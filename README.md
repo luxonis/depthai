@@ -34,7 +34,7 @@ The DepthAI platform is engineered from the ground up to enable the original vis
 
 So what are the reference designs (the carrier boards) which will be released should the campaign be funded?
 
-# DepthAI | Raspberry Pi Compute Module
+** DepthAI | Raspberry Pi Compute Module **
 ![DepthAI Models](/images/67506624-a6ebe100-f64a-11e9-9f3b-12af23c2fa6c.png)
 ![DepthAI Models](/images/67516510-01db0380-f65e-11e9-99e0-7d635781e377.png)
 
