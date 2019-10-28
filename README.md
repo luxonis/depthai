@@ -78,6 +78,12 @@ This design allows you to leverage DepthAI with whichever platform you choose.  
  ![DepthAI Models](/images/67602419-c448aa00-f733-11e9-905f-a288ea166a60.png)
  ![DepthAI Models](/images/67602612-34efc680-f734-11e9-9b74-adafa11a80fe.png)
  
+ Want to build things off this?  Or want to buy these straight up?  Support our CrowdSupply to make this a reality:
+ https://www.crowdsupply.com/luxonis/depthai
+ 
+ Best,
+ Brandon and the Luxonis team!
+ 
  
  
 
