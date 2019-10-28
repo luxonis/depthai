@@ -31,6 +31,23 @@ The DepthAI platform is engineered from the ground up to enable the original vis
  
  This allows you to integrate the power of the Myriad X into your design with a standard 4-layer (or even 2-layer, gasp!) PCB.  And then leverage our reference hardware and software designs to get up/going super-fast (or just buy our boards directly, if they happen to fit the bill for what you need).  Which all results in getting up/running fast:
 ![DepthAI Models](/images/67452322-0b258b00-f5e0-11e9-843d-09c6231fb8b9.png)
+
+So what are the reference designs (the carrier boards) which will be released should the campaign be funded?
+
+# DepthAI | Raspberry Pi Compute Module
+![DepthAI Models](/images/67506624-a6ebe100-f64a-11e9-9f3b-12af23c2fa6c.png)
+![DepthAI Models](/images/67516510-01db0380-f65e-11e9-99e0-7d635781e377.png)
+
+# DepthAI | Raspberry Pi HAT with FFC Cameras
+![DepthAI Models](/images/67524974-078d1500-f66f-11e9-9b86-cd7578f63b42.png)
+![DepthAI Models](/images/67516846-92b1df00-f65e-11e9-974b-b37825192901.png)
+![DepthAI Models](/images/67516891-a8270900-f65e-11e9-9ad1-3318f49396e5.png)
+
+# DepthAI | USB3 with FFC Camera
+![DepthAI Models](/images/67526422-f691d300-f671-11e9-8b11-e574e808c619.png)
+![DepthAI Models](/images/67530493-745adc00-f67c-11e9-86bb-d78ba7150d16.png)
+![DepthAI Models](/images/67530766-63f73100-f67d-11e9-9f9a-e7ca269832cb.png)
+
  
  
 
