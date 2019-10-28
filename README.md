@@ -6,6 +6,8 @@ We are launching a CrowdSupply campaign (https://www.crowdsupply.com/luxonis/dep
 
 In addition to the designs shown above (which will be purchase-able through the campaign), we will be releasing an ordered, but not-yet-received version which integrates all 3 cameras onto a single board with a USB3C interface to the host, shown on the bottom right below.
 
+![DepthAI Models](/images/67443015-55970f80-f5c0-11e9-83c3-2bf07a2479e3.png)
+
 ### The Why of DepthAI
 
 The Myriad X is WAY faster and a TON of features are only accessible when cameras are connected directly to it over MIPI.  Take object detection below as an example:
@@ -13,9 +15,7 @@ The Myriad X is WAY faster and a TON of features are only accessible when camera
 
 So that's 25FPS instead of 8FPS... and that frame-rate is achieved with no host processing AT ALL!  (Technically, you can run DepthAI with no host at all - but often you'll want a host so that other business-logic code can be run based on the output of DepthAI... like 'pick only the ripe strawberries')
 
-![DepthAI Models](/images/67443015-55970f80-f5c0-11e9-83c3-2bf07a2479e3.png)
-
-The DepthAI platform is engineered from the ground up to enable the original vision of the Myriad X - which is to allow low-power, high-efficiency vision processing including stereo depth, motion estimation, and neural inference.  Existing platforms have no MIPI interface and only have a PCIE or USB inferface and so cannot take advantage of a TON of the hardware modules built into the Myriad X which are only (meaningfully) usable with MIPI:
+There's more to it than just being faster though... the DepthAI platform is engineered from the ground up to enable the original vision of the Myriad X - which is to allow low-power, high-efficiency vision processing including stereo depth, motion estimation, and neural inference.  Existing platforms have no MIPI interface and only have a PCIE or USB inferface and so cannot take advantage of a TON of the hardware modules built into the Myriad X which are only (meaningfully) usable with MIPI:
 
  - Stereo Depth 
  - Edge Detection 
