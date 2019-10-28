@@ -9,7 +9,7 @@ In addition to the designs shown above (which will be purchase-able through the 
 ### The Why of DepthAI
 
 The Myriad X is WAY faster and a TON of features are only accessible when cameras are connected directly to it over MIPI.  Take object detection below as an example:
-![DepthAI Models](/images/67452420-66577d80-f5e0-11e9-9e32-8de8ff6da9d0)
+![DepthAI Models](/images/67452420-66577d80-f5e0-11e9-9e32-8de8ff6da9d0.png)
 
 So that's 25FPS instead of 8FPS... and that frame-rate is achieved with no host processing AT ALL!  (Technically, you can run DepthAI with no host at all - but often you'll want a host so that other business-logic code can be run based on the output of DepthAI... like 'pick only the ripe strawberries')
 
