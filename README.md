@@ -4,6 +4,10 @@ We are launching a CrowdSupply campaign (https://www.crowdsupply.com/luxonis/dep
 
 ![DepthAI Models](/images/67516272-9e50d600-f65d-11e9-9343-8a8c3425c47d.png)
 
+### Why?
+
+
+
 In addition to the designs shown above (which will be purchase-able through the campaign), we will be releasing an ordered, but not-yet-received version which integrates all 3 cameras onto a single board with a USB3C interface to the host, shown on the bottom right below.
 
 ![DepthAI Models](/images/67443015-55970f80-f5c0-11e9-83c3-2bf07a2479e3.png)
