@@ -26,6 +26,8 @@ There's more to it than just being faster though... the DepthAI platform is engi
  - JPEG Encoding
  - H.264 and H.265 Encoding
  
+ ### The How and What of DepthAI:
+ 
  So to allow the use of these, DepthAI is engineered to allow direct MIPI connection:
  
  ![DepthAI Models](/images/67444612-10c2a700-f5c7-11e9-8018-5485c2dad580.png)
@@ -41,20 +43,20 @@ There's more to it than just being faster though... the DepthAI platform is engi
 
 So what are the reference designs (the carrier boards) which will be released should the campaign be funded?
 
-## DepthAI | Raspberry Pi Compute Module
+#### DepthAI | Raspberry Pi Compute Module
 ![DepthAI Models](/images/67506624-a6ebe100-f64a-11e9-9f3b-12af23c2fa6c.png)
 ![DepthAI Models](/images/67516510-01db0380-f65e-11e9-99e0-7d635781e377.png)
 
 This design allows you to have the Myriad X, all the cameras, and the Raspberry Pi on one board.  So that you don't have to worry about cabling things together, boards strewn about your desk, etc. when prototyping and writing code.
 
-## DepthAI | Raspberry Pi HAT with FFC Camera Interfaces
+#### DepthAI | Raspberry Pi HAT with FFC Camera Interfaces
 ![DepthAI Models](/images/67524974-078d1500-f66f-11e9-9b86-cd7578f63b42.png)
 ![DepthAI Models](/images/67516846-92b1df00-f65e-11e9-974b-b37825192901.png)
 ![DepthAI Models](/images/67516891-a8270900-f65e-11e9-9ad1-3318f49396e5.png)
 
 This design allows you to leverage your existing Raspberry Pi (and perhaps even its mounting on your platform) and simply add this DepthAI hat to get this AI, depth, and vision processing power.  Off-board modular cameras allow integration up to 6 inches away from the Pi/HAT.
 
-## DepthAI | USB3 with FFC Camera Interfaces
+#### DepthAI | USB3 with FFC Camera Interfaces
 ![DepthAI Models](/images/67526422-f691d300-f671-11e9-8b11-e574e808c619.png)
 ![DepthAI Models](/images/67530493-745adc00-f67c-11e9-86bb-d78ba7150d16.png)
 ![DepthAI Models](/images/67530766-63f73100-f67d-11e9-9f9a-e7ca269832cb.png)
@@ -67,7 +69,7 @@ This design allows you to leverage DepthAI with whichever platform you choose.  
   
  Note: We have a preliminary system working which actually works with the Raspberry Pi Camera V2.1... but the ISP is still a bit broken so it flashes at lighting transitions/etc.  If there's sufficient interest we'll finish this proof-of-concept driver/camera tuning for the Myriad X and release hardware to support the Pi V2.1 camera as well.
  
- ## DepthAI | Modular (FFC) Cameras
+ #### DepthAI | Modular (FFC) Cameras
  ![DepthAI Models](/images/67601447-a37f5500-f731-11e9-8c2c-dd7ca0ab9609.png)
  ![DepthAI Models](/images/67606323-41791c80-f73e-11e9-8b43-18e8d21e9070.png)
  
