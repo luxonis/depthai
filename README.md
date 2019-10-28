@@ -4,11 +4,14 @@ We are launching a CrowdSupply campaign (https://www.crowdsupply.com/luxonis/dep
 
 ![DepthAI Models](/images/67516272-9e50d600-f65d-11e9-9343-8a8c3425c47d.png)
 
-### Why?
-
-
-
 In addition to the designs shown above (which will be purchase-able through the campaign), we will be releasing an ordered, but not-yet-received version which integrates all 3 cameras onto a single board with a USB3C interface to the host, shown on the bottom right below.
+
+### The Why of DepthAI
+
+The Myriad X is WAY faster and a TON of features are only accessible when cameras are connected directly to it over MIPI.  Take object detection below as an example:
+![DepthAI Models](/images/67452420-66577d80-f5e0-11e9-9e32-8de8ff6da9d0)
+
+So that's 25FPS instead of 8FPS... and that frame-rate is achieved with no host processing AT ALL!  (Technically, you can run DepthAI with no host at all - but often you'll want a host so that other business-logic code can be run based on the output of DepthAI... like 'pick only the ripe strawberries')
 
 ![DepthAI Models](/images/67443015-55970f80-f5c0-11e9-83c3-2bf07a2479e3.png)
 
