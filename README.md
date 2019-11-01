@@ -34,7 +34,7 @@ There's more to it than just being faster though... the DepthAI platform is engi
  
  And to allow this power to be integrate-able into actual products (which may require differing stereo baselines, differing interfaces, geometries, etc.) and to make hardware integration much easier (removing the need to integrate a very-fine-pitch multi-hundred-ball BGA into your design) we made a System on Module to hold the Myriad X:
  
- ![DepthAI Models](/images/67533825-9e1a0000-f688-11e9-95a7-26206fdb9a43.png)
+ ![DepthAI Models](/images/1099overview.png)
  
  This module enables a simple and standard tolerance PCB, instead of the high-layer-count and high-density-integration (including laser vias and stacked vias) required to integrate the Myriad X directly.  And it also provides all the power supply rails, power sequencing, clock generation, and camera-support hardware on-module.
  
