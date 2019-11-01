@@ -78,6 +78,56 @@ This design allows you to leverage DepthAI with whichever platform you choose.  
  ![DepthAI Models](/images/67602419-c448aa00-f733-11e9-905f-a288ea166a60.png)
  ![DepthAI Models](/images/67602612-34efc680-f734-11e9-9b74-adafa11a80fe.png)
  
+ ## Use Cases
+
+**Health and Safety**
+
+The real-time and completely-on-device nature of DepthAI is what makes new use-cases in health and safety applications.  
+
+Did you know that the number one cause of injury and death in oil and gas actually comes from situations of trucks and other vehicles impacting people? The size, weight, power, and real-time nature of DepthAI enables use-cases never before possible.
+
+Imagine a smart helmet for factory workers that warns the worker when a fork-lift is about to run him or her over. Or even a smart fork-lift that can tell what objects are, where they are, and prevents the operator from running over the person - or hitting critical equipment. All while allowing the human operator to go about business as usual. The combination of Depth+AI allows such a system to real-time make 'virtual walls' around people, equipment, etc.
+
+We're planning to use DepthAI internally to make **Commute Guardian**, which is a similar application, aiming to try to keep people who ride bikes safe from distracted drivers.
+
+**Food processing**
+
+DepthAI is hugely useful in food processing. To determine if a food product is safe, often many factors need to be taken into account, including size (volume), weight, and appearance. DepthAI allows some very interesting use-cases here. First, since it has real-time (at up to 120FPS) depth mapping, multiple DepthAI can be used to very accurately get the volume and weight of produce - without costly, error-prone mechanical weight sensors. And importantly, since mechanical weight sensors suffer from vibration error, etc., they limit how fast the food product can move down the line.
+
+Using DepthAI for optical weighing and volume, the speed of the line can be increased significantly while also achieving a more accurate weight - with the supplemental data of full volumetric data - so you can sort with insane granularity.
+
+And in addition, one of the most painful parts about inspecting food items with computer vision is that for many foods there's a huge variation of color, appearance, etc. that are all 'good' - so traditional algorithmic solutions fall apart (often resulting in 30% false-disposal rates when enabled, so they're disabled and teams of people do the inspection/removal by hand instead). But humans, looking at these food products can easily tell good/bad. And AI has been proven to be able to do the same.
+
+So DepthAI would be able to weigh the food, get it's real-time size/shape - and be able to run a neural model real-time to produce good/bad criteria (and other grading) - which can be mechanically actuated to sort the food product real-time.
+
+And most importantly, this is all quantified.  So not only can it achieve equivalent functionality of a team of people, it can also deliver data on size, shape, 'goodness', weight, etc. for every good product that goes through the line.
+
+So you can have a record and quantify real-time and over time all the types of defects, the diseases seen, the packaging errors, etc. to be able to optimize all of the processes involved in the short-term, the long-term, and across seasonal variations.
+
+**Manufacturing**
+
+Similar to food processing, there are many places where DepthAI solves difficult problems that previously were not solvable with technology (i.e. required in-line human inspection and/or intervention) or where traditional computer vision systems do function, but are brittle, expensive, and require top experts in the field to develop and maintain the algorithms as products evolve and new products are added to the manufacturing line. 
+
+DepthAI allows neural models to perform the same functions, while also measuring dimensions, size, shape, mass real-time - removing the need for personnel to do mind-numbing and error prone inspection while simultaneous providing real-time quantified business isights - and without the huge NRE required to pay for algorithmic solutions.  
+
+**Mining**
+
+This one is very interesting - as working in mines is very hazardous - but you often want/need human perception in the mine to know what to do next. DepthAI allows that sort of insight, without putting a human at risk.  So the state of the mine and of the mining equipment can be monitored real-time and quantified - giving alerts when things are going wrong (or right) - amplifying personnel's capability to keep people and equipment safe while increasing visibility into overall mining performance and efficiency.
+
+**Autonomy**
+
+When programming an autonomous platform to move about the world, the two key things needed are (1) what are the things around me and (2) what is their location relative to me. DepthAI gives this in an easy API which allows straightforward business logic for driving the platform.  
+
+In the aerial use case, this includes drone sense-and-avoid, emergency recovery (where to land/crash without harming people or property if the prop fails and the UAV only has seconds to respond), and self-navigation in GPS-denied environments.
+
+And for ground platforms, this allows unstructured navigation. So understanding what is around, and where, without a-priori knowledge, and responding accordingly.  
+
+A good out-of-the-box example of this actually Unfolding Space ([here](https://hackaday.io/project/163784-unfolding-space)) (an early tester of DepthAI), which aims to aid in the autonomy of people who are blind.  With DepthAI, such a system no longer has to be simple 'avoid the nebulous blob over there' but rather, 'there's a park bench 2.5 meters to your left and all 5 seats are open'.
+
+Another more straightforward example is autonomous lawn mowing, while safely avoiding unexpected obstacles.
+ 
+ 
+ **Support Us!**
  Want to build things off this?  Or want to buy these straight up?  Support our CrowdSupply to make this a reality:
  https://www.crowdsupply.com/luxonis/depthai
  
