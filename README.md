@@ -132,6 +132,7 @@ Another more straightforward example is autonomous lawn mowing, while safely avo
  https://www.crowdsupply.com/luxonis/depthai
  
  Best,
+ 
  Brandon and the Luxonis team!
  
  
