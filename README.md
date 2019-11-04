@@ -1,5 +1,7 @@
 # DepthAI
 
+UPDATE: Our Crowd Supply campaign is live!  https://www.crowdsupply.com/luxonis/depthai
+
 We are launching a CrowdSupply campaign (https://www.crowdsupply.com/luxonis/depthai) to bring the power of the Myriad X to your design.  If the campaign is successful we will be releasing the designs (hardware and software) for the following Myriad X carrier boards here on Github - to enable engineers and makers to build their own solutions, leveraging our source designs/code.
 
 ![DepthAI Models](/images/overall-summary.png)
