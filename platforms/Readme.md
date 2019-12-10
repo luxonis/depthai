@@ -1,4 +1,4 @@
-##The default example runs a 20-class object detector (PASCAL VOC 20-class) with MobileNet-SSD 300x300:
+The default example runs a 20-class object detector (PASCAL VOC 20-class) with MobileNet-SSD 300x300:
 
 20 classes:
 Person: person
@@ -8,7 +8,7 @@ Indoor: bottle, chair, dining table, potted plant, sofa, tv/monitor
 
 To run your own model, use OpenVINO to convert it as below:
 
-##Inputs required
+*Inputs required*
 BLOB file compatible with OpenVINO (Can be acquired through Exports function in inference-engine examples). They can also be generated using myriad_compile.
 When producing blobs, the following constraints must be applied.
 * CMX-SLICES    = 8
