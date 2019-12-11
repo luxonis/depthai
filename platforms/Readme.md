@@ -17,7 +17,7 @@ When producing blobs, the following constraints must be applied.
 * OUTPUT-FORMATS= FP16/FP32
 
 So to convert your model, open a terminal in the folder where the *.xml and *.bin files are stored and type:
-/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/myriad_compile -m *.xml -ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES 8 -VPU_NUMBER_OF_CMX_SLICES
+/opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/myriad_compile -m *.xml -ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES 8 -VPU_NUMBER_OF_CMX_SLICES 8
 
 Example below is shown for mobilenet SSD:
 /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/myriad_compile -m mobilenet-ssd-fp16.xml -ip U8 -VPU_PLATFORM VPU_2480 -VPU_NUMBER_OF_SHAVES 8 -VPU_NUMBER_OF_CMX_SLICES 8
