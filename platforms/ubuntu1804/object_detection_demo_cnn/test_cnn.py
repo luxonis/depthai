@@ -3,67 +3,83 @@ from time import time
 import numpy as np
 import cv2
 
+import sys
 from time import sleep
 
-streams_list = ['metaout']
+arguments = sys.argv
 
-labels_fpath = 'labels/mobilenet-ssd-4b17b0a707.txt'
+#TODO: how properly set this value
+SCALE_X = 672
+SCALE_Y = 384
+
+# for mobile ssd
+# SCALE_X = 300
+# SCALE_Y = 300
+
+# for mobile person retail
+# SCALE_X = 544
+# SCALE_Y = 320
+
+if len(arguments) < 2:
+   print("Add mode as an argument: run or debug modes available")
+   exit(0)
+
+elif arguments[1] == "debug":
+    cmd_file_ = ""
+elif arguments[1] == "run":
+    cmd_file_ = "./depthai_cnn.cmd"
+else:
+    print("Bad input parameters")
+    exit(0)
+
+
+
+
+# set the path to your labels
+labels_fpath = 'depthai-resources/nn/vehicle-detection-adas-0002/vehicle-detection-adas-0002.txt'
 labels = []
 with open(labels_fpath) as fp:
     labels = fp.readlines()
+    labels = [i.strip() for i in labels]
 
 
+
+# set the path to your blob and json
+streams_list = ['metaout', 'previewout']
 p = depthai.create_pipeline_cnn(
         streams=streams_list,
-        cmd_file='./depthai_cnn.cmd',
-	blob_file = 'models/mobilenet-ssd-4b17b0a707.blob'
+        cmd_file=cmd_file_,
+        blob_file = 'depthai-resources/nn/vehicle-detection-adas-0002/vehicle-detection-adas-0002.blob',
+        blob_file_config = 'depthai-resources/nn/vehicle-detection-adas-0002/vehicle-detection-adas-0002.json'
         )
 
-detections_prev = []
 
 while True:
-    detections, packets = p.get_available_cnn_detections_and_data_packets()
+    tensors, packets = p.get_available_tensors_and_data_packets()
 
-    # print(packets.getData())
+    for t in tensors:
+        for packet in packets:
+            if packet.stream_name == 'previewout':
+                data = packet.getData()
+                # reshape
+                data0 = data[0,:,:]
+                data1 = data[1,:,:]
+                data2 = data[2,:,:]
+                frame = cv2.merge([data0, data1, data2])
 
-    if len(detections) > 0:
-        detections_prev = detections
+                if t[0][0]['confidence'] > 0.9:
 
-    for det in detections:
-        
-        print("Label: " + str(det.label))
-        print("Confidence: " + str(det.confidence))
-        print("x: " + str(det.x))
-        print("y: " + str(det.y))
-        print("w: " + str(det.width))
-        print("h: " + str(det.height))
+                    pt1 = int(t[0][0]['top']*SCALE_X), int(t[0][0]['left']*SCALE_X)
+                    pt2 = int((t[0][0]['bottom'])*SCALE_Y), int((t[0][0]['right'])*SCALE_Y)
 
-    for packet in packets:
-        if packet.stream_name == 'previewout':
-            data = packet.getData()
-            # change shape (3, 300, 300) -> (300, 300, 3)
-            data0 = data[0,:,:]
-            data1 = data[1,:,:]
-            data2 = data[2,:,:]
-            frame = cv2.merge([data0, data1, data2])
-                
-
-            for det in detections_prev:
-                if det.confidence > 0.9:
-                    pt1 = int(det.x), int(det.y)
-                    pt2 = int(det.x + det.width), int(det.y + det.height)
                     cv2.rectangle(frame, pt1, pt2, (0, 0, 255))
 
-                    pt_t1 = int(det.x), int(det.y) + 20
-                    cv2.putText(frame, labels[det.label], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-                    pt_t2 = int(det.x), int(det.y) + 40
-                    cv2.putText(frame, str(det.confidence), pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                    pt_t1 = int(t[0][0]['top']*SCALE_X), int(t[0][0]['left']*SCALE_X) + 20
+                    cv2.putText(frame, labels[int(t[0][0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
+                cv2.imshow('previewout', frame)
 
-            # cv2.imshow('previewout', cv2.resize(frame,(300, 300)))
-            cv2.imshow('previewout', frame)
-
-    if cv2.waitKey(1) == ord('q'):
+    if cv2.waitKey(100) == ord('q'):
         break
 
 print('py: DONE.')
