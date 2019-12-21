@@ -1,3 +1,10 @@
+The pre-requisite for DepthAI to run is OpenVINO having been successfully installed on your platform.  Currently we support Ubuntu and Raspbian, but if you have another OS/platform you'd like supported, let us know and we'll get that going.  
+
+To install OpenVINO, use the following:
+ - Raspbian: https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_raspbian.html
+ - Ubuntu: https://docs.openvinotoolkit.org/latest/_docs_install_guides_installing_openvino_linux.html
+  - Make sure to follow the "Steps for Intel® Movidius™ Neural Compute Stick and Intel® Neural Compute Stick 2" section
+
 The default example runs a 20-class object detector (PASCAL VOC 20-class) with MobileNet-SSD 300x300:
 
 20 classes:
