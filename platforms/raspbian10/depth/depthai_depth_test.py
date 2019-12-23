@@ -15,7 +15,7 @@ streams_list = ['meta_d2h', 'depth']
 
 pipieline = depthai.create_pipeline(
         streams=streams_list,
-        cmd_file='depth.cmd'
+        cmd_file='depthai.cmd'
         )
 
 
