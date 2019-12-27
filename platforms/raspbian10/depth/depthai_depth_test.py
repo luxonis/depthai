@@ -11,7 +11,7 @@ except ImportError:
 
 counter = 0
 
-streams_list = ['meta_d2h', 'depth']
+streams_list = ['depth', 'left', 'right']
 
 pipieline = depthai.create_pipeline(
         streams=streams_list,
