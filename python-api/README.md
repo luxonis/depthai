@@ -12,7 +12,7 @@ Files with extention `.so` are python modules:
 
 # Issues reporting  
 We are developing depthai framework, and it's crucial for us to know what kind of problems users are facing.  
-Remember, the more information you give us, the faster we will help you and make depthai better!  
+So thanks for testing DepthAI! The information you give us, the faster we will help you and make depthai better!  
   
 Please, do the following steps:  
 1. Run script `log_system_information.sh` and provide us the output (`log_system_information.txt`, it's system version & modules versions);  
