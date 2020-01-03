@@ -10,6 +10,18 @@ Files with extention `.so` are python modules:
 `test.py` - depth example  
 `test_cnn.py` - CNN inference example
 
+# Conversion of existing trained models into Intel Movidius binary format
+OpenVINO toolkit contains components which allow conversion of existing supported trained `Caffe
+and Tensorflow` models into Intel Movidius binary format through the Intermediate Representation
+(IR) format.  
+Example of the conversion:
+1. <path-to-openvino-folder>/deployment_tools/model_optimizer/python3 mo.py --model_name ResNet50 --output_dir ResNet50_IR_FP16 --framework tf --data_type FP16 --input_model inference_graph.pb  
+  This command will produce the following contents: Where ResNet50.xml is a file containing execution graph for this network; ResNet50.bin is weights file; and ResNet50.mapping contains mapping between layers in original public/custom model and layers
+within IR.
+2. Weights (.bin) and graph (.xml) produced on the previous step will be required for building a blob file.
+myriad_compile tool comes bundled with OpenVINO package and is used for blob generation. When producing blobs, the following constraints must be applied: CMX-SLICES = 8 SHAVES = 8 INPUT-FORMATS = 8 OUTPUT-FORMATS= FP16/FP32 (Make changes in host code for meta frame display accordingly). Example of command execution: <path-to-openvino-folder>/deployment_tools/inference_engine/lib/intel64/myriad_compile -m ./ResNet50.xml -o ResNet50.blob -ip U8 -VPU_PLATFORM VPU_2480 -VPU_NUMBER_OF_SHAVES 8 -VPU_NUMBER_OF_CMX_SLICES 8
+
+
 # Calibration
 For better depth image quality, you need a stereo calibration. To do it, you have to:
 1. Print the chessboard for calibration. The picture can be found in the `resources` folder (resources/calibration-chess-board.png)  
