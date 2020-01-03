@@ -73,7 +73,7 @@ print("py: Size of calibration = " + str(calib_puttern_size))
 streams_list = ['left', 'right', 'depth', 'meta_d2h']
 pipieline = depthai.create_pipeline(
         streams=streams_list,
-        cmd_file='./depthai.cmd'
+        cmd_file='./depthai_depth.cmd'
         )
 
 num_of_polygons = 0
