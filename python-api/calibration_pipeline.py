@@ -5,6 +5,8 @@ from time import time
 import numpy as np
 import os
 
+import consts.resource_paths
+
 use_cv = True
 try:
     import cv2
@@ -70,10 +72,14 @@ else:
 print("py: Size of calibration = " + str(calib_puttern_size))
 
 
-streams_list = ['left', 'right', 'depth', 'meta_d2h']
+cmd_file = consts.resource_paths.device_depth_cmd_fpath
+
+streams_list = ['left', 'right', 'depth']
 pipieline = depthai.create_pipeline(
         streams=streams_list,
-        cmd_file='./depthai_depth.cmd'
+        cmd_file=cmd_file,
+        calibration_file=consts.resource_paths.calib_fpath,
+        config_file=consts.resource_paths.pipeline_config_fpath
         )
 
 num_of_polygons = 0
