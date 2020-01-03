@@ -8,7 +8,12 @@ Files with extention `.so` are python modules:
   
 # Examples
 `test.py` - depth example  
-`test_cnn.py` - CNN inference example  
+`test_cnn.py` - CNN inference example
+
+# Calibration
+This build uses the default calibration file. There are two ways to change it:
+1. easy way: rename your calibration file to "default.calib" and move it the resources folder.
+2. harder way: go to the consts/resource_paths.py and set the path to your calibration file into calib_fpath variable.
 
 # Issues reporting  
 We are developing depthai framework, and it's crucial for us to know what kind of problems users are facing.  
