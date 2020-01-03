@@ -11,9 +11,15 @@ Files with extention `.so` are python modules:
 `test_cnn.py` - CNN inference example
 
 # Calibration
-This build uses the default calibration file. There are two ways to change it:
-1. easy way: rename your calibration file to "default.calib" and move it the resources folder.
-2. harder way: go to the consts/resource_paths.py and set the path to your calibration file into calib_fpath variable.
+For better device performance, you need to calibrate it. To do it, you have to:
+1. Print the chessboard for calibration. The picture can be found in the `resources` folder (resources/calibration-chess-board.png)
+2 Start python3 script: type `python3 calibration_pipeline.py` in the terminal. Two streams left and right will show up. Each window will contain a polygon.
+3. Put a printed chessboard within the polygon and press barspace. It will take a photo. There will be 13 positions of polygons.
+4. After it, the calibration will automatically start based on taken pictures. If calibration is a successful file named `depthai.calib` will be generated. 
+
+Depthai has the default calibration file. There are two ways to change it:
+1. Easy way: rename your calibration file to `default.calib` and move it the resources folder
+2. Harder way: go to the `consts/resource_paths.py` and set the path to your calibration file into `calib_fpath` variable.
 
 # Issues reporting  
 We are developing depthai framework, and it's crucial for us to know what kind of problems users are facing.  
