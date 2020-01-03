@@ -11,7 +11,7 @@ Files with extention `.so` are python modules:
 `test_cnn.py` - CNN inference example
 
 # Calibration
-For better depth image quality, you need to calibrate it. To do it, you have to:
+For better depth image quality, you need a stereo calibration. To do it, you have to:
 1. Print the chessboard for calibration. The picture can be found in the `resources` folder (resources/calibration-chess-board.png)  
 2. Start python3 script: type `python3 calibration_pipeline.py` in the terminal. Two streams left and right will show up. Each window will contain a polygon.  
 3. Put a printed chessboard within the polygon and press barspace. It will take a photo. There will be 13 positions of polygons.  
