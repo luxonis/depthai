@@ -7,8 +7,10 @@ Files with extention `.so` are python modules:
 - `depthai.cpython-37m-arm-linux-gnueabihf.so` built for Raspbian 10 & Python 3.7  
   
 # Examples
-`test.py` - depth example  
+`test.py` - depth example
 `test_cnn.py` - CNN inference example
+
+Run `python3 test_cnn.py` on a system with OpenVINO installed to run a MobileNet-SSD 20-class object detector from the 12MP color camera video stream.  And run `python3 test.py` to run depth alone.  We are still working on getting depth and AI to run together without crashing.  :-)  So that is not available yet.
 
 # Conversion of existing trained models into Intel Movidius binary format
 OpenVINO toolkit contains components which allow conversion of existing supported trained `Caffe
