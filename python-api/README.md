@@ -1,5 +1,5 @@
 # About
-This is python API of depthai and examples.  
+This is python API of DepthAI and examples.  
 
 # Python modules
 Files with extention `.so` are python modules:  
