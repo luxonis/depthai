@@ -82,10 +82,15 @@ while True:
                     cv2.rectangle(frame, pt1, pt2, (0, 0, 255))
 
                     pt_t1 = x1, y1 + 20
-                    cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-                    pt_t2 = x1, y1 + 40
-                    cv2.putText(frame, str(e[0]['confidence']), pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                    # Handles case where TensorEntry object label = 7552.
+                    if e[0]['label'] > len(labels):
+                        print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
+                    else:
+                        cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+
+                        pt_t2 = x1, y1 + 40
+                        cv2.putText(frame, str(e[0]['confidence']), pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
             cv2.imshow('previewout', frame)
 
