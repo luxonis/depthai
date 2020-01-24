@@ -1,9 +1,11 @@
-device_ai_cmd_fpath    = './depthai_ai.cmd'
-device_depth_cmd_fpath = './depthai_depth.cmd'
+device_cmd_fpath    = './depthai.cmd'
 
-blob_labels_fpath = './resources/mobilenet_ssd_labels.txt'
-blob_fpath        = './resources/mobilenet-ssd-4b17b0a707.blob'
-blob_config_fpath = './resources/mobilenet_ssd.json'
+prefix = './resources/'
+
+blob_labels_fpath = './resources/nn/object_detection_4shave/labels_for_mobilenet_ssd.txt'
+blob_fpath        = './resources/nn/object_detection_4shave/mobilenet_ssd.blob'
+blob_config_fpath = './resources/nn/object_detection_4shave/object_detection.json'
 
 calib_fpath =           './resources/default.calib'
 pipeline_config_fpath = './resources/config.json'
+

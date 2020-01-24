@@ -1,17 +1,13 @@
-import depthai
-import calibration_utils
-
 from time import time
-import numpy as np
 import os
 
-import consts.resource_paths
+import numpy as np
+import cv2
 
-use_cv = True
-try:
-    import cv2
-except ImportError:
-    use_cv = False
+import depthai
+
+import calibration_utils
+import consts.resource_paths
 
 
 def setPolygonCoordinates(height, width):
@@ -72,15 +68,41 @@ else:
 print("py: Size of calibration = " + str(calib_puttern_size))
 
 
-cmd_file = consts.resource_paths.device_depth_cmd_fpath
+cmd_file = consts.resource_paths.device_cmd_fpath
+if not depthai.init_device(cmd_file=cmd_file):
+    print("Error initializing device. Try to reset it.")
+    exit(1)
 
-streams_list = ['left', 'right', 'depth']
-pipieline = depthai.create_pipeline(
-        streams=streams_list,
-        cmd_file=cmd_file,
-        calibration_file=consts.resource_paths.calib_fpath,
-        config_file=consts.resource_paths.pipeline_config_fpath
-        )
+
+configs = {
+    'streams': ['left', 'right'],
+    'depth': 
+    {
+        'calibration_file': consts.resource_paths.calib_fpath,
+        # 'type': 'median',
+        'padding_factor': 0.3
+    },
+    'ai':
+    {
+        'blob_file': consts.resource_paths.blob_fpath,
+        'blob_file_config': consts.resource_paths.blob_config_fpath
+    },
+    'board_config':
+    {
+        'swap_left_and_right_cameras': False,
+        'left_fov_deg': 69.0,
+        'left_to_right_distance_cm': 3.5
+    }
+}
+
+p = depthai.create_pipeline(config=configs)
+
+
+if p is None:
+    print('Pipeline is not created.')
+    exit(2)
+
+
 
 num_of_polygons = 0
 polygons_coordinates = []
@@ -100,7 +122,7 @@ run_capturing_images = True # value becames False and stop the main loop when al
 calculate_coordinates = False # track if coordinates of polynoms was calculated
 
 while run_capturing_images:
-    data_list = pipieline.get_available_data_packets()
+    _, data_list = p.get_available_nnet_and_data_packets()
     for packet in data_list:
         if packet.stream_name == 'left' or packet.stream_name == 'right':
             frame = packet.getData()
@@ -110,7 +132,7 @@ while run_capturing_images:
                 num_of_polygons = getNumOfPolygons(polygons_coordinates)
                 calculate_coordinates = True
 
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
             if capture_images == True:
                 if packet.stream_name == 'left':
