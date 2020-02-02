@@ -3,6 +3,8 @@ import glob
 import os
 import shutil
 import numpy as np
+import re
+import time
 from argparse import ArgumentParser
 
 
@@ -40,6 +42,56 @@ def parse_args():
 
     return options
 
+# Creates a set of 13 polygon coordinates
+def setPolygonCoordinates(height, width):
+    horizontal_shift = width//4
+    vertical_shift = height//4
+
+    margin = 60
+    slope = 150
+
+    p_coordinates = [
+            [[margin,0], [margin,height], [width//2, height-slope], [width//2, slope]],
+            [[horizontal_shift, 0], [horizontal_shift, height], [width//2 + horizontal_shift, height-slope], [width//2 + horizontal_shift, slope]],
+            [[horizontal_shift*2-margin, 0], [horizontal_shift*2-margin, height], [width//2 + horizontal_shift*2-margin, height-slope], [width//2 + horizontal_shift*2-margin, slope]],
+
+            [[margin,margin], [margin, height-margin], [width-margin, height-margin], [width-margin, margin]],
+
+            [[width-margin, 0], [width-margin, height], [width//2, height-slope], [width//2, slope]],
+            [[width-horizontal_shift, 0], [width-horizontal_shift, height], [width//2-horizontal_shift, height-slope], [width//2-horizontal_shift, slope]],
+            [[width-horizontal_shift*2+margin, 0], [width-horizontal_shift*2+margin, height], [width//2-horizontal_shift*2+margin, height-slope], [width//2-horizontal_shift*2+margin, slope]],
+
+            [[0,margin], [width, margin], [width-slope, height//2], [slope, height//2]],
+            [[0,vertical_shift], [width, vertical_shift], [width-slope, height//2+vertical_shift], [slope, height//2+vertical_shift]],
+            [[0,vertical_shift*2-margin], [width, vertical_shift*2-margin], [width-slope, height//2+vertical_shift*2-margin], [slope, height//2+vertical_shift*2-margin]],
+
+            [[0,height-margin], [width, height-margin], [width-slope, height//2], [slope, height//2]],
+            [[0,height-vertical_shift], [width, height-vertical_shift], [width-slope, height//2-vertical_shift], [slope, height//2-vertical_shift]],
+            [[0,height-vertical_shift*2+margin], [width, height-vertical_shift*2+margin], [width-slope, height//2-vertical_shift*2+margin], [slope, height//2-vertical_shift*2+margin]]
+        ]
+    return p_coordinates
+
+def getPolygonCoordinates(idx, p_coordinates):
+    return p_coordinates[idx]
+
+def getNumOfPolygons(p_coordinates):
+    return len(p_coordinates)
+
+# Filters polygons to just those at the given indexes.
+def select_polygon_coords(p_coordinates,indexes):
+    if indexes == None:
+        # The default
+        return p_coordinates
+    else:
+        print("Filtering polygons to those at indexes=",indexes)
+        return [p_coordinates[i] for i in indexes]
+
+def image_filename(stream_name,polygon_index,total_num_of_captured_images):
+    return "{stream_name}_p{polygon_index}_{total_num_of_captured_images}.png".format(stream_name=stream_name,polygon_index=polygon_index,total_num_of_captured_images=total_num_of_captured_images)
+
+def polygon_from_image_name(image_name):
+    """Returns the polygon index from an image name (ex: "left_p10_0.png" => 10)"""
+    return int(re.findall("p(\d+)",image_name)[0])
 
 class StereoCalibration(object):
     """Class to Calculate Calibration and Rectify a Stereo Camera."""
@@ -75,6 +127,7 @@ class StereoCalibration(object):
         self.objpoints = []  # 3d point in real world space
         self.imgpoints_l = []  # 2d points in image plane.
         self.imgpoints_r = []  # 2d points in image plane.
+        self.calib_successes = [] # polygon ids of left/right image sets with checkerboard corners.
 
         images_left = glob.glob(filepath + "/left/*")
         images_right = glob.glob(filepath + "/right/*")
@@ -96,6 +149,9 @@ class StereoCalibration(object):
             assert img_l is not None, "ERROR: Images not read correctly"
             assert img_r is not None, "ERROR: Images not read correctly"
 
+            print("Finding chessboard corners for %s and %s..." % (image_left,image_right))
+            start_time = time.time()
+
             # Find the chess board corners
             flags = 0
             flags |= cv2.CALIB_CB_ADAPTIVE_THRESH
@@ -116,15 +172,30 @@ class StereoCalibration(object):
                 rt = cv2.cornerSubPix(img_r, corners_r, (5, 5),
                                       (-1, -1), self.criteria)
                 self.imgpoints_r.append(corners_r)
+                self.calib_successes.append(polygon_from_image_name(image_left))
+                print("\t[OK]. Took %i seconds." % (round(time.time() - start_time, 2)))
             else:
-                print("Corners not detected for",
-                      str(os.path.basename(image_left)),
-                      str(os.path.basename(image_right)))
+                print("\t[ERROR] - Corners not detected. Took %i seconds." % (round(time.time() - start_time, 2)))
 
             self.img_shape = img_r.shape[::-1]
         print(str(len(self.objpoints)) + " of " + str(len(images_left)) +
               " images being used for calibration")
-        assert len(self.objpoints) > 4, "ERROR: Not enough valid image sets, please re-capture"
+        self.ensure_valid_images()
+
+    def ensure_valid_images(self):
+        """
+        Ensures there is one set of left/right images for each polygon. If not, raises an raises an
+        AssertionError with instructions on re-running calibration for the invalid polygons.
+        """
+        expected_polygons = len(setPolygonCoordinates(1000,600)) # inseted values are placeholders
+        unique_calib_successes = set(self.calib_successes)
+        if len(unique_calib_successes) != expected_polygons:
+            valid = set(np.arange(0,expected_polygons))
+            missing = valid - unique_calib_successes
+            arg_value = ' '.join(map(str, missing))
+            raise AssertionError("Missing valid image sets for %i polygons. Re-run calibration with the\n'-p %s' argument to re-capture images for these polygons." % (len(missing), arg_value))
+        else:
+            return true
 
     def stereo_calibrate(self):
         """Calibrate camera and construct Homography."""
@@ -155,7 +226,7 @@ class StereoCalibration(object):
             self.objpoints, self.imgpoints_l, self.imgpoints_r,
             self.M1, self.d1, self.M2, self.d2, self.img_shape,
             criteria=stereocalib_criteria, flags=flags)
-	
+
         assert ret < 1.0, "ERROR: Calibration no succesfull, please re-capture"
         print("Calibration successful, RMS error: " + str(ret))
 
