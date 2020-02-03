@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import shutil
 import consts.resource_paths
+import json
 
 use_cv = True
 try:
@@ -45,6 +46,9 @@ def parse_args():
 
     Capture 3 images per polygon:
     python calibrate.py -c 3
+
+    Pass thru pipeline config options:
+    python calibrate.py -co '{"board_config": {"swap_left_and_right_cameras": true, "left_to_right_distance_cm": 9.0}}'
     '''
     parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-p", "--polygons", default=list(np.arange(len(setPolygonCoordinates(1000,600)))), nargs='*',
@@ -62,11 +66,19 @@ def parse_args():
     parser.add_argument("-m", "--mode", default=['capture','process'], nargs='*',
                         type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
+    parser.add_argument("-co", "--config_overwrite", default=None,
+                        type=str, required=False,
+                        help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
+
     options = parser.parse_args()
 
     return options
 
 args = vars(parse_args())
+
+if args['config_overwrite']:
+    args['config_overwrite'] = json.loads(args['config_overwrite'])
+
 print("Using Arguments=",args)
 
 if 'capture' in args['mode']:
@@ -114,6 +126,10 @@ if 'capture' in args['mode']:
             'left_to_right_distance_cm': 3.5
         }
     }
+
+    if args['config_overwrite'] is not None:
+        config = merge(args['config_overwrite'],config)
+        print("Merged Pipeline config with overwrite",config)
 
     pipeline = depthai.create_pipeline(config)
 
