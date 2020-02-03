@@ -127,7 +127,11 @@ if 'capture' in args['mode']:
                     cv2.putText(frame, "Align cameras with callibration board and press spacebar to capture the image", (0, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
                     cv2.putText(frame, "Polygon Position: %i. " % (polygon_index) + "Captured %i of %i images." % (total_num_of_captured_images,total_images), (0, 700), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0))
                     cv2.polylines(frame, np.array([getPolygonCoordinates(polygon_index, polygons_coordinates)]), True, (0, 0, 255), 4)
-                    cv2.imshow(packet.stream_name, frame)
+                    # original image is 1280x720. reduce by 2x so it fits better.
+                    aspect_ratio = 1.5
+                    new_x, new_y = int(frame.shape[1]/aspect_ratio), int(frame.shape[0]/aspect_ratio)
+                    resized_image = cv2.resize(frame,(new_x,new_y))
+                    cv2.imshow(packet.stream_name, resized_image)
                 else:
                     # all polygons used, stop the loop
                     run_capturing_images = False
