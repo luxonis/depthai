@@ -36,7 +36,7 @@ def parse_args():
     return options
 
 args = vars(parse_args())
-print("args:",args)
+print("Using Arguments=",args)
 
 if 'capture' in args['mode']:
 
@@ -151,7 +151,7 @@ else:
     print("Skipping capture.")
 
 if 'process' in args['mode']:
-    print("py: Starting calibration based on captured images")
+    print("Starting image processing")
     cal_data = StereoCalibration()
     try:
         cal_data.calibrate("dataset", args['square_size_cm'], "./depthai.calib")

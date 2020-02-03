@@ -72,6 +72,7 @@ class StereoCalibration(object):
 
     def calibrate(self, filepath, square_size, out_filepath):
         """Function to calculate calibration for stereo camera."""
+        start_time = time.time()
         # init object data
         self.objp = np.zeros((9 * 6, 3), np.float32)
         self.objp[:, :2] = np.mgrid[0:9, 0:6].T.reshape(-1, 2)
@@ -86,8 +87,9 @@ class StereoCalibration(object):
 
         # save data to binary file
         self.H.tofile(out_filepath)
-        print("Result written to: " + out_filepath)
 
+        print("Calibration file written to %s.\nRename this file to `default.calib` and move it the `resources` folder." % (out_filepath))
+        print("\tTook %i to run image processing." % (round(time.time() - start_time, 2)))
         # show debug output for visual inspection
         print("\nRectifying dataset for visual inspection")
         self.show_rectified_images(filepath, out_filepath)
@@ -120,7 +122,7 @@ class StereoCalibration(object):
             assert img_l is not None, "ERROR: Images not read correctly"
             assert img_r is not None, "ERROR: Images not read correctly"
 
-            print("Finding chessboard corners for %s and %s..." % (image_left,image_right))
+            print("Finding chessboard corners for %s and %s..." % (os.path.basename(image_left), os.path.basename(image_right)))
             start_time = time.time()
 
             # Find the chess board corners
@@ -166,7 +168,7 @@ class StereoCalibration(object):
             arg_value = ' '.join(map(str, missing))
             raise AssertionError("Missing valid image sets for %i polygons. Re-run calibration with the\n'-p %s' argument to re-capture images for these polygons." % (len(missing), arg_value))
         else:
-            return true
+            return True
 
     def stereo_calibrate(self):
         """Calibrate camera and construct Homography."""
@@ -198,8 +200,8 @@ class StereoCalibration(object):
             self.M1, self.d1, self.M2, self.d2, self.img_shape,
             criteria=stereocalib_criteria, flags=flags)
 
-        assert ret < 1.0, "ERROR: Calibration no succesfull, please re-capture"
-        print("Calibration successful, RMS error: " + str(ret))
+        assert ret < 1.0, "[ERROR] Calibration RMS error < 1.0 (%i). Re-try image capture." % (ret)
+        print("[OK] Calibration successful w/ RMS error=" + str(ret))
 
         # construct Homography
         plane_depth = 40.0  # arbitrary plane depth
@@ -212,7 +214,7 @@ class StereoCalibration(object):
         disparity = (self.M1[0, 0] * T[0] / plane_depth)
         self.H[0, 2] -= disparity
         self.H = self.H.astype(np.float32)
-        print("Rectifying Homography:")
+        print("Rectifying Homography...")
         print(self.H)
 
     def show_rectified_images(self, dataset_dir, calibration_file):
@@ -288,6 +290,7 @@ class StereoCalibration(object):
                 line_row += 30
 
             # show image
+            print("Displaying Stereo Pair for visual inspection. Press the [ESC] key to exit.")
             while(1):
                 cv2.imshow('Stereo Pair', img_concat)
                 k = cv2.waitKey(33)
