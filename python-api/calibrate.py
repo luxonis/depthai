@@ -1,5 +1,6 @@
 import depthai
 from  calibration_utils import *
+import argparse
 from argparse import ArgumentParser
 from time import time
 import numpy as np
@@ -15,7 +16,37 @@ except ImportError:
     use_cv = False
 
 def parse_args():
-    parser = ArgumentParser()
+    epilog_text = '''
+    Captures and processes images for disparity depth calibration, generating a `dephtai.calib` file
+    that should be loaded when initializing depthai. By default, captures one image across 13 polygon positions.
+
+    Image capture requires the use of a printed 7x9 OpenCV checkerboard applied to a flat surface (ex: sturdy cardboard).
+    When taking photos, ensure the checkerboard fits within both the left and right image displays. The board does not need
+    to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
+
+    If the checkerboard does not fit within a captured image, the calibration will generate an error message with instructions
+    on re-running calibration for polygons w/o valid checkerboard captures.
+
+    The script requires a RMS error < 1.0 to generate a calibration file. If RMS exceeds this threshold, an error is displayed.
+
+    Example usage:
+
+    Run calibration with a checkerboard square size of 2.35 cm:
+    python calibrate.py -s 2.35
+
+    Run calibration for only the first and 3rd polygon positions:
+    python calibrate.py -p 0 2
+
+    Only run image processing (not image capture) w/ a 2.35 cm square size. Requires a set of polygon images:
+    python calibrate.py -s 2.35 -m process
+
+    Delete all existing images before starting image capture:
+    python calibrate.py -i delete
+
+    Capture 3 images per polygon:
+    python calibrate.py -c 3
+    '''
+    parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-p", "--polygons", default=list(np.arange(len(setPolygonCoordinates(1000,600)))), nargs='*',
                         type=int, required=False,
                         help="Space-separated list of polygons (ex: 0 5 7) to restrict image capture. Default is all polygons.")
