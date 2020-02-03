@@ -106,7 +106,7 @@ if 'capture' in args['mode']:
         print("[ERROR] Unable to initialize device. Try to reset it. Exiting.")
         exit(1)
 
-    config = configs = {
+    config = {
         'streams': ['left', 'right'],
         'depth':
         {
