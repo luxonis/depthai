@@ -5,8 +5,6 @@ import shutil
 import numpy as np
 import re
 import time
-from argparse import ArgumentParser
-
 
 def mkdir_overwrite(dir):
     if not os.path.exists(dir):
@@ -14,33 +12,6 @@ def mkdir_overwrite(dir):
     else:
         shutil.rmtree(dir)
         os.makedirs(dir)
-
-
-def parse_args():
-    parser = ArgumentParser()
-    parser.add_argument("-d", "--dataset", action="store",
-                        type=str, dest="dataset_dir", required=True,
-                        help="Path to calibration dataset, NB must conatin /left and /right dirs")
-    parser.add_argument("-s", "--square_size_cm", action="store",
-                        type=float, dest="square_size_cm", required=False,
-                        help="Sqaure size of calibration pattern used, NB Please use [cm]")
-    parser.add_argument("-c", "--calib_file", action="store",
-                        type=str, dest="calib_filepath", default="./calibration.bin",
-                        help="output filepath for calibration")
-    parser.add_argument("-a", "--apply_calibration", action="store_true",
-                        dest="apply_calibration",
-                        help="Instead of calibrating, aplly calibration file to dataset")
-
-    options = parser.parse_args()
-
-    if options.apply_calibration is False and options.square_size_cm is None:
-        print("\nError: Attempting to calibrate but no square size provided.\n")
-        parser.print_help()
-        raise SystemExit()
-    elif options.apply_calibration is True and options.square_size_cm is not None:
-        print("\nWarning: Sqaure size arg not used.\n")
-
-    return options
 
 # Creates a set of 13 polygon coordinates
 def setPolygonCoordinates(height, width):

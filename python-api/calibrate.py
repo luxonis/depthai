@@ -30,7 +30,7 @@ def parse_args():
                         help="Whether existing images should be modified or all images should be deleted before running image capture. The default is 'modify'. Change to 'delete' to delete all image files.")
     parser.add_argument("-m", "--mode", default=['capture','process'], nargs='*',
                         type=str, required=False,
-                        help="Space-separaed list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
+                        help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     options = parser.parse_args()
 
     return options
