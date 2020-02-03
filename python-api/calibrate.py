@@ -196,9 +196,18 @@ if 'capture' in args['mode']:
                     # all polygons used, stop the loop
                     run_capturing_images = False
 
-        key = cv2.waitKey(33)
+        # key = cv2.waitKey(33)
+        #
+        # if key == 27: # ESC is consistent w/exiting stereo image preview.
+        #     capture_images = True
+        #
+        # elif key == ord("q"):
+        #     print("py: Calibration has been interrupted!")
+        #     exit(0)
 
-        if key == 27: # ESC is consistent w/exiting stereo image preview.
+        key = cv2.waitKey(1)
+
+        if key == ord(" "):
             capture_images = True
 
         elif key == ord("q"):
