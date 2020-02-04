@@ -48,7 +48,7 @@ def parse_args():
     python calibrate.py -c 3
 
     Pass thru pipeline config options:
-    python calibrate.py -co '{"board_config": {"swap_left_and_right_cameras": true, "left_to_right_distance_cm": 9.0}}'
+    python calibrate.py -co '{"board_config": {"swap_left_and_right_cameras": true, "left_to_right_distance_cm": 7.5}}'
     '''
     parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-p", "--polygons", default=list(np.arange(len(setPolygonCoordinates(1000,600)))), nargs='*',
@@ -121,9 +121,9 @@ if 'capture' in args['mode']:
         },
         'board_config':
         {
-            'swap_left_and_right_cameras': False,
+            'swap_left_and_right_cameras': True,
             'left_fov_deg': 69.0,
-            'left_to_right_distance_cm': 3.5
+            'left_to_right_distance_cm': 9.0
         }
     }
 

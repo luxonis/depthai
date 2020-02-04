@@ -36,9 +36,9 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 
 
 configs = {
-    'streams': ['left', 'right'],
     # 'streams': ['disparity', 'left', 'right', 'metaout', 'previewout', 'depth_mm_h', 'depth_color_h'],
-    'depth': 
+    'streams': ['left', 'right'],
+    'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
         # 'type': 'median',
@@ -51,9 +51,9 @@ configs = {
     },
     'board_config':
     {
-        'swap_left_and_right_cameras': False,
+        'swap_left_and_right_cameras': True,
         'left_fov_deg': 69.0,
-        'left_to_right_distance_cm': 3.5
+        'left_to_right_distance_cm': 9.0
     }
 }
 
@@ -177,4 +177,4 @@ while True:
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
 
-print('py: DONE.')
+pri
