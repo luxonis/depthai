@@ -14,6 +14,7 @@ Files with extention `.so` are python modules:
 `test_cnn.py` - CNN inference example
 
 ## Conversion of existing trained models into Intel Movidius binary format
+
 OpenVINO toolkit contains components which allow conversion of existing supported trained `Caffe
 and Tensorflow` models into Intel Movidius binary format through the Intermediate Representation
 (IR) format.  
@@ -25,16 +26,12 @@ Example of the conversion:
 
 ## Calibration
 
-For better depth image quality, you need a stereo calibration. To do it, you have to:
-1. Print the chessboard for calibration. The picture can be found in the `resources` folder (resources/calibration-chess-board.png). Measure the square size in centimeters and insert the value in the command below.
-2. Start python3 script: type `python3 calibrate.py -s [SQUARE_SIZE_IN_CM]` in the terminal. Two streams left and right will show up. Each window will contain a polygon.  
-3. Put a printed chessboard within the polygon and press barspace. It will take a photo. There will be 13 positions of polygons.  
-4. After it, the calibration will automatically start based on taken pictures. If calibration is a successful file named `depthai.calib` will be generated.
+For better depth image quality, perform a stereo camera calibration. Follow these steps:
 
-Depthai has the default calibration file. There are two ways to change it:
-
-1. Easy way: rename your calibration file to `default.calib` and move it the resources folder.  
-2. Harder way: go to the `consts/resource_paths.py` and set the path to your calibration file into `calib_fpath` variable.  
+1. Print the chessboard calibration image. This image is in the `resources` folder (resources/calibration-chess-board.png). Measure the square size in centimeters and insert the value in the command below. The entire board should fit on a single piece of paper (scale to fit).
+2. Start the calibration script: `python3 calibrate.py -s [SQUARE_SIZE_IN_CM]`. Left and right video streams are displayed. Each window will contain a polygon.  
+3. Hold up the printed chessboard so that the whole of the checkerboard is displayed within both video streams. Match the orientation of the overlayed polygon and press [SPACEBAR] to capture an image. The checkerboard pattern does not need to match the polygon exactly, but it is important to use the polygon as a guideline for angling and location relative to the camera. There are 13 required polygon positions.
+4. After capturing images for all of the polygon positions, the calibration image processing step will begin. If successful, a `depthai.calib` file will be added to the `resources/` folder. This file is loaded by default via the `calib_fpath` variable within `consts/resource_paths.py`. 
 
 ## Issues reporting  
 
