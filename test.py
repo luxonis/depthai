@@ -37,7 +37,7 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 
 configs = {
     # 'streams': ['disparity', 'left', 'right', 'metaout', 'previewout', 'depth_mm_h', 'depth_color_h'],
-    'streams': ['left', 'right'],
+    'streams': ['left', 'right', 'depth_color_h'],
     'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
