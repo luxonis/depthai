@@ -243,7 +243,7 @@ if 'process' in args['mode']:
     print("Starting image processing")
     cal_data = StereoCalibration()
     try:
-        cal_data.calibrate("dataset", args['square_size_cm'], "./depthai.calib")
+        cal_data.calibrate("dataset", args['square_size_cm'], "./resources/depthai.calib")
     except AssertionError as e:
         print("[ERROR] " + str(e))
         exit(0)
