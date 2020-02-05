@@ -47,4 +47,4 @@ Please, do the following steps:
 3. Describe the expected results;  
 4. Describe the actual running results (what you see after started your script with depthai);  
 5. Provide us information about how you are using the depthai python API (code snippet, for example);  
-6. Send us consol outputs;  
+6. Send us console outputs;  
