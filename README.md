@@ -30,8 +30,8 @@ For better depth image quality, perform a stereo camera calibration. Follow thes
 
 1. Print the chessboard calibration image. This image is in the `resources` folder (resources/calibration-chess-board.png). Measure the square size in centimeters and insert the value in the command below. The entire board should fit on a single piece of paper (scale to fit).
 2. Start the calibration script: `python3 calibrate.py -s [SQUARE_SIZE_IN_CM]`. Left and right video streams are displayed. Each window will contain a polygon.  
-3. Hold up the printed chessboard so all four corners of the board are displayed within both video streams. Match the orientation of the overlayed polygon and press [SPACEBAR] to capture an image. The board does not need to fit inside the polygon, just match the orientation. There are 13 required polygon positions.
-4. After capturing images for all of the polygon positions, the calibration image processing step will begin. If successful, a `depthai.calib` will be added to the `resources/` folder. This file is loaded by default via the `calib_fpath` variable within `consts/resource_paths.py`. 
+3. Hold up the printed chessboard so that the whole of the checkerboard is displayed within both video streams. Match the orientation of the overlayed polygon and press [SPACEBAR] to capture an image. The checkerboard pattern does not need to match the polygon exactly, but it is important to use the polygon as a guideline for angling and location relative to the camera. There are 13 required polygon positions.
+4. After capturing images for all of the polygon positions, the calibration image processing step will begin. If successful, a `depthai.calib` file will be added to the `resources/` folder. This file is loaded by default via the `calib_fpath` variable within `consts/resource_paths.py`. 
 
 ## Issues reporting  
 
