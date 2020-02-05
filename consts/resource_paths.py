@@ -13,13 +13,12 @@ blob_config_fpath = './resources/nn/object_detection_4shave/object_detection.jso
 if path.exists('./resources/depthai.calib'):
     calib_fpath = './resources/depthai.calib'
     print("Using Calibration File: depthai.calib")
-    
+
 elif path.exists('./resources/default.calib'):
     calib_fpath = './resources/default.calib'
     print("Using Calibration File: default.calib")
-    
+
 else:
-    print("ERROR: NO CALIRATION FILE")
+    print("ERROR: NO CALIBRATION FILE")
 
 pipeline_config_fpath = './resources/config.json'
-
