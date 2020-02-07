@@ -107,7 +107,7 @@ class StereoCalibration(object):
         # save data to binary file
         self.H.tofile(out_filepath)
 
-        print("Calibration file written to %s.\nRename this file to `default.calib` and move it the `resources` folder." % (out_filepath))
+        print("Calibration file written to %s." % (out_filepath))
         print("\tTook %i to run image processing." % (round(time.time() - start_time, 2)))
         # show debug output for visual inspection
         print("\nRectifying dataset for visual inspection")
