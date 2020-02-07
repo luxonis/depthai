@@ -3,7 +3,7 @@
     [
         {       
             "output_tensor_name": "out",
-            "output_dimensions": [1, 1, 100, 7],
+            "output_dimensions": [1, 1, 100, 10],
             "output_entry_iteration_index": 2,
             "output_properties_dimensions": [3],
             "property_key_mapping":
@@ -11,7 +11,7 @@
                 [],
                 [],
                 [],
-                ["id", "label", "confidence", "left", "top", "right", "bottom"]
+                ["id", "label", "confidence", "left", "top", "right", "bottom", "distance_x", "distance_y", "distance_z"]
             ],
             "output_properties_type": "f16"
         }
