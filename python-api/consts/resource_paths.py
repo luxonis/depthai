@@ -8,4 +8,3 @@ blob_config_fpath = './resources/nn/object_detection_4shave/object_detection.jso
 
 calib_fpath =           './resources/default.calib'
 pipeline_config_fpath = './resources/config.json'
-

@@ -35,8 +35,9 @@ if not depthai.init_device(cmd_file):
 print('Available streams: ' + str(depthai.get_available_steams()))
 
 
+# Make sure to put 'left' always first. Workaround for an issue to be investigated
 configs = {
-    'streams': ['left', 'right'],
+    'streams': ['left', 'right', 'metaout', 'previewout', 'depth_sipp'],
     # 'streams': ['disparity', 'left', 'right', 'metaout', 'previewout', 'depth_mm_h', 'depth_color_h'],
     'depth': 
     {
@@ -53,7 +54,8 @@ configs = {
     {
         'swap_left_and_right_cameras': False,
         'left_fov_deg': 69.0,
-        'left_to_right_distance_cm': 3.5
+        'left_to_right_distance_cm': 3.5,
+        'left_to_rgb_distance_cm': 0.0
     }
 }
 
@@ -131,11 +133,16 @@ while True:
                         cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
                         pt_t2 = x1, y1 + 40
-                        cv2.putText(frame, str(e[0]['confidence']), pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                        cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
                         pt_t3 = x1, y1 + 60
-                        dist = e[0].distance()
-                        cv2.putText(frame, 'dist: ' + str(dist) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                        cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+
+                        pt_t4 = x1, y1 + 80
+                        cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+
+                        pt_t5 = x1, y1 + 100
+                        cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
             cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', frame)
@@ -153,7 +160,7 @@ while True:
                     cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                     cv2.imshow(packet.stream_name, frame)
                 else: # uint16
-                    frame_u8 = (frame // 255).astype(np.uint8)
+                    frame_u8 = (frame // 256).astype(np.uint8)
                     cv2.putText(frame_u8, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
                     cv2.putText(frame_u8, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
                     cv2.imshow(packet.stream_name, frame_u8)
