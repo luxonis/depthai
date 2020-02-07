@@ -34,11 +34,10 @@ if not depthai.init_device(cmd_file):
 
 print('Available streams: ' + str(depthai.get_available_steams()))
 
-
-# Make sure to put 'left' always first.
 configs = {
-    # 'streams': ['left', 'right', 'metaout', 'previewout', depth_sipp],
-    'streams': ['previewout','metaout', 'depth_sipp'],
+    # ['previewout', 'metaout', 'left', 'right', 'disparity', 'depth_sipp']
+    # If "left" is used, it must be in the first position.
+    'streams': ['previewout','metaout'],
     'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
@@ -52,10 +51,10 @@ configs = {
     },
     'board_config':
     {
-        'swap_left_and_right_cameras': True,
-        'left_fov_deg': 69.0,
+        'swap_left_and_right_cameras': True, # True for 1097 and 1098OBC
+        'left_fov_deg': 69.0, # same on 1097 and 1098OBC
         'left_to_right_distance_cm': 9.0,
-        'left_to_rgb_distance_cm': 2.0
+        'left_to_rgb_distance_cm': 2.0 # currently unused
     }
 }
 
@@ -186,5 +185,3 @@ while True:
         break
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add cod
-
-
