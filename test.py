@@ -37,7 +37,7 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 
 # Make sure to put 'left' always first.
 configs = {
-    # 'streams': ['left', 'right', 'metaout', 'previewout', 'disparity', 'depth_mm_h', 'depth_color_h'],
+    # 'streams': ['left', 'right', 'metaout', 'previewout', depth_sipp],
     'streams': ['previewout','metaout', 'depth_sipp'],
     'depth':
     {
