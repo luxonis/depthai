@@ -38,7 +38,7 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 # Make sure to put 'left' always first.
 configs = {
     # 'streams': ['left', 'right', 'metaout', 'previewout', 'disparity', 'depth_mm_h', 'depth_color_h'],
-    'streams': ['left', 'right', 'previewout','metaout', 'depth_sipp'],
+    'streams': ['previewout','metaout'],
     'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
@@ -116,7 +116,7 @@ while True:
             # iterate threw pre-saved entries & draw rectangle & text on image:
             for e in entries_prev:
                 # the lower confidence threshold - the more we get false positives
-                if e[0]['confidence'] > 0.5:
+                if e[0]['confidence'] > 0.8:
                     x1 = int(e[0]['left'] * img_w)
                     y1 = int(e[0]['top'] * img_h)
 
