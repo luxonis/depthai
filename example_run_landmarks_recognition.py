@@ -77,8 +77,6 @@ while True:
             img_h = frame.shape[0]
             img_w = frame.shape[1]
 
-
-            # frame = cv2.resize(frame, (300, 300))
             
             if len(entries_prev) != 0:
                 for i in entries_prev:
