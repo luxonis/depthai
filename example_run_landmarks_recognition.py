@@ -47,16 +47,22 @@ if p is None:
     exit(2)
 
 
+
+entries_prev = []
+
 while True:
 
     nnet_packets, data_packets = p.get_available_nnet_and_data_packets()
     
+
     for i, nnet_packet in enumerate(nnet_packets):
         landmarks = []
         for i in range(len(nnet_packet.entries()[0][0])):
             landmarks.append(nnet_packet.entries()[0][0][i])
         
         landmarks = list(zip(*[iter(landmarks)]*2))
+        entries_prev = landmarks
+
 
     for packet in data_packets:
         if packet.stream_name == 'previewout':
@@ -73,18 +79,19 @@ while True:
 
 
             # frame = cv2.resize(frame, (300, 300))
-
-            for i in landmarks:
-                x = int(i[0]*img_h)
-                y = int(i[1]*img_w)
-                # print(x,y)
-                cv2.circle(frame, (x,y), 3, (0, 0, 255))
+            
+            if len(entries_prev) != 0:
+                for i in entries_prev:
+                    x = int(i[0]*img_h)
+                    y = int(i[1]*img_w)
+                    # # print(x,y)
+                    cv2.circle(frame, (x,y), 3, (0, 0, 255))
 
             frame = cv2.resize(frame, (300, 300))
             cv2.imshow('previewout', frame)
             
 
-    if cv2.waitKey(100) == ord('q'):
+    if cv2.waitKey(1) == ord('q'):
         break
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
