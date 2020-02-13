@@ -8,7 +8,6 @@ import depthai
 
 import consts.resource_paths
 
-
 cmd_file = consts.resource_paths.device_cmd_fpath
 if len(sys.argv) > 1 and sys.argv[1] == "debug":
     cmd_file = ''
