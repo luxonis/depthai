@@ -14,7 +14,6 @@ if len(sys.argv) > 1 and sys.argv[1] == "debug":
     cmd_file = ''
     print('depthai will not load cmd file into device.')
 
-
 labels = []
 with open(consts.resource_paths.blob_labels_fpath) as fp:
     labels = fp.readlines()
@@ -34,11 +33,12 @@ if not depthai.init_device(cmd_file):
 
 print('Available streams: ' + str(depthai.get_available_steams()))
 
+
+# Make sure to put 'left' always first. Workaround for an issue to be investigated
 configs = {
-    # ['previewout', 'metaout', 'left', 'right', 'disparity', 'depth_sipp']
-    # If "left" is used, it must be in the first position.
-    'streams': ['previewout','metaout'],
-    'depth':
+    'streams': ['metaout', 'previewout'],
+    # 'streams': ['disparity', 'left', 'right', 'metaout', 'previewout', 'depth_mm_h', 'depth_color_h'],
+    'depth': 
     {
         'calibration_file': consts.resource_paths.calib_fpath,
         # 'type': 'median',
@@ -47,14 +47,15 @@ configs = {
     'ai':
     {
         'blob_file': consts.resource_paths.blob_fpath,
-        'blob_file_config': consts.resource_paths.blob_config_fpath
+        'blob_file_config': consts.resource_paths.blob_config_fpath,
+        'calc_dist_to_bb': True
     },
     'board_config':
     {
-        'swap_left_and_right_cameras': True, # True for 1097 and 1098OBC
-        'left_fov_deg': 69.0, # same on 1097 and 1098OBC
-        'left_to_right_distance_cm': 9.0,
-        'left_to_rgb_distance_cm': 2.0 # currently unused
+        'swap_left_and_right_cameras': False,
+        'left_fov_deg': 69.0,
+        'left_to_right_distance_cm': 3.5,
+        'left_to_rgb_distance_cm': 0.0
     }
 }
 
@@ -115,7 +116,7 @@ while True:
             # iterate threw pre-saved entries & draw rectangle & text on image:
             for e in entries_prev:
                 # the lower confidence threshold - the more we get false positives
-                if e[0]['confidence'] > 0.8:
+                if e[0]['confidence'] > 0.5:
                     x1 = int(e[0]['left'] * img_w)
                     y1 = int(e[0]['top'] * img_h)
 
@@ -159,13 +160,10 @@ while True:
                     cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                     cv2.imshow(packet.stream_name, frame)
                 else: # uint16
-                    frame = (65535 // frame).astype(np.uint8)
-                    #colorize depth map, comment out code below to obtain grayscale
-                    frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
-                    # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
-                    cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                    cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                    cv2.imshow(packet.stream_name, frame)
+                    frame_u8 = (frame // 256).astype(np.uint8)
+                    cv2.putText(frame_u8, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                    cv2.putText(frame_u8, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                    cv2.imshow(packet.stream_name, frame_u8)
             else: # bgr
                 cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
@@ -184,4 +182,6 @@ while True:
     if cv2.waitKey(1) == ord('q'):
         break
 
-del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add cod
+del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
+
+print('py: DONE.')

@@ -36,19 +36,20 @@ configs = {
         'blob_file_config': consts.resource_paths.prefix + 'nn/object_detection_4shave/object_detection.json',
 
         # leave only one uncommented:
-        'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/face-detection-adas-0001.blob'
-        # 'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/face-detection-retail-0004.blob
-        # 'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/mobilenet_ssd.blob',
+        # 'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/face-detection-adas-0001.blob',
+        #  'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/face-detection-retail-0004.blob',
+         'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/mobilenet_ssd.blob',
         # 'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/pedestrian-detection-adas-0002.blob'
         # 'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/person-detection-retail-0002.blob'
         # 'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/person-detection-retail-0013.blob'
         # 'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/person-vehicle-bike-detection-crossroad-1016.blob'
         # 'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/vehicle-detection-adas-0002.blob'
         # 'blob_file': consts.resource_paths.prefix + 'nn/object_detection_4shave/vehicle-license-plate-detection-barrier-0106.blob'
+        'calc_dist_to_bb': True
     },
     'board_config':
     {
-        'swap_left_and_right_cameras': False
+        'swap_left_and_right_cameras': True
     }
 }
 
@@ -123,7 +124,7 @@ while True:
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow(packet.stream_name, frame_bgr)
 
-    if cv2.waitKey(100) == ord('q'):
+    if cv2.waitKey(1) == ord('q'):
         break
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.

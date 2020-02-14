@@ -49,6 +49,7 @@ e_states = {
     4 : "anger"
 }
 
+entries_prev = []
 
 while True:
 
@@ -58,6 +59,7 @@ while True:
         detections = []
         for i in range(len(nnet_packet.entries()[0][0])):
             detections.append(nnet_packet.entries()[0][0][i])
+        entries_prev = detections 
 
     for packet in data_packets:
         if packet.stream_name == 'previewout':
@@ -72,17 +74,17 @@ while True:
             img_h = frame.shape[0]
             img_w = frame.shape[1]
 
-            emotion = e_states[np.argmax(detections)]
-            # print(emotion)
+            if len(entries_prev) != 0:
+                emotion = e_states[np.argmax(entries_prev)]
+                cv2.putText(frame, emotion, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
             frame = cv2.resize(frame, (300, 300))
-            cv2.putText(frame, emotion, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
             cv2.imshow('previewout', frame)
 
 
             
 
-    if cv2.waitKey(100) == ord('q'):
+    if cv2.waitKey(1) == ord('q'):
         break
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
