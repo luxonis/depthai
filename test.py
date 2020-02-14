@@ -48,7 +48,8 @@ configs = {
     'ai':
     {
         'blob_file': consts.resource_paths.blob_fpath,
-        'blob_file_config': consts.resource_paths.blob_config_fpath
+        'blob_file_config': consts.resource_paths.blob_config_fpath,
+        'calc_dist_to_bb': True
     },
     'board_config':
     {
@@ -119,9 +120,6 @@ while True:
                 if e[0]['confidence'] > 0.5:
                     x1 = int(e[0]['left'] * img_w)
                     y1 = int(e[0]['top'] * img_h)
-                    print(e[0]['distance_x'])
-                    print(e[0]['distance_y'])
-                    print(e[0]['distance_z'])
 
                     pt1 = x1, y1
                     pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
