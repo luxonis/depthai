@@ -14,7 +14,6 @@ if len(sys.argv) > 1 and sys.argv[1] == "debug":
     cmd_file = ''
     print('depthai will not load cmd file into device.')
 
-
 labels = []
 with open(consts.resource_paths.blob_labels_fpath) as fp:
     labels = fp.readlines()
