@@ -41,7 +41,7 @@ configs = {
     # If "left" is used, it must be in the first position.
     # To test depth use:
     # ['metaout', 'previewout', 'depth_sipp']
-    'streams': ['left', 'right', 'metaout', 'previewout', 'depth_sipp'],
+    'streams': ['metaout', 'previewout'],
     'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
