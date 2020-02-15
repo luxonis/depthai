@@ -36,9 +36,11 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 
 # Make sure to put 'left' always first. Workaround for an issue to be investigated
 configs = {
+    # Possible streams:
+    # ['left', 'right','previewout', 'metaout', 'disparity', 'depth_sipp']
+    # If "left" is used, it must be in the first position.
     'streams': ['metaout', 'previewout'],
-    # 'streams': ['disparity', 'left', 'right', 'metaout', 'previewout', 'depth_mm_h', 'depth_color_h'],
-    'depth': 
+    'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
         # 'type': 'median',
@@ -52,17 +54,15 @@ configs = {
     },
     'board_config':
     {
-        'swap_left_and_right_cameras': False,
-        'left_fov_deg': 69.0,
-        'left_to_right_distance_cm': 3.5,
-        'left_to_rgb_distance_cm': 0.0
+        'swap_left_and_right_cameras': True, # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
+        'left_fov_deg': 69.0, # Same on 1097 and 1098OBC
+        'left_to_right_distance_cm': 9.0, # Distance between stereo cameras
+        'left_to_rgb_distance_cm': 2.0 # Currently unused
     }
 }
 
-
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=configs)
-
 
 if p is None:
     print('Pipeline is not created.')
