@@ -70,7 +70,7 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
     # Possible streams:
-    # ['left', 'right','previewout', 'metaout', 'disparity', 'depth_sipp']
+    # ['left', 'right','previewout', 'metaout', 'depth_sipp']
     # If "left" is used, it must be in the first position.
     # To test depth use:
     # ['metaout', 'previewout', 'depth_sipp']
