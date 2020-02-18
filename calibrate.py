@@ -1,5 +1,6 @@
 import depthai
-from  calibration_utils import *
+from depthai_helpers.calibration_utils import *
+from depthai_helpers import utils
 import argparse
 from argparse import ArgumentParser
 import time
@@ -128,7 +129,7 @@ if 'capture' in args['mode']:
     }
 
     if args['config_overwrite'] is not None:
-        config = merge(args['config_overwrite'],config)
+        config = utils.merge(args['config_overwrite'],config)
         print("Merged Pipeline config with overwrite",config)
 
     pipeline = depthai.create_pipeline(config)
