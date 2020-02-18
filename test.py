@@ -18,8 +18,13 @@ def parse_args():
 
     Example usage:
 
-    Pass thru pipeline config options:
+    # Pass thru pipeline config options
+
+    ## USB3 w/onboard cameras board config:
     python3 test.py -co '{"board_config": {"left_to_right_distance_cm": 7.5}}'
+
+    ## Show the depth stream:
+    python3 test.py -co '{"streams": ["depth_sipp"]}'
     '''
     parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-co", "--config_overwrite", default=None,
