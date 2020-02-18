@@ -1,12 +1,41 @@
 import sys
 from time import time
 from time import sleep
+import argparse
+from argparse import ArgumentParser
+import json
 import numpy as np
 import cv2
 
 import depthai
 
 import consts.resource_paths
+from depthai_helpers import utils
+
+def parse_args():
+    epilog_text = '''
+    Displays video streams captured by DepthAI.
+
+    Example usage:
+
+    Pass thru pipeline config options:
+    python3 test.py -co '{"board_config": {"left_to_right_distance_cm": 7.5}}'
+    '''
+    parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("-co", "--config_overwrite", default=None,
+                        type=str, required=False,
+                        help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
+
+    options = parser.parse_args()
+
+    return options
+
+args = vars(parse_args())
+
+if args['config_overwrite']:
+    args['config_overwrite'] = json.loads(args['config_overwrite'])
+
+print("Using Arguments=",args)
 
 
 cmd_file = consts.resource_paths.device_cmd_fpath
@@ -33,9 +62,8 @@ if not depthai.init_device(cmd_file):
 
 print('Available streams: ' + str(depthai.get_available_steams()))
 
-
-# Make sure to put 'left' always first. Workaround for an issue to be investigated
-configs = {
+# Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
+config = {
     # Possible streams:
     # ['left', 'right','previewout', 'metaout', 'disparity', 'depth_sipp']
     # If "left" is used, it must be in the first position.
@@ -63,8 +91,12 @@ configs = {
     }
 }
 
+if args['config_overwrite'] is not None:
+    config = utils.merge(args['config_overwrite'],config)
+    print("Merged Pipeline config with overwrite",config)
+
 # create the pipeline, here is the first connection with the device
-p = depthai.create_pipeline(config=configs)
+p = depthai.create_pipeline(config=config)
 
 if p is None:
     print('Pipeline is not created.')
@@ -74,7 +106,7 @@ if p is None:
 t_start = time()
 frame_count = {}
 frame_count_prev = {}
-for s in configs['streams']:
+for s in config['streams']:
     frame_count[s] = 0
     frame_count_prev[s] = 0
 
@@ -101,7 +133,7 @@ while True:
             entries_prev.append(e)
 
     for packet in data_packets:
-        if packet.stream_name not in configs['streams']:
+        if packet.stream_name not in config['streams']:
             continue # skip streams that were automatically added
         elif packet.stream_name == 'previewout':
             data = packet.getData()
@@ -177,7 +209,7 @@ while True:
     if t_start + 1.0 < t_curr:
         t_start = t_curr
 
-        for s in configs['streams']:
+        for s in config['streams']:
             frame_count_prev[s] = frame_count[s]
             frame_count[s] = 0
 
