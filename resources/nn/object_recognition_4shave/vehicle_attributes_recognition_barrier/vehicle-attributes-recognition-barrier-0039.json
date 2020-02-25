@@ -1,0 +1,65 @@
+{
+    "tensors":
+    [
+        {       
+            "output_tensor_name": "out",
+            "output_dimensions": [1, 7, 1, 1],
+            "output_entry_iteration_index": 0,
+            "output_properties_dimensions": [0],
+            "property_key_mapping":
+            [
+                ["white", "gray", "yellow", "red", "green", "blue", "black"]
+            ],
+            "property_value_mapping":
+            [
+                []
+            ],
+            "output_properties_type": "f16"
+        },
+	{       
+            "output_tensor_name": "out1",
+            "output_dimensions": [1, 4, 1, 1],
+            "output_entry_iteration_index": 0,
+            "output_properties_dimensions": [0],
+            "property_key_mapping":
+            [
+                ["car", "bus", "truck", "van"]
+            ],
+            "property_value_mapping":
+            [
+                []
+            ],
+            "output_properties_type": "f16"
+       }
+    ],
+    "mappings":
+    {
+        "labels":
+        [
+            "background",
+            "aeroplane",
+            "bicycle",
+            "bird",
+            "boat",
+            "bottle",
+            "bus",
+            "car",
+            "cat",
+            "chair",
+            "cow",
+            "diningtable",
+            "dog",
+            "horse",
+            "motorbike",
+            "person",
+            "pottedplant",
+            "sheep",
+            "sofa",
+            "train",
+            "tvmonitor"
+        ]
+    }
+}
+
+
+
