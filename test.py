@@ -1,46 +1,15 @@
+import json
 import sys
 from time import time
 from time import sleep
-import argparse
-from argparse import ArgumentParser
-import json
 import numpy as np
 import cv2
+import struct
 
 import depthai
 
 import consts.resource_paths
-from depthai_helpers import utils
-
-def parse_args():
-    epilog_text = '''
-    Displays video streams captured by DepthAI.
-
-    Example usage:
-
-    # Pass thru pipeline config options
-
-    ## USB3 w/onboard cameras board config:
-    python3 test.py -co '{"board_config": {"left_to_right_distance_cm": 7.5}}'
-
-    ## Show the depth stream:
-    python3 test.py -co '{"streams": ["depth_sipp"]}'
-    '''
-    parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-co", "--config_overwrite", default=None,
-                        type=str, required=False,
-                        help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
-
-    options = parser.parse_args()
-
-    return options
-
-args = vars(parse_args())
-
-if args['config_overwrite']:
-    args['config_overwrite'] = json.loads(args['config_overwrite'])
-
-print("Using Arguments=",args)
+from termcolor import colored
 
 
 cmd_file = consts.resource_paths.device_cmd_fpath
@@ -48,16 +17,15 @@ if len(sys.argv) > 1 and sys.argv[1] == "debug":
     cmd_file = ''
     print('depthai will not load cmd file into device.')
 
+
 labels = []
 with open(consts.resource_paths.blob_labels_fpath) as fp:
     labels = fp.readlines()
     labels = [i.strip() for i in labels]
 
 
-
 print('depthai.__version__ == %s' % depthai.__version__)
 print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
-
 
 
 if not depthai.init_device(cmd_file):
@@ -67,15 +35,20 @@ if not depthai.init_device(cmd_file):
 
 print('Available streams: ' + str(depthai.get_available_steams()))
 
-# Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
-config = {
-    # Possible streams:
-    # ['left', 'right','previewout', 'metaout', 'depth_sipp']
-    # If "left" is used, it must be in the first position.
-    # To test depth use:
-    # ['metaout', 'previewout', 'depth_sipp']
-    'streams': ['metaout', 'previewout'],
-    'depth':
+
+# Make sure to put 'left' always first. Workaround for an issue to be investigated
+configs = {
+    'streams': [
+        'meta_d2h',
+        {'name': 'left', "max_fps": 5.0},
+        {'name': 'right', "max_fps": 5.0},
+        # 'depth_sipp',
+        'metaout',
+        'previewout',
+        'depth_color_h',
+    ],
+    #'streams': ['left', 'right', 'metaout', 'previewout', 'depth_sipp'],
+    'depth': 
     {
         'calibration_file': consts.resource_paths.calib_fpath,
         # 'type': 'median',
@@ -89,19 +62,23 @@ config = {
     },
     'board_config':
     {
-        'swap_left_and_right_cameras': True, # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
-        'left_fov_deg': 69.0, # Same on 1097 and 1098OBC
-        'left_to_right_distance_cm': 9.0, # Distance between stereo cameras
-        'left_to_rgb_distance_cm': 2.0 # Currently unused
+        'swap_left_and_right_cameras': False,
+        'left_fov_deg': 69.0,
+        'left_to_right_distance_cm': 3.5,
+        'left_to_rgb_distance_cm': 0.0
     }
 }
 
-if args['config_overwrite'] is not None:
-    config = utils.merge(args['config_overwrite'],config)
-    print("Merged Pipeline config with overwrite",config)
+if 'depth_sipp' in configs['streams'] and ('depth_color_h' in configs['streams'] or 'depth_mm_h' in configs['streams']):
+    print(colored('ERROR: depth_sipp is mutually exclusive with depth_color_h', 'red'))
+    exit(2)
+    # del configs["streams"][configs['streams'].index('depth_sipp')]
+
+stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in configs['streams']]
 
 # create the pipeline, here is the first connection with the device
-p = depthai.create_pipeline(config=config)
+p = depthai.create_pipeline(config=configs)
+
 
 if p is None:
     print('Pipeline is not created.')
@@ -111,7 +88,7 @@ if p is None:
 t_start = time()
 frame_count = {}
 frame_count_prev = {}
-for s in config['streams']:
+for s in stream_names:
     frame_count[s] = 0
     frame_count_prev[s] = 0
 
@@ -138,7 +115,7 @@ while True:
             entries_prev.append(e)
 
     for packet in data_packets:
-        if packet.stream_name not in config['streams']:
+        if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
         elif packet.stream_name == 'previewout':
             data = packet.getData()
@@ -158,6 +135,9 @@ while True:
                 if e[0]['confidence'] > 0.5:
                     x1 = int(e[0]['left'] * img_w)
                     y1 = int(e[0]['top'] * img_h)
+                    # print(e[0]['distance_x'])
+                    # print(e[0]['distance_y'])
+                    # print(e[0]['distance_z'])
 
                     pt1 = x1, y1
                     pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
@@ -173,15 +153,15 @@ while True:
 
                         pt_t2 = x1, y1 + 40
                         cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                        if configs['ai']['calc_dist_to_bb']:
+                            pt_t3 = x1, y1 + 60
+                            cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
-                        pt_t3 = x1, y1 + 60
-                        cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                            pt_t4 = x1, y1 + 80
+                            cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
-                        pt_t4 = x1, y1 + 80
-                        cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
-
-                        pt_t5 = x1, y1 + 100
-                        cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                            pt_t5 = x1, y1 + 100
+                            cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
             cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', frame)
@@ -207,6 +187,15 @@ while True:
                 cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
                 cv2.imshow(packet.stream_name, frame)
+        elif packet.stream_name == 'meta_d2h':
+            str_ = packet.getDataAsStr()
+            dict_ = json.loads(str_)
+
+            print('meta_d2h Temp',
+            	' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
+            	' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
+            	' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
+            	' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
 
         frame_count[packet.stream_name] += 1
 
@@ -214,7 +203,7 @@ while True:
     if t_start + 1.0 < t_curr:
         t_start = t_curr
 
-        for s in config['streams']:
+        for s in stream_names:
             frame_count_prev[s] = frame_count[s]
             frame_count[s] = 0
 
