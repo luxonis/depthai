@@ -9,7 +9,6 @@ import struct
 import depthai
 
 import consts.resource_paths
-from termcolor import colored
 
 
 cmd_file = consts.resource_paths.device_cmd_fpath
@@ -70,7 +69,7 @@ configs = {
 }
 
 if 'depth_sipp' in configs['streams'] and ('depth_color_h' in configs['streams'] or 'depth_mm_h' in configs['streams']):
-    print(colored('ERROR: depth_sipp is mutually exclusive with depth_color_h', 'red'))
+    print('ERROR: depth_sipp is mutually exclusive with depth_color_h')
     exit(2)
     # del configs["streams"][configs['streams'].index('depth_sipp')]
 
