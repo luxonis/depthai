@@ -29,7 +29,8 @@ configs = {
 
         # 35 landmarks
         'blob_file_config': consts.resource_paths.prefix + 'nn/object_recognition_4shave/landmarks/landmarks-config-35.json',
-        'blob_file': consts.resource_paths.prefix + 'nn/object_recognition_4shave/landmarks/facial-landmarks-35-adas-0002.blob'
+        'blob_file': consts.resource_paths.prefix + 'nn/object_recognition_4shave/landmarks/facial-landmarks-35-adas-0002.blob',
+        'calc_dist_to_bb': False
     },
     'board_config':
     {

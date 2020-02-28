@@ -24,7 +24,8 @@ configs = {
     'ai':
     {
         'blob_file_config': consts.resource_paths.prefix + 'nn/object_recognition_4shave/emotion_recognition/emotions-recognition-retail-0003.json',
-        'blob_file': consts.resource_paths.prefix + 'nn/object_recognition_4shave/emotion_recognition/emotions-recognition-retail-0003.blob'
+        'blob_file': consts.resource_paths.prefix + 'nn/object_recognition_4shave/emotion_recognition/emotions-recognition-retail-0003.blob',
+        'calc_dist_to_bb': False
     },
     'board_config':
     {
