@@ -23,8 +23,8 @@ def parse_args():
     ## USB3 w/onboard cameras board config:
     python3 test.py -co '{"board_config": {"left_to_right_distance_cm": 7.5}}'
 
-    ## Show the depth stream:
-    python3 test.py -co '{"streams": ["depth_sipp"]}'
+    ## Show the left+depth stream:
+    python3 test.py -co '{"streams": ["left","depth_sipp"]}'
     '''
     parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-co", "--config_overwrite", default=None,
@@ -199,10 +199,13 @@ while True:
                     cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                     cv2.imshow(packet.stream_name, frame)
                 else: # uint16
-                    frame_u8 = (frame // 256).astype(np.uint8)
-                    cv2.putText(frame_u8, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                    cv2.putText(frame_u8, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                    cv2.imshow(packet.stream_name, frame_u8)
+                    frame = (65535 // frame).astype(np.uint8)
+                    #colorize depth map, comment out code below to obtain grayscale
+                    frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
+                    # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
+                    cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                    cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                    cv2.imshow(packet.stream_name, frame)
             else: # bgr
                 cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
