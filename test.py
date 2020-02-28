@@ -41,10 +41,10 @@ configs = {
         'meta_d2h',
         {'name': 'left', "max_fps": 5.0},
         {'name': 'right', "max_fps": 5.0},
-        # 'depth_sipp',
+        {'name': 'depth_sipp', "max_fps": 10.0},
         'metaout',
-        'previewout',
-        'depth_color_h',
+        {'name': 'previewout', "max_fps": 10.0},
+        # 'depth_color_h',
     ],
     #'streams': ['left', 'right', 'metaout', 'previewout', 'depth_sipp'],
     'depth': 
