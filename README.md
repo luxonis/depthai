@@ -1,4 +1,4 @@
-# DepthAI Python API Extras
+# DepthAI Python API Extras 
 
 This repo contains the pre-compiled DepthAI Python module (compiled as an architecture-specific `.so` file), utilities, and DepthAI examples.
 
