@@ -9,6 +9,37 @@ import struct
 import depthai
 
 import consts.resource_paths
+from depthai_helpers import utils
+
+def parse_args():
+    epilog_text = '''
+    Displays video streams captured by DepthAI.
+
+    Example usage:
+
+    # Pass thru pipeline config options
+
+    ## USB3 w/onboard cameras board config:
+    python3 test.py -co '{"board_config": {"left_to_right_distance_cm": 7.5}}'
+
+    ## Show the left+depth stream:
+    python3 test.py -co '{"streams": ["left","depth_sipp"]}'
+    '''
+    parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("-co", "--config_overwrite", default=None,
+                        type=str, required=False,
+                        help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
+
+    options = parser.parse_args()
+
+    return options
+
+args = vars(parse_args())
+
+if args['config_overwrite']:
+    args['config_overwrite'] = json.loads(args['config_overwrite'])
+
+print("Using Arguments=",args)
 
 
 cmd_file = consts.resource_paths.device_cmd_fpath
@@ -37,16 +68,14 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 
 # Make sure to put 'left' always first. Workaround for an issue to be investigated
 configs = {
-    'streams': [
-        'meta_d2h',
-        {'name': 'left', "max_fps": 5.0},
-        {'name': 'right', "max_fps": 5.0},
-        {'name': 'depth_sipp', "max_fps": 10.0},
-        'metaout',
-        {'name': 'previewout', "max_fps": 10.0},
-        # 'depth_color_h',
+    # Possible streams:
+    # ['left', 'right','previewout', 'metaout', 'depth_sipp', 'depth_color_h', 'disparity']
+	# To test depth use:
+    #'streams': [
+	#	{'name': 'depth_sipp', "max_fps": 12.0},
+	#	{'name': 'previewout', "max_fps": 12.0},
     ],
-    #'streams': ['left', 'right', 'metaout', 'previewout', 'depth_sipp'],
+    'streams': ['metaout', 'previewout'],
     'depth': 
     {
         'calibration_file': consts.resource_paths.calib_fpath,
@@ -61,10 +90,10 @@ configs = {
     },
     'board_config':
     {
-        'swap_left_and_right_cameras': False,
-        'left_fov_deg': 69.0,
-        'left_to_right_distance_cm': 3.5,
-        'left_to_rgb_distance_cm': 0.0
+        'swap_left_and_right_cameras': True, # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
+        'left_fov_deg': 69.0, # Same on 1097 and 1098OBC
+        'left_to_right_distance_cm': 9.0, # Distance between stereo cameras
+        'left_to_rgb_distance_cm': 2.0 # Currently unused
     }
 }
 
@@ -74,6 +103,10 @@ if 'depth_sipp' in configs['streams'] and ('depth_color_h' in configs['streams']
     # del configs["streams"][configs['streams'].index('depth_sipp')]
 
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in configs['streams']]
+
+if args['config_overwrite'] is not None:
+    config = utils.merge(args['config_overwrite'],config)
+    print("Merged Pipeline config with overwrite",config)
 
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=configs)
