@@ -2,6 +2,8 @@ import json
 import sys
 from time import time
 from time import sleep
+import argparse
+from argparse import ArgumentParser
 import numpy as np
 import cv2
 import struct
@@ -10,6 +12,7 @@ import depthai
 
 import consts.resource_paths
 from depthai_helpers import utils
+
 
 def parse_args():
     epilog_text = '''
@@ -71,10 +74,7 @@ configs = {
     # Possible streams:
     # ['left', 'right','previewout', 'metaout', 'depth_sipp', 'depth_color_h', 'disparity']
 	# To test depth use:
-    #'streams': [
-	#	{'name': 'depth_sipp', "max_fps": 12.0},
-	#	{'name': 'previewout', "max_fps": 12.0},
-    ],
+    # 'streams': [{'name': 'depth_sipp', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
     'streams': ['metaout', 'previewout'],
     'depth': 
     {
