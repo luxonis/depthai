@@ -1,9 +1,9 @@
-import json
 import sys
 from time import time
 from time import sleep
 import argparse
 from argparse import ArgumentParser
+import json
 import numpy as np
 import cv2
 import struct
@@ -69,7 +69,7 @@ if not depthai.init_device(cmd_file):
 print('Available streams: ' + str(depthai.get_available_steams()))
 
 
-# Make sure to put 'left' always first. Workaround for an issue to be investigated
+# Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 configs = {
     # Possible streams:
     # ['left', 'right','previewout', 'metaout', 'depth_sipp', 'depth_color_h', 'disparity']

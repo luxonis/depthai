@@ -1,0 +1,80 @@
+{
+    "tensors":
+    [
+        {       
+            "output_tensor_name": "out",
+            "output_dimensions": [1, 8, 1, 1],
+            "output_entry_iteration_index": 0,
+            "output_properties_dimensions": [0],
+            "property_key_mapping":
+            [
+                ["is_male", "has_bag", "has_backpack", "has_hat", "has_longsleeves", "has_longpants", "has_longhair", "has_coat_jacket"]
+            ],
+            "property_value_mapping":
+            [
+                []
+            ],
+            "output_properties_type": "f16"
+        },
+	{       
+            "output_tensor_name": "out1",
+            "output_dimensions": [1, 2, 1, 1],
+            "output_entry_iteration_index": 0,
+            "output_properties_dimensions": [0],
+            "property_key_mapping":
+            [
+                ["x", "y"]
+            ],
+            "property_value_mapping":
+            [
+                []
+            ],
+            "output_properties_type": "f16"
+       },
+       {       
+            "output_tensor_name": "out2",
+            "output_dimensions": [1, 2, 1, 1],
+            "output_entry_iteration_index": 0,
+            "output_properties_dimensions": [0],
+            "property_key_mapping":
+            [
+                ["x", "y"]
+            ],
+            "property_value_mapping":
+            [
+                []
+            ],
+            "output_properties_type": "f16"
+       }
+    ],
+    "mappings":
+    {
+        "labels":
+        [
+            "background",
+            "aeroplane",
+            "bicycle",
+            "bird",
+            "boat",
+            "bottle",
+            "bus",
+            "car",
+            "cat",
+            "chair",
+            "cow",
+            "diningtable",
+            "dog",
+            "horse",
+            "motorbike",
+            "person",
+            "pottedplant",
+            "sheep",
+            "sofa",
+            "train",
+            "tvmonitor"
+        ]
+    }
+}
+
+
+

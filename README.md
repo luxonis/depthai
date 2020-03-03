@@ -35,4 +35,4 @@ If you run into a problem, please follow the steps below and email support@luxon
 3. Describe the expected results; 
 4. Describe the actual running results (what you see after started your script with DepthAI)
 5. How you are using the DepthAI python API (code snippet, for example)
-6. Console output
+6. Console output 
