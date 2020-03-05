@@ -70,10 +70,10 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
     # Possible streams:
-    # ['left', 'right','previewout', 'metaout', 'depth_sipp']
+    # ['left', 'right','previewout', 'metaout', 'depth_sipp', 'disparity', 'depth_color_h']
     # If "left" is used, it must be in the first position.
     # To test depth use:
-    # ['metaout', 'previewout', 'depth_sipp']
+    # 'streams': [{'name': 'depth_sipp', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
     'streams': ['metaout', 'previewout'],
     'depth':
     {
@@ -96,6 +96,14 @@ config = {
     }
 }
 
+if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] or 'depth_mm_h' in config['streams']):
+    print('ERROR: depth_sipp is mutually exclusive with depth_color_h')
+    exit(2)
+    # del config["streams"][config['streams'].index('depth_sipp')]
+
+stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
+
+
 if args['config_overwrite'] is not None:
     config = utils.merge(args['config_overwrite'],config)
     print("Merged Pipeline config with overwrite",config)
@@ -111,7 +119,7 @@ if p is None:
 t_start = time()
 frame_count = {}
 frame_count_prev = {}
-for s in config['streams']:
+for s in stream_names:
     frame_count[s] = 0
     frame_count_prev[s] = 0
 
@@ -138,7 +146,7 @@ while True:
             entries_prev.append(e)
 
     for packet in data_packets:
-        if packet.stream_name not in config['streams']:
+        if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
         elif packet.stream_name == 'previewout':
             data = packet.getData()
@@ -173,15 +181,15 @@ while True:
 
                         pt_t2 = x1, y1 + 40
                         cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                        if config['ai']['calc_dist_to_bb']:
+                            pt_t3 = x1, y1 + 60
+                            cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
-                        pt_t3 = x1, y1 + 60
-                        cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                            pt_t4 = x1, y1 + 80
+                            cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
-                        pt_t4 = x1, y1 + 80
-                        cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
-
-                        pt_t5 = x1, y1 + 100
-                        cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                            pt_t5 = x1, y1 + 100
+                            cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
             cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', frame)
@@ -217,7 +225,7 @@ while True:
     if t_start + 1.0 < t_curr:
         t_start = t_curr
 
-        for s in config['streams']:
+        for s in stream_names:
             frame_count_prev[s] = frame_count[s]
             frame_count[s] = 0
 
