@@ -23,14 +23,14 @@ def parse_args():
     ## USB3 w/onboard cameras board config:
     python3 test.py -co '{"board_config": {"left_to_right_distance_cm": 7.5}}'
 
-    ## Show the left+depth stream:
-    python3 test.py -co '{"streams": ["left","depth_sipp"]}'
+    ## Show the depth stream:
+    python3 test.py -co '{"streams": [{"name": "depth_sipp", "max_fps": 12.0}]}'
     '''
     parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
-    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true') #used only by board developers
+
     options = parser.parse_args()
 
     return options
@@ -44,7 +44,7 @@ print("Using Arguments=",args)
 
 
 cmd_file = consts.resource_paths.device_cmd_fpath
-if args['dev_debug']:
+if len(sys.argv) > 1 and sys.argv[1] == "debug":
     cmd_file = ''
     print('depthai will not load cmd file into device.')
 
@@ -96,14 +96,14 @@ config = {
     }
 }
 
+if args['config_overwrite'] is not None:
+    config = utils.merge(args['config_overwrite'],config)
+    print("Merged Pipeline config with overwrite",config)
+
 if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] or 'depth_mm_h' in config['streams']):
     print('ERROR: depth_sipp is mutually exclusive with depth_color_h')
     exit(2)
     # del config["streams"][config['streams'].index('depth_sipp')]
-
-if args['config_overwrite'] is not None:
-    config = utils.merge(args['config_overwrite'],config)
-    print("Merged Pipeline config with overwrite",config)
 
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
 
@@ -234,3 +234,4 @@ while True:
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
 
 print('py: DONE.')
+                                                                                      
