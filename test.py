@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
-
+    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true', help="Used by board developers for debugging.")
     options = parser.parse_args()
 
     return options
@@ -44,7 +44,7 @@ print("Using Arguments=",args)
 
 
 cmd_file = consts.resource_paths.device_cmd_fpath
-if len(sys.argv) > 1 and sys.argv[1] == "debug":
+if args['dev_debug']:
     cmd_file = ''
     print('depthai will not load cmd file into device.')
 
