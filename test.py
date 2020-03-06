@@ -30,7 +30,7 @@ def parse_args():
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
-
+    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true') #used only by board developers
     options = parser.parse_args()
 
     return options
@@ -44,7 +44,7 @@ print("Using Arguments=",args)
 
 
 cmd_file = consts.resource_paths.device_cmd_fpath
-if len(sys.argv) > 1 and sys.argv[1] == "debug":
+if args['dev_debug']:
     cmd_file = ''
     print('depthai will not load cmd file into device.')
 
@@ -101,12 +101,11 @@ if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] o
     exit(2)
     # del config["streams"][config['streams'].index('depth_sipp')]
 
-stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
-
-
 if args['config_overwrite'] is not None:
     config = utils.merge(args['config_overwrite'],config)
     print("Merged Pipeline config with overwrite",config)
+
+stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
 
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=config)
