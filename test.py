@@ -23,14 +23,14 @@ def parse_args():
     ## USB3 w/onboard cameras board config:
     python3 test.py -co '{"board_config": {"left_to_right_distance_cm": 7.5}}'
 
-    ## Show the left+depth stream:
-    python3 test.py -co '{"streams": ["left","depth_sipp"]}'
+    ## Show the depth stream:
+    python3 test.py -co '{"streams": [{"name": "depth_sipp", "max_fps": 12.0}]}'
     '''
     parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
-
+    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true', help="Used by board developers for debugging.")
     options = parser.parse_args()
 
     return options
@@ -44,7 +44,7 @@ print("Using Arguments=",args)
 
 
 cmd_file = consts.resource_paths.device_cmd_fpath
-if len(sys.argv) > 1 and sys.argv[1] == "debug":
+if args['dev_debug']:
     cmd_file = ''
     print('depthai will not load cmd file into device.')
 
@@ -70,10 +70,10 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
     # Possible streams:
-    # ['left', 'right','previewout', 'metaout', 'depth_sipp']
+    # ['left', 'right','previewout', 'metaout', 'depth_sipp', 'disparity', 'depth_color_h']
     # If "left" is used, it must be in the first position.
     # To test depth use:
-    # ['metaout', 'previewout', 'depth_sipp']
+    # 'streams': [{'name': 'depth_sipp', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
     'streams': ['metaout', 'previewout'],
     'depth':
     {
@@ -100,6 +100,13 @@ if args['config_overwrite'] is not None:
     config = utils.merge(args['config_overwrite'],config)
     print("Merged Pipeline config with overwrite",config)
 
+if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] or 'depth_mm_h' in config['streams']):
+    print('ERROR: depth_sipp is mutually exclusive with depth_color_h')
+    exit(2)
+    # del config["streams"][config['streams'].index('depth_sipp')]
+
+stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
+
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=config)
 
@@ -111,7 +118,7 @@ if p is None:
 t_start = time()
 frame_count = {}
 frame_count_prev = {}
-for s in config['streams']:
+for s in stream_names:
     frame_count[s] = 0
     frame_count_prev[s] = 0
 
@@ -138,7 +145,7 @@ while True:
             entries_prev.append(e)
 
     for packet in data_packets:
-        if packet.stream_name not in config['streams']:
+        if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
         elif packet.stream_name == 'previewout':
             data = packet.getData()
@@ -173,15 +180,15 @@ while True:
 
                         pt_t2 = x1, y1 + 40
                         cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                        if config['ai']['calc_dist_to_bb']:
+                            pt_t3 = x1, y1 + 60
+                            cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
-                        pt_t3 = x1, y1 + 60
-                        cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                            pt_t4 = x1, y1 + 80
+                            cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
-                        pt_t4 = x1, y1 + 80
-                        cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
-
-                        pt_t5 = x1, y1 + 100
-                        cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                            pt_t5 = x1, y1 + 100
+                            cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
             cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', frame)
@@ -217,7 +224,7 @@ while True:
     if t_start + 1.0 < t_curr:
         t_start = t_curr
 
-        for s in config['streams']:
+        for s in stream_names:
             frame_count_prev[s] = frame_count[s]
             frame_count[s] = 0
 
@@ -227,3 +234,4 @@ while True:
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
 
 print('py: DONE.')
+                                                                                      
