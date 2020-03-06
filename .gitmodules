@@ -1,0 +1,3 @@
+[submodule "depthai-api"]
+	path = depthai-api
+	url = ../depthai-api
