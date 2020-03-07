@@ -10,6 +10,12 @@ Files with `.so` extension are the python modules:
 - `depthai.cpython-36m-x86_64-linux-gnu.so` built for Ubuntu 18.04 & Python 3.6  
 - `depthai.cpython-37m-arm-linux-gnueabihf.so` built for Raspbian 10 & Python 3.7  
 
+For supporting other platforms, there is an option to build the python lib from sources by grabbing the [depthai-api](https://github.com/luxonis/depthai-api) submodule:
+
+    git submodule update --init
+    ./depthai-api/install_dependencies.sh
+    ./depthai-api/build_py_module.sh
+
 ## Examples
 
 `test.py` - depth & CNN inference example  
@@ -21,8 +27,8 @@ OpenVINO toolkit contains components which allow conversion of existing supporte
 Example of the conversion:
 1. First the `model_optimizer` tool will convert the model to IR format:  
 
-        cd <path-to-openvino-folder>/deployment_tools/model_optimizer
-        python3 mo.py --model_name ResNet50 --output_dir ResNet50_IR_FP16 --framework tf --data_type FP16 --input_model inference_graph.pb
+       cd <path-to-openvino-folder>/deployment_tools/model_optimizer
+       python3 mo.py --model_name ResNet50 --output_dir ResNet50_IR_FP16 --framework tf --data_type FP16 --input_model inference_graph.pb
 
     - The command will produce the following files in the `ResNet50_IR_FP16` directory:
         - `ResNet50.bin` - weights file;
@@ -31,14 +37,14 @@ Example of the conversion:
 2. The weights (`.bin`) and graph (`.xml`) files produced above (or from the Intel Model Zoo) will be required for building a blob file,
 with the help of the `myriad_compile` tool. When producing blobs, the following constraints must be applied:
 
-        CMX-SLICES = 4 
-        SHAVES = 4 
-        INPUT-FORMATS = 8 
-        OUTPUT-FORMATS = FP16/FP32 (host code for meta frame display should be updated accordingly)
+       CMX-SLICES = 4 
+       SHAVES = 4 
+       INPUT-FORMATS = 8 
+       OUTPUT-FORMATS = FP16/FP32 (host code for meta frame display should be updated accordingly)
 
     Example of command execution:
 
-        <path-to-openvino-folder>/deployment_tools/inference_engine/lib/intel64/myriad_compile -m ./ResNet50.xml -o ResNet50.blob -ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
+       <path-to-openvino-folder>/deployment_tools/inference_engine/lib/intel64/myriad_compile -m ./ResNet50.xml -o ResNet50.blob -ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
 
 ## Reporting issues
 
