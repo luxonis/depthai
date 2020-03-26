@@ -234,4 +234,3 @@ while True:
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
 
 print('py: DONE.')
-                                                                                      
