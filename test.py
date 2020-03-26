@@ -30,6 +30,8 @@ def parse_args():
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
+    parser.add_argument("-dev", "--device-id", default='', type=str,
+                        help="USB port number for the device to connect to. Use the word 'list' to show all devices and exit.")
     parser.add_argument("-debug", "--dev_debug", default=None, action='store_true', help="Used by board developers for debugging.")
     options = parser.parse_args()
 
@@ -60,7 +62,7 @@ print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
 
 
 
-if not depthai.init_device(cmd_file):
+if not depthai.init_device(cmd_file, args['device_id']):
     print("Error initializing device. Try to reset it.")
     exit(1)
 
