@@ -1,8 +1,8 @@
+#process watchdog, used to recover depthai.py 
+#on any userspace error in depthai.py (segfault for example)
 import os
 import signal
 import subprocess
-import time
-import itertools
 import atexit
 import sys
 
