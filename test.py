@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 import json
 import numpy as np
 import cv2
+import os
 
 import depthai
 
@@ -37,7 +38,11 @@ def parse_args():
 
     return options
 
-args = vars(parse_args())
+global args
+try:
+    args = vars(parse_args())
+except:
+    os._exit(2)
 
 if args['config_overwrite']:
     args['config_overwrite'] = json.loads(args['config_overwrite'])
@@ -114,7 +119,7 @@ p = depthai.create_pipeline(config=config)
 
 if p is None:
     print('Pipeline is not created.')
-    exit(2)
+    exit(3)
 
 
 t_start = time()
@@ -126,11 +131,27 @@ for s in stream_names:
 
 entries_prev = []
 
+process_watchdog_timeout=10 #seconds
+def reset_process_wd():
+    global wd_cutoff
+    wd_cutoff=time()+process_watchdog_timeout
+    return
+
+reset_process_wd()
 
 while True:
     # retreive data from the device
     # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
     nnet_packets, data_packets = p.get_available_nnet_and_data_packets()
+    
+    packets_len = len(nnet_packets) + len(data_packets)
+    if packets_len != 0:
+        reset_process_wd()
+    else:
+        cur_time=time()
+        if cur_time > wd_cutoff:
+            print("process watchdog timeout")
+            os._exit(10)
 
     for i, nnet_packet in enumerate(nnet_packets):
         # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate threw them
