@@ -77,6 +77,15 @@ def parse_args():
 
 args = vars(parse_args())
 
+def find_chessboard(frame, small=True):
+    gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+    if small:
+        frame = cv2.resize(frame, (0, 0), fx = 0.3, fy = 0.3)
+    board_detected, corners = cv2.findChessboardCorners(frame, (9,6),chessboard_flags)
+    return  board_detected
+
+
+
 if args['config_overwrite']:
     args['config_overwrite'] = json.loads(args['config_overwrite'])
 
@@ -156,11 +165,20 @@ if 'capture' in args['mode']:
     calculate_coordinates = False # track if coordinates of polynoms was calculated
     total_images = args['count']*len(args['polygons'])
 
+    # Chessboard detection termination criteria
+    criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
+    chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
+    framecnt = 0
+    leftcolor = (0, 0, 255)
+    rightcolor = (0, 0, 255)
+
     while run_capturing_images:
         _, data_list = pipeline.get_available_nnet_and_data_packets()
         for packet in data_list:
             if packet.stream_name == 'left' or packet.stream_name == 'right':
+                framecnt += 1            
                 frame = packet.getData()
+
                 if calculate_coordinates == False:
                     height, width = frame.shape
                     polygons_coordinates = setPolygonCoordinates(height, width)
@@ -174,16 +192,25 @@ if 'capture' in args['mode']:
 
                 if capture_images == True:
                     if packet.stream_name == 'left':
-                        filename = image_filename(packet.stream_name,polygon_index,total_num_of_captured_images)
-                        cv2.imwrite("dataset/left/" + str(filename), frame)
-                        print("py: Saved image as: " + str(filename))
-                        captured_left_image = True
+                        if find_chessboard(frame, False):
+                            filename = image_filename(packet.stream_name,polygon_index,total_num_of_captured_images)
+                            cv2.imwrite("dataset/left/" + str(filename), frame)
+                            print("py: Saved image as: " + str(filename))
+                            captured_left_image = True
+                        else:
+                            print("py: could not find chessboard, try again")
+                            capture_images, captured_left_image, captured_right_image = False, False, False
+
 
                     elif packet.stream_name == 'right':
-                        filename = image_filename(packet.stream_name,polygon_index,total_num_of_captured_images)
-                        cv2.imwrite("dataset/right/" + str(filename), frame)
-                        print("py: Saved image as: " + str(filename))
-                        captured_right_image = True
+                        if find_chessboard(frame, False):
+                            filename = image_filename(packet.stream_name,polygon_index,total_num_of_captured_images)
+                            cv2.imwrite("dataset/right/" + str(filename), frame)
+                            print("py: Saved image as: " + str(filename))
+                            captured_right_image = True
+                        else:
+                            print("py: could not find chess board, try again")
+                            capture_images, captured_left_image, captured_right_image = False, False, False
 
                     if captured_right_image == True and captured_left_image == True:
                         capture_images = False
@@ -199,19 +226,38 @@ if 'capture' in args['mode']:
                             except IndexError:
                                 complete = True
 
-                if complete == False:
-                    cv2.putText(frame, "Align cameras with callibration board and press spacebar to capture the image", (0, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
+                if complete == False:                    
+                    if framecnt % 60 is 0:
+                        # Find the chess board corners once a second
+                        if find_chessboard(frame):
+                            rightcolor = (0, 255, 0)
+                        else:
+                            rightcolor = (0, 0, 255)
+                    if framecnt % 61 is 0:
+                        if find_chessboard(frame):
+                            leftcolor = (0, 255, 0)
+                        else:
+                            leftcolor = (0, 0, 255)
+
+                    cv2.putText(frame, "Align cameras with callibration board and press spacebar to capture the image:", (0, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
                     cv2.putText(frame, "Polygon Position: %i. " % (polygon_index) + "Captured %i of %i images." % (total_num_of_captured_images,total_images), (0, 700), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0))
-                    cv2.polylines(frame, np.array([getPolygonCoordinates(polygon_index, polygons_coordinates)]), True, (0, 0, 255), 4)
-                    # Resizing drastically reduces the framerate
-                    # original image is 1280x720. reduce by 2x so it fits better.
-                    # aspect_ratio = 1.5
-                    # new_x, new_y = int(frame.shape[1]/aspect_ratio), int(frame.shape[0]/aspect_ratio)
-                    # resized_image = cv2.resize(frame,(new_x,new_y))
+
+                    if packet.stream_name == 'left':
+                        cv2.polylines(frame, np.array([getPolygonCoordinates(polygon_index, polygons_coordinates)]), True, leftcolor , 4)
+                    else:
+                        cv2.polylines(frame, np.array([getPolygonCoordinates(polygon_index, polygons_coordinates)]), True, rightcolor , 4)
+
+
+
+                    frame = cv2.resize(frame, (0, 0), fx = 0.8, fy = 0.8)
                     cv2.imshow(packet.stream_name, frame)
+
                 else:
                     # all polygons used, stop the loop
                     run_capturing_images = False
+
+
+
 
         # key = cv2.waitKey(33)
         #
