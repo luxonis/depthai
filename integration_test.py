@@ -3,6 +3,28 @@ import signal
 import subprocess
 import time
 import itertools
+from threading import Timer
+import atexit
+import logging
+
+logger = logging.getLogger('integration_test')
+hdlr = logging.FileHandler('./integration_test.log', 'w')
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr) 
+logger.setLevel(logging.INFO)
+
+def kill_proc(proc, timeout):
+  timeout["value"] = True
+  os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+
+def cleanup():
+    global run
+    run=False
+    if(p is not None):
+        print('Stopping subprocess with pid: ', str(p.pid))
+        os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+        print('Stopped!')
 
 #todo merge with streams
 stream_size = {
@@ -20,15 +42,23 @@ streams = [
     "right",
     "depth_sipp"]
 
-#todo ma
 USB_version=3
+timeout_sec=60
 
+global gl_limit_fps
 if USB_version==2:
     gl_limit_fps=True
     usb_bandwith=29*1024*1024
     gl_max_fps=12.0
 else:
     gl_limit_fps=False
+
+global p
+global return_code
+
+p=None
+
+atexit.register(cleanup)
 
 config_ovewrite_cmd = """-co '{"streams": ["""
 for L in range(0, len(streams)+1):
@@ -64,12 +94,23 @@ for L in range(0, len(streams)+1):
                 config_builder = config_builder+separator+comb+'"'
         config_builder = config_builder + """]}'"""
         if subset:
-            cmd = "python3 test.py " + config_builder
-            print(cmd)
-            pro = subprocess.Popen(cmd, stdout=subprocess.PIPE, 
-                       shell=True, preexec_fn=os.setsid) 
-                       
-            time.sleep(5)
-            #todo check return value
-            os.killpg(os.getpgid(pro.pid), signal.SIGTERM)  # Send the signal to all the process groups
-            time.sleep(5)
+            cmd = "python3 depthai.py " + config_builder
+            if(config_builder ==  """-co '{"streams": ["metaout"]}'"""):
+                continue
+            logger.info(cmd)
+
+            p = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid)
+            timeout = {"value": False}
+            timer = Timer(timeout_sec, kill_proc, [p, timeout])
+            timer.start()
+            p.wait()
+            timer.cancel()
+            return_code = p.returncode
+            p=None
+            if(timeout["value"]):
+                logger.info("returned succesfully")
+            else:
+                logger.info("returned with error code: " + str(return_code))
+            # if(return_code != 0):
+                # print("test returned with "+str(return_code))
+            time.sleep(3)
