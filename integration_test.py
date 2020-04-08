@@ -6,6 +6,45 @@ import itertools
 from threading import Timer
 import atexit
 import logging
+import argparse
+from argparse import ArgumentParser
+
+def parse_args():
+    epilog_text = '''
+    Integration test for DepthAI.
+    Generates all combinations of streams defined in "streams", runs each of them for maximum of "timeout" seconds.
+    The logs are written into integration_test.log.
+    
+    Example usage: python3 integration_test.py -usb=2 -to=10
+    python3 integration_test.py -usb=3 -to=60
+
+    '''
+    parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("-usb", "--usb_version", default=3,
+                        type=int, required=False,
+                        help="USB version on which to perform tests.")
+    parser.add_argument("-to", "--timeout_sec", default=30, type=int,
+                        help="Timeout in seconds for each stream combination. [MAX time allowed to run each test.]")
+    options = parser.parse_args()
+
+    return options
+
+global args
+try:
+    args = vars(parse_args())
+except:
+    os._exit(2)
+
+global USB_version
+global timeout_sec
+
+if args['usb_version']:
+    USB_version = args['usb_version']
+print("USB_version: "+str(USB_version))
+
+if args['timeout_sec']:
+    timeout_sec = args['timeout_sec']
+print("timeout: "+str(timeout_sec) + " seconds")
 
 logger = logging.getLogger('integration_test')
 hdlr = logging.FileHandler('./integration_test.log', 'w')
@@ -42,8 +81,7 @@ streams = [
     "right",
     "depth_sipp"]
 
-USB_version=3
-timeout_sec=60
+
 
 global gl_limit_fps
 if USB_version==2:
