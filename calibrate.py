@@ -247,7 +247,7 @@ if 'process' in args['mode']:
         cal_data.calibrate("dataset", args['square_size_cm'], "./resources/depthai.calib")
     except AssertionError as e:
         print("[ERROR] " + str(e))
-        exit(0)
+        exit(1)
 else:
     print("Skipping process.")
 
