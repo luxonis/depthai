@@ -15,7 +15,7 @@ def parse_args():
     Generates all combinations of streams defined in "streams", runs each of them for maximum of "timeout" seconds.
     The logs are written into integration_test.log.
     
-    Example usage: python3 integration_test.py -usb=2 -to=10
+    Example usage: python3 integration_test.py -usb=2 -to=30
     python3 integration_test.py -usb=3 -to=60
 
     '''
@@ -55,14 +55,14 @@ logger.setLevel(logging.INFO)
 
 def kill_proc(proc, timeout):
   timeout["value"] = True
-  os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+  os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
 
 def cleanup():
     global run
     run=False
     if(p is not None):
         print('Stopping subprocess with pid: ', str(p.pid))
-        os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+        os.killpg(os.getpgid(p.pid), signal.SIGTERM)
         print('Stopped!')
 
 #todo merge with streams
