@@ -70,6 +70,12 @@ def parse_args():
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
+    parser.add_argument("-fv", "--field-of-view", default=69.0, type=float,
+                        help="Field of view for the stereo cameras in [deg]")
+    parser.add_argument("-b", "--baseline", default=9.0, type=float,
+                        help="Left/Right camera baseline in [cm]")
+    parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=True, action="store_false",
+                        help="Do not swap the Left and Right cameras")
 
     options = parser.parse_args()
 
@@ -122,9 +128,9 @@ if 'capture' in args['mode']:
         },
         'board_config':
         {
-            'swap_left_and_right_cameras': True,
-            'left_fov_deg': 69.0,
-            'left_to_right_distance_cm': 9.0
+            'swap_left_and_right_cameras': args['swap_lr'],
+            'left_fov_deg':  args['field_of_view'],
+            'left_to_right_distance_cm': args['baseline'],
         }
     }
 
