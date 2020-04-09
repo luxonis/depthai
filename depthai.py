@@ -80,10 +80,12 @@ print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
 
 ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 if(ret != 0):
-    print(bcolors.WARNING + "WARNING: Usb rules not found" + bcolors.ENDC)
-    print(bcolors.RED + "Set rules: \n" \
+    print(bcolors.WARNING + "\nWARNING: Usb rules not found" + bcolors.ENDC)
+    print(bcolors.RED + "\nSet rules: \n" \
     """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n""" \
-    "sudo udevadm control --reload-rules && udevadm trigger \n" + bcolors.ENDC)
+    "sudo udevadm control --reload-rules && udevadm trigger \n" \
+    "Disconnect/connect usb cable on host! \n"    + bcolors.ENDC)
+    os._exit(1)
 
 if not depthai.init_device(cmd_file, args['device_id']):
     print("Error initializing device. Try to reset it.")
