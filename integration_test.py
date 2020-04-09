@@ -149,6 +149,4 @@ for L in range(0, len(streams)+1):
                 logger.info("returned succesfully")
             else:
                 logger.info("returned with error code: " + str(return_code))
-            # if(return_code != 0):
-                # print("test returned with "+str(return_code))
             time.sleep(3)
