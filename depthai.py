@@ -7,11 +7,23 @@ import json
 import numpy as np
 import cv2
 import os
+import subprocess
 
 import depthai
 
 import consts.resource_paths
 from depthai_helpers import utils
+
+class bcolors:
+    HEADER = '\033[95m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    WARNING = '\033[1;5;31m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 def parse_args():
     epilog_text = '''
@@ -66,6 +78,14 @@ print('depthai.__version__ == %s' % depthai.__version__)
 print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
 
 
+ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+if(ret != 0):
+    print(bcolors.WARNING + "\nWARNING: Usb rules not found" + bcolors.ENDC)
+    print(bcolors.RED + "\nSet rules: \n" \
+    """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n""" \
+    "sudo udevadm control --reload-rules && udevadm trigger \n" \
+    "Disconnect/connect usb cable on host! \n"    + bcolors.ENDC)
+    os._exit(1)
 
 if not depthai.init_device(cmd_file, args['device_id']):
     print("Error initializing device. Try to reset it.")
@@ -257,3 +277,4 @@ while True:
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
 
 print('py: DONE.')
+os._exit(0)
