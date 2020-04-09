@@ -290,7 +290,8 @@ class StereoCalibration(object):
                 if k == 32:    # Esc key to stop
                     break
                 elif k == 27:
-                    raise SystemExit()
+                    os._exit(0)
+                    # raise SystemExit()
                 elif k == -1:  # normally -1 returned,so don't print it
                     continue
 
