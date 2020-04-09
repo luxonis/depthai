@@ -4,6 +4,7 @@ __pycache__/
 # General
 .DS_Store
 .vscode
+*.log
 # Distribution / packaging
 .Python
 build/
