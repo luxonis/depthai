@@ -45,7 +45,11 @@ def parse_args():
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
     parser.add_argument("-dev", "--device-id", default='', type=str,
                         help="USB port number for the device to connect to. Use the word 'list' to show all devices and exit.")
-    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true', help="Used by board developers for debugging.")
+    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true', 
+                        help="Used by board developers for debugging.")
+    parser.add_argument("-fusb2", "--force_usb2", default=None, action='store_true', 
+                        help="Force usb2 connection")
+
     options = parser.parse_args()
 
     return options
@@ -61,8 +65,12 @@ if args['config_overwrite']:
 
 print("Using Arguments=",args)
 
+if args['force_usb2']:
+    print(bcolors.WARNING + "FORCE USB2 MODE" + bcolors.ENDC)
+    cmd_file = consts.resource_paths.device_usb2_cmd_fpath
+else:
+    cmd_file = consts.resource_paths.device_cmd_fpath
 
-cmd_file = consts.resource_paths.device_cmd_fpath
 if args['dev_debug']:
     cmd_file = ''
     print('depthai will not load cmd file into device.')
