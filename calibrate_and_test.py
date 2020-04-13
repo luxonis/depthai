@@ -1,29 +1,20 @@
 import os
 import signal
 import subprocess
-import time
-import itertools
 import atexit
 import sys
+import time
 
-global all_processes
-all_processes=list()
+global p
+global return_code
+
+p=None
+
 def cleanup():
-    global run
-    run=False
-    timeout_sec = 5
-    for p in all_processes: # list of your processes
-        print("cleaning")
-        p_sec = 0
-        for _ in range(timeout_sec):
-            if p.poll() == None:
-                time.sleep(1)
-                p_sec += 1
-        if p_sec >= timeout_sec:
-            p.killpg()
-            # os.killpg(os.getpgid(p.pid), signal.SIGTERM)  # Send the signal to all the process groups
-
-    print('cleaned up!')
+    if(p is not None):
+        print('Stopping subprocess with pid: ', str(p.pid))
+        os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+        print('Stopped!')
 
 args=""
 
@@ -31,18 +22,24 @@ for arg in sys.argv[1:]:
     args+="'"+arg+"' "
 
 calibrate_cmd = "python3 calibrate.py " + args
-test_cmd = """python3 test.py -co '{"streams": [{"name": "depth_sipp", "max_fps": 12.0}]}'"""
+test_cmd = """python3 depthai.py -co '{"streams": [{"name": "depth_sipp", "max_fps": 12.0}]}'"""
+
 
 atexit.register(cleanup)
 
-p = subprocess.run(calibrate_cmd, shell=True)
-all_processes.append(p)
+p = subprocess.Popen(calibrate_cmd, shell=True, preexec_fn=os.setsid) 
+p.wait()
 return_code = p.returncode
-# print("Return code:"+str(return_code))
-all_processes.clear()
+p=None
+print("Return code:"+str(return_code))
+time.sleep(3)
+
 if(return_code == 0):
-    p = subprocess.run(test_cmd, shell=True)
-    all_processes.append(p)
+    p = subprocess.Popen(test_cmd, shell=True, preexec_fn=os.setsid) 
+    p.wait()
     return_code = p.returncode
-    # print("Return code:"+str(return_code))
-    all_processes.clear()
+    p=None
+    print("Return code:"+str(return_code))
+
+
+exit(return_code)
