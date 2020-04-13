@@ -100,7 +100,7 @@ if 'capture' in args['mode']:
             Path("dataset/"+path).mkdir(parents=True, exist_ok=True)
     except OSError as e:
         print ("An error occurred trying to create image dataset directories:",e)
-        exit(0)
+        os._exit(1)
 
     # Create Depth AI Pipeline to start video streaming
     cmd_file = consts.resource_paths.device_cmd_fpath
@@ -111,7 +111,7 @@ if 'capture' in args['mode']:
     # time.sleep(1)
     if not depthai.init_device(cmd_file=cmd_file):
         print("[ERROR] Unable to initialize device. Try to reset it. Exiting.")
-        exit(1)
+        os._exit(1)
 
     config = {
         'streams': ['left', 'right'],
@@ -142,7 +142,7 @@ if 'capture' in args['mode']:
 
     if pipeline is None:
         print("[ERROR] Unable to create pipeline. Exiting.")
-        exit(2)
+        os._exit(2)
 
     num_of_polygons = 0
     polygons_coordinates = []
@@ -226,7 +226,7 @@ if 'capture' in args['mode']:
         #
         # elif key == ord("q"):
         #     print("py: Calibration has been interrupted!")
-        #     exit(0)
+        #     os._exit(0)
 
         key = cv2.waitKey(1)
 
@@ -235,7 +235,7 @@ if 'capture' in args['mode']:
 
         elif key == ord("q"):
             print("py: Calibration has been interrupted!")
-            exit(0)
+            os._exit(0)
 
 
     del pipeline # need to manualy delete the object, because of size of HostDataPacket queue runs out (Not enough free space to save {stream})
@@ -253,8 +253,9 @@ if 'process' in args['mode']:
         cal_data.calibrate("dataset", args['square_size_cm'], "./resources/depthai.calib")
     except AssertionError as e:
         print("[ERROR] " + str(e))
-        exit(1)
+        os._exit(1)
 else:
     print("Skipping process.")
 
 print('py: DONE.')
+os._exit(0)
