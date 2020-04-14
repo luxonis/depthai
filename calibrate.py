@@ -91,26 +91,6 @@ def find_chessboard(frame):
 
 class Main:
     cmd_file = consts.resource_paths.device_cmd_fpath
-    config = {
-        'streams': ['left', 'right'],
-        'depth':
-            {
-                'calibration_file': consts.resource_paths.calib_fpath,
-                # 'type': 'median',
-                'padding_factor': 0.3
-            },
-        'ai':
-            {
-                'blob_file': consts.resource_paths.blob_fpath,
-                'blob_file_config': consts.resource_paths.blob_config_fpath
-            },
-        'board_config':
-            {
-                'swap_left_and_right_cameras': args['swap_lr'],
-                'left_fov_deg':  args['field_of_view'],
-                'left_to_right_distance_cm': args['baseline'],
-            }
-    }
     polygons = None
     current_polygon = 0
     images_captured_polygon = 0
@@ -118,6 +98,26 @@ class Main:
 
     def __init__(self):
         self.args = vars(parse_args())
+        self.config = {
+            'streams': ['left', 'right'],
+            'depth':
+                {
+                    'calibration_file': consts.resource_paths.calib_fpath,
+                    # 'type': 'median',
+                    'padding_factor': 0.3
+                },
+            'ai':
+                {
+                    'blob_file': consts.resource_paths.blob_fpath,
+                    'blob_file_config': consts.resource_paths.blob_config_fpath
+                },
+            'board_config':
+                {
+                    'swap_left_and_right_cameras': self.args['swap_lr'],
+                    'left_fov_deg':  self.args['field_of_view'],
+                    'left_to_right_distance_cm': self.args['baseline'],
+                }
+        }
         if self.args['config_overwrite']:
             utils.merge(json.loads(self.args['config_overwrite']), self.config)
             print("Merged Pipeline config with overwrite", self.config)
