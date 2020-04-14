@@ -84,8 +84,7 @@ def parse_args():
 
 def find_chessboard(frame):
     chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
-    small_frame = cv2.resize(frame, (0, 0), fx=0.3, fy=0.3)
-    board_detected, _ = cv2.findChessboardCorners(small_frame, (9, 6), chessboard_flags)
+    board_detected, _ = cv2.findChessboardCorners(frame, (9, 6), chessboard_flags)
     return board_detected
 
 
