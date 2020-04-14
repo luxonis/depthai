@@ -43,6 +43,20 @@ def parse_args():
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
+    parser.add_argument("-fv", "--field-of-view", default=71.86, type=float,
+                        help="Horizontal field of view (HFOV) for the stereo cameras in [deg]")
+    parser.add_argument("-b", "--baseline", default=9.0, type=float,
+                        help="Left/Right camera baseline in [cm]")
+    parser.add_argument("-r", "--rgb-baseline", default=2.0, type=float,
+                        help="Distance the RGB camera is from the Left camera")
+    parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=True, action="store_false",
+                        help="Do not swap the Left and Right cameras")
+    parser.add_argument("-e", "--store-eeprom", default=False, action='store_true',
+                        help="Store the calibration and board_config (fov, baselines, swap-lr) in the EEPROM onboard")
+    parser.add_argument("--clear-eeprom", default=False, action='store_true',
+                        help="Invalidate the calib and board_config from EEPROM")
+    parser.add_argument("-o", "--override-calib", default=False, action='store_true',
+                        help="Use the calib and board_config from host, ignoring the EEPROM data if programmed")
     parser.add_argument("-dev", "--device-id", default='', type=str,
                         help="USB port number for the device to connect to. Use the word 'list' to show all devices and exit.")
     parser.add_argument("-debug", "--dev_debug", default=None, action='store_true', 
@@ -124,10 +138,13 @@ config = {
     },
     'board_config':
     {
-        'swap_left_and_right_cameras': True, # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
-        'left_fov_deg': 69.0, # Same on 1097 and 1098OBC
-        'left_to_right_distance_cm': 9.0, # Distance between stereo cameras
-        'left_to_rgb_distance_cm': 2.0 # Currently unused
+        'swap_left_and_right_cameras': args['swap_lr'], # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
+        'left_fov_deg': args['field_of_view'], # Same on 1097 and 1098OBC
+        'left_to_right_distance_cm': args['baseline'], # Distance between stereo cameras
+        'left_to_rgb_distance_cm': args['rgb_baseline'], # Currently unused
+        'store_to_eeprom': args['store_eeprom'],
+        'clear_eeprom': args['clear_eeprom'],
+        'override_eeprom_calib': args['override_calib'],
     }
 }
 
