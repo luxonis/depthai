@@ -155,11 +155,12 @@ class Main:
     def capture_images(self):
         max_frames_per_capure = 4
         capture_counter = 0
+        finished = False
         capturing = False
         captured_left = False
         captured_right = False
         with self.get_pipeline() as pipeline:
-            while True:
+            while not finished:
                 _, data_list = pipeline.get_available_nnet_and_data_packets()
                 for packet in data_list:
                     frame = packet.getData()
@@ -198,6 +199,7 @@ class Main:
                             self.current_polygon += 1
 
                             if self.current_polygon == len(self.polygons):
+                                finished = True
                                 break
                     elif capturing:
                         capture_counter += 1
