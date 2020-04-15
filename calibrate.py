@@ -84,8 +84,9 @@ def parse_args():
 
 def find_chessboard(frame):
     chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
-    board_detected, _ = cv2.findChessboardCorners(frame, (9, 6), chessboard_flags)
-    return board_detected
+    small_frame = cv2.resize(frame, (0, 0), fx=0.3, fy=0.3)
+    return cv2.findChessboardCorners(small_frame, (9, 6), chessboard_flags)[0] and \
+           cv2.findChessboardCorners(frame, (9, 6), chessboard_flags)[0]
 
 
 class Main:
@@ -152,12 +153,12 @@ class Main:
         return True
 
     def capture_images(self):
-        max_frames_per_capure = 4
-        capture_counter = 0
         finished = False
         capturing = False
         captured_left = False
         captured_right = False
+        tried_left = False
+        tried_right = False
         with self.get_pipeline() as pipeline:
             while not finished:
                 _, data_list = pipeline.get_available_nnet_and_data_packets()
@@ -179,33 +180,16 @@ class Main:
 
                     if key == ord(" "):
                         capturing = True
-                        capture_counter = 0
 
-                    if capturing and packet.stream_name == 'left' and not captured_left:
+                    if capturing and packet.stream_name == 'left' and not tried_left:
+                        print("PARSEL")
                         captured_left = self.parse_frame(frame, packet.stream_name)
-                    elif capturing and packet.stream_name == 'right' and not captured_right:
+                        tried_left = True
+                    elif capturing and packet.stream_name == 'right' and not tried_right:
+                        print("PARSER")
                         captured_right = self.parse_frame(frame, packet.stream_name)
-
-                    if captured_left and captured_right:
-                        self.images_captured += 1
-                        self.images_captured_polygon += 1
-                        captured_left = False
-                        captured_right = False
-                        capturing = False
-
-                        if self.images_captured_polygon == self.args['count']:
-                            self.images_captured_polygon = 0
-                            self.current_polygon += 1
-
-                            if self.current_polygon == len(self.polygons):
-                                finished = True
-                                break
-                    elif capturing:
-                        capture_counter += 1
-                        if capture_counter > max_frames_per_capure:
-                            print("py: Stopping the capture, unable to find chessboard! Fix position and press spacebar again")
-                            capturing = False
-
+                        tried_right = True
+                    print("AFTER!")
                     has_success = (packet.stream_name == "left" and captured_left) or \
                                   (packet.stream_name == "right" and captured_right)
                     cv2.putText(
@@ -228,6 +212,31 @@ class Main:
 
                     small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)  # we don't need full resolution
                     cv2.imshow(packet.stream_name, small_frame)
+
+                    if captured_left and captured_right:
+                        self.images_captured += 1
+                        self.images_captured_polygon += 1
+                        captured_left = False
+                        captured_right = False
+                        tried_left = False
+                        tried_right = False
+                        capturing = False
+
+                    elif tried_left and tried_right:
+                        print("py: Stopping the capture, unable to find chessboard! Fix position and press spacebar again")
+                        capturing = False
+                        tried_left = False
+                        tried_right = False
+                        break
+
+                    if self.images_captured_polygon == self.args['count']:
+                        self.images_captured_polygon = 0
+                        self.current_polygon += 1
+
+                        if self.current_polygon == len(self.polygons):
+                            finished = True
+                            cv2.destroyAllWindows()
+                            break
 
     def calibrate(self):
         print("Starting image processing")
