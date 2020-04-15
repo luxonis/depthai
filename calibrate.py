@@ -90,8 +90,11 @@ def find_chessboard(frame):
 
 
 class Main:
+    output_scale_factor = 0.5
     cmd_file = consts.resource_paths.device_cmd_fpath
     polygons = None
+    width = None
+    height = None
     current_polygon = 0
     images_captured_polygon = 0
     images_captured = 0
@@ -152,6 +155,47 @@ class Main:
         print("py: Saved image as: " + str(filename))
         return True
 
+    def show_info_frame(self):
+        info_frame = np.zeros((600, 1000, 3), np.uint8)
+        print("Starting image capture. Press the [ESC] key to abort.")
+        print("Will take {} total images, {} per each polygon.".format(self.total_images, self.args['count']))
+
+        def show(position, text):
+            cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
+
+        show((25, 100), "Information about image capture:")
+        show((25, 160), "Press the [ESC] key to abort.")
+        show((25, 220), "Press the [spacebar] key to capture the image.")
+        show((25, 300), "Polygon on the image represents the desired chessboard")
+        show((25, 340), "position, that will provide best calibration score.")
+        show((25, 400), "Will take {} total images, {} per each polygon.".format(self.total_images, self.args['count']))
+        show((25, 550), "To continue, press [spacebar]...")
+
+        cv2.imshow("info", info_frame)
+        while True:
+            key = cv2.waitKey(1)
+            if key == ord(" "):
+                cv2.destroyAllWindows()
+                return
+            elif key == 27 or key == ord("q"):  # 27 - ESC
+                cv2.destroyAllWindows()
+                raise SystemExit(0)
+
+    def show_failed_capture_frame(self):
+        width, height = int(self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
+        info_frame = np.zeros((height, width, 3), np.uint8)
+        print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
+
+        def show(position, text):
+            cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 255, 0))
+
+        show((50, int(height / 2 - 40)), "Capture failed, unable to find chessboard!")
+        show((60, int(height / 2 + 40)), "Fix position and press spacebar again")
+
+        cv2.imshow("left", info_frame)
+        cv2.imshow("right", info_frame)
+        cv2.waitKey(2000)
+
     def capture_images(self):
         finished = False
         capturing = False
@@ -167,11 +211,8 @@ class Main:
                     frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
                     if self.polygons is None:
-                        height, width, _ = frame.shape
-                        self.polygons = setPolygonCoordinates(height, width)
-                        print("Starting image capture. Press the [ESC] key to abort.")
-                        print("Will take {} total images, {} per each polygon.".format(self.total_images,
-                                                                                       self.args['count']))
+                        self.height, self.width, _ = frame.shape
+                        self.polygons = setPolygonCoordinates(self.height, self.width)
 
                     key = cv2.waitKey(1)
                     if key == ord("q"):
@@ -182,27 +223,20 @@ class Main:
                         capturing = True
 
                     if capturing and packet.stream_name == 'left' and not tried_left:
-                        print("PARSEL")
                         captured_left = self.parse_frame(frame, packet.stream_name)
                         tried_left = True
                     elif capturing and packet.stream_name == 'right' and not tried_right:
-                        print("PARSER")
                         captured_right = self.parse_frame(frame, packet.stream_name)
                         tried_right = True
-                    print("AFTER!")
+
                     has_success = (packet.stream_name == "left" and captured_left) or \
                                   (packet.stream_name == "right" and captured_right)
                     cv2.putText(
                         frame,
-                        "Align cameras with callibration board and press spacebar to capture the image",
-                        (0, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0)
-                    )
-                    cv2.putText(
-                        frame,
                         "Polygon Position: {}. Captured {} of {} images.".format(
-                            self.current_polygon, self.images_captured, self.total_images
+                            self.current_polygon + 1, self.images_captured, self.total_images
                         ),
-                        (0, 700), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0)
+                        (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0)
                     )
                     if self.polygons is not None:
                         cv2.polylines(
@@ -210,23 +244,25 @@ class Main:
                             True, (0, 255, 0) if has_success else (0, 0, 255), 4
                         )
 
-                    small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)  # we don't need full resolution
+                    small_frame = cv2.resize(frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
                     cv2.imshow(packet.stream_name, small_frame)
 
                     if captured_left and captured_right:
                         self.images_captured += 1
                         self.images_captured_polygon += 1
+                        capturing = False
+                        tried_left = False
+                        tried_right = False
                         captured_left = False
                         captured_right = False
-                        tried_left = False
-                        tried_right = False
-                        capturing = False
 
                     elif tried_left and tried_right:
-                        print("py: Stopping the capture, unable to find chessboard! Fix position and press spacebar again")
+                        self.show_failed_capture_frame()
                         capturing = False
                         tried_left = False
                         tried_right = False
+                        captured_left = False
+                        captured_right = False
                         break
 
                     if self.images_captured_polygon == self.args['count']:
@@ -257,6 +293,7 @@ class Main:
             except OSError:
                 print("An error occurred trying to create image dataset directories!")
                 raise
+            self.show_info_frame()
             self.capture_images()
         if 'process' in self.args['mode']:
             self.calibrate()
