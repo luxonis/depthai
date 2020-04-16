@@ -30,7 +30,7 @@ print('Available streams: ' + str(depthai.get_available_steams()))
 
 
 configs = {
-    'streams': ['metaout', 'previewout'],
+    'streams': ['metaout', 'previewout', 'jpegout'],
     'ai':
     {
         'blob_file_config': consts.resource_paths.prefix + 'nn/object_detection_4shave/object_detection.json',
@@ -52,6 +52,7 @@ configs = {
         'swap_left_and_right_cameras': True
     }
 }
+
 
 
 # create the pipeline, here is the first connection with the device
@@ -123,6 +124,13 @@ while True:
             frame_bgr = packet.getData()
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow(packet.stream_name, frame_bgr)
+
+        elif packet.stream_name == 'jpegout':
+            print('jpeg data packet arrived!')
+            jpeg_data = packet.getData()
+            still_frame = cv2.imdecode(jpeg_data, cv2.IMREAD_COLOR)
+            cv2.imshow(packet.stream_name, still_frame)
+		
 
     if cv2.waitKey(1) == ord('q'):
         break
