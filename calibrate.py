@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+
 import depthai
 from depthai_helpers.calibration_utils import *
 from depthai_helpers import utils
@@ -17,50 +19,45 @@ try:
 except ImportError:
     use_cv = False
 
+
 def parse_args():
     epilog_text = '''
-    Captures and processes images for disparity depth calibration, generating a `dephtai.calib` file
-    that should be loaded when initializing depthai. By default, captures one image across 13 polygon positions.
+    Captures and processes images for disparity depth calibration, generating a `depthai.calib` file
+    that should be loaded when initializing depthai. By default, captures one image for each of the 13 calibration target poses.
 
-    Image capture requires the use of a printed 7x9 OpenCV checkerboard applied to a flat surface (ex: sturdy cardboard).
+    Image capture requires the use of a printed 6x9 OpenCV checkerboard target applied to a flat surface (ex: sturdy cardboard).
     When taking photos, ensure the checkerboard fits within both the left and right image displays. The board does not need
     to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
 
-    If the checkerboard does not fit within a captured image, the calibration will generate an error message with instructions
-    on re-running calibration for polygons w/o valid checkerboard captures.
+    If the calibration checkerboard corners cannot be found, the user will be prompted to try that calibration pose again.
 
     The script requires a RMS error < 1.0 to generate a calibration file. If RMS exceeds this threshold, an error is displayed.
+    An average epipolar error of <1.5 is considered to be good, but not required. 
 
     Example usage:
 
-    Run calibration with a checkerboard square size of 2.35 cm:
-    python calibrate.py -s 2.35
+    Run calibration with a checkerboard square size of 3.0 cm and baseline of 7.5cm:
+    python3 calibrate.py -s 3.0 -b 7.5
 
-    Run calibration for only the first and 3rd polygon positions:
-    python calibrate.py -p 0 2
-
-    Only run image processing (not image capture) w/ a 2.35 cm square size. Requires a set of polygon images:
-    python calibrate.py -s 2.35 -m process
+    Only run image processing only with same board setup. Requires a set of saved capture images:
+    python3 calibrate.py -s 3.0 -b 7.5 -m process
+    
+    Change Left/Right baseline to 15cm and swap Left/Right cameras:
+    python3 calibrate.py -b 15 -w False
 
     Delete all existing images before starting image capture:
-    python calibrate.py -i delete
-
-    Capture 3 images per polygon:
-    python calibrate.py -c 3
+    python3 calibrate.py -i delete
 
     Pass thru pipeline config options:
-    python calibrate.py -co '{"board_config": {"swap_left_and_right_cameras": true, "left_to_right_distance_cm": 7.5}}'
+    python3 calibrate.py -co '{"board_config": {"swap_left_and_right_cameras": true, "left_to_right_distance_cm": 7.5}}'
     '''
-    parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-p", "--polygons", default=list(np.arange(len(setPolygonCoordinates(1000,600)))), nargs='*',
-                        type=int, required=False,
-                        help="Space-separated list of polygons (ex: 0 5 7) to restrict image capture. Default is all polygons.")
+    parser = ArgumentParser(epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-c", "--count", default=1,
                         type=int, required=False,
-                        help="Number of images per polygon to capture. Default is 1.")
+                        help="Number of images per polygon to capture. Default: 1.")
     parser.add_argument("-s", "--square_size_cm", default="2.5",
                         type=float, required=False,
-                        help="Square size of calibration pattern used in centimeters. Default is 2.5.")
+                        help="Square size of calibration pattern used in centimeters. Default: 2.5cm.")
     parser.add_argument("-i", "--image_op", default="modify",
                         type=str, required=False,
                         help="Whether existing images should be modified or all images should be deleted before running image capture. The default is 'modify'. Change to 'delete' to delete all image files.")
@@ -71,191 +68,234 @@ def parse_args():
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
     parser.add_argument("-fv", "--field-of-view", default=71.86, type=float,
-                        help="Horizontal field of view (HFOV) for the stereo cameras in [deg]")
+                        help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
     parser.add_argument("-b", "--baseline", default=9.0, type=float,
-                        help="Left/Right camera baseline in [cm]")
+                        help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
     parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=True, action="store_false",
-                        help="Do not swap the Left and Right cameras")
+                        help="Do not swap the Left and Right cameras. Default: True.")
 
     options = parser.parse_args()
 
     return options
 
-args = vars(parse_args())
 
-if args['config_overwrite']:
-    args['config_overwrite'] = json.loads(args['config_overwrite'])
+def find_chessboard(frame):
+    chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
+    small_frame = cv2.resize(frame, (0, 0), fx=0.3, fy=0.3)
+    return cv2.findChessboardCorners(small_frame, (9, 6), chessboard_flags)[0] and \
+           cv2.findChessboardCorners(frame, (9, 6), chessboard_flags)[0]
 
-print("Using Arguments=",args)
 
-if 'capture' in args['mode']:
-
-    # Delete Dataset directory if asked
-    if args['image_op'] == 'delete':
-        shutil.rmtree('dataset/')
-
-    # Creates dirs to save captured images
-    try:
-        for path in ["left","right"]:
-            Path("dataset/"+path).mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        print ("An error occurred trying to create image dataset directories:",e)
-        os._exit(1)
-
-    # Create Depth AI Pipeline to start video streaming
+class Main:
+    output_scale_factor = 0.5
     cmd_file = consts.resource_paths.device_cmd_fpath
+    polygons = None
+    width = None
+    height = None
+    current_polygon = 0
+    images_captured_polygon = 0
+    images_captured = 0
 
-    # Possible to try and reboot?
-    # The following doesn't work (have to manually hit switch on device)
-    # depthai.reboot_device
-    # time.sleep(1)
-    if not depthai.init_device(cmd_file=cmd_file):
-        print("[ERROR] Unable to initialize device. Try to reset it. Exiting.")
-        os._exit(1)
-
-    config = {
-        'streams': ['left', 'right'],
-        'depth':
-        {
-            'calibration_file': consts.resource_paths.calib_fpath,
-            # 'type': 'median',
-            'padding_factor': 0.3
-        },
-        'ai':
-        {
-            'blob_file': consts.resource_paths.blob_fpath,
-            'blob_file_config': consts.resource_paths.blob_config_fpath
-        },
-        'board_config':
-        {
-            'swap_left_and_right_cameras': args['swap_lr'],
-            'left_fov_deg':  args['field_of_view'],
-            'left_to_right_distance_cm': args['baseline'],
+    def __init__(self):
+        self.args = vars(parse_args())
+        self.config = {
+            'streams': ['left', 'right'],
+            'depth':
+                {
+                    'calibration_file': consts.resource_paths.calib_fpath,
+                    # 'type': 'median',
+                    'padding_factor': 0.3
+                },
+            'ai':
+                {
+                    'blob_file': consts.resource_paths.blob_fpath,
+                    'blob_file_config': consts.resource_paths.blob_config_fpath
+                },
+            'board_config':
+                {
+                    'swap_left_and_right_cameras': self.args['swap_lr'],
+                    'left_fov_deg':  self.args['field_of_view'],
+                    'left_to_right_distance_cm': self.args['baseline'],
+                }
         }
-    }
+        if self.args['config_overwrite']:
+            utils.merge(json.loads(self.args['config_overwrite']), self.config)
+            print("Merged Pipeline config with overwrite", self.config)
+        self.total_images = self.args['count'] * len(setPolygonCoordinates(1000, 600))  # random polygons for count
+        print("Using Arguments=", self.args)
 
-    if args['config_overwrite'] is not None:
-        config = utils.merge(args['config_overwrite'],config)
-        print("Merged Pipeline config with overwrite",config)
+    @contextmanager
+    def get_pipeline(self):
+        # Possible to try and reboot?
+        # The following doesn't work (have to manually hit switch on device)
+        # depthai.reboot_device
+        # time.sleep(1)
+        if not depthai.init_device(cmd_file=self.cmd_file):
+            raise RuntimeError("Unable to initialize device. Try to reset it")
 
-    pipeline = depthai.create_pipeline(config)
+        pipeline = depthai.create_pipeline(self.config)
 
-    if pipeline is None:
-        print("[ERROR] Unable to create pipeline. Exiting.")
-        os._exit(2)
+        if pipeline is None:
+            raise RuntimeError("Unable to create pipeline")
 
-    num_of_polygons = 0
-    polygons_coordinates = []
+        try:
+            yield pipeline
+        finally:
+            del pipeline
 
-    image_per_polygon_counter = 0 # variable to track how much images were captured per each polygon
-    complete = False # Indicates if images have been captured for all polygons
+    def parse_frame(self, frame, stream_name):
+        if not find_chessboard(frame):
+            return False
 
-    polygon_index = args['polygons'][0] # number to track which polygon is currently using
-    total_num_of_captured_images = 0 # variable to hold total number of captured images
+        filename = image_filename(stream_name, self.current_polygon, self.images_captured)
+        cv2.imwrite("dataset/{}/{}".format(stream_name, filename), frame)
+        print("py: Saved image as: " + str(filename))
+        return True
 
-    capture_images = False # value to track the state of capture button (spacebar)
-    captured_left_image = False # value to check if image from the left camera was capture
-    captured_right_image = False # value to check if image from the right camera was capture
+    def show_info_frame(self):
+        info_frame = np.zeros((600, 1000, 3), np.uint8)
+        print("Starting image capture. Press the [ESC] key to abort.")
+        print("Will take {} total images, {} per each polygon.".format(self.total_images, self.args['count']))
 
-    run_capturing_images = True # value becames False and stop the main loop when all polygon indexes were used
+        def show(position, text):
+            cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
 
-    calculate_coordinates = False # track if coordinates of polynoms was calculated
-    total_images = args['count']*len(args['polygons'])
+        show((25, 100), "Information about image capture:")
+        show((25, 160), "Press the [ESC] key to abort.")
+        show((25, 220), "Press the [spacebar] key to capture the image.")
+        show((25, 300), "Polygon on the image represents the desired chessboard")
+        show((25, 340), "position, that will provide best calibration score.")
+        show((25, 400), "Will take {} total images, {} per each polygon.".format(self.total_images, self.args['count']))
+        show((25, 550), "To continue, press [spacebar]...")
 
-    while run_capturing_images:
-        _, data_list = pipeline.get_available_nnet_and_data_packets()
-        for packet in data_list:
-            if packet.stream_name == 'left' or packet.stream_name == 'right':
-                frame = packet.getData()
-                if calculate_coordinates == False:
-                    height, width = frame.shape
-                    polygons_coordinates = setPolygonCoordinates(height, width)
-                    # polygons_coordinates = select_polygon_coords(polygons_coordinates,args['polygons'])
-                    num_of_polygons = len(args['polygons'])
-                    print("Starting image capture. Press the [ESC] key to abort.")
-                    print("Will take %i total images, %i per each polygon." % (total_images,args['count']))
-                    calculate_coordinates = True
+        cv2.imshow("info", info_frame)
+        while True:
+            key = cv2.waitKey(1)
+            if key == ord(" "):
+                cv2.destroyAllWindows()
+                return
+            elif key == 27 or key == ord("q"):  # 27 - ESC
+                cv2.destroyAllWindows()
+                raise SystemExit(0)
 
-                frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+    def show_failed_capture_frame(self):
+        width, height = int(self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
+        info_frame = np.zeros((height, width, 3), np.uint8)
+        print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
 
-                if capture_images == True:
-                    if packet.stream_name == 'left':
-                        filename = image_filename(packet.stream_name,polygon_index,total_num_of_captured_images)
-                        cv2.imwrite("dataset/left/" + str(filename), frame)
-                        print("py: Saved image as: " + str(filename))
-                        captured_left_image = True
+        def show(position, text):
+            cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 255, 0))
 
-                    elif packet.stream_name == 'right':
-                        filename = image_filename(packet.stream_name,polygon_index,total_num_of_captured_images)
-                        cv2.imwrite("dataset/right/" + str(filename), frame)
-                        print("py: Saved image as: " + str(filename))
-                        captured_right_image = True
+        show((50, int(height / 2 - 40)), "Capture failed, unable to find chessboard!")
+        show((60, int(height / 2 + 40)), "Fix position and press spacebar again")
 
-                    if captured_right_image == True and captured_left_image == True:
-                        capture_images = False
-                        captured_left_image = False
-                        captured_right_image = False
-                        total_num_of_captured_images += 1
-                        image_per_polygon_counter += 1
+        cv2.imshow("left", info_frame)
+        cv2.imshow("right", info_frame)
+        cv2.waitKey(2000)
 
-                        if image_per_polygon_counter == args['count']:
-                            image_per_polygon_counter = 0
-                            try:
-                                polygon_index = args['polygons'][args['polygons'].index(polygon_index)+1]
-                            except IndexError:
-                                complete = True
+    def capture_images(self):
+        finished = False
+        capturing = False
+        captured_left = False
+        captured_right = False
+        tried_left = False
+        tried_right = False
+        with self.get_pipeline() as pipeline:
+            while not finished:
+                _, data_list = pipeline.get_available_nnet_and_data_packets()
+                for packet in data_list:
+                    frame = packet.getData()
+                    frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
-                if complete == False:
-                    cv2.putText(frame, "Align cameras with callibration board and press spacebar to capture the image", (0, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
-                    cv2.putText(frame, "Polygon Position: %i. " % (polygon_index) + "Captured %i of %i images." % (total_num_of_captured_images,total_images), (0, 700), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0))
-                    cv2.polylines(frame, np.array([getPolygonCoordinates(polygon_index, polygons_coordinates)]), True, (0, 0, 255), 4)
-                    # Resizing drastically reduces the framerate
-                    # original image is 1280x720. reduce by 2x so it fits better.
-                    # aspect_ratio = 1.5
-                    # new_x, new_y = int(frame.shape[1]/aspect_ratio), int(frame.shape[0]/aspect_ratio)
-                    # resized_image = cv2.resize(frame,(new_x,new_y))
-                    cv2.imshow(packet.stream_name, frame)
-                else:
-                    # all polygons used, stop the loop
-                    run_capturing_images = False
+                    if self.polygons is None:
+                        self.height, self.width, _ = frame.shape
+                        self.polygons = setPolygonCoordinates(self.height, self.width)
 
-        # key = cv2.waitKey(33)
-        #
-        # if key == 27: # ESC is consistent w/exiting stereo image preview.
-        #     capture_images = True
-        #
-        # elif key == ord("q"):
-        #     print("py: Calibration has been interrupted!")
-        #     os._exit(0)
+                    key = cv2.waitKey(1)
+                    if key == 27 or key == ord("q"):
+                        print("py: Calibration has been interrupted!")
+                        raise SystemExit(0)
 
-        key = cv2.waitKey(1)
+                    if key == ord(" "):
+                        capturing = True
 
-        if key == ord(" "):
-            capture_images = True
+                    if capturing and packet.stream_name == 'left' and not tried_left:
+                        captured_left = self.parse_frame(frame, packet.stream_name)
+                        tried_left = True
+                    elif capturing and packet.stream_name == 'right' and not tried_right:
+                        captured_right = self.parse_frame(frame, packet.stream_name)
+                        tried_right = True
 
-        elif key == ord("q"):
-            print("py: Calibration has been interrupted!")
-            os._exit(0)
+                    has_success = (packet.stream_name == "left" and captured_left) or \
+                                  (packet.stream_name == "right" and captured_right)
+                    cv2.putText(
+                        frame,
+                        "Polygon Position: {}. Captured {} of {} images.".format(
+                            self.current_polygon + 1, self.images_captured, self.total_images
+                        ),
+                        (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0)
+                    )
+                    if self.polygons is not None:
+                        cv2.polylines(
+                            frame, np.array([self.polygons[self.current_polygon]]),
+                            True, (0, 255, 0) if has_success else (0, 0, 255), 4
+                        )
+
+                    small_frame = cv2.resize(frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
+                    cv2.imshow(packet.stream_name, small_frame)
+
+                    if captured_left and captured_right:
+                        self.images_captured += 1
+                        self.images_captured_polygon += 1
+                        capturing = False
+                        tried_left = False
+                        tried_right = False
+                        captured_left = False
+                        captured_right = False
+
+                    elif tried_left and tried_right:
+                        self.show_failed_capture_frame()
+                        capturing = False
+                        tried_left = False
+                        tried_right = False
+                        captured_left = False
+                        captured_right = False
+                        break
+
+                    if self.images_captured_polygon == self.args['count']:
+                        self.images_captured_polygon = 0
+                        self.current_polygon += 1
+
+                        if self.current_polygon == len(self.polygons):
+                            finished = True
+                            cv2.destroyAllWindows()
+                            break
+
+    def calibrate(self):
+        print("Starting image processing")
+        cal_data = StereoCalibration()
+        try:
+            cal_data.calibrate("dataset", self.args['square_size_cm'], "./resources/depthai.calib")
+        except AssertionError as e:
+            print("[ERROR] " + str(e))
+            raise SystemExit(1)
+
+    def run(self):
+        if 'capture' in self.args['mode']:
+            try:
+                if self.args['image_op'] == 'delete':
+                    shutil.rmtree('dataset/')
+                Path("dataset/left").mkdir(parents=True, exist_ok=True)
+                Path("dataset/right").mkdir(parents=True, exist_ok=True)
+            except OSError:
+                print("An error occurred trying to create image dataset directories!")
+                raise
+            self.show_info_frame()
+            self.capture_images()
+        if 'process' in self.args['mode']:
+            self.calibrate()
+        print('py: DONE.')
 
 
-    del pipeline # need to manualy delete the object, because of size of HostDataPacket queue runs out (Not enough free space to save {stream})
-
-    cv2.destroyWindow("left")
-    cv2.destroyWindow("right")
-
-else:
-    print("Skipping capture.")
-
-if 'process' in args['mode']:
-    print("Starting image processing")
-    cal_data = StereoCalibration()
-    try:
-        cal_data.calibrate("dataset", args['square_size_cm'], "./resources/depthai.calib")
-    except AssertionError as e:
-        print("[ERROR] " + str(e))
-        os._exit(1)
-else:
-    print("Skipping process.")
-
-print('py: DONE.')
-os._exit(0)
+if __name__ == "__main__":
+    Main().run()
