@@ -64,7 +64,8 @@ def parse_args():
                         help="Used by board developers for debugging.")
     parser.add_argument("-fusb2", "--force_usb2", default=None, action='store_true', 
                         help="Force usb2 connection")
-
+    parser.add_argument("-cnn", "--cnn_model", default='mobilenet_ssd', type=str, 
+                        help="Cnn model to run on DepthAI")
     options = parser.parse_args()
 
     return options
@@ -90,10 +91,15 @@ if args['dev_debug']:
     cmd_file = ''
     print('depthai will not load cmd file into device.')
 
-labels = []
-with open(consts.resource_paths.blob_labels_fpath) as fp:
-    labels = fp.readlines()
-    labels = [i.strip() for i in labels]
+if args['cnn_model']:
+    cnn_model_path = consts.resource_paths.nn_resource_path + args['cnn_model']+ "/" + args['cnn_model']
+    blob_file = cnn_model_path + ".blob"
+    blob_file_config = cnn_model_path + ".json"
+
+with open(blob_file_config) as f:
+    data = json.load(f)
+
+labels = data['mappings']['labels']
 
 
 
@@ -133,8 +139,8 @@ config = {
     },
     'ai':
     {
-        'blob_file': consts.resource_paths.blob_fpath,
-        'blob_file_config': consts.resource_paths.blob_config_fpath,
+        'blob_file': blob_file,
+        'blob_file_config': blob_file_config,
         'calc_dist_to_bb': True
     },
     'board_config':
