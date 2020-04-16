@@ -22,45 +22,42 @@ except ImportError:
 
 def parse_args():
     epilog_text = '''
-    Captures and processes images for disparity depth calibration, generating a `dephtai.calib` file
-    that should be loaded when initializing depthai. By default, captures one image across 13 polygon positions.
+    Captures and processes images for disparity depth calibration, generating a `depthai.calib` file
+    that should be loaded when initializing depthai. By default, captures one image for each of the 13 calibration target poses.
 
-    Image capture requires the use of a printed 7x9 OpenCV checkerboard applied to a flat surface (ex: sturdy cardboard).
+    Image capture requires the use of a printed 6x9 OpenCV checkerboard target applied to a flat surface (ex: sturdy cardboard).
     When taking photos, ensure the checkerboard fits within both the left and right image displays. The board does not need
     to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
 
-    If the checkerboard does not fit within a captured image, the calibration will generate an error message with instructions
-    on re-running calibration for polygons w/o valid checkerboard captures.
+    If the calibration checkerboard corners cannot be found, the user will be prompted to try that calibration pose again.
 
     The script requires a RMS error < 1.0 to generate a calibration file. If RMS exceeds this threshold, an error is displayed.
+    An average epipolar error of <1.5 is considered to be good, but not required. 
 
     Example usage:
 
-    Run calibration with a checkerboard square size of 2.35 cm:
-    python calibrate.py -s 2.35
+    Run calibration with a checkerboard square size of 3.0 cm and baseline of 7.5cm:
+    python3 calibrate.py -s 3.0 -b 7.5
 
-    Run calibration for only the first and 3rd polygon positions:
-    python calibrate.py -p 0 2
-
-    Only run image processing (not image capture) w/ a 2.35 cm square size. Requires a set of polygon images:
-    python calibrate.py -s 2.35 -m process
+    Only run image processing only with same board setup. Requires a set of saved capture images:
+    python3 calibrate.py -s 3.0 -b 7.5 -m process
+    
+    Change Left/Right baseline to 15cm and swap Left/Right cameras:
+    python3 calibrate.py -b 15 -w False
 
     Delete all existing images before starting image capture:
-    python calibrate.py -i delete
-
-    Capture 3 images per polygon:
-    python calibrate.py -c 3
+    python3 calibrate.py -i delete
 
     Pass thru pipeline config options:
-    python calibrate.py -co '{"board_config": {"swap_left_and_right_cameras": true, "left_to_right_distance_cm": 7.5}}'
+    python3 calibrate.py -co '{"board_config": {"swap_left_and_right_cameras": true, "left_to_right_distance_cm": 7.5}}'
     '''
     parser = ArgumentParser(epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-c", "--count", default=1,
                         type=int, required=False,
-                        help="Number of images per polygon to capture. Default is 1.")
+                        help="Number of images per polygon to capture. Default: 1.")
     parser.add_argument("-s", "--square_size_cm", default="2.5",
                         type=float, required=False,
-                        help="Square size of calibration pattern used in centimeters. Default is 2.5.")
+                        help="Square size of calibration pattern used in centimeters. Default: 2.5cm.")
     parser.add_argument("-i", "--image_op", default="modify",
                         type=str, required=False,
                         help="Whether existing images should be modified or all images should be deleted before running image capture. The default is 'modify'. Change to 'delete' to delete all image files.")
@@ -71,11 +68,11 @@ def parse_args():
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
     parser.add_argument("-fv", "--field-of-view", default=71.86, type=float,
-                        help="Horizontal field of view (HFOV) for the stereo cameras in [deg]")
+                        help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
     parser.add_argument("-b", "--baseline", default=9.0, type=float,
-                        help="Left/Right camera baseline in [cm]")
+                        help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
     parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=True, action="store_false",
-                        help="Do not swap the Left and Right cameras")
+                        help="Do not swap the Left and Right cameras. Default: True.")
 
     options = parser.parse_args()
 
