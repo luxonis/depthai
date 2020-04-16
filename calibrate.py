@@ -215,7 +215,7 @@ class Main:
                         self.polygons = setPolygonCoordinates(self.height, self.width)
 
                     key = cv2.waitKey(1)
-                    if key == ord("q"):
+                    if key == 27 or key == ord("q"):
                         print("py: Calibration has been interrupted!")
                         raise SystemExit(0)
 
