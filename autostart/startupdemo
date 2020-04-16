@@ -11,6 +11,6 @@ raspi-gpio set 33 dl  # drive low to allow Myriad X to run
 echo Booting DepthAI
 echo Loading Start-up Demo Application...
 sleep 1
-cd /home/pi/Desktop/depthai-python-extras
+cd /home/pi/Desktop/depthai
 python3 test.py
 sleep 60
