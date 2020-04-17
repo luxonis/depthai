@@ -64,7 +64,7 @@ def parse_args():
                         help="Used by board developers for debugging.")
     parser.add_argument("-fusb2", "--force_usb2", default=None, action='store_true', 
                         help="Force usb2 connection")
-    parser.add_argument("-cnn", "--cnn_model", default='mobilenet_ssd', type=str, 
+    parser.add_argument("-cnn", "--cnn_model", default='mobilenet-ssd', type=str, 
                         help="Cnn model to run on DepthAI")
     options = parser.parse_args()
 
