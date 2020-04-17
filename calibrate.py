@@ -5,9 +5,7 @@ from depthai_helpers.calibration_utils import *
 from depthai_helpers import utils
 import argparse
 from argparse import ArgumentParser
-import time
 import numpy as np
-import os
 from pathlib import Path
 import shutil
 import consts.resource_paths
@@ -88,6 +86,26 @@ def find_chessboard(frame):
 
 def ts(packet):
     return packet.getMetadata().getTimestamp()
+
+
+def get_recent_pair(data_list):
+    lefts, rights = [], []
+
+    for packet in data_list:
+        if packet.stream_name == "left":
+            lefts.append(packet)
+        elif packet.stream_name == "right":
+            rights.append(packet)
+
+    if len(lefts) == 0 or len(rights) == 0:
+        return None, None
+
+    lefts_ts = np.array(map(lambda packet: ts(packet), lefts))
+    rights_ts = np.array(map(lambda packet: ts(packet), rights))
+    min_right = rights[np.array([abs(min(lefts_ts - item, key=abs)) for item in rights_ts]).argmin()]
+    min_left = lefts[abs(lefts_ts - ts(min_right)).argmin()]
+
+    return min_left, min_right
 
 
 class Main:
@@ -204,16 +222,11 @@ class Main:
         captured_right = False
         tried_left = False
         tried_right = False
-        recent_left = None
-        recent_right = None
+
         with self.get_pipeline() as pipeline:
             while not finished:
                 _, data_list = pipeline.get_available_nnet_and_data_packets()
-                for packet in data_list:
-                    if packet.stream_name == "left" and (recent_left is None or ts(recent_left) < ts(packet)):
-                        recent_left = packet
-                    elif packet.stream_name == "right" and (recent_right is None or ts(recent_right) < ts(packet)):
-                        recent_right = packet
+                recent_left, recent_right = get_recent_pair(data_list)
 
                 if recent_left is None or recent_right is None:
                     continue
