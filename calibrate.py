@@ -73,6 +73,10 @@ def parse_args():
                         help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
     parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=True, action="store_false",
                         help="Do not swap the Left and Right cameras. Default: True.")
+    parser.add_argument("-iv", "--invert-vertical", dest="invert_v", default=False, action="store_true",
+                        help="Invert vertical axis of the camera for the display")
+    parser.add_argument("-ih", "--invert-horizontal", dest="invert_h", default=False, action="store_true",
+                        help="Invert horizontal axis of the camera for the display")
 
     options = parser.parse_args()
 
@@ -228,6 +232,14 @@ class Main:
 
                     has_success = (packet.stream_name == "left" and captured_left) or \
                                   (packet.stream_name == "right" and captured_right)
+
+                    if self.args['invert_v'] and self.args['invert_h']:
+                        frame = cv2.flip(frame, -1)
+                    elif self.args['invert_v']:
+                        frame = cv2.flip(frame, 0)
+                    elif self.args['invert_h']:
+                        frame = cv2.flip(frame, 1)
+
                     cv2.putText(
                         frame,
                         "Polygon Position: {}. Captured {} of {} images.".format(
