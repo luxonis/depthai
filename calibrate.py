@@ -86,6 +86,10 @@ def find_chessboard(frame):
            cv2.findChessboardCorners(frame, (9, 6), chessboard_flags)[0]
 
 
+def ts(packet):
+    return packet.getMetadata().getTimestamp()
+
+
 class Main:
     output_scale_factor = 0.5
     cmd_file = consts.resource_paths.device_cmd_fpath
@@ -200,96 +204,88 @@ class Main:
         captured_right = False
         tried_left = False
         tried_right = False
+        recent_left = None
+        recent_right = None
         with self.get_pipeline() as pipeline:
-            packet_list = []
             while not finished:
                 _, data_list = pipeline.get_available_nnet_and_data_packets()
-                # Converting data_list into python list to get latest two data packets
                 for packet in data_list:
-                    packet_list.append(packet)
-                
-                # ESC or "q" to quit image capture
-                key = cv2.waitKey(1)
-                if key == 27 or key == ord("q"):
-                    print("py: Calibration has been interrupted!")
-                    raise SystemExit(0)
+                    if packet.stream_name == "left" and (recent_left is None or ts(recent_left) < ts(packet)):
+                        recent_left = packet
+                    elif packet.stream_name == "right" and (recent_right is None or ts(recent_right) < ts(packet)):
+                        recent_right = packet
 
-                #Spacebar to capture image pair
-                if key == ord(" "):
-                        capturing = True   
-                
-                if len(packet_list) > 1:    
-                    metadata0 = packet_list[-2].getMetadata()    #Second-most recent data packet
-                    metadata1 = packet_list[-1].getMetadata()    #Most recent data packet
-                    ts0 = metadata0.getTimestamp()
-                    ts1 = metadata1.getTimestamp()
-                    
-                    packet_pair = []
-                    if abs(ts0-ts1) < 0.001: #pair must be at most 1 ms difference 
-                        packet_pair = [packet_list[0], packet_list[1]]
-                        
-                        for packet in packet_pair:
-                            frame = packet.getData()
-                            frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+                if recent_left is None or recent_right is None:
+                    continue
 
-                            if self.polygons is None:
-                                self.height, self.width, _ = frame.shape
-                                self.polygons = setPolygonCoordinates(self.height, self.width)
+                for packet in (recent_left, recent_right):
+                    frame = packet.getData()
+                    frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
-                            if capturing:
-                                if packet.stream_name == 'left' and not tried_left:
-                                    captured_left = self.parse_frame(frame, packet.stream_name)
-                                    tried_left = True
-                                elif packet.stream_name == 'right' and not tried_right:
-                                    captured_right = self.parse_frame(frame, packet.stream_name)
-                                    tried_right = True
+                    if self.polygons is None:
+                        self.height, self.width, _ = frame.shape
+                        self.polygons = setPolygonCoordinates(self.height, self.width)
 
-                            has_success = (packet.stream_name == "left" and captured_left) or \
-                                          (packet.stream_name == "right" and captured_right)
-                            cv2.putText(
-                                frame,
-                                "Polygon Position: {}. Captured {} of {} images.".format(
-                                    self.current_polygon + 1, self.images_captured, self.total_images
-                                ),
-                                (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0)
-                            )
-                            if self.polygons is not None:
-                                cv2.polylines(
-                                    frame, np.array([self.polygons[self.current_polygon]]),
-                                    True, (0, 255, 0) if has_success else (0, 0, 255), 4
-                                )
+                    key = cv2.waitKey(1)
+                    if key == 27 or key == ord("q"):
+                        print("py: Calibration has been interrupted!")
+                        raise SystemExit(0)
 
-                            small_frame = cv2.resize(frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
-                            cv2.imshow(packet.stream_name, small_frame)
+                    if key == ord(" "):
+                        capturing = True
 
-                            if captured_left and captured_right:
-                                self.images_captured += 1
-                                self.images_captured_polygon += 1
-                                capturing = False
-                                tried_left = False
-                                tried_right = False
-                                captured_left = False
-                                captured_right = False
+                    if capturing and abs(ts(recent_left) - ts(recent_right)) < 0.001:
+                        if packet.stream_name == 'left' and not tried_left:
+                            captured_left = self.parse_frame(frame, packet.stream_name)
+                            tried_left = True
+                        elif packet.stream_name == 'right' and not tried_right:
+                            captured_right = self.parse_frame(frame, packet.stream_name)
+                            tried_right = True
 
-                            elif tried_left and tried_right:
-                                self.show_failed_capture_frame()
-                                capturing = False
-                                tried_left = False
-                                tried_right = False
-                                captured_left = False
-                                captured_right = False
-                                break
+                    has_success = (packet.stream_name == "left" and captured_left) or \
+                                  (packet.stream_name == "right" and captured_right)
+                    cv2.putText(
+                        frame,
+                        "Polygon Position: {}. Captured {} of {} images.".format(
+                            self.current_polygon + 1, self.images_captured, self.total_images
+                        ),
+                        (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0)
+                    )
+                    if self.polygons is not None:
+                        cv2.polylines(
+                            frame, np.array([self.polygons[self.current_polygon]]),
+                            True, (0, 255, 0) if has_success else (0, 0, 255), 4
+                        )
 
-                            if self.images_captured_polygon == self.args['count']:
-                                self.images_captured_polygon = 0
-                                self.current_polygon += 1
+                    small_frame = cv2.resize(frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
+                    cv2.imshow(packet.stream_name, small_frame)
 
-                                if self.current_polygon == len(self.polygons):
-                                    finished = True
-                                    cv2.destroyAllWindows()
-                                    break
-                        
-                        packet_list = [] # resets packet_list to get at least two more packets
+                    if captured_left and captured_right:
+                        self.images_captured += 1
+                        self.images_captured_polygon += 1
+                        capturing = False
+                        tried_left = False
+                        tried_right = False
+                        captured_left = False
+                        captured_right = False
+
+                    elif tried_left and tried_right:
+                        self.show_failed_capture_frame()
+                        capturing = False
+                        tried_left = False
+                        tried_right = False
+                        captured_left = False
+                        captured_right = False
+                        break
+
+                    if self.images_captured_polygon == self.args['count']:
+                        self.images_captured_polygon = 0
+                        self.current_polygon += 1
+
+                        if self.current_polygon == len(self.polygons):
+                            finished = True
+                            cv2.destroyAllWindows()
+                            break
 
     def calibrate(self):
         print("Starting image processing")
