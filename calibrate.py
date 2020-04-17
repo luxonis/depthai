@@ -1,3 +1,4 @@
+import platform
 from contextlib import contextmanager
 
 import depthai
@@ -18,6 +19,8 @@ try:
     import cv2
 except ImportError:
     use_cv = False
+
+on_embedded = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
 
 
 def parse_args():
@@ -103,7 +106,9 @@ class Main:
     def __init__(self):
         self.args = vars(parse_args())
         self.config = {
-            'streams': ['left', 'right'],
+            'streams':
+                ['left', 'right'] if not on_embedded else
+                [{'name': 'left', "max_fps": 10.0}, {'name': 'right', "max_fps": 10.0}],
             'depth':
                 {
                     'calibration_file': consts.resource_paths.calib_fpath,
