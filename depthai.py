@@ -66,6 +66,8 @@ def parse_args():
                         help="Force usb2 connection")
     parser.add_argument("-cnn", "--cnn_model", default='mobilenet-ssd', type=str, 
                         help="Cnn model to run on DepthAI")
+    parser.add_argument("-dd", "--disable_depth", default=False,  action='store_true', 
+                        help="Disable depth calculation on CNN models with bounding box output")
     options = parser.parse_args()
 
     return options
@@ -91,10 +93,17 @@ if args['dev_debug']:
     cmd_file = ''
     print('depthai will not load cmd file into device.')
 
+calc_dist_to_bb = True
+if args['disable_depth']:
+    calc_dist_to_bb = False
+
 if args['cnn_model']:
     cnn_model_path = consts.resource_paths.nn_resource_path + args['cnn_model']+ "/" + args['cnn_model']
     blob_file = cnn_model_path + ".blob"
-    blob_file_config = cnn_model_path + ".json"
+    suffix=""
+    if calc_dist_to_bb:
+        suffix="_depth"
+    blob_file_config = cnn_model_path + suffix + ".json"
 
 with open(blob_file_config) as f:
     data = json.load(f)
@@ -141,7 +150,7 @@ config = {
     {
         'blob_file': blob_file,
         'blob_file_config': blob_file_config,
-        'calc_dist_to_bb': True
+        'calc_dist_to_bb': calc_dist_to_bb
     },
     'board_config':
     {
