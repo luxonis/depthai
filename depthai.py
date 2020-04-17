@@ -245,7 +245,6 @@ while True:
                     pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
 
                     cv2.rectangle(frame, pt1, pt2, (0, 0, 255))
-
                     # Handles case where TensorEntry object label = 7552.
                     if e[0]['label'] > len(labels):
                         print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")

@@ -15,6 +15,14 @@
             ],
             "output_properties_type": "f16"
         }
-    ]
+    ],
+    "mappings":
+    {
+        "labels":
+        [
+            "",
+            "vehicle"
+        ]
+    }
 }
 
