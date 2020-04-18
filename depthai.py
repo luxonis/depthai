@@ -68,13 +68,13 @@ def parse_args():
                         help="Cnn model to run on DepthAI")
     parser.add_argument("-dd", "--disable_depth", default=False,  action='store_true', 
                         help="Disable depth calculation on CNN models with bounding box output")
-    parser.add_argument('-s', '--streams',  
+    parser.add_argument("-s", "--streams",  
                         nargs='+',
                         type=str,
                         dest='streams',
                         default=['metaout', 'previewout'],
                         choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h'],
-    )
+                        help="Define which streams to enable")
     options = parser.parse_args()
 
     return options
