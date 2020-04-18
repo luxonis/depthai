@@ -68,6 +68,13 @@ def parse_args():
                         help="Cnn model to run on DepthAI")
     parser.add_argument("-dd", "--disable_depth", default=False,  action='store_true', 
                         help="Disable depth calculation on CNN models with bounding box output")
+    parser.add_argument('-s', '--streams',  
+                        nargs='+',
+                        type=str,
+                        dest='streams',
+                        default=['metaout', 'previewout'],
+                        choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h'],
+    )
     options = parser.parse_args()
 
     return options
@@ -77,6 +84,9 @@ try:
     args = vars(parse_args())
 except:
     os._exit(2)
+
+ 
+stream_list = args['streams']
 
 if args['config_overwrite']:
     args['config_overwrite'] = json.loads(args['config_overwrite'])
@@ -139,7 +149,7 @@ config = {
     # If "left" is used, it must be in the first position.
     # To test depth use:
     # 'streams': [{'name': 'depth_sipp', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
-    'streams': ['metaout', 'previewout'],
+    'streams': stream_list,
     'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
