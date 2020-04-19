@@ -73,6 +73,8 @@ def parse_args():
                         help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
     parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=True, action="store_false",
                         help="Do not swap the Left and Right cameras. Default: True.")
+    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
+                        help="Used by board developers for debugging.")
 
     options = parser.parse_args()
 
@@ -125,6 +127,9 @@ class Main:
         if self.args['config_overwrite']:
             utils.merge(json.loads(self.args['config_overwrite']), self.config)
             print("Merged Pipeline config with overwrite", self.config)
+        if self.args['dev_debug']:
+            self.cmd_file = ''
+            print('depthai will not load cmd file into device.')
         self.total_images = self.args['count'] * len(setPolygonCoordinates(1000, 600))  # random polygons for count
         print("Using Arguments=", self.args)
 
