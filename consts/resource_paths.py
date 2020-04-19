@@ -13,6 +13,7 @@ def relative_to_abs_path(relative_path):
 prefix                = relative_to_abs_path('../resources/')+"/"
 device_cmd_fpath      = relative_to_abs_path('../depthai.cmd')
 device_usb2_cmd_fpath = relative_to_abs_path('../depthai_usb2.cmd')
+boards_dir_path       = relative_to_abs_path('../resources/boards') + "/"
 custom_calib_fpath    = relative_to_abs_path('../resources/depthai.calib')
 blob_labels_fpath     = relative_to_abs_path('../resources/nn/object_detection_4shave/labels_for_mobilenet_ssd.txt')
 blob_fpath            = relative_to_abs_path('../resources/nn/object_detection_4shave/mobilenet_ssd.blob')
