@@ -49,6 +49,7 @@ def parse_args():
                         help="Used by board developers for debugging.")
     parser.add_argument("-fusb2", "--force_usb2", default=None, action='store_true', 
                         help="Force usb2 connection")
+    parser.add_argument("-v", "--video", default=None, type=str, required=False, help="Path where to save video stream (existing file will be overwritten)")
 
     options = parser.parse_args()
 
@@ -109,7 +110,7 @@ config = {
     # If "left" is used, it must be in the first position.
     # To test depth use:
     # 'streams': [{'name': 'depth_sipp', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
-    'streams': ['metaout', 'previewout'],
+    'streams': ['jpegout', 'metaout', 'previewout'],
     'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
@@ -131,6 +132,7 @@ config = {
     }
 }
 
+
 if args['config_overwrite'] is not None:
     config = utils.merge(args['config_overwrite'],config)
     print("Merged Pipeline config with overwrite",config)
@@ -139,6 +141,21 @@ if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] o
     print('ERROR: depth_sipp is mutually exclusive with depth_color_h')
     exit(2)
     # del config["streams"][config['streams'].index('depth_sipp')]
+
+# Append video stream if video recording was requested and stream is not already specified
+video_file = None
+if args['video'] is not None:
+    
+    # open video file
+    try:
+        video_file = open(args['video'], 'wb')
+        if config['streams'].count('video') == 0:
+            config['streams'].append('video')
+    except IOError:
+        print("Error: couldn't open video file for writing. Disabled video output stream")
+        if config['streams'].count('video') == 1:
+            config['streams'].remove('video')
+    
 
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
 
@@ -166,6 +183,7 @@ def reset_process_wd():
     return
 
 reset_process_wd()
+
 
 while True:
     # retreive data from the device
@@ -269,6 +287,15 @@ while True:
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
                 cv2.imshow(packet.stream_name, frame)
 
+        elif packet.stream_name == 'jpegout':
+            jpg = packet.getData()
+            mat = cv2.imdecode(jpg, cv2.IMREAD_COLOR)
+            cv2.imshow('jpegout', mat)
+
+        elif packet.stream_name == 'video':
+            videoFrame = packet.getData()
+            videoFrame.tofile(video_file)                
+
         frame_count[packet.stream_name] += 1
 
     t_curr = time()
@@ -279,10 +306,19 @@ while True:
             frame_count_prev[s] = frame_count[s]
             frame_count[s] = 0
 
-    if cv2.waitKey(1) == ord('q'):
+
+    key = cv2.waitKey(1)
+    if key == ord('c'):
+        depthai.request_jpeg()
+    elif key == ord('q'):
         break
 
+
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
+
+# Close video output file if was opened
+if video_file is not None:
+    video_file.close()
 
 print('py: DONE.')
 os._exit(0)
