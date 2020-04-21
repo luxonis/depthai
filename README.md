@@ -1,6 +1,6 @@
-# DepthAI Python API Extras
+# DepthAI Python Module
 
-This repo contains the pre-compiled DepthAI Python module (compiled as an architecture-specific `.so` file), utilities, and DepthAI examples.
+This repo contains the pre-compiled DepthAI Python module (compiled as an architecture-specific `.so` file), utilities, and a submodule that allows compiling the DepthAI Python module for other platforms.
 
 __Documentation is available at [https://docs.luxonis.com](https://docs.luxonis.com).__
 
@@ -13,12 +13,12 @@ Files with `.so` extension are the python modules:
 For supporting other platforms, there is an option to build the python lib from sources by grabbing the [depthai-api](https://github.com/luxonis/depthai-api) submodule:
 
     git submodule update --init
-    ./depthai-api/install_dependencies.sh
+    ./depthai-api/install_dependencies.sh # Only required in first build on a given system
     ./depthai-api/build_py_module.sh
 
 ## Examples
 
-`test.py` - depth & CNN inference example  
+`python3 test.py` - depth & CNN inference example  
 
 ## Conversion of existing trained models into Intel Movidius binary format
 
