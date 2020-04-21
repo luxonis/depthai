@@ -76,6 +76,9 @@ def parse_args():
                         help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
     parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=True, action="store_false",
                         help="Do not swap the Left and Right cameras. Default: True.")
+
+    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
+                        help="Used by board developers for debugging.")
     parser.add_argument("-iv", "--invert-vertical", dest="invert_v", default=False, action="store_true",
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invert-horizontal", dest="invert_h", default=False, action="store_true",
@@ -91,6 +94,10 @@ def find_chessboard(frame):
     small_frame = cv2.resize(frame, (0, 0), fx=0.3, fy=0.3)
     return cv2.findChessboardCorners(small_frame, (9, 6), chessboard_flags)[0] and \
            cv2.findChessboardCorners(frame, (9, 6), chessboard_flags)[0]
+
+
+def ts(packet):
+    return packet.getMetadata().getTimestamp()
 
 
 class Main:
@@ -130,6 +137,9 @@ class Main:
         if self.args['config_overwrite']:
             utils.merge(json.loads(self.args['config_overwrite']), self.config)
             print("Merged Pipeline config with overwrite", self.config)
+        if self.args['dev_debug']:
+            self.cmd_file = ''
+            print('depthai will not load cmd file into device.')
         self.total_images = self.args['count'] * len(setPolygonCoordinates(1000, 600))  # random polygons for count
         print("Using Arguments=", self.args)
 
@@ -209,10 +219,21 @@ class Main:
         captured_right = False
         tried_left = False
         tried_right = False
+        recent_left = None
+        recent_right = None
         with self.get_pipeline() as pipeline:
             while not finished:
                 _, data_list = pipeline.get_available_nnet_and_data_packets()
                 for packet in data_list:
+                    if packet.stream_name == "left" and (recent_left is None or ts(recent_left) < ts(packet)):
+                        recent_left = packet
+                    elif packet.stream_name == "right" and (recent_right is None or ts(recent_right) < ts(packet)):
+                        recent_right = packet
+
+                if recent_left is None or recent_right is None:
+                    continue
+
+                for packet in (recent_left, recent_right):
                     frame = packet.getData()
                     frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
 
@@ -228,12 +249,13 @@ class Main:
                     if key == ord(" "):
                         capturing = True
 
-                    if capturing and packet.stream_name == 'left' and not tried_left:
-                        captured_left = self.parse_frame(frame, packet.stream_name)
-                        tried_left = True
-                    elif capturing and packet.stream_name == 'right' and not tried_right:
-                        captured_right = self.parse_frame(frame, packet.stream_name)
-                        tried_right = True
+                    if capturing and abs(ts(recent_left) - ts(recent_right)) < 0.001:
+                        if packet.stream_name == 'left' and not tried_left:
+                            captured_left = self.parse_frame(frame, packet.stream_name)
+                            tried_left = True
+                        elif packet.stream_name == 'right' and not tried_right:
+                            captured_right = self.parse_frame(frame, packet.stream_name)
+                            tried_right = True
 
                     has_success = (packet.stream_name == "left" and captured_left) or \
                                   (packet.stream_name == "right" and captured_right)
