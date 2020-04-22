@@ -128,11 +128,12 @@ def show_mobilenet_ssd(entries_prev, frame):
 def decode_age_gender_recognition(nnet_packet):
     detections = []
     for _, e in enumerate(nnet_packet.entries()):
-        detections.append(e[0]["age"])
-        if e[1]["female"] > e[1]["male"]:
-            detections.append("female")
-        else:
-            detections.append("male")
+        if e[1]["female"] > 0.8 or e[1]["male"] > 0.8:
+            detections.append(e[0]["age"])  
+            if e[1]["female"] > e[1]["male"]:
+                detections.append("female")
+            else:
+                detections.append("male")
     return detections
 
 def show_age_gender_recognition(entries_prev, frame):
@@ -163,8 +164,10 @@ def show_emotion_recognition(entries_prev, frame):
         4 : "anger"
     }
     if len(entries_prev) != 0:
-        emotion = e_states[np.argmax(entries_prev)]
-        cv2.putText(frame, emotion, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        max_confidence = max(entries_prev)
+        if(max_confidence > 0.7):
+            emotion = e_states[np.argmax(entries_prev)]
+            cv2.putText(frame, emotion, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
     frame = cv2.resize(frame, (300, 300))
 
     return frame
