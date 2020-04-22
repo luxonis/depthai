@@ -82,7 +82,7 @@ class StereoCalibration(object):
         self.H.tofile(out_filepath)
 
         print("Calibration file written to %s." % (out_filepath))
-        print("\tTook %i to run image processing." % (round(time.time() - start_time, 2)))
+        print("\tTook %i seconds to run image processing." % (round(time.time() - start_time, 2)))
         # show debug output for visual inspection
         print("\nRectifying dataset for visual inspection")
         self.show_rectified_images(filepath, out_filepath)
@@ -173,17 +173,17 @@ class StereoCalibration(object):
 
         # config
         flags = 0
-        flags |= cv2.CALIB_FIX_ASPECT_RATIO
+        #flags |= cv2.CALIB_FIX_ASPECT_RATIO
         flags |= cv2.CALIB_USE_INTRINSIC_GUESS
-        flags |= cv2.CALIB_SAME_FOCAL_LENGTH
-        flags |= cv2.CALIB_ZERO_TANGENT_DIST
+        #flags |= cv2.CALIB_SAME_FOCAL_LENGTH
+        #flags |= cv2.CALIB_ZERO_TANGENT_DIST
         flags |= cv2.CALIB_RATIONAL_MODEL
-        flags |= cv2.CALIB_FIX_K1
-        flags |= cv2.CALIB_FIX_K2
-        flags |= cv2.CALIB_FIX_K3
-        flags |= cv2.CALIB_FIX_K4
-        flags |= cv2.CALIB_FIX_K5
-        flags |= cv2.CALIB_FIX_K6
+        #flags |= cv2.CALIB_FIX_K1
+        #flags |= cv2.CALIB_FIX_K2
+        #flags |= cv2.CALIB_FIX_K3
+        #flags |= cv2.CALIB_FIX_K4
+        #flags |= cv2.CALIB_FIX_K5
+        #flags |= cv2.CALIB_FIX_K6
         stereocalib_criteria = (cv2.TERM_CRITERIA_COUNT +
                                 cv2.TERM_CRITERIA_EPS, 100, 1e-5)
 
@@ -197,7 +197,8 @@ class StereoCalibration(object):
         print("[OK] Calibration successful w/ RMS error=" + str(ret))
 
         # construct Homography
-        plane_depth = 40.0  # arbitrary plane depth
+        plane_depth = 40000000.0  # arbitrary plane depth 
+        #TODO: Need to understand effect of plane_depth. Why does this improve some boards' cals?
         n = np.array([[0.0], [0.0], [-1.0]])
         d_inv = 1.0 / plane_depth
         H = (R - d_inv * np.dot(T, n.transpose()))
