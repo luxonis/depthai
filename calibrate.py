@@ -142,20 +142,11 @@ class Main:
         }
         if self.args['board']:
             board_path = Path(self.args['board'])
+            if not board_path.exists():
+                board_path = Path(consts.resource_paths.boards_dir_path) / Path(self.args['board'].upper()).with_suffix('.json')
                 if not board_path.exists():
-                    board_path = Path(consts.resource_paths.boards_dir_path) / Path(self.args['board'].upper()).with_suffix('.json')
-                    if not board_path.exists():
-                        raise ValueError('Board config not found: {}'.format(board_path))
-                with open(board_path) as fp:
-                    board_config = json.load(fp)
-                utils.merge(board_config, self.config)
-            board_file = self.args['board']
-            if not os.path.exists(board_file):
-                board_file = consts.resource_paths.boards_dir_path + board_file.upper() + '.json'
-                if not os.path.exists(board_file):
-                    print('ERROR: Board config not found:', board_file)
-                    os._exit(2)
-            with open(board_file) as fp:
+                    raise ValueError('Board config not found: {}'.format(board_path))
+            with open(board_path) as fp:
                 board_config = json.load(fp)
             utils.merge(board_config, self.config)
         if self.args['config_overwrite']:
