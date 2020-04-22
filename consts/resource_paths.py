@@ -12,9 +12,8 @@ device_cmd_fpath      = relative_to_abs_path('../depthai.cmd')
 device_usb2_cmd_fpath = relative_to_abs_path('../depthai_usb2.cmd')
 custom_calib_fpath    = relative_to_abs_path('../resources/depthai.calib')
 nn_resource_path      = relative_to_abs_path('../resources/nn')+"/"
-blob_labels_fpath     = relative_to_abs_path('../resources/nn/object_detection_4shave/labels_for_mobilenet_ssd.txt')
-blob_fpath            = relative_to_abs_path('../resources/nn/object_detection_4shave/mobilenet_ssd.blob')
-blob_config_fpath     = relative_to_abs_path('../resources/nn/object_detection_4shave/object_detection.json')
+blob_fpath            = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.blob')
+blob_config_fpath     = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.json')
 pipeline_config_fpath = relative_to_abs_path('../resources/config.json')
 
 if Path(custom_calib_fpath).exists():
