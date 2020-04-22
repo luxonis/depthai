@@ -9,6 +9,7 @@ import cv2
 import os
 import subprocess
 import platform
+from pathlib import Path
 
 import depthai
 
@@ -252,6 +253,16 @@ if args['cnn_model']:
     if calc_dist_to_bb:
         suffix="_depth"
     blob_file_config = cnn_model_path + suffix + ".json"
+
+blob_file_path = Path(blob_file)
+blob_file_config_path = Path(blob_file_config)
+if not blob_file_path.exists():
+    print(bcolors.WARNING + "\nWARNING: NN blob not found in: " + blob_file + bcolors.ENDC)
+    os._exit(1)
+
+if not blob_file_config_path.exists():
+    print(bcolors.WARNING + "\nWARNING: NN json not found in: " + blob_file_config + bcolors.ENDC)
+    os._exit(1)
 
 with open(blob_file_config) as f:
     data = json.load(f)
