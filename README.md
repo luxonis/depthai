@@ -13,7 +13,7 @@ Files with `.so` extension are the python modules:
 For supporting other platforms, there is an option to build the python lib from sources by grabbing the [depthai-api](https://github.com/luxonis/depthai-api) submodule:
 
     git submodule update --init
-    ./depthai-api/install_dependencies.sh
+    ./depthai-api/install_dependencies.sh # Only required in first build on a given system
     ./depthai-api/build_py_module.sh
 
 ## Examples

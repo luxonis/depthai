@@ -1,0 +1,47 @@
+{
+    "tensors":
+    [
+        {       
+            "output_tensor_name": "out",
+            "output_dimensions": [1, 1, 100, 7],
+            "output_entry_iteration_index": 2,
+            "output_properties_dimensions": [3],
+            "property_key_mapping":
+            [
+                [],
+                [],
+                [],
+                ["id", "label", "confidence", "left", "top", "right", "bottom"]
+            ],
+            "output_properties_type": "f16"
+        }
+    ],
+    "mappings":
+    {
+        "labels":
+        [
+            "background",
+            "aeroplane",
+            "bicycle",
+            "bird",
+            "boat",
+            "bottle",
+            "bus",
+            "car",
+            "cat",
+            "chair",
+            "cow",
+            "diningtable",
+            "dog",
+            "horse",
+            "motorbike",
+            "person",
+            "pottedplant",
+            "sheep",
+            "sofa",
+            "train",
+            "tvmonitor"
+        ]
+    }
+}
+
