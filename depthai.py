@@ -3,6 +3,7 @@ from time import time
 from time import sleep
 import argparse
 from argparse import ArgumentParser
+from pathlib import Path
 import json
 import numpy as np
 import cv2
@@ -170,16 +171,15 @@ config = {
 }
 
 if args['board']:
-    board_file = args['board']
-    if not os.path.exists(board_file):
-        board_file = consts.resource_paths.boards_dir_path + board_file.upper() + '.json'
-        if not os.path.exists(board_file):
-            print('ERROR: Board config not found:', board_file)
+    board_path = Path(args['board'])
+    if not board_path.exists():
+        board_path = Path(consts.resource_paths.boards_dir_path) / Path(args['board'].upper()).with_suffix('.json')
+        if not board_path.exists():
+            print('ERROR: Board config not found: {}'.format(board_path))
             os._exit(2)
-    with open(board_file) as fp:
+    with open(board_path) as fp:
         board_config = json.load(fp)
-    config = utils.merge(board_config, config)
-
+    utils.merge(board_config, config)
 if args['config_overwrite'] is not None:
     config = utils.merge(args['config_overwrite'],config)
     print("Merged Pipeline config with overwrite",config)
