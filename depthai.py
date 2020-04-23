@@ -304,7 +304,6 @@ config = {
     'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
-        # 'type': 'median',
         'padding_factor': 0.3
     },
     'ai':
