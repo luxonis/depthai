@@ -144,6 +144,7 @@ class Main:
                     'swap_left_and_right_cameras': self.args['swap_lr'],
                     'left_fov_deg':  self.args['field_of_view'],
                     'left_to_right_distance_cm': self.args['baseline'],
+                    'override_eeprom': True,
                 }
         }
         if self.args['board']:
