@@ -33,13 +33,10 @@ def parse_args():
 
     Example usage:
 
-    # Pass thru pipeline config options
-
-    ## USB3 w/onboard cameras board config:
-    python3 test.py -co '{"board_config": {"left_to_right_distance_cm": 7.5}}'
-
     ## Show the depth stream:
-    python3 test.py -co '{"streams": [{"name": "depth_sipp", "max_fps": 12.0}]}'
+    python3 test.py -s depth_sipp,12
+    ## Show the depth stream and NN output:
+    python3 test.py -s metaout previewout,12 depth_sipp,12
     '''
     parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-co", "--config_overwrite", default=None,
@@ -71,14 +68,40 @@ def parse_args():
                         help="Disable depth calculation on CNN models with bounding box output")
     parser.add_argument("-s", "--streams",  
                         nargs='+',
-                        type=str,
+                        type=stream_type,
                         dest='streams',
                         default=['metaout', 'previewout'],
-                        choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h'],
-                        help="Define which streams to enable")
+                        help="Define which streams to enable \
+                        Format: stream_name or stream_name,max_fps \
+                        Example: -s metaout previewout \
+                        Example: -s metaout previewout,10 depth_sipp,10")
     options = parser.parse_args()
 
     return options
+
+def stream_type(option):
+    option_list = option.split(',')
+    option_args = len(option_list)
+    if option_args not in [1,2]:
+        print(bcolors.WARNING + option+" format is invalid. See --help" + bcolors.ENDC)
+        raise ValueError
+
+    stream_choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h']
+    stream_name = option_list[0]
+    if stream_name not in stream_choices:
+        print(bcolors.WARNING + stream_name +" is not in available stream list: \n" + str(stream_choices) + bcolors.ENDC)
+        raise ValueError
+
+    if(option_args == 1):
+        stream_dict = {'name': stream_name}
+    else:       
+        try:
+            max_fps = float(option_list[1])
+        except:
+            print(bcolors.WARNING + "In option: " + str(option) + " " + option_list[1] + " is not a number!" + bcolors.ENDC)
+
+        stream_dict = {'name': stream_name, "max_fps": max_fps}
+    return stream_dict
 
 def decode_mobilenet_ssd(nnet_packet):
     detections = []
