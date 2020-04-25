@@ -144,6 +144,8 @@ class Main:
                     'swap_left_and_right_cameras': self.args['swap_lr'],
                     'left_fov_deg':  self.args['field_of_view'],
                     'left_to_right_distance_cm': self.args['baseline'],
+                    'override_eeprom': True,
+                    'stereo_center_crop': True,
                 }
         }
         if self.args['board']:
@@ -333,9 +335,10 @@ class Main:
 
     def calibrate(self):
         print("Starting image processing")
+        flags = [self.config['board_config']['stereo_center_crop']]
         cal_data = StereoCalibration()
         try:
-            cal_data.calibrate("dataset", self.args['square_size_cm'], "./resources/depthai.calib")
+            cal_data.calibrate("dataset", self.args['square_size_cm'], "./resources/depthai.calib", flags)
         except AssertionError as e:
             print("[ERROR] " + str(e))
             raise SystemExit(1)

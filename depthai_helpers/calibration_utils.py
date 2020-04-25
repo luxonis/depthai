@@ -63,7 +63,7 @@ class StereoCalibration(object):
     def __init__(self):
         """Class to Calculate Calibration and Rectify a Stereo Camera."""
 
-    def calibrate(self, filepath, square_size, out_filepath):
+    def calibrate(self, filepath, square_size, out_filepath, flags):
         """Function to calculate calibration for stereo camera."""
         start_time = time.time()
         # init object data
@@ -80,6 +80,10 @@ class StereoCalibration(object):
 
         # save data to binary file
         self.H.tofile(out_filepath)
+
+        # append specific flags to file
+        with open(out_filepath, "ab") as fp:
+            fp.write(bytearray(flags))
 
         print("Calibration file written to %s." % (out_filepath))
         print("\tTook %i seconds to run image processing." % (round(time.time() - start_time, 2)))
