@@ -3,6 +3,7 @@ from time import time
 from time import sleep
 import argparse
 from argparse import ArgumentParser
+from pathlib import Path
 import json
 import numpy as np
 import cv2
@@ -45,25 +46,30 @@ def parse_args():
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
-    parser.add_argument("-fv", "--field-of-view", default=71.86, type=float,
-                        help="Horizontal field of view (HFOV) for the stereo cameras in [deg]")
-    parser.add_argument("-b", "--baseline", default=9.0, type=float,
-                        help="Left/Right camera baseline in [cm]")
-    parser.add_argument("-r", "--rgb-baseline", default=2.0, type=float,
-                        help="Distance the RGB camera is from the Left camera")
-    parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=True, action="store_false",
-                        help="Do not swap the Left and Right cameras")
+    parser.add_argument("-brd", "--board", default=None, type=str,
+                        help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
+                            "Or path to a custom .json board config. Mutually exclusive with [-fv -rfv -b -r -w]")
+    parser.add_argument("-fv", "--field-of-view", default=None, type=float,
+                        help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
+    parser.add_argument("-rfv", "--rgb-field-of-view", default=None, type=float,
+                        help="Horizontal field of view (HFOV) for the RGB camera in [deg]. Default: 68.7938deg.")
+    parser.add_argument("-b", "--baseline", default=None, type=float,
+                        help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
+    parser.add_argument("-r", "--rgb-baseline", default=None, type=float,
+                        help="Distance the RGB camera is from the Left camera. Default: 2.0cm.")
+    parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=None, action="store_false",
+                        help="Do not swap the Left and Right cameras.")
     parser.add_argument("-e", "--store-eeprom", default=False, action='store_true',
                         help="Store the calibration and board_config (fov, baselines, swap-lr) in the EEPROM onboard")
     parser.add_argument("--clear-eeprom", default=False, action='store_true',
                         help="Invalidate the calib and board_config from EEPROM")
-    parser.add_argument("-o", "--override-calib", default=False, action='store_true',
+    parser.add_argument("-o", "--override-eeprom", default=False, action='store_true',
                         help="Use the calib and board_config from host, ignoring the EEPROM data if programmed")
     parser.add_argument("-dev", "--device-id", default='', type=str,
                         help="USB port number for the device to connect to. Use the word 'list' to show all devices and exit.")
-    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true', 
+    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
                         help="Used by board developers for debugging.")
-    parser.add_argument("-fusb2", "--force_usb2", default=None, action='store_true', 
+    parser.add_argument("-fusb2", "--force_usb2", default=None, action='store_true',
                         help="Force usb2 connection")
     parser.add_argument("-cnn", "--cnn_model", default='mobilenet-ssd', type=str, 
                         help="Cnn model to run on DepthAI")
@@ -77,6 +83,20 @@ def parse_args():
                         choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h'],
                         help="Define which streams to enable")
     options = parser.parse_args()
+
+    if (options.board is not None) and ((options.field_of_view     is not None)
+                                     or (options.rgb_field_of_view is not None)
+                                     or (options.baseline          is not None)
+                                     or (options.rgb_baseline      is not None)
+                                     or (options.swap_lr           is not None)):
+        parser.error("[-brd] is mutually exclusive with [-fv -rfv -b -r -w]")
+
+    # Set some defaults after the above check
+    if options.field_of_view     is None: options.field_of_view = 71.86
+    if options.rgb_field_of_view is None: options.rgb_field_of_view = 68.7938
+    if options.baseline          is None: options.baseline = 9.0
+    if options.rgb_baseline      is None: options.rgb_baseline = 2.0
+    if options.swap_lr           is None: options.swap_lr = True
 
     return options
 
@@ -317,14 +337,25 @@ config = {
     {
         'swap_left_and_right_cameras': args['swap_lr'], # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
         'left_fov_deg': args['field_of_view'], # Same on 1097 and 1098OBC
+        'rgb_fov_deg': args['rgb_field_of_view'],
         'left_to_right_distance_cm': args['baseline'], # Distance between stereo cameras
         'left_to_rgb_distance_cm': args['rgb_baseline'], # Currently unused
         'store_to_eeprom': args['store_eeprom'],
         'clear_eeprom': args['clear_eeprom'],
-        'override_eeprom_calib': args['override_calib'],
+        'override_eeprom': args['override_eeprom'],
     }
 }
 
+if args['board']:
+    board_path = Path(args['board'])
+    if not board_path.exists():
+        board_path = Path(consts.resource_paths.boards_dir_path) / Path(args['board'].upper()).with_suffix('.json')
+        if not board_path.exists():
+            print('ERROR: Board config not found: {}'.format(board_path))
+            os._exit(2)
+    with open(board_path) as fp:
+        board_config = json.load(fp)
+    utils.merge(board_config, config)
 if args['config_overwrite'] is not None:
     config = utils.merge(args['config_overwrite'],config)
     print("Merged Pipeline config with overwrite",config)
