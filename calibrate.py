@@ -70,13 +70,15 @@ def parse_args():
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
                         help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
-    parser.add_argument("-fv", "--field-of-view", default=71.86, type=float,
+    parser.add_argument("-brd", "--board", default=None, type=str,
+                        help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
+                            "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
+    parser.add_argument("-fv", "--field-of-view", default=None, type=float,
                         help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
-    parser.add_argument("-b", "--baseline", default=9.0, type=float,
+    parser.add_argument("-b", "--baseline", default=None, type=float,
                         help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
-    parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=True, action="store_false",
-                        help="Do not swap the Left and Right cameras. Default: True.")
-
+    parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=None, action="store_false",
+                        help="Do not swap the Left and Right cameras.")
     parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
                         help="Used by board developers for debugging.")
     parser.add_argument("-iv", "--invert-vertical", dest="invert_v", default=False, action="store_true",
@@ -85,6 +87,16 @@ def parse_args():
                         help="Invert horizontal axis of the camera for the display")
 
     options = parser.parse_args()
+
+    if (options.board is not None) and ((options.field_of_view is not None)
+                                     or (options.baseline      is not None)
+                                     or (options.swap_lr       is not None)):
+        parser.error("[-brd] is mutually exclusive with [-fv -b -w]")
+
+    # Set some defaults after the above check
+    if options.field_of_view is None: options.field_of_view = 71.86
+    if options.baseline      is None: options.baseline = 9.0
+    if options.swap_lr       is None: options.swap_lr = True
 
     return options
 
@@ -132,8 +144,19 @@ class Main:
                     'swap_left_and_right_cameras': self.args['swap_lr'],
                     'left_fov_deg':  self.args['field_of_view'],
                     'left_to_right_distance_cm': self.args['baseline'],
+                    'override_eeprom': True,
+                    'stereo_center_crop': True,
                 }
         }
+        if self.args['board']:
+            board_path = Path(self.args['board'])
+            if not board_path.exists():
+                board_path = Path(consts.resource_paths.boards_dir_path) / Path(self.args['board'].upper()).with_suffix('.json')
+                if not board_path.exists():
+                    raise ValueError('Board config not found: {}'.format(board_path))
+            with open(board_path) as fp:
+                board_config = json.load(fp)
+            utils.merge(board_config, self.config)
         if self.args['config_overwrite']:
             utils.merge(json.loads(self.args['config_overwrite']), self.config)
             print("Merged Pipeline config with overwrite", self.config)
@@ -312,9 +335,10 @@ class Main:
 
     def calibrate(self):
         print("Starting image processing")
+        flags = [self.config['board_config']['stereo_center_crop']]
         cal_data = StereoCalibration()
         try:
-            cal_data.calibrate("dataset", self.args['square_size_cm'], "./resources/depthai.calib")
+            cal_data.calibrate("dataset", self.args['square_size_cm'], "./resources/depthai.calib", flags)
         except AssertionError as e:
             print("[ERROR] " + str(e))
             raise SystemExit(1)
