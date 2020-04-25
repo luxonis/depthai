@@ -63,7 +63,7 @@ def parse_args():
                         help="Store the calibration and board_config (fov, baselines, swap-lr) in the EEPROM onboard")
     parser.add_argument("--clear-eeprom", default=False, action='store_true',
                         help="Invalidate the calib and board_config from EEPROM")
-    parser.add_argument("-o", "--override-calib", default=False, action='store_true',
+    parser.add_argument("-o", "--override-eeprom", default=False, action='store_true',
                         help="Use the calib and board_config from host, ignoring the EEPROM data if programmed")
     parser.add_argument("-dev", "--device-id", default='', type=str,
                         help="USB port number for the device to connect to. Use the word 'list' to show all devices and exit.")
@@ -342,7 +342,7 @@ config = {
         'left_to_rgb_distance_cm': args['rgb_baseline'], # Currently unused
         'store_to_eeprom': args['store_eeprom'],
         'clear_eeprom': args['clear_eeprom'],
-        'override_eeprom_calib': args['override_calib'],
+        'override_eeprom': args['override_eeprom'],
     }
 }
 
