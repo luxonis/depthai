@@ -486,6 +486,7 @@ while True:
         break
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
+depthai.deinit_device()
 
 print('py: DONE.')
-os._exit(0)
+
