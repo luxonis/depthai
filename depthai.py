@@ -129,30 +129,41 @@ def decode_mobilenet_ssd(nnet_packet):
     for _, e in enumerate(nnet_packet.entries()):
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
-        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
+        try:
+            if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
+                break
+        except ValueError:
+            print("detector id/confidence ValueError " + "id: " + str(e[0]['id']) + " confidence: " + str(e[0]['confidence']))
             break
         # save entry for further usage (as image package may arrive not the same time as nnet package)
         detections.append(e)
     return detections
 
 def show_mobilenet_ssd(entries_prev, frame):
-    img_h = frame.shape[0]
-    img_w = frame.shape[1]
+    try:
+        img_h = frame.shape[0]
+        img_w = frame.shape[1]
+    except ValueError:
+        print("detector img_h/img_w ValueError " + "img_h: " + str(img_h) + " img_w: " + str(img_w))
+        return frame
+    
     # iterate through pre-saved entries & draw rectangle & text on image:
     for e in entries_prev:
-        # the lower confidence threshold - the more we get false positives
-        if e[0]['confidence'] > 0.5:
-            x1 = int(e[0]['left'] * img_w)
-            y1 = int(e[0]['top'] * img_h)
-
-            pt1 = x1, y1
-            pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
-
-            cv2.rectangle(frame, pt1, pt2, (0, 0, 255))
-            # Handles case where TensorEntry object label is out if range
+        try:
+            # Handles case where TensorEntry object label is out if range   
             if e[0]['label'] > len(labels):
                 print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
-            else:
+                raise ValueError
+            # the lower confidence threshold - the more we get false positives
+            if e[0]['confidence'] > 0.5:
+                x1 = int(e[0]['left'] * img_w)
+                y1 = int(e[0]['top'] * img_h)
+
+                pt1 = x1, y1
+                pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
+
+                cv2.rectangle(frame, pt1, pt2, (0, 0, 255))
+
                 pt_t1 = x1, y1 + 20
                 cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
@@ -167,27 +178,37 @@ def show_mobilenet_ssd(entries_prev, frame):
 
                     pt_t5 = x1, y1 + 100
                     cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+        except ValueError:
+            print("detector ValueError, discarding NN packet")
+            break
+    
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
     detections = []
     for _, e in enumerate(nnet_packet.entries()):
-        if e[1]["female"] > 0.8 or e[1]["male"] > 0.8:
-            detections.append(e[0]["age"])  
-            if e[1]["female"] > e[1]["male"]:
-                detections.append("female")
-            else:
-                detections.append("male")
+        try:
+            if e[1]["female"] > 0.8 or e[1]["male"] > 0.8:
+                detections.append(e[0]["age"])  
+                if e[1]["female"] > e[1]["male"]:
+                    detections.append("female")
+                else:
+                    detections.append("male")
+        except ValueError:
+            detections = []
     return detections
 
 def show_age_gender_recognition(entries_prev, frame):
     # img_h = frame.shape[0]
     # img_w = frame.shape[1]
     if len(entries_prev) != 0:
-        age = (int)(entries_prev[0]*100)
-        cv2.putText(frame, "Age: " + str(age), (0, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-        gender = entries_prev[1]
-        cv2.putText(frame, "G: " + str(gender), (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        try:
+            age = (int)(entries_prev[0]*100)
+            gender = entries_prev[1]
+            cv2.putText(frame, "Age: " + str(age), (0, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            cv2.putText(frame, "G: " + str(gender), (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        except ValueError:
+            print("age/gender ValueError " + "age: " + str(age) + " gender: " + str(gender))
     frame = cv2.resize(frame, (300, 300))
     return frame
 
@@ -210,8 +231,10 @@ def show_emotion_recognition(entries_prev, frame):
     if len(entries_prev) != 0:
         max_confidence = max(entries_prev)
         if(max_confidence > 0.7):
-            emotion = e_states[np.argmax(entries_prev)]
-            cv2.putText(frame, emotion, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            highest_conf_idx = np.argmax(entries_prev)
+            if(highest_conf_idx < len(e_states)):
+                emotion = e_states[highest_conf_idx]
+                cv2.putText(frame, emotion, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
     frame = cv2.resize(frame, (300, 300))
 
     return frame
@@ -226,16 +249,22 @@ def decode_landmarks_recognition(nnet_packet):
     return landmarks
 
 def show_landmarks_recognition(entries_prev, frame):
-    img_h = frame.shape[0]
-    img_w = frame.shape[1]
+    try:
+        img_h = frame.shape[0]
+        img_w = frame.shape[1]
+    except ValueError:
+        print("landmarks img_h/img_w ValueError " + "img_h: " + str(img_h) + " img_w: " + str(img_w))
+        frame = cv2.resize(frame, (300, 300))
+        return frame
 
     if len(entries_prev) != 0:
         for i in entries_prev:
             try:
                 x = int(i[0]*img_h)
                 y = int(i[1]*img_w)
-            except:
-                continue
+            except ValueError:
+                print("landmarks x/y ValueError " + "x: " + str(x) + " y: " + str(y))
+                break
             # # print(x,y)
             cv2.circle(frame, (x,y), 3, (0, 0, 255))
 
