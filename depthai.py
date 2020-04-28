@@ -81,6 +81,8 @@ def parse_args():
                         Format: stream_name or stream_name,max_fps \
                         Example: -s metaout previewout \
                         Example: -s metaout previewout,10 depth_sipp,10")
+    parser.add_argument("-v", "--video", default=None, type=str, required=False, help="Path where to save video stream (existing file will be overwritten)")
+
     options = parser.parse_args()
 
     if (options.board is not None) and ((options.field_of_view     is not None)
@@ -387,6 +389,21 @@ if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] o
     exit(2)
     # del config["streams"][config['streams'].index('depth_sipp')]
 
+# Append video stream if video recording was requested and stream is not already specified
+video_file = None
+if args['video'] is not None:
+    
+    # open video file
+    try:
+        video_file = open(args['video'], 'wb')
+        if config['streams'].count('video') == 0:
+            config['streams'].append('video')
+    except IOError:
+        print("Error: couldn't open video file for writing. Disabled video output stream")
+        if config['streams'].count('video') == 1:
+            config['streams'].remove('video')
+    
+
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
 
 # create the pipeline, here is the first connection with the device
@@ -413,6 +430,7 @@ def reset_process_wd():
     return
 
 reset_process_wd()
+
 
 while True:
     # retreive data from the device
@@ -472,6 +490,15 @@ while True:
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
                 cv2.imshow(packet.stream_name, frame)
 
+        elif packet.stream_name == 'jpegout':
+            jpg = packet.getData()
+            mat = cv2.imdecode(jpg, cv2.IMREAD_COLOR)
+            cv2.imshow('jpegout', mat)
+
+        elif packet.stream_name == 'video':
+            videoFrame = packet.getData()
+            videoFrame.tofile(video_file)                
+
         frame_count[packet.stream_name] += 1
 
     t_curr = time()
@@ -482,11 +509,20 @@ while True:
             frame_count_prev[s] = frame_count[s]
             frame_count[s] = 0
 
-    if cv2.waitKey(1) == ord('q'):
+
+    key = cv2.waitKey(1)
+    if key == ord('c'):
+        depthai.request_jpeg()
+    elif key == ord('q'):
         break
+
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
 depthai.deinit_device()
+
+# Close video output file if was opened
+if video_file is not None:
+    video_file.close()
 
 print('py: DONE.')
 
