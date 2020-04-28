@@ -72,6 +72,8 @@ def parse_args():
                         help="Cnn model to run on DepthAI")
     parser.add_argument("-dd", "--disable_depth", default=False,  action='store_true', 
                         help="Disable depth calculation on CNN models with bounding box output")
+    parser.add_argument("-bb", "--draw-bb-depth", default=False,  action='store_true',
+                        help="Draw the bounding boxes over the left/right/depth* streams")
     parser.add_argument("-s", "--streams",  
                         nargs='+',
                         type=stream_type,
@@ -135,38 +137,48 @@ def decode_mobilenet_ssd(nnet_packet):
         detections.append(e)
     return detections
 
-def show_mobilenet_ssd(entries_prev, frame):
+def nn_to_depth_coord(x, y):
+    x_depth = int(nn2depth['off_x'] + x * nn2depth['max_w'])
+    y_depth = int(nn2depth['off_y'] + y * nn2depth['max_h'])
+    return x_depth, y_depth
+
+def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
     # iterate through pre-saved entries & draw rectangle & text on image:
     for e in entries_prev:
         # the lower confidence threshold - the more we get false positives
         if e[0]['confidence'] > 0.5:
-            x1 = int(e[0]['left'] * img_w)
-            y1 = int(e[0]['top'] * img_h)
+            if is_depth:
+                pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
+                pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
+                color = (255, 255, 255) # bgr
+            else:
+                pt1 = int(e[0]['left']  * img_w), int(e[0]['top']    * img_h)
+                pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
+                color = (0, 0, 255) # bgr
 
-            pt1 = x1, y1
-            pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
+            x1, y1 = pt1
 
-            cv2.rectangle(frame, pt1, pt2, (0, 0, 255))
+            cv2.rectangle(frame, pt1, pt2, color)
             # Handles case where TensorEntry object label is out if range
             if e[0]['label'] > len(labels):
                 print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
             else:
                 pt_t1 = x1, y1 + 20
-                cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
                 pt_t2 = x1, y1 + 40
-                cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
                 if config['ai']['calc_dist_to_bb']:
                     pt_t3 = x1, y1 + 60
-                    cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                    cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
 
                     pt_t4 = x1, y1 + 80
-                    cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                    cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
 
                     pt_t5 = x1, y1 + 100
-                    cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                    cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
@@ -396,6 +408,8 @@ if p is None:
     print('Pipeline is not created.')
     exit(3)
 
+nn2depth = depthai.get_nn_to_depth_bbox_mapping()
+
 
 t_start = time()
 frame_count = {}
@@ -458,7 +472,6 @@ while True:
                 if frame.dtype == np.uint8: # grayscale
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                     cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
-                    cv2.imshow(packet.stream_name, frame)
                 else: # uint16
                     frame = (65535 // frame).astype(np.uint8)
                     #colorize depth map, comment out code below to obtain grayscale
@@ -466,11 +479,13 @@ while True:
                     # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
                     cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                    cv2.imshow(packet.stream_name, frame)
             else: # bgr
                 cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                cv2.imshow(packet.stream_name, frame)
+
+            if args['draw_bb_depth']:
+                show_nn(entries_prev, frame, is_depth=True)
+            cv2.imshow(packet.stream_name, frame)
 
         frame_count[packet.stream_name] += 1
 
