@@ -129,7 +129,7 @@ def decode_mobilenet_ssd(nnet_packet):
     for _, e in enumerate(nnet_packet.entries()):
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
-        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
+        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0 or e[0]['label'] > len(labels):
             break
         # save entry for further usage (as image package may arrive not the same time as nnet package)
         detections.append(e)
@@ -149,24 +149,21 @@ def show_mobilenet_ssd(entries_prev, frame):
             pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
 
             cv2.rectangle(frame, pt1, pt2, (0, 0, 255))
-            # Handles case where TensorEntry object label is out if range
-            if e[0]['label'] > len(labels):
-                print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
-            else:
-                pt_t1 = x1, y1 + 20
-                cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            
+            pt_t1 = x1, y1 + 20
+            cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
-                pt_t2 = x1, y1 + 40
-                cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
-                if config['ai']['calc_dist_to_bb']:
-                    pt_t3 = x1, y1 + 60
-                    cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+            pt_t2 = x1, y1 + 40
+            cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+            if config['ai']['calc_dist_to_bb']:
+                pt_t3 = x1, y1 + 60
+                cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
-                    pt_t4 = x1, y1 + 80
-                    cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                pt_t4 = x1, y1 + 80
+                cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
 
-                    pt_t5 = x1, y1 + 100
-                    cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
+                pt_t5 = x1, y1 + 100
+                cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255))
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
