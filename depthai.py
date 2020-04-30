@@ -108,7 +108,7 @@ def stream_type(option):
         print(bcolors.WARNING + option+" format is invalid. See --help" + bcolors.ENDC)
         raise ValueError
 
-    stream_choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h']
+    stream_choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h', 'meta_d2h']
     stream_name = option_list[0]
     if stream_name not in stream_choices:
         print(bcolors.WARNING + stream_name +" is not in available stream list: \n" + str(stream_choices) + bcolors.ENDC)
@@ -497,7 +497,17 @@ while True:
 
         elif packet.stream_name == 'video':
             videoFrame = packet.getData()
-            videoFrame.tofile(video_file)                
+            videoFrame.tofile(video_file)
+        
+        elif packet.stream_name == 'meta_d2h':
+            str_ = packet.getDataAsStr()
+            dict_ = json.loads(str_)
+
+            print('meta_d2h Temp',
+                ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
+                ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
+                ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
+                ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
 
         frame_count[packet.stream_name] += 1
 
