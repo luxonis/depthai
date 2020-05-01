@@ -528,10 +528,11 @@ while True:
 
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
+depthai.deinit_device()
 
 # Close video output file if was opened
 if video_file is not None:
     video_file.close()
 
 print('py: DONE.')
-os._exit(0)
+
