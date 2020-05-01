@@ -144,6 +144,14 @@ def nn_to_depth_coord(x, y):
     y_depth = int(nn2depth['off_y'] + y * nn2depth['max_h'])
     return x_depth, y_depth
 
+def average_depth_coord(pt1, pt2):
+    factor = 1 - config['depth']['padding_factor']
+    x_shift = int((pt2[0] - pt1[0]) * factor / 2)
+    y_shift = int((pt2[1] - pt1[1]) * factor / 2)
+    avg_pt1 = (pt1[0] + x_shift), (pt1[1] + y_shift)
+    avg_pt2 = (pt2[0] - x_shift), (pt2[1] - y_shift)
+    return avg_pt1, avg_pt2
+
 def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
@@ -154,6 +162,9 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
             if is_depth:
                 pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
                 pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
+                color = (255, 0, 0) # bgr
+                avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2)
+                cv2.rectangle(frame, avg_pt1, avg_pt2, color)
                 color = (255, 255, 255) # bgr
             else:
                 pt1 = int(e[0]['left']  * img_w), int(e[0]['top']    * img_h)
