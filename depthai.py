@@ -74,6 +74,8 @@ def parse_args():
                         help="Disable depth calculation on CNN models with bounding box output")
     parser.add_argument("-bb", "--draw-bb-depth", default=False,  action='store_true',
                         help="Draw the bounding boxes over the left/right/depth* streams")
+    parser.add_argument("-ff", "--full-fov-nn", default=False,  action='store_true',
+                        help="Full RGB FOV for NN, not keeping the aspect ratio")
     parser.add_argument("-s", "--streams",  
                         nargs='+',
                         type=stream_type,
@@ -379,7 +381,8 @@ config = {
     {
         'blob_file': blob_file,
         'blob_file_config': blob_file_config,
-        'calc_dist_to_bb': calc_dist_to_bb
+        'calc_dist_to_bb': calc_dist_to_bb,
+        'keep_aspect_ratio': not args['full_fov_nn'],
     },
     'board_config':
     {
