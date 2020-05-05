@@ -376,6 +376,7 @@ config = {
         'calibration_file': consts.resource_paths.calib_fpath,
         'padding_factor': 0.3,
         'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
+        'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number 
     },
     'ai':
     {
