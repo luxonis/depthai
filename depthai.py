@@ -70,6 +70,8 @@ def parse_args():
                         help="Force usb2 connection")
     parser.add_argument("-cnn", "--cnn_model", default='mobilenet-ssd', type=str, 
                         help="Cnn model to run on DepthAI")
+    parser.add_argument('-cam', "--cnn-camera", default='rgb', choices=['rgb', 'left', 'right'],
+                        help='Choose camera input for CNN (default: %(default)s)')
     parser.add_argument("-dd", "--disable_depth", default=False,  action='store_true', 
                         help="Disable depth calculation on CNN models with bounding box output")
     parser.add_argument("-bb", "--draw-bb-depth", default=False,  action='store_true',
@@ -383,6 +385,7 @@ config = {
         'blob_file_config': blob_file_config,
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
+        'camera_input': args['cnn_camera'],
     },
     'board_config':
     {
