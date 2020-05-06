@@ -16,6 +16,8 @@ For supporting other platforms, there is an option to build the python lib from 
     ./depthai-api/install_dependencies.sh # Only required in first build on a given system
     ./depthai-api/build_py_module.sh
 
+When updating it is often necessary to run `./depthai-api/build_py_module.sh --clean` in order to build a new version of the module for your chosen platform. 
+
 ## Examples
 
 `python3 test.py` - depth & CNN inference example  
