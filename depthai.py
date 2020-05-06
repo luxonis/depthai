@@ -9,9 +9,7 @@ import numpy as np
 import os
 from pathlib import Path
 import platform
-import sys
 from time import time
-from time import sleep
 import subprocess
 
 class bcolors:
