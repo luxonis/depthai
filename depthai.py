@@ -180,20 +180,25 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
             if e[0]['label'] > len(labels):
                 print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
             else:
-                pt_t1 = x1, y1 + 20
-                cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                pt_t1 = x1 + 6, y1 -10
+                bg_t1 = x1, y1 -28
+                bg_t2 = x1  + 78, y1
+                cv2.rectangle(frame, bg_t1, bg_t2, color, cv2.FILLED)
+                color = (0, 0, 0) # bgr
+                cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 1)
 
-                pt_t2 = x1, y1 + 40
-                cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                pt_t2 = x1 + 90, y1 - 10
+                cv2.putText(frame, '{:.2f}%'.format(100*e[0]['confidence']), pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                color = (0, 0, 255) # bgr
                 if config['ai']['calc_dist_to_bb']:
-                    pt_t3 = x1, y1 + 60
-                    cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                    pt_t3 = x1 + 5, y1 + 20
+                    cv2.putText(frame, 'x: {:4.1f}m'.format(e[0]['distance_x']), pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
 
-                    pt_t4 = x1, y1 + 80
-                    cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                    pt_t4 = x1 + 5, y1 + 40
+                    cv2.putText(frame, 'y: {:4.1f}m'.format(e[0]['distance_y']), pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
 
-                    pt_t5 = x1, y1 + 100
-                    cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                    pt_t5 = x1 + 5, y1 + 60
+                    cv2.putText(frame, 'z: {:4.1f}m'.format(e[0]['distance_z']), pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
@@ -491,7 +496,7 @@ while True:
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
-            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.putText(nn_frame, str(frame_count_prev[packet.stream_name]) + "fps", (12, 27), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0))
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packet.getData()
