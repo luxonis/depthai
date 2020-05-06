@@ -1,21 +1,18 @@
+from argparse import ArgumentParser
+import argparse
+import cv2
+import consts.resource_paths
+import depthai
+from depthai_helpers import utils
+import json
+import numpy as np
+import os
+from pathlib import Path
+import platform
 import sys
 from time import time
 from time import sleep
-import argparse
-from argparse import ArgumentParser
-from pathlib import Path
-import json
-import numpy as np
-import cv2
-import os
 import subprocess
-import platform
-from pathlib import Path
-
-import depthai
-
-import consts.resource_paths
-from depthai_helpers import utils
 
 class bcolors:
     HEADER = '\033[95m'
