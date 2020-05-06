@@ -499,7 +499,7 @@ while True:
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
-            cv2.putText(nn_frame, str(frame_count_prev[packet.stream_name]) + "fps", (12, 27), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0))
+            cv2.putText(nn_frame, f"{frame_count_prev[packet.stream_name]} fps", (12, 27), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0))
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packet.getData()
