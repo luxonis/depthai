@@ -1,21 +1,16 @@
-import sys
-from time import time
-from time import sleep
-import argparse
 from argparse import ArgumentParser
-from pathlib import Path
+import argparse
+import cv2
+import consts.resource_paths
+import depthai
+from depthai_helpers import utils
 import json
 import numpy as np
-import cv2
 import os
-import subprocess
-import platform
 from pathlib import Path
-
-import depthai
-
-import consts.resource_paths
-from depthai_helpers import utils
+import platform
+from time import time
+import subprocess
 
 class bcolors:
     HEADER = '\033[95m'
@@ -105,6 +100,17 @@ def parse_args():
 
     return options
 
+def draw_label(frame, origin, label, font=cv2.FONT_HERSHEY_SIMPLEX, bg_color=(0,0,255), font_color=(0,0,0), font_scale=1):
+    bg_t1 = origin[0] -1 , origin[1] - 28
+    text_size = cv2.getTextSize(label, font, font_scale, 1)
+    bg_t2 = origin[0]  + 78, origin[1]
+
+    cv2.rectangle(frame, bg_t1, bg_t2, bg_color, cv2.FILLED)
+    cv2.putText(frame, label, (origin[0] + 5, origin[1] - 10), font, font_scale, font_color, 1)
+
+def draw_bounding_box(frame, top_left, bottom_right, color):
+    cv2.rectangle(frame, top_left, bottom_right, color, 2)
+
 def stream_type(option):
     option_list = option.split(',')
     option_args = len(option_list)
@@ -153,47 +159,49 @@ def average_depth_coord(pt1, pt2):
     avg_pt1 = (pt1[0] + x_shift), (pt1[1] + y_shift)
     avg_pt2 = (pt2[0] - x_shift), (pt2[1] - y_shift)
     return avg_pt1, avg_pt2
-
+    
 def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
-    # iterate through pre-saved entries & draw rectangle & text on image:
+    bounding_box_color = (0,0,255) #bgr
+    label_text_color = (0,0,0) #bgr
+
+    # Iterate through saved entries and mark them with a label and bounding box
     for e in entries_prev:
-        # the lower confidence threshold - the more we get false positives
+        # Lower confidence means more likely to detect objects.
+        # Note: this can lead to an increase in false positives.
         if e[0]['confidence'] > 0.5:
             if is_depth:
                 pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
                 pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
-                color = (255, 0, 0) # bgr
-                avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2)
-                cv2.rectangle(frame, avg_pt1, avg_pt2, color)
-                color = (255, 255, 255) # bgr
+                pt1, pt2 = average_depth_coord(pt1, pt2)
             else:
                 pt1 = int(e[0]['left']  * img_w), int(e[0]['top']    * img_h)
                 pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
-                color = (0, 0, 255) # bgr
+            
+            draw_bounding_box(frame, pt1, pt2, bounding_box_color)
 
-            x1, y1 = pt1
-
-            cv2.rectangle(frame, pt1, pt2, color)
             # Handles case where TensorEntry object label is out if range
             if e[0]['label'] > len(labels):
                 print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
             else:
-                pt_t1 = x1, y1 + 20
-                cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                x1, y1 = pt1
 
-                pt_t2 = x1, y1 + 40
-                cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                draw_label(frame, (x1,y1), labels[int(e[0]['label'])], font_scale=0.6)
+
+                pt_t2 = x1 + 90, y1 - 10
+                
+                cv2.putText(frame, '{:.2f}%'.format(100*e[0]['confidence']), pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, label_text_color)
+                color = (0, 0, 255) # bgr
                 if config['ai']['calc_dist_to_bb']:
-                    pt_t3 = x1, y1 + 60
-                    cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                    pt_t3 = x1 + 5, y1 + 20
+                    cv2.putText(frame, 'x: {:4.1f}m'.format(e[0]['distance_x']), pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, label_text_color)
 
-                    pt_t4 = x1, y1 + 80
-                    cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                    pt_t4 = x1 + 5, y1 + 40
+                    cv2.putText(frame, 'y: {:4.1f}m'.format(e[0]['distance_y']), pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, label_text_color)
 
-                    pt_t5 = x1, y1 + 100
-                    cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                    pt_t5 = x1 + 5, y1 + 60
+                    cv2.putText(frame, 'z: {:4.1f}m'.format(e[0]['distance_z']), pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, label_text_color)
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
@@ -491,7 +499,10 @@ while True:
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
-            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+
+            cv2.rectangle(nn_frame, (0,0), (55,20), (255,255,255), cv2.FILLED)
+            cv2.putText(nn_frame, f"{frame_count_prev[packet.stream_name]} fps", (6, 14), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0))
+
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packet.getData()
@@ -560,6 +571,7 @@ while True:
 
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
+
 depthai.deinit_device()
 
 # Close video output file if was opened
