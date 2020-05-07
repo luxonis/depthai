@@ -568,10 +568,10 @@ while True:
         depthai.request_jpeg()
     elif key == ord('q'):
         break
-    elif key == ord('d'):
-        show_debug_on_image = not show_debug_on_image
+
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
+
 depthai.deinit_device()
 
 # Close video output file if was opened
