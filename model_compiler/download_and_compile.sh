@@ -34,7 +34,6 @@ MYRIAD_COMPILE_PATH="$OPENVINO_PATH/deployment_tools/inference_engine/lib/intel6
 
 CLOUD_COMPILE_SCRIPT=$PWD/model_converter.py
 
-echo $MODELS_LIST
 rm -f $MODELS_LIST
 
 cd $NN_PATH
@@ -53,11 +52,13 @@ for f in *; do
         # $f is a directory
         if [ "$CLOUD_COMPILE" = "yes" ] 
         then
-            echo_and_run python3 $CLOUD_COMPILE_SCRIPT --xml $DOWNLOADS_DIR/intel/$f/FP16/$f.xml --bin $DOWNLOADS_DIR/intel/$f/FP16/$f.xml -o $f/$f.blob
+            echo_and_run python3 $CLOUD_COMPILE_SCRIPT --xml $DOWNLOADS_DIR/intel/$f/FP16/$f.xml --bin $DOWNLOADS_DIR/intel/$f/FP16/$f.bin -o $NN_PATH/$f/$f.blob
         else
-            echo_and_run $MYRIAD_COMPILE_PATH $MYRIAD_COMPILE_OPTIONS -m $DOWNLOADS_DIR/intel/$f/FP16/$f.xml -o $f/$f.blob
+            echo_and_run $MYRIAD_COMPILE_PATH $MYRIAD_COMPILE_OPTIONS -m $DOWNLOADS_DIR/intel/$f/FP16/$f.xml -o $NN_PATH/$f/$f.blob
         fi
     fi
 done
 
 cd $CUR_DIR
+
+rm -f $MODELS_LIST
