@@ -126,7 +126,8 @@ class Main:
         self.args = vars(parse_args())
         self.config = {
             'streams':
-                ['left', 'right'],
+                ['left', 'right'] if not on_embedded else
+                [{'name': 'left', "max_fps": 10.0}, {'name': 'right', "max_fps": 10.0}],
             'depth':
                 {
                     'calibration_file': consts.resource_paths.calib_fpath,
