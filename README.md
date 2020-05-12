@@ -6,15 +6,19 @@ __Documentation is available at [https://docs.luxonis.com](https://docs.luxonis.
 
 ## Python modules
 
+DepthAI requites [numpy](https://numpy.org/) and [opencv-python](https://pypi.org/project/opencv-python/). To get the versions of these packages you need for DepthAI, use pip: `pip install -r requirements.txt`
+
 Files with `.so` extension are the python modules:  
 - `depthai.cpython-36m-x86_64-linux-gnu.so` built for Ubuntu 18.04 & Python 3.6  
-- `depthai.cpython-37m-arm-linux-gnueabihf.so` built for Raspbian 10 & Python 3.7  
+- `depthai.cpython-37m-arm-linux-gnueabihf.so` built for Raspbian 10 & Python 3.7
 
 For supporting other platforms, there is an option to build the python lib from sources by grabbing the [depthai-api](https://github.com/luxonis/depthai-api) submodule:
 
     git submodule update --init
     ./depthai-api/install_dependencies.sh # Only required in first build on a given system
     ./depthai-api/build_py_module.sh
+
+When updating DepthAI on these platforms it is often necessary to run `./depthai-api/build_py_module.sh --clean` in order to build a new version of the depthai-api module for your chosen platform. 
 
 ## Examples
 
