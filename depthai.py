@@ -14,7 +14,7 @@ import depthai
 
 import consts.resource_paths
 from depthai_helpers import utils
-from depthai_helpers.cli_utils import parse_args, PrintColors
+from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
 
 
 def decode_mobilenet_ssd(nnet_packet):
@@ -174,7 +174,7 @@ if args['config_overwrite']:
 print("Using Arguments=",args)
 
 if args['force_usb2']:
-    print(PrintColors.WARNING + "FORCE USB2 MODE" + PrintColors.ENDC)
+    cli_print("FORCE USB2 MODE", PrintColors.WARNING)
     cmd_file = consts.resource_paths.device_usb2_cmd_fpath
 else:
     cmd_file = consts.resource_paths.device_cmd_fpath
@@ -216,11 +216,11 @@ if args['cnn_model']:
 blob_file_path = Path(blob_file)
 blob_file_config_path = Path(blob_file_config)
 if not blob_file_path.exists():
-    print(PrintColors.WARNING + "\nWARNING: NN blob not found in: " + blob_file + PrintColors.ENDC)
+    cli_print("\nWARNING: NN blob not found in: " + blob_file, PrintColors.WARNING)
     os._exit(1)
 
 if not blob_file_config_path.exists():
-    print(PrintColors.WARNING + "\nWARNING: NN json not found in: " + blob_file_config + PrintColors.ENDC)
+    cli_print("\nWARNING: NN json not found in: " + blob_file_config, PrintColors.WARNING)
     os._exit(1)
 
 with open(blob_file_config) as f:
@@ -238,11 +238,11 @@ print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
 if platform.system() == 'Linux':
     ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if(ret != 0):
-        print(PrintColors.WARNING + "\nWARNING: Usb rules not found" + PrintColors.ENDC)
-        print(PrintColors.RED + "\nSet rules: \n" \
-        """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n""" \
-        "sudo udevadm control --reload-rules && udevadm trigger \n" \
-        "Disconnect/connect usb cable on host! \n" + PrintColors.ENDC)
+        cli_print("\nWARNING: Usb rules not found", PrintColors.WARNING)
+        cli_print("\nSet rules: \n"
+        """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n"""
+        "sudo udevadm control --reload-rules && udevadm trigger \n"
+        "Disconnect/connect usb cable on host! \n", PrintColors.RED)
         os._exit(1)
 
 if not depthai.init_device(cmd_file, args['device_id']):
