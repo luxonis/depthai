@@ -4,19 +4,19 @@ import argparse
 
 
 class PrintColors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    WARNING = '\033[1;5;31m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    HEADER = "\033[95m"
+    BLUE = "\033[94m"
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    WARNING = "\033[1;5;31m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
 def parse_args():
-    epilog_text = '''
+    epilog_text = """
     Displays video streams captured by DepthAI.
 
     Example usage:
@@ -25,7 +25,7 @@ def parse_args():
     python3 test.py -s depth_sipp,12
     ## Show the depth stream and NN output:
     python3 test.py -s metaout previewout,12 depth_sipp,12
-    '''
+    """
     parser = argparse.ArgumentParser(epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-co", "--config_overwrite", default=None,
                         type=str, required=False,
@@ -44,32 +44,32 @@ def parse_args():
                         help="Distance the RGB camera is from the Left camera. Default: 2.0cm.")
     parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=None, action="store_false",
                         help="Do not swap the Left and Right cameras.")
-    parser.add_argument("-e", "--store-eeprom", default=False, action='store_true',
+    parser.add_argument("-e", "--store-eeprom", default=False, action="store_true",
                         help="Store the calibration and board_config (fov, baselines, swap-lr) in the EEPROM onboard")
-    parser.add_argument("--clear-eeprom", default=False, action='store_true',
+    parser.add_argument("--clear-eeprom", default=False, action="store_true",
                         help="Invalidate the calib and board_config from EEPROM")
-    parser.add_argument("-o", "--override-eeprom", default=False, action='store_true',
+    parser.add_argument("-o", "--override-eeprom", default=False, action="store_true",
                         help="Use the calib and board_config from host, ignoring the EEPROM data if programmed")
-    parser.add_argument("-dev", "--device-id", default='', type=str,
+    parser.add_argument("-dev", "--device-id", default="", type=str,
                         help="USB port number for the device to connect to. Use the word 'list' to show all devices "
                              "and exit.")
-    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
+    parser.add_argument("-debug", "--dev_debug", default=None, action="store_true",
                         help="Used by board developers for debugging.")
-    parser.add_argument("-fusb2", "--force_usb2", default=None, action='store_true',
+    parser.add_argument("-fusb2", "--force_usb2", default=None, action="store_true",
                         help="Force usb2 connection")
-    parser.add_argument("-cnn", "--cnn_model", default='mobilenet-ssd', type=str,
+    parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str,
                         help="Cnn model to run on DepthAI")
-    parser.add_argument("-dd", "--disable_depth", default=False, action='store_true',
+    parser.add_argument("-dd", "--disable_depth", default=False, action="store_true",
                         help="Disable depth calculation on CNN models with bounding box output")
-    parser.add_argument("-bb", "--draw-bb-depth", default=False, action='store_true',
+    parser.add_argument("-bb", "--draw-bb-depth", default=False, action="store_true",
                         help="Draw the bounding boxes over the left/right/depth* streams")
-    parser.add_argument("-ff", "--full-fov-nn", default=False, action='store_true',
+    parser.add_argument("-ff", "--full-fov-nn", default=False, action="store_true",
                         help="Full RGB FOV for NN, not keeping the aspect ratio")
     parser.add_argument("-s", "--streams",
-                        nargs='+',
+                        nargs="+",
                         type=stream_type,
-                        dest='streams',
-                        default=['metaout', 'previewout'],
+                        dest="streams",
+                        default=["metaout", "previewout"],
                         help=("Define which streams to enable \n"
                               "Format: stream_name or stream_name,max_fps \n"
                               "Example: -s metaout previewout \n"
@@ -96,14 +96,14 @@ def parse_args():
 
 def stream_type(option):
     max_fps = None
-    option_list = option.split(',')
+    option_list = option.split(",")
     option_args = len(option_list)
     if option_args not in [1, 2]:
         msg_string = "{0} format is invalid. See --help".format(option)
         print("{0}{1}{2}".format(PrintColors.WARNING, msg_string, PrintColors.ENDC))
         raise ValueError(msg_string)
 
-    stream_choices = ['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h', 'meta_d2h']
+    stream_choices = ["metaout", "previewout", "left", "right", "depth_sipp", "disparity", "depth_color_h", "meta_d2h"]
     stream_name = option_list[0]
     if stream_name not in stream_choices:
         msg_string = "{0} is not in available stream list: \n{1}".format(stream_name, stream_choices)
@@ -111,7 +111,7 @@ def stream_type(option):
         raise ValueError(msg_string)
 
     if option_args == 1:
-        stream_dict = {'name': stream_name}
+        stream_dict = {"name": stream_name}
     else:
         try:
             max_fps = float(option_list[1])
@@ -119,5 +119,5 @@ def stream_type(option):
             print("{0}In option: {1} {2} is not a number!{3}".format(PrintColors.WARNING, option, option_list[1],
                                                                      PrintColors.ENDC))
 
-        stream_dict = {'name': stream_name, "max_fps": max_fps}
+        stream_dict = {"name": stream_name, "max_fps": max_fps}
     return stream_dict
