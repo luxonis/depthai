@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
+from enum import Enum
 
 
-class PrintColors:
+class PrintColors(Enum):
     HEADER = "\033[95m"
     BLUE = "\033[94m"
     GREEN = "\033[92m"
@@ -21,7 +22,8 @@ def cli_print(msg, print_color):
     """
     if not isinstance(print_color, PrintColors):
         raise ValueError("Must use PrintColors type in cli_print")
-    print("{0}{1}{2}".format(print_color, msg, PrintColors.ENDC))
+    print("{0}{1}{2}".format(print_color.value, msg, PrintColors.ENDC.value))
+
 
 def parse_args():
     epilog_text = """
