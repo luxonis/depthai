@@ -19,3 +19,7 @@ class TestCliUtils(unittest.TestCase):
 
     def test_cli_print_valid(self):
         cli_print("some message", PrintColors.WARNING)
+
+    def test_cli_print_input_not_valid(self):
+        with self.assertRaises(ValueError):
+            cli_print("some message", "Not a valid type")
