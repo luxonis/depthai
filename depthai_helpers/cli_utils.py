@@ -15,6 +15,14 @@ class PrintColors:
     UNDERLINE = "\033[4m"
 
 
+def cli_print(msg, print_color):
+    """
+    Prints to console with input print color type
+    """
+    if not isinstance(print_color, PrintColors):
+        raise ValueError("Must use PrintColors type in cli_print")
+    print("{0}{1}{2}".format(print_color, msg, PrintColors.ENDC))
+
 def parse_args():
     epilog_text = """
     Displays video streams captured by DepthAI.
@@ -100,14 +108,14 @@ def stream_type(option):
     option_args = len(option_list)
     if option_args not in [1, 2]:
         msg_string = "{0} format is invalid. See --help".format(option)
-        print("{0}{1}{2}".format(PrintColors.WARNING, msg_string, PrintColors.ENDC))
+        cli_print(msg_string, PrintColors.WARNING)
         raise ValueError(msg_string)
 
     stream_choices = ["metaout", "previewout", "left", "right", "depth_sipp", "disparity", "depth_color_h", "meta_d2h"]
     stream_name = option_list[0]
     if stream_name not in stream_choices:
         msg_string = "{0} is not in available stream list: \n{1}".format(stream_name, stream_choices)
-        print("{0}{1}{2}".format(PrintColors.WARNING, msg_string, PrintColors.ENDC))
+        cli_print(msg_string, PrintColors.WARNING)
         raise ValueError(msg_string)
 
     if option_args == 1:
@@ -116,8 +124,8 @@ def stream_type(option):
         try:
             max_fps = float(option_list[1])
         except ValueError:
-            print("{0}In option: {1} {2} is not a number!{3}".format(PrintColors.WARNING, option, option_list[1],
-                                                                     PrintColors.ENDC))
+            msg_string = "In option: {0} {1} is not a number!".format(option, option_list[1])
+            cli_print(msg_string, PrintColors.WARNING)
 
         stream_dict = {"name": stream_name, "max_fps": max_fps}
     return stream_dict
