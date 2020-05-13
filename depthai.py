@@ -17,7 +17,7 @@ import depthai
 import consts.resource_paths
 from depthai_helpers import utils
 
-class bcolors:
+class PrintColors:
     HEADER = '\033[95m'
     BLUE = '\033[94m'
     GREEN = '\033[92m'
@@ -109,13 +109,13 @@ def stream_type(option):
     option_list = option.split(',')
     option_args = len(option_list)
     if option_args not in [1,2]:
-        print(bcolors.WARNING + option+" format is invalid. See --help" + bcolors.ENDC)
+        print(PrintColors.WARNING + option + " format is invalid. See --help" + PrintColors.ENDC)
         raise ValueError
 
     stream_choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h', 'meta_d2h']
     stream_name = option_list[0]
     if stream_name not in stream_choices:
-        print(bcolors.WARNING + stream_name +" is not in available stream list: \n" + str(stream_choices) + bcolors.ENDC)
+        print(PrintColors.WARNING + stream_name + " is not in available stream list: \n" + str(stream_choices) + PrintColors.ENDC)
         raise ValueError
 
     if(option_args == 1):
@@ -124,7 +124,7 @@ def stream_type(option):
         try:
             max_fps = float(option_list[1])
         except:
-            print(bcolors.WARNING + "In option: " + str(option) + " " + option_list[1] + " is not a number!" + bcolors.ENDC)
+            print(PrintColors.WARNING + "In option: " + str(option) + " " + option_list[1] + " is not a number!" + PrintColors.ENDC)
 
         stream_dict = {'name': stream_name, "max_fps": max_fps}
     return stream_dict
@@ -285,7 +285,7 @@ if args['config_overwrite']:
 print("Using Arguments=",args)
 
 if args['force_usb2']:
-    print(bcolors.WARNING + "FORCE USB2 MODE" + bcolors.ENDC)
+    print(PrintColors.WARNING + "FORCE USB2 MODE" + PrintColors.ENDC)
     cmd_file = consts.resource_paths.device_usb2_cmd_fpath
 else:
     cmd_file = consts.resource_paths.device_cmd_fpath
@@ -327,11 +327,11 @@ if args['cnn_model']:
 blob_file_path = Path(blob_file)
 blob_file_config_path = Path(blob_file_config)
 if not blob_file_path.exists():
-    print(bcolors.WARNING + "\nWARNING: NN blob not found in: " + blob_file + bcolors.ENDC)
+    print(PrintColors.WARNING + "\nWARNING: NN blob not found in: " + blob_file + PrintColors.ENDC)
     os._exit(1)
 
 if not blob_file_config_path.exists():
-    print(bcolors.WARNING + "\nWARNING: NN json not found in: " + blob_file_config + bcolors.ENDC)
+    print(PrintColors.WARNING + "\nWARNING: NN json not found in: " + blob_file_config + PrintColors.ENDC)
     os._exit(1)
 
 with open(blob_file_config) as f:
@@ -349,11 +349,11 @@ print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
 if platform.system() == 'Linux':
     ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if(ret != 0):
-        print(bcolors.WARNING + "\nWARNING: Usb rules not found" + bcolors.ENDC)
-        print(bcolors.RED + "\nSet rules: \n" \
+        print(PrintColors.WARNING + "\nWARNING: Usb rules not found" + PrintColors.ENDC)
+        print(PrintColors.RED + "\nSet rules: \n" \
         """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n""" \
         "sudo udevadm control --reload-rules && udevadm trigger \n" \
-        "Disconnect/connect usb cable on host! \n"    + bcolors.ENDC)
+        "Disconnect/connect usb cable on host! \n" + PrintColors.ENDC)
         os._exit(1)
 
 if not depthai.init_device(cmd_file, args['device_id']):
