@@ -95,27 +95,29 @@ def parse_args():
 
 
 def stream_type(option):
+    max_fps = None
     option_list = option.split(',')
     option_args = len(option_list)
     if option_args not in [1, 2]:
-        print(PrintColors.WARNING + option + " format is invalid. See --help" + PrintColors.ENDC)
-        raise ValueError
+        msg_string = "{0} format is invalid. See --help".format(option)
+        print("{0}{1}{2}".format(PrintColors.WARNING, msg_string, PrintColors.ENDC))
+        raise ValueError(msg_string)
 
     stream_choices = ['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h', 'meta_d2h']
     stream_name = option_list[0]
     if stream_name not in stream_choices:
-        print(PrintColors.WARNING + stream_name + " is not in available stream list: \n" + str(
-            stream_choices) + PrintColors.ENDC)
-        raise ValueError
+        msg_string = "{0} is not in available stream list: \n{1}".format(stream_name, stream_choices)
+        print("{0}{1}{2}".format(PrintColors.WARNING, msg_string, PrintColors.ENDC))
+        raise ValueError(msg_string)
 
-    if (option_args == 1):
+    if option_args == 1:
         stream_dict = {'name': stream_name}
     else:
         try:
             max_fps = float(option_list[1])
-        except:
-            print(PrintColors.WARNING + "In option: " + str(option) + " " + option_list[
-                1] + " is not a number!" + PrintColors.ENDC)
+        except ValueError:
+            print("{0}In option: {1} {2} is not a number!{3}".format(PrintColors.WARNING, option, option_list[1],
+                                                                     PrintColors.ENDC))
 
         stream_dict = {'name': stream_name, "max_fps": max_fps}
     return stream_dict
