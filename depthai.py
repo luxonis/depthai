@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 
-import sys
 from time import time
-from time import sleep
 import argparse
 from argparse import ArgumentParser
-from pathlib import Path
 import json
 import numpy as np
 import cv2
