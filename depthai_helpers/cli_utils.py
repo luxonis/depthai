@@ -116,15 +116,3 @@ def stream_type(option):
 
         stream_dict = {'name': stream_name, "max_fps": max_fps}
     return stream_dict
-
-def decode_mobilenet_ssd(nnet_packet):
-    detections = []
-    # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate threw them
-    for _, e in enumerate(nnet_packet.entries()):
-        # for MobileSSD entries are sorted by confidence
-        # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
-        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0 or e[0]['label'] > len(labels):
-            break
-        # save entry for further usage (as image package may arrive not the same time as nnet package)
-        detections.append(e)
-    return detections
