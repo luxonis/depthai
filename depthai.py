@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
-from time import time
 import argparse
 from argparse import ArgumentParser
 import json
-import numpy as np
-import cv2
+from pathlib import Path
+import platform
 import os
 import subprocess
-import platform
-from pathlib import Path
+from time import time
+
+import cv2
+import numpy as np
 
 import depthai
 
