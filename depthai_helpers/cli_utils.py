@@ -78,20 +78,18 @@ def parse_args():
                         help="Path where to save video stream (existing file will be overwritten)")
 
     options = parser.parse_args()
-
-    if (options.board is not None) and ((options.field_of_view is not None)
-                                        or (options.rgb_field_of_view is not None)
-                                        or (options.baseline is not None)
-                                        or (options.rgb_baseline is not None)
-                                        or (options.swap_lr is not None)):
+    any_options_set = any([options.field_of_view, options.rgb_field_of_view, options.baseline, options.rgb_baseline,
+                           options.swap_lr])
+    if (options.board is not None) and any_options_set:
         parser.error("[-brd] is mutually exclusive with [-fv -rfv -b -r -w]")
 
     # Set some defaults after the above check
-    if options.field_of_view is None: options.field_of_view = 71.86
-    if options.rgb_field_of_view is None: options.rgb_field_of_view = 68.7938
-    if options.baseline is None: options.baseline = 9.0
-    if options.rgb_baseline is None: options.rgb_baseline = 2.0
-    if options.swap_lr is None: options.swap_lr = True
+    if not options.board:
+        options.field_of_view = 71.86
+        options.rgb_field_of_view = 68.7938
+        options.baseline = 9.0
+        options.rgb_baseline = 2.0
+        options.swap_lr = True
 
     return options
 
