@@ -159,10 +159,11 @@ def average_depth_coord(pt1, pt2):
 def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
+    global config
     # iterate through pre-saved entries & draw rectangle & text on image:
     for e in entries_prev:
         # the lower confidence threshold - the more we get false positives
-        if e[0]['confidence'] > 0.5:
+        if e[0]['confidence'] > config['depth']['confidence_threshold']:
             if is_depth:
                 pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
                 pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
@@ -378,6 +379,7 @@ config = {
         'calibration_file': consts.resource_paths.calib_fpath,
         'padding_factor': 0.3,
         'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
+        'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number 
     },
     'ai':
     {
