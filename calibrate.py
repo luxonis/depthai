@@ -337,8 +337,8 @@ class Main:
                             cv2.destroyAllWindows()
                             break
                 
-                combine_img = np.hstack((frame_list[0], frame_list[1]))
-                # combine_img = np.vstack((frame_list[0], frame_list[1]))
+                # combine_img = np.hstack((frame_list[0], frame_list[1]))
+                combine_img = np.vstack((frame_list[0], frame_list[1]))
 
                 cv2.imshow("left + right",combine_img)
                 frame_list.clear()
