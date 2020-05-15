@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 from time import time
 from time import sleep
@@ -135,7 +137,7 @@ def decode_mobilenet_ssd(nnet_packet):
     for _, e in enumerate(nnet_packet.entries()):
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
-        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
+        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0 or e[0]['label'] > len(labels):
             break
         # save entry for further usage (as image package may arrive not the same time as nnet package)
         detections.append(e)
@@ -483,27 +485,31 @@ while True:
     for packet in data_packets:
         if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
+        packetData = packet.getData()
+        if packetData is None:
+            print('Invalid packet data!')
+            continue
         elif packet.stream_name == 'previewout':
-            data = packet.getData()
+            
             # the format of previewout image is CHW (Chanel, Height, Width), but OpenCV needs HWC, so we
             # change shape (3, 300, 300) -> (300, 300, 3)
-            data0 = data[0,:,:]
-            data1 = data[1,:,:]
-            data2 = data[2,:,:]
+            data0 = packetData[0,:,:]
+            data1 = packetData[1,:,:]
+            data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
-            frame_bgr = packet.getData()
+            frame_bgr = packetData
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
                 show_nn(entries_prev, frame_bgr, is_depth=True)
             cv2.imshow(packet.stream_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
-            frame = packet.getData()
+            frame = packetData
 
             if len(frame.shape) == 2:
                 if frame.dtype == np.uint8: # grayscale
@@ -525,12 +531,12 @@ while True:
             cv2.imshow(packet.stream_name, frame)
 
         elif packet.stream_name == 'jpegout':
-            jpg = packet.getData()
+            jpg = packetData
             mat = cv2.imdecode(jpg, cv2.IMREAD_COLOR)
             cv2.imshow('jpegout', mat)
 
         elif packet.stream_name == 'video':
-            videoFrame = packet.getData()
+            videoFrame = packetData
             videoFrame.tofile(video_file)
         
         elif packet.stream_name == 'meta_d2h':
