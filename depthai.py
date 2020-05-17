@@ -293,8 +293,8 @@ except:
     print("Labels not found in json!")
 
 
-print('depthai.__version__ == %s' % depthai.__version__)
-print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
+#print('depthai.__version__ == %s' % depthai.__version__)
+#print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
 
 if platform.system() == 'Linux':
     ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -306,12 +306,14 @@ if platform.system() == 'Linux':
         "Disconnect/connect usb cable on host! \n"    + bcolors.ENDC)
         os._exit(1)
 
-if not depthai.init_device(cmd_file, args['device_id']):
-    print("Error initializing device. Try to reset it.")
-    exit(1)
+device = depthai.Device("", False)
+
+#if not depthai.init_device(cmd_file, args['device_id']):
+#    print("Error initializing device. Try to reset it.")
+#    exit(1)
 
 
-print('Available streams: ' + str(depthai.get_available_steams()))
+print('Available streams: ' + str(device.get_available_streams()))
 
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
@@ -368,7 +370,8 @@ if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] o
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
 
 # create the pipeline, here is the first connection with the device
-p = depthai.create_pipeline(config=config)
+
+p = device.create_pipeline(config=config)
 
 if p is None:
     print('Pipeline is not created.')
