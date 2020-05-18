@@ -167,10 +167,38 @@ def decode_tracklets(packetData):
 
     return tracklets
 
+def show_tracklets(tracklet_list, frame):
+    # img_h = frame.shape[0]
+    # img_w = frame.shape[1]
+
+    # iterate through pre-saved entries & draw rectangle & text on image:
+    for tracklet in tracklet_list:
+
+        pt1 = tracklet.left,  tracklet.top
+        pt2 = tracklet.right,  tracklet.bottom
+        color = (255, 0, 0) # bgr
+        cv2.rectangle(frame, pt1, pt2, color)
+
+        middle_pt = (int)(tracklet.left + (tracklet.right - tracklet.left)/2), (int)(tracklet.top + (tracklet.bottom - tracklet.top)/2)
+        cv2.circle(frame, middle_pt, 0, color, -1)
+        cv2.putText(frame, "ID {0}".format(tracklet.id), middle_pt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+        x1, y1 = tracklet.left,  tracklet.bottom
+
+        tracklet_label = labels[tracklet.label]
+
+        pt_t1 = x1, y1 - 40
+        cv2.putText(frame, tracklet_label, pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        pt_t2 = x1, y1 - 20
+        cv2.putText(frame, tracklet.status, pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+
+        
+    return frame
+
 def print_tracklets(tracklet_list):
     print("Number of tracklets: {0}".format(len(tracklet_list)))
-    for i in range(len(tracklet_list)):
-        tracklet = tracklet_list[i]
+    for tracklet in tracklet_list:
         print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
         .format(tracklet.left, tracklet.top, tracklet.right, tracklet.bottom, tracklet.id, labels[tracklet.label], tracklet.status))
 
@@ -545,6 +573,7 @@ while True:
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
+            nn_frame = show_tracklets(tracklets_prev, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
@@ -595,7 +624,6 @@ while True:
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                 ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
         elif packet.stream_name == 'object_tracker':
-            tracklets_prev.clear()
             tracklets_prev = decode_tracklets(packetData)
             print_tracklets(tracklets_prev)
 
