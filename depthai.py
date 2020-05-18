@@ -22,13 +22,18 @@ from depthai_helpers import utils
 
 
 class Tracklet:
+    states = {
+        0 : "NEW",
+        1 : "TRACKED",
+        2 : "LOST",
+    }
     left : int
     top : int
     right : int 
     bottom : int
     id : int
     label : int
-    status : int
+    status : str
 
 class bcolors:
     HEADER = '\033[95m'
@@ -147,28 +152,29 @@ def decode_tracklets(packetData):
     tracklet_size=32
     tracklet_start=8
     tracklets = []
-    for i in range(nr_objects):
+    for _ in range(nr_objects):
         decoded_tracklet = Tracklet()
         tracklet = packetData[tracklet_start:tracklet_start+tracklet_size]
         decoded_tracklet.left = struct.unpack("<I", bytearray(tracklet[0:4]))[0]
-        print('left' + str(decoded_tracklet.left)) 
         decoded_tracklet.top = struct.unpack("<I", bytearray(tracklet[4:8]))[0]
-        print('top' + str(decoded_tracklet.top)) 
         decoded_tracklet.right = struct.unpack("<I", bytearray(tracklet[8:12]))[0]
-        print('right' + str(decoded_tracklet.right)) 
         decoded_tracklet.bottom = struct.unpack("<I", bytearray(tracklet[12:16]))[0]
-        print('bottom' + str(decoded_tracklet.bottom)) 
         decoded_tracklet.id = struct.unpack("<I", bytearray(tracklet[16:20]))[0]
-        print('id' + str(decoded_tracklet.id)) 
         decoded_tracklet.label = struct.unpack("<I", bytearray(tracklet[24:28]))[0]
-        print('label' + str(decoded_tracklet.label)) 
-        decoded_tracklet.status = struct.unpack("<I", bytearray(tracklet[28:32]))[0]
-        print('status' + str(decoded_tracklet.status)) 
+        decoded_tracklet.status = Tracklet.states[struct.unpack("<I", bytearray(tracklet[28:32]))[0]]
         tracklet_start = tracklet_start + tracklet_size
         tracklets.append(decoded_tracklet)
-        print("----")
 
     return tracklets
+
+def print_tracklets(tracklet_list):
+    print("Number of tracklets: {0}".format(len(tracklet_list)))
+    for i in range(len(tracklet_list)):
+        tracklet = tracklet_list[i]
+        print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
+        .format(tracklet.left, tracklet.top, tracklet.right, tracklet.bottom, tracklet.id, labels[tracklet.label], tracklet.status))
+
+    return
 
 def decode_mobilenet_ssd(nnet_packet):
     detections = []
@@ -494,6 +500,7 @@ for s in stream_names:
     frame_count_prev[s] = 0
 
 entries_prev = []
+tracklets_prev = []
 
 process_watchdog_timeout=10 #seconds
 def reset_process_wd():
@@ -588,8 +595,9 @@ while True:
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                 ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
         elif packet.stream_name == 'object_tracker':
-            # print("object_tracker")
-            decode_tracklets(packetData)
+            tracklets_prev.clear()
+            tracklets_prev = decode_tracklets(packetData)
+            print_tracklets(tracklets_prev)
 
         frame_count[packet.stream_name] += 1
 
