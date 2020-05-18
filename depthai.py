@@ -13,11 +13,22 @@ import os
 import subprocess
 import platform
 from pathlib import Path
+import struct
 
 import depthai
 
 import consts.resource_paths
 from depthai_helpers import utils
+
+
+class Tracklet:
+    left : int
+    top : int
+    right : int 
+    bottom : int
+    id : int
+    label : int
+    status : int
 
 class bcolors:
     HEADER = '\033[95m'
@@ -114,7 +125,7 @@ def stream_type(option):
         print(bcolors.WARNING + option+" format is invalid. See --help" + bcolors.ENDC)
         raise ValueError
 
-    stream_choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h', 'meta_d2h']
+    stream_choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h', 'meta_d2h', 'object_tracker']
     stream_name = option_list[0]
     if stream_name not in stream_choices:
         print(bcolors.WARNING + stream_name +" is not in available stream list: \n" + str(stream_choices) + bcolors.ENDC)
@@ -130,6 +141,34 @@ def stream_type(option):
 
         stream_dict = {'name': stream_name, "max_fps": max_fps}
     return stream_dict
+
+def decode_tracklets(packetData):
+    nr_objects = struct.unpack("<I", bytearray(packetData[0:4]))[0]
+    tracklet_size=32
+    tracklet_start=8
+    tracklets = []
+    for i in range(nr_objects):
+        decoded_tracklet = Tracklet()
+        tracklet = packetData[tracklet_start:tracklet_start+tracklet_size]
+        decoded_tracklet.left = struct.unpack("<I", bytearray(tracklet[0:4]))[0]
+        print('left' + str(decoded_tracklet.left)) 
+        decoded_tracklet.top = struct.unpack("<I", bytearray(tracklet[4:8]))[0]
+        print('top' + str(decoded_tracklet.top)) 
+        decoded_tracklet.right = struct.unpack("<I", bytearray(tracklet[8:12]))[0]
+        print('right' + str(decoded_tracklet.right)) 
+        decoded_tracklet.bottom = struct.unpack("<I", bytearray(tracklet[12:16]))[0]
+        print('bottom' + str(decoded_tracklet.bottom)) 
+        decoded_tracklet.id = struct.unpack("<I", bytearray(tracklet[16:20]))[0]
+        print('id' + str(decoded_tracklet.id)) 
+        decoded_tracklet.label = struct.unpack("<I", bytearray(tracklet[24:28]))[0]
+        print('label' + str(decoded_tracklet.label)) 
+        decoded_tracklet.status = struct.unpack("<I", bytearray(tracklet[28:32]))[0]
+        print('status' + str(decoded_tracklet.status)) 
+        tracklet_start = tracklet_start + tracklet_size
+        tracklets.append(decoded_tracklet)
+        print("----")
+
+    return tracklets
 
 def decode_mobilenet_ssd(nnet_packet):
     detections = []
@@ -548,6 +587,9 @@ while True:
                 ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                 ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
+        elif packet.stream_name == 'object_tracker':
+            # print("object_tracker")
+            decode_tracklets(packetData)
 
         frame_count[packet.stream_name] += 1
 
