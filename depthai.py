@@ -76,7 +76,7 @@ def parse_args():
                         nargs='+',
                         type=stream_type,
                         dest='streams',
-                        default=['metaout', 'previewout'],
+                        default=['aprilout', 'right'],
                         help="Define which streams to enable \
                         Format: stream_name or stream_name,max_fps \
                         Example: -s metaout previewout \
@@ -129,6 +129,8 @@ def decode_mobilenet_ssd(nnet_packet):
     detections = []
     # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate threw them
     for _, e in enumerate(nnet_packet.entries()):
+#        print("asdfasdf")
+#        print(e[0]['confidence'])
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
         if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
@@ -244,6 +246,86 @@ def show_landmarks_recognition(entries_prev, frame):
     frame = cv2.resize(frame, (300, 300))
 
     return frame
+
+
+def get_detections_april(passed_april_packets):
+    detections = []
+    for detection in april_packet.detections:
+        print("detection.id: " + str(detection.id))
+        print("detection.hamming: " + str(detection.hamming))
+        print("detection.decision_margin: " + str(detection.decision_margin))
+        center=detection.getCenter()
+        print("detection.getCenter: " + str(center[0]) + ", " + str(center[1]))
+        corners=detection.getCorners()
+        print("detection.getCorners: " + str(corners[0][0]) + ", " + str(corners[0][1]))
+        print("detection.getCorners: " + str(corners[1][0]) + ", " + str(corners[1][1]))
+        print("detection.getCorners: " + str(corners[2][0]) + ", " + str(corners[2][1]))
+        print("detection.getCorners: " + str(corners[3][0]) + ", " + str(corners[3][1]))
+        detections.append(detection)
+
+    print("\n")
+    
+    return detections
+
+def show_april(passed_detections, frame): 
+
+    # for text
+    font                   = cv2.FONT_HERSHEY_SIMPLEX
+    fontScale              = 1
+    fontColor              = 0
+    lineType               = 2
+
+    # for box lines
+    lineColor           = 0
+    lineThickness       = 3
+
+    for detection in passed_detections:
+#        print("detection.id: " + str(detection.id))
+#        print("detection.hamming: " + str(detection.hamming))
+#        print("detection.decision_margin: " + str(detection.decision_margin))
+        center=detection.getCenter()
+#        print("detection.getCenter: " + str(center[0]) + ", " + str(center[1]))
+        corners=detection.getCorners()
+#        print("detection.getCorners: " + str(corners[0][0]) + ", " + str(corners[0][1]))
+#        print("detection.getCorners: " + str(corners[1][0]) + ", " + str(corners[1][1]))
+#        print("detection.getCorners: " + str(corners[2][0]) + ", " + str(corners[2][1]))
+#        print("detection.getCorners: " + str(corners[3][0]) + ", " + str(corners[3][1]))
+
+#       TODO: make april detection size adjustable.
+#       using 320x180 right now
+#       oddly enough, preview is 300x300
+#       left is full 1280x720!
+#       Anyway, we're using one of the greyscale camera for april detections right now so it won't line up perfectly with the color preview.
+        height, width = frame.shape[:2]
+#        print("height = " + str(height))
+#        print("width = " + str(width))
+        scale_height = height/180   # TODO: make april detection size adjustable. 
+        scale_width = width/320   # TODO: make april detection size adjustable. 
+
+        pt1 = (round(corners[0][0]*scale_width), round(corners[0][1]*scale_height))
+        pt2 = (round(corners[1][0]*scale_width), round(corners[1][1]*scale_height))
+        pt3 = (round(corners[2][0]*scale_width), round(corners[2][1]*scale_height))
+        pt4 = (round(corners[3][0]*scale_width), round(corners[3][1]*scale_height))
+        c1 = (round(center[0][0]*scale_width), round(center[0][1]*scale_height))
+
+        cv2.line(frame, pt1, pt2, lineColor, lineThickness);
+        cv2.line(frame, pt1, pt4, lineColor, lineThickness);
+        cv2.line(frame, pt3, pt4, lineColor, lineThickness);
+        cv2.line(frame, pt3, pt2, lineColor, lineThickness);
+
+
+        cv2.putText(frame,
+            "id: " + str(detection.id), 
+            c1, 
+            font, 
+            fontScale,
+            fontColor,
+            lineType)
+
+
+    return frame
+
+
 
 global args
 try:
@@ -421,6 +503,7 @@ for s in stream_names:
     frame_count[s] = 0
     frame_count_prev[s] = 0
 
+april_prev = []
 entries_prev = []
 
 process_watchdog_timeout=10 #seconds
@@ -435,7 +518,12 @@ reset_process_wd()
 while True:
     # retreive data from the device
     # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
-    nnet_packets, data_packets = p.get_available_nnet_and_data_packets()
+#    nnet_packets, data_packets = p.get_available_nnet_and_data_packets()
+    p.consume_packets()
+    data_packets = p.get_consumed_data_packets()
+    nnet_packets = p.get_consumed_nnet_packets()
+    april_packets = p.get_consumed_april_packets()
+
     
     packets_len = len(nnet_packets) + len(data_packets)
     if packets_len != 0:
@@ -448,6 +536,11 @@ while True:
 
     for _, nnet_packet in enumerate(nnet_packets):
         entries_prev = decode_nn(nnet_packet)
+
+    print("numPackets: " + str(len(april_packets)))
+    for april_packet in april_packets:
+        print("detections.size: " + str(april_packet.size))
+        april_prev = get_detections_april(april_packets)
 
     for packet in data_packets:
         if packet.stream_name not in stream_names:
@@ -462,13 +555,16 @@ while True:
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
-            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.imshow('previewout', nn_frame)
+            cv2.putText(out_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.imshow('previewout', out_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packet.getData()
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.imshow(packet.stream_name, frame_bgr)
+
+            out_frame = show_april(april_prev, frame_bgr)
+
+            cv2.imshow(packet.stream_name, out_frame)
         elif packet.stream_name.startswith('depth'):
             frame = packet.getData()
 
