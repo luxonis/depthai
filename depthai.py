@@ -510,6 +510,10 @@ if args['video'] is not None:
 
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
 
+enable_object_tracker = False
+if 'object_tracker' in stream_names:
+    enable_object_tracker = True
+
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=config)
 
@@ -573,7 +577,8 @@ while True:
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
-            nn_frame = show_tracklets(tracklets_prev, nn_frame)
+            if enable_object_tracker:
+                nn_frame = show_tracklets(tracklets_prev, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
@@ -625,7 +630,7 @@ while True:
                 ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
         elif packet.stream_name == 'object_tracker':
             tracklets_prev = decode_tracklets(packetData)
-            print_tracklets(tracklets_prev)
+            # print_tracklets(tracklets_prev)
 
         frame_count[packet.stream_name] += 1
 
