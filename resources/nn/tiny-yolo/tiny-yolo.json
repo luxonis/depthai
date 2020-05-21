@@ -16,18 +16,16 @@
             ],
             "output_properties_type": "f16"
         },
-	{       
-            "output_tensor_name": "out1",
+	    {       
+            "output_tensor_name": "out2",
             "output_dimensions": [1, 24, 13, 13],
             "output_entry_iteration_index": 0,
             "output_properties_dimensions": [0],
             "property_key_mapping":
             [
-                []
             ],
             "property_value_mapping":
             [
-                []
             ],
             "output_properties_type": "f16"
        }
@@ -36,27 +34,9 @@
     {
         "labels":
         [
-            "background",
-            "aeroplane",
-            "bicycle",
-            "bird",
-            "boat",
-            "bottle",
-            "bus",
-            "car",
-            "cat",
-            "chair",
-            "cow",
-            "diningtable",
-            "dog",
-            "horse",
-            "motorbike",
-            "person",
-            "pottedplant",
-            "sheep",
-            "sofa",
-            "train",
-            "tvmonitor"
+            "mask",
+            "no mask",
+            "no mask2"
         ]
     }
 }
