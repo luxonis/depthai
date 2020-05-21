@@ -306,9 +306,9 @@ def parseTinyYoloV3Output(output_node_results, filtered_objects, source_image_wi
     output_node_results = output_node_results.transpose(0,2,3,1)
     output_h = output_node_results.shape[1]
     output_w = output_node_results.shape[2]
-    for i in range(4):
-        print("shape " + str(i) + " " +  str(output_node_results.shape[i]))
-    print("output_node_results " +str(len(output_node_results)))
+    # for i in range(4):
+    #     print("shape " + str(i) + " " +  str(output_node_results.shape[i]))
+    # print("output_node_results " +str(len(output_node_results)))
 
     # 80 class scores + 4 coordinate values + 1 objectness score = 85 values
     # 85 values * 3 prior box scores per grid cell= 255 values 
@@ -363,40 +363,36 @@ def parseTinyYoloV3Output(output_node_results, filtered_objects, source_image_wi
 
 def decode_tiny_yolo(nnet_packet):
 
-    print("nnet_packet.entries()" + str(len(nnet_packet.entries())))
-    print("nnet_packet.get_tensor()" + str(len(nnet_packet.get_tensor("out"))))
-    print("number of outputs: " + str(len(nnet_packet.entries()[0])))
-    NN_outputs = nnet_packet.entries()[0]
-    # second = np.array(output_node_results)
-    piu = []
-    for i, output_node_results in enumerate(NN_outputs):
-        print("nnet_packet output nr. {0} length : {1}".format(str(i), str(len(output_node_results))))
-        first = np.empty(len(output_node_results), dtype=float)
-        #todo change .. very slow
-        for i2 in range((len(output_node_results))):
-            first[i2] = output_node_results[i2]
-            # print(output_node_results[i2])
-        piu.append(first)
-
-    print("number list: " + str(len(piu[0])))
-    first = np.reshape(piu[0], (1, 24, 26, 26))
-    second = np.reshape(piu[1], (1, 24, 13, 13))
-
-
-    source_image_width = 1920
-    source_image_height = 1080
+    source_image_width = 416
+    source_image_height = 416
     scaled_w = 416
     scaled_h = 416
 
-    filtered_objects = []
-    # for output_node_results in all_output_results.values():
-    #     parseTinyYoloV3Output(output_node_results, filtered_objects, source_image_width, source_image_height, scaled_w, scaled_h, detection_threshold, len(labels))
-    # for i, output_node_results in enumerate(NN_outputs):
-        # parseTinyYoloV3Output(output_node_results, filtered_objects, source_image_width, source_image_height, scaled_w, scaled_h, detection_threshold, len(labels))
-    parseTinyYoloV3Output(first, filtered_objects, source_image_width, source_image_height, scaled_w, scaled_h, detection_threshold, len(labels))
-    parseTinyYoloV3Output(second, filtered_objects, source_image_width, source_image_height, scaled_w, scaled_h, detection_threshold, len(labels))
+    # print("nnet_packet.entries()" + str(len(nnet_packet.entries())))
+    raw_detections = nnet_packet.get_tensor("out")
+    raw_detections.dtype = np.float16  # reinterpret cast
 
-    # parseTinyYoloV3Output(output_node_results, filtered_objects, source_image_width, source_image_height, scaled_w, scaled_h, detection_threshold, len(labels))
+    # print("nnet_packet.get_tensor()" + str(len(raw_detections)))
+    # print("nnet_packet.get_tensor()" + str(raw_detections.dtype))
+
+    # print("number of outputs: " + str(len(nnet_packet.entries()[0])))
+    NN_outputs = nnet_packet.entries()[0]
+    output_shapes = [(1, 24, 26, 26), (1, 24, 13, 13)]
+    NN_output_list = []
+
+    prev_offset = 0
+    for i in range(len(nnet_packet.entries()[0])):
+        n_size = len(NN_outputs[i])
+        output = raw_detections[prev_offset:prev_offset+n_size]
+        output = np.reshape(output, output_shapes[i])
+        NN_output_list.append(output)
+        prev_offset += n_size
+        print("nnet_packet length : {0} {1}".format(str(n_size), str(output.shape)))
+
+    filtered_objects = []
+    for output_node_results in NN_output_list:
+        parseTinyYoloV3Output(output_node_results, filtered_objects, source_image_width, source_image_height, scaled_w, scaled_h, detection_threshold, len(labels))
+
     return filtered_objects
 
 BOX_COLOR = (0,255,0)
@@ -408,9 +404,6 @@ def show_tiny_yolo(filtered_objects, frame, is_depth=0):
 
     img_h = frame.shape[0]
     img_w = frame.shape[1]
-    pt_t1 = (int)(img_w/2), (int)(img_h/2)
-    color = (0, 0, 255) # bgr
-    cv2.putText(frame, "WIP", pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
     # 2. Filter out duplicate objects from all detected objects
     filtered_mask = get_duplicate_box_mask(filtered_objects)
