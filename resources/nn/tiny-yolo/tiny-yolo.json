@@ -3,18 +3,34 @@
     [
         {       
             "output_tensor_name": "out",
-            "output_dimensions": [1, 1, 100, 7],
-            "output_entry_iteration_index": 2,
-            "output_properties_dimensions": [3],
+            "output_dimensions": [1, 24, 26, 26],
+            "output_entry_iteration_index": 0,
+            "output_properties_dimensions": [0],
             "property_key_mapping":
             [
-                [],
-                [],
-                [],
-                ["id", "label", "confidence", "left", "top", "right", "bottom"]
+
+            ],
+            "property_value_mapping":
+            [
+        
             ],
             "output_properties_type": "f16"
-        }
+        },
+	{       
+            "output_tensor_name": "out1",
+            "output_dimensions": [1, 24, 13, 13],
+            "output_entry_iteration_index": 0,
+            "output_properties_dimensions": [0],
+            "property_key_mapping":
+            [
+                []
+            ],
+            "property_value_mapping":
+            [
+                []
+            ],
+            "output_properties_type": "f16"
+       }
     ],
     "mappings":
     {
