@@ -199,6 +199,24 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
                     cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
     return frame
 
+def decode_tiny_yolo(nnet_packet):
+    print('tiny yolo decode stub')
+    detections = []
+    # for _, e in enumerate(nnet_packet.entries()):
+
+    return detections
+
+def show_tiny_yolo(entries_prev, frame, is_depth=0):
+    print('tiny yolo show stub')
+
+    img_h = frame.shape[0]
+    img_w = frame.shape[1]
+    pt_t1 = (int)(img_w/2), (int)(img_h/2)
+    color = (0, 0, 255) # bgr
+    cv2.putText(frame, "WIP", pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+    return frame
+
 def decode_age_gender_recognition(nnet_packet):
     detections = []
     for _, e in enumerate(nnet_packet.entries()):
@@ -312,6 +330,11 @@ if args['cnn_model'] == 'age-gender-recognition-retail-0013':
 if args['cnn_model'] == 'emotions-recognition-retail-0003':
     decode_nn=decode_emotion_recognition
     show_nn=show_emotion_recognition
+    calc_dist_to_bb=False
+
+if args['cnn_model'] == 'tiny-yolo':
+    decode_nn=decode_tiny_yolo
+    show_nn=show_tiny_yolo
     calc_dist_to_bb=False
 
 if args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
