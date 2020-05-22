@@ -148,21 +148,24 @@ def stream_type(option):
     return stream_dict
 
 def decode_tracklets(packetData):
-    nr_objects = struct.unpack("<I", bytearray(packetData[0:4]))[0]
-    tracklet_size=32
-    tracklet_start=8
+    packetData.dtype = np.int32
     tracklets = []
-    for _ in range(nr_objects):
+    nr_objects = packetData[0]
+    tracklet_base = packetData[2:]
+    tracklet_size = 8
+    for i in range(nr_objects):
+        tracklet_base
         decoded_tracklet = Tracklet()
-        tracklet = packetData[tracklet_start:tracklet_start+tracklet_size]
-        decoded_tracklet.left = struct.unpack("<I", bytearray(tracklet[0:4]))[0]
-        decoded_tracklet.top = struct.unpack("<I", bytearray(tracklet[4:8]))[0]
-        decoded_tracklet.right = struct.unpack("<I", bytearray(tracklet[8:12]))[0]
-        decoded_tracklet.bottom = struct.unpack("<I", bytearray(tracklet[12:16]))[0]
-        decoded_tracklet.id = struct.unpack("<I", bytearray(tracklet[16:20]))[0]
-        decoded_tracklet.label = struct.unpack("<I", bytearray(tracklet[24:28]))[0]
-        decoded_tracklet.status = Tracklet.states[struct.unpack("<I", bytearray(tracklet[28:32]))[0]]
-        tracklet_start = tracklet_start + tracklet_size
+        tracklet_start = i * tracklet_size
+        tracklet_end = (i + 1) * tracklet_size
+        tracklet = tracklet_base[tracklet_start:tracklet_end]
+        decoded_tracklet.left = tracklet[0]
+        decoded_tracklet.top = tracklet[1]
+        decoded_tracklet.right = tracklet[2]
+        decoded_tracklet.bottom = tracklet[3]
+        decoded_tracklet.id = tracklet[5]
+        decoded_tracklet.label = tracklet[6]
+        decoded_tracklet.status = Tracklet.states[tracklet[7]]
         tracklets.append(decoded_tracklet)
 
     return tracklets
