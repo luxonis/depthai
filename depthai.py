@@ -76,6 +76,7 @@ def parse_args():
                         nargs='+',
                         type=stream_type,
                         dest='streams',
+#                        default=['metaout', 'previewout'],
                         default=['aprilout', 'right'],
                         help="Define which streams to enable \
                         Format: stream_name or stream_name,max_fps \
@@ -306,7 +307,7 @@ def show_april(passed_detections, frame):
         pt2 = (round(corners[1][0]*scale_width), round(corners[1][1]*scale_height))
         pt3 = (round(corners[2][0]*scale_width), round(corners[2][1]*scale_height))
         pt4 = (round(corners[3][0]*scale_width), round(corners[3][1]*scale_height))
-        c1 = (round(center[0][0]*scale_width), round(center[0][1]*scale_height))
+        c1 = (round(center[0]*scale_width), round(center[1]*scale_height))
 
         cv2.line(frame, pt1, pt2, lineColor, lineThickness);
         cv2.line(frame, pt1, pt4, lineColor, lineThickness);
@@ -555,8 +556,8 @@ while True:
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
-            cv2.putText(out_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.imshow('previewout', out_frame)
+            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packet.getData()
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
