@@ -398,7 +398,18 @@ config = {
         'store_to_eeprom': args['store_eeprom'],
         'clear_eeprom': args['clear_eeprom'],
         'override_eeprom': args['override_eeprom'],
-    }
+    },
+    
+    #'video_config':
+    #{
+    #    'rateCtrlMode': 'cbr',
+    #    'profile': 'h265_main', # Options: 'h264_baseline' / 'h264_main' / 'h264_high' / 'h265_main'
+    #    'bitrate': 8000000, # When using CBR
+    #    'maxBitrate': 8000000, # When using CBR
+    #    'keyframeFrequency': 30,
+    #    'numBFrames': 0,
+    #    'quality': 80 # (0 - 100%) When using VBR
+    #}
 }
 
 if args['board']:
