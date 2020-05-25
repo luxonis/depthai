@@ -574,6 +574,12 @@ while True:
     key = cv2.waitKey(1)
     if key == ord('c'):
         depthai.request_jpeg()
+    elif key == ord('f'):
+        depthai.request_af_trigger()
+    elif key == ord('1'):
+        depthai.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO)
+    elif key == ord('2'):
+        depthai.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO)
     elif key == ord('q'):
         break
 
