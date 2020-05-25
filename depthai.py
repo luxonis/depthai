@@ -163,7 +163,7 @@ def decode_tracklets(packetData):
         decoded_tracklet.top = tracklet[1]
         decoded_tracklet.right = tracklet[2]
         decoded_tracklet.bottom = tracklet[3]
-        decoded_tracklet.id = tracklet[5]
+        decoded_tracklet.id = tracklet[4]
         decoded_tracklet.label = tracklet[6]
         decoded_tracklet.status = Tracklet.states[tracklet[7]]
         tracklets.append(decoded_tracklet)
