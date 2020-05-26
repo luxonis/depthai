@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+from time import monotonic
 from time import time
 from time import sleep
 import argparse
@@ -470,7 +471,7 @@ entries_prev = []
 process_watchdog_timeout=10 #seconds
 def reset_process_wd():
     global wd_cutoff
-    wd_cutoff=time()+process_watchdog_timeout
+    wd_cutoff=monotonic()+process_watchdog_timeout
     return
 
 reset_process_wd()
@@ -485,7 +486,7 @@ while True:
     if packets_len != 0:
         reset_process_wd()
     else:
-        cur_time=time()
+        cur_time=monotonic()
         if cur_time > wd_cutoff:
             print("process watchdog timeout")
             os._exit(10)
