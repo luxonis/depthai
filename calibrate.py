@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import platform
 from contextlib import contextmanager
 
@@ -230,8 +232,9 @@ class Main:
         show((50, int(height / 2 - 40)), "Capture failed, unable to find chessboard!")
         show((60, int(height / 2 + 40)), "Fix position and press spacebar again")
 
-        cv2.imshow("left", info_frame)
-        cv2.imshow("right", info_frame)
+        # cv2.imshow("left", info_frame)
+        # cv2.imshow("right", info_frame)
+        cv2.imshow("left + right",info_frame)
         cv2.waitKey(2000)
 
     def capture_images(self):
@@ -255,6 +258,15 @@ class Main:
                 if recent_left is None or recent_right is None:
                     continue
 
+                key = cv2.waitKey(1)
+                if key == 27 or key == ord("q"):
+                    print("py: Calibration has been interrupted!")
+                    raise SystemExit(0)
+
+                if key == ord(" "):
+                    capturing = True
+                
+                frame_list = []
                 for packet in (recent_left, recent_right):
                     frame = packet.getData()
                     frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
@@ -262,14 +274,6 @@ class Main:
                     if self.polygons is None:
                         self.height, self.width, _ = frame.shape
                         self.polygons = setPolygonCoordinates(self.height, self.width)
-
-                    key = cv2.waitKey(1)
-                    if key == 27 or key == ord("q"):
-                        print("py: Calibration has been interrupted!")
-                        raise SystemExit(0)
-
-                    if key == ord(" "):
-                        capturing = True
 
                     if capturing and abs(ts(recent_left) - ts(recent_right)) < 0.001:
                         if packet.stream_name == 'left' and not tried_left:
@@ -303,7 +307,8 @@ class Main:
                         )
 
                     small_frame = cv2.resize(frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
-                    cv2.imshow(packet.stream_name, small_frame)
+                    # cv2.imshow(packet.stream_name, small_frame)
+                    frame_list.append(small_frame)
 
                     if captured_left and captured_right:
                         self.images_captured += 1
@@ -331,6 +336,12 @@ class Main:
                             finished = True
                             cv2.destroyAllWindows()
                             break
+                
+                # combine_img = np.hstack((frame_list[0], frame_list[1]))
+                combine_img = np.vstack((frame_list[0], frame_list[1]))
+
+                cv2.imshow("left + right",combine_img)
+                frame_list.clear()
 
     def calibrate(self):
         print("Starting image processing")

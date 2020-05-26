@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 import signal
 import subprocess
@@ -149,4 +151,4 @@ for L in range(0, len(streams)+1):
                 logger.info("returned succesfully")
             else:
                 logger.info("returned with error code: " + str(return_code))
-            time.sleep(3)
+            time.sleep(5)
