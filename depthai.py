@@ -70,7 +70,7 @@ def parse_args():
                         help="Force usb2 connection")
     parser.add_argument("-cnn", "--cnn_model", default='mobilenet-ssd', type=str, 
                         help="Cnn model to run on DepthAI")
-    parser.add_argument('-cam', "--cnn-camera", default='rgb', choices=['rgb', 'left', 'right'],
+    parser.add_argument('-cam', "--cnn-camera", default='rgb', choices=['rgb', 'left', 'right', 'left_right'],
                         help='Choose camera input for CNN (default: %(default)s)')
     parser.add_argument("-dd", "--disable_depth", default=False,  action='store_true', 
                         help="Disable depth calculation on CNN models with bounding box output")
@@ -133,7 +133,7 @@ def stream_type(option):
 
 def decode_mobilenet_ssd(nnet_packet):
     detections = []
-    # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate threw them
+    # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate through them
     for _, e in enumerate(nnet_packet.entries()):
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
@@ -449,11 +449,18 @@ nn2depth = depthai.get_nn_to_depth_bbox_mapping()
 t_start = time()
 frame_count = {}
 frame_count_prev = {}
+entries_prev = {}
 for s in stream_names:
-    frame_count[s] = 0
-    frame_count_prev[s] = 0
-
-entries_prev = []
+    stream_windows = []
+    if s == 'previewout':
+        for cam in {'rgb', 'left', 'right'}:
+            entries_prev[cam] = []
+            stream_windows.append(s + '-' + cam)
+    else:
+        stream_windows.append(s)
+    for w in stream_windows:
+        frame_count[w] = 0
+        frame_count_prev[w] = 0
 
 process_watchdog_timeout=10 #seconds
 def reset_process_wd():
@@ -479,13 +486,16 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        entries_prev = decode_nn(nnet_packet)
+        entries_prev[nnet_packet.getMetadata().getCameraName()] = decode_nn(nnet_packet)
 
     for packet in data_packets:
+        window_name = packet.stream_name
         if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
         elif packet.stream_name == 'previewout':
             data = packet.getData()
+            camera = packet.getMetadata().getCameraName()
+            window_name = 'previewout-' + camera
             # the format of previewout image is CHW (Chanel, Height, Width), but OpenCV needs HWC, so we
             # change shape (3, 300, 300) -> (300, 300, 3)
             data0 = data[0,:,:]
@@ -493,37 +503,39 @@ while True:
             data2 = data[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(entries_prev, frame)
-            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.imshow('previewout', nn_frame)
+            nn_frame = show_nn(entries_prev[camera], frame)
+            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.imshow(window_name, nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packet.getData()
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
-                show_nn(entries_prev, frame_bgr, is_depth=True)
-            cv2.imshow(packet.stream_name, frame_bgr)
+                camera = packet.getMetadata().getCameraName()
+                show_nn(entries_prev[camera], frame_bgr, is_depth=True)
+            cv2.imshow(window_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
             frame = packet.getData()
 
             if len(frame.shape) == 2:
                 if frame.dtype == np.uint8: # grayscale
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
-                    cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
+                    cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                 else: # uint16
                     frame = (65535 // frame).astype(np.uint8)
                     #colorize depth map, comment out code below to obtain grayscale
                     frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
                     # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                    cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                    cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
             else: # bgr
                 cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
-                cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
             if args['draw_bb_depth']:
-                show_nn(entries_prev, frame, is_depth=True)
-            cv2.imshow(packet.stream_name, frame)
+                # TODO check NN cam input
+                show_nn(entries_prev['right'], frame, is_depth=True)
+            cv2.imshow(window_name, frame)
 
         elif packet.stream_name == 'jpegout':
             jpg = packet.getData()
@@ -544,16 +556,22 @@ while True:
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                 ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
 
-        frame_count[packet.stream_name] += 1
+        frame_count[window_name] += 1
 
     t_curr = time()
     if t_start + 1.0 < t_curr:
         t_start = t_curr
 
         for s in stream_names:
-            frame_count_prev[s] = frame_count[s]
-            frame_count[s] = 0
-
+            stream_windows = []
+            if s == 'previewout':
+                for cam in {'rgb', 'left', 'right'}:
+                    stream_windows.append(s + '-' + cam)
+            else:
+                stream_windows.append(s)
+            for w in stream_windows:
+                frame_count_prev[w] = frame_count[w]
+                frame_count[w] = 0
 
     key = cv2.waitKey(1)
     if key == ord('c'):
