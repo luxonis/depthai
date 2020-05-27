@@ -5,7 +5,7 @@ from pathlib import Path
 import platform
 import os
 import subprocess
-from time import time, sleep
+from time import time, sleep, monotonic
 
 import cv2
 import numpy as np
