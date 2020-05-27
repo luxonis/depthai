@@ -5,7 +5,7 @@ from pathlib import Path
 import platform
 import os
 import subprocess
-from time import time
+from time import time, sleep
 
 import cv2
 import numpy as np
@@ -46,10 +46,11 @@ def average_depth_coord(pt1, pt2):
 def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
+    global config
     # iterate through pre-saved entries & draw rectangle & text on image:
     for e in entries_prev:
         # the lower confidence threshold - the more we get false positives
-        if e[0]['confidence'] > 0.5:
+        if e[0]['confidence'] > config['depth']['confidence_threshold']:
             if is_depth:
                 pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
                 pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
@@ -265,6 +266,7 @@ config = {
         'calibration_file': consts.resource_paths.calib_fpath,
         'padding_factor': 0.3,
         'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
+        'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number 
     },
     'ai':
     {
@@ -283,7 +285,18 @@ config = {
         'store_to_eeprom': args['store_eeprom'],
         'clear_eeprom': args['clear_eeprom'],
         'override_eeprom': args['override_eeprom'],
-    }
+    },
+    
+    #'video_config':
+    #{
+    #    'rateCtrlMode': 'cbr',
+    #    'profile': 'h265_main', # Options: 'h264_baseline' / 'h264_main' / 'h264_high' / 'h265_main'
+    #    'bitrate': 8000000, # When using CBR
+    #    'maxBitrate': 8000000, # When using CBR
+    #    'keyframeFrequency': 30,
+    #    'numBFrames': 0,
+    #    'quality': 80 # (0 - 100%) When using VBR
+    #}
 }
 
 if args['board']:
@@ -344,7 +357,7 @@ entries_prev = []
 process_watchdog_timeout=10 #seconds
 def reset_process_wd():
     global wd_cutoff
-    wd_cutoff=time()+process_watchdog_timeout
+    wd_cutoff=monotonic()+process_watchdog_timeout
     return
 
 reset_process_wd()
@@ -359,7 +372,7 @@ while True:
     if packets_len != 0:
         reset_process_wd()
     else:
-        cur_time=time()
+        cur_time=monotonic()
         if cur_time > wd_cutoff:
             print("process watchdog timeout")
             os._exit(10)
