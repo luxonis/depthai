@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 #process watchdog, used to recover depthai.py 
 #on any userspace error in depthai.py (segfault for example)
 import os
