@@ -21,20 +21,6 @@ import consts.resource_paths
 from depthai_helpers import utils
 
 
-class Tracklet:
-    states = {
-        0 : "NEW",
-        1 : "TRACKED",
-        2 : "LOST",
-    }
-    left : int
-    top : int
-    right : int 
-    bottom : int
-    id : int
-    label : int
-    status : str
-
 class bcolors:
     HEADER = '\033[95m'
     BLUE = '\033[94m'
@@ -147,65 +133,53 @@ def stream_type(option):
         stream_dict = {'name': stream_name, "max_fps": max_fps}
     return stream_dict
 
-def decode_tracklets(packetData):
-    packetData.dtype = np.int32
-    tracklets = []
-    nr_objects = packetData[0]
-    tracklet_base = packetData[2:]
-    tracklet_size = 8
-    for i in range(nr_objects):
-        tracklet_base
-        decoded_tracklet = Tracklet()
-        tracklet_start = i * tracklet_size
-        tracklet_end = (i + 1) * tracklet_size
-        tracklet = tracklet_base[tracklet_start:tracklet_end]
-        decoded_tracklet.left = tracklet[0]
-        decoded_tracklet.top = tracklet[1]
-        decoded_tracklet.right = tracklet[2]
-        decoded_tracklet.bottom = tracklet[3]
-        decoded_tracklet.id = tracklet[4]
-        decoded_tracklet.label = tracklet[6]
-        decoded_tracklet.status = Tracklet.states[tracklet[7]]
-        tracklets.append(decoded_tracklet)
 
-    return tracklets
-
-def show_tracklets(tracklet_list, frame):
+def show_tracklets(tracklets, frame):
     # img_h = frame.shape[0]
     # img_w = frame.shape[1]
 
     # iterate through pre-saved entries & draw rectangle & text on image:
-    for tracklet in tracklet_list:
+    e_tracklet_states = {
+        0 : "NEW",
+        1 : "TRACKED",
+        2 : "LOST",
+    }
 
-        pt1 = tracklet.left,  tracklet.top
-        pt2 = tracklet.right,  tracklet.bottom
+    tracklet_nr = tracklets.getNrTracklets()
+
+    for i in range(tracklet_nr):
+        left_coord      = tracklets.getLeftCoord(i)
+        top_coord       = tracklets.getTopCoord(i)
+        right_coord     = tracklets.getRightCoord(i)
+        bottom_coord    = tracklets.getBottomCoord(i)
+        tracklet_id     = tracklets.getId(i)
+        tracklet_label  = labels[tracklets.getLabel(i)]
+        tracklet_status = e_tracklet_states[tracklets.getStatus(i)]
+
+        # print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
+        #     .format(left_coord, top_coord, right_coord, bottom_coord, tracklet_id, tracklet_label, tracklet_status))
+        
+        pt1 = left_coord,  top_coord
+        pt2 = right_coord,  bottom_coord
         color = (255, 0, 0) # bgr
         cv2.rectangle(frame, pt1, pt2, color)
 
-        middle_pt = (int)(tracklet.left + (tracklet.right - tracklet.left)/2), (int)(tracklet.top + (tracklet.bottom - tracklet.top)/2)
+        middle_pt = (int)(left_coord + (right_coord - left_coord)/2), (int)(top_coord + (bottom_coord - top_coord)/2)
         cv2.circle(frame, middle_pt, 0, color, -1)
-        cv2.putText(frame, "ID {0}".format(tracklet.id), middle_pt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        cv2.putText(frame, "ID {0}".format(tracklet_id), middle_pt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-        x1, y1 = tracklet.left,  tracklet.bottom
+        x1, y1 = left_coord,  bottom_coord
 
-        tracklet_label = labels[tracklet.label]
 
         pt_t1 = x1, y1 - 40
         cv2.putText(frame, tracklet_label, pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         pt_t2 = x1, y1 - 20
-        cv2.putText(frame, tracklet.status, pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        cv2.putText(frame, tracklet_status, pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
 
         
     return frame
 
-def print_tracklets(tracklet_list):
-    print("Number of tracklets: {0}".format(len(tracklet_list)))
-    for tracklet in tracklet_list:
-        print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
-        .format(tracklet.left, tracklet.top, tracklet.right, tracklet.bottom, tracklet.id, labels[tracklet.label], tracklet.status))
-
-    return
 
 def decode_mobilenet_ssd(nnet_packet):
     detections = []
@@ -535,7 +509,7 @@ for s in stream_names:
     frame_count_prev[s] = 0
 
 entries_prev = []
-tracklets_prev = []
+tracklets = None
 
 process_watchdog_timeout=10 #seconds
 def reset_process_wd():
@@ -580,8 +554,8 @@ while True:
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
-            if enable_object_tracker:
-                nn_frame = show_tracklets(tracklets_prev, nn_frame)
+            if enable_object_tracker and tracklets is not None:
+                nn_frame = show_tracklets(tracklets, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
@@ -632,8 +606,7 @@ while True:
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                 ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
         elif packet.stream_name == 'object_tracker':
-            tracklets_prev = decode_tracklets(packetData)
-            # print_tracklets(tracklets_prev)
+            tracklets = packet.getObjectTracker()
 
         frame_count[packet.stream_name] += 1
 
