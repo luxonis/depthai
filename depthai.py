@@ -23,12 +23,6 @@ def show_tracklets(tracklets, frame):
     # img_w = frame.shape[1]
 
     # iterate through pre-saved entries & draw rectangle & text on image:
-    e_tracklet_states = {
-        0 : "NEW",
-        1 : "TRACKED",
-        2 : "LOST",
-    }
-
     tracklet_nr = tracklets.getNrTracklets()
 
     for i in range(tracklet_nr):
@@ -38,7 +32,7 @@ def show_tracklets(tracklets, frame):
         bottom_coord    = tracklets.getBottomCoord(i)
         tracklet_id     = tracklets.getId(i)
         tracklet_label  = labels[tracklets.getLabel(i)]
-        tracklet_status = e_tracklet_states[tracklets.getStatus(i)]
+        tracklet_status = tracklets.getStatus(i)
 
         # print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
         #     .format(left_coord, top_coord, right_coord, bottom_coord, tracklet_id, tracklet_label, tracklet_status))
