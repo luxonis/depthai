@@ -26,7 +26,9 @@ def decode_mobilenet_ssd(nnet_packet):
         if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0 or e[0]['label'] > len(labels):
             break
         # save entry for further usage (as image package may arrive not the same time as nnet package)
-        detections.append(e)
+        # the lower confidence threshold - the more we get false positives
+        if e[0]['confidence'] > config['depth']['confidence_threshold']:
+            detections.append(e)
     return detections
 
 
@@ -49,41 +51,39 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
     global config
     # iterate through pre-saved entries & draw rectangle & text on image:
     for e in entries_prev:
-        # the lower confidence threshold - the more we get false positives
-        if e[0]['confidence'] > config['depth']['confidence_threshold']:
-            if is_depth:
-                pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
-                pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
-                color = (255, 0, 0) # bgr
-                avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2)
-                cv2.rectangle(frame, avg_pt1, avg_pt2, color)
-                color = (255, 255, 255) # bgr
-            else:
-                pt1 = int(e[0]['left']  * img_w), int(e[0]['top']    * img_h)
-                pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
-                color = (0, 0, 255) # bgr
+        if is_depth:
+            pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
+            pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
+            color = (255, 0, 0) # bgr
+            avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2)
+            cv2.rectangle(frame, avg_pt1, avg_pt2, color)
+            color = (255, 255, 255) # bgr
+        else:
+            pt1 = int(e[0]['left']  * img_w), int(e[0]['top']    * img_h)
+            pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
+            color = (0, 0, 255) # bgr
 
-            x1, y1 = pt1
+        x1, y1 = pt1
 
-            cv2.rectangle(frame, pt1, pt2, color)
-            # Handles case where TensorEntry object label is out if range
-            if e[0]['label'] > len(labels):
-                print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
-            else:
-                pt_t1 = x1, y1 + 20
-                cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        cv2.rectangle(frame, pt1, pt2, color)
+        # Handles case where TensorEntry object label is out if range
+        if e[0]['label'] > len(labels):
+            print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
+        else:
+            pt_t1 = x1, y1 + 20
+            cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-                pt_t2 = x1, y1 + 40
-                cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
-                if config['ai']['calc_dist_to_bb']:
-                    pt_t3 = x1, y1 + 60
-                    cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+            pt_t2 = x1, y1 + 40
+            cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+            if config['ai']['calc_dist_to_bb']:
+                pt_t3 = x1, y1 + 60
+                cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
 
-                    pt_t4 = x1, y1 + 80
-                    cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                pt_t4 = x1, y1 + 80
+                cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
 
-                    pt_t5 = x1, y1 + 100
-                    cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                pt_t5 = x1, y1 + 100
+                cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
