@@ -28,7 +28,21 @@ def decode_mobilenet_ssd(nnet_packet):
         # save entry for further usage (as image package may arrive not the same time as nnet package)
         # the lower confidence threshold - the more we get false positives
         if e[0]['confidence'] > config['depth']['confidence_threshold']:
-            detections.append(e)
+            # Temporary workaround: create a copy of NN data, due to issues with C++/python bindings
+            copy = {}
+            copy[0] = {}
+            copy[0]['id']         = e[0]['id']
+            copy[0]['left']       = e[0]['left']
+            copy[0]['top']        = e[0]['top']
+            copy[0]['right']      = e[0]['right']
+            copy[0]['bottom']     = e[0]['bottom']
+            copy[0]['label']      = e[0]['label']
+            copy[0]['confidence'] = e[0]['confidence']
+            if config['ai']['calc_dist_to_bb']:
+                copy[0]['distance_x'] = e[0]['distance_x']
+                copy[0]['distance_y'] = e[0]['distance_y']
+                copy[0]['distance_z'] = e[0]['distance_z']
+            detections.append(copy)
     return detections
 
 
