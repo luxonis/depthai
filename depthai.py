@@ -26,13 +26,14 @@ def show_tracklets(tracklets, frame):
     tracklet_nr = tracklets.getNrTracklets()
 
     for i in range(tracklet_nr):
-        left_coord      = tracklets.getLeftCoord(i)
-        top_coord       = tracklets.getTopCoord(i)
-        right_coord     = tracklets.getRightCoord(i)
-        bottom_coord    = tracklets.getBottomCoord(i)
-        tracklet_id     = tracklets.getId(i)
-        tracklet_label  = labels[tracklets.getLabel(i)]
-        tracklet_status = tracklets.getStatus(i)
+        tracklet        = tracklets.getTracklet(i)
+        left_coord      = tracklet.getLeftCoord()
+        top_coord       = tracklet.getTopCoord()
+        right_coord     = tracklet.getRightCoord()
+        bottom_coord    = tracklet.getBottomCoord()
+        tracklet_id     = tracklet.getId()
+        tracklet_label  = labels[tracklet.getLabel()]
+        tracklet_status = tracklet.getStatus()
 
         # print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
         #     .format(left_coord, top_coord, right_coord, bottom_coord, tracklet_id, tracklet_label, tracklet_status))
