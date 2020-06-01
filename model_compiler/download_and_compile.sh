@@ -1,5 +1,7 @@
 #!/bin/bash
 
+source /opt/intel/openvino/bin/setupvars.sh
+
 OPENVINO_VERSION="2020.1.023"
 
 echo_and_run() { echo -e "\$ $* \n" ; "$@" ; }
@@ -47,6 +49,17 @@ done
 
 echo_and_run python3 $MODEL_DOWNLOADER_PATH $MODEL_DOWNLOADER_OPTIONS
 
+
+cd $DOWNLOADS_DIR/public
+for f in *; do
+    if [ -d "$f" ]; then
+        # $f is a directory
+        mkdir $DOWNLOADS_DIR/intel/$f/FP16/
+        echo_and_run $OPENVINO_PATH/deployment_tools/model_optimizer/mo.py --input_model $DOWNLOADS_DIR/public/$f/$f.caffemodel --input_proto $DOWNLOADS_DIR/public/$f/$f.prototxt --data_type=FP16 --mean_values [127.5,127.5,127.5] --scale_values [255,255,255] -o $DOWNLOADS_DIR/intel/$f/FP16/
+    fi
+done
+
+cd $NN_PATH
 for f in *; do
     if [ -d "$f" ]; then
         # $f is a directory
