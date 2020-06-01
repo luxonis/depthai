@@ -61,14 +61,30 @@ def show_tracklets(tracklets, frame):
 
 def decode_mobilenet_ssd(nnet_packet):
     detections = []
-    # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate threw them
+    # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate through them
     for _, e in enumerate(nnet_packet.entries()):
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
         if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0 or e[0]['label'] > len(labels):
             break
         # save entry for further usage (as image package may arrive not the same time as nnet package)
-        detections.append(e)
+        # the lower confidence threshold - the more we get false positives
+        if e[0]['confidence'] > config['depth']['confidence_threshold']:
+            # Temporary workaround: create a copy of NN data, due to issues with C++/python bindings
+            copy = {}
+            copy[0] = {}
+            copy[0]['id']         = e[0]['id']
+            copy[0]['left']       = e[0]['left']
+            copy[0]['top']        = e[0]['top']
+            copy[0]['right']      = e[0]['right']
+            copy[0]['bottom']     = e[0]['bottom']
+            copy[0]['label']      = e[0]['label']
+            copy[0]['confidence'] = e[0]['confidence']
+            if config['ai']['calc_dist_to_bb']:
+                copy[0]['distance_x'] = e[0]['distance_x']
+                copy[0]['distance_y'] = e[0]['distance_y']
+                copy[0]['distance_z'] = e[0]['distance_z']
+            detections.append(copy)
     return detections
 
 
@@ -91,41 +107,39 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
     global config
     # iterate through pre-saved entries & draw rectangle & text on image:
     for e in entries_prev:
-        # the lower confidence threshold - the more we get false positives
-        if e[0]['confidence'] > config['depth']['confidence_threshold']:
-            if is_depth:
-                pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
-                pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
-                color = (255, 0, 0) # bgr
-                avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2)
-                cv2.rectangle(frame, avg_pt1, avg_pt2, color)
-                color = (255, 255, 255) # bgr
-            else:
-                pt1 = int(e[0]['left']  * img_w), int(e[0]['top']    * img_h)
-                pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
-                color = (0, 0, 255) # bgr
+        if is_depth:
+            pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
+            pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
+            color = (255, 0, 0) # bgr
+            avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2)
+            cv2.rectangle(frame, avg_pt1, avg_pt2, color)
+            color = (255, 255, 255) # bgr
+        else:
+            pt1 = int(e[0]['left']  * img_w), int(e[0]['top']    * img_h)
+            pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
+            color = (0, 0, 255) # bgr
 
-            x1, y1 = pt1
+        x1, y1 = pt1
 
-            cv2.rectangle(frame, pt1, pt2, color)
-            # Handles case where TensorEntry object label is out if range
-            if e[0]['label'] > len(labels):
-                print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
-            else:
-                pt_t1 = x1, y1 + 20
-                cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        cv2.rectangle(frame, pt1, pt2, color)
+        # Handles case where TensorEntry object label is out if range
+        if e[0]['label'] > len(labels):
+            print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
+        else:
+            pt_t1 = x1, y1 + 20
+            cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-                pt_t2 = x1, y1 + 40
-                cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
-                if config['ai']['calc_dist_to_bb']:
-                    pt_t3 = x1, y1 + 60
-                    cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+            pt_t2 = x1, y1 + 40
+            cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+            if config['ai']['calc_dist_to_bb']:
+                pt_t3 = x1, y1 + 60
+                cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
 
-                    pt_t4 = x1, y1 + 80
-                    cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                pt_t4 = x1, y1 + 80
+                cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
 
-                    pt_t5 = x1, y1 + 100
-                    cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                pt_t5 = x1, y1 + 100
+                cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
@@ -316,6 +330,7 @@ config = {
         'blob_file_config': blob_file_config,
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
+        'camera_input': args['cnn_camera'],
     },
     'board_config':
     {
@@ -392,11 +407,20 @@ nn2depth = depthai.get_nn_to_depth_bbox_mapping()
 t_start = time()
 frame_count = {}
 frame_count_prev = {}
+entries_prev = {}
 for s in stream_names:
     frame_count[s] = 0
     frame_count_prev[s] = 0
-
-entries_prev = []
+    stream_windows = []
+    if s == 'previewout':
+        for cam in {'rgb', 'left', 'right'}:
+            entries_prev[cam] = []
+            stream_windows.append(s + '-' + cam)
+    else:
+        stream_windows.append(s)
+    for w in stream_windows:
+        frame_count[w] = 0
+        frame_count_prev[w] = 0
 tracklets = None
 
 process_watchdog_timeout=10 #seconds
@@ -423,9 +447,10 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        entries_prev = decode_nn(nnet_packet)
+        entries_prev[nnet_packet.getMetadata().getCameraName()] = decode_nn(nnet_packet)
 
     for packet in data_packets:
+        window_name = packet.stream_name
         if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
         packetData = packet.getData()
@@ -433,7 +458,8 @@ while True:
             print('Invalid packet data!')
             continue
         elif packet.stream_name == 'previewout':
-            
+            camera = packet.getMetadata().getCameraName()
+            window_name = 'previewout-' + camera
             # the format of previewout image is CHW (Chanel, Height, Width), but OpenCV needs HWC, so we
             # change shape (3, 300, 300) -> (300, 300, 3)
             data0 = packetData[0,:,:]
@@ -441,39 +467,41 @@ while True:
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(entries_prev, frame)
+            nn_frame = show_nn(entries_prev[camera], frame)
             if enable_object_tracker and tracklets is not None:
                 nn_frame = show_tracklets(tracklets, nn_frame)
-            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.imshow('previewout', nn_frame)
+            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.imshow(window_name, nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packetData
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
-                show_nn(entries_prev, frame_bgr, is_depth=True)
-            cv2.imshow(packet.stream_name, frame_bgr)
+                camera = packet.getMetadata().getCameraName()
+                show_nn(entries_prev[camera], frame_bgr, is_depth=True)
+            cv2.imshow(window_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
             frame = packetData
 
             if len(frame.shape) == 2:
                 if frame.dtype == np.uint8: # grayscale
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
-                    cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
+                    cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                 else: # uint16
                     frame = (65535 // frame).astype(np.uint8)
                     #colorize depth map, comment out code below to obtain grayscale
                     frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
                     # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                    cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                    cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
             else: # bgr
                 cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
-                cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
             if args['draw_bb_depth']:
-                show_nn(entries_prev, frame, is_depth=True)
-            cv2.imshow(packet.stream_name, frame)
+                # TODO check NN cam input
+                show_nn(entries_prev['right'], frame, is_depth=True)
+            cv2.imshow(window_name, frame)
 
         elif packet.stream_name == 'jpegout':
             jpg = packetData
@@ -496,16 +524,22 @@ while True:
         elif packet.stream_name == 'object_tracker':
             tracklets = packet.getObjectTracker()
 
-        frame_count[packet.stream_name] += 1
+        frame_count[window_name] += 1
 
     t_curr = time()
     if t_start + 1.0 < t_curr:
         t_start = t_curr
 
         for s in stream_names:
-            frame_count_prev[s] = frame_count[s]
-            frame_count[s] = 0
-
+            stream_windows = []
+            if s == 'previewout':
+                for cam in {'rgb', 'left', 'right'}:
+                    stream_windows.append(s + '-' + cam)
+            else:
+                stream_windows.append(s)
+            for w in stream_windows:
+                frame_count_prev[w] = frame_count[w]
+                frame_count[w] = 0
 
     key = cv2.waitKey(1)
     if key == ord('c'):
