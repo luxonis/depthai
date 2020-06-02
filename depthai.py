@@ -317,6 +317,12 @@ config = {
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
     },
+    # object tracker
+    'ot':
+    {
+        'max_tracklets'        : 20, #maximum 20 is supported
+        'confidence_threshold' : 0.5, #object is tracked only for detections over this threshold
+    },
     'board_config':
     {
         'swap_left_and_right_cameras': args['swap_lr'], # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
