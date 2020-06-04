@@ -63,8 +63,8 @@ def parse_args():
     parser.add_argument("-dev", "--device-id", default="", type=str,
                         help="USB port number for the device to connect to. Use the word 'list' to show all devices "
                              "and exit.")
-    parser.add_argument("-debug", "--dev_debug", default=None, action="store_true",
-                        help="Used by board developers for debugging.")
+    parser.add_argument("-debug", "--dev_debug", nargs="?", default=None, const='', type=str, required=False,
+                        help="Used by board developers for debugging. Can take parameter to device binary")
     parser.add_argument("-fusb2", "--force_usb2", default=None, action="store_true",
                         help="Force usb2 connection")
     parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str,
@@ -115,7 +115,7 @@ def stream_type(option):
         cli_print(msg_string, PrintColors.WARNING)
         raise ValueError(msg_string)
 
-    stream_choices = ["metaout", "previewout", "left", "right", "depth_sipp", "disparity", "depth_color_h", "meta_d2h", "object_tracker"]
+    stream_choices = ["metaout", "video", "jpegout", "previewout", "left", "right", "depth_sipp", "disparity", "depth_color_h", "meta_d2h", "object_tracker"]
     stream_name = option_list[0]
     if stream_name not in stream_choices:
         msg_string = "{0} is not in available stream list: \n{1}".format(stream_name, stream_choices)
