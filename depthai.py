@@ -17,6 +17,48 @@ from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
 
 
+
+def show_tracklets(tracklets, frame):
+    # img_h = frame.shape[0]
+    # img_w = frame.shape[1]
+
+    # iterate through pre-saved entries & draw rectangle & text on image:
+    tracklet_nr = tracklets.getNrTracklets()
+
+    for i in range(tracklet_nr):
+        tracklet        = tracklets.getTracklet(i)
+        left_coord      = tracklet.getLeftCoord()
+        top_coord       = tracklet.getTopCoord()
+        right_coord     = tracklet.getRightCoord()
+        bottom_coord    = tracklet.getBottomCoord()
+        tracklet_id     = tracklet.getId()
+        tracklet_label  = labels[tracklet.getLabel()]
+        tracklet_status = tracklet.getStatus()
+
+        # print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
+        #     .format(left_coord, top_coord, right_coord, bottom_coord, tracklet_id, tracklet_label, tracklet_status))
+        
+        pt1 = left_coord,  top_coord
+        pt2 = right_coord,  bottom_coord
+        color = (255, 0, 0) # bgr
+        cv2.rectangle(frame, pt1, pt2, color)
+
+        middle_pt = (int)(left_coord + (right_coord - left_coord)/2), (int)(top_coord + (bottom_coord - top_coord)/2)
+        cv2.circle(frame, middle_pt, 0, color, -1)
+        cv2.putText(frame, "ID {0}".format(tracklet_id), middle_pt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+        x1, y1 = left_coord,  bottom_coord
+
+
+        pt_t1 = x1, y1 - 40
+        cv2.putText(frame, tracklet_label, pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        pt_t2 = x1, y1 - 20
+        cv2.putText(frame, tracklet_status, pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+
+        
+    return frame
+
 def decode_mobilenet_ssd(nnet_packet):
     detections = []
     # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate threw them
@@ -275,6 +317,12 @@ config = {
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
     },
+    # object tracker
+    'ot':
+    {
+        'max_tracklets'        : 20, #maximum 20 is supported
+        'confidence_threshold' : 0.5, #object is tracked only for detections over this threshold
+    },
     'board_config':
     {
         'swap_left_and_right_cameras': args['swap_lr'], # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
@@ -335,6 +383,8 @@ if args['video'] is not None:
 
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
 
+enable_object_tracker = 'object_tracker' in stream_names
+
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=config)
 
@@ -353,6 +403,7 @@ for s in stream_names:
     frame_count_prev[s] = 0
 
 entries_prev = []
+tracklets = None
 
 process_watchdog_timeout=10 #seconds
 def reset_process_wd():
@@ -397,6 +448,8 @@ while True:
             frame = cv2.merge([data0, data1, data2])
 
             nn_frame = show_nn(entries_prev, frame)
+            if enable_object_tracker and tracklets is not None:
+                nn_frame = show_tracklets(tracklets, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
@@ -446,6 +499,8 @@ while True:
                 ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                 ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
+        elif packet.stream_name == 'object_tracker':
+            tracklets = packet.getObjectTracker()
 
         frame_count[packet.stream_name] += 1
 
