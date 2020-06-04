@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 
 import depthai
+print('Using depthai module from: ', depthai.__file__)
 
 import consts.resource_paths
 from depthai_helpers import utils
@@ -230,15 +231,27 @@ if args['config_overwrite']:
 
 print("Using Arguments=",args)
 
+usb2_mode = False
 if args['force_usb2']:
     cli_print("FORCE USB2 MODE", PrintColors.WARNING)
-    cmd_file = consts.resource_paths.device_usb2_cmd_fpath
+    usb2_mode = True
 else:
-    cmd_file = consts.resource_paths.device_cmd_fpath
+    usb2_mode = False
 
-if args['dev_debug']:
+debug_mode = False
+print('Value of -debug: ', args['dev_debug'])
+
+if args['dev_debug'] == None:
+    # Debug -debug flag NOT present,
+    debug_mode = False
+elif args['dev_debug'] == '':
+    # If just -debug flag is present -> cmd_file = '' (wait for device to be connected beforehand)
+    debug_mode = True
     cmd_file = ''
-    print('depthai will not load cmd file into device.')
+else: 
+    debug_mode = False
+    cmd_file = args['dev_debug']
+
 
 calc_dist_to_bb = True
 if args['disable_depth']:
@@ -302,7 +315,11 @@ if platform.system() == 'Linux':
         "Disconnect/connect usb cable on host! \n", PrintColors.RED)
         os._exit(1)
 
-device = depthai.Device("", False)
+device = None
+if debug_mode: 
+    device = depthai.Device("", args['device_id'])
+else:
+    device = depthai.Device(args['device_id'], usb2_mode)
 
 #if not depthai.init_device(cmd_file, args['device_id']):
 #    print("Error initializing device. Try to reset it.")
@@ -311,10 +328,27 @@ device = depthai.Device("", False)
 
 print('Available streams: ' + str(device.get_available_streams()))
 
+
+# Append video stream if video recording was requested and stream is not already specified
+video_file = None
+if args['video'] is not None:
+    stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in stream_list]
+    # open video file
+    try:
+        video_file = open(args['video'], 'wb')
+        if 'video' not in stream_names:
+            stream_list.append({"name": "video"})
+    except IOError:
+        print("Error: couldn't open video file for writing. Disabled video output stream")
+        if 'video' in stream_names:
+            stream_list.remove({"name": "video"})
+
+
+
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
     # Possible streams:
-    # ['left', 'right','previewout', 'metaout', 'depth_sipp', 'disparity', 'depth_color_h']
+    # ['left', 'right', 'jpegout', 'video', 'previewout', 'metaout', 'depth_sipp', 'disparity', 'depth_color_h']
     # If "left" is used, it must be in the first position.
     # To test depth use:
     # 'streams': [{'name': 'depth_sipp', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
@@ -377,34 +411,22 @@ if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] o
     exit(2)
     # del config["streams"][config['streams'].index('depth_sipp')]
 
-# Append video stream if video recording was requested and stream is not already specified
-video_file = None
-if args['video'] is not None:
-    
-    # open video file
-    try:
-        video_file = open(args['video'], 'wb')
-        if config['streams'].count('video') == 0:
-            config['streams'].append('video')
-    except IOError:
-        print("Error: couldn't open video file for writing. Disabled video output stream")
-        if config['streams'].count('video') == 1:
-            config['streams'].remove('video')
-    
 
-stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
+
+# Create a list of enabled streams ()
+stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in stream_list]
 
 enable_object_tracker = 'object_tracker' in stream_names
 
 # create the pipeline, here is the first connection with the device
-
 p = device.create_pipeline(config=config)
 
 if p is None:
     print('Pipeline is not created.')
     exit(3)
 
-nn2depth = depthai.get_nn_to_depth_bbox_mapping()
+nn2depth = device.get_nn_to_depth_bbox_mapping()
+
 
 
 t_start = time()
@@ -434,12 +456,20 @@ def reset_process_wd():
 
 reset_process_wd()
 
-
+ops = 0
+prevTime = time()
 while True:
     # retreive data from the device
     # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
-    nnet_packets, data_packets = p.get_available_nnet_and_data_packets()
+    nnet_packets, data_packets = p.get_available_nnet_and_data_packets(True)
     
+    ### Uncomment to print ops
+    # ops = ops + 1
+    # if time() - prevTime > 1.0:
+    #     print('OPS: ', ops)
+    #     ops = 0
+    #     prevTime = time()
+
     packets_len = len(nnet_packets) + len(data_packets)
     if packets_len != 0:
         reset_process_wd()
@@ -450,7 +480,11 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        entries_prev[nnet_packet.getMetadata().getCameraName()] = decode_nn(nnet_packet)
+        meta = nnet_packet.getMetadata()
+        camera = 'rgb'
+        if meta != None:
+            camera = meta.getCameraName()
+        entries_prev[camera] = decode_nn(nnet_packet)
 
     for packet in data_packets:
         window_name = packet.stream_name
@@ -461,7 +495,11 @@ while True:
             print('Invalid packet data!')
             continue
         elif packet.stream_name == 'previewout':
-            camera = packet.getMetadata().getCameraName()
+            meta = packet.getMetadata()
+            camera = 'rgb'
+            if meta != None:
+                camera = meta.getCameraName()
+
             window_name = 'previewout-' + camera
             # the format of previewout image is CHW (Chanel, Height, Width), but OpenCV needs HWC, so we
             # change shape (3, 300, 300) -> (300, 300, 3)
@@ -546,19 +584,22 @@ while True:
 
     key = cv2.waitKey(1)
     if key == ord('c'):
-        depthai.request_jpeg()
+        if 'jpegout' in stream_names == 0:
+            print("'jpegout' stream not enabled. Try settings -s jpegout to enable it")
+        else:
+            device.request_jpeg()
     elif key == ord('f'):
-        depthai.request_af_trigger()
+        device.request_af_trigger()
     elif key == ord('1'):
-        depthai.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO)
+        device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO)
     elif key == ord('2'):
-        depthai.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO)
+        device.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO)
     elif key == ord('q'):
         break
 
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
-depthai.deinit_device()
+device.deinit_device()
 
 # Close video output file if was opened
 if video_file is not None:
