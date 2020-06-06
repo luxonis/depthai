@@ -402,7 +402,10 @@ for s in stream_names:
     frame_count[s] = 0
     frame_count_prev[s] = 0
 
-entries_prev = []
+nnet_prev = {}
+nnet_prev["entries_prev"] = []
+nnet_prev["nnet_source"] = []
+
 tracklets = None
 
 process_watchdog_timeout=10 #seconds
@@ -429,7 +432,8 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        entries_prev = decode_nn(nnet_packet)
+        nnet_prev["nnet_source"] = nnet_packet
+        nnet_prev["entries_prev"] = decode_nn(nnet_packet)
 
     for packet in data_packets:
         if packet.stream_name not in stream_names:
@@ -447,7 +451,7 @@ while True:
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(entries_prev, frame)
+            nn_frame = show_nn(nnet_prev["entries_prev"], frame)
             if enable_object_tracker and tracklets is not None:
                 nn_frame = show_tracklets(tracklets, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
@@ -457,7 +461,7 @@ while True:
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
-                show_nn(entries_prev, frame_bgr, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame_bgr, is_depth=True)
             cv2.imshow(packet.stream_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
             frame = packetData
@@ -478,7 +482,7 @@ while True:
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
             if args['draw_bb_depth']:
-                show_nn(entries_prev, frame, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame, is_depth=True)
             cv2.imshow(packet.stream_name, frame)
 
         elif packet.stream_name == 'jpegout':
