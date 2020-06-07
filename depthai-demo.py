@@ -239,8 +239,7 @@ else:
     usb2_mode = False
 
 debug_mode = False
-print('Value of -debug: ', args['dev_debug'])
-
+cmd_file = ''
 if args['dev_debug'] == None:
     # Debug -debug flag NOT present,
     debug_mode = False
@@ -249,7 +248,7 @@ elif args['dev_debug'] == '':
     debug_mode = True
     cmd_file = ''
 else: 
-    debug_mode = False
+    debug_mode = True
     cmd_file = args['dev_debug']
 
 
@@ -317,7 +316,8 @@ if platform.system() == 'Linux':
 
 device = None
 if debug_mode: 
-    device = depthai.Device("", args['device_id'])
+    print('Cmd file: ', cmd_file, ' args["device_id"]: ', args['device_id'])
+    device = depthai.Device(cmd_file, args['device_id'])
 else:
     device = depthai.Device(args['device_id'], usb2_mode)
 
@@ -368,6 +368,12 @@ config = {
         'keep_aspect_ratio': not args['full_fov_nn'],
         'camera_input': args['cnn_camera'],
     },
+    # object tracker
+    'ot':
+    {
+        'max_tracklets'        : 20, #maximum 20 is supported
+        'confidence_threshold' : 0.5, #object is tracked only for detections over this threshold
+    },
     'board_config':
     {
         'swap_left_and_right_cameras': args['swap_lr'], # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
@@ -382,14 +388,19 @@ config = {
     
     #'video_config':
     #{
-    #    'rateCtrlMode': 'cbr',
-    #    'profile': 'h265_main', # Options: 'h264_baseline' / 'h264_main' / 'h264_high' / 'h265_main'
-    #    'bitrate': 8000000, # When using CBR
-    #    'maxBitrate': 8000000, # When using CBR
-    #    'keyframeFrequency': 30,
-    #    'numBFrames': 0,
-    #    'quality': 80 # (0 - 100%) When using VBR
+    #    'rateCtrlMode': 'cbr', # Options: cbr / vbr
+    #    'profile': 'h265_main', # Options: 'h264_baseline' / 'h264_main' / 'h264_high' / 'h265_main / 'mjpeg' '
+    #    'bitrate': 8000000, # When using CBR (H264/H265 only)
+    #    'maxBitrate': 8000000, # When using CBR (H264/H265 only)
+    #    'keyframeFrequency': 30, (H264/H265 only)
+    #    'numBFrames': 0, (H264/H265 only)
+    #    'quality': 80 # (0 - 100%) When using VBR or MJPEG profile
     #}
+    'video_config':
+    {
+        'profile': 'mjpeg',
+        'quality': 95
+    }
 }
 
 if args['board']:
@@ -552,7 +563,10 @@ while True:
         elif packet.stream_name == 'video':
             videoFrame = packetData
             videoFrame.tofile(video_file)
-        
+            #mjpeg = packetData
+            #mat = cv2.imdecode(mjpeg, cv2.IMREAD_COLOR)
+            #cv2.imshow('mjpeg', mat)
+
         elif packet.stream_name == 'meta_d2h':
             str_ = packet.getDataAsStr()
             dict_ = json.loads(str_)
