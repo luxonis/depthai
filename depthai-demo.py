@@ -374,6 +374,12 @@ config = {
         'max_tracklets'        : 20, #maximum 20 is supported
         'confidence_threshold' : 0.5, #object is tracked only for detections over this threshold
     },
+    # object tracker
+    'ot':
+    {
+        'max_tracklets'        : 20, #maximum 20 is supported
+        'confidence_threshold' : 0.5, #object is tracked only for detections over this threshold
+    },
     'board_config':
     {
         'swap_left_and_right_cameras': args['swap_lr'], # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
@@ -396,11 +402,11 @@ config = {
     #    'numBFrames': 0, (H264/H265 only)
     #    'quality': 80 # (0 - 100%) When using VBR or MJPEG profile
     #}
-    'video_config':
-    {
-        'profile': 'mjpeg',
-        'quality': 95
-    }
+    #'video_config':
+    #{
+    #    'profile': 'mjpeg',
+    #    'quality': 95
+    #}
 }
 
 if args['board']:
@@ -439,6 +445,9 @@ if p is None:
 nn2depth = device.get_nn_to_depth_bbox_mapping()
 
 
+nnet_prev = {}
+nnet_prev["entries_prev"] = {}
+nnet_prev["nnet_source"] = []
 
 t_start = time()
 frame_count = {}
@@ -450,7 +459,7 @@ for s in stream_names:
     stream_windows = []
     if s == 'previewout':
         for cam in {'rgb', 'left', 'right'}:
-            entries_prev[cam] = []
+            nnet_prev['entries_prev'][cam] = []
             stream_windows.append(s + '-' + cam)
     else:
         stream_windows.append(s)
@@ -491,11 +500,14 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
+        nnet_prev["nnet_source"] = nnet_packet
+        
         meta = nnet_packet.getMetadata()
         camera = 'rgb'
         if meta != None:
             camera = meta.getCameraName()
-        entries_prev[camera] = decode_nn(nnet_packet)
+        nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet)
+
 
     for packet in data_packets:
         window_name = packet.stream_name
@@ -519,7 +531,7 @@ while True:
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(entries_prev[camera], frame)
+            nn_frame = show_nn(nnet_prev["entries_prev"][camera], frame)
             if enable_object_tracker and tracklets is not None:
                 nn_frame = show_tracklets(tracklets, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
@@ -530,7 +542,7 @@ while True:
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
                 camera = packet.getMetadata().getCameraName()
-                show_nn(entries_prev[camera], frame_bgr, is_depth=True)
+                show_nn(nnet_prev["entries_prev"][camera], frame_bgr, is_depth=True)
             cv2.imshow(window_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
             frame = packetData
@@ -552,7 +564,7 @@ while True:
 
             if args['draw_bb_depth']:
                 # TODO check NN cam input
-                show_nn(entries_prev['right'], frame, is_depth=True)
+                show_nn(nnet_prev["entries_prev"]['right'], frame, is_depth=True)
             cv2.imshow(window_name, frame)
 
         elif packet.stream_name == 'jpegout':
