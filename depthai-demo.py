@@ -500,12 +500,11 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        nnet_prev["nnet_source"][camera] = nnet_packet
-        
         meta = nnet_packet.getMetadata()
         camera = 'rgb'
         if meta != None:
             camera = meta.getCameraName()
+        nnet_prev["nnet_source"][camera] = nnet_packet
         nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet)
 
 
