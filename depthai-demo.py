@@ -447,7 +447,7 @@ nn2depth = device.get_nn_to_depth_bbox_mapping()
 
 nnet_prev = {}
 nnet_prev["entries_prev"] = {}
-nnet_prev["nnet_source"] = []
+nnet_prev["nnet_source"] = {}
 
 t_start = time()
 frame_count = {}
@@ -500,7 +500,7 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        nnet_prev["nnet_source"] = nnet_packet
+        nnet_prev["nnet_source"][camera] = nnet_packet
         
         meta = nnet_packet.getMetadata()
         camera = 'rgb'
