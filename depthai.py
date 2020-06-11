@@ -228,6 +228,20 @@ if args['cnn_model']:
         suffix="_depth"
     blob_file_config = cnn_model_path + suffix + ".json"
 
+blob_file2 = ""
+blob_file_config2 = ""
+if args['cnn_model2']:
+    print("Using CNN2:", args['cnn_model2'])
+    cnn_model_path = consts.resource_paths.nn_resource_path + args['cnn_model2']+ "/" + args['cnn_model2']
+    blob_file2 = cnn_model_path + ".blob"
+    blob_file_config2 = cnn_model_path + ".json"
+    if not Path(blob_file2).exists():
+        cli_print("\nWARNING: NN2 blob not found in: " + blob_file2, PrintColors.WARNING)
+        os._exit(1)
+    if not Path(blob_file_config2).exists():
+        cli_print("\nWARNING: NN2 json not found in: " + blob_file_config2, PrintColors.WARNING)
+        os._exit(1)
+
 blob_file_path = Path(blob_file)
 blob_file_config_path = Path(blob_file_config)
 if not blob_file_path.exists():
@@ -286,6 +300,8 @@ config = {
     {
         'blob_file': blob_file,
         'blob_file_config': blob_file_config,
+        'blob_file2': blob_file2,
+        'blob_file_config2': blob_file_config2,
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
         'camera_input': args['cnn_camera'],
