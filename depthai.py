@@ -20,7 +20,7 @@ from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
 def decode_mobilenet_ssd(nnet_packet):
     detections = []
     # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate through them
-    for _, e in enumerate(nnet_packet.entries()):
+    for it, e in enumerate(nnet_packet.entries()):
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
         if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0 or e[0]['label'] > len(labels):
@@ -42,6 +42,12 @@ def decode_mobilenet_ssd(nnet_packet):
                 copy[0]['distance_x'] = e[0]['distance_x']
                 copy[0]['distance_y'] = e[0]['distance_y']
                 copy[0]['distance_z'] = e[0]['distance_z']
+            landmarks = []
+            if it == 0: # For now we run second-stage only on first detection
+                for i in range(len(e[1])):
+                    landmarks.append(e[1][i])
+                landmarks = list(zip(*[iter(landmarks)]*2))
+            copy[0]['landmarks'] = landmarks
             detections.append(copy)
     return detections
 
@@ -78,6 +84,7 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
             color = (0, 0, 255) # bgr
 
         x1, y1 = pt1
+        x2, y2 = pt2
 
         cv2.rectangle(frame, pt1, pt2, color)
         # Handles case where TensorEntry object label is out if range
@@ -98,6 +105,16 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
 
                 pt_t5 = x1, y1 + 100
                 cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+        if len(e[0]['landmarks']) != 0:
+            bb_w = x2 - x1
+            bb_h = y2 - y1
+            for i in e[0]['landmarks']:
+                try:
+                    x = x1 + int(i[0]*bb_w)
+                    y = y1 + int(i[1]*bb_h)
+                except:
+                    continue
+                cv2.circle(frame, (x,y), 4, (255, 0, 0))
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
