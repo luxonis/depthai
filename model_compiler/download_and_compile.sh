@@ -1,7 +1,5 @@
 #!/bin/bash
 
-source /opt/intel/openvino/bin/setupvars.sh
-
 OPENVINO_VERSION="2020.1.023"
 
 echo_and_run() { echo -e "\$ $* \n" ; "$@" ; }
@@ -27,11 +25,17 @@ echo "NN_PATH doesn't exist"
 exit 2
 fi
 
+source $OPENVINO_PATH/bin/setupvars.sh
+
+SHAVE_NR='4'
+CMX_NR='4'
+
+
 MODEL_DOWNLOADER_OPTIONS="--precisions FP16 --output_dir $DOWNLOADS_DIR --cache_dir $DOWNLOADS_DIR --num_attempts 5 --list $MODELS_LIST"
 MODEL_DOWNLOADER_PATH="$OPENVINO_PATH/deployment_tools/tools/model_downloader/downloader.py"
 
 
-MYRIAD_COMPILE_OPTIONS="-ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4"
+MYRIAD_COMPILE_OPTIONS="-ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES $SHAVE_NR -VPU_NUMBER_OF_CMX_SLICES $CMX_NR"
 MYRIAD_COMPILE_PATH="$OPENVINO_PATH/deployment_tools/inference_engine/lib/intel64/myriad_compile"
 
 CLOUD_COMPILE_SCRIPT=$PWD/model_converter.py
