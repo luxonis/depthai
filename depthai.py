@@ -316,6 +316,9 @@ config = {
         'blob_file_config': blob_file_config,
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
+        'shaves' : 4,
+        'cmx_slices' : 4,
+        'NCEs' : 2,
     },
     # object tracker
     'ot':
@@ -333,7 +336,7 @@ config = {
         'store_to_eeprom': args['store_eeprom'],
         'clear_eeprom': args['clear_eeprom'],
         'override_eeprom': args['override_eeprom'],
-        'rgb_cam_config' : "4k_30hz"
+        'rgb_cam_config' : "1080p_30hz"
     },
     
     #'video_config':
