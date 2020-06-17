@@ -31,3 +31,8 @@ MANIFEST
 # DepthAI-Specific
 dataset/
 depthai.calib
+
+*.h264
+*.h265
+*.mkv
+*.mp4
