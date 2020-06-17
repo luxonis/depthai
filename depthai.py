@@ -333,6 +333,7 @@ config = {
         'store_to_eeprom': args['store_eeprom'],
         'clear_eeprom': args['clear_eeprom'],
         'override_eeprom': args['override_eeprom'],
+        'rgb_cam_config' : "4k_30hz"
     },
     
     #'video_config':
