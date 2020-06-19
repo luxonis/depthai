@@ -36,3 +36,4 @@ depthai.calib
 *.h265
 *.mkv
 *.mp4
+*.blob.sh*cmx*
