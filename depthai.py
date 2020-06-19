@@ -288,12 +288,16 @@ if platform.system() == 'Linux':
         "Disconnect/connect usb cable on host! \n", PrintColors.RED)
         os._exit(1)
 
-if not depthai.init_device(cmd_file, args['device_id']):
-    print("Error initializing device. Try to reset it.")
-    exit(1)
-
-
-print('Available streams: ' + str(depthai.get_available_steams()))
+cli_print("Compiling model for {0} shaves and {1} slices ".format(str(args['shaves']), str(args['cmx_slices'])), PrintColors.RED)
+shave_nr = str(args['shaves'])
+cmx_slices = str(args['cmx_slices'])
+ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr, cmx_slices])
+if(ret != 0):
+    cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
+    args['shaves'] = 4
+    args['cmx_slices'] = 4
+else:
+    blob_file = blob_file + ".sh" + shave_nr + "cmx" + cmx_slices
 
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
@@ -316,9 +320,9 @@ config = {
         'blob_file_config': blob_file_config,
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
-        'shaves' : 4,
-        'cmx_slices' : 4,
-        'NCEs' : 2,
+        'shaves' : args['shaves'],
+        'cmx_slices' : args['cmx_slices'],
+        'NCEs' : args['NCEs'],
     },
     # object tracker
     'ot':
@@ -336,7 +340,7 @@ config = {
         'store_to_eeprom': args['store_eeprom'],
         'clear_eeprom': args['clear_eeprom'],
         'override_eeprom': args['override_eeprom'],
-        'rgb_cam_config' : "1080p_30hz"
+        'rgb_cam_config' : args['rgb_cam_config']
     },
     
     #'video_config':
@@ -389,6 +393,13 @@ stream_names = [stream if isinstance(stream, str) else stream['name'] for stream
 
 enable_object_tracker = 'object_tracker' in stream_names
 
+
+if not depthai.init_device(cmd_file, args['device_id']):
+    print("Error initializing device. Try to reset it.")
+    exit(1)
+
+print('Available streams: ' + str(depthai.get_available_steams()))
+
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=config)
 
@@ -436,6 +447,9 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
+        frame_count["metaout"] += 1
+        # print("metaout fps: " + str(frame_count_prev["metaout"]))
+
         nnet_prev["nnet_source"] = nnet_packet
         nnet_prev["entries_prev"] = decode_nn(nnet_packet)
 
