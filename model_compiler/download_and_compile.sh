@@ -12,11 +12,7 @@ CMX_NR=$3
 CLOUD_COMPILE="yes"
 
 CUR_DIR=$PWD
-DOWNLOADS_DIR=`realpath downloads`
 NN_PATH=`realpath ../resources/nn`
-
-MODEL_DOWNLOADER_OPTIONS="--precisions FP16 --output_dir $DOWNLOADS_DIR --cache_dir $DOWNLOADS_DIR --num_attempts 5 --name $MODEL_NAME"
-MODEL_DOWNLOADER_PATH=`realpath open_model_zoo/tools/downloader/downloader.py`
 
 BLOB_SUFFIX='.sh'$SHAVE_NR'cmx'$CMX_NR
 
@@ -27,10 +23,7 @@ if [ -f "$BLOB_OUT" ]; then
     exit 0
 fi
 
-
 CLOUD_COMPILE_SCRIPT=$PWD/model_converter.py
-
-
 
 cd $NN_PATH
 if [ -d "$MODEL_NAME" ]; then
