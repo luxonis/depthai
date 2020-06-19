@@ -44,6 +44,14 @@ def parse_args():
     parser.add_argument("-brd", "--board", default=None, type=str,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
                              "Or path to a custom .json board config. Mutually exclusive with [-fv -rfv -b -r -w]")
+    parser.add_argument("-sh", "--shaves", default=4, type=int,
+                        help="Number of shaves used by NN.")
+    parser.add_argument("-cmx", "--cmx_slices", default=4, type=int,
+                        help="Number of cmx slices used by NN.")
+    parser.add_argument("-NCE", "--NCEs", default=2, type=int,
+                        help="Number of NCEs used by NN.")
+    parser.add_argument("-rgb", "--rgb_cam_config", default="1080p_30hz", type=str,
+                        help="RGB cam config: 1080p_30hz or 4k_30hz are supported.")
     parser.add_argument("-fv", "--field-of-view", default=None, type=float,
                         help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
     parser.add_argument("-rfv", "--rgb-field-of-view", default=None, type=float,
