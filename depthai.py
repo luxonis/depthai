@@ -6,7 +6,7 @@ import platform
 import os
 import subprocess
 from time import time, sleep, monotonic
-
+from datetime import datetime
 import cv2
 import numpy as np
 
@@ -18,6 +18,7 @@ from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
 
 
 def decode_mobilenet_ssd(nnet_packet):
+    global cnn_model2
     detections = []
     # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate through them
     for it, e in enumerate(nnet_packet.entries()):
@@ -44,11 +45,18 @@ def decode_mobilenet_ssd(nnet_packet):
                 copy[0]['distance_z'] = e[0]['distance_z']
             landmarks = []
             if it == 0: # For now we run second-stage only on first detection
-                for i in range(len(e[1])):
-                    landmarks.append(e[1][i])
-                landmarks = list(zip(*[iter(landmarks)]*2))
+                # landmarks-regression-retail-0009
+                if cnn_model2 == 'landmarks-regression-retail-0009':
+                    for i in range(len(e[1])):
+                        landmarks.append(e[1][i])
+                    landmarks = list(zip(*[iter(landmarks)]*2))
+                # emotions-recognition-retail-0003
+                if cnn_model2 == 'emotions-recognition-retail-0003':
+                    for i in range(len(e[1])):
+                        landmarks.append(e[1][i])
             copy[0]['landmarks'] = landmarks
             detections.append(copy)
+
     return detections
 
 
@@ -68,7 +76,16 @@ def average_depth_coord(pt1, pt2):
 def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
-    global config
+    e_states = {
+        0 : "neutral",
+        1 : "happy",
+        2 : "sad",
+        3 : "surprise",
+        4 : "anger"
+    }
+    global config, cnn_model2
+    
+    last_detected = datetime.now()
     # iterate through pre-saved entries & draw rectangle & text on image:
     for e in entries_prev:
         if is_depth:
@@ -105,23 +122,36 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
 
                 pt_t5 = x1, y1 + 100
                 cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
+                
+        
         if len(e[0]['landmarks']) != 0:
-            bb_w = x2 - x1
-            bb_h = y2 - y1
-            for i in e[0]['landmarks']:
-                try:
-                    x = x1 + int(i[0]*bb_w)
-                    y = y1 + int(i[1]*bb_h)
-                except:
-                    continue
-                cv2.circle(frame, (x,y), 4, (255, 0, 0))
+            # landmarks-regression-retail-0009
+            if cnn_model2 == 'landmarks-regression-retail-0009':
+                bb_w = x2 - x1
+                bb_h = y2 - y1
+                for i in e[0]['landmarks']:
+                    try:
+                        x = x1 + int(i[0]*bb_w)
+                        y = y1 + int(i[1]*bb_h)
+                    except:
+                        continue
+                    cv2.circle(frame, (x,y), 4, (255, 0, 0))
+            # emotions-recognition-retail-0003
+            if cnn_model2 == 'emotions-recognition-retail-0003':
+                pt_t3 = x2-50, y2-10
+                max_confidence = max(e[0]['landmarks'])
+                if(max_confidence > 0.7):
+                    emotion = e_states[np.argmax(e[0]['landmarks'])]
+                    if (datetime.now() - last_detected).total_seconds() < 100:
+                        cv2.putText(frame, emotion, pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255, 0), 2)
+                        
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
     detections = []
     for _, e in enumerate(nnet_packet.entries()):
         if e[1]["female"] > 0.8 or e[1]["male"] > 0.8:
-            detections.append(e[0]["age"])  
+            detections.append(e[0]["age"])
             if e[1]["female"] > e[1]["male"]:
                 detections.append("female")
             else:
@@ -191,7 +221,7 @@ def show_landmarks_recognition(entries_prev, frame):
 
     return frame
 
-global args
+global args, cnn_model2
 try:
     args = vars(parse_args())
 except:
@@ -249,6 +279,7 @@ blob_file2 = ""
 blob_file_config2 = ""
 if args['cnn_model2']:
     print("Using CNN2:", args['cnn_model2'])
+    cnn_model2 = args['cnn_model2']
     cnn_model_path = consts.resource_paths.nn_resource_path + args['cnn_model2']+ "/" + args['cnn_model2']
     blob_file2 = cnn_model_path + ".blob"
     blob_file_config2 = cnn_model_path + ".json"
@@ -311,7 +342,7 @@ config = {
         'calibration_file': consts.resource_paths.calib_fpath,
         'padding_factor': 0.3,
         'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
-        'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number 
+        'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number
     },
     'ai':
     {
@@ -504,7 +535,7 @@ while True:
                 ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
                 ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
-                ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
+                ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
 
         frame_count[window_name] += 1
 
