@@ -1,8 +1,6 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
-OPENVINO_VERSION="2020.1.023"
-
 echo_and_run() { echo -e "\$ $* \n" ; "$@" ; }
 
 MODEL_NAME=$1
