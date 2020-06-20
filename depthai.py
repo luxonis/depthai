@@ -288,16 +288,21 @@ if platform.system() == 'Linux':
         "Disconnect/connect usb cable on host! \n", PrintColors.RED)
         os._exit(1)
 
-cli_print("Compiling model for {0} shaves and {1} slices ".format(str(args['shaves']), str(args['cmx_slices'])), PrintColors.RED)
 shave_nr = str(args['shaves'])
 cmx_slices = str(args['cmx_slices'])
-ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr, cmx_slices])
+NCE_nr = str(args['NCEs'])
+cli_print("Compiling model for {0} shaves, {1} slices and {2} NCEs ".format(shave_nr, cmx_slices, NCE_nr), PrintColors.RED)
+
+ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr, cmx_slices, NCE_nr])
 if(ret != 0):
     cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
     args['shaves'] = 4
     args['cmx_slices'] = 4
 else:
     blob_file = blob_file + ".sh" + shave_nr + "cmx" + cmx_slices
+    if args['NCEs'] == 0:
+        blob_file = blob_file + "NO_NCE"
+
 
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
@@ -448,7 +453,6 @@ while True:
 
     for _, nnet_packet in enumerate(nnet_packets):
         frame_count["metaout"] += 1
-        # print("metaout fps: " + str(frame_count_prev["metaout"]))
 
         nnet_prev["nnet_source"] = nnet_packet
         nnet_prev["entries_prev"] = decode_nn(nnet_packet)
@@ -529,6 +533,8 @@ while True:
     t_curr = time()
     if t_start + 1.0 < t_curr:
         t_start = t_curr
+        # print("metaout fps: " + str(frame_count_prev["metaout"]))
+
 
         for s in stream_names:
             frame_count_prev[s] = frame_count[s]
