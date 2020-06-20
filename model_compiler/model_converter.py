@@ -37,11 +37,18 @@ headers = {
 }
 
 try:
-  blob_file = open(args['output'],'wb')
   response = requests.request("POST", url,  data=payload)
-  # print(response.text.encode('utf8'))
-  blob_file.write(response.content)
-  blob_file.close()
 except:
   print("Connection timed out!")
   exit(1)
+
+# print(response.text.encode('utf8'))
+if response.status_code == 200:
+  blob_file = open(args['output'],'wb')
+  blob_file.write(response.content)
+  blob_file.close()
+else:
+  print("Model compilation failed with error code: " + str(response.status_code))
+  print(str(response.text.encode('utf8')))
+  exit(2)
+
