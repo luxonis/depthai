@@ -8,10 +8,12 @@ def parse_args():
     Myriad blob compiler in cloud.
     '''
     parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-sh", "--shaves", default=4, type=str,
+    parser.add_argument("-sh", "--shaves", default=4, type=int,
                         help="Number of shaves used by NN.")
-    parser.add_argument("-cmx", "--cmx_slices", default=4, type=str,
+    parser.add_argument("-cmx", "--cmx_slices", default=4, type=int,
                         help="Number of cmx slices used by NN.")
+    parser.add_argument("-NCE", "--NCEs", default=1, type=int,
+                        help="Number of NCEs used by NN.")
     parser.add_argument("-o", "--output", default=None,
                         type=str, required=True,
                         help=".blob output")
@@ -23,6 +25,7 @@ def parse_args():
 
 args = vars(parse_args())
 
+PLATFORM="VPU_MYRIAD_2450" if args['NCEs'] == 0 else "VPU_MYRIAD_2480"
 
 url = "http://69.164.214.171:8080/"
 payload = {
@@ -30,7 +33,7 @@ payload = {
     'model_name': args['input'],
     'model_downloader_params': '--precisions FP16 --num_attempts 5',
     'intermediate_compiler_params': '--data_type=FP16 --mean_values [127.5,127.5,127.5] --scale_values [255,255,255]',
-    'compiler_params': '-ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES ' + args['shaves'] +' -VPU_NUMBER_OF_CMX_SLICES ' + args['cmx_slices']
+    'compiler_params': '-ip U8 -VPU_MYRIAD_PLATFORM ' + PLATFORM + ' -VPU_NUMBER_OF_SHAVES ' + str(args['shaves']) +' -VPU_NUMBER_OF_CMX_SLICES ' + str(args['cmx_slices'])
 }
 headers = {
     'Content-Type': 'application/json'
