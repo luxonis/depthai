@@ -365,6 +365,17 @@ config = {
         'clear_eeprom': args['clear_eeprom'],
         'override_eeprom': args['override_eeprom'],
     },
+    'camera':
+    {
+        # TODO 'rgb': {},
+        'mono':
+        {
+            # 1280x720, 640x400 (binning enabled)
+          # 'resolution_w': 0, # 0: auto
+            'resolution_h': 400,
+            'fps': 45.0,
+        },
+    },
     
     #'video_config':
     #{
