@@ -291,18 +291,25 @@ if platform.system() == 'Linux':
 shave_nr = str(args['shaves'])
 cmx_slices = str(args['cmx_slices'])
 NCE_nr = str(args['NCEs'])
-cli_print("Compiling model for {0} shaves, {1} slices and {2} NCEs ".format(shave_nr, cmx_slices, NCE_nr), PrintColors.RED)
 
-ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr, cmx_slices, NCE_nr])
-if(ret != 0):
-    cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
-    args['shaves'] = 4
-    args['cmx_slices'] = 4
+outblob_file = blob_file + ".sh" + shave_nr + "cmx" + cmx_slices
+if args['NCEs'] == 0:
+    outblob_file = outblob_file + "NO_NCE"
+if(not Path(outblob_file).exists()):
+    cli_print("Compiling model for {0} shaves, {1} slices and {2} NCEs ".format(shave_nr, cmx_slices, NCE_nr), PrintColors.RED)
+    ret = depthai.download_blob(args['cnn_model'], args['shaves'], args['cmx_slices'], args['NCEs'], outblob_file)
+    # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr, cmx_slices, NCE_nr])
+    print(str(ret))
+    if(ret != 0):
+        cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
+        args['shaves'] = 4
+        args['cmx_slices'] = 4
+        args['NCEs'] = 1
+    else:
+        blob_file = outblob_file
 else:
-    blob_file = blob_file + ".sh" + shave_nr + "cmx" + cmx_slices
-    if args['NCEs'] == 0:
-        blob_file = blob_file + "NO_NCE"
-
+    cli_print("Compiled mode found: compiled for {0} shaves, {1} slices and {2} NCEs ".format(shave_nr, cmx_slices, NCE_nr), PrintColors.GREEN)
+    blob_file = outblob_file
 
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
