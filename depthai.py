@@ -9,12 +9,12 @@ from time import time, sleep, monotonic
 
 import cv2
 import numpy as np
-
 import depthai
 
 import consts.resource_paths
 from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
+from depthai_helpers.tiny_yolo_v3_decoder import decode_tiny_yolo, show_tiny_yolo
 
 
 
@@ -85,7 +85,7 @@ def average_depth_coord(pt1, pt2):
     avg_pt2 = (pt2[0] - x_shift), (pt2[1] - y_shift)
     return avg_pt1, avg_pt2
 
-def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
+def show_mobilenet_ssd(entries_prev, frame, labels, is_depth=0):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
     global config
@@ -128,6 +128,7 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
                     cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
     return frame
 
+
 def decode_age_gender_recognition(nnet_packet):
     detections = []
     for _, e in enumerate(nnet_packet.entries()):
@@ -139,7 +140,7 @@ def decode_age_gender_recognition(nnet_packet):
                 detections.append("male")
     return detections
 
-def show_age_gender_recognition(entries_prev, frame):
+def show_age_gender_recognition(entries_prev, frame, labels):
     # img_h = frame.shape[0]
     # img_w = frame.shape[1]
     if len(entries_prev) != 0:
@@ -156,7 +157,7 @@ def decode_emotion_recognition(nnet_packet):
         detections.append(nnet_packet.entries()[0][0][i])
     return detections
 
-def show_emotion_recognition(entries_prev, frame):
+def show_emotion_recognition(entries_prev, frame, labels):
     # img_h = frame.shape[0]
     # img_w = frame.shape[1]
     e_states = {
@@ -184,7 +185,7 @@ def decode_landmarks_recognition(nnet_packet):
     landmarks = list(zip(*[iter(landmarks)]*2))
     return landmarks
 
-def show_landmarks_recognition(entries_prev, frame):
+def show_landmarks_recognition(entries_prev, frame, labels):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
 
@@ -208,7 +209,8 @@ try:
 except:
     os._exit(2)
 
- 
+compile_model = args['shaves'] is not None and args['cmx_slices'] is not None and args['NCEs']
+
 stream_list = args['streams']
 
 if args['config_overwrite']:
@@ -242,6 +244,12 @@ if args['cnn_model'] == 'emotions-recognition-retail-0003':
     decode_nn=decode_emotion_recognition
     show_nn=show_emotion_recognition
     calc_dist_to_bb=False
+
+if args['cnn_model'] == 'tiny-yolo':
+    decode_nn=decode_tiny_yolo
+    show_nn=show_tiny_yolo
+    calc_dist_to_bb=False
+    compile_model=False
 
 if args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
     decode_nn=decode_landmarks_recognition
@@ -288,28 +296,36 @@ if platform.system() == 'Linux':
         "Disconnect/connect usb cable on host! \n", PrintColors.RED)
         os._exit(1)
 
-shave_nr = str(args['shaves'])
-cmx_slices = str(args['cmx_slices'])
-NCE_nr = str(args['NCEs'])
 
-outblob_file = blob_file + ".sh" + shave_nr + "cmx" + cmx_slices
-if args['NCEs'] == 0:
-    outblob_file = outblob_file + "NO_NCE"
-if(not Path(outblob_file).exists()):
-    cli_print("Compiling model for {0} shaves, {1} slices and {2} NCEs ".format(shave_nr, cmx_slices, NCE_nr), PrintColors.RED)
-    ret = depthai.download_blob(args['cnn_model'], args['shaves'], args['cmx_slices'], args['NCEs'], outblob_file)
-    # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr, cmx_slices, NCE_nr])
-    print(str(ret))
-    if(ret != 0):
-        cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
-        args['shaves'] = 4
-        args['cmx_slices'] = 4
-        args['NCEs'] = 1
+default_blob=True
+if compile_model:
+    default_blob=False
+    shave_nr = args['shaves']
+    cmx_slices = args['cmx_slices']
+    NCE_nr = args['NCEs']
+
+    outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices)
+    if NCE_nr == 0:
+        outblob_file = outblob_file + "NO_NCE"
+    if(not Path(outblob_file).exists()):
+        cli_print("Compiling model for {0} shaves, {1} slices and {2} NCEs ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
+        ret = depthai.download_blob(args['cnn_model'], shave_nr, cmx_slices, NCE_nr, outblob_file)
+        # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr, cmx_slices, NCE_nr])
+        print(str(ret))
+        if(ret != 0):
+            cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
+            default_blob=True
+        else:
+            blob_file = outblob_file
     else:
+        cli_print("Compiled mode found: compiled for {0} shaves, {1} slices and {2} NCEs ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
         blob_file = outblob_file
-else:
-    cli_print("Compiled mode found: compiled for {0} shaves, {1} slices and {2} NCEs ".format(shave_nr, cmx_slices, NCE_nr), PrintColors.GREEN)
-    blob_file = outblob_file
+
+if default_blob:
+    #default
+    shave_nr = 4
+    cmx_slices = 4
+    NCE_nr = 1
 
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
@@ -332,9 +348,9 @@ config = {
         'blob_file_config': blob_file_config,
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
-        'shaves' : args['shaves'],
-        'cmx_slices' : args['cmx_slices'],
-        'NCEs' : args['NCEs'],
+        'shaves' : shave_nr,
+        'cmx_slices' : cmx_slices,
+        'NCEs' : NCE_nr,
     },
     # object tracker
     'ot':
@@ -480,7 +496,7 @@ while True:
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(nnet_prev["entries_prev"], frame)
+            nn_frame = show_nn(nnet_prev["entries_prev"], frame, labels)
             if enable_object_tracker and tracklets is not None:
                 nn_frame = show_tracklets(tracklets, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
@@ -490,7 +506,7 @@ while True:
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
-                show_nn(nnet_prev["entries_prev"], frame_bgr, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame_bgr, labels, is_depth=True)
             cv2.imshow(packet.stream_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
             frame = packetData
