@@ -83,7 +83,7 @@ def parse_args():
                         type=stream_type,
                         dest='streams',
 #                        default=['metaout', 'previewout'],
-                        default=['aprilout', 'right'],
+                        default=['aprilout', 'right', 'metaout', 'previewout'],
                         help="Define which streams to enable \
                         Format: stream_name or stream_name,max_fps \
                         Example: -s metaout previewout \
