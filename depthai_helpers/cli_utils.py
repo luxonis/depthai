@@ -50,8 +50,14 @@ def parse_args():
                         help="Number of cmx slices used by NN.")
     parser.add_argument("-NCE", "--NCEs", default=None, type=int,
                         help="Number of NCEs used by NN.")
-    parser.add_argument("-rgb", "--rgb_cam_config", default="1080p_30hz", type=str,
-                        help="RGB cam config: 1080p_30hz or 4k_30hz are supported.")
+    parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int,
+                        help="RGB cam res config: 1080 or 2160 are supported.")
+    parser.add_argument("-rgbf", "--rgb_fps", default=30, type=int,
+                        help="RGB cam fps config: 30 fps is supported.")
+    parser.add_argument("-monor", "--mono_resolution", default=720, type=int,
+                        help="Mono cam res config: 720 or 480 are supported.")
+    parser.add_argument("-monof", "--mono_fps", default=30, type=int,
+                        help="Mono cam fps config: 30 fps is supported.")
     parser.add_argument("-fv", "--field-of-view", default=None, type=float,
                         help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
     parser.add_argument("-rfv", "--rgb-field-of-view", default=None, type=float,
