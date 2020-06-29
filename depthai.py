@@ -368,9 +368,24 @@ config = {
         'store_to_eeprom': args['store_eeprom'],
         'clear_eeprom': args['clear_eeprom'],
         'override_eeprom': args['override_eeprom'],
-        'rgb_cam_config' : args['rgb_cam_config']
     },
-    
+    'camera':
+    {
+        'rgb':
+        {
+            # 3840x2160, 1920x1080
+            # only UHD/1080p/30 fps supported for now
+            'resolution_h': args['rgb_resolution'],
+            'fps': args['rgb_fps'],
+        },
+        'mono':
+        {
+            # 1280x720, 640x400 (binning enabled)
+            # only 720/30 fps supported for now
+            'resolution_h': args['mono_resolution'],
+            'fps': args['mono_fps'],
+        },
+    },
     #'video_config':
     #{
     #    'rateCtrlMode': 'cbr',
