@@ -1,136 +1,61 @@
 #!/usr/bin/env python3
 
-import sys
-from time import time
-from time import sleep
-import argparse
-from argparse import ArgumentParser
-from pathlib import Path
 import json
-import numpy as np
-import cv2
+from pathlib import Path
+import platform
 import os
 import subprocess
-import platform
-from pathlib import Path
+from time import time, sleep, monotonic
+
+import cv2
+import numpy as np
 
 import depthai
 
 import consts.resource_paths
 from depthai_helpers import utils
+from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
 
-class bcolors:
-    HEADER = '\033[95m'
-    BLUE = '\033[94m'
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    WARNING = '\033[1;5;31m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
 
-def parse_args():
-    epilog_text = '''
-    Displays video streams captured by DepthAI.
 
-    Example usage:
+def show_tracklets(tracklets, frame):
+    # img_h = frame.shape[0]
+    # img_w = frame.shape[1]
 
-    ## Show the depth stream:
-    python3 test.py -s depth_sipp,12
-    ## Show the depth stream and NN output:
-    python3 test.py -s metaout previewout,12 depth_sipp,12
-    '''
-    parser = ArgumentParser(epilog=epilog_text,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-co", "--config_overwrite", default=None,
-                        type=str, required=False,
-                        help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
-    parser.add_argument("-brd", "--board", default=None, type=str,
-                        help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
-                            "Or path to a custom .json board config. Mutually exclusive with [-fv -rfv -b -r -w]")
-    parser.add_argument("-fv", "--field-of-view", default=None, type=float,
-                        help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
-    parser.add_argument("-rfv", "--rgb-field-of-view", default=None, type=float,
-                        help="Horizontal field of view (HFOV) for the RGB camera in [deg]. Default: 68.7938deg.")
-    parser.add_argument("-b", "--baseline", default=None, type=float,
-                        help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
-    parser.add_argument("-r", "--rgb-baseline", default=None, type=float,
-                        help="Distance the RGB camera is from the Left camera. Default: 2.0cm.")
-    parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=None, action="store_false",
-                        help="Do not swap the Left and Right cameras.")
-    parser.add_argument("-e", "--store-eeprom", default=False, action='store_true',
-                        help="Store the calibration and board_config (fov, baselines, swap-lr) in the EEPROM onboard")
-    parser.add_argument("--clear-eeprom", default=False, action='store_true',
-                        help="Invalidate the calib and board_config from EEPROM")
-    parser.add_argument("-o", "--override-eeprom", default=False, action='store_true',
-                        help="Use the calib and board_config from host, ignoring the EEPROM data if programmed")
-    parser.add_argument("-dev", "--device-id", default='', type=str,
-                        help="USB port number for the device to connect to. Use the word 'list' to show all devices and exit.")
-    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
-                        help="Used by board developers for debugging.")
-    parser.add_argument("-fusb2", "--force_usb2", default=None, action='store_true',
-                        help="Force usb2 connection")
-    parser.add_argument("-cnn", "--cnn_model", default='mobilenet-ssd', type=str, 
-                        help="Cnn model to run on DepthAI")
-    parser.add_argument("-dd", "--disable_depth", default=False,  action='store_true', 
-                        help="Disable depth calculation on CNN models with bounding box output")
-    parser.add_argument("-bb", "--draw-bb-depth", default=False,  action='store_true',
-                        help="Draw the bounding boxes over the left/right/depth* streams")
-    parser.add_argument("-ff", "--full-fov-nn", default=False,  action='store_true',
-                        help="Full RGB FOV for NN, not keeping the aspect ratio")
-    parser.add_argument("-s", "--streams",  
-                        nargs='+',
-                        type=stream_type,
-                        dest='streams',
-#                        default=['metaout', 'previewout'],
-                        default=['aprilout', 'right', 'metaout', 'previewout'],
-                        help="Define which streams to enable \
-                        Format: stream_name or stream_name,max_fps \
-                        Example: -s metaout previewout \
-                        Example: -s metaout previewout,10 depth_sipp,10")
-    parser.add_argument("-v", "--video", default=None, type=str, required=False, help="Path where to save video stream (existing file will be overwritten)")
+    # iterate through pre-saved entries & draw rectangle & text on image:
+    tracklet_nr = tracklets.getNrTracklets()
 
-    options = parser.parse_args()
+    for i in range(tracklet_nr):
+        tracklet        = tracklets.getTracklet(i)
+        left_coord      = tracklet.getLeftCoord()
+        top_coord       = tracklet.getTopCoord()
+        right_coord     = tracklet.getRightCoord()
+        bottom_coord    = tracklet.getBottomCoord()
+        tracklet_id     = tracklet.getId()
+        tracklet_label  = labels[tracklet.getLabel()]
+        tracklet_status = tracklet.getStatus()
 
-    if (options.board is not None) and ((options.field_of_view     is not None)
-                                     or (options.rgb_field_of_view is not None)
-                                     or (options.baseline          is not None)
-                                     or (options.rgb_baseline      is not None)
-                                     or (options.swap_lr           is not None)):
-        parser.error("[-brd] is mutually exclusive with [-fv -rfv -b -r -w]")
+        # print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
+        #     .format(left_coord, top_coord, right_coord, bottom_coord, tracklet_id, tracklet_label, tracklet_status))
+        
+        pt1 = left_coord,  top_coord
+        pt2 = right_coord,  bottom_coord
+        color = (255, 0, 0) # bgr
+        cv2.rectangle(frame, pt1, pt2, color)
 
-    # Set some defaults after the above check
-    if options.field_of_view     is None: options.field_of_view = 71.86
-    if options.rgb_field_of_view is None: options.rgb_field_of_view = 68.7938
-    if options.baseline          is None: options.baseline = 9.0
-    if options.rgb_baseline      is None: options.rgb_baseline = 2.0
-    if options.swap_lr           is None: options.swap_lr = True
+        middle_pt = (int)(left_coord + (right_coord - left_coord)/2), (int)(top_coord + (bottom_coord - top_coord)/2)
+        cv2.circle(frame, middle_pt, 0, color, -1)
+        cv2.putText(frame, "ID {0}".format(tracklet_id), middle_pt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-    return options
+        x1, y1 = left_coord,  bottom_coord
 
-def stream_type(option):
-    option_list = option.split(',')
-    option_args = len(option_list)
-    if option_args not in [1,2]:
-        print(bcolors.WARNING + option+" format is invalid. See --help" + bcolors.ENDC)
-        raise ValueError
 
-    stream_choices=['metaout', 'previewout', 'left', 'right', 'depth_sipp', 'disparity', 'depth_color_h', 'meta_d2h']
-    stream_name = option_list[0]
-    if stream_name not in stream_choices:
-        print(bcolors.WARNING + stream_name +" is not in available stream list: \n" + str(stream_choices) + bcolors.ENDC)
-        raise ValueError
-
-    if(option_args == 1):
-        stream_dict = {'name': stream_name}
-    else:       
-        try:
-            max_fps = float(option_list[1])
-        except:
-            print(bcolors.WARNING + "In option: " + str(option) + " " + option_list[1] + " is not a number!" + bcolors.ENDC)
-
-        stream_dict = {'name': stream_name, "max_fps": max_fps}
-    return stream_dict
+        pt_t1 = x1, y1 - 40
+        cv2.putText(frame, tracklet_label, pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        pt_t2 = x1, y1 - 20
+        cv2.putText(frame, tracklet_status, pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        
+    return frame
 
 def decode_mobilenet_ssd(nnet_packet):
     detections = []
@@ -145,6 +70,7 @@ def decode_mobilenet_ssd(nnet_packet):
         # save entry for further usage (as image package may arrive not the same time as nnet package)
         detections.append(e)
     return detections
+
 
 def nn_to_depth_coord(x, y):
     x_depth = int(nn2depth['off_x'] + x * nn2depth['max_w'])
@@ -371,7 +297,7 @@ if args['config_overwrite']:
 print("Using Arguments=",args)
 
 if args['force_usb2']:
-    print(bcolors.WARNING + "FORCE USB2 MODE" + bcolors.ENDC)
+    cli_print("FORCE USB2 MODE", PrintColors.WARNING)
     cmd_file = consts.resource_paths.device_usb2_cmd_fpath
 else:
     cmd_file = consts.resource_paths.device_cmd_fpath
@@ -413,11 +339,11 @@ if args['cnn_model']:
 blob_file_path = Path(blob_file)
 blob_file_config_path = Path(blob_file_config)
 if not blob_file_path.exists():
-    print(bcolors.WARNING + "\nWARNING: NN blob not found in: " + blob_file + bcolors.ENDC)
+    cli_print("\nWARNING: NN blob not found in: " + blob_file, PrintColors.WARNING)
     os._exit(1)
 
 if not blob_file_config_path.exists():
-    print(bcolors.WARNING + "\nWARNING: NN json not found in: " + blob_file_config + bcolors.ENDC)
+    cli_print("\nWARNING: NN json not found in: " + blob_file_config, PrintColors.WARNING)
     os._exit(1)
 
 with open(blob_file_config) as f:
@@ -435,11 +361,11 @@ print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
 if platform.system() == 'Linux':
     ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if(ret != 0):
-        print(bcolors.WARNING + "\nWARNING: Usb rules not found" + bcolors.ENDC)
-        print(bcolors.RED + "\nSet rules: \n" \
-        """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n""" \
-        "sudo udevadm control --reload-rules && udevadm trigger \n" \
-        "Disconnect/connect usb cable on host! \n"    + bcolors.ENDC)
+        cli_print("\nWARNING: Usb rules not found", PrintColors.WARNING)
+        cli_print("\nSet rules: \n"
+        """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n"""
+        "sudo udevadm control --reload-rules && udevadm trigger \n"
+        "Disconnect/connect usb cable on host! \n", PrintColors.RED)
         os._exit(1)
 
 if not depthai.init_device(cmd_file, args['device_id']):
@@ -471,6 +397,12 @@ config = {
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
     },
+    # object tracker
+    'ot':
+    {
+        'max_tracklets'        : 20, #maximum 20 is supported
+        'confidence_threshold' : 0.5, #object is tracked only for detections over this threshold
+    },
     'board_config':
     {
         'swap_left_and_right_cameras': args['swap_lr'], # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
@@ -481,7 +413,18 @@ config = {
         'store_to_eeprom': args['store_eeprom'],
         'clear_eeprom': args['clear_eeprom'],
         'override_eeprom': args['override_eeprom'],
-    }
+    },
+    
+    #'video_config':
+    #{
+    #    'rateCtrlMode': 'cbr',
+    #    'profile': 'h265_main', # Options: 'h264_baseline' / 'h264_main' / 'h264_high' / 'h265_main'
+    #    'bitrate': 8000000, # When using CBR
+    #    'maxBitrate': 8000000, # When using CBR
+    #    'keyframeFrequency': 30,
+    #    'numBFrames': 0,
+    #    'quality': 80 # (0 - 100%) When using VBR
+    #}
 }
 
 if args['board']:
@@ -520,6 +463,8 @@ if args['video'] is not None:
 
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
 
+enable_object_tracker = 'object_tracker' in stream_names
+
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=config)
 
@@ -537,13 +482,21 @@ for s in stream_names:
     frame_count[s] = 0
     frame_count_prev[s] = 0
 
+<<<<<<< HEAD
 april_prev = []
 entries_prev = []
+=======
+nnet_prev = {}
+nnet_prev["entries_prev"] = []
+nnet_prev["nnet_source"] = []
+
+tracklets = None
+>>>>>>> master
 
 process_watchdog_timeout=10 #seconds
 def reset_process_wd():
     global wd_cutoff
-    wd_cutoff=time()+process_watchdog_timeout
+    wd_cutoff=monotonic()+process_watchdog_timeout
     return
 
 reset_process_wd()
@@ -563,13 +516,14 @@ while True:
     if packets_len != 0:
         reset_process_wd()
     else:
-        cur_time=time()
+        cur_time=monotonic()
         if cur_time > wd_cutoff:
             print("process watchdog timeout")
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        entries_prev = decode_nn(nnet_packet)
+        nnet_prev["nnet_source"] = nnet_packet
+        nnet_prev["entries_prev"] = decode_nn(nnet_packet)
 
     print("numPackets: " + str(len(april_packets)))
     for april_packet in april_packets:
@@ -592,7 +546,9 @@ while True:
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(entries_prev, frame)
+            nn_frame = show_nn(nnet_prev["entries_prev"], frame)
+            if enable_object_tracker and tracklets is not None:
+                nn_frame = show_tracklets(tracklets, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
@@ -601,10 +557,9 @@ while True:
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
 
             if args['draw_bb_depth']:
-                show_nn(entries_prev, frame_bgr, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame_bgr, is_depth=True)
 
             out_frame = show_april(april_prev, frame_bgr)
-
             cv2.imshow(packet.stream_name, out_frame)
 
         elif packet.stream_name.startswith('depth'):
@@ -626,7 +581,7 @@ while True:
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
             if args['draw_bb_depth']:
-                show_nn(entries_prev, frame, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame, is_depth=True)
             cv2.imshow(packet.stream_name, frame)
 
         elif packet.stream_name == 'jpegout':
@@ -647,6 +602,8 @@ while True:
                 ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                 ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
+        elif packet.stream_name == 'object_tracker':
+            tracklets = packet.getObjectTracker()
 
         frame_count[packet.stream_name] += 1
 
@@ -662,6 +619,12 @@ while True:
     key = cv2.waitKey(1)
     if key == ord('c'):
         depthai.request_jpeg()
+    elif key == ord('f'):
+        depthai.request_af_trigger()
+    elif key == ord('1'):
+        depthai.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO)
+    elif key == ord('2'):
+        depthai.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO)
     elif key == ord('q'):
         break
 
