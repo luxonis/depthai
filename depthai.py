@@ -542,7 +542,7 @@ while True:
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
             if args['draw_bb_depth']:
-                show_nn(nnet_prev["entries_prev"], frame, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame, labels, is_depth=True)
             cv2.imshow(packet.stream_name, frame)
 
         elif packet.stream_name == 'jpegout':
