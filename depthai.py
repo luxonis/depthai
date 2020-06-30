@@ -65,39 +65,43 @@ def decode_mobilenet_ssd(nnet_packet):
     for _, e in enumerate(nnet_packet.entries()):
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
-        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0 or e[0]['label'] > len(labels):
+        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
             break
         # save entry for further usage (as image package may arrive not the same time as nnet package)
         detections.append(e)
     return detections
 
 
-def nn_to_depth_coord(x, y):
+def nn_to_depth_coord(x, y, nn2depth):
     x_depth = int(nn2depth['off_x'] + x * nn2depth['max_w'])
     y_depth = int(nn2depth['off_y'] + y * nn2depth['max_h'])
     return x_depth, y_depth
 
-def average_depth_coord(pt1, pt2):
-    factor = 1 - config['depth']['padding_factor']
+def average_depth_coord(pt1, pt2, padding_factor):
+    factor = 1 - padding_factor
     x_shift = int((pt2[0] - pt1[0]) * factor / 2)
     y_shift = int((pt2[1] - pt1[1]) * factor / 2)
     avg_pt1 = (pt1[0] + x_shift), (pt1[1] + y_shift)
     avg_pt2 = (pt2[0] - x_shift), (pt2[1] - y_shift)
     return avg_pt1, avg_pt2
 
-def show_mobilenet_ssd(entries_prev, frame, labels, is_depth=0):
+def show_mobilenet_ssd(entries_prev, frame, **kwargs):
+    is_depth = 'nn2depth' in kwargs
+    if is_depth:
+        nn2depth = kwargs['nn2depth']
+    config = kwargs['config']
+    labels = kwargs['labels']
     img_h = frame.shape[0]
     img_w = frame.shape[1]
-    global config
     # iterate through pre-saved entries & draw rectangle & text on image:
     for e in entries_prev:
         # the lower confidence threshold - the more we get false positives
         if e[0]['confidence'] > config['depth']['confidence_threshold']:
             if is_depth:
-                pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
-                pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
+                pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'], nn2depth)
+                pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'], nn2depth)
                 color = (255, 0, 0) # bgr
-                avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2)
+                avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2, config['depth']['padding_factor'])
                 cv2.rectangle(frame, avg_pt1, avg_pt2, color)
                 color = (255, 255, 255) # bgr
             else:
@@ -140,7 +144,7 @@ def decode_age_gender_recognition(nnet_packet):
                 detections.append("male")
     return detections
 
-def show_age_gender_recognition(entries_prev, frame, labels):
+def show_age_gender_recognition(entries_prev, frame, **kwargs):
     # img_h = frame.shape[0]
     # img_w = frame.shape[1]
     if len(entries_prev) != 0:
@@ -157,16 +161,11 @@ def decode_emotion_recognition(nnet_packet):
         detections.append(nnet_packet.entries()[0][0][i])
     return detections
 
-def show_emotion_recognition(entries_prev, frame, labels):
+def show_emotion_recognition(entries_prev, frame, **kwargs):
     # img_h = frame.shape[0]
     # img_w = frame.shape[1]
-    e_states = {
-        0 : "neutral",
-        1 : "happy",
-        2 : "sad",
-        3 : "surprise",
-        4 : "anger"
-    }
+    e_states = kwargs['labels']
+
     if len(entries_prev) != 0:
         max_confidence = max(entries_prev)
         if(max_confidence > 0.7):
@@ -185,7 +184,7 @@ def decode_landmarks_recognition(nnet_packet):
     landmarks = list(zip(*[iter(landmarks)]*2))
     return landmarks
 
-def show_landmarks_recognition(entries_prev, frame, labels):
+def show_landmarks_recognition(entries_prev, frame, **kwargs):
     img_h = frame.shape[0]
     img_w = frame.shape[1]
 
@@ -280,6 +279,7 @@ with open(blob_file_config) as f:
 try:
     labels = data['mappings']['labels']
 except:
+    labels = None
     print("Labels not found in json!")
 
 
@@ -511,7 +511,7 @@ while True:
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(nnet_prev["entries_prev"], frame, labels)
+            nn_frame = show_nn(nnet_prev["entries_prev"], frame, labels=labels, config=config)
             if enable_object_tracker and tracklets is not None:
                 nn_frame = show_tracklets(tracklets, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
@@ -521,7 +521,7 @@ while True:
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
-                show_nn(nnet_prev["entries_prev"], frame_bgr, labels, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame_bgr, labels=labels, config=config, nn2depth=nn2depth)
             cv2.imshow(packet.stream_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
             frame = packetData
@@ -542,7 +542,7 @@ while True:
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
             if args['draw_bb_depth']:
-                show_nn(nnet_prev["entries_prev"], frame, labels, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame, labels=labels, config=config, nn2depth=nn2depth)
             cv2.imshow(packet.stream_name, frame)
 
         elif packet.stream_name == 'jpegout':
