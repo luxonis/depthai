@@ -171,7 +171,8 @@ LABEL_BG_COLOR = (70, 120, 70) # greyish green background for text
 TEXT_COLOR = (255, 255, 255)   # white text
 TEXT_FONT = cv2.FONT_HERSHEY_SIMPLEX
 
-def show_tiny_yolo(filtered_objects, frame, labels, is_depth=0):
+def show_tiny_yolo(filtered_objects, frame, **kwargs):
+    labels = kwargs['labels']
     filtered_objects = [obj for obj in filtered_objects if obj['confidence'] >= detection_threshold]
     for object_index in range(len(filtered_objects)):
         
