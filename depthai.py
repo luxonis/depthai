@@ -482,16 +482,14 @@ for s in stream_names:
     frame_count[s] = 0
     frame_count_prev[s] = 0
 
-<<<<<<< HEAD
+
 april_prev = []
-entries_prev = []
-=======
+
 nnet_prev = {}
 nnet_prev["entries_prev"] = []
 nnet_prev["nnet_source"] = []
 
 tracklets = None
->>>>>>> master
 
 process_watchdog_timeout=10 #seconds
 def reset_process_wd():
