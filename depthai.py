@@ -277,6 +277,7 @@ if args['cnn_model']:
 
 blob_file2 = ""
 blob_file_config2 = ""
+cnn_model2 = None
 if args['cnn_model2']:
     print("Using CNN2:", args['cnn_model2'])
     cnn_model2 = args['cnn_model2']
@@ -295,6 +296,11 @@ blob_file_config_path = Path(blob_file_config)
 if not blob_file_path.exists():
     cli_print("\nWARNING: NN blob not found in: " + blob_file, PrintColors.WARNING)
     os._exit(1)
+# Temporary, TODO automatically merge the json files
+if cnn_model2 is not None:
+    if args['cnn_model'] != 'face-detection-retail-0004':
+        print("Temporary limitation, first stage should be face-detection-retail-0004, or json's manually modified")
+        os._exit(1)
 
 if not blob_file_config_path.exists():
     cli_print("\nWARNING: NN json not found in: " + blob_file_config, PrintColors.WARNING)
@@ -503,7 +509,12 @@ while True:
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
-                camera = packet.getMetadata().getCameraName()
+                if packet.stream_name == 'disparity':
+                    camera = args['cnn_camera']
+                    if camera == 'left_right':
+                        camera = 'right'
+                else:
+                    camera = packet.getMetadata().getCameraName()
                 show_nn(entries_prev[camera], frame_bgr, is_depth=True)
             cv2.imshow(window_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
@@ -525,7 +536,9 @@ while True:
                 cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
             if args['draw_bb_depth']:
-                # TODO check NN cam input
+                camera = args['cnn_camera']
+                if camera == 'left_right':
+                    camera = 'right'
                 show_nn(entries_prev['right'], frame, is_depth=True)
             cv2.imshow(window_name, frame)
 
