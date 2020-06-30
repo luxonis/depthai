@@ -150,13 +150,6 @@ class Main:
                 },
             'camera':
                 {
-                    'rgb':
-                    {
-                        # 3840x2160, 1920x1080
-                        # only UHD/1080p/30 fps supported for now
-                        'resolution_h': 1080,
-                        'fps': 30,
-                    },
                     'mono':
                     {
                         # 1280x720, 640x400 (binning enabled)
