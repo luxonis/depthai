@@ -370,10 +370,10 @@ config = {
         # TODO 'rgb': {},
         'mono':
         {
-            # 1280x720, 640x400 (binning enabled)
+            # 1280x720, 1280x800, 640x400 (binning enabled)
           # 'resolution_w': 0, # 0: auto
-            'resolution_h': 400,
-            'fps': 45.0,
+            'resolution_h': 720,
+            'fps': 30.0,
         },
     },
     
