@@ -1,9 +1,16 @@
 #!/bin/bash
+
 #example usage:
 #cloud compile:
 #./download_and_compile.sh mobilenet-ssd 4 4 1 CLOUD_COMPILE
 #local compile
 #./download_and_compile.sh mobilenet-ssd 4 4 1
+
+
+if [ "$#" -lt 4 ]; then
+    echo "Invalid number of arguments."
+    exit 1
+fi
 
 cd "$(dirname "$0")"
 
@@ -41,12 +48,12 @@ OPENVINO_PATH=`realpath /opt/intel/openvino_$OPENVINO_VERSION`
 
 if [ ! -d "$OPENVINO_PATH" ]; then
 echo "OPENVINO_PATH doesn't exist! Openvino $OPENVINO_VERSION is not installed?"
-exit 1
+exit 2
 fi
 
 if [ ! -d "$NN_PATH" ]; then
 echo "NN_PATH doesn't exist"
-exit 2
+exit 3
 fi
 
 source $OPENVINO_PATH/bin/setupvars.sh
@@ -64,7 +71,7 @@ if [ -d "$DOWNLOADS_DIR/public" ]; then
 cd $DOWNLOADS_DIR/public
 if [ -d "$MODEL_NAME" ]; then
     # $MODEL_NAME is a directory
-    mkdir $DOWNLOADS_DIR/intel/$MODEL_NAME/FP16/
+    mkdir -p $DOWNLOADS_DIR/intel/$MODEL_NAME/FP16/
     echo_and_run $OPENVINO_PATH/deployment_tools/model_optimizer/mo.py --input_model $DOWNLOADS_DIR/public/$MODEL_NAME/$MODEL_NAME.caffemodel --input_proto $DOWNLOADS_DIR/public/$MODEL_NAME/$MODEL_NAME.prototxt --data_type=FP16 --mean_values [127.5,127.5,127.5] --scale_values [255,255,255] -o $DOWNLOADS_DIR/intel/$MODEL_NAME/FP16/
 fi
 fi
@@ -93,7 +100,7 @@ if [ -d "$MODEL_NAME" ]; then
     fi
     if [ $? != 0 ]; then
         rm -f $BLOB_OUT
-        exit 2
+        exit 4
     fi
 fi
 
