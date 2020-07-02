@@ -117,7 +117,7 @@ def stream_type(option):
         cli_print(msg_string, PrintColors.WARNING)
         raise ValueError(msg_string)
 
-    stream_choices = ["metaout", "previewout", "left", "right", "depth_sipp", "disparity", "depth_color_h", "meta_d2h"]
+    stream_choices = ["metaout", "previewout", "jpegout", "left", "right", "depth_sipp", "disparity", "depth_color_h", "meta_d2h", "object_tracker"]
     stream_name = option_list[0]
     if stream_name not in stream_choices:
         msg_string = "{0} is not in available stream list: \n{1}".format(stream_name, stream_choices)

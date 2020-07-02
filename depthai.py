@@ -17,6 +17,48 @@ from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
 
 
+
+def show_tracklets(tracklets, frame):
+    # img_h = frame.shape[0]
+    # img_w = frame.shape[1]
+
+    # iterate through pre-saved entries & draw rectangle & text on image:
+    tracklet_nr = tracklets.getNrTracklets()
+
+    for i in range(tracklet_nr):
+        tracklet        = tracklets.getTracklet(i)
+        left_coord      = tracklet.getLeftCoord()
+        top_coord       = tracklet.getTopCoord()
+        right_coord     = tracklet.getRightCoord()
+        bottom_coord    = tracklet.getBottomCoord()
+        tracklet_id     = tracklet.getId()
+        tracklet_label  = labels[tracklet.getLabel()]
+        tracklet_status = tracklet.getStatus()
+
+        # print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
+        #     .format(left_coord, top_coord, right_coord, bottom_coord, tracklet_id, tracklet_label, tracklet_status))
+        
+        pt1 = left_coord,  top_coord
+        pt2 = right_coord,  bottom_coord
+        color = (255, 0, 0) # bgr
+        cv2.rectangle(frame, pt1, pt2, color)
+
+        middle_pt = (int)(left_coord + (right_coord - left_coord)/2), (int)(top_coord + (bottom_coord - top_coord)/2)
+        cv2.circle(frame, middle_pt, 0, color, -1)
+        cv2.putText(frame, "ID {0}".format(tracklet_id), middle_pt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+        x1, y1 = left_coord,  bottom_coord
+
+
+        pt_t1 = x1, y1 - 40
+        cv2.putText(frame, tracklet_label, pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        pt_t2 = x1, y1 - 20
+        cv2.putText(frame, tracklet_status, pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+
+        
+    return frame
+
 def decode_mobilenet_ssd(nnet_packet):
     global cnn_model2
     detections = []
@@ -360,6 +402,12 @@ config = {
         'keep_aspect_ratio': not args['full_fov_nn'],
         'camera_input': args['cnn_camera'],
     },
+    # object tracker
+    'ot':
+    {
+        'max_tracklets'        : 20, #maximum 20 is supported
+        'confidence_threshold' : 0.5, #object is tracked only for detections over this threshold
+    },
     'board_config':
     {
         'swap_left_and_right_cameras': args['swap_lr'], # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
@@ -431,6 +479,8 @@ if args['video'] is not None:
 
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in config['streams']]
 
+enable_object_tracker = 'object_tracker' in stream_names
+
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=config)
 
@@ -444,18 +494,23 @@ nn2depth = depthai.get_nn_to_depth_bbox_mapping()
 t_start = time()
 frame_count = {}
 frame_count_prev = {}
-entries_prev = {}
+nnet_prev = {}
+nnet_prev["entries_prev"] = {}
+nnet_prev["nnet_source"] = {}
 for s in stream_names:
     stream_windows = []
     if s == 'previewout':
         for cam in {'rgb', 'left', 'right'}:
-            entries_prev[cam] = []
+            nnet_prev["entries_prev"][cam] = []
+            nnet_prev["nnet_source"][cam] = []
             stream_windows.append(s + '-' + cam)
     else:
         stream_windows.append(s)
     for w in stream_windows:
         frame_count[w] = 0
         frame_count_prev[w] = 0
+
+tracklets = None
 
 process_watchdog_timeout=10 #seconds
 def reset_process_wd():
@@ -481,7 +536,9 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        entries_prev[nnet_packet.getMetadata().getCameraName()] = decode_nn(nnet_packet)
+        camera = nnet_packet.getMetadata().getCameraName()
+        nnet_prev["nnet_source"][camera] = nnet_packet
+        nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet)
 
     for packet in data_packets:
         window_name = packet.stream_name
@@ -501,7 +558,9 @@ while True:
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(entries_prev[camera], frame)
+            nn_frame = show_nn(nnet_prev["entries_prev"][camera], frame)
+            if enable_object_tracker and tracklets is not None:
+                nn_frame = show_tracklets(tracklets, nn_frame)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow(window_name, nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
@@ -515,7 +574,7 @@ while True:
                         camera = 'right'
                 else:
                     camera = packet.getMetadata().getCameraName()
-                show_nn(entries_prev[camera], frame_bgr, is_depth=True)
+                show_nn(nnet_prev["entries_prev"][camera], frame_bgr, is_depth=True)
             cv2.imshow(window_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
             frame = packetData
@@ -539,7 +598,7 @@ while True:
                 camera = args['cnn_camera']
                 if camera == 'left_right':
                     camera = 'right'
-                show_nn(entries_prev['right'], frame, is_depth=True)
+                show_nn(nnet_prev["entries_prev"][camera], frame, is_depth=True)
             cv2.imshow(window_name, frame)
 
         elif packet.stream_name == 'jpegout':
@@ -560,6 +619,8 @@ while True:
                 ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                 ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
+        elif packet.stream_name == 'object_tracker':
+            tracklets = packet.getObjectTracker()
 
         frame_count[window_name] += 1
 
@@ -581,6 +642,12 @@ while True:
     key = cv2.waitKey(1)
     if key == ord('c'):
         depthai.request_jpeg()
+    elif key == ord('f'):
+        depthai.request_af_trigger()
+    elif key == ord('1'):
+        depthai.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO)
+    elif key == ord('2'):
+        depthai.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO)
     elif key == ord('q'):
         break
 
