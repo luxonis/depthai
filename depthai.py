@@ -60,10 +60,9 @@ def show_tracklets(tracklets, frame):
     return frame
 
 def decode_mobilenet_ssd(nnet_packet):
-    global cnn_model2
     detections = []
     # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate through them
-    for it, e in enumerate(nnet_packet.entries()):
+    for _, e in enumerate(nnet_packet.entries()):
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
         if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0 or e[0]['label'] > len(labels):
@@ -71,34 +70,7 @@ def decode_mobilenet_ssd(nnet_packet):
         # save entry for further usage (as image package may arrive not the same time as nnet package)
         # the lower confidence threshold - the more we get false positives
         if e[0]['confidence'] > config['depth']['confidence_threshold']:
-            # Temporary workaround: create a copy of NN data, due to issues with C++/python bindings
-            copy = {}
-            copy[0] = {}
-            copy[0]['id']         = e[0]['id']
-            copy[0]['left']       = e[0]['left']
-            copy[0]['top']        = e[0]['top']
-            copy[0]['right']      = e[0]['right']
-            copy[0]['bottom']     = e[0]['bottom']
-            copy[0]['label']      = e[0]['label']
-            copy[0]['confidence'] = e[0]['confidence']
-            if config['ai']['calc_dist_to_bb']:
-                copy[0]['distance_x'] = e[0]['distance_x']
-                copy[0]['distance_y'] = e[0]['distance_y']
-                copy[0]['distance_z'] = e[0]['distance_z']
-            landmarks = []
-            if it == 0: # For now we run second-stage only on first detection
-                # landmarks-regression-retail-0009
-                if cnn_model2 == 'landmarks-regression-retail-0009':
-                    for i in range(len(e[1])):
-                        landmarks.append(e[1][i])
-                    landmarks = list(zip(*[iter(landmarks)]*2))
-                # emotions-recognition-retail-0003
-                if cnn_model2 == 'emotions-recognition-retail-0003':
-                    for i in range(len(e[1])):
-                        landmarks.append(e[1][i])
-            copy[0]['landmarks'] = landmarks
-            detections.append(copy)
-
+            detections.append(e)
     return detections
 
 
@@ -129,6 +101,7 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
     
     last_detected = datetime.now()
     # iterate through pre-saved entries & draw rectangle & text on image:
+    iteration = 0
     for e in entries_prev:
         if is_depth:
             pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
@@ -164,14 +137,20 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
 
                 pt_t5 = x1, y1 + 100
                 cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
-                
-        
-        if len(e[0]['landmarks']) != 0:
+
+        # Second-stage NN
+        if iteration == 0: # For now we run second-stage only on first detection
             # landmarks-regression-retail-0009
             if cnn_model2 == 'landmarks-regression-retail-0009':
+                # Decode
+                landmarks = []
+                for i in range(len(e[1])):
+                    landmarks.append(e[1][i])
+                landmarks = list(zip(*[iter(landmarks)]*2))
+                # Show
                 bb_w = x2 - x1
                 bb_h = y2 - y1
-                for i in e[0]['landmarks']:
+                for i in landmarks:
                     try:
                         x = x1 + int(i[0]*bb_w)
                         y = y1 + int(i[1]*bb_h)
@@ -180,13 +159,18 @@ def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
                     cv2.circle(frame, (x,y), 4, (255, 0, 0))
             # emotions-recognition-retail-0003
             if cnn_model2 == 'emotions-recognition-retail-0003':
+                # Decode
+                emotion_data = []
+                for i in range(len(e[1])):
+                    emotion_data.append(e[1][i])
+                # Show
                 pt_t3 = x2-50, y2-10
-                max_confidence = max(e[0]['landmarks'])
+                max_confidence = max(emotion_data)
                 if(max_confidence > 0.7):
-                    emotion = e_states[np.argmax(e[0]['landmarks'])]
+                    emotion = e_states[np.argmax(emotion_data)]
                     if (datetime.now() - last_detected).total_seconds() < 100:
                         cv2.putText(frame, emotion, pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,255, 0), 2)
-                        
+        iteration += 1
     return frame
 
 def decode_age_gender_recognition(nnet_packet):
