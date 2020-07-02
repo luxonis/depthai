@@ -338,11 +338,6 @@ blob_file_config_path = Path(blob_file_config)
 if not blob_file_path.exists():
     cli_print("\nWARNING: NN blob not found in: " + blob_file, PrintColors.WARNING)
     os._exit(1)
-# Temporary, TODO automatically merge the json files
-if cnn_model2 is not None:
-    if args['cnn_model'] != 'face-detection-retail-0004':
-        print("Temporary limitation, first stage should be face-detection-retail-0004, or json's manually modified")
-        os._exit(1)
 
 if not blob_file_config_path.exists():
     cli_print("\nWARNING: NN json not found in: " + blob_file_config, PrintColors.WARNING)
