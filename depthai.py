@@ -143,8 +143,8 @@ if compile_model:
 
 if default_blob:
     #default
-    shave_nr = 4
-    cmx_slices = 4
+    shave_nr = 7
+    cmx_slices = 7
     NCE_nr = 1
 
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
