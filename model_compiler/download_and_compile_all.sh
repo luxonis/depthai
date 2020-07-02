@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 
 SCRIPT_DIR="$(dirname "$0")"
 cd $SCRIPT_DIR
-SCRIPT_DIR=`realpath $SCRIPT_DIR`
+SCRIPT_DIR=`realpath .`
 
 echo_and_run() { echo -e "\$ $* \n" ; "$@" ; }
 
@@ -29,10 +29,13 @@ NN_PATH=`realpath ../resources/nn`
 
 cd $NN_PATH
 for f in *; do
+    if [ -z "$f" ]; then
+        continue
+    fi
     if [ -d "$f" ]; then
         echo_and_run $SCRIPT_DIR/download_and_compile.sh $f $SHAVE_NR $CMX_NR $NCE_NR $CLOUD_COMPILE
         if [ $? != 0 ]; then
-            printf "${RED}Model compile failed!${NC}\n"
+            printf "${RED}Model compile failed with error: $? ${NC}\n"
         fi
     fi
 done
