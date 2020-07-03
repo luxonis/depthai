@@ -18,6 +18,22 @@ SHAVE_NR=$1
 CMX_NR=$2
 NCE_NR=$3
 
+if [ "$NCE_NR" = "2" ]; then 
+cmx_odd=$(($CMX_NR%2))
+shave_odd=$(($SHAVE_NR%2))
+if [ "$cmx_odd" = "1" ]; then
+    printf "${RED}CMX_NR config must be even number when NCE is 2!${NC}\n"
+    exit 1
+fi
+
+if [ "$shave_odd" = "1" ]; then
+    printf "${RED}SHAVE_NR config must be even number when NCE is 2!${NC}\n"
+    exit 1
+fi
+
+fi
+
+
 if [ "$4" = "CLOUD_COMPILE" ] 
 then
 CLOUD_COMPILE="CLOUD_COMPILE"

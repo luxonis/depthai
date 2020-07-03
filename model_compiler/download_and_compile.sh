@@ -28,6 +28,15 @@ else
 VPU_MYRIAD_PLATFORM="VPU_MYRIAD_2480"
 fi
 
+if [ "$NCE_NR" = "2" ]; then 
+CMX_NR_OPT=$(($CMX_NR/2))
+SHAVE_NR_OPT=$(($SHAVE_NR/2))
+else
+CMX_NR_OPT=$CMX_NR
+SHAVE_NR_OPT=$SHAVE_NR
+fi
+
+
 if [ "$5" = "CLOUD_COMPILE" ] 
 then
 CLOUD_COMPILE="yes"
@@ -62,7 +71,7 @@ MODEL_DOWNLOADER_OPTIONS="--precisions FP16 --output_dir $DOWNLOADS_DIR --cache_
 MODEL_DOWNLOADER_PATH="$OPENVINO_PATH/deployment_tools/tools/model_downloader/downloader.py"
 
 
-MYRIAD_COMPILE_OPTIONS="-ip U8 -VPU_MYRIAD_PLATFORM $VPU_MYRIAD_PLATFORM -VPU_NUMBER_OF_SHAVES $SHAVE_NR -VPU_NUMBER_OF_CMX_SLICES $CMX_NR"
+MYRIAD_COMPILE_OPTIONS="-ip U8 -VPU_MYRIAD_PLATFORM $VPU_MYRIAD_PLATFORM -VPU_NUMBER_OF_SHAVES $SHAVE_NR_OPT -VPU_NUMBER_OF_CMX_SLICES $CMX_NR_OPT"
 MYRIAD_COMPILE_PATH="$OPENVINO_PATH/deployment_tools/inference_engine/lib/intel64/myriad_compile"
 
 echo_and_run python3 $MODEL_DOWNLOADER_PATH $MODEL_DOWNLOADER_OPTIONS
@@ -78,10 +87,7 @@ fi
 
 fi
 
-BLOB_SUFFIX='.sh'$SHAVE_NR'cmx'$CMX_NR
-if [ "$NCE_NR" == "0" ]; then
-    BLOB_SUFFIX=$BLOB_SUFFIX"NO_NCE"
-fi
+BLOB_SUFFIX='.sh'$SHAVE_NR'cmx'$CMX_NR'NCE'$NCE_NR
 
 BLOB_OUT=$NN_PATH/$MODEL_NAME/$MODEL_NAME.blob$BLOB_SUFFIX
 
@@ -94,7 +100,7 @@ cd $NN_PATH
 if [ -d "$MODEL_NAME" ]; then
     if [ "$CLOUD_COMPILE" = "yes" ] 
     then
-        echo_and_run python3 $CLOUD_COMPILE_SCRIPT -i $MODEL_NAME -o $BLOB_OUT --shaves $SHAVE_NR --cmx_slices $CMX_NR --NCEs $NCE_NR
+        echo_and_run python3 $CLOUD_COMPILE_SCRIPT -i $MODEL_NAME -o $BLOB_OUT --shaves $SHAVE_NR_OPT --cmx_slices $CMX_NR_OPT --NCEs $NCE_NR
     else
         echo_and_run $MYRIAD_COMPILE_PATH $MYRIAD_COMPILE_OPTIONS -m $DOWNLOADS_DIR/intel/$MODEL_NAME/FP16/$MODEL_NAME.xml -o $BLOB_OUT
     fi
