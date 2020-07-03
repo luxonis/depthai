@@ -9,198 +9,13 @@ from time import time, sleep, monotonic
 
 import cv2
 import numpy as np
-
 import depthai
 
 import consts.resource_paths
 from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
 
-
-
-def show_tracklets(tracklets, frame):
-    # img_h = frame.shape[0]
-    # img_w = frame.shape[1]
-
-    # iterate through pre-saved entries & draw rectangle & text on image:
-    tracklet_nr = tracklets.getNrTracklets()
-
-    for i in range(tracklet_nr):
-        tracklet        = tracklets.getTracklet(i)
-        left_coord      = tracklet.getLeftCoord()
-        top_coord       = tracklet.getTopCoord()
-        right_coord     = tracklet.getRightCoord()
-        bottom_coord    = tracklet.getBottomCoord()
-        tracklet_id     = tracklet.getId()
-        tracklet_label  = labels[tracklet.getLabel()]
-        tracklet_status = tracklet.getStatus()
-
-        # print("left: {0} top: {1} right: {2}, bottom: {3}, id: {4}, label: {5}, status: {6} "\
-        #     .format(left_coord, top_coord, right_coord, bottom_coord, tracklet_id, tracklet_label, tracklet_status))
-        
-        pt1 = left_coord,  top_coord
-        pt2 = right_coord,  bottom_coord
-        color = (255, 0, 0) # bgr
-        cv2.rectangle(frame, pt1, pt2, color)
-
-        middle_pt = (int)(left_coord + (right_coord - left_coord)/2), (int)(top_coord + (bottom_coord - top_coord)/2)
-        cv2.circle(frame, middle_pt, 0, color, -1)
-        cv2.putText(frame, "ID {0}".format(tracklet_id), middle_pt, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-        x1, y1 = left_coord,  bottom_coord
-
-
-        pt_t1 = x1, y1 - 40
-        cv2.putText(frame, tracklet_label, pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-        pt_t2 = x1, y1 - 20
-        cv2.putText(frame, tracklet_status, pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-
-        
-    return frame
-
-def decode_mobilenet_ssd(nnet_packet):
-    detections = []
-    # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate threw them
-    for _, e in enumerate(nnet_packet.entries()):
-        # for MobileSSD entries are sorted by confidence
-        # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
-        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0 or e[0]['label'] > len(labels):
-            break
-        # save entry for further usage (as image package may arrive not the same time as nnet package)
-        detections.append(e)
-    return detections
-
-
-def nn_to_depth_coord(x, y):
-    x_depth = int(nn2depth['off_x'] + x * nn2depth['max_w'])
-    y_depth = int(nn2depth['off_y'] + y * nn2depth['max_h'])
-    return x_depth, y_depth
-
-def average_depth_coord(pt1, pt2):
-    factor = 1 - config['depth']['padding_factor']
-    x_shift = int((pt2[0] - pt1[0]) * factor / 2)
-    y_shift = int((pt2[1] - pt1[1]) * factor / 2)
-    avg_pt1 = (pt1[0] + x_shift), (pt1[1] + y_shift)
-    avg_pt2 = (pt2[0] - x_shift), (pt2[1] - y_shift)
-    return avg_pt1, avg_pt2
-
-def show_mobilenet_ssd(entries_prev, frame, is_depth=0):
-    img_h = frame.shape[0]
-    img_w = frame.shape[1]
-    global config
-    # iterate through pre-saved entries & draw rectangle & text on image:
-    for e in entries_prev:
-        # the lower confidence threshold - the more we get false positives
-        if e[0]['confidence'] > config['depth']['confidence_threshold']:
-            if is_depth:
-                pt1 = nn_to_depth_coord(e[0]['left'],  e[0]['top'])
-                pt2 = nn_to_depth_coord(e[0]['right'], e[0]['bottom'])
-                color = (255, 0, 0) # bgr
-                avg_pt1, avg_pt2 = average_depth_coord(pt1, pt2)
-                cv2.rectangle(frame, avg_pt1, avg_pt2, color)
-                color = (255, 255, 255) # bgr
-            else:
-                pt1 = int(e[0]['left']  * img_w), int(e[0]['top']    * img_h)
-                pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
-                color = (0, 0, 255) # bgr
-
-            x1, y1 = pt1
-
-            cv2.rectangle(frame, pt1, pt2, color)
-            # Handles case where TensorEntry object label is out if range
-            if e[0]['label'] > len(labels):
-                print("Label index=",e[0]['label'], "is out of range. Not applying text to rectangle.")
-            else:
-                pt_t1 = x1, y1 + 20
-                cv2.putText(frame, labels[int(e[0]['label'])], pt_t1, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-                pt_t2 = x1, y1 + 40
-                cv2.putText(frame, '{:.2f}'.format(100*e[0]['confidence']) + ' %', pt_t2, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
-                if config['ai']['calc_dist_to_bb']:
-                    pt_t3 = x1, y1 + 60
-                    cv2.putText(frame, 'x:' '{:7.3f}'.format(e[0]['distance_x']) + ' m', pt_t3, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
-
-                    pt_t4 = x1, y1 + 80
-                    cv2.putText(frame, 'y:' '{:7.3f}'.format(e[0]['distance_y']) + ' m', pt_t4, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
-
-                    pt_t5 = x1, y1 + 100
-                    cv2.putText(frame, 'z:' '{:7.3f}'.format(e[0]['distance_z']) + ' m', pt_t5, cv2.FONT_HERSHEY_SIMPLEX, 0.5, color)
-    return frame
-
-def decode_age_gender_recognition(nnet_packet):
-    detections = []
-    for _, e in enumerate(nnet_packet.entries()):
-        if e[1]["female"] > 0.8 or e[1]["male"] > 0.8:
-            detections.append(e[0]["age"])  
-            if e[1]["female"] > e[1]["male"]:
-                detections.append("female")
-            else:
-                detections.append("male")
-    return detections
-
-def show_age_gender_recognition(entries_prev, frame):
-    # img_h = frame.shape[0]
-    # img_w = frame.shape[1]
-    if len(entries_prev) != 0:
-        age = (int)(entries_prev[0]*100)
-        cv2.putText(frame, "Age: " + str(age), (0, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-        gender = entries_prev[1]
-        cv2.putText(frame, "G: " + str(gender), (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-    frame = cv2.resize(frame, (300, 300))
-    return frame
-
-def decode_emotion_recognition(nnet_packet):
-    detections = []
-    for i in range(len(nnet_packet.entries()[0][0])):
-        detections.append(nnet_packet.entries()[0][0][i])
-    return detections
-
-def show_emotion_recognition(entries_prev, frame):
-    # img_h = frame.shape[0]
-    # img_w = frame.shape[1]
-    e_states = {
-        0 : "neutral",
-        1 : "happy",
-        2 : "sad",
-        3 : "surprise",
-        4 : "anger"
-    }
-    if len(entries_prev) != 0:
-        max_confidence = max(entries_prev)
-        if(max_confidence > 0.7):
-            emotion = e_states[np.argmax(entries_prev)]
-            cv2.putText(frame, emotion, (10, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-    frame = cv2.resize(frame, (300, 300))
-
-    return frame
-
-
-def decode_landmarks_recognition(nnet_packet):
-    landmarks = []
-    for i in range(len(nnet_packet.entries()[0][0])):
-        landmarks.append(nnet_packet.entries()[0][0][i])
-    
-    landmarks = list(zip(*[iter(landmarks)]*2))
-    return landmarks
-
-def show_landmarks_recognition(entries_prev, frame):
-    img_h = frame.shape[0]
-    img_w = frame.shape[1]
-
-    if len(entries_prev) != 0:
-        for i in entries_prev:
-            try:
-                x = int(i[0]*img_h)
-                y = int(i[1]*img_w)
-            except:
-                continue
-            # # print(x,y)
-            cv2.circle(frame, (x,y), 3, (0, 0, 255))
-
-    frame = cv2.resize(frame, (300, 300))
-
-    return frame
+from depthai_helpers.object_tracker_handler import show_tracklets
 
 global args
 try:
@@ -208,7 +23,8 @@ try:
 except:
     os._exit(2)
 
- 
+compile_model = args['shaves'] is not None and args['cmx_slices'] is not None and args['NN_engines']
+
 stream_list = args['streams']
 
 if args['config_overwrite']:
@@ -230,20 +46,31 @@ calc_dist_to_bb = True
 if args['disable_depth']:
     calc_dist_to_bb = False
 
+from depthai_helpers.mobilenet_ssd_handler import decode_mobilenet_ssd, show_mobilenet_ssd
 decode_nn=decode_mobilenet_ssd
 show_nn=show_mobilenet_ssd
 
 if args['cnn_model'] == 'age-gender-recognition-retail-0013':
+    from depthai_helpers.age_gender_recognition_handler import decode_age_gender_recognition, show_age_gender_recognition
     decode_nn=decode_age_gender_recognition
     show_nn=show_age_gender_recognition
     calc_dist_to_bb=False
 
 if args['cnn_model'] == 'emotions-recognition-retail-0003':
+    from depthai_helpers.emotion_recognition_handler import decode_emotion_recognition, show_emotion_recognition
     decode_nn=decode_emotion_recognition
     show_nn=show_emotion_recognition
     calc_dist_to_bb=False
 
+if args['cnn_model'] == 'tiny-yolo':
+    from depthai_helpers.tiny_yolo_v3_handler import decode_tiny_yolo, show_tiny_yolo
+    decode_nn=decode_tiny_yolo
+    show_nn=show_tiny_yolo
+    calc_dist_to_bb=False
+    compile_model=False
+
 if args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
+    from depthai_helpers.landmarks_recognition_handler import decode_landmarks_recognition, show_landmarks_recognition
     decode_nn=decode_landmarks_recognition
     show_nn=show_landmarks_recognition
     calc_dist_to_bb=False
@@ -272,6 +99,7 @@ with open(blob_file_config) as f:
 try:
     labels = data['mappings']['labels']
 except:
+    labels = None
     print("Labels not found in json!")
 
 
@@ -288,12 +116,45 @@ if platform.system() == 'Linux':
         "Disconnect/connect usb cable on host! \n", PrintColors.RED)
         os._exit(1)
 
-if not depthai.init_device(cmd_file, args['device_id']):
-    print("Error initializing device. Try to reset it.")
-    exit(1)
 
+default_blob=True
+if compile_model:
+    default_blob=False
+    shave_nr = args['shaves']
+    cmx_slices = args['cmx_slices']
+    NCE_nr = args['NN_engines']
 
-print('Available streams: ' + str(depthai.get_available_steams()))
+    outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
+
+    if NCE_nr == 2:
+        if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
+            cli_print("shave_nr and cmx_slices config must be even number when NCE is 2!", PrintColors.RED)
+            exit(2)
+        shave_nr_opt = int(shave_nr / 2)
+        cmx_slices_opt = int(cmx_slices / 2)
+    else:
+        shave_nr_opt = int(shave_nr)
+        cmx_slices_opt = int(cmx_slices)
+    
+    if(not Path(outblob_file).exists()):
+        cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
+        ret = depthai.download_blob(args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
+        # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr])
+        print(str(ret))
+        if(ret != 0):
+            cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
+            default_blob=True
+        else:
+            blob_file = outblob_file
+    else:
+        cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
+        blob_file = outblob_file
+
+if default_blob:
+    #default
+    shave_nr = 7
+    cmx_slices = 7
+    NCE_nr = 1
 
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
@@ -316,6 +177,9 @@ config = {
         'blob_file_config': blob_file_config,
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
+        'shaves' : shave_nr,
+        'cmx_slices' : cmx_slices,
+        'NN_engines' : NCE_nr,
     },
     # object tracker
     'ot':
@@ -334,7 +198,23 @@ config = {
         'clear_eeprom': args['clear_eeprom'],
         'override_eeprom': args['override_eeprom'],
     },
-    
+    'camera':
+    {
+        'rgb':
+        {
+            # 3840x2160, 1920x1080
+            # only UHD/1080p/30 fps supported for now
+            'resolution_h': args['rgb_resolution'],
+            'fps': args['rgb_fps'],
+        },
+        'mono':
+        {
+            # 1280x720, 640x400 (binning enabled)
+            # only 720/30 fps supported for now
+            'resolution_h': args['mono_resolution'],
+            'fps': args['mono_fps'],
+        },
+    },
     #'video_config':
     #{
     #    'rateCtrlMode': 'cbr',
@@ -385,6 +265,13 @@ stream_names = [stream if isinstance(stream, str) else stream['name'] for stream
 
 enable_object_tracker = 'object_tracker' in stream_names
 
+
+if not depthai.init_device(cmd_file, args['device_id']):
+    print("Error initializing device. Try to reset it.")
+    exit(1)
+
+print('Available streams: ' + str(depthai.get_available_steams()))
+
 # create the pipeline, here is the first connection with the device
 p = depthai.create_pipeline(config=config)
 
@@ -432,6 +319,8 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
+        frame_count["metaout"] += 1
+
         nnet_prev["nnet_source"] = nnet_packet
         nnet_prev["entries_prev"] = decode_nn(nnet_packet)
 
@@ -451,9 +340,9 @@ while True:
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(nnet_prev["entries_prev"], frame)
+            nn_frame = show_nn(nnet_prev["entries_prev"], frame, labels=labels, config=config)
             if enable_object_tracker and tracklets is not None:
-                nn_frame = show_tracklets(tracklets, nn_frame)
+                nn_frame = show_tracklets(tracklets, nn_frame, labels)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.imshow('previewout', nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
@@ -461,7 +350,7 @@ while True:
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
-                show_nn(nnet_prev["entries_prev"], frame_bgr, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame_bgr, labels=labels, config=config, nn2depth=nn2depth)
             cv2.imshow(packet.stream_name, frame_bgr)
         elif packet.stream_name.startswith('depth'):
             frame = packetData
@@ -482,7 +371,7 @@ while True:
                 cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
             if args['draw_bb_depth']:
-                show_nn(nnet_prev["entries_prev"], frame, is_depth=True)
+                show_nn(nnet_prev["entries_prev"], frame, labels=labels, config=config, nn2depth=nn2depth)
             cv2.imshow(packet.stream_name, frame)
 
         elif packet.stream_name == 'jpegout':
@@ -511,6 +400,7 @@ while True:
     t_curr = time()
     if t_start + 1.0 < t_curr:
         t_start = t_curr
+        # print("metaout fps: " + str(frame_count_prev["metaout"]))
 
         for s in stream_names:
             frame_count_prev[s] = frame_count[s]
