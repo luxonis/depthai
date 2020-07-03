@@ -18,7 +18,7 @@ SHAVE_NR=$1
 CMX_NR=$2
 NCE_NR=$3
 
-if [ "$NCE_NR" = "2" ]; then 
+if [ "$NCE_NR" = "2" ]; then
 cmx_odd=$(($CMX_NR%2))
 shave_odd=$(($SHAVE_NR%2))
 if [ "$cmx_odd" = "1" ]; then
