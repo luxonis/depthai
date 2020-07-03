@@ -48,8 +48,8 @@ def parse_args():
                         help="Number of shaves used by NN.")
     parser.add_argument("-cmx", "--cmx_slices", default=None, type=int,
                         help="Number of cmx slices used by NN.")
-    parser.add_argument("-NCE", "--NCEs", default=None, type=int,
-                        help="Number of NCEs used by NN.")
+    parser.add_argument("-nce", "--NN_engines", default=None, type=int,
+                        help="Number of NN_engines used by NN.")
     parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int,
                         help="RGB cam res config: 1080 or 2160 are supported.")
     parser.add_argument("-rgbf", "--rgb_fps", default=30, type=int,
