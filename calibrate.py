@@ -147,7 +147,17 @@ class Main:
                     'left_to_right_distance_cm': self.args['baseline'],
                     'override_eeprom': True,
                     'stereo_center_crop': True,
-                }
+                },
+            'camera':
+                {
+                    'mono':
+                    {
+                        # 1280x720, 640x400 (binning enabled)
+                        # only 720/30 fps supported for now
+                        'resolution_h': 720,
+                        'fps': 30,
+                    },
+                },
         }
         if self.args['board']:
             board_path = Path(self.args['board'])
