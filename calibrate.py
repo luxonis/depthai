@@ -151,12 +151,12 @@ class Main:
             'camera':
                 {
                     'mono':
-                        {
-                            # 1280x720, 1280x800, 640x400 (binning enabled)
-                            'resolution_h': 720,
-                            'fps': 30.0,
-                        },
-                }
+                    {
+                        # 1280x720, 1280x800, 640x400 (binning enabled)
+                        'resolution_h': 720,
+                        'fps': 30.0,
+                    },
+                },
         }
         if self.args['board']:
             board_path = Path(self.args['board'])
