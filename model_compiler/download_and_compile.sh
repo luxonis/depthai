@@ -28,7 +28,7 @@ else
 VPU_MYRIAD_PLATFORM="VPU_MYRIAD_2480"
 fi
 
-if [ "$NCE_NR" = "2" ]; then 
+if [ "$NCE_NR" = "2" ]; then
 CMX_NR_OPT=$(($CMX_NR/2))
 SHAVE_NR_OPT=$(($SHAVE_NR/2))
 else
