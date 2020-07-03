@@ -124,13 +124,22 @@ if compile_model:
     cmx_slices = args['cmx_slices']
     NCE_nr = args['NCEs']
 
-    outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices)
-    if NCE_nr == 0:
-        outblob_file = outblob_file + "NO_NCE"
+    outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
+
+    if NCE_nr == 2:
+        if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
+            cli_print("shave_nr and cmx_slices config must be even number when NCE is 2!", PrintColors.RED)
+            exit(2)
+        shave_nr_opt = int(shave_nr / 2)
+        cmx_slices_opt = int(cmx_slices / 2)
+    else:
+        shave_nr_opt = int(shave_nr)
+        cmx_slices_opt = int(cmx_slices)
+    
     if(not Path(outblob_file).exists()):
         cli_print("Compiling model for {0} shaves, {1} slices and {2} NCEs ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-        ret = depthai.download_blob(args['cnn_model'], shave_nr, cmx_slices, NCE_nr, outblob_file)
-        # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr, cmx_slices, NCE_nr])
+        ret = depthai.download_blob(args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
+        # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr])
         print(str(ret))
         if(ret != 0):
             cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
@@ -392,7 +401,6 @@ while True:
     if t_start + 1.0 < t_curr:
         t_start = t_curr
         # print("metaout fps: " + str(frame_count_prev["metaout"]))
-
 
         for s in stream_names:
             frame_count_prev[s] = frame_count[s]
