@@ -27,7 +27,7 @@ args = vars(parse_args())
 
 PLATFORM="VPU_MYRIAD_2450" if args['NCEs'] == 0 else "VPU_MYRIAD_2480"
 
-url = "http://69.164.214.171:8080/"
+url = "http://luxonis.com:8080/"
 payload = {
     'compile_type': 'zoo',
     'model_name': args['input'],
