@@ -138,7 +138,10 @@ class Main:
             'ai':
                 {
                     'blob_file': consts.resource_paths.blob_fpath,
-                    'blob_file_config': consts.resource_paths.blob_config_fpath
+                    'blob_file_config': consts.resource_paths.blob_config_fpath,
+                    'shaves' : 7,
+                    'cmx_slices' : 7,
+                    'NN_engines' : 1,
                 },
             'board_config':
                 {
