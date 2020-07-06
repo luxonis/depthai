@@ -61,7 +61,6 @@ def decode_mobilenet_ssd(nnet_packet):
     detections = []
     # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate threw them
     for _, e in enumerate(nnet_packet.entries()):
-#        print("asdfasdf")
 #        print(e[0]['confidence'])
         # for MobileSSD entries are sorted by confidence
         # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
@@ -206,19 +205,18 @@ def show_landmarks_recognition(entries_prev, frame):
 def get_detections_april(passed_april_packets):
     detections = []
     for detection in april_packet.detections:
-        print("detection.id: " + str(detection.id))
-        print("detection.hamming: " + str(detection.hamming))
-        print("detection.decision_margin: " + str(detection.decision_margin))
         center=detection.getCenter()
-        print("detection.getCenter: " + str(center[0]) + ", " + str(center[1]))
         corners=detection.getCorners()
-        print("detection.getCorners: " + str(corners[0][0]) + ", " + str(corners[0][1]))
-        print("detection.getCorners: " + str(corners[1][0]) + ", " + str(corners[1][1]))
-        print("detection.getCorners: " + str(corners[2][0]) + ", " + str(corners[2][1]))
-        print("detection.getCorners: " + str(corners[3][0]) + ", " + str(corners[3][1]))
         detections.append(detection)
-
-    print("\n")
+#        print("detection.id: " + str(detection.id))
+#        print("detection.hamming: " + str(detection.hamming))
+#        print("detection.decision_margin: " + str(detection.decision_margin))
+#        print("detection.getCenter: " + str(center[0]) + ", " + str(center[1]))
+#        print("detection.getCorners: " + str(corners[0][0]) + ", " + str(corners[0][1]))
+#        print("detection.getCorners: " + str(corners[1][0]) + ", " + str(corners[1][1]))
+#        print("detection.getCorners: " + str(corners[2][0]) + ", " + str(corners[2][1]))
+#        print("detection.getCorners: " + str(corners[3][0]) + ", " + str(corners[3][1]))
+#    print("\n")
     
     return detections
 
@@ -524,7 +522,6 @@ while True:
         nnet_prev["entries_prev"] = decode_nn(nnet_packet)
 
     for april_packet in april_packets:
-        print("detections.size: " + str(april_packet.size))
         april_prev = get_detections_april(april_packets)
 
     for packet in data_packets:
