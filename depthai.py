@@ -349,7 +349,7 @@ while True:
 
         camera = nnet_packet.getMetadata().getCameraName()
         nnet_prev["nnet_source"][camera] = nnet_packet
-        nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet)
+        nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet, config=config)
 
     for packet in data_packets:
         window_name = packet.stream_name
