@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def decode_emotion_recognition(nnet_packet):
+def decode_emotion_recognition(nnet_packet, **kwargs):
     detections = []
     for i in range(len(nnet_packet.entries()[0][0])):
         detections.append(nnet_packet.entries()[0][0][i])
