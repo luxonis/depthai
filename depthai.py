@@ -523,7 +523,6 @@ while True:
         nnet_prev["nnet_source"] = nnet_packet
         nnet_prev["entries_prev"] = decode_nn(nnet_packet)
 
-    print("numPackets: " + str(len(april_packets)))
     for april_packet in april_packets:
         print("detections.size: " + str(april_packet.size))
         april_prev = get_detections_april(april_packets)

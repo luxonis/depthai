@@ -83,7 +83,10 @@ def parse_args():
                         help=("Define which streams to enable \n"
                               "Format: stream_name or stream_name,max_fps \n"
                               "Example: -s metaout previewout \n"
-                              "Example: -s metaout previewout,10 depth_sipp,10"))
+                              "Example: -s metaout previewout,10 depth_sipp,10 \n"
+                              "Format: if using the aprilout stream, you can specify tag type after aprilout stream. \n"
+                              "The default is 36h11\n"
+                              "Example: -s right aprilout,25h9"))
     parser.add_argument("-v", "--video", default=None, type=str, required=False,
                         help="Path where to save video stream (existing file will be overwritten)")
 
@@ -108,12 +111,14 @@ def stream_type(option):
     max_fps = None
     option_list = option.split(",")
     option_args = len(option_list)
+
     if option_args not in [1, 2]:
         msg_string = "{0} format is invalid. See --help".format(option)
         cli_print(msg_string, PrintColors.WARNING)
         raise ValueError(msg_string)
 
-    stream_choices = ["metaout", "previewout", "jpegout", "left", "right", "depth_sipp", "disparity", "depth_color_h", "meta_d2h", "object_tracker"]
+    stream_choices = ["metaout", "previewout", "jpegout", "left", "right", "depth_sipp", "disparity", "depth_color_h", "meta_d2h", "object_tracker", "aprilout"]
+    apriltag_types = ["16h5", "25h9", "36h11", "cir21h7", "cir49h12", "cust48h12", "stand41h12", "stand52h13"]
     stream_name = option_list[0]
     if stream_name not in stream_choices:
         msg_string = "{0} is not in available stream list: \n{1}".format(stream_name, stream_choices)
@@ -122,6 +127,15 @@ def stream_type(option):
 
     if option_args == 1:
         stream_dict = {"name": stream_name}
+
+    elif stream_name == 'aprilout':
+        april_type = option_list[1];
+        if april_type not in apriltag_types:
+            msg_string = "{0} is not a valid apriltag type: \n{1}".format(option_list[1], apriltag_types)
+            cli_print(msg_string, PrintColors.WARNING)
+            raise ValueError(msg_string)
+        else:
+            stream_dict = {"name": stream_name, "april_type": april_type}
     else:
         try:
             max_fps = float(option_list[1])
@@ -130,4 +144,5 @@ def stream_type(option):
             cli_print(msg_string, PrintColors.WARNING)
 
         stream_dict = {"name": stream_name, "max_fps": max_fps}
+
     return stream_dict
