@@ -140,8 +140,6 @@ if compile_model:
     cmx_slices = args['cmx_slices']
     NCE_nr = args['NN_engines']
 
-    outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
-
     if NCE_nr == 2:
         if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
             cli_print("shave_nr and cmx_slices config must be even number when NCE is 2!", PrintColors.RED)
@@ -151,7 +149,9 @@ if compile_model:
     else:
         shave_nr_opt = int(shave_nr)
         cmx_slices_opt = int(cmx_slices)
-    
+
+    outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
+
     if(not Path(outblob_file).exists()):
         cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
         ret = depthai.download_blob(args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
@@ -165,6 +165,22 @@ if compile_model:
     else:
         cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
         blob_file = outblob_file
+
+    if args['cnn_model2']:
+        outblob_file = blob_file2 + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
+        if(not Path(outblob_file).exists()):
+            cli_print("Compiling model2 for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
+            ret = depthai.download_blob(args['cnn_model2'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
+            # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr])
+            print(str(ret))
+            if(ret != 0):
+                cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
+                default_blob=True
+            else:
+                blob_file2 = outblob_file
+        else:
+            cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
+            blob_file2 = outblob_file
 
 if default_blob:
     #default
