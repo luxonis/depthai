@@ -400,11 +400,11 @@ while True:
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
+                camera = args['cnn_camera']
                 if packet.stream_name == 'disparity':
-                    camera = args['cnn_camera']
                     if camera == 'left_right':
                         camera = 'right'
-                else:
+                elif camera != 'rgb':
                     camera = packet.getMetadata().getCameraName()
                 show_nn(nnet_prev["entries_prev"][camera], frame_bgr, labels=labels, config=config, nn2depth=nn2depth)
             cv2.imshow(window_name, frame_bgr)
