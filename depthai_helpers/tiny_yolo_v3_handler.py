@@ -116,7 +116,7 @@ def intersection_over_union(box_1, box_2):
     return area_of_overlap / area_of_union
 
 
-def decode_tiny_yolo(nnet_packet):
+def decode_tiny_yolo(nnet_packet, **kwargs):
     raw_detections = nnet_packet.get_tensor("out")
     raw_detections.dtype = np.float16
     NN_outputs = nnet_packet.entries()[0]
