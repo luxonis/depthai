@@ -55,9 +55,9 @@ def parse_args():
     parser.add_argument("-rgbf", "--rgb_fps", default=30, type=int,
                         help="RGB cam fps config: 30 fps is supported.")
     parser.add_argument("-monor", "--mono_resolution", default=720, type=int,
-                        help="Mono cam res config: 720 or 480 are supported.")
-    parser.add_argument("-monof", "--mono_fps", default=30, type=int,
-                        help="Mono cam fps config: 30 fps is supported.")
+                        help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400 - binning. Default: %(default)s")
+    parser.add_argument("-monof", "--mono_fps", default=30.0, type=float,
+                        help="Mono cam fps: 1.0..60.0 for 720 or 800, 1.0..120.0 for 400. Default: %(default)s")
     parser.add_argument("-fv", "--field-of-view", default=None, type=float,
                         help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
     parser.add_argument("-rfv", "--rgb-field-of-view", default=None, type=float,
