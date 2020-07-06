@@ -322,12 +322,16 @@ frame_count_prev = {}
 nnet_prev = {}
 nnet_prev["entries_prev"] = {}
 nnet_prev["nnet_source"] = {}
+frame_count['nn'] = {}
+frame_count_prev['nn'] = {}
 for s in stream_names:
     stream_windows = []
     if s == 'previewout':
         for cam in {'rgb', 'left', 'right'}:
             nnet_prev["entries_prev"][cam] = []
             nnet_prev["nnet_source"][cam] = []
+            frame_count['nn'][cam] = 0
+            frame_count_prev['nn'][cam] = 0
             stream_windows.append(s + '-' + cam)
     else:
         stream_windows.append(s)
@@ -361,11 +365,11 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        frame_count["metaout"] += 1
-
         camera = nnet_packet.getMetadata().getCameraName()
         nnet_prev["nnet_source"][camera] = nnet_packet
         nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet, config=config)
+        frame_count['metaout'] += 1
+        frame_count['nn'][camera] += 1
 
     for packet in data_packets:
         window_name = packet.stream_name
@@ -389,6 +393,7 @@ while True:
             if enable_object_tracker and tracklets is not None:
                 nn_frame = show_tracklets(tracklets, nn_frame, labels)
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.putText(nn_frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
             cv2.imshow(window_name, nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packetData
@@ -461,6 +466,8 @@ while True:
             if s == 'previewout':
                 for cam in {'rgb', 'left', 'right'}:
                     stream_windows.append(s + '-' + cam)
+                    frame_count_prev['nn'][cam] = frame_count['nn'][cam]
+                    frame_count['nn'][cam] = 0
             else:
                 stream_windows.append(s)
             for w in stream_windows:
