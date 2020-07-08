@@ -58,6 +58,8 @@ def parse_args():
                         help="Mono cam res config: 720 or 480 are supported.")
     parser.add_argument("-monof", "--mono_fps", default=30, type=int,
                         help="Mono cam fps config: 30 fps is supported.")
+    parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=disparity_ct_type,
+                        help="Disparity_confidence_threshold.")
     parser.add_argument("-fv", "--field-of-view", default=None, type=float,
                         help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
     parser.add_argument("-rfv", "--rgb-field-of-view", default=None, type=float,
@@ -145,3 +147,15 @@ def stream_type(option):
 
         stream_dict = {"name": stream_name, "max_fps": max_fps}
     return stream_dict
+
+def disparity_ct_type(value):
+    try: 
+        value = int(value)
+    except ValueError:
+        raise ValueError("Confidence threshold should be INT")
+    if value < 0 or value > 255:
+        msg_string = "{0} disparity confidence threshold is not in interval [0,255]. See --help".format(value)
+        cli_print(msg_string, PrintColors.WARNING)
+        raise ValueError(msg_string)
+    
+    return value
