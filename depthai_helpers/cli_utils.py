@@ -51,13 +51,15 @@ def parse_args():
     parser.add_argument("-nce", "--NN_engines", default=None, type=int,
                         help="Number of NN_engines used by NN.")
     parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int,
-                        help="RGB cam res height: (1920x)1080 or (3840x)2160. Default: %(default)s")
+                        help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056)x3040. Default: %(default)s")
     parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float,
                         help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
     parser.add_argument("-monor", "--mono_resolution", default=720, type=int,
                         help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400 - binning. Default: %(default)s")
     parser.add_argument("-monof", "--mono_fps", default=30.0, type=float,
                         help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
+    parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=disparity_ct_type,
+                        help="Disparity_confidence_threshold.")
     parser.add_argument("-fv", "--field-of-view", default=None, type=float,
                         help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
     parser.add_argument("-rfv", "--rgb-field-of-view", default=None, type=float,
@@ -149,3 +151,15 @@ def stream_type(option):
 
         stream_dict = {"name": stream_name, "max_fps": max_fps}
     return stream_dict
+
+def disparity_ct_type(value):
+    try: 
+        value = int(value)
+    except ValueError:
+        raise ValueError("Confidence threshold should be INT")
+    if value < 0 or value > 255:
+        msg_string = "{0} disparity confidence threshold is not in interval [0,255]. See --help".format(value)
+        cli_print(msg_string, PrintColors.WARNING)
+        raise ValueError(msg_string)
+    
+    return value

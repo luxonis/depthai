@@ -350,6 +350,19 @@ def reset_process_wd():
 reset_process_wd()
 
 
+def on_trackbar_change(value):
+    depthai.send_DisparityConfidenceThreshold(value)
+    return
+
+for stream in stream_names:
+    if stream in ["disparity", "depth_color_h", "depth_sipp"]:
+        cv2.namedWindow(stream)
+        trackbar_name = 'Disparity confidence'
+        conf_thr_slider_min = 0
+        conf_thr_slider_max = 255
+        cv2.createTrackbar(trackbar_name, stream, conf_thr_slider_min, conf_thr_slider_max, on_trackbar_change)
+        cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
+
 while True:
     # retreive data from the device
     # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
