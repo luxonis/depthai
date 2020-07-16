@@ -6,7 +6,7 @@ __Documentation is available at [https://docs.luxonis.com](https://docs.luxonis.
 
 ## Python modules
 
-DepthAI requites [numpy](https://numpy.org/) and [opencv-python](https://pypi.org/project/opencv-python/). To get the versions of these packages you need for DepthAI, use pip: `pip install -r requirements.txt`
+DepthAI requites [numpy](https://numpy.org/) and [opencv-python](https://pypi.org/project/opencv-python/). To get the versions of these packages you need for DepthAI, use pip: `pip3 install -r requirements.txt`
 
 Files with `.so` extension are the python modules:  
 - `depthai.cpython-36m-x86_64-linux-gnu.so` built for Ubuntu 18.04 & Python 3.6  
