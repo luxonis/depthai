@@ -138,7 +138,10 @@ class Main:
             'ai':
                 {
                     'blob_file': consts.resource_paths.blob_fpath,
-                    'blob_file_config': consts.resource_paths.blob_config_fpath
+                    'blob_file_config': consts.resource_paths.blob_config_fpath,
+                    'shaves' : 7,
+                    'cmx_slices' : 7,
+                    'NN_engines' : 1,
                 },
             'board_config':
                 {
@@ -147,7 +150,16 @@ class Main:
                     'left_to_right_distance_cm': self.args['baseline'],
                     'override_eeprom': True,
                     'stereo_center_crop': True,
-                }
+                },
+            'camera':
+                {
+                    'mono':
+                    {
+                        # 1280x720, 1280x800, 640x400 (binning enabled)
+                        'resolution_h': 720,
+                        'fps': 30.0,
+                    },
+                },
         }
         if self.args['board']:
             board_path = Path(self.args['board'])
