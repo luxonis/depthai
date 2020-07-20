@@ -302,7 +302,20 @@ if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] o
     exit(2)
     # del config["streams"][config['streams'].index('depth_sipp')]
 
-
+# Append video stream if video recording was requested and stream is not already specified
+video_file = None
+if args['video'] is not None:
+    
+    # open video file
+    try:
+        video_file = open(args['video'], 'wb')
+        if config['streams'].count('video') == 0:
+            config['streams'].append('video')
+    except IOError:
+        print("Error: couldn't open video file for writing. Disabled video output stream")
+        if config['streams'].count('video') == 1:
+            config['streams'].remove('video')
+    
 
 # Create a list of enabled streams ()
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in stream_list]
@@ -328,10 +341,6 @@ if p is None:
 
 nn2depth = device.get_nn_to_depth_bbox_mapping()
 
-
-nnet_prev = {}
-nnet_prev["entries_prev"] = {}
-nnet_prev["nnet_source"] = {}
 
 t_start = time()
 frame_count = {}
@@ -538,7 +547,7 @@ while True:
 
 
 del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
-device.deinit_device()
+del device
 
 # Close video output file if was opened
 if video_file is not None:
