@@ -145,6 +145,13 @@ if platform.system() == 'Linux':
         "Disconnect/connect usb cable on host! \n", PrintColors.RED)
         os._exit(1)
 
+if args['cnn_camera'] == 'left_right':
+    if args['NN_engines'] is None:
+        args['NN_engines'] = 2
+        args['shaves'] = 6 if args['shaves'] is None else args['shaves'] - args['shaves'] % 2
+        args['cmx_slices'] = 6 if args['cmx_slices'] is None else args['cmx_slices'] - args['cmx_slices'] % 2
+        compile_model = True
+        cli_print('Running NN on both cams requires 2 NN engines!', PrintColors.RED)
 
 default_blob=True
 if compile_model:

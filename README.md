@@ -7,9 +7,9 @@ __Documentation is available at [https://docs.luxonis.com](https://docs.luxonis.
 ## Python modules (Dependencies)
 
 DepthAI Demo requires [numpy](https://numpy.org/), [opencv-python](https://pypi.org/project/opencv-python/) and [depthai](https://github.com/luxonis/depthai-api). 
-To get the versions of these packages you need for the program, use pip: (Make sure pip is upgraded: `pip install -U pip`)
+To get the versions of these packages you need for the program, use pip: (Make sure pip is upgraded: ` python3 -m pip install -U pip`)
 ```
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt 
 ```
 
 ## Examples
