@@ -37,3 +37,5 @@ depthai.calib
 *.mkv
 *.mp4
 *.blob.sh*cmx*
+*.cmd
+*.so
