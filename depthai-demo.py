@@ -16,6 +16,7 @@ print('Using depthai module from: ', depthai.__file__)
 import consts.resource_paths
 from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
+from depthai_helpers.model_downloader import download_model
 
 from depthai_helpers.object_tracker_handler import show_tracklets
 
@@ -174,9 +175,7 @@ if compile_model:
 
     if(not Path(outblob_file).exists()):
         cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-        ret = depthai.download_model(args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
-        # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr])
-        print(str(ret))
+        ret = download_model(args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
         if(ret != 0):
             cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
             default_blob=True
@@ -190,9 +189,7 @@ if compile_model:
         outblob_file = blob_file2 + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
         if(not Path(outblob_file).exists()):
             cli_print("Compiling model2 for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-            ret = depthai.download_model(args['cnn_model2'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
-            # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr])
-            print(str(ret))
+            ret = download_model(args['cnn_model2'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
             if(ret != 0):
                 cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
                 default_blob=True
