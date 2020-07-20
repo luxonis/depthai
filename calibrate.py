@@ -155,10 +155,9 @@ class Main:
                 {
                     'mono':
                     {
-                        # 1280x720, 640x400 (binning enabled)
-                        # only 720/30 fps supported for now
+                        # 1280x720, 1280x800, 640x400 (binning enabled)
                         'resolution_h': 720,
-                        'fps': 30,
+                        'fps': 30.0,
                     },
                 },
         }
