@@ -51,13 +51,13 @@ def parse_args():
     parser.add_argument("-nce", "--NN_engines", default=None, type=int,
                         help="Number of NN_engines used by NN.")
     parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int,
-                        help="RGB cam res config: 1080 or 2160 are supported.")
-    parser.add_argument("-rgbf", "--rgb_fps", default=30, type=int,
-                        help="RGB cam fps config: 30 fps is supported.")
+                        help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056)x3040. Default: %(default)s")
+    parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float,
+                        help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
     parser.add_argument("-monor", "--mono_resolution", default=720, type=int,
-                        help="Mono cam res config: 720 or 480 are supported.")
-    parser.add_argument("-monof", "--mono_fps", default=30, type=int,
-                        help="Mono cam fps config: 30 fps is supported.")
+                        help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400 - binning. Default: %(default)s")
+    parser.add_argument("-monof", "--mono_fps", default=30.0, type=float,
+                        help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
     parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=disparity_ct_type,
                         help="Disparity_confidence_threshold.")
     parser.add_argument("-fv", "--field-of-view", default=None, type=float,
@@ -85,6 +85,10 @@ def parse_args():
                         help="Force usb2 connection")
     parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str,
                         help="Cnn model to run on DepthAI")
+    parser.add_argument("-cnn2", "--cnn_model2", default="", type=str,
+                        help="Cnn model to run on DepthAI for second-stage inference")
+    parser.add_argument('-cam', "--cnn_camera", default='rgb', choices=['rgb', 'left', 'right', 'left_right'],
+                        help='Choose camera input for CNN (default: %(default)s)')
     parser.add_argument("-dd", "--disable_depth", default=False, action="store_true",
                         help="Disable depth calculation on CNN models with bounding box output")
     parser.add_argument("-bb", "--draw-bb-depth", default=False, action="store_true",
