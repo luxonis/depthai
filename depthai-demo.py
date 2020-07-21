@@ -350,20 +350,27 @@ nnet_prev["entries_prev"] = {}
 nnet_prev["nnet_source"] = {}
 frame_count['nn'] = {}
 frame_count_prev['nn'] = {}
+
+NN_cams = {'rgb', 'left', 'right'}
+
+for cam in NN_cams:
+    nnet_prev["entries_prev"][cam] = []
+    nnet_prev["nnet_source"][cam] = []
+    frame_count['nn'][cam] = 0
+    frame_count_prev['nn'][cam] = 0
+
+stream_windows = []
 for s in stream_names:
-    stream_windows = []
     if s == 'previewout':
-        for cam in {'rgb', 'left', 'right'}:
-            nnet_prev["entries_prev"][cam] = []
-            nnet_prev["nnet_source"][cam] = []
-            frame_count['nn'][cam] = 0
-            frame_count_prev['nn'][cam] = 0
+        for cam in NN_cams:
             stream_windows.append(s + '-' + cam)
     else:
         stream_windows.append(s)
-    for w in stream_windows:
-        frame_count[w] = 0
-        frame_count_prev[w] = 0
+
+for w in stream_windows:
+    frame_count[w] = 0
+    frame_count_prev[w] = 0
+
 tracklets = None
 
 process_watchdog_timeout=10 #seconds
@@ -517,18 +524,18 @@ while True:
         t_start = t_curr
         # print("metaout fps: " + str(frame_count_prev["metaout"]))
 
+        stream_windows = []
         for s in stream_names:
-            stream_windows = []
             if s == 'previewout':
-                for cam in {'rgb', 'left', 'right'}:
+                for cam in NN_cams:
                     stream_windows.append(s + '-' + cam)
                     frame_count_prev['nn'][cam] = frame_count['nn'][cam]
                     frame_count['nn'][cam] = 0
             else:
                 stream_windows.append(s)
-            for w in stream_windows:
-                frame_count_prev[w] = frame_count[w]
-                frame_count[w] = 0
+        for w in stream_windows:
+            frame_count_prev[w] = frame_count[w]
+            frame_count[w] = 0
 
     key = cv2.waitKey(1)
     if key == ord('c'):
