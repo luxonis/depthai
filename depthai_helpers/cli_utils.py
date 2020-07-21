@@ -95,6 +95,8 @@ def parse_args():
                         help="Draw the bounding boxes over the left/right/depth* streams")
     parser.add_argument("-ff", "--full-fov-nn", default=False, action="store_true",
                         help="Full RGB FOV for NN, not keeping the aspect ratio")
+    parser.add_argument("-sync", "--sync-video-meta", default=False, action="store_true",
+                        help="Synchronize 'previewout' and 'metaout' streams")
     parser.add_argument("-s", "--streams",
                         nargs="+",
                         type=stream_type,
