@@ -9,16 +9,9 @@ __Documentation is available at [https://docs.luxonis.com](https://docs.luxonis.
 DepthAI requires [numpy](https://numpy.org/) and [opencv-python](https://pypi.org/project/opencv-python/). To get the versions of these packages you need for DepthAI, use pip: `python3 -m pip install -r requirements.txt`
 
 Optional:
-For command line autocomplete when pressing TAB:
-On MAC OSX:
-`autoload -U bashcompinit`
-`bashcompinit`
-Add to .zshrc:
-`echo ~/.zshrc >> eval "$(register-python-argcomplete depthai.py)"`
-
-On other Linux based platforms:
+For command line autocomplete when pressing TAB, only bash interpreter supported now:
 Add to .bashrc:
-`echo ~/.bashrc >> eval "$(register-python-argcomplete depthai.py)"`
+`echo 'eval "$(register-python-argcomplete depthai.py)"' >> ~/.bashrc`
 
 If you use any other interpreter: https://kislyuk.github.io/argcomplete/
 
