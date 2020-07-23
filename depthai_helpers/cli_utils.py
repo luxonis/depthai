@@ -15,7 +15,7 @@ def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir)
             if os.path.isdir(os.path.join(a_dir, name))]
 
-stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth_sipp", "disparity", "depth_color_h", "meta_d2h", "object_tracker")
+stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth_raw", "disparity", "disparity_color", "meta_d2h", "object_tracker")
 CNN_choices = get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
 
 class RangeFloat(object):
@@ -63,9 +63,9 @@ def parse_args():
     Example usage:
 
     ## Show the depth stream:
-    python3 test.py -s depth_sipp,12
+    python3 test.py -s depth_raw,12
     ## Show the depth stream and NN output:
-    python3 test.py -s metaout previewout,12 depth_sipp,12
+    python3 test.py -s metaout previewout,12 depth_raw,12
     """
     parser = argparse.ArgumentParser(epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-co", "--config_overwrite", default=None,
@@ -196,7 +196,13 @@ def stream_type(option):
         cli_print(msg_string, PrintColors.WARNING)
         raise ValueError(msg_string)
 
+    deprecated_choices = ("depth_sipp", "depth_color_h")
+    transition_map = {"depth_sipp" : "disparity_color", "depth_color_h" : "disparity_color"}
     stream_name = option_list[0]
+    if stream_name in deprecated_choices:
+        cli_print("Stream option " + stream_name + " is deprecated, use: " + transition_map[stream_name], PrintColors.WARNING)
+        stream_name = transition_map[stream_name]
+
     if stream_name not in stream_choices:
         msg_string = "{0} is not in available stream list: \n{1}".format(stream_name, stream_choices)
         cli_print(msg_string, PrintColors.WARNING)
