@@ -198,10 +198,10 @@ if default_blob:
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
     # Possible streams:
-    # ['left', 'right','previewout', 'metaout', 'depth_sipp', 'disparity', 'depth_color_h']
+    # ['left', 'right','previewout', 'metaout', 'depth_raw', 'disparity', 'disparity_color']
     # If "left" is used, it must be in the first position.
     # To test depth use:
-    # 'streams': [{'name': 'depth_sipp', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
+    # 'streams': [{'name': 'depth_raw', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
     'streams': stream_list,
     'depth':
     {
@@ -282,10 +282,9 @@ if args['config_overwrite'] is not None:
     config = utils.merge(args['config_overwrite'],config)
     print("Merged Pipeline config with overwrite",config)
 
-if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] or 'depth_mm_h' in config['streams']):
-    print('ERROR: depth_sipp is mutually exclusive with depth_color_h')
+if 'depth_raw' in config['streams'] and ('disparity_color' in config['streams'] or 'disparity' in config['streams']):
+    print('ERROR: depth_raw is mutually exclusive with disparity_color')
     exit(2)
-    # del config["streams"][config['streams'].index('depth_sipp')]
 
 # Append video stream if video recording was requested and stream is not already specified
 video_file = None
@@ -368,7 +367,7 @@ def on_trackbar_change(value):
     return
 
 for stream in stream_names:
-    if stream in ["disparity", "depth_color_h", "depth_sipp"]:
+    if stream in ["disparity", "disparity_color", "depth_raw"]:
         cv2.namedWindow(stream)
         trackbar_name = 'Disparity confidence'
         conf_thr_slider_min = 0
@@ -434,7 +433,7 @@ while True:
                     camera = packet.getMetadata().getCameraName()
                 show_nn(nnet_prev["entries_prev"][camera], frame_bgr, labels=labels, config=config, nn2depth=nn2depth)
             cv2.imshow(window_name, frame_bgr)
-        elif packet.stream_name.startswith('depth'):
+        elif packet.stream_name.startswith('depth') or packet.stream_name == 'disparity_color':
             frame = packetData
 
             if len(frame.shape) == 2:
