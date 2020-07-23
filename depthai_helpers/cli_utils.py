@@ -11,12 +11,46 @@ from enum import Enum
 import os
 import consts.resource_paths
 
-def get_immediate_subdirectories(a_dir):
+def _get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir)
             if os.path.isdir(os.path.join(a_dir, name))]
 
-stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth_raw", "disparity", "disparity_color", "meta_d2h", "object_tracker")
-CNN_choices = get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
+_stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth_raw", "disparity", "disparity_color", "meta_d2h", "object_tracker")
+_CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
+
+def _stream_type(option):
+    max_fps = None
+    option_list = option.split(",")
+    option_args = len(option_list)
+    if option_args not in [1, 2]:
+        msg_string = "{0} format is invalid. See --help".format(option)
+        cli_print(msg_string, PrintColors.WARNING)
+        raise ValueError(msg_string)
+
+    deprecated_choices = ("depth_sipp", "depth_color_h")
+    transition_map = {"depth_sipp" : "disparity_color", "depth_color_h" : "disparity_color"}
+    stream_name = option_list[0]
+    if stream_name in deprecated_choices:
+        cli_print("Stream option " + stream_name + " is deprecated, use: " + transition_map[stream_name], PrintColors.WARNING)
+        stream_name = transition_map[stream_name]
+
+    if stream_name not in _stream_choices:
+        msg_string = "{0} is not in available stream list: \n{1}".format(stream_name, _stream_choices)
+        cli_print(msg_string, PrintColors.WARNING)
+        raise ValueError(msg_string)
+
+    if option_args == 1:
+        stream_dict = {"name": stream_name}
+    else:
+        try:
+            max_fps = float(option_list[1])
+        except ValueError:
+            msg_string = "In option: {0} {1} is not a number!".format(option, option_list[1])
+            cli_print(msg_string, PrintColors.WARNING)
+
+        stream_dict = {"name": stream_name, "max_fps": max_fps}
+    return stream_dict
+
 
 class RangeFloat(object):
     def __init__(self, start, end):
@@ -63,9 +97,9 @@ def parse_args():
     Example usage:
 
     ## Show the depth stream:
-    python3 test.py -s depth_raw,12
+    python3 test.py -s disparity_color,12
     ## Show the depth stream and NN output:
-    python3 test.py -s metaout previewout,12 depth_raw,12
+    python3 test.py -s metaout previewout,12 disparity_color,12
     """
     parser = argparse.ArgumentParser(epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-co", "--config_overwrite", default=None,
@@ -136,10 +170,10 @@ def parse_args():
     parser.add_argument("-fusb2", "--force_usb2", default=None, action="store_true",
                         help="Force usb2 connection")
     
-    parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=CNN_choices,
+    parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=_CNN_choices,
                         help="Cnn model to run on DepthAI")
     
-    parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=CNN_choices,
+    parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=_CNN_choices,
                         help="Cnn model to run on DepthAI for second-stage inference")
     
     parser.add_argument('-cam', "--cnn_camera", default='rgb', choices=['rgb', 'left', 'right', 'left_right'],
@@ -156,14 +190,14 @@ def parse_args():
     
     parser.add_argument("-s", "--streams",
                         nargs="+",
-                        type=stream_type,
+                        type=_stream_type,
                         dest="streams",
                         default=["metaout", "previewout"],
                         help=("Define which streams to enable \n"
                               "Format: stream_name or stream_name,max_fps \n"
                               "Example: -s metaout previewout \n"
                               "Example: -s metaout previewout,10 depth_sipp,10"))\
-                        .completer=ChoicesCompleter(stream_choices)
+                        .completer=ChoicesCompleter(_stream_choices)
     
     parser.add_argument("-v", "--video", default=None, type=str, required=False,
                         help="Path where to save video stream (existing file will be overwritten)")
@@ -185,37 +219,3 @@ def parse_args():
         options.swap_lr = True
 
     return options
-
-
-def stream_type(option):
-    max_fps = None
-    option_list = option.split(",")
-    option_args = len(option_list)
-    if option_args not in [1, 2]:
-        msg_string = "{0} format is invalid. See --help".format(option)
-        cli_print(msg_string, PrintColors.WARNING)
-        raise ValueError(msg_string)
-
-    deprecated_choices = ("depth_sipp", "depth_color_h")
-    transition_map = {"depth_sipp" : "disparity_color", "depth_color_h" : "disparity_color"}
-    stream_name = option_list[0]
-    if stream_name in deprecated_choices:
-        cli_print("Stream option " + stream_name + " is deprecated, use: " + transition_map[stream_name], PrintColors.WARNING)
-        stream_name = transition_map[stream_name]
-
-    if stream_name not in stream_choices:
-        msg_string = "{0} is not in available stream list: \n{1}".format(stream_name, stream_choices)
-        cli_print(msg_string, PrintColors.WARNING)
-        raise ValueError(msg_string)
-
-    if option_args == 1:
-        stream_dict = {"name": stream_name}
-    else:
-        try:
-            max_fps = float(option_list[1])
-        except ValueError:
-            msg_string = "In option: {0} {1} is not a number!".format(option, option_list[1])
-            cli_print(msg_string, PrintColors.WARNING)
-
-        stream_dict = {"name": stream_name, "max_fps": max_fps}
-    return stream_dict
