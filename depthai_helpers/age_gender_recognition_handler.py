@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def decode_age_gender_recognition(nnet_packet):
+def decode_age_gender_recognition(nnet_packet, **kwargs):
     detections = []
     for _, e in enumerate(nnet_packet.entries()):
         if e[1]["female"] > 0.8 or e[1]["male"] > 0.8:
