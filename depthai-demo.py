@@ -29,12 +29,19 @@ except:
     os._exit(2)
 
 configMan = DepthConfigManager(args)
+
 cmd_file, debug_mode = configMan.getCommandFile()
 usb2_mode = configMan.getUsb2Mode()
+
+# decode_nn and show_nn are functions that are dependent on the neural network that's being run.
 decode_nn = configMan.decode_nn
 show_nn = configMan.show_nn
-config = configMan.jsonConfig
+
+# Labels for the current neural network. They are parsed from the blog config file.
 labels = configMan.labels
+
+# This json file is sent to DepthAI. It communicates what options you'd like to enable and what model you'd like to run.
+config = configMan.jsonConfig
 
 # Create a list of enabled streams ()
 stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in configMan.stream_list]
