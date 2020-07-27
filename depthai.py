@@ -6,7 +6,7 @@ import platform
 import os
 import subprocess
 from time import time, sleep, monotonic
-
+from datetime import datetime
 import cv2
 import numpy as np
 import depthai
@@ -17,7 +17,7 @@ from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
 
 from depthai_helpers.object_tracker_handler import show_tracklets
 
-global args
+global args, cnn_model2
 try:
     args = vars(parse_args())
 except:
@@ -83,6 +83,22 @@ if args['cnn_model']:
         suffix="_depth"
     blob_file_config = cnn_model_path + suffix + ".json"
 
+blob_file2 = ""
+blob_file_config2 = ""
+cnn_model2 = None
+if args['cnn_model2']:
+    print("Using CNN2:", args['cnn_model2'])
+    cnn_model2 = args['cnn_model2']
+    cnn_model_path = consts.resource_paths.nn_resource_path + args['cnn_model2']+ "/" + args['cnn_model2']
+    blob_file2 = cnn_model_path + ".blob"
+    blob_file_config2 = cnn_model_path + ".json"
+    if not Path(blob_file2).exists():
+        cli_print("\nWARNING: NN2 blob not found in: " + blob_file2, PrintColors.WARNING)
+        os._exit(1)
+    if not Path(blob_file_config2).exists():
+        cli_print("\nWARNING: NN2 json not found in: " + blob_file_config2, PrintColors.WARNING)
+        os._exit(1)
+
 blob_file_path = Path(blob_file)
 blob_file_config_path = Path(blob_file_config)
 if not blob_file_path.exists():
@@ -116,6 +132,13 @@ if platform.system() == 'Linux':
         "Disconnect/connect usb cable on host! \n", PrintColors.RED)
         os._exit(1)
 
+if args['cnn_camera'] == 'left_right':
+    if args['NN_engines'] is None:
+        args['NN_engines'] = 2
+        args['shaves'] = 6 if args['shaves'] is None else args['shaves'] - args['shaves'] % 2
+        args['cmx_slices'] = 6 if args['cmx_slices'] is None else args['cmx_slices'] - args['cmx_slices'] % 2
+        compile_model = True
+        cli_print('Running NN on both cams requires 2 NN engines!', PrintColors.RED)
 
 default_blob=True
 if compile_model:
@@ -123,8 +146,6 @@ if compile_model:
     shave_nr = args['shaves']
     cmx_slices = args['cmx_slices']
     NCE_nr = args['NN_engines']
-
-    outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
 
     if NCE_nr == 2:
         if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
@@ -135,7 +156,9 @@ if compile_model:
     else:
         shave_nr_opt = int(shave_nr)
         cmx_slices_opt = int(cmx_slices)
-    
+
+    outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
+
     if(not Path(outblob_file).exists()):
         cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
         ret = depthai.download_blob(args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
@@ -150,6 +173,22 @@ if compile_model:
         cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
         blob_file = outblob_file
 
+    if args['cnn_model2']:
+        outblob_file = blob_file2 + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
+        if(not Path(outblob_file).exists()):
+            cli_print("Compiling model2 for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
+            ret = depthai.download_blob(args['cnn_model2'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
+            # ret = subprocess.call(['model_compiler/download_and_compile.sh', args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr])
+            print(str(ret))
+            if(ret != 0):
+                cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
+                default_blob=True
+            else:
+                blob_file2 = outblob_file
+        else:
+            cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
+            blob_file2 = outblob_file
+
 if default_blob:
     #default
     shave_nr = 7
@@ -159,24 +198,27 @@ if default_blob:
 # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
 config = {
     # Possible streams:
-    # ['left', 'right','previewout', 'metaout', 'depth_sipp', 'disparity', 'depth_color_h']
+    # ['left', 'right','previewout', 'metaout', 'depth_raw', 'disparity', 'disparity_color']
     # If "left" is used, it must be in the first position.
     # To test depth use:
-    # 'streams': [{'name': 'depth_sipp', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
+    # 'streams': [{'name': 'depth_raw', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
     'streams': stream_list,
     'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
         'padding_factor': 0.3,
         'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
-        'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number 
+        'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number
     },
     'ai':
     {
         'blob_file': blob_file,
         'blob_file_config': blob_file_config,
+        'blob_file2': blob_file2,
+        'blob_file_config2': blob_file_config2,
         'calc_dist_to_bb': calc_dist_to_bb,
         'keep_aspect_ratio': not args['full_fov_nn'],
+        'camera_input': args['cnn_camera'],
         'shaves' : shave_nr,
         'cmx_slices' : cmx_slices,
         'NN_engines' : NCE_nr,
@@ -209,8 +251,7 @@ config = {
         },
         'mono':
         {
-            # 1280x720, 640x400 (binning enabled)
-            # only 720/30 fps supported for now
+            # 1280x720, 1280x800, 640x400 (binning enabled)
             'resolution_h': args['mono_resolution'],
             'fps': args['mono_fps'],
         },
@@ -241,10 +282,9 @@ if args['config_overwrite'] is not None:
     config = utils.merge(args['config_overwrite'],config)
     print("Merged Pipeline config with overwrite",config)
 
-if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] or 'depth_mm_h' in config['streams']):
-    print('ERROR: depth_sipp is mutually exclusive with depth_color_h')
+if 'depth_raw' in config['streams'] and ('disparity_color' in config['streams'] or 'disparity' in config['streams']):
+    print('ERROR: depth_raw is mutually exclusive with disparity_color')
     exit(2)
-    # del config["streams"][config['streams'].index('depth_sipp')]
 
 # Append video stream if video recording was requested and stream is not already specified
 video_file = None
@@ -285,13 +325,31 @@ nn2depth = depthai.get_nn_to_depth_bbox_mapping()
 t_start = time()
 frame_count = {}
 frame_count_prev = {}
-for s in stream_names:
-    frame_count[s] = 0
-    frame_count_prev[s] = 0
-
 nnet_prev = {}
-nnet_prev["entries_prev"] = []
-nnet_prev["nnet_source"] = []
+nnet_prev["entries_prev"] = {}
+nnet_prev["nnet_source"] = {}
+frame_count['nn'] = {}
+frame_count_prev['nn'] = {}
+
+NN_cams = {'rgb', 'left', 'right'}
+
+for cam in NN_cams:
+    nnet_prev["entries_prev"][cam] = []
+    nnet_prev["nnet_source"][cam] = []
+    frame_count['nn'][cam] = 0
+    frame_count_prev['nn'][cam] = 0
+
+stream_windows = []
+for s in stream_names:
+    if s == 'previewout':
+        for cam in NN_cams:
+            stream_windows.append(s + '-' + cam)
+    else:
+        stream_windows.append(s)
+
+for w in stream_windows:
+    frame_count[w] = 0
+    frame_count_prev[w] = 0
 
 tracklets = None
 
@@ -309,7 +367,7 @@ def on_trackbar_change(value):
     return
 
 for stream in stream_names:
-    if stream in ["disparity", "depth_color_h", "depth_sipp"]:
+    if stream in ["disparity", "disparity_color", "depth_raw"]:
         cv2.namedWindow(stream)
         trackbar_name = 'Disparity confidence'
         conf_thr_slider_min = 0
@@ -332,12 +390,14 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
-        frame_count["metaout"] += 1
-
-        nnet_prev["nnet_source"] = nnet_packet
-        nnet_prev["entries_prev"] = decode_nn(nnet_packet)
+        camera = nnet_packet.getMetadata().getCameraName()
+        nnet_prev["nnet_source"][camera] = nnet_packet
+        nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet, config=config)
+        frame_count['metaout'] += 1
+        frame_count['nn'][camera] += 1
 
     for packet in data_packets:
+        window_name = packet.stream_name
         if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
         packetData = packet.getData()
@@ -345,7 +405,8 @@ while True:
             print('Invalid packet data!')
             continue
         elif packet.stream_name == 'previewout':
-            
+            camera = packet.getMetadata().getCameraName()
+            window_name = 'previewout-' + camera
             # the format of previewout image is CHW (Chanel, Height, Width), but OpenCV needs HWC, so we
             # change shape (3, 300, 300) -> (300, 300, 3)
             data0 = packetData[0,:,:]
@@ -353,39 +414,49 @@ while True:
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
 
-            nn_frame = show_nn(nnet_prev["entries_prev"], frame, labels=labels, config=config)
+            nn_frame = show_nn(nnet_prev["entries_prev"][camera], frame, labels=labels, config=config)
             if enable_object_tracker and tracklets is not None:
                 nn_frame = show_tracklets(tracklets, nn_frame, labels)
-            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.imshow('previewout', nn_frame)
+            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.putText(nn_frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
+            cv2.imshow(window_name, nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packetData
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
-                show_nn(nnet_prev["entries_prev"], frame_bgr, labels=labels, config=config, nn2depth=nn2depth)
-            cv2.imshow(packet.stream_name, frame_bgr)
-        elif packet.stream_name.startswith('depth'):
+                camera = args['cnn_camera']
+                if packet.stream_name == 'disparity':
+                    if camera == 'left_right':
+                        camera = 'right'
+                elif camera != 'rgb':
+                    camera = packet.getMetadata().getCameraName()
+                show_nn(nnet_prev["entries_prev"][camera], frame_bgr, labels=labels, config=config, nn2depth=nn2depth)
+            cv2.imshow(window_name, frame_bgr)
+        elif packet.stream_name.startswith('depth') or packet.stream_name == 'disparity_color':
             frame = packetData
 
             if len(frame.shape) == 2:
                 if frame.dtype == np.uint8: # grayscale
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
-                    cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
+                    cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                 else: # uint16
                     frame = (65535 // frame).astype(np.uint8)
                     #colorize depth map, comment out code below to obtain grayscale
                     frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
                     # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                    cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                    cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
             else: # bgr
                 cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
-                cv2.putText(frame, "fps: " + str(frame_count_prev[packet.stream_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+                cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
             if args['draw_bb_depth']:
-                show_nn(nnet_prev["entries_prev"], frame, labels=labels, config=config, nn2depth=nn2depth)
-            cv2.imshow(packet.stream_name, frame)
+                camera = args['cnn_camera']
+                if camera == 'left_right':
+                    camera = 'right'
+                show_nn(nnet_prev["entries_prev"][camera], frame, labels=labels, config=config, nn2depth=nn2depth)
+            cv2.imshow(window_name, frame)
 
         elif packet.stream_name == 'jpegout':
             jpg = packetData
@@ -404,21 +475,29 @@ while True:
                 ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
                 ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                 ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
-                ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))            
+                ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
         elif packet.stream_name == 'object_tracker':
             tracklets = packet.getObjectTracker()
 
-        frame_count[packet.stream_name] += 1
+        frame_count[window_name] += 1
 
     t_curr = time()
     if t_start + 1.0 < t_curr:
         t_start = t_curr
         # print("metaout fps: " + str(frame_count_prev["metaout"]))
 
+        stream_windows = []
         for s in stream_names:
-            frame_count_prev[s] = frame_count[s]
-            frame_count[s] = 0
-
+            if s == 'previewout':
+                for cam in NN_cams:
+                    stream_windows.append(s + '-' + cam)
+                    frame_count_prev['nn'][cam] = frame_count['nn'][cam]
+                    frame_count['nn'][cam] = 0
+            else:
+                stream_windows.append(s)
+        for w in stream_windows:
+            frame_count_prev[w] = frame_count[w]
+            frame_count[w] = 0
 
     key = cv2.waitKey(1)
     if key == ord('c'):
