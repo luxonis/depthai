@@ -18,6 +18,8 @@ from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
 from depthai_helpers.model_downloader import download_model
 
+from depthai_helpers.config_manager import DepthConfigManager
+
 from depthai_helpers.object_tracker_handler import show_tracklets
 
 global args, cnn_model2
@@ -26,302 +28,16 @@ try:
 except:
     os._exit(2)
 
-compile_model = args['shaves'] is not None and args['cmx_slices'] is not None and args['NN_engines']
-
-stream_list = args['streams']
-
-if args['config_overwrite']:
-    args['config_overwrite'] = json.loads(args['config_overwrite'])
-
-print("Using Arguments=",args)
-
-usb2_mode = False
-if args['force_usb2']:
-    cli_print("FORCE USB2 MODE", PrintColors.WARNING)
-    usb2_mode = True
-else:
-    usb2_mode = False
-
-debug_mode = False
-cmd_file = ''
-if args['dev_debug'] == None:
-    # Debug -debug flag NOT present,
-    debug_mode = False
-elif args['dev_debug'] == '':
-    # If just -debug flag is present -> cmd_file = '' (wait for device to be connected beforehand)
-    debug_mode = True
-    cmd_file = ''
-else: 
-    debug_mode = True
-    cmd_file = args['dev_debug']
-
-
-calc_dist_to_bb = True
-if args['disable_depth']:
-    calc_dist_to_bb = False
-
-from depthai_helpers.mobilenet_ssd_handler import decode_mobilenet_ssd, show_mobilenet_ssd
-decode_nn=decode_mobilenet_ssd
-show_nn=show_mobilenet_ssd
-
-if args['cnn_model'] == 'age-gender-recognition-retail-0013':
-    from depthai_helpers.age_gender_recognition_handler import decode_age_gender_recognition, show_age_gender_recognition
-    decode_nn=decode_age_gender_recognition
-    show_nn=show_age_gender_recognition
-    calc_dist_to_bb=False
-
-if args['cnn_model'] == 'emotions-recognition-retail-0003':
-    from depthai_helpers.emotion_recognition_handler import decode_emotion_recognition, show_emotion_recognition
-    decode_nn=decode_emotion_recognition
-    show_nn=show_emotion_recognition
-    calc_dist_to_bb=False
-
-if args['cnn_model'] == 'tiny-yolo':
-    from depthai_helpers.tiny_yolo_v3_handler import decode_tiny_yolo, show_tiny_yolo
-    decode_nn=decode_tiny_yolo
-    show_nn=show_tiny_yolo
-    calc_dist_to_bb=False
-    compile_model=False
-
-if args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
-    from depthai_helpers.landmarks_recognition_handler import decode_landmarks_recognition, show_landmarks_recognition
-    decode_nn=decode_landmarks_recognition
-    show_nn=show_landmarks_recognition
-    calc_dist_to_bb=False
-
-if args['cnn_model']:
-    cnn_model_path = consts.resource_paths.nn_resource_path + args['cnn_model']+ "/" + args['cnn_model']
-    blob_file = cnn_model_path + ".blob"
-    suffix=""
-    if calc_dist_to_bb:
-        suffix="_depth"
-    blob_file_config = cnn_model_path + suffix + ".json"
-
-blob_file2 = ""
-blob_file_config2 = ""
-cnn_model2 = None
-if args['cnn_model2']:
-    print("Using CNN2:", args['cnn_model2'])
-    cnn_model2 = args['cnn_model2']
-    cnn_model_path = consts.resource_paths.nn_resource_path + args['cnn_model2']+ "/" + args['cnn_model2']
-    blob_file2 = cnn_model_path + ".blob"
-    blob_file_config2 = cnn_model_path + ".json"
-    if not Path(blob_file2).exists():
-        cli_print("\nWARNING: NN2 blob not found in: " + blob_file2, PrintColors.WARNING)
-        os._exit(1)
-    if not Path(blob_file_config2).exists():
-        cli_print("\nWARNING: NN2 json not found in: " + blob_file_config2, PrintColors.WARNING)
-        os._exit(1)
-
-blob_file_path = Path(blob_file)
-blob_file_config_path = Path(blob_file_config)
-if not blob_file_path.exists():
-    cli_print("\nWARNING: NN blob not found in: " + blob_file, PrintColors.WARNING)
-    os._exit(1)
-
-if not blob_file_config_path.exists():
-    cli_print("\nWARNING: NN json not found in: " + blob_file_config, PrintColors.WARNING)
-    os._exit(1)
-
-with open(blob_file_config) as f:
-    data = json.load(f)
-
-try:
-    labels = data['mappings']['labels']
-except:
-    labels = None
-    print("Labels not found in json!")
-
-
-#print('depthai.__version__ == %s' % depthai.__version__)
-#print('depthai.__dev_version__ == %s' % depthai.__dev_version__)
-
-if platform.system() == 'Linux':
-    ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    if(ret != 0):
-        cli_print("\nWARNING: Usb rules not found", PrintColors.WARNING)
-        cli_print("\nSet rules: \n"
-        """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n"""
-        "sudo udevadm control --reload-rules && udevadm trigger \n"
-        "Disconnect/connect usb cable on host! \n", PrintColors.RED)
-        os._exit(1)
-
-if args['cnn_camera'] == 'left_right':
-    if args['NN_engines'] is None:
-        args['NN_engines'] = 2
-        args['shaves'] = 6 if args['shaves'] is None else args['shaves'] - args['shaves'] % 2
-        args['cmx_slices'] = 6 if args['cmx_slices'] is None else args['cmx_slices'] - args['cmx_slices'] % 2
-        compile_model = True
-        cli_print('Running NN on both cams requires 2 NN engines!', PrintColors.RED)
-
-default_blob=True
-if compile_model:
-    default_blob=False
-    shave_nr = args['shaves']
-    cmx_slices = args['cmx_slices']
-    NCE_nr = args['NN_engines']
-
-    if NCE_nr == 2:
-        if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
-            cli_print("shave_nr and cmx_slices config must be even number when NCE is 2!", PrintColors.RED)
-            exit(2)
-        shave_nr_opt = int(shave_nr / 2)
-        cmx_slices_opt = int(cmx_slices / 2)
-    else:
-        shave_nr_opt = int(shave_nr)
-        cmx_slices_opt = int(cmx_slices)
-
-    outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
-
-    if(not Path(outblob_file).exists()):
-        cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-        ret = download_model(args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
-        if(ret != 0):
-            cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
-            default_blob=True
-        else:
-            blob_file = outblob_file
-    else:
-        cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
-        blob_file = outblob_file
-
-    if args['cnn_model2']:
-        outblob_file = blob_file2 + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
-        if(not Path(outblob_file).exists()):
-            cli_print("Compiling model2 for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-            ret = download_model(args['cnn_model2'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
-            if(ret != 0):
-                cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
-                default_blob=True
-            else:
-                blob_file2 = outblob_file
-        else:
-            cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
-            blob_file2 = outblob_file
-
-if default_blob:
-    #default
-    shave_nr = 7
-    cmx_slices = 7
-    NCE_nr = 1
-
-# Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
-config = {
-    # Possible streams:
-    # ['left', 'right', 'jpegout', 'video', 'previewout', 'metaout', 'depth_raw', 'disparity', 'disparity_color']
-    # If "left" is used, it must be in the first position.
-    # To test depth use:
-    # 'streams': [{'name': 'depth_raw', "max_fps": 12.0}, {'name': 'previewout', "max_fps": 12.0}, ],
-    'streams': stream_list,
-    'depth':
-    {
-        'calibration_file': consts.resource_paths.calib_fpath,
-        'padding_factor': 0.3,
-        'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
-        'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number
-    },
-    'ai':
-    {
-        'blob_file': blob_file,
-        'blob_file_config': blob_file_config,
-        'blob_file2': blob_file2,
-        'blob_file_config2': blob_file_config2,
-        'calc_dist_to_bb': calc_dist_to_bb,
-        'keep_aspect_ratio': not args['full_fov_nn'],
-        'camera_input': args['cnn_camera'],
-        'shaves' : shave_nr,
-        'cmx_slices' : cmx_slices,
-        'NN_engines' : NCE_nr,
-    },
-    # object tracker
-    'ot':
-    {
-        'max_tracklets'        : 20, #maximum 20 is supported
-        'confidence_threshold' : 0.5, #object is tracked only for detections over this threshold
-    },
-    'board_config':
-    {
-        'swap_left_and_right_cameras': args['swap_lr'], # True for 1097 (RPi Compute) and 1098OBC (USB w/onboard cameras)
-        'left_fov_deg': args['field_of_view'], # Same on 1097 and 1098OBC
-        'rgb_fov_deg': args['rgb_field_of_view'],
-        'left_to_right_distance_cm': args['baseline'], # Distance between stereo cameras
-        'left_to_rgb_distance_cm': args['rgb_baseline'], # Currently unused
-        'store_to_eeprom': args['store_eeprom'],
-        'clear_eeprom': args['clear_eeprom'],
-        'override_eeprom': args['override_eeprom'],
-    },
-    'camera':
-    {
-        'rgb':
-        {
-            # 3840x2160, 1920x1080
-            # only UHD/1080p/30 fps supported for now
-            'resolution_h': args['rgb_resolution'],
-            'fps': args['rgb_fps'],
-        },
-        'mono':
-        {
-            # 1280x720, 1280x800, 640x400 (binning enabled)
-            'resolution_h': args['mono_resolution'],
-            'fps': args['mono_fps'],
-        },
-    },
-    'app':
-    {
-        'sync_video_meta_streams': args['sync_video_meta'],
-    },
-    #'video_config':
-    #{
-    #    'rateCtrlMode': 'cbr', # Options: cbr / vbr
-    #    'profile': 'h265_main', # Options: 'h264_baseline' / 'h264_main' / 'h264_high' / 'h265_main / 'mjpeg' '
-    #    'bitrate': 8000000, # When using CBR (H264/H265 only)
-    #    'maxBitrate': 8000000, # When using CBR (H264/H265 only)
-    #    'keyframeFrequency': 30, (H264/H265 only)
-    #    'numBFrames': 0, (H264/H265 only)
-    #    'quality': 80 # (0 - 100%) When using VBR or MJPEG profile
-    #}
-    #'video_config':
-    #{
-    #    'profile': 'mjpeg',
-    #    'quality': 95
-    #}
-}
-
-if args['board']:
-    board_path = Path(args['board'])
-    if not board_path.exists():
-        board_path = Path(consts.resource_paths.boards_dir_path) / Path(args['board'].upper()).with_suffix('.json')
-        if not board_path.exists():
-            print('ERROR: Board config not found: {}'.format(board_path))
-            os._exit(2)
-    with open(board_path) as fp:
-        board_config = json.load(fp)
-    utils.merge(board_config, config)
-if args['config_overwrite'] is not None:
-    config = utils.merge(args['config_overwrite'],config)
-    print("Merged Pipeline config with overwrite",config)
-
-if 'depth_raw' in config['streams'] and ('disparity_color' in config['streams'] or 'disparity' in config['streams']):
-    print('ERROR: depth_raw is mutually exclusive with disparity_color')
-    exit(2)
-
-# Append video stream if video recording was requested and stream is not already specified
-video_file = None
-if args['video'] is not None:
-    
-    # open video file
-    try:
-        video_file = open(args['video'], 'wb')
-        if config['streams'].count('video') == 0:
-            config['streams'].append('video')
-    except IOError:
-        print("Error: couldn't open video file for writing. Disabled video output stream")
-        if config['streams'].count('video') == 1:
-            config['streams'].remove('video')
-    
+configMan = DepthConfigManager(args)
+cmd_file, debug_mode = configMan.getCommandFile()
+usb2_mode = configMan.getUsb2Mode()
+decode_nn = configMan.decode_nn
+show_nn = configMan.show_nn
+config = configMan.jsonConfig
+labels = configMan.labels
 
 # Create a list of enabled streams ()
-stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in stream_list]
+stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in configMan.stream_list]
 
 enable_object_tracker = 'object_tracker' in stream_names
 
@@ -333,6 +49,7 @@ if debug_mode:
 else:
     device = depthai.Device(args['device_id'], usb2_mode)
 
+print(stream_names)
 print('Available streams: ' + str(device.get_available_streams()))
 
 # create the pipeline, here is the first connection with the device
