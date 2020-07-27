@@ -72,6 +72,7 @@ class DepthConfigManager:
             decode_nn=decode_tiny_yolo
             show_nn=show_tiny_yolo
             decode_nn_json=decode_tiny_yolo_json
+
             self.calc_dist_to_bb=False
             self.compile_model=False
 
@@ -83,7 +84,6 @@ class DepthConfigManager:
             self.calc_dist_to_bb=False
 
         return decode_nn, show_nn, decode_nn_json
-
 
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':
@@ -247,7 +247,6 @@ class DepthConfigManager:
                     config['streams'].remove('video')
 
         return config
-
 
 
 class BlobManager:
