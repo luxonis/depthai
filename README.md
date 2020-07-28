@@ -6,7 +6,14 @@ __Documentation is available at [https://docs.luxonis.com](https://docs.luxonis.
 
 ## Python modules
 
-DepthAI requites [numpy](https://numpy.org/) and [opencv-python](https://pypi.org/project/opencv-python/). To get the versions of these packages you need for DepthAI, use pip: `pip3 install -r requirements.txt`
+DepthAI requires [numpy](https://numpy.org/) and [opencv-python](https://pypi.org/project/opencv-python/). To get the versions of these packages you need for DepthAI, use pip: `python3 -m pip install -r requirements.txt`
+
+Optional:
+For command line autocomplete when pressing TAB, only bash interpreter supported now:
+Add to .bashrc:
+`echo 'eval "$(register-python-argcomplete depthai.py)"' >> ~/.bashrc`
+
+If you use any other interpreter: https://kislyuk.github.io/argcomplete/
 
 Files with `.so` extension are the python modules:  
 - `depthai.cpython-36m-x86_64-linux-gnu.so` built for Ubuntu 18.04 & Python 3.6  
