@@ -17,9 +17,3 @@ def merge(source, destination):
             destination[key] = value
 
     return destination
-def mkdir_overwrite(dir):
-    if not os.path.exists(dir):
-        os.makedirs(dir)
-    else:
-        shutil.rmtree(dir)
-        os.makedirs(dir)
