@@ -52,6 +52,7 @@ def _stream_type(option):
 
 
 class CliArgs:
+
     args = []
 
     def __init__(self):
