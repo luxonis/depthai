@@ -256,6 +256,10 @@ config = {
             'fps': args['mono_fps'],
         },
     },
+    'app':
+    {
+        'sync_video_meta_streams': args['sync_video_meta'],
+    },
     #'video_config':
     #{
     #    'rateCtrlMode': 'cbr',
