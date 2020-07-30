@@ -26,12 +26,10 @@ from depthai_helpers.object_tracker_handler import show_tracklets
 
 global args, cnn_model2
 try:
-    args = vars(parse_args())
+    cliArgs = CliArgs()
+    args = vars(cliArgs.parse_args())
 except:
     os._exit(2)
-
-cliArgs = CliArgs()
-args = vars(cliArgs.parse_args())
 
 configMan = DepthConfigManager(args)
 
