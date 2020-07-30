@@ -1,4 +1,5 @@
 import cv2
+import json
 import numpy as np
 from datetime import datetime
 
@@ -17,6 +18,25 @@ def decode_mobilenet_ssd(nnet_packet, **kwargs):
             detections.append(e)
     return detections
 
+def decode_mobilenet_ssd_convert_json(detections):
+    convertList = []
+
+    for entry in detections:
+        jsonConvertDict = {}
+        jsonConvertDict["id"] = entry[0]["id"]
+        jsonConvertDict["label"] = entry[0]["label"]
+        jsonConvertDict["confidence"] = entry[0]["confidence"]
+        jsonConvertDict["left"] = entry[0]["left"]
+        jsonConvertDict["right"] = entry[0]["right"]
+        jsonConvertDict["top"] = entry[0]["top"]
+        jsonConvertDict["bottom"] = entry[0]["bottom"]
+        jsonConvertDict["distance_x"] = entry[0]["distance_x"]
+        jsonConvertDict["distance_y"] = entry[0]["distance_y"]
+        jsonConvertDict["distance_z"] = entry[0]["distance_z"]
+        jsonStr = json.dumps(jsonConvertDict)
+        convertList.append(jsonStr)
+
+    return convertList
 
 def nn_to_depth_coord(x, y, nn2depth):
     x_depth = int(nn2depth['off_x'] + x * nn2depth['max_w'])

@@ -9,16 +9,18 @@ from time import time, sleep, monotonic
 from datetime import datetime
 import cv2
 import numpy as np
+import sys
 
 import depthai
 print('Using depthai module from: ', depthai.__file__)
 
 import consts.resource_paths
 from depthai_helpers import utils
-from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
+from depthai_helpers.cli_utils import cli_print, PrintColors
 from depthai_helpers.model_downloader import download_model
 
 from depthai_helpers.config_manager import DepthConfigManager
+from depthai_helpers.arg_manager import CliArgs
 
 from depthai_helpers.object_tracker_handler import show_tracklets
 
@@ -28,8 +30,12 @@ try:
 except:
     os._exit(2)
 
+cliArgs = CliArgs()
+args = vars(cliArgs.parse_args())
+
 configMan = DepthConfigManager(args)
 
+# these are largely for debug and dev.
 cmd_file, debug_mode = configMan.getCommandFile()
 usb2_mode = configMan.getUsb2Mode()
 
@@ -37,7 +43,7 @@ usb2_mode = configMan.getUsb2Mode()
 decode_nn = configMan.decode_nn
 show_nn = configMan.show_nn
 
-# Labels for the current neural network. They are parsed from the blog config file.
+# Labels for the current neural network. They are parsed from the blob config file.
 labels = configMan.labels
 
 # This json file is sent to DepthAI. It communicates what options you'd like to enable and what model you'd like to run.
@@ -66,8 +72,8 @@ if p is None:
     print('Pipeline is not created.')
     exit(3)
 
-nn2depth = device.get_nn_to_depth_bbox_mapping()
 
+nn2depth = device.get_nn_to_depth_bbox_mapping()
 
 t_start = time()
 frame_count = {}
