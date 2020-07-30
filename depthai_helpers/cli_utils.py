@@ -187,7 +187,10 @@ def parse_args():
     
     parser.add_argument("-ff", "--full-fov-nn", default=False, action="store_true",
                         help="Full RGB FOV for NN, not keeping the aspect ratio")
-    
+
+    parser.add_argument("-sync", "--sync-video-meta", default=False, action="store_true",
+                        help="Synchronize 'previewout' and 'metaout' streams")
+
     parser.add_argument("-s", "--streams",
                         nargs="+",
                         type=_stream_type,
