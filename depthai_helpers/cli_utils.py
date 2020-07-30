@@ -120,13 +120,13 @@ def parse_args():
     parser.add_argument("-nce", "--NN_engines", default=None, type=int, choices=range(0,3), metavar="[0-2]",
                         help="Number of NN_engines used by NN.")
 
-    parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=['1080', '2160', '3040'],
+    parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],
                         help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
 
     parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float,
                         help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
 
-    parser.add_argument("-monor", "--mono_resolution", default=720, type=int,  choices=['400', '720', '800'],
+    parser.add_argument("-monor", "--mono_resolution", default=720, type=int,  choices=[400, 720, 800],
                         help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400 - binning. Default: %(default)s")
 
     parser.add_argument("-monof", "--mono_fps", default=30.0, type=float,
