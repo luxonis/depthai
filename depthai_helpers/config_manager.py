@@ -1,3 +1,4 @@
+import os
 import json
 import platform
 import subprocess
@@ -5,6 +6,7 @@ from pathlib import Path
 import consts.resource_paths
 
 from depthai_helpers.model_downloader import download_model
+from depthai_helpers.cli_utils import cli_print, PrintColors
 
 class DepthConfigManager:
     labels = ""
