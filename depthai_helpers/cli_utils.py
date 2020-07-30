@@ -32,7 +32,6 @@ class PrintColors(Enum):
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
 
-
 def cli_print(msg, print_color):
     """
     Prints to console with input print color type
@@ -40,4 +39,3 @@ def cli_print(msg, print_color):
     if not isinstance(print_color, PrintColors):
         raise ValueError("Must use PrintColors type in cli_print")
     print("{0}{1}{2}".format(print_color.value, msg, PrintColors.ENDC.value))
-
