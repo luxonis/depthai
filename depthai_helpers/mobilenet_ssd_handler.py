@@ -33,10 +33,11 @@ def decode_mobilenet_ssd_convert_json(detections):
         jsonConvertDict["distance_x"] = entry[0]["distance_x"]
         jsonConvertDict["distance_y"] = entry[0]["distance_y"]
         jsonConvertDict["distance_z"] = entry[0]["distance_z"]
-        jsonStr = json.dumps(jsonConvertDict)
-        convertList.append(jsonStr)
+        convertList.append([jsonConvertDict])
 
-    return convertList
+    jsonStr = json.dumps(convertList)
+
+    return jsonStr
 
 def nn_to_depth_coord(x, y, nn2depth):
     x_depth = int(nn2depth['off_x'] + x * nn2depth['max_w'])
