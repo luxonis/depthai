@@ -1,2 +1,5 @@
 numpy==1.18.3
-opencv-python==4.2.0.34
+opencv-python==4.2.0.34; platform_machine != "armv7l"
+opencv-python==4.1.0.25; platform_machine == "armv7l"
+requests==2.24.0
+argcomplete==1.12.0
