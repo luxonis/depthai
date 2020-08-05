@@ -72,7 +72,6 @@ class DepthConfigManager:
             decode_nn=decode_tiny_yolo
             show_nn=show_tiny_yolo
             decode_nn_json=decode_tiny_yolo_json
-
             self.calc_dist_to_bb=False
             self.compile_model=False
 
