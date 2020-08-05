@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import json
 
 def decode_landmarks_recognition(nnet_packet, **kwargs):
     landmarks = []
@@ -9,6 +9,10 @@ def decode_landmarks_recognition(nnet_packet, **kwargs):
     
     landmarks = list(zip(*[iter(landmarks)]*2))
     return landmarks
+
+def decode_landmarks_recognition_json(nnet_packet, **kwargs):
+    landmarks = decode_landmarks_recognition(nnet_packet, **kwargs)
+    return json.dumps(landmarks)
 
 def show_landmarks_recognition(entries_prev, frame, **kwargs):
     img_h = frame.shape[0]

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import json
 
 
 def decode_age_gender_recognition(nnet_packet, **kwargs):
@@ -12,6 +13,10 @@ def decode_age_gender_recognition(nnet_packet, **kwargs):
             else:
                 detections.append("male")
     return detections
+
+def decode_age_gender_recognition_json(nnet_packet, **kwargs):
+    detections = decode_age_gender_recognition(nnet_packet, **kwargs)
+    return json.dumps(detections)
 
 def show_age_gender_recognition(entries_prev, frame, **kwargs):
     # img_h = frame.shape[0]

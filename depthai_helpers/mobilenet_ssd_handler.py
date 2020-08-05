@@ -18,8 +18,10 @@ def decode_mobilenet_ssd(nnet_packet, **kwargs):
             detections.append(e)
     return detections
 
-def decode_mobilenet_ssd_convert_json(detections):
+def decode_mobilenet_ssd_json(nnet_packet, **kwargs):
     convertList = []
+
+    detections = decode_mobilenet_ssd(nnet_packet, **kwargs)
 
     for entry in detections:
         jsonConvertDict = {}
