@@ -18,7 +18,7 @@ class DepthConfigManager:
         self.calc_dist_to_bb = not self.args['disable_depth']
 
         # Prepare handler methods (decode_nn, show_nn) for the network we want to run.
-        self.decode_nn, self.show_nn = self.importAndGetCallbacksForNN()
+        self.decode_nn, self.show_nn, self.decode_nn_json = self.importAndGetCallbacksForNN()
         self.jsonConfig = self.generateJsonConfig()
 
 
@@ -48,36 +48,41 @@ class DepthConfigManager:
 
     def importAndGetCallbacksForNN(self):
         # why inline imports? Could just make a dict for all these to make managing them easier and less verbose.
-        from depthai_helpers.mobilenet_ssd_handler import decode_mobilenet_ssd, show_mobilenet_ssd
+        from depthai_helpers.mobilenet_ssd_handler import decode_mobilenet_ssd, show_mobilenet_ssd, decode_mobilenet_ssd_json
         decode_nn=decode_mobilenet_ssd
         show_nn=show_mobilenet_ssd
+        decode_nn_json=decode_mobilenet_ssd_json
 
         if self.args['cnn_model'] == 'age-gender-recognition-retail-0013':
-            from depthai_helpers.age_gender_recognition_handler import decode_age_gender_recognition, show_age_gender_recognition
+            from depthai_helpers.age_gender_recognition_handler import decode_age_gender_recognition, show_age_gender_recognition, decode_age_gender_recognition_json
             decode_nn=decode_age_gender_recognition
             show_nn=show_age_gender_recognition
+            decode_nn_json=decode_age_gender_recognition_json
             self.calc_dist_to_bb=False
 
         if self.args['cnn_model'] == 'emotions-recognition-retail-0003':
-            from depthai_helpers.emotion_recognition_handler import decode_emotion_recognition, show_emotion_recognition
+            from depthai_helpers.emotion_recognition_handler import decode_emotion_recognition, show_emotion_recognition, decode_emotion_recognition_json
             decode_nn=decode_emotion_recognition
             show_nn=show_emotion_recognition
+            decode_nn_json=decode_emotion_recognition_json
             self.calc_dist_to_bb=False
 
         if self.args['cnn_model'] == 'tiny-yolo':
-            from depthai_helpers.tiny_yolo_v3_handler import decode_tiny_yolo, show_tiny_yolo
+            from depthai_helpers.tiny_yolo_v3_handler import decode_tiny_yolo, show_tiny_yolo, decode_tiny_yolo_json
             decode_nn=decode_tiny_yolo
             show_nn=show_tiny_yolo
+            decode_nn_json=decode_tiny_yolo_json
             self.calc_dist_to_bb=False
             self.compile_model=False
 
         if self.args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
-            from depthai_helpers.landmarks_recognition_handler import decode_landmarks_recognition, show_landmarks_recognition
+            from depthai_helpers.landmarks_recognition_handler import decode_landmarks_recognition, show_landmarks_recognition, decode_landmarks_recognition_json
             decode_nn=decode_landmarks_recognition
             show_nn=show_landmarks_recognition
+            decode_nn_json=decode_landmarks_recognition_json
             self.calc_dist_to_bb=False
 
-        return decode_nn, show_nn
+        return decode_nn, show_nn, decode_nn_json
 
 
     def linuxCheckApplyUsbRules(self):
