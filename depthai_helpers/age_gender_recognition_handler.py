@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-from depthai_helpers.tensor_utils import *
+from depthai_helpers.tensor_utils import get_tensor_output, get_tensor_outputs_list, get_tensor_outputs_dict
 
 
 def decode_age_gender_recognition(nnet_packet, **kwargs):
@@ -21,7 +21,7 @@ def show_age_gender_recognition(entries_prev, frame, **kwargs):
     male_conf = gender_out[0,1,0,0]
 
     conf_thr = config['depth']['confidence_threshold']
-    if female_conf > 0.8 or male_conf > 0.8:
+    if female_conf > conf_thr or male_conf > conf_thr:
         gender = "male"
         if female_conf > male_conf:
             gender = "female"

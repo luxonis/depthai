@@ -2,7 +2,7 @@ from math import exp as exp
 import cv2
 import numpy as np
 from time import time
-from depthai_helpers.tensor_utils import *
+from depthai_helpers.tensor_utils import get_tensor_output, get_tensor_outputs_list, get_tensor_outputs_dict
 
 # Adjust these thresholds
 detection_threshold = 0.60
