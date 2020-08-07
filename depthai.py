@@ -68,6 +68,20 @@ if args['cnn_model'] == 'tiny-yolo-v3':
     show_nn=show_tiny_yolo
     calc_dist_to_bb=False
     compile_model=False
+    
+if args['cnn_model'] == 'openpose':
+    from depthai_helpers.openpose_handler import decode_openpose, show_openpose
+    decode_nn=decode_openpose
+    show_nn=show_openpose
+    calc_dist_to_bb=False
+    compile_model=False
+    
+if args['cnn_model'] == 'openpose2':
+    from depthai_helpers.openpose2_handler import decode_openpose, show_openpose
+    decode_nn=decode_openpose
+    show_nn=show_openpose
+    calc_dist_to_bb=False
+    compile_model=False
 
 if args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
     from depthai_helpers.landmarks_recognition_handler import decode_landmarks_recognition, show_landmarks_recognition

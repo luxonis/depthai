@@ -17,7 +17,7 @@ class YoloParams:
         self.anchors = [10,14, 23,27, 37,58, 81,82, 135,169, 344,319]
 
         if side ==26:
-            mask=[0,1,2]
+            mask=[1,2,3]
             self.num = len(mask)
         else:
             mask=[3,4,5]
