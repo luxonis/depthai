@@ -1,11 +1,13 @@
 import cv2
 import numpy as np
+from depthai_helpers.tensor_utils import get_tensor_output, get_tensor_outputs_list, get_tensor_outputs_dict
 
 
 def decode_landmarks_recognition(nnet_packet, **kwargs):
+    landmarks_tensor = get_tensor_output(nnet_packet, 0)
     landmarks = []
-    for i in range(len(nnet_packet.entries()[0][0])):
-        landmarks.append(nnet_packet.entries()[0][0][i])
+    for i in landmarks_tensor[0]:
+        landmarks.append(i[0][0])
     
     landmarks = list(zip(*[iter(landmarks)]*2))
     return landmarks

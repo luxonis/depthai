@@ -2,7 +2,7 @@ from math import exp as exp
 import cv2
 import numpy as np
 from time import time
-from depthai_helpers.tensor_utils import *
+from depthai_helpers.tensor_utils import get_tensor_output, get_tensor_outputs_list, get_tensor_outputs_dict
 
 # Adjust these thresholds
 detection_threshold = 0.60
@@ -17,7 +17,7 @@ class YoloParams:
         self.anchors = [10,14, 23,27, 37,58, 81,82, 135,169, 344,319]
 
         if side ==26:
-            mask=[0,1,2]
+            mask=[1,2,3]
             self.num = len(mask)
         else:
             mask=[3,4,5]

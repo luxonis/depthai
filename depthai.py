@@ -435,7 +435,8 @@ while True:
                         camera = 'right'
                 elif camera != 'rgb':
                     camera = packet.getMetadata().getCameraName()
-                show_nn(nnet_prev["entries_prev"][camera], frame_bgr, labels=labels, config=config, nn2depth=nn2depth)
+                if nnet_prev["entries_prev"][camera] is not None:
+                    frame_bgr = show_nn(nnet_prev["entries_prev"][camera], frame_bgr, labels=labels, config=config, nn2depth=nn2depth)
             cv2.imshow(window_name, frame_bgr)
         elif packet.stream_name.startswith('depth') or packet.stream_name == 'disparity_color':
             frame = packetData
@@ -459,7 +460,8 @@ while True:
                 camera = args['cnn_camera']
                 if camera == 'left_right':
                     camera = 'right'
-                show_nn(nnet_prev["entries_prev"][camera], frame, labels=labels, config=config, nn2depth=nn2depth)
+                if nnet_prev["entries_prev"][camera] is not None:
+                    frame = show_nn(nnet_prev["entries_prev"][camera], frame, labels=labels, config=config, nn2depth=nn2depth)
             cv2.imshow(window_name, frame)
 
         elif packet.stream_name == 'jpegout':
