@@ -1,21 +1,10 @@
 import cv2
 import numpy as np
 from datetime import datetime
+from depthai_helpers.tensor_utils import *
 
 def decode_mobilenet_ssd(nnet_packet, **kwargs):
-    config = kwargs['config']
-    detections = []
-    # the result of the MobileSSD has detection rectangles (here: entries), and we can iterate through them
-    for _, e in enumerate(nnet_packet.entries()):
-        # for MobileSSD entries are sorted by confidence
-        # {id == -1} or {confidence == 0} is the stopper (special for OpenVINO models and MobileSSD architecture)
-        if e[0]['id'] == -1.0 or e[0]['confidence'] == 0.0:
-            break
-        # save entry for further usage (as image package may arrive not the same time as nnet package)
-        # the lower confidence threshold - the more we get false positives
-        if e[0]['confidence'] > config['depth']['confidence_threshold']:
-            detections.append(e)
-    return detections
+    return nnet_packet
 
 
 def nn_to_depth_coord(x, y, nn2depth):
@@ -31,14 +20,34 @@ def average_depth_coord(pt1, pt2, padding_factor):
     avg_pt2 = (pt2[0] - x_shift), (pt2[1] - y_shift)
     return avg_pt1, avg_pt2
 
-def show_mobilenet_ssd(entries_prev, frame, **kwargs):
+def show_mobilenet_ssd(nnet_packet, frame, **kwargs):
+    res = get_tensor_output(nnet_packet, 0)
+    
     is_depth = 'nn2depth' in kwargs
     if is_depth:
         nn2depth = kwargs['nn2depth']
     config = kwargs['config']
     labels = kwargs['labels']
-    img_h = frame.shape[0]
-    img_w = frame.shape[1]
+    frame_h = frame.shape[0]
+    frame_w = frame.shape[1]
+
+    for obj in res[0][0]:
+        # Draw only objects when probability more than specified threshold
+        if obj[2] > config['depth']['confidence_threshold']:
+            xmin = int(obj[3] * frame_w)
+            ymin = int(obj[4] * frame_h)
+            xmax = int(obj[5] * frame_w)
+            ymax = int(obj[6] * frame_h)
+            class_id = int(obj[1])
+            # Draw box and label\class_id
+            color = (min(class_id * 12.5, 255), min(class_id * 7, 255), min(class_id * 5, 255))
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), color, 2)
+            det_label = labels[class_id] if labels else str(class_id)
+            cv2.putText(frame, det_label + ' ' + str(round(obj[2] * 100, 1)) + ' %', (xmin, ymin - 7),
+                        cv2.FONT_HERSHEY_COMPLEX, 0.6, color, 1)
+    
+    return frame
+
 
     last_detected = datetime.now()
     # iterate through pre-saved entries & draw rectangle & text on image:
@@ -52,8 +61,8 @@ def show_mobilenet_ssd(entries_prev, frame, **kwargs):
             cv2.rectangle(frame, avg_pt1, avg_pt2, color)
             color = (255, 255, 255) # bgr
         else:
-            pt1 = int(e[0]['left']  * img_w), int(e[0]['top']    * img_h)
-            pt2 = int(e[0]['right'] * img_w), int(e[0]['bottom'] * img_h)
+            pt1 = int(e[0]['left']  * frame_w), int(e[0]['top']    * frame_h)
+            pt2 = int(e[0]['right'] * frame_w), int(e[0]['bottom'] * frame_h)
             color = (0, 0, 255) # bgr
 
         x1, y1 = pt1

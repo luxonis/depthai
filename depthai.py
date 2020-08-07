@@ -62,7 +62,7 @@ if args['cnn_model'] == 'emotions-recognition-retail-0003':
     show_nn=show_emotion_recognition
     calc_dist_to_bb=False
 
-if args['cnn_model'] == 'tiny-yolo':
+if args['cnn_model'] == 'tiny-yolo-v3':
     from depthai_helpers.tiny_yolo_v3_handler import decode_tiny_yolo, show_tiny_yolo
     decode_nn=decode_tiny_yolo
     show_nn=show_tiny_yolo
@@ -338,8 +338,8 @@ frame_count_prev['nn'] = {}
 NN_cams = {'rgb', 'left', 'right'}
 
 for cam in NN_cams:
-    nnet_prev["entries_prev"][cam] = []
-    nnet_prev["nnet_source"][cam] = []
+    nnet_prev["entries_prev"][cam] = None
+    nnet_prev["nnet_source"][cam] = None
     frame_count['nn'][cam] = 0
     frame_count_prev['nn'][cam] = 0
 
@@ -417,13 +417,13 @@ while True:
             data1 = packetData[1,:,:]
             data2 = packetData[2,:,:]
             frame = cv2.merge([data0, data1, data2])
-
-            nn_frame = show_nn(nnet_prev["entries_prev"][camera], frame, labels=labels, config=config)
-            if enable_object_tracker and tracklets is not None:
-                nn_frame = show_tracklets(tracklets, nn_frame, labels)
-            cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-            cv2.putText(nn_frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
-            cv2.imshow(window_name, nn_frame)
+            if nnet_prev["entries_prev"][camera] is not None:
+                frame = show_nn(nnet_prev["entries_prev"][camera], frame, labels=labels, config=config)
+                if enable_object_tracker and tracklets is not None:
+                    frame = show_tracklets(tracklets, frame, labels)
+            cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+            cv2.putText(frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
+            cv2.imshow(window_name, frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packetData
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
