@@ -1,3 +1,4 @@
 numpy ~= 1.18
 opencv-python ~= 4.0
-git+https://github.com/luxonis/depthai-api.git@21a50e87b798e3121a4c90609668c79f58330109
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+depthai==0.1.0.0+c9187c094ad0eb5ee0f3c7fcfe654e19a03ac985
