@@ -74,6 +74,12 @@ if args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-
     decode_nn=decode_landmarks_recognition
     show_nn=show_landmarks_recognition
     calc_dist_to_bb=False
+    
+if args['cnn_model'] == 'deeplabv3p_person':
+    from depthai_helpers.deeplabv3p_person import decode_deeplabv3p, show_deeplabv3p
+    decode_nn=decode_deeplabv3p
+    show_nn=show_deeplabv3p
+    calc_dist_to_bb=False
 
 if args['cnn_model']:
     cnn_model_path = consts.resource_paths.nn_resource_path + args['cnn_model']+ "/" + args['cnn_model']
