@@ -209,6 +209,8 @@ config = {
         'padding_factor': 0.3,
         'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
         'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number
+        'median_kernel_size': args['stereo_median_size'],
+        'lr_check': args['stereo_lr_check'],
     },
     'ai':
     {
