@@ -136,6 +136,12 @@ def parse_args():
                         choices=range(0,256), metavar="[0-255]",
                         help="Disparity_confidence_threshold.")
 
+    parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0, 3, 5, 7],
+                        help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
+
+    parser.add_argument("-lrc", "--stereo_lr_check", default=False, action="store_true",
+                        help="Enable stereo 'Left-Right check' feature.")
+
     parser.add_argument("-fv", "--field-of-view", default=None, type=float,
                         help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
 
