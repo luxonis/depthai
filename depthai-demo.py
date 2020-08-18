@@ -386,7 +386,7 @@ reset_process_wd()
 
 
 def on_trackbar_change(value):
-    device.send_DisparityConfidenceThreshold(value)
+    device.send_disparity_confidence_threshold(value)
     return
 
 for stream in stream_names:
