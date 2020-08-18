@@ -12,6 +12,13 @@ To get the versions of these packages you need for the program, use pip: (Make s
 python3 -m pip install -r requirements.txt 
 ```
 
+Optional:
+For command line autocomplete when pressing TAB, only bash interpreter supported now:
+Add to .bashrc:
+`echo 'eval "$(register-python-argcomplete depthai.py)"' >> ~/.bashrc`
+
+If you use any other interpreter: https://kislyuk.github.io/argcomplete/
+
 ## Examples
 
 `python3 test.py` - depth & CNN inference example  
