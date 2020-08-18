@@ -181,6 +181,10 @@ class DepthConfigManager:
                     'fps': self.args['mono_fps'],
                 },
             },
+            'app':
+            {
+                'sync_video_meta_streams': self.args['sync_video_meta'],
+            },
             #'video_config':
             #{
             #    'rateCtrlMode': 'cbr', # Options: cbr / vbr
