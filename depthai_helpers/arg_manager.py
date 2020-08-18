@@ -50,9 +50,7 @@ def _stream_type(option):
         stream_dict = {"name": stream_name, "max_fps": max_fps}
     return stream_dict
 
-
 class CliArgs:
-
     args = []
 
     def __init__(self):
