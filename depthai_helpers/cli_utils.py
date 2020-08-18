@@ -4,21 +4,22 @@ from enum import Enum
 import os
 import consts.resource_paths
 
-def _get_immediate_subdirectories(a_dir):
-    return [name for name in os.listdir(a_dir)
-            if os.path.isdir(os.path.join(a_dir, name))]
+class RangeFloat(object):
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
 
-_stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth_raw", "disparity", "disparity_color", "meta_d2h", "object_tracker")
-_CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
+    def __eq__(self, other):
+        return self.start <= other <= self.end
 
-def _stream_type(option):
-    max_fps = None
-    option_list = option.split(",")
-    option_args = len(option_list)
-    if option_args not in [1, 2]:
-        msg_string = "{0} format is invalid. See --help".format(option)
-        cli_print(msg_string, PrintColors.WARNING)
-        raise ValueError(msg_string)
+    def __contains__(self, item):
+        return self.__eq__(item)
+
+    def __iter__(self):
+        yield self
+
+    def __str__(self):
+        return '[{0},{1}]'.format(self.start, self.end)
 
 class PrintColors(Enum):
     HEADER = "\033[95m"
