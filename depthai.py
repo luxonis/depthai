@@ -372,6 +372,18 @@ def on_trackbar_change(value):
     depthai.send_DisparityConfidenceThreshold(value)
     return
 
+time_start = time()
+def print_packet_info(packet):
+    meta = packet.getMetadata()
+    print("[{:.6f} {:15s}]".format(time()-time_start, packet.stream_name), end='')
+    if meta is not None:
+        print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), end='')
+        if not (packet.stream_name.startswith('disparity')
+             or packet.stream_name.startswith('depth')):
+            print('', meta.getCameraName(), end='')
+    print()
+    return
+
 for stream in stream_names:
     if stream in ["disparity", "disparity_color", "depth_raw"]:
         cv2.namedWindow(stream)
@@ -396,6 +408,7 @@ while True:
             os._exit(10)
 
     for _, nnet_packet in enumerate(nnet_packets):
+        if args['verbose']: print_packet_info(nnet_packet)
         camera = nnet_packet.getMetadata().getCameraName()
         nnet_prev["nnet_source"][camera] = nnet_packet
         nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet, config=config)
@@ -406,6 +419,7 @@ while True:
         window_name = packet.stream_name
         if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
+        if args['verbose']: print_packet_info(packet)
         packetData = packet.getData()
         if packetData is None:
             print('Invalid packet data!')
