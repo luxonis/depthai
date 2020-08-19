@@ -197,6 +197,9 @@ def parse_args():
     parser.add_argument("-sync", "--sync-video-meta", default=False, action="store_true",
                         help="Synchronize 'previewout' and 'metaout' streams")
 
+    parser.add_argument("-vv", "--verbose", default=False, action="store_true",
+                        help="Verbose, print info about received packets.")
+
     parser.add_argument("-s", "--streams",
                         nargs="+",
                         type=_stream_type,
