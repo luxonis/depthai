@@ -248,6 +248,7 @@ class DepthConfigManager:
         return config
 
 
+
 class BlobManager:
     def __init__(self, args, compile_model, calc_dist_to_bb):
         self.args = args
