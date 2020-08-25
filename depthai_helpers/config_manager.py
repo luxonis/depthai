@@ -233,12 +233,12 @@ class DepthConfigManager:
             # del config["streams"][config['streams'].index('depth_sipp')]
 
         # Append video stream if video recording was requested and stream is not already specified
-        video_file = None
+        self.video_file = None
         if self.args['video'] is not None:
             
             # open video file
             try:
-                video_file = open(self.args['video'], 'wb')
+                self.video_file = open(self.args['video'], 'wb')
                 if config['streams'].count('video') == 0:
                     config['streams'].append('video')
             except IOError:
@@ -247,6 +247,7 @@ class DepthConfigManager:
                     config['streams'].remove('video')
 
         return config
+
 
 
 class BlobManager:
