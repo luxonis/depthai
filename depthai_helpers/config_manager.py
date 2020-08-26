@@ -5,6 +5,7 @@ import subprocess
 from pathlib import Path
 import consts.resource_paths
 
+from depthai_helpers import utils
 from depthai_helpers.model_downloader import download_model
 from depthai_helpers.cli_utils import cli_print, PrintColors
 
@@ -14,12 +15,12 @@ class DepthConfigManager:
     def __init__(self, args):
         self.args = args
         self.stream_list = args['streams']
-        self.compile_model = self.args['shaves'] is not None and self.args['cmx_slices'] is not None and self.args['NN_engines']
+        self.compile_model = self.args['shaves'] is not None or self.args['cmx_slices'] is not None or self.args['NN_engines']
         self.calc_dist_to_bb = not self.args['disable_depth']
 
         # Prepare handler methods (decode_nn, show_nn) for the network we want to run.
-        self.decode_nn, self.show_nn, self.decode_nn_json = self.importAndGetCallbacksForNN()
-        self.jsonConfig = self.generateJsonConfig()
+        self.importAndSetCallbacksForNN()
+        self.generateJsonConfig()
 
 
     def getUsb2Mode(self):
@@ -46,43 +47,42 @@ class DepthConfigManager:
         return cmd_file, debug_mode
 
 
-    def importAndGetCallbacksForNN(self):
+    def importAndSetCallbacksForNN(self):
         # why inline imports? Could just make a dict for all these to make managing them easier and less verbose.
         from depthai_helpers.mobilenet_ssd_handler import decode_mobilenet_ssd, show_mobilenet_ssd, decode_mobilenet_ssd_json
-        decode_nn=decode_mobilenet_ssd
-        show_nn=show_mobilenet_ssd
-        decode_nn_json=decode_mobilenet_ssd_json
+        self.decode_nn=decode_mobilenet_ssd
+        self.show_nn=show_mobilenet_ssd
+        self.decode_nn_json=decode_mobilenet_ssd_json
 
         if self.args['cnn_model'] == 'age-gender-recognition-retail-0013':
             from depthai_helpers.age_gender_recognition_handler import decode_age_gender_recognition, show_age_gender_recognition, decode_age_gender_recognition_json
-            decode_nn=decode_age_gender_recognition
-            show_nn=show_age_gender_recognition
-            decode_nn_json=decode_age_gender_recognition_json
+            self.decode_nn=decode_age_gender_recognition
+            self.show_nn=show_age_gender_recognition
+            self.decode_nn_json=decode_age_gender_recognition_json
             self.calc_dist_to_bb=False
 
         if self.args['cnn_model'] == 'emotions-recognition-retail-0003':
             from depthai_helpers.emotion_recognition_handler import decode_emotion_recognition, show_emotion_recognition, decode_emotion_recognition_json
-            decode_nn=decode_emotion_recognition
-            show_nn=show_emotion_recognition
-            decode_nn_json=decode_emotion_recognition_json
+            self.decode_nn=decode_emotion_recognition
+            self.show_nn=show_emotion_recognition
+            self.decode_nn_json=decode_emotion_recognition_json
             self.calc_dist_to_bb=False
 
         if self.args['cnn_model'] == 'tiny-yolo':
             from depthai_helpers.tiny_yolo_v3_handler import decode_tiny_yolo, show_tiny_yolo, decode_tiny_yolo_json
-            decode_nn=decode_tiny_yolo
-            show_nn=show_tiny_yolo
-            decode_nn_json=decode_tiny_yolo_json
+            self.decode_nn=decode_tiny_yolo
+            self.show_nn=show_tiny_yolo
+            self.decode_nn_json=decode_tiny_yolo_json
             self.calc_dist_to_bb=False
             self.compile_model=False
 
         if self.args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
             from depthai_helpers.landmarks_recognition_handler import decode_landmarks_recognition, show_landmarks_recognition, decode_landmarks_recognition_json
-            decode_nn=decode_landmarks_recognition
-            show_nn=show_landmarks_recognition
-            decode_nn_json=decode_landmarks_recognition_json
+            self.decode_nn=decode_landmarks_recognition
+            self.show_nn=show_landmarks_recognition
+            self.decode_nn_json=decode_landmarks_recognition_json
             self.calc_dist_to_bb=False
 
-        return decode_nn, show_nn, decode_nn_json
 
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':
@@ -118,6 +118,10 @@ class DepthConfigManager:
             shave_nr = 7
             cmx_slices = 7
             NCE_nr = 1
+        else:
+            shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
+            cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
+            NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
 
         # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
         config = {
@@ -201,9 +205,7 @@ class DepthConfigManager:
             #}
         }
 
-        config = self.postProcessJsonConfig(config)
-
-        return config
+        self.jsonConfig = self.postProcessJsonConfig(config)
 
 
     def postProcessJsonConfig(self, config):
@@ -269,9 +271,9 @@ class BlobManager:
         # compile modules
         self.default_blob=True
         if compile_model:
-            self.blob_file, self.default_blob = self.compileBlob(blob_file)
+            self.blob_file, self.default_blob = self.compileBlob(self.blob_file)
             if self.args['cnn_model2']:
-                self.blob_file2, self.default_blob = self.compileBlob(blob_file2)
+                self.blob_file2, self.default_blob = self.compileBlob(self.blob_file2)
 
     def getLabels(self):
         # try and load labels
@@ -311,9 +313,9 @@ class BlobManager:
 
     def compileBlob(self, blob_file):
         default_blob=False
-        shave_nr = self.args['shaves']
-        cmx_slices = self.args['cmx_slices']
-        NCE_nr = self.args['NN_engines']
+        shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
+        cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
+        NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
 
         if NCE_nr == 2:
             if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
