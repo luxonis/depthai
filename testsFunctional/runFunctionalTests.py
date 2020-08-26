@@ -1,4 +1,5 @@
 import os
+import consts.resource_paths
 
 class TestManager:
     results = []
@@ -10,7 +11,7 @@ class TestManager:
 
 
     def printResult(self, exitCode, testName):
-        if result == 0:
+        if exitCode == 0:
             print("\033[1;32;40m----------------------------------------------------------------")
             print(testName + " Passed!")
             print("----------------------------------------------------------------\033[0m")
@@ -30,10 +31,11 @@ class TestManager:
 
 if __name__ == "__main__":
     testMan = TestManager()
+    testPath = consts.resource_paths.tests_functional_path
 
     # try data streams
     #meta_d2h
-    result = os.system("python3 test_meta_d2h.py -s " + "meta_d2h metaout")
+    result = os.system("python3 " + testPath + "test_meta_d2h.py -s " + "meta_d2h metaout")
     testMan.printResult(result, "meta_d2h")
     testMan.appendResult(["meta_d2h", result])
 
@@ -42,8 +44,9 @@ if __name__ == "__main__":
     #testMan.printResult(result, "jpegout")
 
     #object_tracker
-    result = os.system("python3 test_object_tracker.py -s " + "metaout object_tracker previewout")
+    result = os.system("python3 " + testPath + "test_object_tracker.py -s " + "metaout object_tracker previewout")
     testMan.printResult(result, "object_tracker")
+    print(result)
     testMan.appendResult(["object_tracker", result])
 
 
@@ -59,19 +62,19 @@ if __name__ == "__main__":
 
     for stream in visualStreams:
         testMan.printTestName(stream)
-        result = os.system("python3 test_video.py -s " + stream)
+        result = os.system("python3 " + testPath + "test_video.py -s " + stream)
         testMan.printResult(result, stream)
         testMan.appendResult([stream, result])
 
 
     #try various -cnn options
-    cnndir = "../resources/nn/"
+    cnndir = consts.resource_paths.nn_resource_path
     cnnlist = os.listdir(cnndir)
     for cnn in cnnlist:
         print(cnndir+cnn)
         if os.path.isdir(cnndir+cnn):
             testMan.printTestName(cnn)
-            runStr = "python3 test_video.py -cnn " + cnn
+            runStr = "python3 " + testPath + "test_video.py -cnn " + cnn
             result = os.system(runStr)
             testMan.printResult(result, cnn)
             testMan.appendResult([cnn, result])
