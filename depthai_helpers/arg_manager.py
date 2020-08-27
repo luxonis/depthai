@@ -26,10 +26,9 @@ def _stream_type(option):
         cli_print(msg_string, PrintColors.WARNING)
         raise ValueError(msg_string)
 
-    deprecated_choices = ("depth_sipp", "depth_color_h")
     transition_map = {"depth_sipp" : "disparity_color", "depth_color_h" : "disparity_color"}
     stream_name = option_list[0]
-    if stream_name in deprecated_choices:
+    if stream_name in transition_map:
         cli_print("Stream option " + stream_name + " is deprecated, use: " + transition_map[stream_name], PrintColors.WARNING)
         stream_name = transition_map[stream_name]
 
