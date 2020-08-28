@@ -18,6 +18,7 @@ custom_calib_fpath    = relative_to_abs_path('../resources/depthai.calib')
 nn_resource_path      = relative_to_abs_path('../resources/nn')+"/"
 blob_fpath            = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.blob')
 blob_config_fpath     = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.json')
+tests_functional_path = relative_to_abs_path('../testsFunctional/') + "/"
 
 if custom_calib_fpath is not None and Path(custom_calib_fpath).exists():
     calib_fpath = custom_calib_fpath
