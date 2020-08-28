@@ -2,6 +2,7 @@ from math import exp as exp
 import cv2
 import numpy as np
 from time import time
+import json
 
 # Adjust these thresholds
 detection_threshold = 0.60
@@ -165,6 +166,25 @@ def decode_tiny_yolo(nnet_packet, **kwargs):
    
     filtered_objects=objects
     return filtered_objects
+
+def decode_tiny_yolo_json(nnet_packet, **kwargs):
+    convertList = []
+
+    filtered_objects = decode_tiny_yolo(nnet_packet, **kwargs)
+    for entry in filtered_objects:
+        jsonConvertDict = {}
+        jsonConvertDict["xmin"] = entry["xmin"]
+        jsonConvertDict["ymin"] = entry["ymin"]
+        jsonConvertDict["xmax"] = entry["xmax"]
+        jsonConvertDict["ymax"] = entry["ymax"]
+        if type(entry["confidence"]) is np.float16:
+            jsonConvertDict["confidence"] = entry["confidence"].item()
+        else:
+            jsonConvertDict["confidence"] = entry["confidence"]
+        jsonConvertDict["class_id"] = entry["class_id"]
+        convertList.append(jsonConvertDict)
+
+    return json.dumps(convertList)
 
 BOX_COLOR = (0,255,0)
 LABEL_BG_COLOR = (70, 120, 70) # greyish green background for text
