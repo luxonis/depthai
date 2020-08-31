@@ -14,6 +14,7 @@ import depthai
 import consts.resource_paths
 from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, parse_args, PrintColors
+from depthai_helpers.projector_3d import depthmap_to_projection, visualize, PointCloudVisualizer
 
 from depthai_helpers.object_tracker_handler import show_tracklets
 
@@ -206,6 +207,8 @@ config = {
     'depth':
     {
         'calibration_file': consts.resource_paths.calib_fpath,
+        'left_mesh_file': consts.resource_paths.left_mesh_fpath,
+        'right_mesh_file': consts.resource_paths.right_mesh_fpath,
         'padding_factor': 0.3,
         'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
         'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number
@@ -393,11 +396,13 @@ for stream in stream_names:
         cv2.createTrackbar(trackbar_name, stream, conf_thr_slider_min, conf_thr_slider_max, on_trackbar_change)
         cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
 
+pcl_converter = PointCloudVisualizer("intrinsic.json")
+right = None
 while True:
     # retreive data from the device
     # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
     nnet_packets, data_packets = p.get_available_nnet_and_data_packets()
-    
+
     packets_len = len(nnet_packets) + len(data_packets)
     if packets_len != 0:
         reset_process_wd()
@@ -415,12 +420,15 @@ while True:
         frame_count['metaout'] += 1
         frame_count['nn'][camera] += 1
 
+    # print("Out of packers--------------------------------------->")
     for packet in data_packets:
         window_name = packet.stream_name
+        print(packet.stream_name + "---------------------->")
         if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
         if args['verbose']: print_packet_info(packet)
         packetData = packet.getData()
+
         if packetData is None:
             print('Invalid packet data!')
             continue
@@ -442,6 +450,8 @@ while True:
             cv2.imshow(window_name, nn_frame)
         elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
             frame_bgr = packetData
+            if packet.stream_name == 'right':
+                right = packetData
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
@@ -455,18 +465,26 @@ while True:
             cv2.imshow(window_name, frame_bgr)
         elif packet.stream_name.startswith('depth') or packet.stream_name == 'disparity_color':
             frame = packetData
-
+            print(packet.stream_name + "---------------------->")
             if len(frame.shape) == 2:
                 if frame.dtype == np.uint8: # grayscale
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                     cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                 else: # uint16
-                    frame = (65535 // frame).astype(np.uint8)
+
+                    if right is not None:
+                        pcl_converter.rgbd_to_projection(frame, right)
+
+                    # pcl_converter.depthmap_to_projection(frame)
+                    frame = (65535//frame).astype(np.uint8)
+
+
                     #colorize depth map, comment out code below to obtain grayscale
                     frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
                     # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
                     cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
+
             else: # bgr
                 cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
                 cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
