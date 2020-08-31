@@ -214,6 +214,9 @@ def parse_args():
     parser.add_argument("-v", "--video", default=None, type=str, required=False,
                         help="Path where to save video stream (existing file will be overwritten)")
     
+    parser.add_argument("-pcl", "--pointcloud", default=False, action="store_true",
+                        help="Convert Depth map image to gray scale")
+
     argcomplete.autocomplete(parser)
 
     options = parser.parse_args()
@@ -221,6 +224,18 @@ def parse_args():
                            options.swap_lr])
     if (options.board is not None) and any_options_set:
         parser.error("[-brd] is mutually exclusive with [-fv -rfv -b -r -w]")
+
+    # rgb_available = False
+    # depth_available = False
+    # for stream in options.streams:
+
+
+
+    # rgb_available = options.streams.name == 'right' or options.streams.name == 'left' or options.streams.name == 'previewout'
+    #
+    #
+    # if not (options.pointcloud and options.streams.name == 'depth_raw' and rgb_available):
+
 
     # Set some defaults after the above check
     if not options.board:
