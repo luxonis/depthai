@@ -17,46 +17,50 @@ class PointCloudVisualizer():
         self.vis = o3d.visualization.Visualizer()
         self.vis.create_window()
         self.isstarted = False
+
+
+        # intrinsic = o3d.camera.PinholeCameraIntrinsic()
+        # print(str(type(intrinsic)))
         # open3d::camera::PinholeCameraIntrinsic instrinsic;  # TODO: Try this
         # instrinsic.SetIntrinsics(480, 272, 282.15, 321.651, 270, 153.9);
         # self.vis.add_geometry(self.pcl)
 
 
-    def dummy_pcl(self):
-        x = np.linspace(-3, 3, 401)
-        mesh_x, mesh_y = np.meshgrid(x, x)
-        z = np.sinc((np.power(mesh_x, 2) + np.power(mesh_y, 2)))
-        z_norm = (z - z.min()) / (z.max() - z.min())
-        xyz = np.zeros((np.size(mesh_x), 3))
-        xyz[:, 0] = np.reshape(mesh_x, -1)
-        xyz[:, 1] = np.reshape(mesh_y, -1)
-        xyz[:, 2] = np.reshape(z_norm, -1)
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(xyz)
-        return pcd
+    # def dummy_pcl(self):
+    #     x = np.linspace(-3, 3, 401)
+    #     mesh_x, mesh_y = np.meshgrid(x, x)
+    #     z = np.sinc((np.power(mesh_x, 2) + np.power(mesh_y, 2)))
+    #     z_norm = (z - z.min()) / (z.max() - z.min())
+    #     xyz = np.zeros((np.size(mesh_x), 3))
+    #     xyz[:, 0] = np.reshape(mesh_x, -1)
+    #     xyz[:, 1] = np.reshape(mesh_y, -1)
+    #     xyz[:, 2] = np.reshape(z_norm, -1)
+    #     pcd = o3d.geometry.PointCloud()
+    #     pcd.points = o3d.utility.Vector3dVector(xyz)
+    #     return pcd
 
     def rgbd_to_projection(self, depth_map, rgb):
-        # depth_map[depth_map == 65535] = 0
-        # self.depth_map = 65535 // depth_map
         self.depth_map = depth_map
-
         self.rgb = rgb
         rgb_o3d = o3d.geometry.Image(self.rgb)
         depth_o3d = o3d.geometry.Image(self.depth_map)
         rgbd_image = o3d.geometry.RGBDImage.create_from_color_and_depth(rgb_o3d, depth_o3d)
-
-        # img = o3d.geometry.Image((self.depth_map))
-
-        if not self.isstarted:
-            print("inhere")
-            self.pcl = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic, project_valid_depth_only=True)
-            self.vis.add_geometry(self.pcl)
-            self.isstarted = True
+        if self.pcl is None:
+            self.pcl = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic)
         else:
-            print("not inhere")
-            pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic, project_valid_depth_only=True)
+            pcd = o3d.geometry.PointCloud.create_from_rgbd_image(rgbd_image, self.pinhole_camera_intrinsic)
             self.pcl.points = pcd.points
             self.pcl.colors = pcd.colors
+        return self.pcl
+
+
+    def visualize_pcd(self):
+        if not self.isstarted:
+            self.vis.add_geometry(self.pcl)
+            origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=[0, 0, 0])
+            self.vis.add_geometry(origin)
+            self.isstarted = True
+        else:
             self.vis.update_geometry(self.pcl)
             self.vis.poll_events()
             self.vis.update_renderer()

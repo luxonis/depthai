@@ -402,8 +402,10 @@ for stream in stream_names:
         cv2.createTrackbar(trackbar_name, stream, conf_thr_slider_min, conf_thr_slider_max, on_trackbar_change)
         cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
 
-pcl_converter = PointCloudVisualizer("intrinsic.json")
-right = None
+if "depth_raw" in stream_names and "right" in stream_names:
+    pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
+    right = None
+
 while True:
     # retreive data from the device
     # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
@@ -477,14 +479,10 @@ while True:
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                     cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                 else: # uint16
-
-                    if right is not None:
-                        pcl_converter.rgbd_to_projection(frame, right)
-
-                    # pcl_converter.depthmap_to_projection(frame)
+                    if "depth_raw" in stream_names and "right" in stream_names and right is not None:
+                        pcd = pcl_converter.rgbd_to_projection(frame, right)
+                        pcl_converter.visualize_pcd()
                     frame = (65535//frame).astype(np.uint8)
-
-
                     #colorize depth map, comment out code below to obtain grayscale
                     frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
                     # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
