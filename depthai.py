@@ -214,6 +214,12 @@ config = {
         'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number
         'median_kernel_size': args['stereo_median_size'],
         'lr_check': args['stereo_lr_check'],
+        'warp_rectify':
+        {
+            'use_mesh' : True, # if False, will use homography
+            'mirror_frame': True, # if False, the disparity will be mirrored instead
+            'edge_fill_color': -1, # gray 0..255, or -1 to replicate pixel values
+        },
     },
     'ai':
     {
