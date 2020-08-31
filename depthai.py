@@ -448,7 +448,7 @@ while True:
             cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(nn_frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
             cv2.imshow(window_name, nn_frame)
-        elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
+        elif packet.stream_name in ['left', 'right', 'disparity', 'rectified_left', 'rectified_right']:
             frame_bgr = packetData
             if packet.stream_name == 'right':
                 right = packetData
