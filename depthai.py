@@ -216,9 +216,9 @@ config = {
         'lr_check': args['stereo_lr_check'],
         'warp_rectify':
         {
-            'use_mesh' : True, # if False, will use homography
+            'use_mesh' : False, # if False, will use homography
             'mirror_frame': True, # if False, the disparity will be mirrored instead
-            'edge_fill_color': -1, # gray 0..255, or -1 to replicate pixel values
+            'edge_fill_color': 64, # gray 0..255, or -1 to replicate pixel values
         },
     },
     'ai':
@@ -431,7 +431,7 @@ while True:
     # print("Out of packers--------------------------------------->")
     for packet in data_packets:
         window_name = packet.stream_name
-        print(packet.stream_name + "---------------------->")
+        #print(packet.stream_name + "---------------------->")
         if packet.stream_name not in stream_names:
             continue # skip streams that were automatically added
         if args['verbose']: print_packet_info(packet)
@@ -473,7 +473,7 @@ while True:
             cv2.imshow(window_name, frame_bgr)
         elif packet.stream_name.startswith('depth') or packet.stream_name == 'disparity_color':
             frame = packetData
-            print(packet.stream_name + "---------------------->")
+            #print(packet.stream_name + "---------------------->")
             if len(frame.shape) == 2:
                 if frame.dtype == np.uint8: # grayscale
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
