@@ -82,7 +82,7 @@ class StereoCalibration(object):
         # save data to binary file
         # self.H.tofile(out_filepath)
 
-        with open("out_filepath", "wb") as fp:
+        with open(out_filepath, "wb") as fp:
             fp.write(self.H1.tobytes())
             fp.write(self.H2.tobytes())
             fp.write(self.M1.tobytes())
