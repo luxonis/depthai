@@ -82,13 +82,20 @@ class StereoCalibration(object):
         # save data to binary file
         # self.H.tofile(out_filepath)
 
+        self.H1_fp32 = self.H1.astype(np.float32)
+        self.H2_fp32 = self.H2.astype(np.float32)
+        self.M1_fp32 = self.M1.astype(np.float32)
+        self.M2_fp32 = self.M2.astype(np.float32)
+        self.R_fp32  = self.R.astype(np.float32)
+        self.T_fp32  = self.T.astype(np.float32)
+
         with open(out_filepath, "wb") as fp:
-            fp.write(self.H1.tobytes())
-            fp.write(self.H2.tobytes())
-            fp.write(self.M1.tobytes())
-            fp.write(self.M2.tobytes())
-            fp.write(self.R.tobytes())
-            fp.write(self.T.tobytes())
+            fp.write(self.H1_fp32.tobytes())
+            fp.write(self.H2_fp32.tobytes())
+            fp.write(self.M1_fp32.tobytes())
+            fp.write(self.M2_fp32.tobytes())
+            fp.write(self.R_fp32.tobytes())
+            fp.write(self.T_fp32.tobytes())
 
         self.create_save_mesh()
 
