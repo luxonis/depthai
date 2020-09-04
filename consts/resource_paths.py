@@ -17,6 +17,7 @@ boards_dir_path       = relative_to_abs_path('../resources/boards') + "/"
 custom_calib_fpath    = relative_to_abs_path('../resources/depthai.calib')
 left_mesh_fpath        = relative_to_abs_path('../resources/mesh_left.calib')
 right_mesh_fpath        = relative_to_abs_path('../resources/mesh_right.calib')
+
 nn_resource_path      = relative_to_abs_path('../resources/nn')+"/"
 blob_fpath            = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.blob')
 blob_config_fpath     = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.json')

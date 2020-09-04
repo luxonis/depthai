@@ -5,6 +5,7 @@ import shutil
 import numpy as np
 import re
 import time
+import consts.resource_paths
 
 # Creates a set of 13 polygon coordinates
 def setPolygonCoordinates(height, width):
@@ -75,12 +76,9 @@ class StereoCalibration(object):
         # process images, detect corners, refine and save data
         self.process_images(filepath)
 
-        # run calibration procedure and construct Homography
-        # self.stereo_calibrate()
-        # H1, H2 = self.stereo_calibrate_two_homography_uncalib()
+        # run calibration procedure and construct Homography and mesh
         self.stereo_calibrate_two_homography_calib()
         # save data to binary file
-        # self.H.tofile(out_filepath)
 
         self.H1_fp32 = self.H1.astype(np.float32)
         self.H2_fp32 = self.H2.astype(np.float32)
@@ -89,9 +87,12 @@ class StereoCalibration(object):
         self.R_fp32  = self.R.astype(np.float32)
         self.T_fp32  = self.T.astype(np.float32)
 
+        inv_H1 = np.linalg.inv(self.H1_fp32)
+        inv_H2 = np.linalg.inv(self.H2_fp32)
+
         with open(out_filepath, "wb") as fp:
-            fp.write(self.H1_fp32.tobytes())
-            fp.write(self.H2_fp32.tobytes())
+            fp.write(inv_H2.tobytes()) # goes to right camera
+            fp.write(inv_H1.tobytes()) # goes to left camera
             fp.write(self.M1_fp32.tobytes())
             fp.write(self.M2_fp32.tobytes())
             fp.write(self.R_fp32.tobytes())
@@ -106,10 +107,10 @@ class StereoCalibration(object):
         print("Calibration file written to %s." % (out_filepath))
         print("\tTook %i seconds to run image processing." % (round(time.time() - start_time, 2)))
         # show debug output for visual inspection
-        print("\nRectifying dataset for visual inspection")
-        self.show_rectified_images_two_calib(filepath)
-        # self.show_rectified_images_two(filepath, H1, H2)
-        self.show_rectified_images(filepath, out_filepath)
+        print("\nRectifying dataset for visual inspection using Mesh")
+        self.show_rectified_images_two_calib(filepath, False)
+        print("\nRectifying dataset for visual inspection using Two Homography")
+        self.show_rectified_images_two_calib(filepath, True)
 
     def process_images(self, filepath):
         """Read images, detect corners, refine corners, and save data."""
@@ -192,7 +193,7 @@ class StereoCalibration(object):
             raise AssertionError("Missing valid image sets for %i polygons. Re-run calibration with the\n'-p %s' argument to re-capture images for these polygons." % (len(missing), arg_value))
         else:
             return True
-
+    
     def stereo_calibrate(self):
         """Calibrate camera and construct Homography."""
         # init camera calibrations
@@ -229,10 +230,6 @@ class StereoCalibration(object):
         # construct Homography
         plane_depth = 40000000.0  # arbitrary plane depth 
         #TODO: Need to understand effect of plane_depth. Why does this improve some boards' cals?
-        # n = np.array([[0.0], [0.0], [-1.0]])
-        # d_inv = 1.0 / plane_depth
-        # z = np.dot(T, n.transpose())
-        # H = (R - d_inv * z)
         self.H = np.dot(self.M2, np.dot(R, np.linalg.inv(self.M1)))
         self.H /= self.H[2, 2]
         # rectify Homography for right camera
@@ -291,12 +288,15 @@ class StereoCalibration(object):
 
         map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
-        print("type of maps built -------->")
+        
         print(str(type(map_x_l)))
         meshCellSize = 16
         mesh_left = []
         mesh_right = []
-    
+        map_x_l.tofile("map_left_x.calib")
+        map_y_l.tofile("map_left_y.calib")
+        map_x_r.tofile("map_right_x.calib")
+        map_y_r.tofile("map_right_y.calib")
         for y in range(map_x_l.shape[0] + 1):
             if y % meshCellSize == 0:
                 row_left = []
@@ -334,46 +334,45 @@ class StereoCalibration(object):
         
         mesh_left = np.array(mesh_left)
         mesh_right = np.array(mesh_right)
-        
-        mesh_left.tofile("mesh_left.calib")
-        mesh_right.tofile("mesh_right.calib")
+        mesh_left.tofile(consts.resource_paths.left_mesh_fpath)
+        mesh_right.tofile(consts.resource_paths.right_mesh_fpath)
 
-    def show_rectified_images_two_calib(self, dataset_dir):
+    def show_rectified_images_two_calib(self, dataset_dir, use_homo):
         images_left = glob.glob(dataset_dir + '/left/*.png')
         images_right = glob.glob(dataset_dir + '/right/*.png')
         images_left.sort()
         images_right.sort()
-
+        print("HU IHER")
         assert len(images_left) != 0, "ERROR: Images not read correctly"
         assert len(images_right) != 0, "ERROR: Images not read correctly"
 
-        map1_l, map2_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
-        map1_r, map2_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+        if not use_homo:
+            mapx_l, mapy_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
 
-        H1 = np.matmul(np.matmul(self.M1, self.R1), np.linalg.inv(self.M1))
-        H2 = np.matmul(np.matmul(self.M1, self.R2), np.linalg.inv(self.M2))
 
         image_data_pairs = []
         for image_left, image_right in zip(images_left, images_right):
             # read images
             img_l = cv2.imread(image_left, 0)
             img_r = cv2.imread(image_right, 0)
-            img_l = cv2.remap(img_l, map1_l, map2_l, cv2.INTER_CUBIC)
-            img_r = cv2.remap(img_r, map1_r, map2_r, cv2.INTER_CUBIC)
+            if not use_homo:
+                img_l = cv2.remap(img_l, mapx_l, mapy_l, cv2.INTER_LINEAR)
+                img_r = cv2.remap(img_r, mapx_r, mapy_r, cv2.INTER_LINEAR)
+            else:
+                # img_l = cv2.undistort(img_l, self.M1, self.d1, None, self.M1)
+                # img_r = cv2.undistort(img_r, self.M2, self.d2, None, self.M2)
 
-            # img_l = cv2.undistort(img_l, self.M1, self.d1, None, self.M1)
-            # img_r = cv2.undistort(img_r, self.M2, self.d2, None, self.M2)
-
-            # # warp right image
-            # img_l = cv2.warpPerspective(img_l, H1, img_l.shape[::-1],
-            #                             cv2.INTER_CUBIC +
-            #                             cv2.WARP_FILL_OUTLIERS +
-            #                             cv2.WARP_INVERSE_MAP)
-            #
-            # img_r = cv2.warpPerspective(img_r, H2, img_r.shape[::-1],
-            #                             cv2.INTER_CUBIC +
-            #                             cv2.WARP_FILL_OUTLIERS +
-            #                             cv2.WARP_INVERSE_MAP)
+                # warp right image
+                img_l = cv2.warpPerspective(img_l, self.H1_fp32, img_l.shape[::-1],
+                                            cv2.INTER_CUBIC +
+                                            cv2.WARP_FILL_OUTLIERS +
+                                            cv2.WARP_INVERSE_MAP)
+                
+                img_r = cv2.warpPerspective(img_r, self.H2_fp32, img_r.shape[::-1],
+                                            cv2.INTER_CUBIC +
+                                            cv2.WARP_FILL_OUTLIERS +
+                                            cv2.WARP_INVERSE_MAP)
 
 
             image_data_pairs.append((img_l, img_r))
@@ -385,6 +384,7 @@ class StereoCalibration(object):
             flags = 0
             flags |= cv2.CALIB_CB_ADAPTIVE_THRESH
             flags |= cv2.CALIB_CB_NORMALIZE_IMAGE
+            flags |= cv2.CALIB_CB_FAST_CHECK
             ret_l, corners_l = cv2.findChessboardCorners(image_data_pair[0],
                                                          (9, 6), flags)
             ret_r, corners_r = cv2.findChessboardCorners(image_data_pair[1],
@@ -392,7 +392,7 @@ class StereoCalibration(object):
 
             # termination criteria
             self.criteria = (cv2.TERM_CRITERIA_MAX_ITER +
-                             cv2.TERM_CRITERIA_EPS, 30, 0.001)
+                             cv2.TERM_CRITERIA_EPS, 10, 0.05)
 
             # if corners are found in both images, refine and add data
             if ret_l and ret_r:
@@ -402,6 +402,11 @@ class StereoCalibration(object):
                                       (-1, -1), self.criteria)
                 imgpoints_l.extend(corners_l)
                 imgpoints_r.extend(corners_r)
+                epi_error_sum = 0
+                for l_pt, r_pt in zip(corners_l, corners_r):
+                    epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+                
+                print("Average Epipolar Error per image on host: " + str(epi_error_sum / len(corners_l)))
 
         epi_error_sum = 0
         for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):
@@ -467,46 +472,7 @@ class StereoCalibration(object):
 
         assert ret < 1.0, "[ERROR] Calibration RMS error < 1.0 (%i). Re-try image capture." % (ret)
         print("[OK] Calibration successful w/ RMS error=" + str(ret))
-        # s_b = [[0,    -T[2],  T[1]],
-        #        [T[2],   0,   -T[0]],
-        #        [-T[1], T[0],    0]
-        #       ]
-        # f_mat = np.matmul(np.matmul(np.matmul(np.transpose(np.linalg.inv(self.M1)), s_b), np.transpose(R)), np.linalg.inv(self.M2))
-        # f_mat /= f_mat[2, 2]
-        # i = 0
-        # for pts_l, pts_r in zip(self.imgpoints_l, self.imgpoints_r):
-        #     print("Image number--->" + str(i))
-        #     m = pts_l[i]
-        #     pt_r = pts_r[i,0]
-        #     # pt_r.insert(1)
-        #     pt_r = np.append(pt_r, 1).reshape(3, 1)
-        #     pt_l = pts_l[i, 0]
-        #     # pt_l.append(1)
-        #     pt_l = np.append(pt_l, 1).reshape(1, 3)
-        #     # print(pt_r)
-        #     # print(np.transpose(pt_r) * f_mat * pt_l)
-        #     # x = pt_r * f_mat * pt_l
-        #     # z = pt_l * f_mat * pt_r
-        #
-        #     # x = np.dot(np.dot(pt_r, f_mat),pt_l)
-        #     # print("res->" + str(x))
-        #     y = np.dot(np.dot(pt_l, f_mat),pt_r)
-        #     z = np.dot(np.dot(pt_l, F), pt_r)
-        #
-        #     print("res->y" + str(y) + " --- " + str(z))
-        #
-        #     i += 1
-        # f = f_mat.reshape(3, 3)
 
-        # f = []
-        # for row in f_mat:
-        #     c = []
-        #     for col in row:
-        #         c.append(col[0])
-        #     f.append(c)
-        # f = np.array(f)
-        # f /= f[2,2]
-        # val_list = np.array(self.imgpoints_l).reshape(-1,2)  #.reshape(54,2)
         F_test, mask = cv2.findFundamentalMat(np.array(self.imgpoints_l).reshape(-1, 2),
                                    np.array(self.imgpoints_r).reshape(-1, 2),
                                    cv2.FM_RANSAC, 2) # try ransac and other methods too.
@@ -670,7 +636,7 @@ class StereoCalibration(object):
 
             # termination criteria
             self.criteria = (cv2.TERM_CRITERIA_MAX_ITER +
-                             cv2.TERM_CRITERIA_EPS, 30, 0.001)
+                             cv2.TERM_CRITERIA_EPS, 10, 0.05)
 
             # if corners are found in both images, refine and add data
             if ret_l and ret_r:
@@ -680,6 +646,8 @@ class StereoCalibration(object):
                                       (-1, -1), self.criteria)
                 imgpoints_l.extend(corners_l)
                 imgpoints_r.extend(corners_r)
+                epi_error_sum = 0
+    
 
         epi_error_sum = 0
         for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):

@@ -216,7 +216,10 @@ def parse_args():
                         help="Path where to save video stream (existing file will be overwritten)")
     
     parser.add_argument("-pcl", "--pointcloud", default=False, action="store_true",
-                        help="Convert Depth map image to gray scale")
+                        help="Convert Depth map image to point clouds")
+
+    parser.add_argument("-mesh", "--use_mesh", default=False, action="store_true",
+                        help="use mesh for rectification of the stereo images")
 
     argcomplete.autocomplete(parser)
 

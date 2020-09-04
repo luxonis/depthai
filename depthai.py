@@ -216,9 +216,9 @@ config = {
         'lr_check': args['stereo_lr_check'],
         'warp_rectify':
         {
-            'use_mesh' : False, # if False, will use homography
+            'use_mesh' : args['use_mesh'], # if False, will use homography
             'mirror_frame': True, # if False, the disparity will be mirrored instead
-            'edge_fill_color': 64, # gray 0..255, or -1 to replicate pixel values
+            'edge_fill_color': 0, # gray 0..255, or -1 to replicate pixel values
         },
     },
     'ai':
@@ -402,10 +402,13 @@ for stream in stream_names:
         cv2.createTrackbar(trackbar_name, stream, conf_thr_slider_min, conf_thr_slider_max, on_trackbar_change)
         cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
 
-if "depth_raw" in stream_names and "right" in stream_names:
-    pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
-    right = None
+# if "depth_raw" in stream_names and "right" in stream_names:
+#     pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
+#     right = None
 
+right = None
+
+pcl_not_set = True
 while True:
     # retreive data from the device
     # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
@@ -436,7 +439,7 @@ while True:
             continue # skip streams that were automatically added
         if args['verbose']: print_packet_info(packet)
         packetData = packet.getData()
-
+    
         if packetData is None:
             print('Invalid packet data!')
             continue
@@ -458,7 +461,7 @@ while True:
             cv2.imshow(window_name, nn_frame)
         elif packet.stream_name in ['left', 'right', 'disparity', 'rectified_left', 'rectified_right']:
             frame_bgr = packetData
-            if packet.stream_name == 'right':
+            if args['pointcloud'] and packet.stream_name == 'right':
                 right = packetData
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
@@ -479,7 +482,10 @@ while True:
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                     cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                 else: # uint16
-                    if "depth_raw" in stream_names and "right" in stream_names and right is not None:
+                    if args['pointcloud'] and "depth_raw" in stream_names and "right" in stream_names and right is not None:
+                        if pcl_not_set:
+                            pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
+                            pcl_not_set =  False
                         pcd = pcl_converter.rgbd_to_projection(frame, right)
                         pcl_converter.visualize_pcd()
                     frame = (65535//frame).astype(np.uint8)
