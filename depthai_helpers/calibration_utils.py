@@ -81,23 +81,23 @@ class StereoCalibration(object):
         self.stereo_calibrate_two_homography_calib()
         # save data to binary file
 
-        self.H1_fp32 = self.H1.astype(np.float32)
-        self.H2_fp32 = self.H2.astype(np.float32)
-        self.M1_fp32 = self.M1.astype(np.float32)
-        self.M2_fp32 = self.M2.astype(np.float32)
-        self.R_fp32  = self.R.astype(np.float32)
-        self.T_fp32  = self.T.astype(np.float32)
+        inv_H1 = np.linalg.inv(self.H1)
+        inv_H2 = np.linalg.inv(self.H2)
 
-        inv_H1 = np.linalg.inv(self.H1_fp32)
-        inv_H2 = np.linalg.inv(self.H2_fp32)
+        inv_H1_fp32 = inv_H1.astype(np.float32)
+        inv_H2_fp32 = inv_H2.astype(np.float32)
+        M1_fp32 = self.M1.astype(np.float32)
+        M2_fp32 = self.M2.astype(np.float32)
+        R_fp32  = self.R.astype(np.float32)
+        T_fp32  = self.T.astype(np.float32)
 
         with open(out_filepath, "wb") as fp:
-            fp.write(inv_H2.tobytes()) # goes to right camera
-            fp.write(inv_H1.tobytes()) # goes to left camera
-            fp.write(self.M2_fp32.tobytes()) # right camera intrinsics
-            fp.write(self.M1_fp32.tobytes()) # left camera intrinsics
-            fp.write(self.R_fp32.tobytes()) # Rotation matrix left -> right
-            fp.write(self.T_fp32.tobytes()) # Translation vector left -> right
+            fp.write(inv_H1_fp32.tobytes()) # goes to left camera
+            fp.write(inv_H2_fp32.tobytes()) # goes to right camera
+            fp.write(M1_fp32.tobytes()) # left camera intrinsics
+            fp.write(M2_fp32.tobytes()) # right camera intrinsics
+            fp.write(R_fp32.tobytes()) # Rotation matrix left -> right
+            fp.write(T_fp32.tobytes()) # Translation vector left -> right
 
         self.create_save_mesh()
         
