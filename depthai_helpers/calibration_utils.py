@@ -93,10 +93,10 @@ class StereoCalibration(object):
         with open(out_filepath, "wb") as fp:
             fp.write(inv_H2.tobytes()) # goes to right camera
             fp.write(inv_H1.tobytes()) # goes to left camera
-            fp.write(self.M1_fp32.tobytes())
-            fp.write(self.M2_fp32.tobytes())
-            fp.write(self.R_fp32.tobytes())
-            fp.write(self.T_fp32.tobytes())
+            fp.write(self.M2_fp32.tobytes()) # right camera intrinsics
+            fp.write(self.M1_fp32.tobytes()) # left camera intrinsics
+            fp.write(self.R_fp32.tobytes()) # Rotation matrix left -> right
+            fp.write(self.T_fp32.tobytes()) # Translation vector left -> right
 
         self.create_save_mesh()
 
@@ -293,10 +293,7 @@ class StereoCalibration(object):
         meshCellSize = 16
         mesh_left = []
         mesh_right = []
-        map_x_l.tofile("map_left_x.calib")
-        map_y_l.tofile("map_left_y.calib")
-        map_x_r.tofile("map_right_x.calib")
-        map_y_r.tofile("map_right_y.calib")
+
         for y in range(map_x_l.shape[0] + 1):
             if y % meshCellSize == 0:
                 row_left = []
