@@ -221,6 +221,9 @@ def parse_args():
     parser.add_argument("-mesh", "--use_mesh", default=False, action="store_true",
                         help="use mesh for rectification of the stereo images")
 
+    parser.add_argument("-mirror_frame", "--mirror_frame", default=True, action="store_true",
+                        help="When set to false Disparity frame will be mirrored")
+                        
     argcomplete.autocomplete(parser)
 
     options = parser.parse_args()

@@ -308,8 +308,8 @@ class StereoCalibration(object):
         
         # TODO: Try replacing P1 and P2 with M2 later and test it.
 
-        map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
-        map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+        map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
+        map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
         
         print(str(type(map_x_l)))
         meshCellSize = 16
