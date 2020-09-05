@@ -217,7 +217,7 @@ config = {
         'warp_rectify':
         {
             'use_mesh' : args['use_mesh'], # if False, will use homography
-            'mirror_frame': True, # if False, the disparity will be mirrored instead
+            'mirror_frame': args['mirror_frame'], # if False, the disparity will be mirrored instead
             'edge_fill_color': 0, # gray 0..255, or -1 to replicate pixel values
         },
     },
@@ -406,9 +406,9 @@ for stream in stream_names:
 #     pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
 #     right = None
 
-right = None
-
+right_rectified = None
 pcl_not_set = True
+
 while True:
     # retreive data from the device
     # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
@@ -461,8 +461,8 @@ while True:
             cv2.imshow(window_name, nn_frame)
         elif packet.stream_name in ['left', 'right', 'disparity', 'rectified_left', 'rectified_right']:
             frame_bgr = packetData
-            if args['pointcloud'] and packet.stream_name == 'right':
-                right = packetData
+            if args['pointcloud'] and packet.stream_name == 'rectified_right':
+                right_rectified = packetData
             cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
             if args['draw_bb_depth']:
@@ -482,11 +482,12 @@ while True:
                     cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                     cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                 else: # uint16
-                    if args['pointcloud'] and "depth_raw" in stream_names and "right" in stream_names and right is not None:
+                    if args['pointcloud'] and "depth_raw" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
                         if pcl_not_set:
                             pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
                             pcl_not_set =  False
-                        pcd = pcl_converter.rgbd_to_projection(frame, right)
+                        right_rectified = cv2.flip(right_rectified, 1)
+                        pcd = pcl_converter.rgbd_to_projection(frame, right_rectified)
                         pcl_converter.visualize_pcd()
                     frame = (65535//frame).astype(np.uint8)
                     #colorize depth map, comment out code below to obtain grayscale
