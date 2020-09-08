@@ -408,7 +408,6 @@ for stream in stream_names:
 
 right_rectified = None
 pcl_not_set = True
-
 while True:
     # retreive data from the device
     # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
@@ -484,7 +483,7 @@ while True:
                 else: # uint16
                     if args['pointcloud'] and "depth_raw" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
                         if pcl_not_set:
-                            pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
+                            pcl_converter = PointCloudVisualizer(depthai.get_right_intrinsic(), 1280, 720)
                             pcl_not_set =  False
                         right_rectified = cv2.flip(right_rectified, 1)
                         pcd = pcl_converter.rgbd_to_projection(frame, right_rectified)

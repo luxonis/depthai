@@ -4,16 +4,23 @@ import numpy as np
 import open3d as o3d
 
 class PointCloudVisualizer():
-    def __init__(self, intrinsic_file, stride=1, depth_scale=1, depth_trunc=96, rgbd_mode=False):
+    def __init__(self, intrinsic_matrix, width, height):
         self.depth_map = None
         self.rgb = None
         self.pcl = None
         # self.pcl = self.dummy_pcl()
-        self.stride = stride
-        self.depth_scale = depth_scale
-        self.depth_trunc = depth_trunc
-        self.rgbd_mode = rgbd_mode
-        self.pinhole_camera_intrinsic = o3d.io.read_pinhole_camera_intrinsic(intrinsic_file)
+        # self.stride = stride
+        # self.depth_scale = depth_scale
+        # self.depth_trunc = depth_trunc
+        # self.rgbd_mode = rgbd_mode
+        # self.pinhole_camera_intrinsic = o3d.io.read_pinhole_camera_intrinsic(intrinsic_file)
+
+        self.pinhole_camera_intrinsic = o3d.camera.PinholeCameraIntrinsic(width,
+                                                                         height,
+                                                                         intrinsic_matrix[0][0],
+                                                                         intrinsic_matrix[1][1],
+                                                                         intrinsic_matrix[0][2],
+                                                                         intrinsic_matrix[1][2])
         self.vis = o3d.visualization.Visualizer()
         self.vis.create_window()
         self.isstarted = False
