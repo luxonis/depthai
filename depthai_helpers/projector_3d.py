@@ -8,8 +8,6 @@ class PointCloudVisualizer():
         self.depth_map = None
         self.rgb = None
         self.pcl = None
-        # self.pcl = self.dummy_pcl()
-        # self.stride = stride
         # self.depth_scale = depth_scale
         # self.depth_trunc = depth_trunc
         # self.rgbd_mode = rgbd_mode
