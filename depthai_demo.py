@@ -244,6 +244,13 @@ class DepthAI:
                     #mjpeg = packetData
                     #mat = cv2.imdecode(mjpeg, cv2.IMREAD_COLOR)
                     #cv2.imshow('mjpeg', mat)
+                elif packet.stream_name == 'raw_color':
+                    meta = packet.getMetadata()
+                    w = meta.getFrameWidth()
+                    h = meta.getFrameHeight()
+                    yuv420p = packetData.reshape( (h * 3 // 2, w) )
+                    bgr = cv2.cvtColor(yuv420p, cv2.COLOR_YUV2BGR_IYUV)
+                    cv2.imshow("raw_color", bgr)
 
                 elif packet.stream_name == 'meta_d2h':
                     str_ = packet.getDataAsStr()
