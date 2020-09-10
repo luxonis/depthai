@@ -3,6 +3,4 @@ opencv-python==4.2.0.34; platform_machine != "armv7l"
 opencv-python==4.1.0.25; platform_machine == "armv7l"
 requests==2.24.0
 argcomplete==1.12.0
-
---extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.1.0.0+75e7a1ea15bb9bf9a8e832e4f7436007e5b96cdd
+depthai==0.2.0.1
