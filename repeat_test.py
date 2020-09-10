@@ -40,7 +40,7 @@ args=""
 for arg in sys.argv[1:]:
     args+="'"+arg+"' "
 
-cmd = "python3 depthai.py " + args
+cmd = "python3 depthai-demo.py " + args
 
 logger.info(cmd)
 

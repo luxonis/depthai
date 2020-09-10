@@ -1,12 +1,16 @@
-# DepthAI Python Module
+# DepthAI Demo Program
 
-This repo contains the pre-compiled DepthAI Python module (compiled as an architecture-specific `.so` file), utilities, and a submodule that allows compiling the DepthAI Python module for other platforms.
+This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
 __Documentation is available at [https://docs.luxonis.com](https://docs.luxonis.com).__
 
-## Python modules
+## Python modules (Dependencies)
 
-DepthAI requires [numpy](https://numpy.org/) and [opencv-python](https://pypi.org/project/opencv-python/). To get the versions of these packages you need for DepthAI, use pip: `python3 -m pip install -r requirements.txt`
+DepthAI Demo requires [numpy](https://numpy.org/), [opencv-python](https://pypi.org/project/opencv-python/) and [depthai](https://github.com/luxonis/depthai-api). 
+To get the versions of these packages you need for the program, use pip: (Make sure pip is upgraded: ` python3 -m pip install -U pip`)
+```
+python3 -m pip install -r requirements.txt 
+```
 
 Optional:
 For command line autocomplete when pressing TAB, only bash interpreter supported now:
@@ -14,18 +18,6 @@ Add to .bashrc:
 `echo 'eval "$(register-python-argcomplete depthai.py)"' >> ~/.bashrc`
 
 If you use any other interpreter: https://kislyuk.github.io/argcomplete/
-
-Files with `.so` extension are the python modules:  
-- `depthai.cpython-36m-x86_64-linux-gnu.so` built for Ubuntu 18.04 & Python 3.6  
-- `depthai.cpython-37m-arm-linux-gnueabihf.so` built for Raspbian 10 & Python 3.7
-
-For supporting other platforms, there is an option to build the python lib from sources by grabbing the [depthai-api](https://github.com/luxonis/depthai-api) submodule:
-
-    git submodule update --init
-    ./depthai-api/install_dependencies.sh # Only required in first build on a given system
-    ./depthai-api/build_py_module.sh
-
-When updating DepthAI on these platforms it is often necessary to run `./depthai-api/build_py_module.sh --clean` in order to build a new version of the depthai-api module for your chosen platform. 
 
 ## Examples
 
