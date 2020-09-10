@@ -383,12 +383,12 @@ class StereoCalibration(object):
                 # img_r = cv2.undistort(img_r, self.M2, self.d2, None, self.M2)
 
                 # warp right image
-                img_l = cv2.warpPerspective(img_l, self.H1_fp32, img_l.shape[::-1],
+                img_l = cv2.warpPerspective(img_l, self.H1, img_l.shape[::-1],
                                             cv2.INTER_CUBIC +
                                             cv2.WARP_FILL_OUTLIERS +
                                             cv2.WARP_INVERSE_MAP)
                 
-                img_r = cv2.warpPerspective(img_r, self.H2_fp32, img_r.shape[::-1],
+                img_r = cv2.warpPerspective(img_r, self.H2, img_r.shape[::-1],
                                             cv2.INTER_CUBIC +
                                             cv2.WARP_FILL_OUTLIERS +
                                             cv2.WARP_INVERSE_MAP)
