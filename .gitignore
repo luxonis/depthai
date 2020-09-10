@@ -42,3 +42,6 @@ intrinsic_calib_m2
 *.mkv
 *.mp4
 *.blob.sh*cmx*
+*.cmd
+*.mvcmd
+*.so
