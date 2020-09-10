@@ -5,4 +5,4 @@ requests==2.24.0
 argcomplete==1.12.0
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.1.0.0+4d6b8f40e312e2d173732e6fe54d101724024b4f
+depthai==0.1.0.0+474de6ef80c1f216dade40f1e275d063fa3d135a
