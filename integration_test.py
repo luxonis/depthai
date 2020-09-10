@@ -134,7 +134,7 @@ for L in range(0, len(streams)+1):
                 config_builder = config_builder+separator+comb+'"'
         config_builder = config_builder + """]}'"""
         if subset:
-            cmd = "python3 depthai.py " + config_builder
+            cmd = "python3 depthai-demo.py " + config_builder
             if(config_builder ==  """-co '{"streams": ["metaout"]}'"""):
                 continue
             logger.info(cmd)

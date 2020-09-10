@@ -1,12 +1,16 @@
 import cv2
 import numpy as np
-
+import json
 
 def decode_emotion_recognition(nnet_packet, **kwargs):
     detections = []
     for i in range(len(nnet_packet.entries()[0][0])):
         detections.append(nnet_packet.entries()[0][0][i])
     return detections
+
+def decode_emotion_recognition_json(nnet_packet, **kwargs):
+    detections = decode_emotion_recognition(nnet_packet, **kwargs)
+    return json.dumps(detections)
 
 def show_emotion_recognition(entries_prev, frame, **kwargs):
     # img_h = frame.shape[0]

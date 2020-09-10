@@ -185,10 +185,14 @@ class Main:
         # The following doesn't work (have to manually hit switch on device)
         # depthai.reboot_device
         # time.sleep(1)
-        if not depthai.init_device(cmd_file=self.cmd_file):
-            raise RuntimeError("Unable to initialize device. Try to reset it")
 
-        pipeline = depthai.create_pipeline(self.config)
+        pipeline = None
+
+        try:
+            device = depthai.Device("", False)
+            pipeline = device.create_pipeline(self.config)
+        except RuntimeError:
+            raise RuntimeError("Unable to initialize device. Try to reset it")
 
         if pipeline is None:
             raise RuntimeError("Unable to create pipeline")
