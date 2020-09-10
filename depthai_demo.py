@@ -137,6 +137,7 @@ class DepthAI:
                     print('', meta.getCameraName(), end='')
             print()
             return
+
         for stream in stream_names:
             if stream in ["disparity", "disparity_color", "depth_raw"]:
                 cv2.namedWindow(stream)
@@ -145,10 +146,7 @@ class DepthAI:
                 conf_thr_slider_max = 255
                 cv2.createTrackbar(trackbar_name, stream, conf_thr_slider_min, conf_thr_slider_max, self.on_trackbar_change)
                 cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
-        # if "depth_raw" in stream_names and "right" in stream_names:
-        #     pcl_converter = PointCloudVisualizer('resources/intrinisc_right.json')
-        #     right = None
-
+        
         right_rectified = None
         pcl_not_set = True
 

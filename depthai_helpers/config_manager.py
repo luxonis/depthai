@@ -30,6 +30,7 @@ class DepthConfigManager:
             usb2_mode = True
         else:
             usb2_mode = False
+        return usb2_mode
 
     def getCommandFile(self):
         debug_mode = False
@@ -134,9 +135,19 @@ class DepthConfigManager:
             'depth':
             {
                 'calibration_file': consts.resource_paths.calib_fpath,
+                'left_mesh_file': consts.resource_paths.left_mesh_fpath,
+                'right_mesh_file': consts.resource_paths.right_mesh_fpath,
                 'padding_factor': 0.3,
                 'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
                 'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number
+                'median_kernel_size': self.args['stereo_median_size'],
+                'lr_check': self.args['stereo_lr_check'],
+                'warp_rectify':
+                {
+                    'use_mesh' : self.args['use_mesh'], # if False, will use homography
+                    'mirror_frame': self.args['mirror_frame'], # if False, the disparity will be mirrored instead
+                    'edge_fill_color': 0, # gray 0..255, or -1 to replicate pixel values
+                },
             },
             'ai':
             {
