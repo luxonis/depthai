@@ -124,6 +124,9 @@ class DepthConfigManager:
             cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
             NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
 
+        if self.args['stereo_lr_check'] == True:
+            raise ValueError("Left-right check option is still under development. Don;t enable it.")
+
         # Do not modify the default values in the config Dict below directly. Instead, use the `-co` argument when running this script.
         config = {
             # Possible streams:
