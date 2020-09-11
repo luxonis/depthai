@@ -21,6 +21,7 @@ from depthai_helpers.model_downloader import download_model
 
 from depthai_helpers.config_manager import DepthConfigManager
 from depthai_helpers.arg_manager import CliArgs
+from depthai_helpers.projector_3d import PointCloudVisualizer
 
 from depthai_helpers.object_tracker_handler import show_tracklets
 
@@ -152,6 +153,7 @@ class DepthAI:
 
         ops = 0
         prevTime = time()
+        print(self.device.get_translation())
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
@@ -239,7 +241,7 @@ class DepthAI:
                         else: # uint16
                             if args['pointcloud'] and "depth_raw" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
                                 if pcl_not_set:
-                                    pcl_converter = PointCloudVisualizer(depthai.get_right_intrinsic(), 1280, 720)
+                                    pcl_converter = PointCloudVisualizer(self.device.get_right_intrinsic(), 1280, 720)
                                     pcl_not_set =  False
                                 right_rectified = cv2.flip(right_rectified, 1)
                                 pcd = pcl_converter.rgbd_to_projection(frame, right_rectified)
