@@ -90,6 +90,11 @@ class StereoCalibration(object):
         M2_fp32 = self.M2.astype(np.float32)
         R_fp32  = self.R.astype(np.float32)
         T_fp32  = self.T.astype(np.float32)
+        M3_fp32 = np.identity(3, dtype = np.float32)
+        R_rgb_fp32 = np.identity(3, dtype = np.float32) 
+        T_rgb_fp32 = np.zeros(3, dtype = np.float32)  
+        d1_coeff_fp32 = self.d1.astype(np.float32)
+        d2_coeff_fp32 = self.d2.astype(np.float32)
 
         with open(out_filepath, "wb") as fp:
             fp.write(inv_H1_fp32.tobytes()) # goes to left camera
@@ -98,6 +103,11 @@ class StereoCalibration(object):
             fp.write(M2_fp32.tobytes()) # right camera intrinsics
             fp.write(R_fp32.tobytes()) # Rotation matrix left -> right
             fp.write(T_fp32.tobytes()) # Translation vector left -> right
+            fp.write(M3_fp32.tobytes()) # rgb camera intrinsics ## Currently Identity matrix
+            fp.write(R_rgb_fp32.tobytes()) # Rotation matrix left -> rgb ## Currently Identity matrix
+            fp.write(T_rgb_fp32.tobytes()) # Translation vector left -> rgb ## Currently vector of zeros
+            fp.write(d1_coeff_fp32.tobytes()) # distortion coeff of left camaera
+            fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camaera
 
         self.create_save_mesh()
         
@@ -289,8 +299,12 @@ class StereoCalibration(object):
 
         map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
-        
-        print(str(type(map_x_l)))
+        print("Distortion coeff left cam")
+        print(self.d1)
+        print("Distortion coeff right cam ")
+        print(self.d2)
+
+        # print(str(type(map_x_l)))
         meshCellSize = 16
         mesh_left = []
         mesh_right = []
