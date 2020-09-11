@@ -101,27 +101,6 @@ class StereoCalibration(object):
 
         self.create_save_mesh()
         
-        # storing right camera intrinsics locally. Temporary update
-        intrinsi_right = {
-            'width' : 1280,
-            'height' : 720,
-            'intrinsic_matrix' :
-            [
-                self.M2[0,0],
-                self.M2[1,0],
-                self.M2[2,0],
-                self.M2[0,1],
-                self.M2[1,1],
-                self.M2[2,1],
-                self.M2[0,2],
-                self.M2[1,2],
-                self.M2[2,2],
-            ]
-        }
-
-        with open('resources/intrinisc_right.json', 'w') as fp:
-            json.dump(intrinsi_right, fp,indent=4)
-
         # append specific flags to file
         with open(out_filepath, "ab") as fp:
             fp.write(bytearray(flags))
