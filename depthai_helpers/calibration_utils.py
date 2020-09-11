@@ -361,7 +361,6 @@ class StereoCalibration(object):
         images_right = glob.glob(dataset_dir + '/right/*.png')
         images_left.sort()
         images_right.sort()
-        print("HU IHER")
         assert len(images_left) != 0, "ERROR: Images not read correctly"
         assert len(images_right) != 0, "ERROR: Images not read correctly"
 
