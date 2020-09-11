@@ -31,6 +31,12 @@ class DepthConfigManager:
         else:
             usb2_mode = False
 
+    def getColorPreviewScale(self):
+        if self.args['color_scale']:
+            return self.args['color_scale']
+        else:
+            return 1.0
+
     def getCommandFile(self):
         debug_mode = False
         cmd_file = ''
