@@ -153,7 +153,7 @@ class DepthAI:
 
         ops = 0
         prevTime = time()
-        print(self.device.get_translation())
+
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
