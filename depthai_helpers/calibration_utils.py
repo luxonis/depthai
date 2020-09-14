@@ -81,24 +81,65 @@ class StereoCalibration(object):
         self.stereo_calibrate_two_homography_calib()
         # save data to binary file
 
-        inv_H1 = np.linalg.inv(self.H1)
-        inv_H2 = np.linalg.inv(self.H2)
+        # inv_H1 = np.linalg.inv(self.H1)
+        # inv_H2 = np.linalg.inv(self.H2)
 
-        inv_H1_fp32 = inv_H1.astype(np.float32)
-        inv_H2_fp32 = inv_H2.astype(np.float32)
+        # inv_H1_fp32 = inv_H1.astype(np.float32)
+        # inv_H2_fp32 = inv_H2.astype(np.float32)
+        R1_fp32 = self.R1.astype(np.float32)
+        R2_fp32 = self.R2.astype(np.float32)
         M1_fp32 = self.M1.astype(np.float32)
         M2_fp32 = self.M2.astype(np.float32)
         R_fp32  = self.R.astype(np.float32)
         T_fp32  = self.T.astype(np.float32)
-        M3_fp32 = np.identity(3, dtype = np.float32)
-        R_rgb_fp32 = np.identity(3, dtype = np.float32) 
+        M3_fp32 = np.zeros((3,3), dtype = np.float32)
+        R_rgb_fp32 = np.zeros((3,3), dtype = np.float32) 
         T_rgb_fp32 = np.zeros(3, dtype = np.float32)  
-        d1_coeff_fp32 = self.d1.astype(np.float32)
-        d2_coeff_fp32 = self.d2.astype(np.float32)
+        d1_coeff_fp32 = self.d1[0].astype(np.float32)
+        d2_coeff_fp32 = self.d2[0].astype(np.float32)
+        d3_coeff_fp32 = np.zeros(12, dtype = np.float32) 
+        
+
+
+        # low_res = np.identity(3, dtype = np.float32)
+        # low_res[0,0] = 0.5
+        # low_res[1,1] = 0.5
+        # print("right intriniscs 800")
+        # print(self.M2)
+        # print("left intriniscs 800")
+        # print(self.M1)
+        
+        # self.show_rectified_images_two_calib(filepath, True)
+
+
+        # self.M2[1,2] -=40 
+        # self.M1[1,2] -=40 
+        # print("right intriniscs 720")
+        # print(self.M2)
+        # print("left intriniscs 720")
+        # print(self.M1)
+        # self.H1 = np.matmul(np.matmul(self.M1, self.R1), np.linalg.inv(self.M1))
+        # self.H2 = np.matmul(np.matmul(self.M1, self.R2), np.linalg.inv(self.M2))   
+        # self.show_rectified_images_two_calib("dataset720", True)
+
+        # self.M2[1,2] +=40 
+        # self.M1[1,2] +=40 
+        # print("right intriniscs 400")
+        # self.M2 = np.matmul(low_res,self.M2)
+        # print(np.matmul(low_res,self.M2))
+        # print("left intriniscs 400")
+        # self.M1 = np.matmul(low_res,self.M1)
+        # print(np.matmul(low_res,self.M1))
+        # self.H1 = np.matmul(np.matmul(self.M2, self.R1), np.linalg.inv(self.M1))
+        # self.H2 = np.matmul(np.matmul(self.M2, self.R2), np.linalg.inv(self.M2))   
+        # self.show_rectified_images_two_calib("dataset400", True)
+
+        # self.test_img_vis(filepath)
+
 
         with open(out_filepath, "wb") as fp:
-            fp.write(inv_H1_fp32.tobytes()) # goes to left camera
-            fp.write(inv_H2_fp32.tobytes()) # goes to right camera
+            fp.write(R1_fp32.tobytes()) # Rotation rectification goes to left camera
+            fp.write(R2_fp32.tobytes()) # Rotation rectification goes to right camera
             fp.write(M1_fp32.tobytes()) # left camera intrinsics
             fp.write(M2_fp32.tobytes()) # right camera intrinsics
             fp.write(R_fp32.tobytes()) # Rotation matrix left -> right
@@ -108,6 +149,7 @@ class StereoCalibration(object):
             fp.write(T_rgb_fp32.tobytes()) # Translation vector left -> rgb ## Currently vector of zeros
             fp.write(d1_coeff_fp32.tobytes()) # distortion coeff of left camaera
             fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camaera
+            fp.write(d3_coeff_fp32.tobytes()) # distortion coeff of rgb camaera
 
         self.create_save_mesh()
         
@@ -288,14 +330,13 @@ class StereoCalibration(object):
                                                                                                 self.M2,
                                                                                                 self.d2,
                                                                                                 self.img_shape, self.R, self.T)
-        # TODO: Try Building mesh from homography later.
-        self.H1 = np.matmul(np.matmul(self.M1, self.R1), np.linalg.inv(self.M1))
-        self.H2 = np.matmul(np.matmul(self.M1, self.R2), np.linalg.inv(self.M2))                                                                                        
+
+        self.H1 = np.matmul(np.matmul(self.M2, self.R1), np.linalg.inv(self.M1))
+        self.H2 = np.matmul(np.matmul(self.M2, self.R2), np.linalg.inv(self.M2))                                                                                        
 
 
     def create_save_mesh(self): #, output_path):
         
-        # TODO: Try replacing P1 and P2 with M2 later and test it.
 
         map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
@@ -305,49 +346,75 @@ class StereoCalibration(object):
         print(self.d2)
 
         # print(str(type(map_x_l)))
-        meshCellSize = 16
-        mesh_left = []
-        mesh_right = []
+        # map_x_l.tofile(consts.resource_paths.left_mesh_fpath)
+        # map_y_l.tofile(out_filepath)
+        # map_x_r.tofile(out_filepath)
+        # map_y_r.tofile(out_filepath)
 
-        for y in range(map_x_l.shape[0] + 1):
-            if y % meshCellSize == 0:
-                row_left = []
-                row_right = []
-                for x in range(map_x_l.shape[1] + 1):
-                    if x % meshCellSize == 0:
-                        if y == map_x_l.shape[0] and x == map_x_l.shape[1]:
-                            row_left.append(map_y_l[y - 1, x - 1])
-                            row_left.append(map_x_l[y - 1, x - 1])
-                            row_right.append(map_y_r[y - 1, x - 1])
-                            row_right.append(map_x_r[y - 1, x - 1])
-                        elif y == map_x_l.shape[0]:
-                            row_left.append(map_y_l[y - 1, x])
-                            row_left.append(map_x_l[y - 1, x])
-                            row_right.append(map_y_r[y - 1, x])
-                            row_right.append(map_x_r[y - 1, x])
-                        elif x == map_x_l.shape[1]:
-                            row_left.append(map_y_l[y, x - 1])
-                            row_left.append(map_x_l[y, x - 1])
-                            row_right.append(map_y_r[y, x - 1])
-                            row_right.append(map_x_r[y, x - 1])
-                        else:
-                            row_left.append(map_y_l[y, x])
-                            row_left.append(map_x_l[y, x])
-                            row_right.append(map_y_r[y, x])
-                            row_right.append(map_x_r[y, x])
-                if (map_x_l.shape[1] % meshCellSize) % 2 != 0:
-                            row_left.append(0)
-                            row_left.append(0)
-                            row_right.append(0)
-                            row_right.append(0)
+        map_x_l_fp32 = map_x_l.astype(np.float32)
+        map_y_l_fp32 = map_y_l.astype(np.float32)
+        map_x_r_fp32 = map_x_r.astype(np.float32)
+        map_y_r_fp32 = map_y_r.astype(np.float32)
 
-                mesh_left.append(row_left)
-                mesh_right.append(row_right)    
+        with open(consts.resource_paths.left_mesh_fpath, "ab") as fp:
+            fp.write(map_x_l_fp32.tobytes())
+            fp.write(map_y_l_fp32.tobytes())
         
-        mesh_left = np.array(mesh_left)
-        mesh_right = np.array(mesh_right)
-        mesh_left.tofile(consts.resource_paths.left_mesh_fpath)
-        mesh_right.tofile(consts.resource_paths.right_mesh_fpath)
+        with open(consts.resource_paths.right_mesh_fpath, "ab") as fp:    
+            fp.write(map_x_r_fp32.tobytes())
+            fp.write(map_y_r_fp32.tobytes())
+        
+        print("shape of maps")
+        print(map_x_l.shape)
+        print(map_y_l.shape)
+        print(map_x_r.shape)
+        print(map_y_r.shape)
+        
+
+
+        # meshCellSize = 16
+        # mesh_left = []
+        # mesh_right = []
+
+        # for y in range(map_x_l.shape[0] + 1):
+        #     if y % meshCellSize == 0:
+        #         row_left = []
+        #         row_right = []
+        #         for x in range(map_x_l.shape[1] + 1):
+        #             if x % meshCellSize == 0:
+        #                 if y == map_x_l.shape[0] and x == map_x_l.shape[1]:
+        #                     row_left.append(map_y_l[y - 1, x - 1])
+        #                     row_left.append(map_x_l[y - 1, x - 1])
+        #                     row_right.append(map_y_r[y - 1, x - 1])
+        #                     row_right.append(map_x_r[y - 1, x - 1])
+        #                 elif y == map_x_l.shape[0]:
+        #                     row_left.append(map_y_l[y - 1, x])
+        #                     row_left.append(map_x_l[y - 1, x])
+        #                     row_right.append(map_y_r[y - 1, x])
+        #                     row_right.append(map_x_r[y - 1, x])
+        #                 elif x == map_x_l.shape[1]:
+        #                     row_left.append(map_y_l[y, x - 1])
+        #                     row_left.append(map_x_l[y, x - 1])
+        #                     row_right.append(map_y_r[y, x - 1])
+        #                     row_right.append(map_x_r[y, x - 1])
+        #                 else:
+        #                     row_left.append(map_y_l[y, x])
+        #                     row_left.append(map_x_l[y, x])
+        #                     row_right.append(map_y_r[y, x])
+        #                     row_right.append(map_x_r[y, x])
+        #         if (map_x_l.shape[1] % meshCellSize) % 2 != 0:
+        #                     row_left.append(0)
+        #                     row_left.append(0)
+        #                     row_right.append(0)
+        #                     row_right.append(0)
+
+        #         mesh_left.append(row_left)
+        #         mesh_right.append(row_right)    
+        
+        # mesh_left = np.array(mesh_left)
+        # mesh_right = np.array(mesh_right)
+        # mesh_left.tofile(consts.resource_paths.left_mesh_fpath)
+        # mesh_right.tofile(consts.resource_paths.right_mesh_fpath)
 
     def show_rectified_images_two_calib(self, dataset_dir, use_homo):
         images_left = glob.glob(dataset_dir + '/left/*.png')
@@ -358,8 +425,11 @@ class StereoCalibration(object):
         assert len(images_right) != 0, "ERROR: Images not read correctly"
 
         if not use_homo:
-            mapx_l, mapy_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
-            mapx_r, mapy_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+            # mapx_l, mapy_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
+            # mapx_r, mapy_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+            mapx_l, mapy_l = self.rectify_map(self.M1, self.d1[0], self.R1)
+            mapx_r, mapy_r = self.rectify_map(self.M2, self.d2[0], self.R2)
+
 
 
         image_data_pairs = []
@@ -413,11 +483,11 @@ class StereoCalibration(object):
                                       (-1, -1), self.criteria)
                 imgpoints_l.extend(corners_l)
                 imgpoints_r.extend(corners_r)
-                epi_error_sum = 0
-                for l_pt, r_pt in zip(corners_l, corners_r):
-                    epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+                # epi_error_sum = 0
+                # for l_pt, r_pt in zip(corners_l, corners_r):
+                #     epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
                 
-                print("Average Epipolar Error per image on host: " + str(epi_error_sum / len(corners_l)))
+                # print("Average Epipolar Error per image on host: " + str(epi_error_sum / len(corners_l)))
 
         epi_error_sum = 0
         for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):
@@ -449,6 +519,79 @@ class StereoCalibration(object):
                     # raise SystemExit()
                 elif k == -1:  # normally -1 returned,so don't print it
                     continue
+
+
+    def rectify_map(self, M, d, R):
+        fx = M[0,0]
+        fy = M[1,1]
+        u0 = M[0,2]
+        v0 = M[1,2]
+        # distortion coefficients
+        print("distortion coeff")
+        print(d)
+        print(d.shape)
+        k1 = d[0]
+        k2 = d[1] 
+        p1 = d[2] 
+        p2 = d[3] 
+        k3 = d[4] 
+        s4 = d[11]
+        k4 = d[5]
+        k5 = d[6]
+        k6 = d[7]
+        s1 = d[8]
+        s2 = d[9] 
+        s3 = d[10]
+        tauX = d[12] 
+        tauY = d[13]
+
+
+        
+        matTilt = np.identity(3, dtype=np.float32)
+        ir = np.linalg.inv(np.matmul(self.M2, R)) ## Change it to using LU
+        s_x = []
+        s_y = []
+        s_w = []
+        for i in range(8):
+            s_x.append(ir[0,0] * i)
+            s_y.append(ir[1,0] * i)
+            s_w.append(ir[2,0] * i)
+        map_x = np.zeros((800,1280),dtype=np.float32)
+        map_y = np.zeros((800,1280),dtype=np.float32)
+
+        for i in range(800):
+            _x = i * ir[0,1] + ir[0,2]
+            _y = i * ir[1,1] + ir[1,2]
+            _w = i * ir[2,1] + ir[2,2]
+
+            for j in range(1280):
+                _x += ir[0,0]
+                _y += ir[1,0]
+                _w += ir[2,0]
+                w = 1/_w
+                x = _x * w
+                y = _y * w
+
+                x2 = x*x
+                y2 = y*y
+                r2 = x2  + y2
+                _2xy = 2*x*y
+                kr = (1 + ((k3*r2 + k2)*r2 + k1)*r2)/(1 + ((k6*r2 + k5)*r2 + k4)*r2)
+                xd = (x*kr + p1*_2xy + p2*(r2 + 2*x2) + s1*r2+s2*r2*r2)
+                yd = (y*kr + p1*(r2 + 2*y2) + p2*_2xy + s3*r2+s4*r2*r2)
+                vec_3d = np.array([xd,yd,1]).reshape(3,1)
+                vecTilt = np.matmul(matTilt, vec_3d);
+                # Vec3d vecTilt = matTilt*cv::Vec3d(xd, yd, 1);
+                invProj = 1./vecTilt[2] if vecTilt[2] else 1
+                # double invProj = vecTilt(2) ? 1./vecTilt(2) : 1;
+                # double u = fx*invProj*vecTilt(0) + u0;
+                # double v = fy*invProj*vecTilt(1) + v0;    
+                u = fx*invProj*vecTilt[0] + u0; # u0 and v0 is from the M1
+                v = fy*invProj*vecTilt[1] + v0;                
+                map_x[i,j] = u
+                map_y[i,j] = v
+        print("map built")
+        return map_x, map_y
 
 
     def stereo_calibrate_two_homography_uncalib(self):
@@ -492,6 +635,54 @@ class StereoCalibration(object):
                                                     np.array(self.imgpoints_r).reshape(-1, 2),
                                                     F_test,
                                                     self.img_shape, 2)
+
+    def test_img_vis(self, dataset_dir):
+        images_left = glob.glob(dataset_dir + '/left/*.png')
+        images_right = glob.glob(dataset_dir + '/right/*.png')
+        images_left.sort()
+        images_right.sort()
+
+        map1_l, map2_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M1, self.img_shape, cv2.CV_32FC1)
+        map1_r, map2_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
+
+        map1_l_review, map2_l_review = self.rectify_map(self.M1, self.d1[0], self.R1)
+        map1_r_review, map2_r_review = self.rectify_map(self.M2, self.d2[0], self.R2)
+
+        image_data_pairs = []
+        for image_left, image_right in zip(images_left, images_right):
+
+            img_l = cv2.imread(image_left, 0)
+            img_r = cv2.imread(image_right, 0)
+
+            img_l_cv2 = cv2.remap(img_l, map1_l, map2_l, cv2.INTER_CUBIC)
+            img_r_cv2 = cv2.remap(img_r, map1_r, map2_r, cv2.INTER_CUBIC)
+
+            img_l_review = cv2.remap(img_l, map1_l_review, map2_l_review, cv2.INTER_CUBIC)
+            img_r_review = cv2.remap(img_r, map1_r_review, map2_r_review, cv2.INTER_CUBIC)
+            img_concat = cv2.hconcat([img_l_review, img_l_cv2])
+            img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
+            while(1):
+                cv2.imshow('Stereo Pair', img_concat)
+                k = cv2.waitKey(33)
+                if k == 32:    
+                    break
+                elif k == 27: # Esc key to stop
+                    break
+                    # raise SystemExit()
+                elif k == -1:  # normally -1 returned,so don't print it
+                    continue
+            img_concat = cv2.hconcat([img_r_review, img_r_cv2])
+            img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
+            while(1):
+                cv2.imshow('Stereo Pair', img_concat)
+                k = cv2.waitKey(33)
+                if k == 32:    
+                    break
+                elif k == 27: # Esc key to stop
+                    break
+                    # raise SystemExit()
+                elif k == -1:  # normally -1 returned,so don't print it
+                    continue
 
 
     def show_rectified_images_two_uncalib(self, dataset_dir):
