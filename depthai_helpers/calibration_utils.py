@@ -81,11 +81,8 @@ class StereoCalibration(object):
         self.stereo_calibrate_two_homography_calib()
         # save data to binary file
 
-        inv_H1 = np.linalg.inv(self.H1)
-        inv_H2 = np.linalg.inv(self.H2)
-
-        inv_H1_fp32 = inv_H1.astype(np.float32)
-        inv_H2_fp32 = inv_H2.astype(np.float32)
+        R1_fp32 = self.R1.astype(np.float32)
+        R2_fp32 = self.R2.astype(np.float32)
         M1_fp32 = self.M1.astype(np.float32)
         M2_fp32 = self.M2.astype(np.float32)
         R_fp32  = self.R.astype(np.float32)
@@ -97,8 +94,8 @@ class StereoCalibration(object):
         d2_coeff_fp32 = self.d2.astype(np.float32)
 
         with open(out_filepath, "wb") as fp:
-            fp.write(inv_H1_fp32.tobytes()) # goes to left camera
-            fp.write(inv_H2_fp32.tobytes()) # goes to right camera
+            fp.write(R1_fp32.tobytes()) # goes to left camera
+            fp.write(R2_fp32.tobytes()) # goes to right camera
             fp.write(M1_fp32.tobytes()) # left camera intrinsics
             fp.write(M2_fp32.tobytes()) # right camera intrinsics
             fp.write(R_fp32.tobytes()) # Rotation matrix left -> right
