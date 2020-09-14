@@ -156,7 +156,7 @@ class Main:
                     'mono':
                     {
                         # 1280x720, 1280x800, 640x400 (binning enabled)
-                        'resolution_h': 720,
+                        'resolution_h': 800,
                         'fps': 30.0,
                     },
                 },
