@@ -99,7 +99,9 @@ class StereoCalibration(object):
         d2_coeff_fp32 = self.d2[0].astype(np.float32)
         d3_coeff_fp32 = np.zeros(12, dtype = np.float32) 
         
-
+        print("Left Homography")
+        print(self.H1)
+        print(self.H2)
 
         # low_res = np.identity(3, dtype = np.float32)
         # low_res[0,0] = 0.5
