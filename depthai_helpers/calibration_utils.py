@@ -92,6 +92,7 @@ class StereoCalibration(object):
         T_rgb_fp32 = np.zeros(3, dtype = np.float32)  
         d1_coeff_fp32 = self.d1.astype(np.float32)
         d2_coeff_fp32 = self.d2.astype(np.float32)
+        d3_coeff_fp32 = np.zeros(14, dtype = np.float32)
 
         with open(out_filepath, "wb") as fp:
             fp.write(R1_fp32.tobytes()) # goes to left camera
@@ -105,6 +106,7 @@ class StereoCalibration(object):
             fp.write(T_rgb_fp32.tobytes()) # Translation vector left -> rgb ## Currently vector of zeros
             fp.write(d1_coeff_fp32.tobytes()) # distortion coeff of left camera
             fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camera
+            fp.write(d3_coeff_fp32.tobytes()) # distortion coeff of rgb camera - currently zeros
 
         self.create_save_mesh()
         
