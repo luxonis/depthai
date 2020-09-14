@@ -108,6 +108,39 @@ class StereoCalibration(object):
             fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camera
             fp.write(d3_coeff_fp32.tobytes()) # distortion coeff of rgb camera - currently zeros
 
+        if 0: # Print matrices, to compare with device data
+            np.set_printoptions(suppress=True, precision=6)
+            print("\nR1 (left)");  print(R1_fp32)
+            print("\nR2 (right)"); print(R2_fp32)
+            print("\nM1 (left)");  print(M1_fp32)
+            print("\nM2 (right)"); print(M2_fp32)
+            print("\nR");          print(R_fp32)
+            print("\nT");          print(T_fp32)
+            print("\nM3 (rgb)");   print(M3_fp32)
+
+        if 0: # Print computed homography, to compare with device data
+            np.set_printoptions(suppress=True, precision=6)
+            for res_height in [800, 720, 400]:
+                m1 = np.copy(M1_fp32)
+                m2 = np.copy(M2_fp32)
+                if res_height == 720:
+                    m1[1,2] -= 40
+                    m2[1,2] -= 40
+                if res_height == 400:
+                    m_scale = [[0.5,   0, 0],
+                               [  0, 0.5, 0],
+                               [  0,   0, 1]]
+                    m1 = np.matmul(m_scale, m1)
+                    m2 = np.matmul(m_scale, m2)
+                h1 = np.matmul(np.matmul(m2, R1_fp32), np.linalg.inv(m1))
+                h2 = np.matmul(np.matmul(m2, R2_fp32), np.linalg.inv(m2))
+                h1 = np.linalg.inv(h1)
+                h2 = np.linalg.inv(h2)
+                print('\nHomography H1, H2 for height =', res_height)
+                print(h1)
+                print()
+                print(h2)
+
         self.create_save_mesh()
         
         # append specific flags to file
