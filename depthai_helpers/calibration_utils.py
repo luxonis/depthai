@@ -87,7 +87,7 @@ class StereoCalibration(object):
         M2_fp32 = self.M2.astype(np.float32)
         R_fp32  = self.R.astype(np.float32)
         T_fp32  = self.T.astype(np.float32)
-        M3_fp32 = np.identity(3, dtype = np.float32)
+        M3_fp32 = np.zeros((3, 3), dtype = np.float32)
         R_rgb_fp32 = np.identity(3, dtype = np.float32) 
         T_rgb_fp32 = np.zeros(3, dtype = np.float32)  
         d1_coeff_fp32 = self.d1.astype(np.float32)
@@ -100,11 +100,11 @@ class StereoCalibration(object):
             fp.write(M2_fp32.tobytes()) # right camera intrinsics
             fp.write(R_fp32.tobytes()) # Rotation matrix left -> right
             fp.write(T_fp32.tobytes()) # Translation vector left -> right
-            fp.write(M3_fp32.tobytes()) # rgb camera intrinsics ## Currently Identity matrix
+            fp.write(M3_fp32.tobytes()) # rgb camera intrinsics ## Currently a zero matrix
             fp.write(R_rgb_fp32.tobytes()) # Rotation matrix left -> rgb ## Currently Identity matrix
             fp.write(T_rgb_fp32.tobytes()) # Translation vector left -> rgb ## Currently vector of zeros
-            fp.write(d1_coeff_fp32.tobytes()) # distortion coeff of left camaera
-            fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camaera
+            fp.write(d1_coeff_fp32.tobytes()) # distortion coeff of left camera
+            fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camera
 
         self.create_save_mesh()
         
