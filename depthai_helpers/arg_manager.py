@@ -14,7 +14,8 @@ def _get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir)
             if os.path.isdir(os.path.join(a_dir, name))]
 
-_stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth_raw", "disparity", "disparity_color", "meta_d2h", "object_tracker", "color")
+_stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth_raw", "disparity", "disparity_color",
+                   "meta_d2h", "object_tracker", "rectified_left", "rectified_right", "color")
 _CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
 
 def _stream_type(option):
@@ -104,6 +105,11 @@ class CliArgs:
                             choices=range(0,256), metavar="[0-255]",
                             help="Disparity_confidence_threshold.")
 
+        parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0, 3, 5, 7],
+                            help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
+
+        parser.add_argument("-lrc", "--stereo_lr_check", default=False, action="store_true",
+                        help="Enable stereo 'Left-Right check' feature.")
         parser.add_argument("-fv", "--field-of-view", default=None, type=float,
                             help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
 
@@ -157,6 +163,8 @@ class CliArgs:
         parser.add_argument("-sync", "--sync-video-meta", default=False, action="store_true",
                             help="Synchronize 'previewout' and 'metaout' streams")
 
+        parser.add_argument("-vv", "--verbose", default=False, action="store_true",
+                        help="Verbose, print info about received packets.")
         parser.add_argument("-s", "--streams",
                             nargs="+",
                             type=_stream_type,
@@ -171,6 +179,15 @@ class CliArgs:
         parser.add_argument("-v", "--video", default=None, type=str, required=False,
                             help="Path where to save video stream (existing file will be overwritten)")
         
+        parser.add_argument("-pcl", "--pointcloud", default=False, action="store_true",
+                        help="Convert Depth map image to point clouds")
+
+        parser.add_argument("-mesh", "--use_mesh", default=False, action="store_true",
+                        help="use mesh for rectification of the stereo images")
+
+        parser.add_argument("-mirror_rectified", "--mirror_rectified", default='true', choices=['true', 'false'],
+                        help="Normally, rectified_left/_right are mirrored for Stereo engine constraints. "
+                             "If false, disparity/depth will be mirrored instead. Default: true")
         argcomplete.autocomplete(parser)
 
         options = parser.parse_args()
