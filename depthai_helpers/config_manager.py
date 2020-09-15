@@ -148,7 +148,7 @@ class DepthConfigManager:
                 'warp_rectify':
                 {
                     'use_mesh' : self.args['use_mesh'], # if False, will use homography
-                    'mirror_frame': self.args['mirror_frame'], # if False, the disparity will be mirrored instead
+                    'mirror_frame': self.args['mirror_rectified'] == 'true', # if False, the disparity will be mirrored instead
                     'edge_fill_color': 0, # gray 0..255, or -1 to replicate pixel values
                 },
             },
