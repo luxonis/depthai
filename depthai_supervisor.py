@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-#process watchdog, used to recover depthai.py 
-#on any userspace error in depthai.py (segfault for example)
+#process watchdog, used to recover depthai-demo.py 
+#on any userspace error in depthai-demo.py (segfault for example)
 import os
 import signal
 import subprocess
@@ -26,7 +26,7 @@ args=""
 for arg in sys.argv[1:]:
     args+="'"+arg+"' "
 
-cmd = "python3 depthai-demo.py " + args
+cmd = "python3 depthai_demo.py " + args
 print(cmd)
 
 atexit.register(cleanup)
