@@ -21,6 +21,7 @@ from depthai_helpers.model_downloader import download_model
 
 from depthai_helpers.config_manager import DepthConfigManager
 from depthai_helpers.arg_manager import CliArgs
+from depthai_helpers.projector_3d import PointCloudVisualizer
 
 from depthai_helpers.object_tracker_handler import show_tracklets
 
@@ -126,6 +127,18 @@ class DepthAI:
         
         self.reset_process_wd()
 
+        time_start = time()
+        def print_packet_info(packet):
+            meta = packet.getMetadata()
+            print("[{:.6f} {:15s}]".format(time()-time_start, packet.stream_name), end='')
+            if meta is not None:
+                print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), end='')
+                if not (packet.stream_name.startswith('disparity')
+                     or packet.stream_name.startswith('depth')):
+                    print('', meta.getCameraName(), end='')
+            print()
+            return
+
         for stream in stream_names:
             if stream in ["disparity", "disparity_color", "depth_raw"]:
                 cv2.namedWindow(stream)
@@ -134,6 +147,10 @@ class DepthAI:
                 conf_thr_slider_max = 255
                 cv2.createTrackbar(trackbar_name, stream, conf_thr_slider_min, conf_thr_slider_max, self.on_trackbar_change)
                 cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
+        
+        right_rectified = None
+        pcl_not_set = True
+
         ops = 0
         prevTime = time()
         while self.runThread:
@@ -158,6 +175,8 @@ class DepthAI:
                     os._exit(10)
 
             for _, nnet_packet in enumerate(self.nnet_packets):
+                if args['verbose']: print_packet_info(nnet_packet)
+
                 meta = nnet_packet.getMetadata()
                 camera = 'rgb'
                 if meta != None:
@@ -171,6 +190,7 @@ class DepthAI:
                 window_name = packet.stream_name
                 if packet.stream_name not in stream_names:
                     continue # skip streams that were automatically added
+                if args['verbose']: print_packet_info(packet)
                 packetData = packet.getData()
                 if packetData is None:
                     print('Invalid packet data!')
@@ -195,8 +215,10 @@ class DepthAI:
                     cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
                     cv2.putText(nn_frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
                     cv2.imshow(window_name, nn_frame)
-                elif packet.stream_name == 'left' or packet.stream_name == 'right' or packet.stream_name == 'disparity':
+                elif packet.stream_name in ['left', 'right', 'disparity', 'rectified_left', 'rectified_right']:
                     frame_bgr = packetData
+                    if args['pointcloud'] and packet.stream_name == 'rectified_right':
+                        right_rectified = packetData
                     cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
                     cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
                     if args['draw_bb_depth']:
@@ -216,6 +238,14 @@ class DepthAI:
                             cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                             cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                         else: # uint16
+                            if args['pointcloud'] and "depth_raw" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
+                                if pcl_not_set:
+                                    pcl_converter = PointCloudVisualizer(self.device.get_right_intrinsic(), 1280, 720)
+                                    pcl_not_set =  False
+                                right_rectified = cv2.flip(right_rectified, 1)
+                                pcd = pcl_converter.rgbd_to_projection(frame, right_rectified)
+                                pcl_converter.visualize_pcd()
+                            
                             frame = (65535 // frame).astype(np.uint8)
                             #colorize depth map, comment out code below to obtain grayscale
                             frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
