@@ -81,73 +81,65 @@ class StereoCalibration(object):
         self.stereo_calibrate_two_homography_calib()
         # save data to binary file
 
-        # inv_H1 = np.linalg.inv(self.H1)
-        # inv_H2 = np.linalg.inv(self.H2)
-
-        # inv_H1_fp32 = inv_H1.astype(np.float32)
-        # inv_H2_fp32 = inv_H2.astype(np.float32)
         R1_fp32 = self.R1.astype(np.float32)
         R2_fp32 = self.R2.astype(np.float32)
         M1_fp32 = self.M1.astype(np.float32)
         M2_fp32 = self.M2.astype(np.float32)
         R_fp32  = self.R.astype(np.float32)
         T_fp32  = self.T.astype(np.float32)
-        M3_fp32 = np.zeros((3,3), dtype = np.float32)
-        R_rgb_fp32 = np.zeros((3,3), dtype = np.float32) 
+        M3_fp32 = np.zeros((3, 3), dtype = np.float32)
+        R_rgb_fp32 = np.zeros((3, 3), dtype = np.float32) 
         T_rgb_fp32 = np.zeros(3, dtype = np.float32)  
-        d1_coeff_fp32 = self.d1[0].astype(np.float32)
-        d2_coeff_fp32 = self.d2[0].astype(np.float32)
-        d3_coeff_fp32 = np.zeros(14, dtype = np.float32) 
-        
-        # low_res = np.identity(3, dtype = np.float32)
-        # low_res[0,0] = 0.5
-        # low_res[1,1] = 0.5
-        # print("right intriniscs 800")
-        # print(self.M2)
-        # print("left intriniscs 800")
-        # print(self.M1)
-        
-        # self.show_rectified_images_two_calib(filepath, True)
-
-
-        # self.M2[1,2] -=40 
-        # self.M1[1,2] -=40 
-        # print("right intriniscs 720")
-        # print(self.M2)
-        # print("left intriniscs 720")
-        # print(self.M1)
-        # self.H1 = np.matmul(np.matmul(self.M1, self.R1), np.linalg.inv(self.M1))
-        # self.H2 = np.matmul(np.matmul(self.M1, self.R2), np.linalg.inv(self.M2))   
-        # self.show_rectified_images_two_calib("dataset720", True)
-
-        # self.M2[1,2] +=40 
-        # self.M1[1,2] +=40 
-        # print("right intriniscs 400")
-        # self.M2 = np.matmul(low_res,self.M2)
-        # print(np.matmul(low_res,self.M2))
-        # print("left intriniscs 400")
-        # self.M1 = np.matmul(low_res,self.M1)
-        # print(np.matmul(low_res,self.M1))
-        # self.H1 = np.matmul(np.matmul(self.M2, self.R1), np.linalg.inv(self.M1))
-        # self.H2 = np.matmul(np.matmul(self.M2, self.R2), np.linalg.inv(self.M2))   
-        # self.show_rectified_images_two_calib("dataset400", True)
-
-        # self.test_img_vis(filepath)
-
+        d1_coeff_fp32 = self.d1.astype(np.float32)
+        d2_coeff_fp32 = self.d2.astype(np.float32)
+        d3_coeff_fp32 = np.zeros(14, dtype = np.float32)
 
         with open(out_filepath, "wb") as fp:
-            fp.write(R1_fp32.tobytes()) # Rotation rectification goes to left camera
-            fp.write(R2_fp32.tobytes()) # Rotation rectification goes to right camera
+            fp.write(R1_fp32.tobytes()) # goes to left camera
+            fp.write(R2_fp32.tobytes()) # goes to right camera
             fp.write(M1_fp32.tobytes()) # left camera intrinsics
             fp.write(M2_fp32.tobytes()) # right camera intrinsics
             fp.write(R_fp32.tobytes()) # Rotation matrix left -> right
             fp.write(T_fp32.tobytes()) # Translation vector left -> right
-            fp.write(M3_fp32.tobytes()) # rgb camera intrinsics ## Currently Identity matrix
+            fp.write(M3_fp32.tobytes()) # rgb camera intrinsics ## Currently a zero matrix
             fp.write(R_rgb_fp32.tobytes()) # Rotation matrix left -> rgb ## Currently Identity matrix
             fp.write(T_rgb_fp32.tobytes()) # Translation vector left -> rgb ## Currently vector of zeros
-            fp.write(d1_coeff_fp32.tobytes()) # distortion coeff of left camaera
-            fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camaera
-            fp.write(d3_coeff_fp32.tobytes()) # distortion coeff of rgb camaera
+            fp.write(d1_coeff_fp32.tobytes()) # distortion coeff of left camera
+            fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camera
+            fp.write(d3_coeff_fp32.tobytes()) # distortion coeff of rgb camera - currently zeros
+
+        if 0: # Print matrices, to compare with device data
+            np.set_printoptions(suppress=True, precision=6)
+            print("\nR1 (left)");  print(R1_fp32)
+            print("\nR2 (right)"); print(R2_fp32)
+            print("\nM1 (left)");  print(M1_fp32)
+            print("\nM2 (right)"); print(M2_fp32)
+            print("\nR");          print(R_fp32)
+            print("\nT");          print(T_fp32)
+            print("\nM3 (rgb)");   print(M3_fp32)
+
+        if 0: # Print computed homography, to compare with device data
+            np.set_printoptions(suppress=True, precision=6)
+            for res_height in [800, 720, 400]:
+                m1 = np.copy(M1_fp32)
+                m2 = np.copy(M2_fp32)
+                if res_height == 720:
+                    m1[1,2] -= 40
+                    m2[1,2] -= 40
+                if res_height == 400:
+                    m_scale = [[0.5,   0, 0],
+                               [  0, 0.5, 0],
+                               [  0,   0, 1]]
+                    m1 = np.matmul(m_scale, m1)
+                    m2 = np.matmul(m_scale, m2)
+                h1 = np.matmul(np.matmul(m2, R1_fp32), np.linalg.inv(m1))
+                h2 = np.matmul(np.matmul(m2, R2_fp32), np.linalg.inv(m2))
+                h1 = np.linalg.inv(h1)
+                h2 = np.linalg.inv(h2)
+                print('\nHomography H1, H2 for height =', res_height)
+                print(h1)
+                print()
+                print(h2)
 
         # self.create_save_mesh()
         
