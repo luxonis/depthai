@@ -15,7 +15,7 @@ def _get_immediate_subdirectories(a_dir):
             if os.path.isdir(os.path.join(a_dir, name))]
 
 _stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth_raw", "disparity", "disparity_color",
-                   "meta_d2h", "object_tracker", "rectified_left", "rectified_right")
+                   "meta_d2h", "object_tracker", "rectified_left", "rectified_right", "color")
 _CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
 
 def _stream_type(option):
@@ -91,6 +91,9 @@ class CliArgs:
 
         parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float,
                             help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
+
+        parser.add_argument("-cs", "--color_scale", default=1.0, type=float,
+                            help="Scale factor for 'color' stream preview window. Default: %(default)s")
 
         parser.add_argument("-monor", "--mono_resolution", default=720, type=int,  choices=[400, 720, 800],
                             help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400 - binning. Default: %(default)s")
