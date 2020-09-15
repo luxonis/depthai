@@ -97,12 +97,8 @@ class StereoCalibration(object):
         T_rgb_fp32 = np.zeros(3, dtype = np.float32)  
         d1_coeff_fp32 = self.d1[0].astype(np.float32)
         d2_coeff_fp32 = self.d2[0].astype(np.float32)
-        d3_coeff_fp32 = np.zeros(12, dtype = np.float32) 
+        d3_coeff_fp32 = np.zeros(14, dtype = np.float32) 
         
-        print("Left Homography")
-        print(self.H1)
-        print(self.H2)
-
         # low_res = np.identity(3, dtype = np.float32)
         # low_res[0,0] = 0.5
         # low_res[1,1] = 0.5
@@ -153,7 +149,7 @@ class StereoCalibration(object):
             fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camaera
             fp.write(d3_coeff_fp32.tobytes()) # distortion coeff of rgb camaera
 
-        self.create_save_mesh()
+        # self.create_save_mesh()
         
         # append specific flags to file
         with open(out_filepath, "ab") as fp:
@@ -338,7 +334,6 @@ class StereoCalibration(object):
 
 
     def create_save_mesh(self): #, output_path):
-        
 
         map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
@@ -427,12 +422,10 @@ class StereoCalibration(object):
         assert len(images_right) != 0, "ERROR: Images not read correctly"
 
         if not use_homo:
-            # mapx_l, mapy_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
-            # mapx_r, mapy_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
-            mapx_l, mapy_l = self.rectify_map(self.M1, self.d1[0], self.R1)
-            mapx_r, mapy_r = self.rectify_map(self.M2, self.d2[0], self.R2)
-
-
+            mapx_l, mapy_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+            # mapx_l, mapy_l = self.rectify_map(self.M1, self.d1[0], self.R1)
+            # mapx_r, mapy_r = self.rectify_map(self.M2, self.d2[0], self.R2)
 
         image_data_pairs = []
         for image_left, image_right in zip(images_left, images_right):
@@ -551,13 +544,13 @@ class StereoCalibration(object):
         
         matTilt = np.identity(3, dtype=np.float32)
         ir = np.linalg.inv(np.matmul(self.M2, R)) ## Change it to using LU
-        s_x = []
-        s_y = []
-        s_w = []
-        for i in range(8):
-            s_x.append(ir[0,0] * i)
-            s_y.append(ir[1,0] * i)
-            s_w.append(ir[2,0] * i)
+        # s_x = [] ## NOT USED
+        # s_y = []
+        # s_w = []
+        # for i in range(8):
+        #     s_x.append(ir[0,0] * i)
+        #     s_y.append(ir[1,0] * i)
+        #     s_w.append(ir[2,0] * i)
         map_x = np.zeros((800,1280),dtype=np.float32)
         map_y = np.zeros((800,1280),dtype=np.float32)
 
