@@ -182,8 +182,9 @@ class CliArgs:
         parser.add_argument("-mesh", "--use_mesh", default=False, action="store_true",
                         help="use mesh for rectification of the stereo images")
 
-        parser.add_argument("-mirror_frame", "--mirror_frame", default=True, action="store_true",
-                        help="When set to false Disparity frame will be mirrored")
+        parser.add_argument("-mirror_rectified", "--mirror_rectified", default='true', choices=['true', 'false'],
+                        help="Normally, rectified_left/_right are mirrored for Stereo engine constraints. "
+                             "If false, disparity/depth will be mirrored instead. Default: true")
         argcomplete.autocomplete(parser)
 
         options = parser.parse_args()
