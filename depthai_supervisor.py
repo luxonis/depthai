@@ -26,7 +26,7 @@ args=""
 for arg in sys.argv[1:]:
     args+="'"+arg+"' "
 
-cmd = "python3 depthai-demo.py " + args
+cmd = "python3 depthai_demo.py " + args
 print(cmd)
 
 atexit.register(cleanup)
