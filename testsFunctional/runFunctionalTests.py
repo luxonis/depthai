@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "previewout",
         "left",
         "right",
-        "depth_raw",
+        "depth",
         "disparity",
         "disparity_color"
     ]
