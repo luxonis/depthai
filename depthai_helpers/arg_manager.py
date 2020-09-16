@@ -14,7 +14,7 @@ def _get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir)
             if os.path.isdir(os.path.join(a_dir, name))]
 
-_stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth_raw", "disparity", "disparity_color",
+_stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth", "disparity", "disparity_color",
                    "meta_d2h", "object_tracker", "rectified_left", "rectified_right", "color")
 _CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
 
@@ -27,7 +27,7 @@ def _stream_type(option):
         cli_print(msg_string, PrintColors.WARNING)
         raise ValueError(msg_string)
 
-    transition_map = {"depth_sipp" : "disparity_color", "depth_color_h" : "disparity_color"}
+    transition_map = {"depth_raw" : "depth"}
     stream_name = option_list[0]
     if stream_name in transition_map:
         cli_print("Stream option " + stream_name + " is deprecated, use: " + transition_map[stream_name], PrintColors.WARNING)
