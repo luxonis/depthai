@@ -140,7 +140,7 @@ class DepthAI:
             return
 
         for stream in stream_names:
-            if stream in ["disparity", "disparity_color", "depth_raw"]:
+            if stream in ["disparity", "disparity_color", "depth"]:
                 cv2.namedWindow(stream)
                 trackbar_name = 'Disparity confidence'
                 conf_thr_slider_min = 0
@@ -238,7 +238,7 @@ class DepthAI:
                             cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                             cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                         else: # uint16
-                            if args['pointcloud'] and "depth_raw" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
+                            if args['pointcloud'] and "depth" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
                                 if pcl_not_set:
                                     pcl_converter = PointCloudVisualizer(self.device.get_right_intrinsic(), 1280, 720)
                                     pcl_not_set =  False
