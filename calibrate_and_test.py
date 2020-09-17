@@ -24,7 +24,7 @@ for arg in sys.argv[1:]:
     args+="'"+arg+"' "
 
 calibrate_cmd = "python3 calibrate.py " + args
-test_cmd = """python3 depthai_demo.py -co '{"streams": [{"name": "depth_raw", "max_fps": 12.0}]}'"""
+test_cmd = """python3 depthai_demo.py -co '{"streams": [{"name": "depth", "max_fps": 12.0}]}'"""
 
 
 atexit.register(cleanup)

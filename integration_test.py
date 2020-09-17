@@ -73,7 +73,7 @@ stream_size = {
     "metaout" : 5 * 1024,
     "left"  : 1280*720*1*30,
     "right" : 1280*720*1*30,
-    "depth_raw" : 1280*720*2*30,
+    "depth" : 1280*720*2*30,
 }
 
 streams = [
@@ -81,7 +81,7 @@ streams = [
     "metaout",
     "left",
     "right",
-    "depth_raw"]
+    "depth"]
 
 
 
