@@ -10,8 +10,9 @@ from datetime import datetime
 import cv2
 import numpy as np
 import sys
-
+import warnings
 import depthai
+
 print('Using depthai module from: ', depthai.__file__)
 
 import consts.resource_paths
@@ -21,13 +22,19 @@ from depthai_helpers.model_downloader import download_model
 
 from depthai_helpers.config_manager import DepthConfigManager
 from depthai_helpers.arg_manager import CliArgs
-from depthai_helpers.projector_3d import PointCloudVisualizer
+
+is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
+if not is_rpi:
+    # warnings.warn("Open3D is not available on raspberry pi so point cloud is disabled", ImportWarning)
+    from depthai_helpers.projector_3d import PointCloudVisualizer
+
 
 from depthai_helpers.object_tracker_handler import show_tracklets
 
 global args, cnn_model2
 
 class DepthAI:
+    global is_rpi
     process_watchdog_timeout=10 #seconds
     nnet_packets = None
     data_packets = None
@@ -50,7 +57,8 @@ class DepthAI:
         args = vars(cliArgs.parse_args())
 
         configMan = DepthConfigManager(args)
-
+        if is_rpi and args['pointcloud']:
+            warnings.warn("Open3D is not available on raspberry pi so point cloud is disabled", ImportWarning)
         # these are largely for debug and dev.
         cmd_file, debug_mode = configMan.getCommandFile()
         usb2_mode = configMan.getUsb2Mode()
@@ -238,7 +246,7 @@ class DepthAI:
                             cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                             cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                         else: # uint16
-                            if args['pointcloud'] and "depth" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
+                            if not is_rpi and args['pointcloud'] and "depth" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
                                 if pcl_not_set:
                                     pcl_converter = PointCloudVisualizer(self.device.get_right_intrinsic(), 1280, 720)
                                     pcl_not_set =  False
