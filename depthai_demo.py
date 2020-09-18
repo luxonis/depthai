@@ -10,7 +10,6 @@ from datetime import datetime
 import cv2
 import numpy as np
 import sys
-import warnings
 import depthai
 
 print('Using depthai module from: ', depthai.__file__)
