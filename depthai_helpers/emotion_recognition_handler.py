@@ -3,9 +3,10 @@ import numpy as np
 import json
 
 def decode_emotion_recognition(nnet_packet, **kwargs):
+    em_tensor = nnet_packet.get_tensor(0)
     detections = []
-    for i in range(len(nnet_packet.entries()[0][0])):
-        detections.append(nnet_packet.entries()[0][0][i])
+    for i in em_tensor[0]:
+        detections.append(i[0][0])
     return detections
 
 def decode_emotion_recognition_json(nnet_packet, **kwargs):
