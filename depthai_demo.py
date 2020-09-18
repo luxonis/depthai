@@ -57,7 +57,7 @@ class DepthAI:
 
         configMan = DepthConfigManager(args)
         if is_rpi and args['pointcloud']:
-            print("Open3D is not available on raspberry pi so point cloud is disabled.")
+            raise NotImplementedError("Point cloud visualization is currently not supported on RPI")
         # these are largely for debug and dev.
         cmd_file, debug_mode = configMan.getCommandFile()
         usb2_mode = configMan.getUsb2Mode()
@@ -245,7 +245,7 @@ class DepthAI:
                             cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                             cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                         else: # uint16
-                            if not is_rpi and args['pointcloud'] and "depth" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
+                            if args['pointcloud'] and "depth" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
                                 if pcl_not_set:
                                     pcl_converter = PointCloudVisualizer(self.device.get_right_intrinsic(), 1280, 720)
                                     pcl_not_set =  False
