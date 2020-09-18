@@ -58,7 +58,7 @@ class DepthAI:
 
         configMan = DepthConfigManager(args)
         if is_rpi and args['pointcloud']:
-            warnings.warn("Open3D is not available on raspberry pi so point cloud is disabled", ImportWarning)
+            print("Open3D is not available on raspberry pi so point cloud is disabled.")
         # these are largely for debug and dev.
         cmd_file, debug_mode = configMan.getCommandFile()
         usb2_mode = configMan.getUsb2Mode()
