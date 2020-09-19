@@ -7,4 +7,4 @@ open3d==0.10.0.0
 # depthai==0.2.0.1
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.2.0.1+4ccbbbfe6e7a90fb51b1cadcce096a28ade8d244
+depthai==0.2.0.1+f3d9f937b2b14afd8caa89cfc3d75765d308d257
