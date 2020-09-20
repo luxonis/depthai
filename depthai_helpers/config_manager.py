@@ -291,9 +291,9 @@ class BlobManager:
         # compile modules
         self.default_blob=True
         if compile_model:
-            self.blob_file, self.default_blob = self.compileBlob(self.blob_file)
+            self.blob_file, self.default_blob = self.compileBlob(self.args['cnn_model'])
             if self.args['cnn_model2']:
-                self.blob_file2, self.default_blob = self.compileBlob(self.blob_file2)
+                self.blob_file2, self.default_blob = self.compileBlob(self.args['cnn_model2'], False)
 
     def getLabels(self):
         # try and load labels
@@ -331,7 +331,9 @@ class BlobManager:
 
         return blobFile, blobFileConfig
 
-    def compileBlob(self, blob_file):
+    def compileBlob(self, nn_model, isFirstNN=True):
+        blob_file, _ = self.getBlobFiles(nn_model, isFirstNN)
+
         default_blob=False
         shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
         cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
@@ -350,7 +352,7 @@ class BlobManager:
         outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
         if(not Path(outblob_file).exists()):
             cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-            ret = download_model(self.args['cnn_model'], shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
+            ret = download_model(nn_model, shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
             if(ret != 0):
                 cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
                 default_blob=True
