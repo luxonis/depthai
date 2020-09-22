@@ -125,7 +125,12 @@ detected_keypoints = []
 def decode_openpose(nnet_packet, **kwargs):
     # openpose from openvino has pafs in first output, keyints in second
     output_list = nnet_packet.getOutputsList()
-  
+
+    # out_layers = nnet_packet.getOutputLayersInfo()
+    # print((out_layers))
+    # in_layers = nnet_packet.getInputLayersInfo()
+    # print(in_layers)
+
     outputs = np.copy(output_list[0])
     outputs = outputs.astype('float32')
 

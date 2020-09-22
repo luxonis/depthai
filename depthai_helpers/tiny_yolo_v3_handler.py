@@ -115,17 +115,25 @@ def decode_tiny_yolo(nnet_packet, **kwargs):
     NN_metadata = kwargs['NN_json']
     output_format = NN_metadata['NN_config']['output_format']
 
+    in_layers = nnet_packet.getInputLayersInfo()
+    # print(in_layers)
+    #todo
+    input_width = in_layers[0].tensor_dimensions[3]
+    input_height = in_layers[0].tensor_dimensions[2]
+
     if output_format == "detection":
+        detections = nnet_packet.getDetectedObjects()
         objects = list()
-        detection_nr = nnet_packet.getDetectionCount()
-        for i in range(detection_nr):
-            detection = nnet_packet.getDetectedObject(i)
+        # detection_nr = detections.size
+        # for i in range(detection_nr):
+        #     detection =detections[i]
+        for detection in detections:
             confidence = detection.confidence
             class_id = detection.label
-            xmin = int(detection.x_min * 416)
-            xmax = int(detection.x_max * 416)
-            ymin = int(detection.y_min * 416)
-            ymax = int(detection.y_max * 416)
+            xmin = int(detection.x_min * input_width)
+            xmax = int(detection.x_max * input_width)
+            ymin = int(detection.y_min * input_height)
+            ymax = int(detection.y_max * input_height)
             depth_x = detection.depth_x
             depth_y = detection.depth_y
             depth_z = detection.depth_z
@@ -138,8 +146,8 @@ def decode_tiny_yolo(nnet_packet, **kwargs):
         output_list = nnet_packet.getOutputsList()
 
         objects = list()
-        resized_image_shape =[416,416]
-        original_image_shape =[416,416]
+        resized_image_shape =[input_width,input_height]
+        original_image_shape =[input_width,input_height]
         iou_threshold = NN_metadata['NN_config']['NN_specific_metadata']['iou_threshold']
 
 

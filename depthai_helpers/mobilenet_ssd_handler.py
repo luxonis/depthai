@@ -10,9 +10,11 @@ def decode_mobilenet_ssd(nnet_packet, **kwargs):
 
     detections_list = []
     if output_format == "detection":
-        detection_nr = nnet_packet.getDetectionCount()
-        for i in range(detection_nr):
-            detection = nnet_packet.getDetectedObject(i)
+        detections = nnet_packet.getDetectedObjects()
+        # detection_nr = detections.size
+        # for i in range(detection_nr):
+        #     detection =detections[i]
+        for detection in detections:
             confidence = detection.confidence
             class_id = detection.label
             x_min = detection.x_min
