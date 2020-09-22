@@ -157,7 +157,7 @@ class DepthAI:
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
-            self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(True)
+            self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(blocking=True)
             
             ### Uncomment to print ops
             # ops = ops + 1
