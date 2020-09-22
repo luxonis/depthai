@@ -149,6 +149,10 @@ class DepthConfigManager:
         try:
             output_format = self.NN_config['NN_config']['output_format']
         except:
+            NN_json = {}
+            NN_json['NN_config'] = {}
+            NN_json['NN_config']['output_format'] = "raw"
+            self.NN_config = NN_json
             output_format = "raw"
 
         if output_format == "raw" and self.calc_dist_to_bb == True:
@@ -333,11 +337,12 @@ class BlobManager:
     def getNNConfig(self):
         # try and load labels
         NN_json = None
-        with open(self.blob_file_config) as f:
-             if f is not None:
-                NN_json = json.load(f)
-                f.close()
-    
+        if Path(self.blob_file_config).exists():
+            with open(self.blob_file_config) as f:
+                if f is not None:
+                    NN_json = json.load(f)
+                    f.close()
+        
         return NN_json
 
     def verifyBlobFilesExist(self, verifyBlob, verifyConfig):
@@ -349,7 +354,7 @@ class BlobManager:
 
         if not verifyConfigPath.exists():
             cli_print("\nWARNING: NN json not found in: " + verifyConfig, PrintColors.WARNING)
-            os._exit(1)
+            cli_print("Defaulting to \"raw\" output format! ", PrintColors.RED)
 
     def getBlobFiles(self, cnnModel, isFirstNN=True):
         cnn_model_path = consts.resource_paths.nn_resource_path + cnnModel + "/" + cnnModel
