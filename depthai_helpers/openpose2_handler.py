@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import depthai
 
 keypointsMapping = ['Nose', 'Neck', 'R-Sho', 'R-Elb', 'R-Wr', 'L-Sho', 'L-Elb', 'L-Wr', 'R-Hip', 'R-Knee', 'R-Ank', 'L-Hip', 'L-Knee', 'L-Ank', 'R-Eye', 'L-Eye', 'R-Ear', 'L-Ear']
 POSE_PAIRS = [[1,2], [1,5], [2,3], [3,4], [5,6], [6,7], [1,8], [8,9], [9,10], [1,11], [11,12], [12,13], [1,0], [0,14], [14,16], [0,15], [15,17], [2,17], [5,16]]
@@ -128,8 +129,14 @@ def decode_openpose(nnet_packet, **kwargs):
 
     # out_layers = nnet_packet.getOutputLayersInfo()
     # print((out_layers))
-    # in_layers = nnet_packet.getInputLayersInfo()
+
+    # print(first_layer)
     # print(in_layers)
+
+    in_layers = nnet_packet.getInputLayersInfo()
+    first_layer = in_layers[0]
+    w = first_layer.get_dimension(depthai.dimension.WIDTH)
+    h = first_layer.get_dimension(depthai.dimension.HEIGHT)
 
     outputs = np.copy(output_list[0])
     outputs = outputs.astype('float32')
