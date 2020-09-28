@@ -337,6 +337,19 @@ class DepthAI:
                 self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO)
             elif key == ord('2'):
                 self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO)
+            # 5,6,7,8,9,0 : temporary, TODO delete
+            elif key == ord('5'):
+                self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_AE_REGION, '0 0 200 200 1')
+            elif key == ord('6'):
+                self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_AE_REGION, '1000 0 200 200 1')
+            elif key == ord('7'):
+                self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '-2')
+            elif key == ord('8'):
+                self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '+2')
+            elif key == ord('9'):
+                self.device.send_camera_control(depthai.Cam3A.Right, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '-2')
+            elif key == ord('0'):
+                self.device.send_camera_control(depthai.Cam3A.Right, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '+2')
             elif key == ord('q'):
                 break
 
