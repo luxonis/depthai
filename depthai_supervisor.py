@@ -36,7 +36,7 @@ run = True
 
 
 while(run):
-    p = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid) 
+    p = subprocess.Popen(cmd, shell=True) 
     p.wait()
     return_code = p.returncode
     p=None
