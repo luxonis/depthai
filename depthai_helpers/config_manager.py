@@ -11,6 +11,7 @@ from depthai_helpers.cli_utils import cli_print, PrintColors
 
 class DepthConfigManager:
     labels = ""
+    NN_config = None
 
     def __init__(self, args):
         self.args = args
@@ -75,12 +76,11 @@ class DepthConfigManager:
             self.decode_nn_json=decode_emotion_recognition_json
             self.calc_dist_to_bb=False
 
-        if self.args['cnn_model'] == 'tiny-yolo':
+        if self.args['cnn_model'] in ['tiny-yolo-v3', 'yolo-v3']:
             from depthai_helpers.tiny_yolo_v3_handler import decode_tiny_yolo, show_tiny_yolo, decode_tiny_yolo_json
             self.decode_nn=decode_tiny_yolo
             self.show_nn=show_tiny_yolo
             self.decode_nn_json=decode_tiny_yolo_json
-            self.calc_dist_to_bb=False
             self.compile_model=False
 
         if self.args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
@@ -88,6 +88,26 @@ class DepthConfigManager:
             self.decode_nn=decode_landmarks_recognition
             self.show_nn=show_landmarks_recognition
             self.decode_nn_json=decode_landmarks_recognition_json
+            self.calc_dist_to_bb=False
+
+        if self.args['cnn_model'] == 'openpose':
+            from depthai_helpers.openpose_handler import decode_openpose, show_openpose
+            self.decode_nn=decode_openpose
+            self.show_nn=show_openpose
+            self.calc_dist_to_bb=False
+            self.compile_model=False
+            
+        if self.args['cnn_model'] == 'openpose2':
+            from depthai_helpers.openpose2_handler import decode_openpose, show_openpose
+            self.decode_nn=decode_openpose
+            self.show_nn=show_openpose
+            self.calc_dist_to_bb=False
+            self.compile_model=False
+
+        if self.args['cnn_model'] == 'deeplabv3p_person':
+            from depthai_helpers.deeplabv3p_person import decode_deeplabv3p, show_deeplabv3p
+            self.decode_nn=decode_deeplabv3p
+            self.show_nn=show_deeplabv3p
             self.calc_dist_to_bb=False
 
 
@@ -119,7 +139,36 @@ class DepthConfigManager:
 
         # Get blob files
         blobMan = BlobManager(self.args, self.compile_model, self.calc_dist_to_bb)
-        self.labels = blobMan.getLabels()
+        self.NN_config = blobMan.getNNConfig()
+        try:
+            self.labels = self.NN_config['mappings']['labels']
+        except:
+            self.labels = None
+            print("Labels not found in json!")
+
+        try:
+            output_format = self.NN_config['NN_config']['output_format']
+        except:
+            NN_json = {}
+            NN_json['NN_config'] = {}
+            NN_json['NN_config']['output_format'] = "raw"
+            self.NN_config = NN_json
+            output_format = "raw"
+
+        if output_format == "raw" and self.calc_dist_to_bb == True:
+            cli_print("WARNING: Depth calculation with raw output format is not supported! It's only supported for YOLO/mobilenet based NNs, disabling calc_dist_to_bb", PrintColors.WARNING)
+            self.calc_dist_to_bb = False
+        
+        stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in self.stream_list]
+        if ('disparity' in stream_names or 'disparity_color' in stream_names) and self.calc_dist_to_bb == True:
+            cli_print("WARNING: Depth calculation with disparity/disparity_color streams is not supported! Disabling calc_dist_to_bb", PrintColors.WARNING)
+            self.calc_dist_to_bb = False
+
+        # check for known bad configurations
+        if 'depth' in stream_names and ('disparity' in stream_names or 'disparity_color' in stream_names):
+            print('ERROR: depth is mutually exclusive with disparity/disparity_color')
+            exit(2)
+
         if blobMan.default_blob:
             #default
             shave_nr = 7
@@ -247,12 +296,6 @@ class DepthConfigManager:
             config = utils.merge(self.args['config_overwrite'],config)
             print("Merged Pipeline config with overwrite",config)
 
-        # check for known bad configurations
-        if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] or 'depth_mm_h' in config['streams']):
-            print('ERROR: depth_sipp is mutually exclusive with depth_color_h')
-            exit(2)
-            # del config["streams"][config['streams'].index('depth_sipp')]
-
         # Append video stream if video recording was requested and stream is not already specified
         self.video_file = None
         if self.args['video'] is not None:
@@ -293,20 +336,18 @@ class BlobManager:
         if compile_model:
             self.blob_file, self.default_blob = self.compileBlob(self.args['cnn_model'])
             if self.args['cnn_model2']:
-                self.blob_file2, self.default_blob = self.compileBlob(self.args['cnn_model2'], False)
+                self.blob_file2, self.default_blob = self.compileBlob(self.args['cnn_model2'])
 
-    def getLabels(self):
+    def getNNConfig(self):
         # try and load labels
-        with open(self.blob_file_config) as f:
-            data = json.load(f)
-
-        try:
-            labels = data['mappings']['labels']
-        except:
-            labels = None
-            print("Labels not found in json!")
-    
-        return labels
+        NN_json = None
+        if Path(self.blob_file_config).exists():
+            with open(self.blob_file_config) as f:
+                if f is not None:
+                    NN_json = json.load(f)
+                    f.close()
+        
+        return NN_json
 
     def verifyBlobFilesExist(self, verifyBlob, verifyConfig):
         verifyBlobPath = Path(verifyBlob)
@@ -317,22 +358,19 @@ class BlobManager:
 
         if not verifyConfigPath.exists():
             cli_print("\nWARNING: NN json not found in: " + verifyConfig, PrintColors.WARNING)
-            os._exit(1)
+            cli_print("Defaulting to \"raw\" output format! ", PrintColors.RED)
 
     def getBlobFiles(self, cnnModel, isFirstNN=True):
         cnn_model_path = consts.resource_paths.nn_resource_path + cnnModel + "/" + cnnModel
         blobFile = cnn_model_path + ".blob"
-        suffix=""
-        if self.calc_dist_to_bb and isFirstNN:
-            suffix="_depth"
-        blobFileConfig = cnn_model_path + suffix + ".json"
+        blobFileConfig = cnn_model_path + ".json"
 
         self.verifyBlobFilesExist(blobFile, blobFileConfig)
 
         return blobFile, blobFileConfig
 
-    def compileBlob(self, nn_model, isFirstNN=True):
-        blob_file, _ = self.getBlobFiles(nn_model, isFirstNN)
+    def compileBlob(self, nn_model):
+        blob_file, _ = self.getBlobFiles(nn_model)
 
         default_blob=False
         shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
