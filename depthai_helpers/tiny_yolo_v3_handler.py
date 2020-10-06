@@ -117,8 +117,8 @@ def decode_tiny_yolo(nnet_packet, **kwargs):
 
     in_layers = nnet_packet.getInputLayersInfo()
     # print(in_layers)
-    input_width  = in_layers[0].get_dimension(depthai.dimension.W)
-    input_height = in_layers[0].get_dimension(depthai.dimension.H)
+    input_width  = in_layers[0].get_dimension(depthai.TensorInfo.Dimension.W)
+    input_height = in_layers[0].get_dimension(depthai.TensorInfo.Dimension.H)
 
     if output_format == "detection":
         detections = nnet_packet.getDetectedObjects()
