@@ -135,8 +135,8 @@ def decode_openpose(nnet_packet, **kwargs):
 
     in_layers = nnet_packet.getInputLayersInfo()
     first_layer = in_layers[0]
-    w = first_layer.get_dimension(depthai.dimension.WIDTH)
-    h = first_layer.get_dimension(depthai.dimension.HEIGHT)
+    w = first_layer.get_dimension(depthai.TensorInfo.Dimension.WIDTH)
+    h = first_layer.get_dimension(depthai.TensorInfo.Dimension.HEIGHT)
 
     outputs = np.copy(output_list[0])
     outputs = outputs.astype('float32')
