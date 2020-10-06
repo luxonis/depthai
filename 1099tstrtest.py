@@ -80,13 +80,13 @@ def moddetect():
 
 def rundepthai():
     global p
-    test_cmd = """python3 depthai_demo.py -s left,10 right,10 previewout,10 metaout jpegout depth_raw,10"""
+    test_cmd = """python3 depthai_demo.py -s left,10 right,10 previewout,10 metaout jpegout depth,10 -monor 400"""
     p = subprocess.Popen(test_cmd, shell=True, preexec_fn=os.setsid)
     return_code = p.returncode
     print("Return code:"+str(return_code))
     
 def printwaiting():
-    print()
+    print() 
     print("---------------------")
     print("Waiting for module...")
     print("---------------------")
@@ -108,7 +108,8 @@ def main():
             isDetected = False
             print("Module unplugged!!!")
             print("Killing test run...")
-            p.kill()
+            # p.kill()
+            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
             pwroff()
             
             printwaiting()
