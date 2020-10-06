@@ -159,6 +159,16 @@ class DepthConfigManager:
             cli_print("WARNING: Depth calculation with raw output format is not supported! It's only supported for YOLO/mobilenet based NNs, disabling calc_dist_to_bb", PrintColors.WARNING)
             self.calc_dist_to_bb = False
         
+        stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in self.stream_list]
+        if ('disparity' in stream_names or 'disparity_color' in stream_names) and self.calc_dist_to_bb == True:
+            cli_print("WARNING: Depth calculation with disparity/disparity_color streams is not supported! Disabling calc_dist_to_bb", PrintColors.WARNING)
+            self.calc_dist_to_bb = False
+
+        # check for known bad configurations
+        if 'depth' in stream_names and ('disparity' in stream_names or 'disparity_color' in stream_names):
+            print('ERROR: depth is mutually exclusive with disparity/disparity_color')
+            exit(2)
+
         if blobMan.default_blob:
             #default
             shave_nr = 7
@@ -285,12 +295,6 @@ class DepthConfigManager:
             self.args['config_overwrite'] = json.loads(self.args['config_overwrite'])
             config = utils.merge(self.args['config_overwrite'],config)
             print("Merged Pipeline config with overwrite",config)
-
-        # check for known bad configurations
-        if 'depth_sipp' in config['streams'] and ('depth_color_h' in config['streams'] or 'depth_mm_h' in config['streams']):
-            print('ERROR: depth_sipp is mutually exclusive with depth_color_h')
-            exit(2)
-            # del config["streams"][config['streams'].index('depth_sipp')]
 
         # Append video stream if video recording was requested and stream is not already specified
         self.video_file = None
