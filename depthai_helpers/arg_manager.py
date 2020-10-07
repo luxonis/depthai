@@ -148,7 +148,8 @@ class CliArgs:
         parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=_CNN_choices,
                             help="Cnn model to run on DepthAI for second-stage inference")
         
-        parser.add_argument('-cam', "--cnn_camera", default='rgb', choices=['rgb', 'left', 'right', 'left_right'],
+        parser.add_argument('-cam', "--cnn_camera", default='rgb',
+                            choices=['rgb', 'left', 'right', 'left_right', 'rectified_left', 'rectified_right', 'rectified_left_right'],
                             help='Choose camera input for CNN (default: %(default)s)')
         
         parser.add_argument("-dd", "--disable_depth", default=False, action="store_true",
