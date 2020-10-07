@@ -144,6 +144,28 @@ class DepthAI:
             print()
             return
 
+        def keypress_handler(self, key, stream_names):
+            keypress_handler_lut = {
+                ord('f'): lambda: self.device.request_af_trigger(),
+                ord('1'): lambda: self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO),
+                ord('2'): lambda: self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO),
+                # 5,6,7,8,9,0: short example for using ISP 3A controls
+                ord('5'): lambda: self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_AE_REGION, '0 0 200 200 1'),
+                ord('6'): lambda: self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_AE_REGION, '1000 0 200 200 1'),
+                ord('7'): lambda: self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '-2'),
+                ord('8'): lambda: self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '+2'),
+                ord('9'): lambda: self.device.send_camera_control(depthai.Cam3A.Right, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '-2'),
+                ord('0'): lambda: self.device.send_camera_control(depthai.Cam3A.Right, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '+2'),
+            }
+            if key in keypress_handler_lut:
+                keypress_handler_lut[key]()
+            elif key == ord('c'):
+                if 'jpegout' in stream_names:
+                    self.device.request_jpeg()
+                else:
+                    print("'jpegout' stream not enabled. Try settings -s jpegout to enable it")
+            return
+
         for stream in stream_names:
             if stream in ["disparity", "disparity_color", "depth"]:
                 cv2.namedWindow(stream)
@@ -330,34 +352,10 @@ class DepthAI:
                     frame_count[w] = 0
 
             key = cv2.waitKey(1)
-            if key == ord('c'):
-                if 'jpegout' in stream_names:
-                    self.device.request_jpeg()
-                else:
-                    print("'jpegout' stream not enabled. Try settings -s jpegout to enable it")
-
-            elif key == ord('f'):
-                self.device.request_af_trigger()
-            elif key == ord('1'):
-                self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO)
-            elif key == ord('2'):
-                self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO)
-            # 5,6,7,8,9,0 : temporary, TODO delete
-            elif key == ord('5'):
-                self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_AE_REGION, '0 0 200 200 1')
-            elif key == ord('6'):
-                self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_AE_REGION, '1000 0 200 200 1')
-            elif key == ord('7'):
-                self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '-2')
-            elif key == ord('8'):
-                self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '+2')
-            elif key == ord('9'):
-                self.device.send_camera_control(depthai.Cam3A.Right, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '-2')
-            elif key == ord('0'):
-                self.device.send_camera_control(depthai.Cam3A.Right, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '+2')
-            elif key == ord('q'):
+            if key == ord('q'):
                 break
-
+            else:
+                keypress_handler(self, key, stream_names)
 
         del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
         del self.device
