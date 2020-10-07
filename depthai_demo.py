@@ -145,17 +145,21 @@ class DepthAI:
             return
 
         def keypress_handler(self, key, stream_names):
+            cam_l = depthai.CameraControl.CamId.LEFT
+            cam_r = depthai.CameraControl.CamId.RIGHT
+            cmd_ae_region = depthai.CameraControl.Command.AE_REGION
+            cmd_exp_comp  = depthai.CameraControl.Command.EXPOSURE_COMPENSATION
             keypress_handler_lut = {
                 ord('f'): lambda: self.device.request_af_trigger(),
                 ord('1'): lambda: self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO),
                 ord('2'): lambda: self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO),
                 # 5,6,7,8,9,0: short example for using ISP 3A controls
-                ord('5'): lambda: self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_AE_REGION, '0 0 200 200 1'),
-                ord('6'): lambda: self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_AE_REGION, '1000 0 200 200 1'),
-                ord('7'): lambda: self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '-2'),
-                ord('8'): lambda: self.device.send_camera_control(depthai.Cam3A.Left, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '+2'),
-                ord('9'): lambda: self.device.send_camera_control(depthai.Cam3A.Right, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '-2'),
-                ord('0'): lambda: self.device.send_camera_control(depthai.Cam3A.Right, depthai.Isp3A.CMD_EXPOSURE_COMPENSATION, '+2'),
+                ord('5'): lambda: self.device.send_camera_control(cam_l, cmd_ae_region, '0 0 200 200 1'),
+                ord('6'): lambda: self.device.send_camera_control(cam_l, cmd_ae_region, '1000 0 200 200 1'),
+                ord('7'): lambda: self.device.send_camera_control(cam_l, cmd_exp_comp, '-2'),
+                ord('8'): lambda: self.device.send_camera_control(cam_l, cmd_exp_comp, '+2'),
+                ord('9'): lambda: self.device.send_camera_control(cam_r, cmd_exp_comp, '-2'),
+                ord('0'): lambda: self.device.send_camera_control(cam_r, cmd_exp_comp, '+2'),
             }
             if key in keypress_handler_lut:
                 keypress_handler_lut[key]()
