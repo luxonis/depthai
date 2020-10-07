@@ -23,9 +23,6 @@ from depthai_helpers.config_manager import DepthConfigManager
 from depthai_helpers.arg_manager import CliArgs
 
 is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
-if not is_rpi:
-    # warnings.warn("Open3D is not available on raspberry pi so point cloud is disabled", ImportWarning)
-    from depthai_helpers.projector_3d import PointCloudVisualizer
 
 
 from depthai_helpers.object_tracker_handler import show_tracklets
@@ -68,6 +65,7 @@ class DepthAI:
 
         # Labels for the current neural network. They are parsed from the blob config file.
         labels = configMan.labels
+        NN_json = configMan.NN_config
 
         # This json file is sent to DepthAI. It communicates what options you'd like to enable and what model you'd like to run.
         config = configMan.jsonConfig
@@ -113,8 +111,8 @@ class DepthAI:
         NN_cams = {'rgb', 'left', 'right'}
 
         for cam in NN_cams:
-            nnet_prev["entries_prev"][cam] = []
-            nnet_prev["nnet_source"][cam] = []
+            nnet_prev["entries_prev"][cam] = None
+            nnet_prev["nnet_source"][cam] = None
             frame_count['nn'][cam] = 0
             frame_count_prev['nn'][cam] = 0
 
@@ -156,14 +154,14 @@ class DepthAI:
                 cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
         
         right_rectified = None
-        pcl_not_set = True
+        pcl_converter = None
 
         ops = 0
         prevTime = time()
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
-            self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(True)
+            self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(blocking=True)
             
             ### Uncomment to print ops
             # ops = ops + 1
@@ -189,7 +187,7 @@ class DepthAI:
                 if meta != None:
                     camera = meta.getCameraName()
                 nnet_prev["nnet_source"][camera] = nnet_packet
-                nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet, config=config)
+                nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet, config=config, NN_json=NN_json)
                 frame_count['metaout'] += 1
                 frame_count['nn'][camera] += 1
 
@@ -215,19 +213,20 @@ class DepthAI:
                     data1 = packetData[1,:,:]
                     data2 = packetData[2,:,:]
                     frame = cv2.merge([data0, data1, data2])
-
-                    nn_frame = show_nn(nnet_prev["entries_prev"][camera], frame, labels=labels, config=config)
-                    if enable_object_tracker and tracklets is not None:
-                        nn_frame = show_tracklets(tracklets, nn_frame, labels)
-                    cv2.putText(nn_frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-                    cv2.putText(nn_frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
-                    cv2.imshow(window_name, nn_frame)
+                    if nnet_prev["entries_prev"][camera] is not None:
+                        frame = show_nn(nnet_prev["entries_prev"][camera], frame, NN_json=NN_json, config=config)
+                        if enable_object_tracker and tracklets is not None:
+                            frame = show_tracklets(tracklets, frame, labels)
+                    cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+                    cv2.putText(frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
+                    cv2.imshow(window_name, frame)
                 elif packet.stream_name in ['left', 'right', 'disparity', 'rectified_left', 'rectified_right']:
                     frame_bgr = packetData
                     if args['pointcloud'] and packet.stream_name == 'rectified_right':
                         right_rectified = packetData
                     cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
                     cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
+                    camera = None
                     if args['draw_bb_depth']:
                         camera = args['cnn_camera']
                         if packet.stream_name == 'disparity':
@@ -235,7 +234,8 @@ class DepthAI:
                                 camera = 'right'
                         elif camera != 'rgb':
                             camera = packet.getMetadata().getCameraName()
-                        show_nn(nnet_prev["entries_prev"][camera], frame_bgr, labels=labels, config=config, nn2depth=nn2depth)
+                        if nnet_prev["entries_prev"][camera] is not None: 
+                            frame_bgr = show_nn(nnet_prev["entries_prev"][camera], frame_bgr, NN_json=NN_json, config=config, nn2depth=nn2depth)
                     cv2.imshow(window_name, frame_bgr)
                 elif packet.stream_name.startswith('depth') or packet.stream_name == 'disparity_color':
                     frame = packetData
@@ -246,11 +246,14 @@ class DepthAI:
                             cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                         else: # uint16
                             if args['pointcloud'] and "depth" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
-                                if pcl_not_set:
+                                try:
+                                    from depthai_helpers.projector_3d import PointCloudVisualizer
+                                except ImportError as e:
+                                    raise ImportError(f"\033[1;5;31mError occured when importing PCL projector: {e} \033[0m ")
+                                if pcl_converter is None:
                                     pcl_converter = PointCloudVisualizer(self.device.get_right_intrinsic(), 1280, 720)
-                                    pcl_not_set =  False
                                 right_rectified = cv2.flip(right_rectified, 1)
-                                pcd = pcl_converter.rgbd_to_projection(frame, right_rectified)
+                                pcl_converter.rgbd_to_projection(frame, right_rectified)
                                 pcl_converter.visualize_pcd()
                             
                             frame = (65535 // frame).astype(np.uint8)
@@ -267,7 +270,8 @@ class DepthAI:
                         camera = args['cnn_camera']
                         if camera == 'left_right':
                             camera = 'right'
-                        show_nn(nnet_prev["entries_prev"][camera], frame, labels=labels, config=config, nn2depth=nn2depth)
+                        if nnet_prev["entries_prev"][camera] is not None:
+                            frame = show_nn(nnet_prev["entries_prev"][camera], frame, NN_json=NN_json, config=config, nn2depth=nn2depth)
                     cv2.imshow(window_name, frame)
 
                 elif packet.stream_name == 'jpegout':
