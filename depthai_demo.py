@@ -246,7 +246,10 @@ class DepthAI:
                             cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                         else: # uint16
                             if args['pointcloud'] and "depth" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
-                                from depthai_helpers.projector_3d import PointCloudVisualizer
+                                try:
+                                    from depthai_helpers.projector_3d import PointCloudVisualizer
+                                except ImportError as e:
+                                    raise ImportError(f"\033[1;5;31mError occured when importing PCL projector: {e} \033[0m ")
                                 if pcl_converter is None:
                                     pcl_converter = PointCloudVisualizer(self.device.get_right_intrinsic(), 1280, 720)
                                 right_rectified = cv2.flip(right_rectified, 1)
