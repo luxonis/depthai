@@ -45,3 +45,4 @@ intrinsic_calib_m2
 *.cmd
 *.mvcmd
 *.so
+*.prof

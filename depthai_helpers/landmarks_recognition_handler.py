@@ -3,9 +3,10 @@ import numpy as np
 import json
 
 def decode_landmarks_recognition(nnet_packet, **kwargs):
+    landmarks_tensor = nnet_packet.get_tensor(0)
     landmarks = []
-    for i in range(len(nnet_packet.entries()[0][0])):
-        landmarks.append(nnet_packet.entries()[0][0][i])
+    for i in landmarks_tensor[0]:
+        landmarks.append(i[0][0])
     
     landmarks = list(zip(*[iter(landmarks)]*2))
     return landmarks
