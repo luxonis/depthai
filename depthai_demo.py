@@ -331,10 +331,11 @@ class DepthAI:
 
             key = cv2.waitKey(1)
             if key == ord('c'):
-                if 'jpegout' in stream_names == 0:
-                    print("'jpegout' stream not enabled. Try settings -s jpegout to enable it")
-                else:
+                if 'jpegout' in stream_names:
                     self.device.request_jpeg()
+                else:
+                    print("'jpegout' stream not enabled. Try settings -s jpegout to enable it")
+
             elif key == ord('f'):
                 self.device.request_af_trigger()
             elif key == ord('1'):
