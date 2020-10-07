@@ -23,9 +23,6 @@ from depthai_helpers.config_manager import DepthConfigManager
 from depthai_helpers.arg_manager import CliArgs
 
 is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
-if not is_rpi:
-    # warnings.warn("Open3D is not available on raspberry pi so point cloud is disabled", ImportWarning)
-    from depthai_helpers.projector_3d import PointCloudVisualizer
 
 
 from depthai_helpers.object_tracker_handler import show_tracklets
@@ -157,7 +154,7 @@ class DepthAI:
                 cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
         
         right_rectified = None
-        pcl_not_set = True
+        pcl_converter = None
 
         ops = 0
         prevTime = time()
@@ -249,11 +246,14 @@ class DepthAI:
                             cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                         else: # uint16
                             if args['pointcloud'] and "depth" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
-                                if pcl_not_set:
+                                try:
+                                    from depthai_helpers.projector_3d import PointCloudVisualizer
+                                except ImportError as e:
+                                    raise ImportError(f"\033[1;5;31mError occured when importing PCL projector: {e} \033[0m ")
+                                if pcl_converter is None:
                                     pcl_converter = PointCloudVisualizer(self.device.get_right_intrinsic(), 1280, 720)
-                                    pcl_not_set =  False
                                 right_rectified = cv2.flip(right_rectified, 1)
-                                pcd = pcl_converter.rgbd_to_projection(frame, right_rectified)
+                                pcl_converter.rgbd_to_projection(frame, right_rectified)
                                 pcl_converter.visualize_pcd()
                             
                             frame = (65535 // frame).astype(np.uint8)
