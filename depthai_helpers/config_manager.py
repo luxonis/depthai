@@ -129,7 +129,7 @@ class DepthConfigManager:
         self.linuxCheckApplyUsbRules()
 
         # left_right double NN check.
-        if self.args['cnn_camera'] == 'left_right':
+        if self.args['cnn_camera'] in ['left_right', 'rectified_left_right']:
             if self.args['NN_engines'] is None:
                 self.args['NN_engines'] = 2
                 self.args['shaves'] = 6 if self.args['shaves'] is None else self.args['shaves'] - self.args['shaves'] % 2
