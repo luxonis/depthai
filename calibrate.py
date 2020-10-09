@@ -16,6 +16,9 @@ import shutil
 import consts.resource_paths
 import json
 
+from depthai_helpers.version_check import check_depthai_version
+check_depthai_version()
+
 use_cv = True
 try:
     import cv2
