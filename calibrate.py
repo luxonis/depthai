@@ -112,6 +112,24 @@ def find_chessboard(frame):
     return cv2.findChessboardCorners(small_frame, (9, 6), chessboard_flags)[0] and \
            cv2.findChessboardCorners(frame, (9, 6), chessboard_flags)[0]
 
+def test_camera_orientation(frame_l, frame_r):
+    chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
+    # termination criteria
+    frame_l = cv2.cvtColor(frame_l, cv2.COLOR_RGB2GRAY)
+    frame_r = cv2.cvtColor(frame_r, cv2.COLOR_RGB2GRAY)
+    criteria = (cv2.TERM_CRITERIA_MAX_ITER +
+                    cv2.TERM_CRITERIA_EPS, 30, 0.001)
+    ret, corners_l =  cv2.findChessboardCorners(frame_l, (9, 6), chessboard_flags)
+    ret, corners_r =  cv2.findChessboardCorners(frame_r, (9, 6), chessboard_flags)
+    rt = cv2.cornerSubPix(frame_l, corners_l, (5, 5),
+                                      (-1, -1), criteria)
+    rt = cv2.cornerSubPix(frame_r, corners_r, (5, 5),
+                                      (-1, -1), criteria)
+    
+    for left, right in zip(corners_l, corners_r):
+        if left[0][0] - right[0][0] < 0:
+            return False
+    return True
 
 def ts(packet):
     return packet.getMetadata().getTimestamp()
@@ -255,6 +273,25 @@ class Main:
         # cv2.imshow("right", info_frame)
         cv2.imshow("left + right",info_frame)
         cv2.waitKey(2000)
+    
+    def show_failed_orientation(self):
+        width, height = int(self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
+        info_frame = np.zeros((height, width, 3), np.uint8)
+        print("py: Capture failed, Swap the camera's ")
+
+        def show(position, text):
+            cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 255, 0))
+
+        show((60, int(height / 2 - 40)), "Calibration failed, Left and ")
+        show((60, int(height /2)), "right camera are swapped!")
+        show((60, int(height / 2 + 40)), "Fix \"swap_left_and_right_cameras\"")
+        show((60, int(height / 2 + 80)), "and start again")
+
+        # cv2.imshow("left", info_frame)
+        # cv2.imshow("right", info_frame)
+        cv2.imshow("left + right",info_frame)
+        cv2.waitKey(5000)
+        raise Exception("Calibration failed, Left and right camera are swapped. Fix \"swap_left_and_right_cameras\" and start again!!")
 
     def capture_images(self):
         finished = False
@@ -298,9 +335,11 @@ class Main:
                         if packet.stream_name == 'left' and not tried_left:
                             captured_left = self.parse_frame(frame, packet.stream_name)
                             tried_left = True
+                            captured_left_frame = frame.copy()
                         elif packet.stream_name == 'right' and not tried_right:
                             captured_right = self.parse_frame(frame, packet.stream_name)
                             tried_right = True
+                            captured_right_frame = frame.copy()
 
                     has_success = (packet.stream_name == "left" and captured_left) or \
                                   (packet.stream_name == "right" and captured_right)
@@ -330,6 +369,12 @@ class Main:
                     frame_list.append(small_frame)
 
                     if captured_left and captured_right:
+                        print("Images captured-->")
+                        print(self.images_captured)
+                        if self.images_captured == 0:
+                            is_orientation_correct = test_camera_orientation(captured_left_frame, captured_right_frame)
+                            if not is_orientation_correct :
+                                self.show_failed_orientation()
                         self.images_captured += 1
                         self.images_captured_polygon += 1
                         capturing = False

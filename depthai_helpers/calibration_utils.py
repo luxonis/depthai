@@ -17,11 +17,11 @@ def setPolygonCoordinates(height, width):
     slope = 150
 
     p_coordinates = [
+            [[margin,margin], [margin, height-margin], [width-margin, height-margin], [width-margin, margin]],
+
             [[margin,0], [margin,height], [width//2, height-slope], [width//2, slope]],
             [[horizontal_shift, 0], [horizontal_shift, height], [width//2 + horizontal_shift, height-slope], [width//2 + horizontal_shift, slope]],
             [[horizontal_shift*2-margin, 0], [horizontal_shift*2-margin, height], [width//2 + horizontal_shift*2-margin, height-slope], [width//2 + horizontal_shift*2-margin, slope]],
-
-            [[margin,margin], [margin, height-margin], [width-margin, height-margin], [width-margin, margin]],
 
             [[width-margin, 0], [width-margin, height], [width//2, height-slope], [width//2, slope]],
             [[width-horizontal_shift, 0], [width-horizontal_shift, height], [width//2-horizontal_shift, height-slope], [width//2-horizontal_shift, slope]],
