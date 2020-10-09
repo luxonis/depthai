@@ -3,7 +3,7 @@ import argparse
 try:
     import argcomplete
 except ImportError:
-    raise ImportError('argcomplete module not found, run python3 -m pip install -r requirements.txt ')
+    raise ImportError('\033[1;5;31m argcomplete module not found, run python3 -m pip install -r requirements.txt \033[0m')
 from argcomplete.completers import ChoicesCompleter
 
 from depthai_helpers.cli_utils import cli_print, PrintColors
