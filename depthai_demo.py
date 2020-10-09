@@ -137,14 +137,14 @@ class DepthAI:
         self.reset_process_wd()
 
         time_start = time()
-        def print_packet_info(packet):
+        def print_packet_info(packet, stream_name):
             meta = packet.getMetadata()
-            print("[{:.6f} {:15s}]".format(time()-time_start, packet.stream_name), end='')
+            print("[{:.6f} {:15s}]".format(time()-time_start, stream_name), end='')
             if meta is not None:
-                print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), end='')
-                if not (packet.stream_name.startswith('disparity')
-                     or packet.stream_name.startswith('depth')):
-                    print('', meta.getCameraName(), end='')
+                source = meta.getCameraName()
+                if stream_name.startswith('disparity') or stream_name.startswith('depth'):
+                    source += ' (rectified)'
+                print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), source, end='')
             print()
             return
 
@@ -210,7 +210,7 @@ class DepthAI:
                     os._exit(10)
 
             for _, nnet_packet in enumerate(self.nnet_packets):
-                if args['verbose']: print_packet_info(nnet_packet)
+                if args['verbose']: print_packet_info(nnet_packet, 'NNet')
 
                 meta = nnet_packet.getMetadata()
                 camera = 'rgb'
@@ -225,7 +225,7 @@ class DepthAI:
                 window_name = packet.stream_name
                 if packet.stream_name not in stream_names:
                     continue # skip streams that were automatically added
-                if args['verbose']: print_packet_info(packet)
+                if args['verbose']: print_packet_info(packet, packet.stream_name)
                 packetData = packet.getData()
                 if packetData is None:
                     print('Invalid packet data!')
