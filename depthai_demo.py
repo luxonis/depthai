@@ -137,10 +137,10 @@ class DepthAI:
             meta = packet.getMetadata()
             print("[{:.6f} {:15s}]".format(time()-time_start, stream_name), end='')
             if meta is not None:
-                print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), end='')
-                if not (stream_name.startswith('disparity')
-                     or stream_name.startswith('depth')):
-                    print('', meta.getCameraName(), end='')
+                source = meta.getCameraName()
+                if stream_name.startswith('disparity') or stream_name.startswith('depth'):
+                    source += ' (rectified)'
+                print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), source, end='')
             print()
             return
 
