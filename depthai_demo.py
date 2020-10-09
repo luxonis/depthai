@@ -13,6 +13,10 @@ import sys
 import depthai
 
 print('Using depthai module from: ', depthai.__file__)
+print('Depthai version installed: ', depthai.__version__)
+
+from depthai_helpers.version_check import check_depthai_version
+check_depthai_version()
 
 import consts.resource_paths
 from depthai_helpers import utils
