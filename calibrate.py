@@ -130,6 +130,8 @@ class Main:
     images_captured_polygon = 0
     images_captured = 0
 
+    dataset_path = None
+
     def __init__(self):
         self.args = vars(parse_args())
         self.config = {
@@ -185,12 +187,13 @@ class Main:
         self.total_images = self.args['count'] * len(setPolygonCoordinates(1000, 600))  # random polygons for count
         print("Using Arguments=", self.args)
 
+        if self.args['device_id'] != "":
+            self.dataset_path = "dataset-device_" + self.args['device_id'] + "/"
+        else:
+            self.dataset_path = "dataset/"
+
     @contextmanager
     def get_pipeline(self):
-        # Possible to try and reboot?
-        # The following doesn't work (have to manually hit switch on device)
-        # depthai.reboot_device
-        # time.sleep(1)
 
         pipeline = None
 
@@ -213,7 +216,7 @@ class Main:
             return False
 
         filename = image_filename(stream_name, self.current_polygon, self.images_captured)
-        cv2.imwrite("dataset/{}/{}".format(stream_name, filename), frame)
+        cv2.imwrite(self.dataset_path + "{}/{}".format(stream_name, filename), frame)
         print("py: Saved image as: " + str(filename))
         return True
 
@@ -370,7 +373,7 @@ class Main:
         flags = [self.config['board_config']['stereo_center_crop']]
         cal_data = StereoCalibration()
         try:
-            cal_data.calibrate("dataset", self.args['square_size_cm'], "./resources/depthai.calib", flags)
+            cal_data.calibrate(self.dataset_path, self.args['square_size_cm'], "./resources/depthai.calib", flags)
         except AssertionError as e:
             print("[ERROR] " + str(e))
             raise SystemExit(1)
@@ -379,9 +382,9 @@ class Main:
         if 'capture' in self.args['mode']:
             try:
                 if self.args['image_op'] == 'delete':
-                    shutil.rmtree('dataset/')
-                Path("dataset/left").mkdir(parents=True, exist_ok=True)
-                Path("dataset/right").mkdir(parents=True, exist_ok=True)
+                    shutil.rmtree(self.dataset_path)
+                Path(self.dataset_path + "left").mkdir(parents=True, exist_ok=True)
+                Path(self.dataset_path + "right").mkdir(parents=True, exist_ok=True)
             except OSError:
                 print("An error occurred trying to create image dataset directories!")
                 raise
