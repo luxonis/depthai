@@ -84,6 +84,9 @@ def parse_args():
                         help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
     parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=None, action="store_false",
                         help="Do not swap the Left and Right cameras.")
+    parser.add_argument("-dev", "--device-id", default="", type=str,
+                        help="USB port number for the device to connect to. Use the word 'list' to show all devices "
+                                "and exit.")
     parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
                         help="Used by board developers for debugging.")
     parser.add_argument("-iv", "--invert-vertical", dest="invert_v", default=False, action="store_true",
@@ -192,7 +195,7 @@ class Main:
         pipeline = None
 
         try:
-            device = depthai.Device("", False)
+            device = depthai.Device(self.args['device_id'], False)
             pipeline = device.create_pipeline(self.config)
         except RuntimeError:
             raise RuntimeError("Unable to initialize device. Try to reset it")
