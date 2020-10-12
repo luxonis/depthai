@@ -357,8 +357,7 @@ class BlobManager:
             os._exit(1)
 
         if not verifyConfigPath.exists():
-            cli_print("\nWARNING: NN json not found in: " + verifyConfig, PrintColors.WARNING)
-            cli_print("Defaulting to \"raw\" output format! ", PrintColors.RED)
+            print("NN config not found in: " + verifyConfig + '. Defaulting to "raw" output format!')
 
     def getBlobFiles(self, cnnModel, isFirstNN=True):
         cnn_model_path = consts.resource_paths.nn_resource_path + cnnModel + "/" + cnnModel
