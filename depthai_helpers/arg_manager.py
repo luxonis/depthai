@@ -17,6 +17,7 @@ def _get_immediate_subdirectories(a_dir):
 _stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth", "disparity", "disparity_color",
                    "meta_d2h", "object_tracker", "rectified_left", "rectified_right", "color")
 _CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
+_CNN2_choices = ['landmarks-regression-retail-0009', 'facial-landmarks-35-adas-0002', 'emotions-recognition-retail-0003']
 
 def _stream_type(option):
     max_fps = None
@@ -145,7 +146,7 @@ class CliArgs:
         parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=_CNN_choices,
                             help="Cnn model to run on DepthAI")
         
-        parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=_CNN_choices,
+        parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=_CNN2_choices,
                             help="Cnn model to run on DepthAI for second-stage inference")
         
         parser.add_argument('-cam', "--cnn_camera", default='rgb',
