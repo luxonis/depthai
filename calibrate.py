@@ -190,7 +190,6 @@ class Main:
         # time.sleep(1)
 
         pipeline = None
-
         try:
             self.device = depthai.Device("", False)
             if not self.device.is_usb3():
