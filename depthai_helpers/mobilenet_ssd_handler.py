@@ -54,13 +54,12 @@ def decode_mobilenet_ssd(nnet_packet, **kwargs):
 
     stage2_detections=None
     # Second-stage NN
-    if 'landmarks-regression-retail-0009' in config['ai']['blob_file2']:
-        landmark_tensor = nnet_packet.get_tensor(1)
-        # Decode
+    if any(x in config['ai']['blob_file2'] for x in ['landmarks-regression-retail-0009', 'facial-landmarks-35-adas-0002'] ):
+        landmarks_tensor = nnet_packet.get_tensor(1)
         landmarks = []
-        for i in landmark_tensor[0]:
-            landmarks.append(i[0][0])
-        landmarks = list(zip(*[iter(landmarks)]*2))
+
+        landmarks_tensor = landmarks_tensor.reshape(landmarks_tensor.shape[1])    
+        landmarks = list(zip(*[iter(landmarks_tensor)]*2))
         stage2_detections=landmarks
     if 'emotions-recognition-retail-0003' in config['ai']['blob_file2']:
         em_tensor = nnet_packet.get_tensor(1)
@@ -169,7 +168,7 @@ def show_mobilenet_ssd(detections, frame, **kwargs):
             
             # Second-stage NN
             if idx == 0: # For now we run second-stage only on first detection
-                if 'landmarks-regression-retail-0009' in config['ai']['blob_file2']:
+                if any(x in config['ai']['blob_file2'] for x in ['landmarks-regression-retail-0009', 'facial-landmarks-35-adas-0002'] ):
                     landmarks = detections["stage2"]
                     # Show
                     bb_w = x2 - x1

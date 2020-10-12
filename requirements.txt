@@ -7,4 +7,4 @@ open3d==0.10.0.0; platform_machine != "armv7l"
 # depthai==0.2.0.1
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.2.0.1+406f48b91e9bd01824c748a0028e07595b5557dd
+depthai==0.2.0.1+bee757d3341fc40771dca684f433ec42c852f8ce
