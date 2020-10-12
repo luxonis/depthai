@@ -18,15 +18,14 @@ custom_calib_fpath    = relative_to_abs_path('../resources/depthai.calib')
 left_mesh_fpath        = relative_to_abs_path('../resources/mesh_left.calib')
 right_mesh_fpath        = relative_to_abs_path('../resources/mesh_right.calib')
 
-right_map_x_fpath        = relative_to_abs_path('../resources/map_x_right.calib')
-right_map_y_fpath        = relative_to_abs_path('../resources/map_y_right.calib')
-left_map_x_fpath        = relative_to_abs_path('../resources/map_x_left.calib')
-left_map_y_fpath        = relative_to_abs_path('../resources/map_y_left.calib')
-
 nn_resource_path      = relative_to_abs_path('../resources/nn')+"/"
 blob_fpath            = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.blob')
 blob_config_fpath     = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.json')
 tests_functional_path = relative_to_abs_path('../testsFunctional/') + "/"
+eeprom_fail_path      = relative_to_abs_path('../resources/images/eeprom_fail.PNG')
+calib_fail_path       = relative_to_abs_path('../resources/images/calib_fail.PNG')
+pass_path             = relative_to_abs_path('../resources/images/pass.PNG')
+usb_3_failed          = relative_to_abs_path('../resources/images/usb_3_Failed.PNG')
 
 if custom_calib_fpath is not None and Path(custom_calib_fpath).exists():
     calib_fpath = custom_calib_fpath

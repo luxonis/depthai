@@ -7,6 +7,9 @@ import re
 import time
 import consts.resource_paths
 import json
+import subprocess
+import depthai
+import signal
 
 # Creates a set of 13 polygon coordinates
 def setPolygonCoordinates(height, width):
@@ -148,12 +151,135 @@ class StereoCalibration(object):
             fp.write(bytearray(flags))
 
         print("Calibration file written to %s." % (out_filepath))
-        print("\tTook %i seconds to run image processing." % (round(time.time() - start_time, 2)))
-        # show debug output for visual inspection
-        print("\nRectifying dataset for visual inspection using Mesh")
-        self.show_rectified_images_two_calib(filepath, False)
-        print("\nRectifying dataset for visual inspection using Two Homography")
-        self.show_rectified_images_two_calib(filepath, True)
+        self.test_epipolar(filepath)
+        # print("\tTook %i seconds to run image processing." % (round(time.time() - start_time, 2)))
+        # # show debug output for visual inspection
+        # print("\nRectifying dataset for visual inspection using Mesh")
+        # self.show_rectified_images_two_calib(filepath, False)
+        # print("\nRectifying dataset for visual inspection using Two Homography")
+        # self.show_rectified_images_two_calib(filepath, True)
+
+    def test_epipolar(self, dataset_dir):
+        images_left = glob.glob(dataset_dir + '/left/*.png')
+        images_right = glob.glob(dataset_dir + '/right/*.png')
+        images_left.sort()
+        images_right.sort()
+        print("HU IHER")
+        assert len(images_left) != 0, "ERROR: Images not read correctly"
+        assert len(images_right) != 0, "ERROR: Images not read correctly"
+
+        image_data_pairs = []
+        for image_left, image_right in zip(images_left, images_right):
+            # read images
+            img_l = cv2.imread(image_left, 0)
+            img_r = cv2.imread(image_right, 0)
+            # warp right image
+            img_l = cv2.warpPerspective(img_l, self.H1, img_l.shape[::-1],
+                                        cv2.INTER_CUBIC +
+                                        cv2.WARP_FILL_OUTLIERS +
+                                        cv2.WARP_INVERSE_MAP)
+            
+            img_r = cv2.warpPerspective(img_r, self.H2, img_r.shape[::-1],
+                                        cv2.INTER_CUBIC +
+                                        cv2.WARP_FILL_OUTLIERS +
+                                        cv2.WARP_INVERSE_MAP)
+
+
+            image_data_pairs.append((img_l, img_r))
+
+
+        # compute metrics
+        imgpoints_r = []
+        imgpoints_l = []
+        for image_data_pair in image_data_pairs:
+            flags = 0
+            flags |= cv2.CALIB_CB_ADAPTIVE_THRESH
+            flags |= cv2.CALIB_CB_NORMALIZE_IMAGE
+            flags |= cv2.CALIB_CB_FAST_CHECK
+            ret_l, corners_l = cv2.findChessboardCorners(image_data_pair[0],
+                                                         (9, 6), flags)
+            ret_r, corners_r = cv2.findChessboardCorners(image_data_pair[1],
+                                                         (9, 6), flags)
+
+            # termination criteria
+            self.criteria = (cv2.TERM_CRITERIA_MAX_ITER +
+                             cv2.TERM_CRITERIA_EPS, 10, 0.05)
+
+            # if corners are found in both images, refine and add data
+            if ret_l and ret_r:
+                rt = cv2.cornerSubPix(image_data_pair[0], corners_l, (5, 5),
+                                      (-1, -1), self.criteria)
+                rt = cv2.cornerSubPix(image_data_pair[1], corners_r, (5, 5),
+                                      (-1, -1), self.criteria)
+                imgpoints_l.extend(corners_l)
+                imgpoints_r.extend(corners_r)
+                epi_error_sum = 0
+                for l_pt, r_pt in zip(corners_l, corners_r):
+                    epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+                
+                print("Average Epipolar Error per image on host: " + str(epi_error_sum / len(corners_l)))
+
+        epi_error_sum = 0
+        for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):
+            epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+
+        avg_epipolar = epi_error_sum / len(imgpoints_r)
+        print("Average Epipolar Error: " + str(avg_epipolar))
+
+        if avg_epipolar > 0.2:
+            fail_img = cv2.imread(consts.resource_paths.calib_fail_path, cv2.IMREAD_COLOR)
+            
+            while (1):
+                cv2.imshow('Calibration test Failed', fail_img)
+                k = cv2.waitKey(33)
+                if k == 32 or k == 27:  # Esc key to stop
+                    break
+                elif k == -1:  # normally -1 returned,so don't print it
+                    continue
+        else:            
+            self.rundepthai()
+            device = depthai.Device("", False)
+            if not device:
+                print("Error initializing device. Try to reset it.")
+                exit(1)
+            
+            if device.is_eeprom_loaded():
+                pass_img = cv2.imread(consts.resource_paths.pass_path, cv2.IMREAD_COLOR)
+                while (1):
+                    cv2.imshow('Calibration test Passed and wrote to EEPROM', pass_img)
+                    k = cv2.waitKey(33)
+                    if k == 32 or k == 27:  # Esc key to stop
+                        break
+                    elif k == -1:  # normally -1 returned,so don't print it
+                        continue
+            else:
+                fail_img = cv2.imread(consts.resource_paths.eeprom_fail_path, cv2.IMREAD_COLOR)
+                while (1):
+                    cv2.imshow('EEPROM write failed', fail_img)
+                    k = cv2.waitKey(33)
+                    if k == 32 or k == 27:  # Esc key to stop
+                        break
+                    elif k == -1:  # normally -1 returned,so don't print it
+                        continue
+            del device
+
+    def rundepthai(self):
+        test_cmd = """python3 depthai_demo.py -brd bw1098obc -e"""
+        self.p = subprocess.Popen(test_cmd, shell=True, preexec_fn=os.setsid)
+        # return_code = self.p.returncode
+        # print("Return code:"+str(return_code))
+        #while (1):
+            # k = cv2.waitKey(33)
+            #char = input()
+            #if char == 'k':  # Esc key to stop
+                # self.p.kill()
+        time.sleep(5)
+        os.killpg(os.getpgid(self.p.pid), signal.SIGTERM)
+            #    break
+            #else:
+            #    print("Please press k to continue")
+
+        time.sleep(2)
 
     def process_images(self, filepath):
         """Read images, detect corners, refine corners, and save data."""

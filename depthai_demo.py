@@ -188,6 +188,18 @@ class DepthAI:
 
         ops = 0
         prevTime = time()
+
+        # print(self.device.is_usb3())
+        if not self.device.is_usb3():
+            fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
+            while True:
+                cv2.imshow('Calibration test Passed and wrote to EEPROM', fail_usb_img)
+                k = cv2.waitKey(33)
+                if k == 32 or k == 27:  # Esc key to stop
+                    break
+                elif k == -1:  # normally -1 returned,so don't print it
+                    continue
+
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
