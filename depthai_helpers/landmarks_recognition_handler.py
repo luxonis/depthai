@@ -5,10 +5,9 @@ import json
 def decode_landmarks_recognition(nnet_packet, **kwargs):
     landmarks_tensor = nnet_packet.get_tensor(0)
     landmarks = []
-    for i in landmarks_tensor[0]:
-        landmarks.append(i[0][0])
-    
-    landmarks = list(zip(*[iter(landmarks)]*2))
+
+    landmarks_tensor = landmarks_tensor.reshape(landmarks_tensor.shape[1])    
+    landmarks = list(zip(*[iter(landmarks_tensor)]*2))
     return landmarks
 
 def decode_landmarks_recognition_json(nnet_packet, **kwargs):
