@@ -226,7 +226,7 @@ class StereoCalibration(object):
         avg_epipolar = epi_error_sum / len(imgpoints_r)
         print("Average Epipolar Error: " + str(avg_epipolar))
 
-        if avg_epipolar > 0.2:
+        if avg_epipolar > 0.5:
             fail_img = cv2.imread(consts.resource_paths.calib_fail_path, cv2.IMREAD_COLOR)
             
             while (1):
