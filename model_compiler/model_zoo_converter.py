@@ -1,8 +1,6 @@
 import requests
 import argparse
 from argparse import ArgumentParser
-from pathlib import Path
-import subprocess
 
 
 def parse_args():
@@ -19,10 +17,7 @@ def parse_args():
     parser.add_argument("-o", "--output", default=None,
                         type=str, required=True,
                         help=".blob output")
-    parser.add_argument("-xml", "--xml", default=None,
-                        type=str, required=True,
-                        help="model name")
-    parser.add_argument("-bin", "--bin", default=None,
+    parser.add_argument("-i", "--input", default=None,
                         type=str, required=True,
                         help="model name")
     options = parser.parse_args()
@@ -30,20 +25,19 @@ def parse_args():
 
 args = vars(parse_args())
 
-def compile_model(xml, bin, shaves, cmx_slices, nces, output_file):
+def download_model(model, shaves, cmx_slices, nces, output_file):
     PLATFORM="VPU_MYRIAD_2450" if nces == 0 else "VPU_MYRIAD_2480"
 
     url = "http://luxonis.com:8080/"
     payload = {
-        'compile_type': 'myriad',
+        'compile_type': 'zoo',
+        'model_name': model,
+        'model_downloader_params': '--precisions FP16 --num_attempts 5',
+        'intermediate_compiler_params': '--data_type=FP16 --mean_values [127.5,127.5,127.5] --scale_values [255,255,255]',
         'compiler_params': '-ip U8 -VPU_MYRIAD_PLATFORM ' + PLATFORM + ' -VPU_NUMBER_OF_SHAVES ' + str(shaves) +' -VPU_NUMBER_OF_CMX_SLICES ' + str(cmx_slices)
     }
-    files = [
-        ('definition', open(Path(xml), 'rb')),
-        ('weights', open(Path(bin), 'rb'))
-    ]
     try:
-        response = requests.request("POST", url, data=payload, files=files)
+        response = requests.request("POST", url, data=payload)
     except:
         print("Connection timed out!")
         return 1
@@ -58,11 +52,6 @@ def compile_model(xml, bin, shaves, cmx_slices, nces, output_file):
 
     return 0
 
-def main():
-    ret = compile_model(args['xml'], args['bin'], args['shaves'], args['cmx_slices'], args['NCEs'], args['output'])
+ret = download_model(args['input'], args['shaves'], args['cmx_slices'], args['NCEs'], args['output'])
 
-    return ret
-
-if __name__ == '__main__':
-    ret = main()
-    exit(ret)
+exit(ret)

@@ -1,0 +1,18 @@
+description: >-
+  Frozen darknet tiny yolo v3.
+task_type: detection
+files:
+  - name: FP16/tiny-yolo-v3.xml
+    size: 43911
+    sha256: 6d6c7f93456942ef9a2f4d1e3c5534a9621ec8e40fee2be81b4392cd1f615831
+    source:
+      $type: google_drive
+      id: 1ZBL9hDEv6_4SYjNJNm4bumQs9UhhsGD7
+  - name: FP16/tiny-yolo-v3.bin
+    size: 17698384
+    sha256: 1140fdc55128e311012aec83f107c87b2def967b2dfcb6292654806abaf57c82
+    source:
+      $type: google_drive
+      id: 1fqkVq2uVJPi5SpJ9Yz8ToEQJYzx-P5RM
+framework: dldt
+license: https://raw.githubusercontent.com/PINTO0309/PINTO_model_zoo/master/LICENSE
