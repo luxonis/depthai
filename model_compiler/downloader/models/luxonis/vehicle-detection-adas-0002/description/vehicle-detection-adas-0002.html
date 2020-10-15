@@ -1,0 +1,94 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">
+      code{white-space: pre-wrap;}
+      span.smallcaps{font-variant: small-caps;}
+      span.underline{text-decoration: underline;}
+      div.column{display: inline-block; vertical-align: top; width: 50%;}
+  </style>
+<link rel="stylesheet" href="../../intel_styles.css" type="text/css" />
+</head>
+<body>
+<div id="banner">
+    <div id="bannerblock">
+      <img src="../../intel_logo.png" class="intellogo">
+      <h1 class="title">Overview of OpenVINO&trade; toolkit Pre-trained Models</h1>
+    </div>
+  </div>
+<div id="contentblock">
+<h1 id="vehicle-detection-adas-0002">vehicle-detection-adas-0002</h1>
+<h2 id="use-case-and-high-level-description">Use Case and High-Level Description</h2>
+<p>This is a vehicle detection network based on an SSD framework with tuned MobileNet v1 as a feature extractor.</p>
+<h2 id="example">Example</h2>
+<div class="figure">
+<img src="./vehicle-detection-adas-0002.png" />
+
+</div>
+<h2 id="specification">Specification</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Metric</th>
+<th align="left">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Average Precision (AP)</td>
+<td align="left">90.6%</td>
+</tr>
+<tr class="even">
+<td align="left">Target vehicle size</td>
+<td align="left">40 x 30 pixels on Full HD image</td>
+</tr>
+<tr class="odd">
+<td align="left">Max objects to detect</td>
+<td align="left">200</td>
+</tr>
+<tr class="even">
+<td align="left">GFlops</td>
+<td align="left">2.798</td>
+</tr>
+<tr class="odd">
+<td align="left">MParams</td>
+<td align="left">1.079</td>
+</tr>
+<tr class="even">
+<td align="left">Source framework</td>
+<td align="left">Caffe*</td>
+</tr>
+</tbody>
+</table>
+<p>Average Precision metric described in: Mark Everingham et al. <a href="http://host.robots.ox.ac.uk/pascal/VOC/pubs/everingham10.pdf">&quot;The PASCAL Visual Object Classes (VOC) Challenge&quot;</a>.</p>
+<p>Tested on a challenging internal dataset with 3000 images and 12585 vehicles to detect.</p>
+<h2 id="performance">Performance</h2>
+<h2 id="inputs">Inputs</h2>
+<ol style="list-style-type: decimal">
+<li>name: &quot;input&quot; , shape: [1x3x384x672] - An input image in the format [BxCxHxW], where:
+<ul>
+<li>B - batch size</li>
+<li>C - number of channels</li>
+<li>H - image height</li>
+<li>W - image width. Expected color order is BGR.</li>
+</ul></li>
+</ol>
+<h2 id="outputs">Outputs</h2>
+<ol style="list-style-type: decimal">
+<li>The net outputs a blob with the shape: [1, 1, N, 7], where N is the number of detected bounding boxes. For each detection, the description has the format: [<code>image_id</code>, <code>label</code>, <code>conf</code>, <code>x_min</code>, <code>y_min</code>, <code>x_max</code>, <code>y_max</code>]
+<ul>
+<li><code>image_id</code> - ID of the image in the batch</li>
+<li><code>label</code> - predicted class ID</li>
+<li><code>conf</code> - confidence for the predicted class</li>
+<li>(<code>x_min</code>, <code>y_min</code>) - coordinates of the top left bounding box corner</li>
+<li>(<code>x_max</code>, <code>y_max</code>) - coordinates of the bottom right bounding box corner.</li>
+</ul></li>
+</ol>
+<h2 id="legal-information">Legal Information</h2>
+<p>[*] Other names and brands may be claimed as the property of others.</p>
+</div>
+</body>
+</html>

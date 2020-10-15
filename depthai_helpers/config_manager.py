@@ -16,7 +16,7 @@ class DepthConfigManager:
     def __init__(self, args):
         self.args = args
         self.stream_list = args['streams']
-        self.compile_model = self.args['shaves'] is not None or self.args['cmx_slices'] is not None or self.args['NN_engines']
+        self.compile_model = True
         self.calc_dist_to_bb = not self.args['disable_depth']
 
         # Prepare handler methods (decode_nn, show_nn) for the network we want to run.
@@ -81,7 +81,6 @@ class DepthConfigManager:
             self.decode_nn=decode_tiny_yolo
             self.show_nn=show_tiny_yolo
             self.decode_nn_json=decode_tiny_yolo_json
-            self.compile_model=False
 
         if self.args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
             from depthai_helpers.landmarks_recognition_handler import decode_landmarks_recognition, show_landmarks_recognition, decode_landmarks_recognition_json
@@ -95,14 +94,12 @@ class DepthConfigManager:
             self.decode_nn=decode_openpose
             self.show_nn=show_openpose
             self.calc_dist_to_bb=False
-            self.compile_model=False
             
         if self.args['cnn_model'] == 'openpose2':
             from depthai_helpers.openpose2_handler import decode_openpose, show_openpose
             self.decode_nn=decode_openpose
             self.show_nn=show_openpose
             self.calc_dist_to_bb=False
-            self.compile_model=False
 
         if self.args['cnn_model'] == 'deeplabv3p_person':
             from depthai_helpers.deeplabv3p_person import decode_deeplabv3p, show_deeplabv3p
@@ -169,15 +166,9 @@ class DepthConfigManager:
             print('ERROR: depth is mutually exclusive with disparity/disparity_color')
             exit(2)
 
-        if blobMan.default_blob:
-            #default
-            shave_nr = 7
-            cmx_slices = 7
-            NCE_nr = 1
-        else:
-            shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
-            cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
-            NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
+        shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
+        cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
+        NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
 
         if self.args['stereo_lr_check'] == True:
             raise ValueError("Left-right check option is still under development. Don;t enable it.")
@@ -327,15 +318,14 @@ class BlobManager:
             print("Using CNN2:", self.args['cnn_model2'])
             self.blob_file2, self.blob_file_config2 = self.getBlobFiles(self.args['cnn_model2'], False)
 
+        # compile modules
+        if compile_model:
+            self.blob_file = self.compileBlob(self.args['cnn_model'])
+            if self.args['cnn_model2']:
+                self.blob_file2 = self.compileBlob(self.args['cnn_model2'])
+
         # verify the first blob files exist? I just copied this logic from before the refactor. Not sure if it's necessary. This makes it so this script won't run unless we have a blob file and config.
         self.verifyBlobFilesExist(self.blob_file, self.blob_file_config)
-
-        # compile modules
-        self.default_blob=True
-        if compile_model:
-            self.blob_file, self.default_blob = self.compileBlob(self.args['cnn_model'])
-            if self.args['cnn_model2']:
-                self.blob_file2, self.default_blob = self.compileBlob(self.args['cnn_model2'])
 
     def getNNConfig(self):
         # try and load labels
@@ -363,14 +353,11 @@ class BlobManager:
         blobFile = cnn_model_path + ".blob"
         blobFileConfig = cnn_model_path + ".json"
 
-        self.verifyBlobFilesExist(blobFile, blobFileConfig)
-
         return blobFile, blobFileConfig
 
     def compileBlob(self, nn_model):
         blob_file, _ = self.getBlobFiles(nn_model)
 
-        default_blob=False
         shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
         cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
         NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
@@ -379,23 +366,18 @@ class BlobManager:
             if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
                 cli_print("shave_nr and cmx_slices config must be even number when NCE is 2!", PrintColors.RED)
                 exit(2)
-            shave_nr_opt = int(shave_nr / 2)
-            cmx_slices_opt = int(cmx_slices / 2)
-        else:
-            shave_nr_opt = int(shave_nr)
-            cmx_slices_opt = int(cmx_slices)
-
+        
         outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
         if(not Path(outblob_file).exists()):
             cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-            ret = download_model(nn_model, shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
+            ret = download_model(nn_model, shave_nr, cmx_slices, NCE_nr, outblob_file)
             if(ret != 0):
                 cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
-                default_blob=True
+                raise RuntimeError("Model compilation failed! Not connected to the internet?")
             else:
                 blob_file = outblob_file
         else:
             cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
             blob_file = outblob_file
 
-        return blob_file, default_blob
+        return blob_file

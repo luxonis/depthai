@@ -1,0 +1,77 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">
+      code{white-space: pre-wrap;}
+      span.smallcaps{font-variant: small-caps;}
+      span.underline{text-decoration: underline;}
+      div.column{display: inline-block; vertical-align: top; width: 50%;}
+  </style>
+<link rel="stylesheet" href="../../intel_styles.css" type="text/css" />
+</head>
+<body>
+<div id="banner">
+    <div id="bannerblock">
+      <img src="../../intel_logo.png" class="intellogo">
+      <h1 class="title">Overview of OpenVINO&trade; toolkit Pre-trained Models</h1>
+    </div>
+  </div>
+<div id="contentblock">
+<h1 id="human-pose-estimation-0001">human-pose-estimation-0001</h1>
+<h2 id="use-case-and-high-level-description">Use Case and High-Level Description</h2>
+<p>This is a multi-person 2D pose estimation network (based on the OpenPose approach) with tuned MobileNet v1 as a feature extractor. For every person in an image, the network detects a human pose: a body skeleton consisting of keypoints and connections between them. The pose may contain up to 18 keypoints: ears, eyes, nose, neck, shoulders, elbows, wrists, hips, knees, and ankles.</p>
+<h2 id="example">Example</h2>
+<div class="figure">
+<img src="./human-pose-estimation-0001.png" />
+
+</div>
+<h2 id="specification">Specification</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Metric</th>
+<th align="left">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Average Precision (AP)</td>
+<td align="left">42.8%</td>
+</tr>
+<tr class="even">
+<td align="left">GFlops</td>
+<td align="left">15.435</td>
+</tr>
+<tr class="odd">
+<td align="left">MParams</td>
+<td align="left">4.099</td>
+</tr>
+<tr class="even">
+<td align="left">Source framework</td>
+<td align="left">Caffe*</td>
+</tr>
+</tbody>
+</table>
+<p>Average Precision metric described in <a href="http://cocodataset.org/#keypoints-eval">COCO Keypoint Evaluation site</a>.</p>
+<p>Tested on a COCO validation subset from the original paper <a href="https://arxiv.org/pdf/1611.08050.pdf">Realtime Multi-Person 2D Pose Estimation using Part Affinity Fields</a>.</p>
+<h2 id="performance">Performance</h2>
+<h2 id="inputs">Inputs</h2>
+<ol style="list-style-type: decimal">
+<li>Name: <code>input</code> , shape: [1x3x256x456]. An input image in the [BxCxHxW] format , where:
+<ul>
+<li>B - batch size</li>
+<li>C - number of channels</li>
+<li>H - image height</li>
+<li>W - image width. Expected color order is BGR.</li>
+</ul></li>
+</ol>
+<h2 id="outputs">Outputs</h2>
+<p>The net outputs two blobs with the [1, 38, 32, 57] and [1, 19, 32, 57] shapes. The first blob contains keypoint pairwise relations (part affinity fields), while the second blob contains keypoint heatmaps.</p>
+<h2 id="legal-information">Legal Information</h2>
+<p>[*] Other names and brands may be claimed as the property of others.</p>
+</div>
+</body>
+</html>
