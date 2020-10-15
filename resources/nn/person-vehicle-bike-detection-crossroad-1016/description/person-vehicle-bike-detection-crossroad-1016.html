@@ -1,0 +1,144 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title></title>
+  <style type="text/css">
+      code{white-space: pre-wrap;}
+      span.smallcaps{font-variant: small-caps;}
+      span.underline{text-decoration: underline;}
+      div.column{display: inline-block; vertical-align: top; width: 50%;}
+  </style>
+<link rel="stylesheet" href="../../intel_styles.css" type="text/css" />
+</head>
+<body>
+<div id="banner">
+    <div id="bannerblock">
+      <img src="../../intel_logo.png" class="intellogo">
+      <h1 class="title">Overview of OpenVINO&trade; toolkit Pre-trained Models</h1>
+    </div>
+  </div>
+<div id="contentblock">
+<h1 id="person-vehicle-bike-detection-crossroad-1016">person-vehicle-bike-detection-crossroad-1016</h1>
+<h2 id="use-case-and-high-level-description">Use case and High-level description</h2>
+<p>MobileNetV2 + SSD-based network is for Person/Vehicle/Bike detection in security surveillance applications. Works in a variety of scenes and weather/lighting conditions.</p>
+<h2 id="example">Example</h2>
+<div class="figure">
+<img src="./person-vehicle-bike-detection-crossroad-1016.png" />
+
+</div>
+<h2 id="specification">Specification</h2>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Metric</th>
+<th align="left">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Mean Average Precision (mAP)</td>
+<td align="left">62.55%</td>
+</tr>
+<tr class="even">
+<td align="left">AP people</td>
+<td align="left">73.63%</td>
+</tr>
+<tr class="odd">
+<td align="left">AP vehicles</td>
+<td align="left">77.84%</td>
+</tr>
+<tr class="even">
+<td align="left">AP bikes</td>
+<td align="left">36.18%</td>
+</tr>
+<tr class="odd">
+<td align="left">Max objects to detect</td>
+<td align="left">200</td>
+</tr>
+<tr class="even">
+<td align="left">GFlops</td>
+<td align="left">3.560</td>
+</tr>
+<tr class="odd">
+<td align="left">Source framework</td>
+<td align="left">PyTorch</td>
+</tr>
+</tbody>
+</table>
+<p>Average Precision (AP) is defined as an area under the <a href="https://en.wikipedia.org/wiki/Precision_and_recall">precision/recall</a> curve.</p>
+<p>Validation dataset consists of 34,757 images from various scenes and includes:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Type of object</th>
+<th align="left">Number of bounding boxes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Vehicle</td>
+<td align="left">229,503</td>
+</tr>
+<tr class="even">
+<td align="left">Pedestrian</td>
+<td align="left">240,009</td>
+</tr>
+<tr class="odd">
+<td align="left">Non-vehicle</td>
+<td align="left">62,643</td>
+</tr>
+</tbody>
+</table>
+<p>Similarly, training dataset has 219,181 images with:</p>
+<table>
+<thead>
+<tr class="header">
+<th align="left">Type of object</th>
+<th align="left">Number of bounding boxes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left">Vehicle</td>
+<td align="left">810,323</td>
+</tr>
+<tr class="even">
+<td align="left">Pedestrian</td>
+<td align="left">1,114,799</td>
+</tr>
+<tr class="odd">
+<td align="left">Non-vehicle</td>
+<td align="left">62,334</td>
+</tr>
+</tbody>
+</table>
+<h2 id="performance">Performance</h2>
+<h2 id="inputs">Inputs</h2>
+<ol style="list-style-type: decimal">
+<li>name: &quot;input.1&quot; , shape: [1x3x512x512] - An input image in the format [BxCxHxW], where
+<ul>
+<li>B - batch size</li>
+<li>C - number of channels</li>
+<li>H - image height</li>
+<li>W - image width</li>
+</ul></li>
+</ol>
+<p>Expected color order - BGR.</p>
+<h2 id="outputs">Outputs</h2>
+<ol style="list-style-type: decimal">
+<li>Net outputs blob with shape: [1, 1, N, 7], where N is the number of detected bounding boxes. For each detection, the description has the format: [<code>image_id</code>, <code>label</code>, <code>conf</code>, <code>x_min</code>, <code>y_min</code>, <code>x_max</code>, <code>y_max</code>]
+<ul>
+<li><code>image_id</code> - ID of the image in the batch</li>
+<li><code>label</code> - predicted class ID</li>
+<li><code>conf</code> - confidence for the predicted class</li>
+<li>(<code>x_min</code>, <code>y_min</code>) - coordinates of the top left bounding box corner</li>
+<li>(<code>x_max</code>, <code>y_max</code>) - coordinates of the bottom right bounding box corner.</li>
+</ul></li>
+</ol>
+<h2 id="legal-information">Legal information</h2>
+<p>[*] Other names and brands may be claimed as the property of others.</p>
+</div>
+</body>
+</html>
