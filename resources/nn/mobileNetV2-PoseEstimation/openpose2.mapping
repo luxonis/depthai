@@ -1,0 +1,1263 @@
+<?xml version="1.0" ?>
+<mapping>
+	<map>
+		<framework name="MobilenetV2/input" out_port_id="0"/>
+		<IR id="0" name="image" out_port_id="0"/>
+	</map>
+	<map>
+		<framework name="image" out_port_id="0"/>
+		<IR id="0" name="image" out_port_id="0"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv/input" out_port_id="0"/>
+		<IR id="2" name="MobilenetV2/Conv/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/Conv/Relu6" out_port_id="0"/>
+		<IR id="2" name="MobilenetV2/Conv/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="3" name="MobilenetV2/expanded_conv/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv/depthwise_output" out_port_id="0"/>
+		<IR id="4" name="MobilenetV2/expanded_conv/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv/depthwise/Relu6" out_port_id="0"/>
+		<IR id="4" name="MobilenetV2/expanded_conv/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/input" out_port_id="0"/>
+		<IR id="5" name="MobilenetV2/expanded_conv/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv/output" out_port_id="0"/>
+		<IR id="5" name="MobilenetV2/expanded_conv/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv/project/Identity" out_port_id="0"/>
+		<IR id="5" name="MobilenetV2/expanded_conv/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="5" name="MobilenetV2/expanded_conv/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="6" name="MobilenetV2/expanded_conv_1/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/expansion_output" out_port_id="0"/>
+		<IR id="7" name="MobilenetV2/expanded_conv_1/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/expand/Relu6" out_port_id="0"/>
+		<IR id="7" name="MobilenetV2/expanded_conv_1/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="8" name="MobilenetV2/expanded_conv_1/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/depthwise_output" out_port_id="0"/>
+		<IR id="9" name="MobilenetV2/expanded_conv_1/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/depthwise/Relu6" out_port_id="0"/>
+		<IR id="9" name="MobilenetV2/expanded_conv_1/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/input" out_port_id="0"/>
+		<IR id="10" name="MobilenetV2/expanded_conv_1/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/output" out_port_id="0"/>
+		<IR id="10" name="MobilenetV2/expanded_conv_1/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/project/Identity" out_port_id="0"/>
+		<IR id="10" name="MobilenetV2/expanded_conv_1/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_1/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="10" name="MobilenetV2/expanded_conv_1/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="11" name="MobilenetV2/expanded_conv_2/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/expansion_output" out_port_id="0"/>
+		<IR id="12" name="MobilenetV2/expanded_conv_2/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/expand/Relu6" out_port_id="0"/>
+		<IR id="12" name="MobilenetV2/expanded_conv_2/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="13" name="MobilenetV2/expanded_conv_2/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/depthwise_output" out_port_id="0"/>
+		<IR id="14" name="MobilenetV2/expanded_conv_2/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/depthwise/Relu6" out_port_id="0"/>
+		<IR id="14" name="MobilenetV2/expanded_conv_2/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/project/Identity" out_port_id="0"/>
+		<IR id="15" name="MobilenetV2/expanded_conv_2/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="15" name="MobilenetV2/expanded_conv_2/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/input" out_port_id="0"/>
+		<IR id="16" name="MobilenetV2/expanded_conv_2/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/output" out_port_id="0"/>
+		<IR id="16" name="MobilenetV2/expanded_conv_2/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_2/add" out_port_id="0"/>
+		<IR id="16" name="MobilenetV2/expanded_conv_2/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="17" name="MobilenetV2/expanded_conv_3/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/expansion_output" out_port_id="0"/>
+		<IR id="18" name="MobilenetV2/expanded_conv_3/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/expand/Relu6" out_port_id="0"/>
+		<IR id="18" name="MobilenetV2/expanded_conv_3/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="19" name="MobilenetV2/expanded_conv_3/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/depthwise_output" out_port_id="0"/>
+		<IR id="20" name="MobilenetV2/expanded_conv_3/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/depthwise/Relu6" out_port_id="0"/>
+		<IR id="20" name="MobilenetV2/expanded_conv_3/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/input" out_port_id="0"/>
+		<IR id="21" name="MobilenetV2/expanded_conv_3/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/output" out_port_id="0"/>
+		<IR id="21" name="MobilenetV2/expanded_conv_3/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/project/Identity" out_port_id="0"/>
+		<IR id="21" name="MobilenetV2/expanded_conv_3/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_3/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="21" name="MobilenetV2/expanded_conv_3/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="22" name="MobilenetV2/expanded_conv_4/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/expansion_output" out_port_id="0"/>
+		<IR id="23" name="MobilenetV2/expanded_conv_4/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/expand/Relu6" out_port_id="0"/>
+		<IR id="23" name="MobilenetV2/expanded_conv_4/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="24" name="MobilenetV2/expanded_conv_4/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/depthwise_output" out_port_id="0"/>
+		<IR id="25" name="MobilenetV2/expanded_conv_4/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/depthwise/Relu6" out_port_id="0"/>
+		<IR id="25" name="MobilenetV2/expanded_conv_4/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/project/Identity" out_port_id="0"/>
+		<IR id="26" name="MobilenetV2/expanded_conv_4/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="26" name="MobilenetV2/expanded_conv_4/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/input" out_port_id="0"/>
+		<IR id="27" name="MobilenetV2/expanded_conv_4/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/output" out_port_id="0"/>
+		<IR id="27" name="MobilenetV2/expanded_conv_4/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_4/add" out_port_id="0"/>
+		<IR id="27" name="MobilenetV2/expanded_conv_4/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="28" name="MobilenetV2/expanded_conv_5/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/expansion_output" out_port_id="0"/>
+		<IR id="29" name="MobilenetV2/expanded_conv_5/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/expand/Relu6" out_port_id="0"/>
+		<IR id="29" name="MobilenetV2/expanded_conv_5/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="30" name="MobilenetV2/expanded_conv_5/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/depthwise_output" out_port_id="0"/>
+		<IR id="31" name="MobilenetV2/expanded_conv_5/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/depthwise/Relu6" out_port_id="0"/>
+		<IR id="31" name="MobilenetV2/expanded_conv_5/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/project/Identity" out_port_id="0"/>
+		<IR id="32" name="MobilenetV2/expanded_conv_5/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="32" name="MobilenetV2/expanded_conv_5/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/input" out_port_id="0"/>
+		<IR id="33" name="MobilenetV2/expanded_conv_5/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/output" out_port_id="0"/>
+		<IR id="33" name="MobilenetV2/expanded_conv_5/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_5/add" out_port_id="0"/>
+		<IR id="33" name="MobilenetV2/expanded_conv_5/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="34" name="MobilenetV2/expanded_conv_6/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/expansion_output" out_port_id="0"/>
+		<IR id="35" name="MobilenetV2/expanded_conv_6/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/expand/Relu6" out_port_id="0"/>
+		<IR id="35" name="MobilenetV2/expanded_conv_6/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="36" name="MobilenetV2/expanded_conv_6/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/depthwise_output" out_port_id="0"/>
+		<IR id="37" name="MobilenetV2/expanded_conv_6/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/depthwise/Relu6" out_port_id="0"/>
+		<IR id="37" name="MobilenetV2/expanded_conv_6/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/input" out_port_id="0"/>
+		<IR id="38" name="MobilenetV2/expanded_conv_6/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/output" out_port_id="0"/>
+		<IR id="38" name="MobilenetV2/expanded_conv_6/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/project/Identity" out_port_id="0"/>
+		<IR id="38" name="MobilenetV2/expanded_conv_6/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_6/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="38" name="MobilenetV2/expanded_conv_6/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="39" name="MobilenetV2/expanded_conv_7/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/expansion_output" out_port_id="0"/>
+		<IR id="40" name="MobilenetV2/expanded_conv_7/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/expand/Relu6" out_port_id="0"/>
+		<IR id="40" name="MobilenetV2/expanded_conv_7/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="41" name="MobilenetV2/expanded_conv_7/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/depthwise_output" out_port_id="0"/>
+		<IR id="42" name="MobilenetV2/expanded_conv_7/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/depthwise/Relu6" out_port_id="0"/>
+		<IR id="42" name="MobilenetV2/expanded_conv_7/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/project/Identity" out_port_id="0"/>
+		<IR id="43" name="MobilenetV2/expanded_conv_7/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="43" name="MobilenetV2/expanded_conv_7/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/input" out_port_id="0"/>
+		<IR id="44" name="MobilenetV2/expanded_conv_7/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/output" out_port_id="0"/>
+		<IR id="44" name="MobilenetV2/expanded_conv_7/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_7/add" out_port_id="0"/>
+		<IR id="44" name="MobilenetV2/expanded_conv_7/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="45" name="MobilenetV2/expanded_conv_8/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/expansion_output" out_port_id="0"/>
+		<IR id="46" name="MobilenetV2/expanded_conv_8/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/expand/Relu6" out_port_id="0"/>
+		<IR id="46" name="MobilenetV2/expanded_conv_8/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="47" name="MobilenetV2/expanded_conv_8/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/depthwise_output" out_port_id="0"/>
+		<IR id="48" name="MobilenetV2/expanded_conv_8/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/depthwise/Relu6" out_port_id="0"/>
+		<IR id="48" name="MobilenetV2/expanded_conv_8/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/project/Identity" out_port_id="0"/>
+		<IR id="49" name="MobilenetV2/expanded_conv_8/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="49" name="MobilenetV2/expanded_conv_8/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/input" out_port_id="0"/>
+		<IR id="50" name="MobilenetV2/expanded_conv_8/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/output" out_port_id="0"/>
+		<IR id="50" name="MobilenetV2/expanded_conv_8/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_8/add" out_port_id="0"/>
+		<IR id="50" name="MobilenetV2/expanded_conv_8/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="51" name="MobilenetV2/expanded_conv_9/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/expansion_output" out_port_id="0"/>
+		<IR id="52" name="MobilenetV2/expanded_conv_9/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/expand/Relu6" out_port_id="0"/>
+		<IR id="52" name="MobilenetV2/expanded_conv_9/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="53" name="MobilenetV2/expanded_conv_9/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/depthwise_output" out_port_id="0"/>
+		<IR id="54" name="MobilenetV2/expanded_conv_9/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/depthwise/Relu6" out_port_id="0"/>
+		<IR id="54" name="MobilenetV2/expanded_conv_9/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/project/Identity" out_port_id="0"/>
+		<IR id="55" name="MobilenetV2/expanded_conv_9/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="55" name="MobilenetV2/expanded_conv_9/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/input" out_port_id="0"/>
+		<IR id="56" name="MobilenetV2/expanded_conv_9/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/output" out_port_id="0"/>
+		<IR id="56" name="MobilenetV2/expanded_conv_9/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_9/add" out_port_id="0"/>
+		<IR id="56" name="MobilenetV2/expanded_conv_9/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="57" name="MobilenetV2/expanded_conv_10/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/expansion_output" out_port_id="0"/>
+		<IR id="58" name="MobilenetV2/expanded_conv_10/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/expand/Relu6" out_port_id="0"/>
+		<IR id="58" name="MobilenetV2/expanded_conv_10/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="59" name="MobilenetV2/expanded_conv_10/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/depthwise_output" out_port_id="0"/>
+		<IR id="60" name="MobilenetV2/expanded_conv_10/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/depthwise/Relu6" out_port_id="0"/>
+		<IR id="60" name="MobilenetV2/expanded_conv_10/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/input" out_port_id="0"/>
+		<IR id="61" name="MobilenetV2/expanded_conv_10/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/output" out_port_id="0"/>
+		<IR id="61" name="MobilenetV2/expanded_conv_10/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/project/Identity" out_port_id="0"/>
+		<IR id="61" name="MobilenetV2/expanded_conv_10/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_10/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="61" name="MobilenetV2/expanded_conv_10/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="62" name="MobilenetV2/expanded_conv_11/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/expansion_output" out_port_id="0"/>
+		<IR id="63" name="MobilenetV2/expanded_conv_11/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/expand/Relu6" out_port_id="0"/>
+		<IR id="63" name="MobilenetV2/expanded_conv_11/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="64" name="MobilenetV2/expanded_conv_11/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/depthwise_output" out_port_id="0"/>
+		<IR id="65" name="MobilenetV2/expanded_conv_11/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/depthwise/Relu6" out_port_id="0"/>
+		<IR id="65" name="MobilenetV2/expanded_conv_11/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/project/Identity" out_port_id="0"/>
+		<IR id="66" name="MobilenetV2/expanded_conv_11/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="66" name="MobilenetV2/expanded_conv_11/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/input" out_port_id="0"/>
+		<IR id="67" name="MobilenetV2/expanded_conv_11/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/output" out_port_id="0"/>
+		<IR id="67" name="MobilenetV2/expanded_conv_11/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_11/add" out_port_id="0"/>
+		<IR id="67" name="MobilenetV2/expanded_conv_11/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/expand/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="68" name="MobilenetV2/expanded_conv_12/expand/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/expansion_output" out_port_id="0"/>
+		<IR id="69" name="MobilenetV2/expanded_conv_12/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/expand/Relu6" out_port_id="0"/>
+		<IR id="69" name="MobilenetV2/expanded_conv_12/expand/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/depthwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="70" name="MobilenetV2/expanded_conv_12/depthwise/depthwise" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/depthwise_output" out_port_id="0"/>
+		<IR id="71" name="MobilenetV2/expanded_conv_12/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/depthwise/Relu6" out_port_id="0"/>
+		<IR id="71" name="MobilenetV2/expanded_conv_12/depthwise/Relu6" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/project/Identity" out_port_id="0"/>
+		<IR id="72" name="MobilenetV2/expanded_conv_12/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/project/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="72" name="MobilenetV2/expanded_conv_12/project/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/output" out_port_id="0"/>
+		<IR id="73" name="MobilenetV2/expanded_conv_12/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/expanded_conv_12/add" out_port_id="0"/>
+		<IR id="73" name="MobilenetV2/expanded_conv_12/add" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="feat_concat" out_port_id="0"/>
+		<IR id="75" name="feat_concat" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="76" name="Openpose/MConv_Stage1_L1_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="77" name="Openpose/MConv_Stage1_L1_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="78" name="Openpose/MConv_Stage1_L1_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="79" name="Openpose/MConv_Stage1_L1_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="80" name="Openpose/MConv_Stage1_L1_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="81" name="Openpose/MConv_Stage1_L1_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="82" name="Openpose/MConv_Stage1_L1_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="83" name="Openpose/MConv_Stage1_L1_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="84" name="Openpose/MConv_Stage1_L1_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="85" name="Openpose/MConv_Stage1_L1_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="86" name="Openpose/MConv_Stage1_L1_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="87" name="Openpose/MConv_Stage1_L1_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="88" name="Openpose/MConv_Stage1_L1_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L1_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="89" name="Openpose/MConv_Stage1_L1_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="90" name="Openpose/MConv_Stage1_L2_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="91" name="Openpose/MConv_Stage1_L2_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="92" name="Openpose/MConv_Stage1_L2_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="93" name="Openpose/MConv_Stage1_L2_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="94" name="Openpose/MConv_Stage1_L2_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="95" name="Openpose/MConv_Stage1_L2_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="96" name="Openpose/MConv_Stage1_L2_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="97" name="Openpose/MConv_Stage1_L2_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="98" name="Openpose/MConv_Stage1_L2_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="99" name="Openpose/MConv_Stage1_L2_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="100" name="Openpose/MConv_Stage1_L2_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="101" name="Openpose/MConv_Stage1_L2_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="102" name="Openpose/MConv_Stage1_L2_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage1_L2_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="103" name="Openpose/MConv_Stage1_L2_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_concat" out_port_id="0"/>
+		<IR id="104" name="Openpose/MConv_Stage2_concat" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="105" name="Openpose/MConv_Stage2_L1_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="106" name="Openpose/MConv_Stage2_L1_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="107" name="Openpose/MConv_Stage2_L1_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="108" name="Openpose/MConv_Stage2_L1_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="109" name="Openpose/MConv_Stage2_L1_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="110" name="Openpose/MConv_Stage2_L1_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="111" name="Openpose/MConv_Stage2_L1_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="112" name="Openpose/MConv_Stage2_L1_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="113" name="Openpose/MConv_Stage2_L1_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="114" name="Openpose/MConv_Stage2_L1_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="115" name="Openpose/MConv_Stage2_L1_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="116" name="Openpose/MConv_Stage2_L1_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="117" name="Openpose/MConv_Stage2_L1_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L1_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="118" name="Openpose/MConv_Stage2_L1_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="119" name="Openpose/MConv_Stage2_L2_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="120" name="Openpose/MConv_Stage2_L2_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="121" name="Openpose/MConv_Stage2_L2_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="122" name="Openpose/MConv_Stage2_L2_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="123" name="Openpose/MConv_Stage2_L2_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="124" name="Openpose/MConv_Stage2_L2_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="125" name="Openpose/MConv_Stage2_L2_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="126" name="Openpose/MConv_Stage2_L2_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="127" name="Openpose/MConv_Stage2_L2_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="128" name="Openpose/MConv_Stage2_L2_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="129" name="Openpose/MConv_Stage2_L2_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="130" name="Openpose/MConv_Stage2_L2_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="131" name="Openpose/MConv_Stage2_L2_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage2_L2_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="132" name="Openpose/MConv_Stage2_L2_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_concat" out_port_id="0"/>
+		<IR id="133" name="Openpose/MConv_Stage3_concat" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="134" name="Openpose/MConv_Stage3_L1_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="135" name="Openpose/MConv_Stage3_L1_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="136" name="Openpose/MConv_Stage3_L1_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="137" name="Openpose/MConv_Stage3_L1_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="138" name="Openpose/MConv_Stage3_L1_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="139" name="Openpose/MConv_Stage3_L1_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="141" name="Openpose/MConv_Stage3_L1_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="142" name="Openpose/MConv_Stage3_L1_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="143" name="Openpose/MConv_Stage3_L1_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="144" name="Openpose/MConv_Stage3_L1_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="145" name="Openpose/MConv_Stage3_L1_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="146" name="Openpose/MConv_Stage3_L1_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="147" name="Openpose/MConv_Stage3_L1_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="148" name="Openpose/MConv_Stage3_L2_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="149" name="Openpose/MConv_Stage3_L2_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="150" name="Openpose/MConv_Stage3_L2_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="151" name="Openpose/MConv_Stage3_L2_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="152" name="Openpose/MConv_Stage3_L2_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="153" name="Openpose/MConv_Stage3_L2_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="154" name="Openpose/MConv_Stage3_L2_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="155" name="Openpose/MConv_Stage3_L2_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="156" name="Openpose/MConv_Stage3_L2_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="157" name="Openpose/MConv_Stage3_L2_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="158" name="Openpose/MConv_Stage3_L2_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="159" name="Openpose/MConv_Stage3_L2_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="160" name="Openpose/MConv_Stage3_L2_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L2_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="161" name="Openpose/MConv_Stage3_L2_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_concat" out_port_id="0"/>
+		<IR id="162" name="Openpose/MConv_Stage4_concat" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="163" name="Openpose/MConv_Stage4_L1_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="164" name="Openpose/MConv_Stage4_L1_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="165" name="Openpose/MConv_Stage4_L1_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="166" name="Openpose/MConv_Stage4_L1_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="167" name="Openpose/MConv_Stage4_L1_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="168" name="Openpose/MConv_Stage4_L1_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="169" name="Openpose/MConv_Stage4_L1_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="170" name="Openpose/MConv_Stage4_L1_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="171" name="Openpose/MConv_Stage4_L1_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="172" name="Openpose/MConv_Stage4_L1_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="173" name="Openpose/MConv_Stage4_L1_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="174" name="Openpose/MConv_Stage4_L1_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="175" name="Openpose/MConv_Stage4_L1_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L1_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="176" name="Openpose/MConv_Stage4_L1_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="177" name="Openpose/MConv_Stage4_L2_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="178" name="Openpose/MConv_Stage4_L2_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="179" name="Openpose/MConv_Stage4_L2_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="180" name="Openpose/MConv_Stage4_L2_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="181" name="Openpose/MConv_Stage4_L2_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="182" name="Openpose/MConv_Stage4_L2_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="183" name="Openpose/MConv_Stage4_L2_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="184" name="Openpose/MConv_Stage4_L2_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="185" name="Openpose/MConv_Stage4_L2_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="186" name="Openpose/MConv_Stage4_L2_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="187" name="Openpose/MConv_Stage4_L2_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="189" name="Openpose/MConv_Stage4_L2_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="190" name="Openpose/MConv_Stage4_L2_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_concat" out_port_id="0"/>
+		<IR id="191" name="Openpose/MConv_Stage5_concat" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="192" name="Openpose/MConv_Stage5_L1_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="193" name="Openpose/MConv_Stage5_L1_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="194" name="Openpose/MConv_Stage5_L1_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="195" name="Openpose/MConv_Stage5_L1_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="196" name="Openpose/MConv_Stage5_L1_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="197" name="Openpose/MConv_Stage5_L1_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="198" name="Openpose/MConv_Stage5_L1_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="199" name="Openpose/MConv_Stage5_L1_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="200" name="Openpose/MConv_Stage5_L1_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="201" name="Openpose/MConv_Stage5_L1_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="202" name="Openpose/MConv_Stage5_L1_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="203" name="Openpose/MConv_Stage5_L1_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="204" name="Openpose/MConv_Stage5_L1_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L1_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="205" name="Openpose/MConv_Stage5_L1_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="206" name="Openpose/MConv_Stage5_L2_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="207" name="Openpose/MConv_Stage5_L2_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="208" name="Openpose/MConv_Stage5_L2_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="209" name="Openpose/MConv_Stage5_L2_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="210" name="Openpose/MConv_Stage5_L2_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="211" name="Openpose/MConv_Stage5_L2_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="212" name="Openpose/MConv_Stage5_L2_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="214" name="Openpose/MConv_Stage5_L2_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="215" name="Openpose/MConv_Stage5_L2_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="216" name="Openpose/MConv_Stage5_L2_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="217" name="Openpose/MConv_Stage5_L2_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="218" name="Openpose/MConv_Stage5_L2_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="219" name="Openpose/MConv_Stage5_L2_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_concat" out_port_id="0"/>
+		<IR id="220" name="Openpose/MConv_Stage6_concat" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="221" name="Openpose/MConv_Stage6_L2_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="222" name="Openpose/MConv_Stage6_L2_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="223" name="Openpose/MConv_Stage6_L2_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="224" name="Openpose/MConv_Stage6_L2_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="225" name="Openpose/MConv_Stage6_L2_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="226" name="Openpose/MConv_Stage6_L2_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="227" name="Openpose/MConv_Stage6_L2_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="228" name="Openpose/MConv_Stage6_L2_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="229" name="Openpose/MConv_Stage6_L2_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="230" name="Openpose/MConv_Stage6_L2_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="231" name="Openpose/MConv_Stage6_L2_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="232" name="Openpose/MConv_Stage6_L2_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="233" name="Openpose/MConv_Stage6_L2_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_1_depthwise/depthwise" out_port_id="0"/>
+		<IR id="235" name="Openpose/MConv_Stage6_L1_1_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_1_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="236" name="Openpose/MConv_Stage6_L1_1_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_1_pointwise/Relu" out_port_id="0"/>
+		<IR id="237" name="Openpose/MConv_Stage6_L1_1_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_2_depthwise/depthwise" out_port_id="0"/>
+		<IR id="238" name="Openpose/MConv_Stage6_L1_2_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_2_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="239" name="Openpose/MConv_Stage6_L1_2_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_2_pointwise/Relu" out_port_id="0"/>
+		<IR id="240" name="Openpose/MConv_Stage6_L1_2_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="241" name="Openpose/MConv_Stage6_L1_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="242" name="Openpose/MConv_Stage6_L1_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_3_pointwise/Relu" out_port_id="0"/>
+		<IR id="243" name="Openpose/MConv_Stage6_L1_3_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_4_depthwise/depthwise" out_port_id="0"/>
+		<IR id="244" name="Openpose/MConv_Stage6_L1_4_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_4_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="245" name="Openpose/MConv_Stage6_L1_4_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="246" name="Openpose/MConv_Stage6_L1_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_5_depthwise/depthwise" out_port_id="0"/>
+		<IR id="247" name="Openpose/MConv_Stage6_L1_5_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L1_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="248" name="Openpose/MConv_Stage6_L1_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/concat_stage7" out_port_id="0"/>
+		<IR id="249" name="Openpose/concat_stage7" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="base/layer_14/output/upsample" out_port_id="0"/>
+		<IR id="74" name="base/layer_14/output/upsample" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="MobilenetV2/Conv/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="1" name="MobilenetV2/Conv/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage3_L1_3_depthwise/depthwise" out_port_id="0"/>
+		<IR id="140" name="Openpose/MConv_Stage3_L1_3_depthwise/depthwise" out_port_id="2"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage4_L2_4_pointwise/Relu" out_port_id="0"/>
+		<IR id="188" name="Openpose/MConv_Stage4_L2_4_pointwise/Relu" out_port_id="1"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage5_L2_3_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="213" name="Openpose/MConv_Stage5_L2_3_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+	<map>
+		<framework name="Openpose/MConv_Stage6_L2_5_pointwise/BatchNorm/FusedBatchNorm" out_port_id="0"/>
+		<IR id="234" name="Openpose/MConv_Stage6_L2_5_pointwise/Conv2D" out_port_id="3"/>
+	</map>
+</mapping>

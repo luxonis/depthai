@@ -99,6 +99,8 @@ class DepthConfigManager:
             self.calc_dist_to_bb=False
             
         if self.args['cnn_model'] == 'openpose2':
+            self.args['cnn_model'] = 'mobileNetV2-PoseEstimation'
+        if self.args['cnn_model'] == 'mobileNetV2-PoseEstimation':
             from depthai_helpers.openpose2_handler import decode_openpose, show_openpose
             self.decode_nn=decode_openpose
             self.show_nn=show_openpose
