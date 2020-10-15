@@ -1,9 +1,9 @@
 import depthai
 from pathlib import Path
-
+import consts.resource_paths as paths
 
 def get_version_from_requirements():
-    with Path('requirements.txt').open() as f:
+    with Path(paths.requirements_path).open() as f:
         datafile = f.readlines()
     for line in datafile:
         if 'depthai' in line:

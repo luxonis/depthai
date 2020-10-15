@@ -26,6 +26,7 @@ eeprom_fail_path      = relative_to_abs_path('../resources/images/eeprom_fail.PN
 calib_fail_path       = relative_to_abs_path('../resources/images/calib_fail.PNG')
 pass_path             = relative_to_abs_path('../resources/images/pass.PNG')
 usb_3_failed          = relative_to_abs_path('../resources/images/usb_3_Failed.PNG')
+requirements_path     = relative_to_abs_path('../requirements.txt')
 
 if custom_calib_fpath is not None and Path(custom_calib_fpath).exists():
     calib_fpath = custom_calib_fpath
