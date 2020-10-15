@@ -89,7 +89,10 @@ class DepthConfigManager:
             self.decode_nn_json=decode_landmarks_recognition_json
             self.calc_dist_to_bb=False
 
+        # backward compatibility
         if self.args['cnn_model'] == 'openpose':
+            self.args['cnn_model'] = 'human-pose-estimation-0001'
+        if self.args['cnn_model'] == 'human-pose-estimation-0001':
             from depthai_helpers.openpose_handler import decode_openpose, show_openpose
             self.decode_nn=decode_openpose
             self.show_nn=show_openpose
