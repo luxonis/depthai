@@ -255,6 +255,7 @@ class DepthConfigManager:
             'app':
             {
                 'sync_video_meta_streams': self.args['sync_video_meta'],
+                'sync_sequence_numbers'  : self.args['sync_sequence_numbers'],
             },
             #'video_config':
             #{
