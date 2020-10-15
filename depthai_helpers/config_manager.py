@@ -366,11 +366,16 @@ class BlobManager:
             if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
                 cli_print("shave_nr and cmx_slices config must be even number when NCE is 2!", PrintColors.RED)
                 exit(2)
-        
+            shave_nr_opt = int(shave_nr / 2)
+            cmx_slices_opt = int(cmx_slices / 2)
+        else:
+            shave_nr_opt = int(shave_nr)
+            cmx_slices_opt = int(cmx_slices)
+
         outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
         if(not Path(outblob_file).exists()):
             cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-            ret = download_model(nn_model, shave_nr, cmx_slices, NCE_nr, outblob_file)
+            ret = download_model(nn_model, shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
             if(ret != 0):
                 cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
                 raise RuntimeError("Model compilation failed! Not connected to the internet?")
