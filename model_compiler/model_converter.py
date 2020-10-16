@@ -33,7 +33,8 @@ args = vars(parse_args())
 def compile_model(xml, bin, shaves, cmx_slices, nces, output_file):
     PLATFORM="VPU_MYRIAD_2450" if nces == 0 else "VPU_MYRIAD_2480"
 
-    url = "http://luxonis.com:8080/"
+    # use 69.214.171 instead luxonis.com to bypass cloudflare limitation of max file size
+    url = "http://69.164.214.171:8080/"
     payload = {
         'compile_type': 'myriad',
         'compiler_params': '-ip U8 -VPU_MYRIAD_PLATFORM ' + PLATFORM + ' -VPU_NUMBER_OF_SHAVES ' + str(shaves) +' -VPU_NUMBER_OF_CMX_SLICES ' + str(cmx_slices)
