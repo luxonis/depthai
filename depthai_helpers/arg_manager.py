@@ -165,6 +165,13 @@ class CliArgs:
         parser.add_argument("-sync", "--sync-video-meta", default=False, action="store_true",
                             help="Synchronize 'previewout' and 'metaout' streams")
 
+        parser.add_argument("-seq", "--sync-sequence-numbers", default=False, action="store_true",
+                            help="Synchronize sequence numbers for all packets. Experimental")
+
+        parser.add_argument("-u", "--usb-chunk-KiB", default=64, type=int,
+                            help="USB transfer chunk on device. Higher (up to megabytes) "
+                            "may improve throughput, or 0 to disable chunking. Default: %(default)s")
+
         parser.add_argument("-vv", "--verbose", default=False, action="store_true",
                         help="Verbose, print info about received packets.")
         parser.add_argument("-s", "--streams",
