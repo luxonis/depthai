@@ -255,6 +255,8 @@ class DepthConfigManager:
             'app':
             {
                 'sync_video_meta_streams': self.args['sync_video_meta'],
+                'sync_sequence_numbers'  : self.args['sync_sequence_numbers'],
+                'usb_chunk_KiB' : self.args['usb_chunk_KiB'],
             },
             #'video_config':
             #{
