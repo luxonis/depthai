@@ -137,14 +137,17 @@ class DepthAI:
         self.reset_process_wd()
 
         time_start = time()
+        def print_packet_info_header():
+            print('[hostTimestamp streamName] devTstamp seq camSrc width height Bpp')
         def print_packet_info(packet, stream_name):
             meta = packet.getMetadata()
             print("[{:.6f} {:15s}]".format(time()-time_start, stream_name), end='')
             if meta is not None:
                 source = meta.getCameraName()
                 if stream_name.startswith('disparity') or stream_name.startswith('depth'):
-                    source += ' (rectified)'
+                    source += '(rectif)'
                 print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), source, end='')
+                print('', meta.getFrameWidth(), meta.getFrameHeight(), meta.getFrameBytesPP(), end='')
             print()
             return
 
@@ -188,6 +191,7 @@ class DepthAI:
 
         ops = 0
         prevTime = time()
+        if args['verbose']: print_packet_info_header()
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
