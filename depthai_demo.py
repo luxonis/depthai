@@ -111,7 +111,9 @@ class DepthAI:
         nnet_prev["nnet_source"] = {}
         frame_count['nn'] = {}
         frame_count_prev['nn'] = {}
-
+        preview_shape = None
+        left_pose = None
+        
         NN_cams = {'rgb', 'left', 'right'}
 
         for cam in NN_cams:
@@ -267,6 +269,7 @@ class DepthAI:
                     cv2.imshow(window_name, frame)
                     cv2.moveWindow(window_name, 0, 0)
                     preview_shape = frame.shape
+
                 elif packet.stream_name in ['left', 'right', 'disparity', 'rectified_left', 'rectified_right']:
                     frame_bgr = packetData
                     if args['pointcloud'] and packet.stream_name == 'rectified_right':
@@ -284,15 +287,14 @@ class DepthAI:
                         if nnet_prev["entries_prev"][camera] is not None: 
                             frame_bgr = show_nn(nnet_prev["entries_prev"][camera], frame_bgr, NN_json=NN_json, config=config, nn2depth=nn2depth)
                     cv2.imshow(window_name, frame_bgr)
-                    if window_name == 'left':
+                    if window_name == 'left' and args['mono_resolution'] == 400:
                         if preview_shape:
                             left_pose = (0, preview_shape[0] + 200)
                         else:    
                             left_pose = (0,400)
                         left_shape = frame_bgr.shape
-                        print(preview_shape)
                         cv2.moveWindow(window_name, 0, left_pose[1])
-                    elif window_name == 'right':
+                    elif window_name == 'right' and args['mono_resolution'] == 400:
                         if left_pose:
                             right_pose = (left_shape[1] + 10, left_pose[1])
                         else:
