@@ -232,7 +232,10 @@ class DepthAI:
                 nnet_prev["entries_prev"][camera] = decode_nn(nnet_packet, config=config, NN_json=NN_json)
                 frame_count['metaout'] += 1
                 frame_count['nn'][camera] += 1
-
+            
+            if 'jpegout' in stream_names:
+                self.device.request_jpeg()
+                
             for packet in self.data_packets:
                 window_name = packet.stream_name
                 if packet.stream_name not in stream_names:
@@ -262,6 +265,8 @@ class DepthAI:
                     cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
                     cv2.putText(frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
                     cv2.imshow(window_name, frame)
+                    cv2.moveWindow(window_name, 0, 0)
+                    preview_shape = frame.shape
                 elif packet.stream_name in ['left', 'right', 'disparity', 'rectified_left', 'rectified_right']:
                     frame_bgr = packetData
                     if args['pointcloud'] and packet.stream_name == 'rectified_right':
@@ -279,6 +284,24 @@ class DepthAI:
                         if nnet_prev["entries_prev"][camera] is not None: 
                             frame_bgr = show_nn(nnet_prev["entries_prev"][camera], frame_bgr, NN_json=NN_json, config=config, nn2depth=nn2depth)
                     cv2.imshow(window_name, frame_bgr)
+                    if window_name == 'left':
+                        if preview_shape:
+                            left_pose = (0, preview_shape[0] + 200)
+                        else:    
+                            left_pose = (0,400)
+                        left_shape = frame_bgr.shape
+                        print(preview_shape)
+                        cv2.moveWindow(window_name, 0, left_pose[1])
+                    elif window_name == 'right':
+                        if left_pose:
+                            right_pose = (left_shape[1] + 10, left_pose[1])
+                        else:
+                            right_pose = (700, 400)
+                        cv2.moveWindow(window_name, right_pose[0], right_pose[1])
+
+
+
+
                 elif packet.stream_name.startswith('depth') or packet.stream_name == 'disparity_color':
                     frame = packetData
 
@@ -319,7 +342,10 @@ class DepthAI:
                 elif packet.stream_name == 'jpegout':
                     jpg = packetData
                     mat = cv2.imdecode(jpg, cv2.IMREAD_COLOR)
+                    h, w, _ = mat.shape
+                    mat = cv2.resize(mat, ( int(w*0.3), int(h*0.3) ), interpolation = cv2.INTER_AREA) 
                     cv2.imshow('jpegout', mat)
+                    cv2.moveWindow('jpegout', 500, 0) # 500 is next to previewout
 
                 elif packet.stream_name == 'video':
                     videoFrame = packetData
