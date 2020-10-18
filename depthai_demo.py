@@ -111,7 +111,9 @@ class DepthAI:
         nnet_prev["nnet_source"] = {}
         frame_count['nn'] = {}
         frame_count_prev['nn'] = {}
-
+        preview_shape = None
+        left_pose = None
+        
         NN_cams = {'rgb', 'left', 'right'}
 
         for cam in NN_cams:
@@ -200,6 +202,11 @@ class DepthAI:
                 else:  # normally -1 returned,so don't print it
                     continue
 
+        left_window_set = False
+        right_window_set = False
+        jpeg_window_set = False
+        preview_window_set = False
+
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
@@ -265,8 +272,11 @@ class DepthAI:
                     cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
                     cv2.putText(frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
                     cv2.imshow(window_name, frame)
-                    cv2.moveWindow(window_name, 0, 0)
+                    if not preview_window_set:
+                        cv2.moveWindow(window_name, 0, 0)
+                        preview_window_set = True
                     preview_shape = frame.shape
+
                 elif packet.stream_name in ['left', 'right', 'disparity', 'rectified_left', 'rectified_right']:
                     frame_bgr = packetData
                     if args['pointcloud'] and packet.stream_name == 'rectified_right':
@@ -284,24 +294,25 @@ class DepthAI:
                         if nnet_prev["entries_prev"][camera] is not None: 
                             frame_bgr = show_nn(nnet_prev["entries_prev"][camera], frame_bgr, NN_json=NN_json, config=config, nn2depth=nn2depth)
                     cv2.imshow(window_name, frame_bgr)
-                    if window_name == 'left':
+                    if window_name == 'left' and args['mono_resolution'] == 400:
                         if preview_shape:
                             left_pose = (0, preview_shape[0] + 200)
                         else:    
                             left_pose = (0,400)
                         left_shape = frame_bgr.shape
-                        print(preview_shape)
-                        cv2.moveWindow(window_name, 0, left_pose[1])
-                    elif window_name == 'right':
+                        if not left_window_set:
+                            cv2.moveWindow(window_name, 0, left_pose[1])
+                            left_window_set = True
+                    elif window_name == 'right' and args['mono_resolution'] == 400:
                         if left_pose:
                             right_pose = (left_shape[1] + 10, left_pose[1])
                         else:
                             right_pose = (700, 400)
-                        cv2.moveWindow(window_name, right_pose[0], right_pose[1])
 
-
-
-
+                        if not right_window_set:
+                            cv2.moveWindow(window_name, right_pose[0], right_pose[1])
+                            right_window_set = True
+                        
                 elif packet.stream_name.startswith('depth') or packet.stream_name == 'disparity_color':
                     frame = packetData
 
@@ -343,10 +354,11 @@ class DepthAI:
                     jpg = packetData
                     mat = cv2.imdecode(jpg, cv2.IMREAD_COLOR)
                     h, w, _ = mat.shape
-                    mat = cv2.resize(mat, ( int(w*0.3), int(h*0.3) ), interpolation = cv2.INTER_AREA) 
+                    mat = cv2.resize(mat, (int(w*0.3), int(h*0.3)), interpolation = cv2.INTER_AREA) 
                     cv2.imshow('jpegout', mat)
-                    cv2.moveWindow('jpegout', 500, 0) # 500 is next to previewout
-
+                    if not jpeg_window_set:
+                        cv2.moveWindow('jpegout', 500, 0) # 500 is next to previewout
+                        jpeg_window_set = True
                 elif packet.stream_name == 'video':
                     videoFrame = packetData
                     videoFrame.tofile(video_file)
