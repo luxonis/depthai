@@ -93,6 +93,17 @@ class DepthAI:
         print(stream_names)
         print('Available streams: ' + str(self.device.get_available_streams()))
 
+        # print(self.device.is_usb3())
+        if not self.device.is_usb3():
+            fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
+            while True:
+                cv2.imshow('Connection over usb 3 failed', fail_usb_img)
+                k = cv2.waitKey(33)
+                if k != -1:  # Esc key to stop
+                    raise ValueError('Couldn\'t connect over USB3')
+                else:  # normally -1 returned,so don't print it
+                    continue
+
         # create the pipeline, here is the first connection with the device
         p = self.device.create_pipeline(config=config)
 
@@ -191,27 +202,12 @@ class DepthAI:
         ops = 0
         prevTime = time()
 
-        # print(self.device.is_usb3())
-        if  self.device.is_usb3():
-            fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
-            while True:
-                cv2.imshow('Connection over usb 3 failed', fail_usb_img)
-                k = cv2.waitKey(33)
-                if k != -1:  # Esc key to stop
-                    raise ValueError('Couldn\'t connect over USB3')
-                else:  # normally -1 returned,so don't print it
-                    continue
-
         left_window_set = False
         right_window_set = False
         jpeg_window_set = 0
         preview_window_set = False
         
         while self.runThread:
-            
-            # if elapsed_secs > 4 and not jpeg_window_set and 'jpegout' in stream_names:
-            
-
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
             self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(blocking=False)
@@ -233,18 +229,19 @@ class DepthAI:
                 if cur_time > wd_cutoff:
                     print("process watchdog timeout")
                     os._exit(10)
-                elif cur_time > wd_cutoff - 7:
+                elif cur_time > wd_cutoff - 10:
                     # print("waiting")
                     if left_window_set:
                         # cv2.destroyAllWindows()
-                        cv2.destroyWindow('previewout-rgb')
+                        
+                        if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
                         cv2.waitKey(1)
-                        cv2.destroyWindow('left')
+                        if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
                         cv2.waitKey(1)
-                        cv2.destroyWindow('right')
+                        if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
                         cv2.waitKey(1)
-                        cv2.destroyWindow('jpegout')
-                        cv2.waitKey(5)
+                        if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
+                        cv2.waitKey(1)
                     left_window_set = False
                     right_window_set = False
                     jpeg_window_set = 0
