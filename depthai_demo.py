@@ -35,7 +35,7 @@ global args, cnn_model2
 
 class DepthAI:
     global is_rpi
-    process_watchdog_timeout=10 #seconds
+    process_watchdog_timeout=15 #seconds
     nnet_packets = None
     data_packets = None
     runThread = True
@@ -192,7 +192,7 @@ class DepthAI:
         prevTime = time()
 
         # print(self.device.is_usb3())
-        if not self.device.is_usb3():
+        if  self.device.is_usb3():
             fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
             while True:
                 cv2.imshow('Connection over usb 3 failed', fail_usb_img)
@@ -204,13 +204,17 @@ class DepthAI:
 
         left_window_set = False
         right_window_set = False
-        jpeg_window_set = False
+        jpeg_window_set = 0
         preview_window_set = False
-
+        
         while self.runThread:
+            
+            # if elapsed_secs > 4 and not jpeg_window_set and 'jpegout' in stream_names:
+            
+
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
-            self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(blocking=True)
+            self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(blocking=False)
             
             ### Uncomment to print ops
             # ops = ops + 1
@@ -220,13 +224,36 @@ class DepthAI:
             #     prevTime = time()
 
             packets_len = len(self.nnet_packets) + len(self.data_packets)
+            # print(packets_len)
             if packets_len != 0:
                 self.reset_process_wd()
             else:
+                # print("In here")
                 cur_time=monotonic()
                 if cur_time > wd_cutoff:
                     print("process watchdog timeout")
                     os._exit(10)
+                elif cur_time > wd_cutoff - 7:
+                    # print("waiting")
+                    if left_window_set:
+                        # cv2.destroyAllWindows()
+                        cv2.destroyWindow('previewout-rgb')
+                        cv2.waitKey(1)
+                        cv2.destroyWindow('left')
+                        cv2.waitKey(1)
+                        cv2.destroyWindow('right')
+                        cv2.waitKey(1)
+                        cv2.destroyWindow('jpegout')
+                        cv2.waitKey(5)
+                    left_window_set = False
+                    right_window_set = False
+                    jpeg_window_set = 0
+                    preview_window_set = False
+
+                    continue
+            
+
+
 
             for _, nnet_packet in enumerate(self.nnet_packets):
                 if args['verbose']: print_packet_info(nnet_packet, 'NNet')
@@ -240,8 +267,7 @@ class DepthAI:
                 frame_count['metaout'] += 1
                 frame_count['nn'][camera] += 1
             
-            if 'jpegout' in stream_names:
-                self.device.request_jpeg()
+            
                 
             for packet in self.data_packets:
                 window_name = packet.stream_name
@@ -253,6 +279,8 @@ class DepthAI:
                     print('Invalid packet data!')
                     continue
                 elif packet.stream_name == 'previewout':
+                    if jpeg_window_set < 10 and 'jpegout' in stream_names:
+                        self.device.request_jpeg()
                     meta = packet.getMetadata()
                     camera = 'rgb'
                     if meta != None:
@@ -356,9 +384,9 @@ class DepthAI:
                     h, w, _ = mat.shape
                     mat = cv2.resize(mat, (int(w*0.3), int(h*0.3)), interpolation = cv2.INTER_AREA) 
                     cv2.imshow('jpegout', mat)
-                    if not jpeg_window_set:
+                    if jpeg_window_set < 10:
                         cv2.moveWindow('jpegout', 500, 0) # 500 is next to previewout
-                        jpeg_window_set = True
+                        jpeg_window_set += 1
                 elif packet.stream_name == 'video':
                     videoFrame = packetData
                     videoFrame.tofile(video_file)
