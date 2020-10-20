@@ -78,13 +78,13 @@ class CliArgs:
                             help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
                                  "Or path to a custom .json board config. Mutually exclusive with [-fv -rfv -b -r -w]")
 
-        parser.add_argument("-sh", "--shaves", default=7, type=int, choices=range(1,15), metavar="[1-14]",
+        parser.add_argument("-sh", "--shaves", default=None, type=int, choices=range(1,15), metavar="[1-14]",
                             help="Number of shaves used by NN.")
 
-        parser.add_argument("-cmx", "--cmx_slices", default=7, type=int, choices=range(1,15), metavar="[1-14]",
+        parser.add_argument("-cmx", "--cmx_slices", default=None, type=int, choices=range(1,15), metavar="[1-14]",
                             help="Number of cmx slices used by NN.")
 
-        parser.add_argument("-nce", "--NN_engines", default=1, type=int, choices=range(0,3), metavar="[0-2]",
+        parser.add_argument("-nce", "--NN_engines", default=None, type=int, choices=[1, 2], metavar="[1-2]",
                             help="Number of NN_engines used by NN.")
 
         parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],

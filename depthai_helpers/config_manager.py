@@ -16,7 +16,6 @@ class DepthConfigManager:
     def __init__(self, args):
         self.args = args
         self.stream_list = args['streams']
-        self.compile_model = True
         self.calc_dist_to_bb = not self.args['disable_depth']
 
         # Prepare handler methods (decode_nn, show_nn) for the network we want to run.
@@ -124,23 +123,40 @@ class DepthConfigManager:
                 "Disconnect/connect usb cable on host! \n", PrintColors.RED)
                 os._exit(1)
 
+    def getMaxShaveNumbers(self):
+        stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in self.stream_list]
+        max_shaves = 14
+        if self.args['rgb_resolution'] != 1080:
+            max_shaves = 11
+            if 'object_tracker' in stream_names:
+                max_shaves = 9
+        elif 'object_tracker' in stream_names:
+            max_shaves = 12
+
+        return max_shaves
 
     def generateJsonConfig(self):
 
         # something to verify usb rules are good?
         self.linuxCheckApplyUsbRules()
 
+        max_shave_nr = self.getMaxShaveNumbers()
+        shave_nr = max_shave_nr if self.args['shaves'] is None else self.args['shaves']
+        cmx_slices = shave_nr if self.args['cmx_slices'] is None else self.args['cmx_slices']
+        NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
+
         # left_right double NN check.
         if self.args['cnn_camera'] in ['left_right', 'rectified_left_right']:
-            if self.args['NN_engines'] is None:
-                self.args['NN_engines'] = 2
-                self.args['shaves'] = 6 if self.args['shaves'] is None else self.args['shaves'] - self.args['shaves'] % 2
-                self.args['cmx_slices'] = 6 if self.args['cmx_slices'] is None else self.args['cmx_slices'] - self.args['cmx_slices'] % 2
-                self.compile_model = True
-                cli_print('Running NN on both cams requires 2 NN engines!', PrintColors.RED)
+            if NCE_nr != 2:
+                NCE_nr = 2
+
+        if NCE_nr == 2:
+            cli_print('Running NN on both cams requires 2 NN engines!', PrintColors.RED)
+            shave_nr = shave_nr - (shave_nr % 2)
+            cmx_slices = cmx_slices - (cmx_slices % 2)
 
         # Get blob files
-        blobMan = BlobManager(self.args, self.compile_model, self.calc_dist_to_bb)
+        blobMan = BlobManager(self.args, self.calc_dist_to_bb, shave_nr, cmx_slices, NCE_nr)
         self.NN_config = blobMan.getNNConfig()
         try:
             self.labels = self.NN_config['mappings']['labels']
@@ -170,10 +186,6 @@ class DepthConfigManager:
         if 'depth' in stream_names and ('disparity' in stream_names or 'disparity_color' in stream_names):
             print('ERROR: depth is mutually exclusive with disparity/disparity_color')
             exit(2)
-
-        shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
-        cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
-        NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
 
         if self.args['stereo_lr_check'] == True:
             raise ValueError("Left-right check option is still under development. Don;t enable it.")
@@ -312,9 +324,12 @@ class DepthConfigManager:
 
 
 class BlobManager:
-    def __init__(self, args, compile_model, calc_dist_to_bb):
+    def __init__(self, args, calc_dist_to_bb, shave_nr, cmx_slices, NCE_nr):
         self.args = args
         self.calc_dist_to_bb = calc_dist_to_bb
+        self.shave_nr = shave_nr
+        self.cmx_slices = cmx_slices
+        self.NCE_nr = NCE_nr
 
         if self.args['cnn_model']:
             self.blob_file, self.blob_file_config = self.getBlobFiles(self.args['cnn_model'])
@@ -325,11 +340,10 @@ class BlobManager:
             print("Using CNN2:", self.args['cnn_model2'])
             self.blob_file2, self.blob_file_config2 = self.getBlobFiles(self.args['cnn_model2'], False)
 
-        # compile modules
-        if compile_model:
-            self.blob_file = self.compileBlob(self.args['cnn_model'])
-            if self.args['cnn_model2']:
-                self.blob_file2 = self.compileBlob(self.args['cnn_model2'])
+        # compile models
+        self.blob_file = self.compileBlob(self.args['cnn_model'])
+        if self.args['cnn_model2']:
+            self.blob_file2 = self.compileBlob(self.args['cnn_model2'])
 
         # verify the first blob files exist? I just copied this logic from before the refactor. Not sure if it's necessary. This makes it so this script won't run unless we have a blob file and config.
         self.verifyBlobFilesExist(self.blob_file, self.blob_file_config)
@@ -365,14 +379,13 @@ class BlobManager:
     def compileBlob(self, nn_model):
         blob_file, _ = self.getBlobFiles(nn_model)
 
-        shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
-        cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
-        NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
+        shave_nr = self.shave_nr
+        cmx_slices = self.cmx_slices
+        NCE_nr = self.NCE_nr
 
         if NCE_nr == 2:
             if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
-                cli_print("shave_nr and cmx_slices config must be even number when NCE is 2!", PrintColors.RED)
-                exit(2)
+                raise ValueError("shave_nr and cmx_slices config must be even number when NCE is 2!")
             shave_nr_opt = int(shave_nr / 2)
             cmx_slices_opt = int(cmx_slices / 2)
         else:
