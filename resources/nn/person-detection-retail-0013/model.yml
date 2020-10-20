@@ -14,6 +14,7 @@
 
 description: >-
   Pedestrian detection (RMNet with lrelu + SSD)
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_person_detection_retail_0013_description_person_detection_retail_0013.html
 task_type: detection
 files:
   - name: FP32/person-detection-retail-0013.xml

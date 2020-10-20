@@ -15,6 +15,7 @@
 description: >-
   Vehicle detector based on SSD + MobileNet with reduced number of channels and depthwise
   head.
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_vehicle_detection_adas_0002_description_vehicle_detection_adas_0002.html
 task_type: detection
 files:
   - name: FP32/vehicle-detection-adas-0002.xml

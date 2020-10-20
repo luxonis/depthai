@@ -1,6 +1,6 @@
 description: >-
   Frozen darknet yolo v3.
-task_type: object_attributes
+task_type: detection
 files:
   - name: FP16/yolo-v3.xml
     size: 233831
