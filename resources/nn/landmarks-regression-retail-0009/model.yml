@@ -15,6 +15,7 @@
 description: >-
   Landmark's detection. Used in Smart Classroom. The model is identical to 0002 but
   trained on internal dataset with improved regression loss.
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_landmarks_regression_retail_0009_description_landmarks_regression_retail_0009.html
 task_type: object_attributes
 files:
   - name: FP32/landmarks-regression-retail-0009.xml

@@ -24,6 +24,7 @@ description: >-
 
   The model output is a typical vector containing the tracked object data, as
   previously described.
+documentation: https://github.com/openvinotoolkit/open_model_zoo/blob/efd238d02035f8a5417b7b1e25cd4c997d44351f/models/public/mobilenet-ssd/mobilenet-ssd.md
 task_type: detection
 files:
   - name: FP16/mobilenet-ssd.xml

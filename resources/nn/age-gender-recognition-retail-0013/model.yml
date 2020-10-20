@@ -13,7 +13,8 @@
 # limitations under the License.
 
 description: >-
-  Age & gender classification. Used in Audience Analytics.
+  Age & gender classification. Used in Audience Analytics.  
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_age_gender_recognition_retail_0013_description_age_gender_recognition_retail_0013.html
 task_type: object_attributes
 files:
   - name: FP32/age-gender-recognition-retail-0013.xml

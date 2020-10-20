@@ -15,6 +15,7 @@
 description: >-
   Multiclass (person -  vehicle -  non-vehicle) detector based on SSD detection architecture
   -  MobileNetV2 backbone)
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_person_vehicle_bike_detection_crossroad_1016_description_person_vehicle_bike_detection_crossroad_1016.html
 task_type: detection
 files:
   - name: FP32/person-vehicle-bike-detection-crossroad-1016.xml

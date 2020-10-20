@@ -14,6 +14,7 @@
 
 description: >-
   Recognizes 5 emotions for a face. Targeted for Retail Audience Analytics.
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_emotions_recognition_retail_0003_description_emotions_recognition_retail_0003.html
 task_type: object_attributes
 files:
   - name: FP32/emotions-recognition-retail-0003.xml

@@ -1,5 +1,6 @@
 description: >-
   2D human pose estimation from PINTO03009
+documentation: https://github.com/PINTO0309/MobileNetV2-PoseEstimation/tree/master/models/train/test/openvino/mobilenet_v2_1.4_224/FP16
 task_type: human_pose_estimation
 files:
   - name: FP16/mobileNetV2-PoseEstimation.xml
