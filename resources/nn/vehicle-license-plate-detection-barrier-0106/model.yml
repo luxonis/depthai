@@ -14,6 +14,7 @@
 
 description: >-
   Multiclass (vehicle -  license plates) detector based on MobileNetV2+SSD
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_vehicle_license_plate_detection_barrier_0106_description_vehicle_license_plate_detection_barrier_0106.html
 task_type: detection
 files:
   - name: FP32/vehicle-license-plate-detection-barrier-0106.xml

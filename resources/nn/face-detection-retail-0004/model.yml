@@ -15,6 +15,7 @@
 description: >-
   Face Detection (SqNet1.0modif+single scale) without BatchNormalization trained with
   negatives.
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_face_detection_retail_0004_description_face_detection_retail_0004.html
 task_type: detection
 files:
   - name: FP32/face-detection-retail-0004.xml

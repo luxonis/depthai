@@ -14,6 +14,7 @@
 
 description: >-
   Custom-architecture convolutional neural network for 35 facial landmarks estimation.
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_facial_landmarks_35_adas_0002_description_facial_landmarks_35_adas_0002.html
 task_type: object_attributes
 files:
   - name: FP32/facial-landmarks-35-adas-0002.xml

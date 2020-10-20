@@ -14,6 +14,7 @@
 
 description: >-
   Face Detection (MobileNet with reduced channels + SSD with weights sharing)
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_face_detection_adas_0001_description_face_detection_adas_0001.html
 task_type: detection
 files:
   - name: FP32/face-detection-adas-0001.xml

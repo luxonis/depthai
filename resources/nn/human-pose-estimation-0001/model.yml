@@ -14,6 +14,7 @@
 
 description: >-
   2D human pose estimation with tuned mobilenet backbone (based on OpenPose).
+documentation: https://docs.openvinotoolkit.org/2020.1/_models_intel_human_pose_estimation_0001_description_human_pose_estimation_0001.html
 task_type: human_pose_estimation
 files:
   - name: FP32/human-pose-estimation-0001.xml
