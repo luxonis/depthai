@@ -6,7 +6,8 @@ from pathlib import Path
 import consts.resource_paths
 
 from depthai_helpers import utils
-from depthai_helpers.model_downloader import download_model
+from model_compiler.model_compiler import download_and_compile_NN_model
+from consts.resource_paths import nn_resource_path as model_zoo_folder
 from depthai_helpers.cli_utils import cli_print, PrintColors
 
 class DepthConfigManager:
@@ -148,10 +149,10 @@ class DepthConfigManager:
         # left_right double NN check.
         if self.args['cnn_camera'] in ['left_right', 'rectified_left_right']:
             if NCE_nr != 2:
+                cli_print('Running NN on both cams requires 2 NN engines!', PrintColors.RED)
                 NCE_nr = 2
 
         if NCE_nr == 2:
-            cli_print('Running NN on both cams requires 2 NN engines!', PrintColors.RED)
             shave_nr = shave_nr - (shave_nr % 2)
             cmx_slices = cmx_slices - (cmx_slices % 2)
 
@@ -341,9 +342,9 @@ class BlobManager:
             self.blob_file2, self.blob_file_config2 = self.getBlobFiles(self.args['cnn_model2'], False)
 
         # compile models
-        self.blob_file = self.compileBlob(self.args['cnn_model'])
+        self.blob_file = self.compileBlob(self.args['cnn_model'], self.args['model_compilation_target'])
         if self.args['cnn_model2']:
-            self.blob_file2 = self.compileBlob(self.args['cnn_model2'])
+            self.blob_file2 = self.compileBlob(self.args['cnn_model2'], self.args['model_compilation_target'])
 
         # verify the first blob files exist? I just copied this logic from before the refactor. Not sure if it's necessary. This makes it so this script won't run unless we have a blob file and config.
         self.verifyBlobFilesExist(self.blob_file, self.blob_file_config)
@@ -376,7 +377,7 @@ class BlobManager:
 
         return blobFile, blobFileConfig
 
-    def compileBlob(self, nn_model):
+    def compileBlob(self, nn_model, model_compilation_target):
         blob_file, _ = self.getBlobFiles(nn_model)
 
         shave_nr = self.shave_nr
@@ -395,7 +396,7 @@ class BlobManager:
         outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
         if(not Path(outblob_file).exists()):
             cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-            ret = download_model(nn_model, shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
+            ret = download_and_compile_NN_model(nn_model, model_zoo_folder, shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file, model_compilation_target)
             if(ret != 0):
                 cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
                 raise RuntimeError("Model compilation failed! Not connected to the internet?")

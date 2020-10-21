@@ -41,7 +41,7 @@ intrinsic_calib_m2
 *.h265
 *.mkv
 *.mp4
-*.blob.sh*cmx*
+*.blob*
 *.cmd
 *.mvcmd
 *.so
