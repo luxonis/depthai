@@ -30,10 +30,11 @@ share/python-wheels/
 MANIFEST
 *.idea
 # DepthAI-Specific
-dataset*/
+*dataset*/
 depthai.calib
 mesh_left.calib
 mesh_right.calib
+1*.calib
 intrinsic.json
 intrinsic_calib_m2
 
