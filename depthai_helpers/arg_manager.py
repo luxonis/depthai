@@ -87,6 +87,10 @@ class CliArgs:
         parser.add_argument("-nce", "--NN_engines", default=None, type=int, choices=[1, 2], metavar="[1-2]",
                             help="Number of NN_engines used by NN.")
 
+        parser.add_argument("-mct", "--model-compilation-target", default="auto",
+                            type=str, required=False, choices=["auto","local","cloud"],
+                            help="Compile model lcoally or in cloud?")
+
         parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],
                             help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
 
