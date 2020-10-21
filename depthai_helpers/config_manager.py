@@ -68,7 +68,7 @@ class DepthConfigManager:
     def getCommandFile(self):
         debug_mode = False
         cmd_file = ''
-        if self.args['firmware'] != '':
+        if self.args['firmware'] != None:
             self.custom_fw_commit = self.args['firmware']
         if self.args['dev_debug'] == None:
             # Debug -debug flag NOT present, check first for custom firmware
