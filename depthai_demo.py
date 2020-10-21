@@ -21,7 +21,6 @@ check_depthai_version()
 import consts.resource_paths
 from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, PrintColors
-from depthai_helpers.model_downloader import download_model
 
 from depthai_helpers.config_manager import DepthConfigManager
 from depthai_helpers.arg_manager import CliArgs
@@ -141,14 +140,17 @@ class DepthAI:
         self.reset_process_wd()
 
         time_start = time()
+        def print_packet_info_header():
+            print('[hostTimestamp streamName] devTstamp seq camSrc width height Bpp')
         def print_packet_info(packet, stream_name):
             meta = packet.getMetadata()
             print("[{:.6f} {:15s}]".format(time()-time_start, stream_name), end='')
             if meta is not None:
                 source = meta.getCameraName()
                 if stream_name.startswith('disparity') or stream_name.startswith('depth'):
-                    source += ' (rectified)'
+                    source += '(rectif)'
                 print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), source, end='')
+                print('', meta.getFrameWidth(), meta.getFrameHeight(), meta.getFrameBytesPP(), end='')
             print()
             return
 
@@ -192,6 +194,7 @@ class DepthAI:
 
         ops = 0
         prevTime = time()
+        if args['verbose']: print_packet_info_header()
         while self.runThread:
             # print(self.device.is_usb3())
             # print(self.device.get_mx_id())
