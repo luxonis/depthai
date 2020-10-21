@@ -42,7 +42,7 @@ class DepthConfigManager:
             return 1.0
 
     def getCustomFirmwarePath(self, commit):
-        fwdir = 'fw_cache/'
+        fwdir = '.fw_cache/'
         if not os.path.exists(fwdir):
             os.mkdir(fwdir)
         fw_variant = ''
