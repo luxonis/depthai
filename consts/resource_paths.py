@@ -1,5 +1,3 @@
-import os
-from os import path
 from pathlib import Path
 
 
@@ -28,10 +26,6 @@ blob_fpath            = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobi
 blob_config_fpath     = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.json')
 tests_functional_path = relative_to_abs_path('../testsFunctional/') + "/"
 
-model_downloader_path = relative_to_abs_path('../model_compiler/downloader/downloader.py')
-download_folder_path  = relative_to_abs_path('../model_compiler/downloads') + "/"
-
-model_compiler_path   = relative_to_abs_path('../model_compiler/model_converter.py')
 
 if custom_calib_fpath is not None and Path(custom_calib_fpath).exists():
     calib_fpath = custom_calib_fpath
