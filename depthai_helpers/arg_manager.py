@@ -176,6 +176,9 @@ class CliArgs:
                             help="USB transfer chunk on device. Higher (up to megabytes) "
                             "may improve throughput, or 0 to disable chunking. Default: %(default)s")
 
+        parser.add_argument("-fw", "--firmware", default="", type=str,
+                            help="Commit hash for custom FW, downloaded from Artifactory")
+
         parser.add_argument("-vv", "--verbose", default=False, action="store_true",
                         help="Verbose, print info about received packets.")
         parser.add_argument("-s", "--streams",

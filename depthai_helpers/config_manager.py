@@ -4,6 +4,7 @@ import platform
 import subprocess
 from pathlib import Path
 import consts.resource_paths
+import urllib.request
 
 from depthai_helpers import utils
 from model_compiler.model_compiler import download_and_compile_NN_model
@@ -13,6 +14,7 @@ from depthai_helpers.cli_utils import cli_print, PrintColors
 class DepthConfigManager:
     labels = ""
     NN_config = None
+    custom_fw_commit = ''
 
     def __init__(self, args):
         self.args = args
@@ -39,12 +41,42 @@ class DepthConfigManager:
         else:
             return 1.0
 
+    def getCustomFirmwarePath(self, commit):
+        fwdir = 'fw_cache/'
+        if not os.path.exists(fwdir):
+            os.mkdir(fwdir)
+        fw_variant = ''
+        if self.getUsb2Mode():
+            fw_variant = 'usb2-'
+        fname = 'depthai-' + fw_variant + commit + '.cmd'
+        path = fwdir + fname
+        if not Path(path).exists():
+            url = 'https://artifacts.luxonis.com/artifactory/luxonis-myriad-snapshot-local/depthai-device-side/'
+            url += commit + '/' + fname
+            print('Downloading custom FW:', url)
+            # Need this to avoid "HTTP Error 403: Forbidden"
+            class CustomURLopener(urllib.request.FancyURLopener):
+                version = "Mozilla/5.0"
+                # FancyURLopener doesn't report by default errors like 404
+                def http_error_default(self, url, fp, errcode, errmsg, headers):
+                    raise ValueError(errcode)
+            url_opener = CustomURLopener()
+            with url_opener.open(url) as response, open(path, 'wb') as outf:
+                outf.write(response.read())
+        return path
+
     def getCommandFile(self):
         debug_mode = False
         cmd_file = ''
+        if self.args['firmware'] != '':
+            self.custom_fw_commit = self.args['firmware']
         if self.args['dev_debug'] == None:
-            # Debug -debug flag NOT present,
-            debug_mode = False
+            # Debug -debug flag NOT present, check first for custom firmware
+            if self.custom_fw_commit == '':
+                debug_mode = False
+            else:
+                debug_mode = True
+                cmd_file = self.getCustomFirmwarePath(self.custom_fw_commit)
         elif self.args['dev_debug'] == '':
             # If just -debug flag is present -> cmd_file = '' (wait for device to be connected beforehand)
             debug_mode = True
