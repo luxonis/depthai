@@ -150,8 +150,8 @@ class StereoCalibration(object):
         print("Calibration file written to %s." % (out_filepath))
         print("\tTook %i seconds to run image processing." % (round(time.time() - start_time, 2)))
         # show debug output for visual inspection
-        print("\nRectifying dataset for visual inspection using Mesh")
-        self.show_rectified_images_two_calib(filepath, False)
+        # print("\nRectifying dataset for visual inspection using Mesh")
+        # self.show_rectified_images_two_calib(filepath, False)
         print("\nRectifying dataset for visual inspection using Two Homography")
         self.show_rectified_images_two_calib(filepath, True)
 
@@ -502,7 +502,7 @@ class StereoCalibration(object):
                 if k == 32:  # Esc key to stop
                     break
                 elif k == 27:
-                    os._exit(0)
+                    return
                     # raise SystemExit()
                 elif k == -1:  # normally -1 returned,so don't print it
                     continue

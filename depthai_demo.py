@@ -93,6 +93,10 @@ class DepthAI:
         print(stream_names)
         print('Available streams: ' + str(self.device.get_available_streams()))
 
+        mx_id = self.device.get_mx_id()
+        calib_path = consts.resource_paths.relative_to_abs_path('../resources/' + mx_id + '.calib')
+        if os.path.isfile(calib_path):
+            config['depth']['calibration_file'] = calib_path
         # create the pipeline, here is the first connection with the device
         p = self.device.create_pipeline(config=config)
 
@@ -189,6 +193,8 @@ class DepthAI:
         ops = 0
         prevTime = time()
         while self.runThread:
+            # print(self.device.is_usb3())
+            # print(self.device.get_mx_id())
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
             self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(blocking=True)

@@ -187,10 +187,10 @@ class Main:
         self.total_images = self.args['count'] * len(setPolygonCoordinates(1000, 600))  # random polygons for count
         print("Using Arguments=", self.args)
 
-        if self.args['device_id'] != "":
-            self.dataset_path = "dataset-device_" + self.args['device_id'] + "/"
-        else:
-            self.dataset_path = "dataset/"
+        # if self.args['device_id'] != "":
+        #     self.dataset_path = "dataset-device_" + self.args['device_id'] + "/"
+        # else:
+        self.dataset_path = "calib_dataset/"
 
     @contextmanager
     def get_pipeline(self):
@@ -200,9 +200,24 @@ class Main:
         try:
             device = depthai.Device(self.args['device_id'], False)
             pipeline = device.create_pipeline(self.config)
+            self.mx_id = device.get_mx_id()
+            if self.mx_id is "UNKNOWN":
+                self.mx_id = "default"
+            else:
+                self.dataset_path = self.dataset_path + self.mx_id + '/'
+            print("dataset path is:")
+            print(self.dataset_path)
         except RuntimeError:
             raise RuntimeError("Unable to initialize device. Try to reset it")
-
+        try:
+            if self.args['image_op'] == 'delete':
+                shutil.rmtree(self.dataset_path)
+            Path(self.dataset_path + "left").mkdir(parents=True, exist_ok=True)
+            Path(self.dataset_path + "right").mkdir(parents=True, exist_ok=True)
+            # print("created folders")
+        except OSError:
+            print("An error occurred trying to create image dataset directories!")
+            raise
         if pipeline is None:
             raise RuntimeError("Unable to create pipeline")
 
@@ -373,21 +388,36 @@ class Main:
         flags = [self.config['board_config']['stereo_center_crop']]
         cal_data = StereoCalibration()
         try:
-            cal_data.calibrate(self.dataset_path, self.args['square_size_cm'], "./resources/depthai.calib", flags)
+            if 'capture' in self.args['mode']:
+                if self.mx_id is "default":
+                    out_file_path = "./resources/depthai.calib"
+                else:
+                    out_file_path = "./resources/" + self.mx_id + ".calib"
+                cal_data.calibrate(self.dataset_path, self.args['square_size_cm'], out_file_path, flags)
+                print("Calibration finished for device with id:{}".format(self.mx_id))
+            else:
+                dataset_list = glob.glob(self.dataset_path + "*")
+                print(dataset_list)
+                old_ds_path = os.path.abspath('dataset')
+                if os.path.isdir(old_ds_path):
+                    dataset_list.append('dataset')
+                if len(dataset_list) > 1:
+                    print("multi device datasets found")
+                    # if 'default' in dataset_list and 
+                for dataset in dataset_list:
+                    if dev_id == 'default' or dev_id == 'dataset':
+                        out_file_path = "./resources/depthai.calib"
+                    else:
+                        out_file_path = "./resources/" + dev_id + ".calib"
+                    cal_data.calibrate(dataset, self.args['square_size_cm'], out_file_path, flags)
+                    print("Calibration finished for device with id:{}".format(dev_id))
+
         except AssertionError as e:
             print("[ERROR] " + str(e))
             raise SystemExit(1)
-
+    
     def run(self):
         if 'capture' in self.args['mode']:
-            try:
-                if self.args['image_op'] == 'delete':
-                    shutil.rmtree(self.dataset_path)
-                Path(self.dataset_path + "left").mkdir(parents=True, exist_ok=True)
-                Path(self.dataset_path + "right").mkdir(parents=True, exist_ok=True)
-            except OSError:
-                print("An error occurred trying to create image dataset directories!")
-                raise
             self.show_info_frame()
             self.capture_images()
         if 'process' in self.args['mode']:
