@@ -15,7 +15,7 @@ from pathlib import Path
 import shutil
 import consts.resource_paths
 import json
-
+from depthai_helpers.config_manager import BlobManager
 from depthai_helpers.version_check import check_depthai_version
 check_depthai_version()
 
@@ -134,6 +134,12 @@ class Main:
 
     def __init__(self):
         self.args = vars(parse_args())
+        cnn_model = {
+                        'cnn_model':'mobilenet-ssd',
+                        'cnn_model2':'',
+                        'model_compilation_target':'auto'
+                    }
+        blobMan = BlobManager(cnn_model, True ,7,7,1)
         self.config = {
             'streams':
                 ['left', 'right'] if not on_embedded else
@@ -145,8 +151,8 @@ class Main:
                 },
             'ai':
                 {
-                    'blob_file': consts.resource_paths.blob_fpath,
-                    'blob_file_config': consts.resource_paths.blob_config_fpath,
+                    'blob_file': blobMan.blob_file,
+                    'blob_file_config': blobMan.blob_file_config,
                     'shaves' : 7,
                     'cmx_slices' : 7,
                     'NN_engines' : 1,
@@ -404,12 +410,13 @@ class Main:
                 if len(dataset_list) > 1:
                     print("multi device datasets found")
                     # if 'default' in dataset_list and 
-                for dataset in dataset_list:
+                for dataset_dir in dataset_list:
+                    _, dev_id = os.path.split(dataset_dir)
                     if dev_id == 'default' or dev_id == 'dataset':
                         out_file_path = "./resources/depthai.calib"
                     else:
                         out_file_path = "./resources/" + dev_id + ".calib"
-                    cal_data.calibrate(dataset, self.args['square_size_cm'], out_file_path, flags)
+                    cal_data.calibrate(dataset_dir, self.args['square_size_cm'], out_file_path, flags)
                     print("Calibration finished for device with id:{}".format(dev_id))
 
         except AssertionError as e:
