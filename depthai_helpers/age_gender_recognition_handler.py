@@ -15,7 +15,7 @@ def decode_age_gender_recognition(nnet_packet, **kwargs):
 
     detection = None
 
-    conf_thr = config['depth']['confidence_threshold']
+    conf_thr = 0.5
     if female_conf > conf_thr or male_conf > conf_thr:
         gender = "male"
         if female_conf > male_conf:

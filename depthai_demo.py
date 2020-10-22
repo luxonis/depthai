@@ -21,7 +21,6 @@ check_depthai_version()
 import consts.resource_paths
 from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, PrintColors
-from depthai_helpers.model_downloader import download_model
 
 from depthai_helpers.config_manager import DepthConfigManager
 from depthai_helpers.arg_manager import CliArgs
@@ -94,16 +93,7 @@ class DepthAI:
         print('Available streams: ' + str(self.device.get_available_streams()))
 
         # print(self.device.is_usb3())
-        if not self.device.is_usb3():
-            fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
-            while True:
-                cv2.imshow('Connection over usb 3 failed', fail_usb_img)
-                k = cv2.waitKey(33)
-                if k != -1:  # Esc key to stop
-                    raise ValueError('Couldn\'t connect over USB3')
-                else:  # normally -1 returned,so don't print it
-                    continue
-
+        
         # create the pipeline, here is the first connection with the device
         p = self.device.create_pipeline(config=config)
 
@@ -150,14 +140,17 @@ class DepthAI:
         self.reset_process_wd()
 
         time_start = time()
+        def print_packet_info_header():
+            print('[hostTimestamp streamName] devTstamp seq camSrc width height Bpp')
         def print_packet_info(packet, stream_name):
             meta = packet.getMetadata()
             print("[{:.6f} {:15s}]".format(time()-time_start, stream_name), end='')
             if meta is not None:
                 source = meta.getCameraName()
                 if stream_name.startswith('disparity') or stream_name.startswith('depth'):
-                    source += ' (rectified)'
+                    source += '(rectif)'
                 print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), source, end='')
+                print('', meta.getFrameWidth(), meta.getFrameHeight(), meta.getFrameBytesPP(), end='')
             print()
             return
 
@@ -207,10 +200,11 @@ class DepthAI:
         jpeg_window_set = 0
         preview_window_set = False
         
+        if args['verbose']: print_packet_info_header()
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
-            self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(blocking=False)
+            self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(blocking=True)
             
             ### Uncomment to print ops
             # ops = ops + 1
@@ -218,6 +212,8 @@ class DepthAI:
             #     print('OPS: ', ops)
             #     ops = 0
             #     prevTime = time()
+
+            ## TODO(sachin): Use mx_id to detect change in device
 
             packets_len = len(self.nnet_packets) + len(self.data_packets)
             # print(packets_len)
@@ -229,28 +225,86 @@ class DepthAI:
                 if cur_time > wd_cutoff:
                     print("process watchdog timeout")
                     os._exit(10)
-                elif cur_time > wd_cutoff - 10:
-                    # print("waiting")
-                    if left_window_set:
-                        # cv2.destroyAllWindows()
+                # elif cur_time > wd_cutoff - 10:
+                #     # print("waiting")
+                #     if left_window_set:
+                #         # cv2.destroyAllWindows()
                         
-                        if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
-                        cv2.waitKey(1)
-                        if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
-                        cv2.waitKey(1)
-                        if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
-                        cv2.waitKey(1)
-                        if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
-                        cv2.waitKey(1)
-                    left_window_set = False
-                    right_window_set = False
-                    jpeg_window_set = 0
-                    preview_window_set = False
+                #         if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
+                #         cv2.waitKey(1)
+                #         if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
+                #         cv2.waitKey(1)
+                #         if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
+                #         cv2.waitKey(1)
+                #         if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
+                #         cv2.waitKey(1)
+                #     left_window_set = False
+                #     right_window_set = False
+                #     jpeg_window_set = 0
+                #     preview_window_set = False
 
-                    continue
+                #     continue
             
 
+            if(self.device.is_device_changed()):
+                # if left_window_set:
+                    # cv2.destroyAllWindows()
+                    # try:
+                    #     if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
+                    #     cv2.waitKey(1)
+                    #     if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
+                    #     cv2.waitKey(1)
+                    #     if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
+                    #     cv2.waitKey(1)
+                    #     if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
+                    #     cv2.waitKey(1)
+                    # except :
+                    #     print("cathing and moving")
+                try:
+                    if cv2.getWindowProperty('usb 3 failed', 0) >= 0: 
+                        cv2.destroyWindow('usb 3 failed')  
+                        cv2.waitKey(5)
+                        sleep(3)
+                except:
+                    pass
 
+                left_window_set = False
+                right_window_set = False
+                jpeg_window_set = 0
+                preview_window_set = False
+
+                print(self.device.is_device_changed())
+                self.device.reset_device_changed()
+                print(self.device.is_device_changed())
+
+
+
+            if not self.device.is_usb3():
+                fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
+                # while True:
+                cv2.imshow('usb 3 failed', fail_usb_img)
+                cv2.waitKey(33)
+                try:
+                    if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
+                    cv2.waitKey(1)
+                    if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
+                    cv2.waitKey(1)
+                    if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
+                    cv2.waitKey(1)
+                    if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
+                    cv2.waitKey(1)
+                except :
+                    pass
+                continue
+            else:
+                try:
+                    if cv2.getWindowProperty('usb 3 failed', 0) >= 0: 
+                        cv2.destroyWindow('usb 3 failed')  
+                        cv2.waitKey(1)
+                except:
+                    pass
+
+            
 
             for _, nnet_packet in enumerate(self.nnet_packets):
                 if args['verbose']: print_packet_info(nnet_packet, 'NNet')
