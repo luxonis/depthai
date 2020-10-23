@@ -11,7 +11,7 @@ import cv2
 import numpy as np
 import sys
 import depthai
-
+import csv
 print('Using depthai module from: ', depthai.__file__)
 print('Depthai version installed: ', depthai.__version__)
 
@@ -50,6 +50,34 @@ class DepthAI:
 
     def stopLoop(self):
         self.runThread = False
+
+    def error_check(self, test_mode):
+        error_exists = False
+        if not self.device.is_usb3():
+            fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
+            error_exists = True
+            cv2.imshow('usb 3 failed', fail_usb_img)
+            cv2.waitKey(33)
+        # else:
+        #     try:
+        #         if cv2.getWindowProperty('usb 3 failed', 0) >= 0: 
+        #             cv2.destroyWindow('usb 3 failed')  
+        #             cv2.waitKey(1)
+        #     except:
+        #         pass
+        if not self.device.is_rgb_connected() :
+            rgb_camera_failed_img = cv2.imread(consts.resource_paths.rgb_camera_not_found, cv2.IMREAD_COLOR)
+            error_exists = True
+            cv2.imshow('rgb camera failed', rgb_camera_failed_img)
+            cv2.waitKey(33)
+        if not '1093' in test_mode and not (self.device.is_left_connected() and self.device.is_right_connected()):
+            mono_camera_failed_img = cv2.imread(consts.resource_paths.mono_camera_not_found, cv2.IMREAD_COLOR)
+            error_exists = True
+            cv2.imshow('stereo camera failed', mono_camera_failed_img)
+            cv2.waitKey(33)
+
+        return error_exists
+
 
     def startLoop(self):
         cliArgs = CliArgs()
@@ -90,7 +118,7 @@ class DepthAI:
             self.device = depthai.Device(args['device_id'], usb2_mode)
 
         print(stream_names)
-        print('Available streams: ' + str(self.device.get_available_streams()))
+        print('Available streams---->: ' + str(self.device.get_available_streams()))
 
         # print(self.device.is_usb3())
         
@@ -201,6 +229,13 @@ class DepthAI:
         preview_window_set = False
         
         if args['verbose']: print_packet_info_header()
+        log_file = "logs.csv"
+        if not os.path.exists(log_file):
+            with open(log_file, mode='w') as log_fopen:
+                header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'rgb_camera', 'left_camera', 'right_camera', 'IMU', 'manual_id']
+                log_csv_writer = csv.writer(log_fopen, delimiter=',')
+                log_csv_writer.writerow(header)
+
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
@@ -213,8 +248,6 @@ class DepthAI:
             #     ops = 0
             #     prevTime = time()
 
-            ## TODO(sachin): Use mx_id to detect change in device
-
             packets_len = len(self.nnet_packets) + len(self.data_packets)
             # print(packets_len)
             if packets_len != 0:
@@ -225,48 +258,47 @@ class DepthAI:
                 if cur_time > wd_cutoff:
                     print("process watchdog timeout")
                     os._exit(10)
-                # elif cur_time > wd_cutoff - 10:
-                #     # print("waiting")
-                #     if left_window_set:
-                #         # cv2.destroyAllWindows()
-                        
-                #         if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
-                #         cv2.waitKey(1)
-                #         if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
-                #         cv2.waitKey(1)
-                #         if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
-                #         cv2.waitKey(1)
-                #         if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
-                #         cv2.waitKey(1)
-                #     left_window_set = False
-                #     right_window_set = False
-                #     jpeg_window_set = 0
-                #     preview_window_set = False
 
-                #     continue
-            
+            if self.device.is_device_changed():
+                # ['time', 'test_type', 'Mx_serial_id', 'USB_3_connection', 'rgb_camera', 'left_camera', 'right_camera', 'IMU', 'manual_id']
+                time_stmp = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
+                available_streams = self.device.get_available_streams()
+                print(self.device.get_available_streams())
+                if 'depth' in stream_names:
+                    test_type = '1099_test'
+                elif 'left' in stream_names and 'right' in stream_names:
+                    test_type = '1098_OBC_test'
+                else:
+                    test_type = '1093_test'
 
-            if(self.device.is_device_changed()):
-                # if left_window_set:
-                    # cv2.destroyAllWindows()
-                    # try:
-                    #     if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
-                    #     cv2.waitKey(1)
-                    #     if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
-                    #     cv2.waitKey(1)
-                    #     if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
-                    #     cv2.waitKey(1)
-                    #     if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
-                    #     cv2.waitKey(1)
-                    # except :
-                    #     print("cathing and moving")
-                try:
-                    if cv2.getWindowProperty('usb 3 failed', 0) >= 0: 
-                        cv2.destroyWindow('usb 3 failed')  
-                        cv2.waitKey(5)
-                        sleep(3)
-                except:
-                    pass
+                mx_serial_id = self.device.get_mx_id()
+                usb_3_connection = str(self.device.is_usb3())
+
+                if '1093' in test_type:
+                    left_camera_connected = '-'
+                    right_camera_connected = '-'
+                else:
+                    left_camera_connected = str(self.device.is_left_connected())
+                    right_camera_connected = str(self.device.is_right_connected())
+
+                rgb_camera_connected = str(self.device.is_rgb_connected())
+                IMU = '-'
+
+                log_list = [time_stmp, test_type, mx_serial_id, usb_3_connection, rgb_camera_connected, left_camera_connected, right_camera_connected, IMU, '--']
+                with open(log_file, mode='a') as log_fopen:
+                    # header = 
+                    log_csv_writer = csv.writer(log_fopen, delimiter=',')
+                    log_csv_writer.writerow(log_list)
+
+                error_window_names = ['usb 3 failed', 'rgb camera failed', 'stereo camera failed']
+                for view_name in error_window_names:
+                    try:
+                        if cv2.getWindowProperty(view_name, 0) >= 0: 
+                            cv2.destroyWindow(view_name)  
+                            cv2.waitKey(1)
+                    except:
+                        pass
+                sleep(3)
 
                 left_window_set = False
                 right_window_set = False
@@ -276,33 +308,51 @@ class DepthAI:
                 print(self.device.is_device_changed())
                 self.device.reset_device_changed()
                 print(self.device.is_device_changed())
+                print("Is rgb conencted ?")
+                print(self.device.is_rgb_connected())
+                print("Is right conencted ?")
+                print(self.device.is_right_connected())
+                print("Is left conencted ?")
+                print(self.device.is_left_connected())
+                
 
-
-
-            if not self.device.is_usb3():
-                fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
-                # while True:
-                cv2.imshow('usb 3 failed', fail_usb_img)
-                cv2.waitKey(33)
-                try:
-                    if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
-                    cv2.waitKey(1)
-                    if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
-                    cv2.waitKey(1)
-                    if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
-                    cv2.waitKey(1)
-                    if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
-                    cv2.waitKey(1)
-                except :
-                    pass
+            if self.error_check(test_type):
+                available_streams = self.device.get_available_streams()
+                for view_name in available_streams:
+                    if 'previewout' in view_name:
+                        view_name = view_name + '-rgb' 
+                    try:
+                        if cv2.getWindowProperty(view_name, 0) >= 0: 
+                            cv2.destroyWindow(view_name)  
+                            cv2.waitKey(1)
+                    except :
+                        pass
                 continue
-            else:
-                try:
-                    if cv2.getWindowProperty('usb 3 failed', 0) >= 0: 
-                        cv2.destroyWindow('usb 3 failed')  
-                        cv2.waitKey(1)
-                except:
-                    pass
+
+            # if not self.device.is_usb3():
+            #     fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
+            #     # while True:
+            #     cv2.imshow('usb 3 failed', fail_usb_img)
+            #     cv2.waitKey(33)
+            #     try:
+            #         if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
+            #         cv2.waitKey(1)
+            #         if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
+            #         cv2.waitKey(1)
+            #         if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
+            #         cv2.waitKey(1)
+            #         if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
+            #         cv2.waitKey(1)
+            #     except :
+            #         pass
+            #     continue
+            # else:
+            #     try:
+            #         if cv2.getWindowProperty('usb 3 failed', 0) >= 0: 
+            #             cv2.destroyWindow('usb 3 failed')  
+            #             cv2.waitKey(1)
+            #     except:
+            #         pass
 
             
 
