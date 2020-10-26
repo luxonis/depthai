@@ -2,24 +2,19 @@ from math import exp as exp
 import cv2
 import numpy as np
 from time import time
-
-# Adjust these thresholds
-detection_threshold = 0.60
-IOU_THRESHOLD = 0.4
+import json
+import depthai
 
 class YoloParams:
     # ------------------------------------------- Extracting layer parameters ------------------------------------------
-    def __init__(self, side):
+    def __init__(self, side, mask, coords, classes, anchors):
         self.num = 3 
-        self.coords = 4 
-        self.classes = 3
-        self.anchors = [10,14, 23,27, 37,58, 81,82, 135,169, 344,319]
+        self.coords = coords 
+        self.classes = classes
+        self.anchors = anchors
 
-        if side ==26:
-            mask=[0,1,2]
-            self.num = len(mask)
-        else:
-            mask=[3,4,5]
+        self.num = len(mask)
+
         maskedAnchors = []
         for idx in mask:
             maskedAnchors += [self.anchors[idx * 2], self.anchors[idx * 2 + 1]]
@@ -117,54 +112,91 @@ def intersection_over_union(box_1, box_2):
 
 
 def decode_tiny_yolo(nnet_packet, **kwargs):
-    raw_detections = nnet_packet.get_tensor("out")
-    raw_detections.dtype = np.float16
-    NN_outputs = nnet_packet.entries()[0]
-    output_shapes = [(1, 24, 26, 26), (1, 24, 13, 13)]
+    NN_metadata = kwargs['NN_json']
+    output_format = NN_metadata['NN_config']['output_format']
 
-    NN_output_list = []
+    in_layers = nnet_packet.getInputLayersInfo()
+    # print(in_layers)
+    input_width  = in_layers[0].get_dimension(depthai.TensorInfo.Dimension.W)
+    input_height = in_layers[0].get_dimension(depthai.TensorInfo.Dimension.H)
 
-    prev_offset = 0
-    for i in range(len(nnet_packet.entries()[0])):  #outblob
-        n_size = len(NN_outputs[i])
-        output = raw_detections[prev_offset:prev_offset+n_size]
-        output = np.reshape(output, output_shapes[i])
-        NN_output_list.append(output)
-        prev_offset += n_size
-  
-    #render_time = 0
-    #parsing_time = 0
+    if output_format == "detection":
+        detections = nnet_packet.getDetectedObjects()
+        objects = list()
+        # detection_nr = detections.size
+        # for i in range(detection_nr):
+        #     detection =detections[i]
+        for detection in detections:
+            confidence = detection.confidence
+            class_id = detection.label
+            xmin = int(detection.x_min * input_width)
+            xmax = int(detection.x_max * input_width)
+            ymin = int(detection.y_min * input_height)
+            ymax = int(detection.y_max * input_height)
+            depth_x = detection.depth_x
+            depth_y = detection.depth_y
+            depth_z = detection.depth_z
+            scaled_object = dict(xmin=xmin, xmax=xmax, ymin=ymin, ymax=ymax, class_id=class_id, confidence=confidence, depth_x=depth_x, depth_y=depth_y, depth_z=depth_z)
+            objects.append(scaled_object)
 
-    # ----------------------------------------------- 6. Doing inference -----------------------------------------------
-    #log.info("Starting inference...")
+        return objects
+    else:
+        
+        output_list = nnet_packet.getOutputsList()
 
-    objects = list()
-    resized_image_shape =[416,416]
-    original_image_shape =[416,416]
-    threshold = 0.5
-    iou_threshold=0.5
+        objects = list()
+        resized_image_shape =[input_width,input_height]
+        original_image_shape =[input_width,input_height]
+        iou_threshold = NN_metadata['NN_config']['NN_specific_metadata']['iou_threshold']
 
 
-    start_time = time()
-    for out_blob in NN_output_list:
-
-        l_params = YoloParams(out_blob.shape[2])
-        objects += parse_yolo_region(out_blob,  resized_image_shape,
-                                             original_image_shape, l_params,
-                                             threshold)
-        parsing_time = time() - start_time
+        start_time = time()
+        for out_blob in output_list:
+            side = out_blob.shape[2]
+            side_str = 'side' + str(side)
+            mask = NN_metadata['NN_config']['NN_specific_metadata']['anchor_masks'][side_str]
+            coords = NN_metadata['NN_config']['NN_specific_metadata']['coordinates']
+            classes = NN_metadata['NN_config']['NN_specific_metadata']['classes']
+            anchors = NN_metadata['NN_config']['NN_specific_metadata']['anchors']
+            detection_threshold = NN_metadata['NN_config']['NN_specific_metadata']['confidence_threshold']
+            
+            l_params = YoloParams(side, mask, coords, classes, anchors)
+            objects += parse_yolo_region(out_blob,  resized_image_shape,
+                                                original_image_shape, l_params,
+                                                detection_threshold)
+            parsing_time = time() - start_time
 
         # Filtering overlapping boxes with respect to the --iou_threshold CLI parameter
-    objects = sorted(objects, key=lambda obj : obj['confidence'], reverse=True)
-    for i in range(len(objects)):
-        if objects[i]['confidence'] == 0:
-            continue
-        for j in range(i + 1, len(objects)):
-            if intersection_over_union(objects[i], objects[j]) > iou_threshold:
-                    objects[j]['confidence'] = 0
-   
-    filtered_objects=objects
-    return filtered_objects
+        objects = sorted(objects, key=lambda obj : obj['confidence'], reverse=True)
+        for i in range(len(objects)):
+            if objects[i]['confidence'] == 0:
+                continue
+            for j in range(i + 1, len(objects)):
+                if intersection_over_union(objects[i], objects[j]) > iou_threshold:
+                        objects[j]['confidence'] = 0
+        
+        objects = [obj for obj in objects if obj['confidence'] >= detection_threshold]
+
+        return objects
+
+def decode_tiny_yolo_json(nnet_packet, **kwargs):
+    convertList = []
+
+    filtered_objects = decode_tiny_yolo(nnet_packet, **kwargs)
+    for entry in filtered_objects:
+        jsonConvertDict = {}
+        jsonConvertDict["xmin"] = entry["xmin"]
+        jsonConvertDict["ymin"] = entry["ymin"]
+        jsonConvertDict["xmax"] = entry["xmax"]
+        jsonConvertDict["ymax"] = entry["ymax"]
+        if type(entry["confidence"]) is np.float16:
+            jsonConvertDict["confidence"] = entry["confidence"].item()
+        else:
+            jsonConvertDict["confidence"] = entry["confidence"]
+        jsonConvertDict["class_id"] = entry["class_id"]
+        convertList.append(jsonConvertDict)
+
+    return json.dumps(convertList)
 
 BOX_COLOR = (0,255,0)
 LABEL_BG_COLOR = (70, 120, 70) # greyish green background for text
@@ -172,21 +204,30 @@ TEXT_COLOR = (255, 255, 255)   # white text
 TEXT_FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 def show_tiny_yolo(filtered_objects, frame, **kwargs):
-    labels = kwargs['labels']
-    filtered_objects = [obj for obj in filtered_objects if obj['confidence'] >= detection_threshold]
-    for object_index in range(len(filtered_objects)):
+    NN_metadata = kwargs['NN_json']
+    labels = NN_metadata['mappings']['labels']
+    config = kwargs['config']
+
+    for detection in filtered_objects:
         
         # get all values from the filtered object list
-        xmin = filtered_objects[object_index]['xmin']
-        ymin = filtered_objects[object_index]['ymin']
-        xmax = filtered_objects[object_index]['xmax']
-        ymax = filtered_objects[object_index]['ymax']
-        confidence = filtered_objects[object_index]['confidence']
-        class_id = filtered_objects[object_index]['class_id']
+        xmin = detection['xmin']
+        ymin = detection['ymin']
+        xmax = detection['xmax']
+        ymax = detection['ymax']
+        confidence = detection['confidence']
+        class_id = detection['class_id']
        
-            # Set up the text for display
+        # Set up the text for display
         cv2.rectangle(frame,(xmin, ymin), (xmax, ymin+20), LABEL_BG_COLOR, -1)
         cv2.putText(frame, labels[class_id] + ': %.2f' % confidence, (xmin+5, ymin+15), TEXT_FONT, 0.5, TEXT_COLOR, 1)
-            # Set up the bounding box
+        # Set up the bounding box
         cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), BOX_COLOR, 1)
+        if config['ai']['calc_dist_to_bb']:
+            depth_x = detection['depth_x']
+            depth_y = detection['depth_y']
+            depth_z = detection['depth_z']
+            cv2.putText(frame, 'x:' '{:7.3f}'.format(depth_x) + ' m', (xmin, ymin+60),  TEXT_FONT, 0.5, TEXT_COLOR)
+            cv2.putText(frame, 'y:' '{:7.3f}'.format(depth_y) + ' m', (xmin, ymin+80),  TEXT_FONT, 0.5, TEXT_COLOR)
+            cv2.putText(frame, 'z:' '{:7.3f}'.format(depth_z) + ' m', (xmin, ymin+100), TEXT_FONT, 0.5, TEXT_COLOR)
     return frame

@@ -15,6 +15,9 @@ from pathlib import Path
 import shutil
 import consts.resource_paths
 import json
+from depthai_helpers.config_manager import BlobManager
+from depthai_helpers.version_check import check_depthai_version
+check_depthai_version()
 
 use_cv = True
 try:
@@ -126,6 +129,16 @@ class Main:
 
     def __init__(self):
         self.args = vars(parse_args())
+        blob_man_args = {
+                        'cnn_model':'mobilenet-ssd',
+                        'cnn_model2':'',
+                        'model_compilation_target':'auto'
+                    }
+        shaves = 7
+        cmx_slices = 7
+        NN_engines = 1
+        blobMan = BlobManager(blob_man_args, True , shaves, cmx_slices,NN_engines)
+
         self.config = {
             'streams':
                 ['left', 'right'] if not on_embedded else
@@ -137,11 +150,11 @@ class Main:
                 },
             'ai':
                 {
-                    'blob_file': consts.resource_paths.blob_fpath,
-                    'blob_file_config': consts.resource_paths.blob_config_fpath,
-                    'shaves' : 7,
-                    'cmx_slices' : 7,
-                    'NN_engines' : 1,
+                    'blob_file': blobMan.blob_file,
+                    'blob_file_config': blobMan.blob_file_config,
+                    'shaves' : shaves,
+                    'cmx_slices' : cmx_slices,
+                    'NN_engines' : NN_engines,
                 },
             'board_config':
                 {
@@ -156,7 +169,7 @@ class Main:
                     'mono':
                     {
                         # 1280x720, 1280x800, 640x400 (binning enabled)
-                        'resolution_h': 720,
+                        'resolution_h': 800,
                         'fps': 30.0,
                     },
                 },
