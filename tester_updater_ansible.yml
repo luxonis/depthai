@@ -1,0 +1,16 @@
+---
+- name: tester updater
+  hosts: tester
+  remote_user: pi
+  gather_facts: false
+  tasks:
+    - name: pull from git
+      git:
+        repo: git@gitee.com:Luxonis-Brian/depthai.git
+        dest: ~/depthai
+        update: yes
+        version: new-test-tools-develop-wip
+    - name: Install specified python requirements and custom Index URL
+      pip:
+        requirements: ~/depthai/requirements.txt
+        executable: pip3
