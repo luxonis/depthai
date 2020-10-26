@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-#process watchdog, used to recover depthai.py 
-#on any userspace error in depthai.py (segfault for example)
+#process watchdog, used to recover depthai-demo.py 
+#on any userspace error in depthai-demo.py (segfault for example)
 import os
 import signal
 import subprocess
@@ -36,7 +36,7 @@ run = True
 
 
 while(run):
-    p = subprocess.Popen(cmd, shell=True, preexec_fn=os.setsid) 
+    p = subprocess.Popen(cmd, shell=True) 
     p.wait()
     return_code = p.returncode
     p=None
