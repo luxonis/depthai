@@ -16,6 +16,10 @@ print('Using depthai module from: ', depthai.__file__)
 print('Depthai version installed: ', depthai.__version__)
 
 from depthai_helpers.version_check import check_depthai_version
+from depthai_helpers.pygame_checkbox import Checkbox, pygame_render_text
+import pygame
+from pygame.locals import *
+
 check_depthai_version()
 
 import consts.resource_paths
@@ -27,10 +31,14 @@ from depthai_helpers.arg_manager import CliArgs
 
 is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
 
-
 from depthai_helpers.object_tracker_handler import show_tracklets
 
 global args, cnn_model2
+white  = [255, 255, 255]
+orange = [143, 122, 4]
+red    = [230, 9, 9]
+green  = [4, 143, 7]
+black  = [0, 0, 0]
 
 class DepthAI:
     global is_rpi
@@ -227,7 +235,65 @@ class DepthAI:
         right_window_set = False
         jpeg_window_set = 0
         preview_window_set = False
-        
+
+        # pygame init and rendering
+        pygame.init()
+        screen = pygame.display.set_mode((800, 600))
+        screen.fill(white)
+        pygame.display.set_caption("UNIT TESTING")
+
+        title = "UNIT TEST IN PROGRESS"
+        pygame_render_text(screen, title, (200,20), orange, 50)
+
+        heading = "Automated Tests                  Operator Tests"
+        pygame_render_text(screen, heading, (250,70), black, 30)
+
+        auto_checkbox_names = ["USB3", "Left camera connected", "Right camera connected", 
+                               "RGB camera connected", "JPEG Encoding", "Previewout-rgb stream",
+                               "Left Stream", "Right Stream"]
+        op_checkbox_names = ["JPEG Encoding", "Previewout-rgb stream", "Left Stream", "Right Stream"]
+
+        y = 110
+        x = 200
+
+        font = pygame.font.Font(None, 20)
+        auto_checkbox_dict = {}
+        for i in range(len(auto_checkbox_names)):
+            w, h = font.size(auto_checkbox_names[i])
+            x_axis = x - w
+            y_axis = y +  (40*i)
+            font_surf = font.render(auto_checkbox_names[i], True, green)
+            screen.blit(font_surf, (x_axis,y_axis))
+            auto_checkbox_dict[auto_checkbox_names[i]] = Checkbox(screen, x + 10, y_axis-5, outline_color=green, 
+                                                        check_color=green, check=True)
+
+        y = 250
+        x = 550
+        heading = "PASS"
+        pygame_render_text(screen, heading, (x, y - 30), green, 30)
+        heading = "Not"
+        pygame_render_text(screen, heading, (x + 70, y - 50), orange, 30)
+
+        heading = "Tested"
+        pygame_render_text(screen, heading, (x + 60, y - 30), orange, 30)
+        heading = "FAIL"
+        pygame_render_text(screen, heading, (x + 150, y - 30), red, 30)
+
+        op_checkbox_dict = {}
+
+        for i in range(len(op_checkbox_names)):
+            w, h = font.size(op_checkbox_names[i])
+            x_axis = x - w
+            y_axis = y +  (40*i)
+            font_surf = font.render(op_checkbox_names[i], True, orange)
+            screen.blit(font_surf, (x_axis,y_axis))
+            checker_list = [Checkbox(screen, x + 10, y_axis-5, outline_color=green, check_color=green, disable_pass = True), 
+                            Checkbox(screen, x + 80, y_axis-5, outline_color=orange, check_color=orange, disable_pass = True, check=True),
+                            Checkbox(screen, x + (80*2), y_axis-5, outline_color=red, check_color=red, disable_pass = True)]
+            op_checkbox_dict[op_checkbox_names[i]] = checker_list
+
+        # <-------------------------------- initialized pygame ------------------------------------>
+
         if args['verbose']: print_packet_info_header()
         log_file = "logs.csv"
         if not os.path.exists(log_file):
@@ -300,6 +366,26 @@ class DepthAI:
                         pass
                 sleep(3)
 
+                if self.device.is_usb3():
+                    auto_checkbox_dict[auto_checkbox_names[0]].check()
+                else:
+                    auto_checkbox_dict[auto_checkbox_names[0]].uncheck()
+
+                if self.device.is_left_connected():
+                    auto_checkbox_dict[auto_checkbox_names[1]].check()
+                else:
+                    auto_checkbox_dict[auto_checkbox_names[1]].uncheck()
+
+                if self.device.is_right_connected():
+                    auto_checkbox_dict[auto_checkbox_names[2]].check()
+                else:
+                    auto_checkbox_dict[auto_checkbox_names[2]].uncheck()
+
+                if self.device.is_rgb_connected():
+                    auto_checkbox_dict[auto_checkbox_names[3]].check()
+                else:
+                    auto_checkbox_dict[auto_checkbox_names[3]].uncheck()
+
                 left_window_set = False
                 right_window_set = False
                 jpeg_window_set = 0
@@ -316,19 +402,43 @@ class DepthAI:
                 print(self.device.is_left_connected())
                 
 
-            if self.error_check(test_type):
-                available_streams = self.device.get_available_streams()
-                for view_name in available_streams:
-                    if 'previewout' in view_name:
-                        view_name = view_name + '-rgb' 
-                    try:
-                        if cv2.getWindowProperty(view_name, 0) >= 0: 
-                            cv2.destroyWindow(view_name)  
-                            cv2.waitKey(1)
-                    except :
-                        pass
-                continue
-
+            # if self.error_check(test_type):
+            #     available_streams = self.device.get_available_streams()
+            #     for view_name in available_streams:
+            #         if 'previewout' in view_name:
+            #             view_name = view_name + '-rgb' 
+            #         try:
+            #             if cv2.getWindowProperty(view_name, 0) >= 0: 
+            #                 cv2.destroyWindow(view_name)  
+            #                 cv2.waitKey(1)
+            #         except :
+            #             pass
+                # continue
+            
+            for event in pygame.event.get():
+                # keys = pygame.key.get_pressed()
+                # if event.type == QUIT:
+                    # pygame.quit()
+                    # sys.exit()
+                # for i in range(len(auto_checkbox_names)):
+                #     auto_checkbox_dict[auto_checkbox_names[i]].update_checkbox(event)
+                for i in range(len(op_checkbox_names)):
+                    ob1 = op_checkbox_dict[op_checkbox_names[i]][0]
+                    ob2 = op_checkbox_dict[op_checkbox_names[i]][1]
+                    ob3 = op_checkbox_dict[op_checkbox_names[i]][2]
+                    ob1.update_checkbox_rel(event, ob2, ob3)
+                    ob2.update_checkbox_rel(event, ob1, ob3)
+                    ob3.update_checkbox_rel(event, ob1, ob2) 
+            
+            for i in range(len(auto_checkbox_names)):
+                auto_checkbox_dict[auto_checkbox_names[i]].render_checkbox()
+    
+            for i in range(len(op_checkbox_names)):
+                op_checkbox_dict[op_checkbox_names[i]][0].render_checkbox()
+                op_checkbox_dict[op_checkbox_names[i]][1].render_checkbox()
+                op_checkbox_dict[op_checkbox_names[i]][2].render_checkbox()
+            
+            pygame.display.update()
             # if not self.device.is_usb3():
             #     fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
             #     # while True:
