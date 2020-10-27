@@ -515,6 +515,14 @@ class DepthAI:
                         ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                         ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                         ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
+                    print('Camera: last frame tstamp: {:.6f}'.format(dict_['camera']['last_frame_timestamp']),
+                        'frame count rgb:', dict_['camera']['rgb']['frame_count'],
+                        'left:', dict_['camera']['left']['frame_count'],
+                        'right:', dict_['camera']['right']['frame_count'])
+                    # Also printed from lib/c++ side
+                    if 0 and 'logs' in dict_:
+                        for log in dict_['logs']:
+                            print('Device log:', log)
                 elif packet.stream_name == 'object_tracker':
                     tracklets = packet.getObjectTracker()
 
