@@ -215,6 +215,21 @@ class DepthAI:
             #     ops = 0
             #     prevTime = time()
 
+
+            if self.device.is_device_changed():
+                try:
+                    if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
+                    cv2.waitKey(1)
+                    if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
+                    cv2.waitKey(1)
+                    if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
+                    cv2.waitKey(1)
+                    if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
+                    cv2.waitKey(1)
+                except :
+                    pass
+                self.device.reset_device_changed()
+
             if not self.device.is_usb3():
                 fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
                 # while True:
