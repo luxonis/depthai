@@ -205,11 +205,11 @@ class Main:
             if not self.device.is_usb3():
                 fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
                 while True:
-                    cv2.imshow('Calibration test Passed and wrote to EEPROM', fail_usb_img)
+                    cv2.imshow('Connection over usb 3 failed', fail_usb_img)
                     k = cv2.waitKey(33)
-                    if k == 32 or k == 27:  # Esc key to stop
-                        break
-                    elif k == -1:  # normally -1 returned,so don't print it
+                    if k != -1:  # Esc key to stop
+                        raise ValueError('Couldn\'t connect over USB3')
+                    else:  # normally -1 returned,so don't print it
                         continue
             pipeline = self.device.create_pipeline(self.config)
         except RuntimeError:
