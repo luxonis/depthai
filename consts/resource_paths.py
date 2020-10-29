@@ -1,5 +1,3 @@
-import os
-from os import path
 from pathlib import Path
 
 
@@ -15,8 +13,8 @@ device_cmd_fpath      = relative_to_abs_path('../depthai.cmd')
 device_usb2_cmd_fpath = relative_to_abs_path('../depthai_usb2.cmd')
 boards_dir_path       = relative_to_abs_path('../resources/boards') + "/"
 custom_calib_fpath    = relative_to_abs_path('../resources/depthai.calib')
-left_mesh_fpath        = relative_to_abs_path('../resources/mesh_left.calib')
-right_mesh_fpath        = relative_to_abs_path('../resources/mesh_right.calib')
+left_mesh_fpath       = relative_to_abs_path('../resources/mesh_left.calib')
+right_mesh_fpath      = relative_to_abs_path('../resources/mesh_right.calib')
 
 nn_resource_path      = relative_to_abs_path('../resources/nn')+"/"
 blob_fpath            = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.blob')
@@ -27,6 +25,7 @@ calib_fail_path       = relative_to_abs_path('../resources/images/calib_fail.PNG
 pass_path             = relative_to_abs_path('../resources/images/pass.PNG')
 usb_3_failed          = relative_to_abs_path('../resources/images/usb_3_Failed.PNG')
 requirements_path     = relative_to_abs_path('../requirements.txt')
+
 
 if custom_calib_fpath is not None and Path(custom_calib_fpath).exists():
     calib_fpath = custom_calib_fpath

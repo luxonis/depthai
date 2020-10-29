@@ -31,6 +31,7 @@ MANIFEST
 *.idea
 # DepthAI-Specific
 dataset/
+.fw_cache/
 depthai.calib
 mesh_left.calib
 mesh_right.calib
@@ -41,7 +42,7 @@ intrinsic_calib_m2
 *.h265
 *.mkv
 *.mp4
-*.blob.sh*cmx*
+*.blob*
 *.cmd
 *.mvcmd
 *.so

@@ -17,6 +17,7 @@ def _get_immediate_subdirectories(a_dir):
 _stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth", "disparity", "disparity_color",
                    "meta_d2h", "object_tracker", "rectified_left", "rectified_right", "color")
 _CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
+_CNN2_choices = ['landmarks-regression-retail-0009', 'facial-landmarks-35-adas-0002', 'emotions-recognition-retail-0003']
 
 def _stream_type(option):
     max_fps = None
@@ -83,8 +84,12 @@ class CliArgs:
         parser.add_argument("-cmx", "--cmx_slices", default=None, type=int, choices=range(1,15), metavar="[1-14]",
                             help="Number of cmx slices used by NN.")
 
-        parser.add_argument("-nce", "--NN_engines", default=None, type=int, choices=range(0,3), metavar="[0-2]",
+        parser.add_argument("-nce", "--NN_engines", default=None, type=int, choices=[1, 2], metavar="[1-2]",
                             help="Number of NN_engines used by NN.")
+
+        parser.add_argument("-mct", "--model-compilation-target", default="auto",
+                            type=str, required=False, choices=["auto","local","cloud"],
+                            help="Compile model lcoally or in cloud?")
 
         parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],
                             help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
@@ -145,7 +150,7 @@ class CliArgs:
         parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=_CNN_choices,
                             help="Cnn model to run on DepthAI")
         
-        parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=_CNN_choices,
+        parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=_CNN2_choices,
                             help="Cnn model to run on DepthAI for second-stage inference")
         
         parser.add_argument('-cam', "--cnn_camera", default='rgb',
@@ -163,6 +168,16 @@ class CliArgs:
 
         parser.add_argument("-sync", "--sync-video-meta", default=False, action="store_true",
                             help="Synchronize 'previewout' and 'metaout' streams")
+
+        parser.add_argument("-seq", "--sync-sequence-numbers", default=False, action="store_true",
+                            help="Synchronize sequence numbers for all packets. Experimental")
+
+        parser.add_argument("-u", "--usb-chunk-KiB", default=64, type=int,
+                            help="USB transfer chunk on device. Higher (up to megabytes) "
+                            "may improve throughput, or 0 to disable chunking. Default: %(default)s")
+
+        parser.add_argument("-fw", "--firmware", default=None, type=str,
+                            help="Commit hash for custom FW, downloaded from Artifactory")
 
         parser.add_argument("-vv", "--verbose", default=False, action="store_true",
                         help="Verbose, print info about received packets.")

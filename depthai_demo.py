@@ -21,7 +21,6 @@ check_depthai_version()
 import consts.resource_paths
 from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, PrintColors
-from depthai_helpers.model_downloader import download_model
 
 from depthai_helpers.config_manager import DepthConfigManager
 from depthai_helpers.arg_manager import CliArgs
@@ -137,14 +136,17 @@ class DepthAI:
         self.reset_process_wd()
 
         time_start = time()
+        def print_packet_info_header():
+            print('[hostTimestamp streamName] devTstamp seq camSrc width height Bpp')
         def print_packet_info(packet, stream_name):
             meta = packet.getMetadata()
             print("[{:.6f} {:15s}]".format(time()-time_start, stream_name), end='')
             if meta is not None:
                 source = meta.getCameraName()
                 if stream_name.startswith('disparity') or stream_name.startswith('depth'):
-                    source += ' (rectified)'
+                    source += '(rectif)'
                 print(" {:.6f}".format(meta.getTimestamp()), meta.getSequenceNum(), source, end='')
+                print('', meta.getFrameWidth(), meta.getFrameHeight(), meta.getFrameBytesPP(), end='')
             print()
             return
 
@@ -190,16 +192,17 @@ class DepthAI:
         prevTime = time()
 
         # print(self.device.is_usb3())
-        if not self.device.is_usb3():
-            fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
-            while True:
-                cv2.imshow('Calibration test Passed and wrote to EEPROM', fail_usb_img)
-                k = cv2.waitKey(33)
-                if k == 32 or k == 27:  # Esc key to stop
-                    break
-                elif k == -1:  # normally -1 returned,so don't print it
-                    continue
+        # if not self.device.is_usb3():
+        #     fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
+        #     while True:
+        #         cv2.imshow('Calibration test Passed and wrote to EEPROM', fail_usb_img)
+        #         k = cv2.waitKey(33)
+        #         if k == 32 or k == 27:  # Esc key to stop
+        #             break
+        #         elif k == -1:  # normally -1 returned,so don't print it
+        #             continue
 
+        if args['verbose']: print_packet_info_header()
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
@@ -212,6 +215,20 @@ class DepthAI:
             #     ops = 0
             #     prevTime = time()
 
+            if not self.device.is_usb3():
+                fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
+                # while True:
+                h, w, _ = fail_usb_img.shape
+                fail_usb_img = cv2.resize(fail_usb_img, (int(w*0.7), int(h*0.7)), interpolation = cv2.INTER_AREA)
+                cv2.imshow('USB 3 connection failed', fail_usb_img)
+                # k = cv2.waitKey(33)
+            else:
+                    try:
+                        if cv2.getWindowProperty('USB 3 connection failed', 0) >= 0: 
+                            cv2.destroyWindow('USB 3 connection failed')  
+                            cv2.waitKey(1)
+                    except:
+                        pass
             packets_len = len(self.nnet_packets) + len(self.data_packets)
             if packets_len != 0:
                 self.reset_process_wd()

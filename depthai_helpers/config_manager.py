@@ -4,19 +4,21 @@ import platform
 import subprocess
 from pathlib import Path
 import consts.resource_paths
+import urllib.request
 
 from depthai_helpers import utils
-from depthai_helpers.model_downloader import download_model
+from model_compiler.model_compiler import download_and_compile_NN_model
+from consts.resource_paths import nn_resource_path as model_zoo_folder
 from depthai_helpers.cli_utils import cli_print, PrintColors
 
 class DepthConfigManager:
     labels = ""
     NN_config = None
+    custom_fw_commit = ''
 
     def __init__(self, args):
         self.args = args
         self.stream_list = args['streams']
-        self.compile_model = self.args['shaves'] is not None or self.args['cmx_slices'] is not None or self.args['NN_engines']
         self.calc_dist_to_bb = not self.args['disable_depth']
 
         # Prepare handler methods (decode_nn, show_nn) for the network we want to run.
@@ -39,12 +41,42 @@ class DepthConfigManager:
         else:
             return 1.0
 
+    def getCustomFirmwarePath(self, commit):
+        fwdir = '.fw_cache/'
+        if not os.path.exists(fwdir):
+            os.mkdir(fwdir)
+        fw_variant = ''
+        if self.getUsb2Mode():
+            fw_variant = 'usb2-'
+        fname = 'depthai-' + fw_variant + commit + '.cmd'
+        path = fwdir + fname
+        if not Path(path).exists():
+            url = 'https://artifacts.luxonis.com/artifactory/luxonis-myriad-snapshot-local/depthai-device-side/'
+            url += commit + '/' + fname
+            print('Downloading custom FW:', url)
+            # Need this to avoid "HTTP Error 403: Forbidden"
+            class CustomURLopener(urllib.request.FancyURLopener):
+                version = "Mozilla/5.0"
+                # FancyURLopener doesn't report by default errors like 404
+                def http_error_default(self, url, fp, errcode, errmsg, headers):
+                    raise ValueError(errcode)
+            url_opener = CustomURLopener()
+            with url_opener.open(url) as response, open(path, 'wb') as outf:
+                outf.write(response.read())
+        return path
+
     def getCommandFile(self):
         debug_mode = False
         cmd_file = ''
+        if self.args['firmware'] != None:
+            self.custom_fw_commit = self.args['firmware']
         if self.args['dev_debug'] == None:
-            # Debug -debug flag NOT present,
-            debug_mode = False
+            # Debug -debug flag NOT present, check first for custom firmware
+            if self.custom_fw_commit == '':
+                debug_mode = False
+            else:
+                debug_mode = True
+                cmd_file = self.getCustomFirmwarePath(self.custom_fw_commit)
         elif self.args['dev_debug'] == '':
             # If just -debug flag is present -> cmd_file = '' (wait for device to be connected beforehand)
             debug_mode = True
@@ -81,7 +113,6 @@ class DepthConfigManager:
             self.decode_nn=decode_tiny_yolo
             self.show_nn=show_tiny_yolo
             self.decode_nn_json=decode_tiny_yolo_json
-            self.compile_model=False
 
         if self.args['cnn_model'] in ['facial-landmarks-35-adas-0002', 'landmarks-regression-retail-0009']:
             from depthai_helpers.landmarks_recognition_handler import decode_landmarks_recognition, show_landmarks_recognition, decode_landmarks_recognition_json
@@ -90,19 +121,22 @@ class DepthConfigManager:
             self.decode_nn_json=decode_landmarks_recognition_json
             self.calc_dist_to_bb=False
 
+        # backward compatibility
         if self.args['cnn_model'] == 'openpose':
+            self.args['cnn_model'] = 'human-pose-estimation-0001'
+        if self.args['cnn_model'] == 'human-pose-estimation-0001':
             from depthai_helpers.openpose_handler import decode_openpose, show_openpose
             self.decode_nn=decode_openpose
             self.show_nn=show_openpose
             self.calc_dist_to_bb=False
-            self.compile_model=False
             
         if self.args['cnn_model'] == 'openpose2':
+            self.args['cnn_model'] = 'mobileNetV2-PoseEstimation'
+        if self.args['cnn_model'] == 'mobileNetV2-PoseEstimation':
             from depthai_helpers.openpose2_handler import decode_openpose, show_openpose
             self.decode_nn=decode_openpose
             self.show_nn=show_openpose
             self.calc_dist_to_bb=False
-            self.compile_model=False
 
         if self.args['cnn_model'] == 'deeplabv3p_person':
             from depthai_helpers.deeplabv3p_person import decode_deeplabv3p, show_deeplabv3p
@@ -122,23 +156,40 @@ class DepthConfigManager:
                 "Disconnect/connect usb cable on host! \n", PrintColors.RED)
                 os._exit(1)
 
+    def getMaxShaveNumbers(self):
+        stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in self.stream_list]
+        max_shaves = 14
+        if self.args['rgb_resolution'] != 1080:
+            max_shaves = 11
+            if 'object_tracker' in stream_names:
+                max_shaves = 9
+        elif 'object_tracker' in stream_names:
+            max_shaves = 12
+
+        return max_shaves
 
     def generateJsonConfig(self):
 
         # something to verify usb rules are good?
         self.linuxCheckApplyUsbRules()
 
+        max_shave_nr = self.getMaxShaveNumbers()
+        shave_nr = max_shave_nr if self.args['shaves'] is None else self.args['shaves']
+        cmx_slices = shave_nr if self.args['cmx_slices'] is None else self.args['cmx_slices']
+        NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
+
         # left_right double NN check.
         if self.args['cnn_camera'] in ['left_right', 'rectified_left_right']:
-            if self.args['NN_engines'] is None:
-                self.args['NN_engines'] = 2
-                self.args['shaves'] = 6 if self.args['shaves'] is None else self.args['shaves'] - self.args['shaves'] % 2
-                self.args['cmx_slices'] = 6 if self.args['cmx_slices'] is None else self.args['cmx_slices'] - self.args['cmx_slices'] % 2
-                self.compile_model = True
+            if NCE_nr != 2:
                 cli_print('Running NN on both cams requires 2 NN engines!', PrintColors.RED)
+                NCE_nr = 2
+
+        if NCE_nr == 2:
+            shave_nr = shave_nr - (shave_nr % 2)
+            cmx_slices = cmx_slices - (cmx_slices % 2)
 
         # Get blob files
-        blobMan = BlobManager(self.args, self.compile_model, self.calc_dist_to_bb)
+        blobMan = BlobManager(self.args, self.calc_dist_to_bb, shave_nr, cmx_slices, NCE_nr)
         self.NN_config = blobMan.getNNConfig()
         try:
             self.labels = self.NN_config['mappings']['labels']
@@ -169,16 +220,6 @@ class DepthConfigManager:
             print('ERROR: depth is mutually exclusive with disparity/disparity_color')
             exit(2)
 
-        if blobMan.default_blob:
-            #default
-            shave_nr = 7
-            cmx_slices = 7
-            NCE_nr = 1
-        else:
-            shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
-            cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
-            NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
-
         if self.args['stereo_lr_check'] == True:
             raise ValueError("Left-right check option is still under development. Don;t enable it.")
 
@@ -197,7 +238,6 @@ class DepthConfigManager:
                 'right_mesh_file': consts.resource_paths.right_mesh_fpath,
                 'padding_factor': 0.3,
                 'depth_limit_m': 10.0, # In meters, for filtering purpose during x,y,z calc
-                'confidence_threshold' : 0.5, #Depth is calculated for bounding boxes with confidence higher than this number
                 'median_kernel_size': self.args['stereo_median_size'],
                 'lr_check': self.args['stereo_lr_check'],
                 'warp_rectify':
@@ -256,6 +296,8 @@ class DepthConfigManager:
             'app':
             {
                 'sync_video_meta_streams': self.args['sync_video_meta'],
+                'sync_sequence_numbers'  : self.args['sync_sequence_numbers'],
+                'usb_chunk_KiB' : self.args['usb_chunk_KiB'],
             },
             #'video_config':
             #{
@@ -315,9 +357,12 @@ class DepthConfigManager:
 
 
 class BlobManager:
-    def __init__(self, args, compile_model, calc_dist_to_bb):
+    def __init__(self, args, calc_dist_to_bb, shave_nr, cmx_slices, NCE_nr):
         self.args = args
         self.calc_dist_to_bb = calc_dist_to_bb
+        self.shave_nr = shave_nr
+        self.cmx_slices = cmx_slices
+        self.NCE_nr = NCE_nr
 
         if self.args['cnn_model']:
             self.blob_file, self.blob_file_config = self.getBlobFiles(self.args['cnn_model'])
@@ -328,15 +373,13 @@ class BlobManager:
             print("Using CNN2:", self.args['cnn_model2'])
             self.blob_file2, self.blob_file_config2 = self.getBlobFiles(self.args['cnn_model2'], False)
 
+        # compile models
+        self.blob_file = self.compileBlob(self.args['cnn_model'], self.args['model_compilation_target'])
+        if self.args['cnn_model2']:
+            self.blob_file2 = self.compileBlob(self.args['cnn_model2'], self.args['model_compilation_target'])
+
         # verify the first blob files exist? I just copied this logic from before the refactor. Not sure if it's necessary. This makes it so this script won't run unless we have a blob file and config.
         self.verifyBlobFilesExist(self.blob_file, self.blob_file_config)
-
-        # compile modules
-        self.default_blob=True
-        if compile_model:
-            self.blob_file, self.default_blob = self.compileBlob(self.args['cnn_model'])
-            if self.args['cnn_model2']:
-                self.blob_file2, self.default_blob = self.compileBlob(self.args['cnn_model2'])
 
     def getNNConfig(self):
         # try and load labels
@@ -357,30 +400,25 @@ class BlobManager:
             os._exit(1)
 
         if not verifyConfigPath.exists():
-            cli_print("\nWARNING: NN json not found in: " + verifyConfig, PrintColors.WARNING)
-            cli_print("Defaulting to \"raw\" output format! ", PrintColors.RED)
+            print("NN config not found in: " + verifyConfig + '. Defaulting to "raw" output format!')
 
     def getBlobFiles(self, cnnModel, isFirstNN=True):
         cnn_model_path = consts.resource_paths.nn_resource_path + cnnModel + "/" + cnnModel
         blobFile = cnn_model_path + ".blob"
         blobFileConfig = cnn_model_path + ".json"
 
-        self.verifyBlobFilesExist(blobFile, blobFileConfig)
-
         return blobFile, blobFileConfig
 
-    def compileBlob(self, nn_model):
+    def compileBlob(self, nn_model, model_compilation_target):
         blob_file, _ = self.getBlobFiles(nn_model)
 
-        default_blob=False
-        shave_nr = 7 if self.args['shaves'] is None else self.args['shaves']
-        cmx_slices = 7 if self.args['cmx_slices'] is None else self.args['cmx_slices']
-        NCE_nr = 1 if self.args['NN_engines'] is None else self.args['NN_engines']
+        shave_nr = self.shave_nr
+        cmx_slices = self.cmx_slices
+        NCE_nr = self.NCE_nr
 
         if NCE_nr == 2:
             if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
-                cli_print("shave_nr and cmx_slices config must be even number when NCE is 2!", PrintColors.RED)
-                exit(2)
+                raise ValueError("shave_nr and cmx_slices config must be even number when NCE is 2!")
             shave_nr_opt = int(shave_nr / 2)
             cmx_slices_opt = int(cmx_slices / 2)
         else:
@@ -390,14 +428,14 @@ class BlobManager:
         outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
         if(not Path(outblob_file).exists()):
             cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-            ret = download_model(nn_model, shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file)
+            ret = download_and_compile_NN_model(nn_model, model_zoo_folder, shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file, model_compilation_target)
             if(ret != 0):
                 cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
-                default_blob=True
+                raise RuntimeError("Model compilation failed! Not connected to the internet?")
             else:
                 blob_file = outblob_file
         else:
             cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
             blob_file = outblob_file
 
-        return blob_file, default_blob
+        return blob_file
