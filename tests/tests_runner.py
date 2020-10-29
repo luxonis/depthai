@@ -2,6 +2,7 @@ import argparse
 import os
 from pathlib import Path
 from consts.resource_paths import nn_resource_path
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-r", "--reruns", type=int, default=0)
@@ -35,12 +36,12 @@ class TestRunner:
                 raise RuntimeError("Test failed: " + cmd)
 
     def test_streams(self, streams):
-        cmd = "python3 " + rel_path('./test_executor.py') + ' -s ' + streams
+        cmd = sys.executable + " " + rel_path('./test_executor.py') + ' -s ' + streams
         name = ','.join(streams.split(' '))
         self.test(name, cmd)
 
     def test_cnn(self, cnn):
-        cmd = "python3 " + rel_path('./test_executor.py') + ' -s previewout metaout -cnn ' + cnn
+        cmd = sys.executable + " " + rel_path('./test_executor.py') + ' -s previewout metaout -cnn ' + cnn
         self.test(cnn, cmd)
 
     def print_summary(self):
