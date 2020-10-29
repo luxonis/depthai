@@ -15,7 +15,7 @@ import csv
 print('Using depthai module from: ', depthai.__file__)
 print('Depthai version installed: ', depthai.__version__)
 
-from depthai_helpers.version_check import check_depthai_version
+from depthai_helpers.version_check import check_depthai_version, get_version_from_requirements
 from depthai_helpers.pygame_checkbox import Checkbox, pygame_render_text
 import pygame
 from pygame.locals import *
@@ -73,7 +73,7 @@ class DepthAI:
         #             cv2.waitKey(1)
         #     except:
         #         pass
-        if not self.device.is_rgb_connected() :
+        if not self.device.is_rgb_connected():
             rgb_camera_failed_img = cv2.imread(consts.resource_paths.rgb_camera_not_found, cv2.IMREAD_COLOR)
             error_exists = True
             cv2.imshow('rgb camera failed', rgb_camera_failed_img)
@@ -190,6 +190,26 @@ class DepthAI:
             print()
             return
 
+        def save_logs(log_list):
+            for i in range(len(auto_checkbox_names)):
+                if auto_checkbox_dict[auto_checkbox_names[i]].is_checked():
+                    log_list.append("pass")
+                else :
+                    log_list.append("fail")
+
+            for i in range(len(op_checkbox_names)):
+                if op_checkbox_dict[op_checkbox_names[i]][0].is_checked():
+                    log_list.append("pass")
+                elif op_checkbox_dict[op_checkbox_names[i]][2].is_checked():
+                    log_list.append("fail")
+                else :
+                    log_list.append("--")
+            # log_list = [time_stmp, test_type, mx_serial_id, usb_3_connection, rgb_camera_connected, left_camera_connected, right_camera_connected, IMU, '--']
+            with open(log_file, mode='a') as log_fopen:
+                # header = 
+                log_csv_writer = csv.writer(log_fopen, delimiter=',')
+                log_csv_writer.writerow(log_list)
+
         def keypress_handler(self, key, stream_names):
             cam_l = depthai.CameraControl.CamId.LEFT
             cam_r = depthai.CameraControl.CamId.RIGHT
@@ -236,11 +256,18 @@ class DepthAI:
         jpeg_window_set = 0
         preview_window_set = False
 
+        if 'depth' in stream_names:
+            test_type = '1099_test'
+        elif 'left' in stream_names and 'right' in stream_names:
+            test_type = '1098_OBC_test'
+        else:
+            test_type = '1093_test'
+
         # pygame init and rendering
         pygame.init()
         screen = pygame.display.set_mode((800, 600))
         screen.fill(white)
-        pygame.display.set_caption("UNIT TESTING")
+        pygame.display.set_caption(test_type)
 
         title = "UNIT TEST IN PROGRESS"
         pygame_render_text(screen, title, (200,20), orange, 50)
@@ -248,10 +275,16 @@ class DepthAI:
         heading = "Automated Tests                  Operator Tests"
         pygame_render_text(screen, heading, (250,70), black, 30)
 
-        auto_checkbox_names = ["USB3", "Left camera connected", "Right camera connected", 
-                               "RGB camera connected", "JPEG Encoding", "Previewout-rgb stream",
-                               "Left Stream", "Right Stream"]
-        op_checkbox_names = ["JPEG Encoding", "Previewout-rgb stream", "Left Stream", "Right Stream"]
+        if '1093' not in test_type:
+            auto_checkbox_names = ["USB3", "Left camera connected", "Right camera connected", 
+                                   "RGB camera connected", "JPEG Encoding Stream", 
+                                   "previewout-rgb Stream", "left Stream", "right Stream"]
+            op_checkbox_names = ["JPEG Encoding", "Previewout-rgb stream", "Left Stream", "Right Stream"]
+        else:
+            auto_checkbox_names = ["USB3", "RGB camera connected", "JPEG Encoding Stream", "previewout-rgb Stream"]
+            op_checkbox_names = ["JPEG Encoding", "Previewout-rgb stream"]
+        
+        mipi_streams = [val for val in auto_checkbox_names if 'Stream' in val]
 
         y = 110
         x = 200
@@ -292,6 +325,14 @@ class DepthAI:
                             Checkbox(screen, x + (80*2), y_axis-5, outline_color=red, check_color=red, disable_pass = True)]
             op_checkbox_dict[op_checkbox_names[i]] = checker_list
 
+        # adding save button
+        save_button =  pygame.Rect(600, 430, 60, 35)
+        pygame.draw.rect(screen, orange, save_button)
+        pygame_render_text(screen, 'SAVE', (605, 440))
+        is_saved = False
+
+
+
         # <-------------------------------- initialized pygame ------------------------------------>
 
         if args['verbose']: print_packet_info_header()
@@ -327,44 +368,51 @@ class DepthAI:
 
             if self.device.is_device_changed():
                 # ['time', 'test_type', 'Mx_serial_id', 'USB_3_connection', 'rgb_camera', 'left_camera', 'right_camera', 'IMU', 'manual_id']
-                time_stmp = datetime.now().strftime("%m-%d-%Y %H:%M:%S")
-                available_streams = self.device.get_available_streams()
-                print(self.device.get_available_streams())
-                if 'depth' in stream_names:
-                    test_type = '1099_test'
-                elif 'left' in stream_names and 'right' in stream_names:
-                    test_type = '1098_OBC_test'
-                else:
-                    test_type = '1093_test'
-
+                start_time = datetime.now()
+                time_stmp = start_time.strftime("%m-%d-%Y %H:%M:%S")
                 mx_serial_id = self.device.get_mx_id()
-                usb_3_connection = str(self.device.is_usb3())
+                log_list = [time_stmp, test_type, mx_serial_id]
+                
+                mipi_test = {}
+                print(stream_names)
+                print(mipi_streams)
+                # if 'OBC' in test_type:
+                for mx_stream in stream_names:
+                    for mipi_id in mipi_streams:
+                        if mx_stream in mipi_id:
+                            mipi_test[mx_stream] = auto_checkbox_dict[mipi_id]
+                            mipi_test[mx_stream].uncheck()
+                        elif mx_stream == 'jpegout' and 'JPEG' in mipi_id:
+                            mipi_test[mx_stream] = auto_checkbox_dict[mipi_id]
+                            mipi_test[mx_stream].uncheck()
+                print(mipi_test)
+                # usb_3_connection = str(self.device.is_usb3())
 
-                if '1093' in test_type:
-                    left_camera_connected = '-'
-                    right_camera_connected = '-'
-                else:
-                    left_camera_connected = str(self.device.is_left_connected())
-                    right_camera_connected = str(self.device.is_right_connected())
+                # if '1093' in test_type:
+                #     left_camera_connected = '-'
+                #     right_camera_connected = '-'
+                # else:
+                #     left_camera_connected = str(self.device.is_left_connected())
+                #     right_camera_connected = str(self.device.is_right_connected())
 
-                rgb_camera_connected = str(self.device.is_rgb_connected())
-                IMU = '-'
+                # rgb_camera_connected = str(self.device.is_rgb_connected())
+                # IMU = '-'
 
-                log_list = [time_stmp, test_type, mx_serial_id, usb_3_connection, rgb_camera_connected, left_camera_connected, right_camera_connected, IMU, '--']
-                with open(log_file, mode='a') as log_fopen:
-                    # header = 
-                    log_csv_writer = csv.writer(log_fopen, delimiter=',')
-                    log_csv_writer.writerow(log_list)
+                # log_list = [time_stmp, test_type, mx_serial_id, usb_3_connection, rgb_camera_connected, left_camera_connected, right_camera_connected, IMU, '--']
+                # with open(log_file, mode='a') as log_fopen:
+                #     # header = 
+                #     log_csv_writer = csv.writer(log_fopen, delimiter=',')
+                #     log_csv_writer.writerow(log_list)
 
-                error_window_names = ['usb 3 failed', 'rgb camera failed', 'stereo camera failed']
-                for view_name in error_window_names:
-                    try:
-                        if cv2.getWindowProperty(view_name, 0) >= 0: 
-                            cv2.destroyWindow(view_name)  
-                            cv2.waitKey(1)
-                    except:
-                        pass
-                sleep(3)
+                # error_window_names = ['usb 3 failed', 'rgb camera failed', 'stereo camera failed']
+                # for view_name in error_window_names:
+                #     try:
+                #         if cv2.getWindowProperty(view_name, 0) >= 0: 
+                #             cv2.destroyWindow(view_name)  
+                #             cv2.waitKey(1)
+                #     except:
+                #         pass
+                # sleep(3)
 
                 if self.device.is_usb3():
                     auto_checkbox_dict[auto_checkbox_names[0]].check()
@@ -390,7 +438,7 @@ class DepthAI:
                 right_window_set = False
                 jpeg_window_set = 0
                 preview_window_set = False
-
+                is_saved = False
                 print(self.device.is_device_changed())
                 self.device.reset_device_changed()
                 print(self.device.is_device_changed())
@@ -401,6 +449,20 @@ class DepthAI:
                 print("Is left conencted ?")
                 print(self.device.is_left_connected())
                 
+                text_pygame = "date_time: " + time_stmp
+                pygame_render_text(screen, text_pygame, (50, 430))
+
+                text_pygame = "test_type: " + test_type
+                pygame_render_text(screen, text_pygame, (50, 460))
+
+                text_pygame = "mx_serial_id: " + mx_serial_id
+                pygame_render_text(screen, text_pygame, (50, 490))
+
+                # text_pygame = "Depthai commit version: " + get_version_from_requirements()
+                # pygame_render_text(screen, text_pygame, (50, 520))
+
+                # text_pygame = "date_time: " + time_stmp
+                # pygame_render_text(screen, text_pygame, (50, 300))
 
             # if self.error_check(test_type):
             #     available_streams = self.device.get_available_streams()
@@ -416,12 +478,30 @@ class DepthAI:
                 # continue
             
             for event in pygame.event.get():
-                # keys = pygame.key.get_pressed()
-                # if event.type == QUIT:
-                    # pygame.quit()
-                    # sys.exit()
-                # for i in range(len(auto_checkbox_names)):
-                #     auto_checkbox_dict[auto_checkbox_names[i]].update_checkbox(event)
+
+                # catching save button
+                if event.type == pygame.MOUSEMOTION:
+                    x, y = event.pos
+                    px, py, w, h = save_button
+                    if px < x < px + w and py < y < py + h:
+                        active = True
+                    else:
+                        active = False
+        
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    click = True
+                if event.type == pygame.MOUSEBUTTONUP:
+                    if active and not is_saved and click:
+                        is_saved = True
+                        click = False
+                        save_logs(log_list)
+                        pygame.draw.rect(screen, green, save_button)
+                        pygame_render_text(screen, 'SAVE', (605, 440))
+                    if active and is_saved and click:
+                        click = False
+                        pygame_render_text(screen, "Saved!!", (605, 480), green)
+                    
+
                 for i in range(len(op_checkbox_names)):
                     ob1 = op_checkbox_dict[op_checkbox_names[i]][0]
                     ob2 = op_checkbox_dict[op_checkbox_names[i]][1]
@@ -439,32 +519,6 @@ class DepthAI:
                 op_checkbox_dict[op_checkbox_names[i]][2].render_checkbox()
             
             pygame.display.update()
-            # if not self.device.is_usb3():
-            #     fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
-            #     # while True:
-            #     cv2.imshow('usb 3 failed', fail_usb_img)
-            #     cv2.waitKey(33)
-            #     try:
-            #         if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
-            #         cv2.waitKey(1)
-            #         if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
-            #         cv2.waitKey(1)
-            #         if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
-            #         cv2.waitKey(1)
-            #         if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
-            #         cv2.waitKey(1)
-            #     except :
-            #         pass
-            #     continue
-            # else:
-            #     try:
-            #         if cv2.getWindowProperty('usb 3 failed', 0) >= 0: 
-            #             cv2.destroyWindow('usb 3 failed')  
-            #             cv2.waitKey(1)
-            #     except:
-            #         pass
-
-            
 
             for _, nnet_packet in enumerate(self.nnet_packets):
                 if args['verbose']: print_packet_info(nnet_packet, 'NNet')
@@ -482,6 +536,10 @@ class DepthAI:
                 
             for packet in self.data_packets:
                 window_name = packet.stream_name
+                if window_name in mipi_test.keys():
+                    if window_name != 'previewout':
+                        mipi_test[window_name].check()
+                # print(window_name)
                 if packet.stream_name not in stream_names:
                     continue # skip streams that were automatically added
                 if args['verbose']: print_packet_info(packet, packet.stream_name)
@@ -498,6 +556,8 @@ class DepthAI:
                         camera = meta.getCameraName()
 
                     window_name = 'previewout-' + camera
+                    if 'rgb' in window_name:
+                        mipi_test['previewout'].check()
                     # the format of previewout image is CHW (Chanel, Height, Width), but OpenCV needs HWC, so we
                     # change shape (3, 300, 300) -> (300, 300, 3)
                     data0 = packetData[0,:,:]

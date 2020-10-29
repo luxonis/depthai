@@ -141,8 +141,9 @@ class Main:
 
         self.config = {
             'streams':
-                ['left', 'right'] if not on_embedded else
-                [{'name': 'left', "max_fps": 10.0}, {'name': 'right', "max_fps": 10.0}],
+                ['left', 'right', 'meta_d2h'] if not on_embedded else
+                [{'name': 'left', "max_fps": 30.0}, {'name': 'right', "max_fps": 30.0}, {'name': 'meta_d2h', "max_fps": 30.0}], 
+                # TODO(sachin): Not tested on embedded
             'depth':
                 {
                     'calibration_file': consts.resource_paths.calib_fpath,
@@ -161,8 +162,8 @@ class Main:
                     'swap_left_and_right_cameras': self.args['swap_lr'],
                     'left_fov_deg':  self.args['field_of_view'],
                     'left_to_right_distance_cm': self.args['baseline'],
-                    'override_eeprom': True,
-                    'stereo_center_crop': True,
+                    'override_eeprom': False,
+                    'stereo_center_crop': False,
                 },
             'camera':
                 {
@@ -181,8 +182,8 @@ class Main:
                 if not board_path.exists():
                     raise ValueError('Board config not found: {}'.format(board_path))
             with open(board_path) as fp:
-                board_config = json.load(fp)
-            utils.merge(board_config, self.config)
+                self.board_config = json.load(fp)
+            utils.merge(self.board_config, self.config)
         if self.args['config_overwrite']:
             utils.merge(json.loads(self.args['config_overwrite']), self.config)
             print("Merged Pipeline config with overwrite", self.config)
@@ -202,7 +203,7 @@ class Main:
         pipeline = None
         try:
             self.device = depthai.Device("", False)
-            if  self.device.is_usb3():
+            if not self.device.is_usb3():
                 fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
                 while True:
                     cv2.imshow('Connection over usb 3 failed', fail_usb_img)
@@ -385,7 +386,7 @@ class Main:
         flags = [self.config['board_config']['stereo_center_crop']]
         cal_data = StereoCalibration()
         try:
-            cal_data.calibrate("dataset", self.args['square_size_cm'], "./resources/depthai.calib", flags)
+            cal_data.calibrate("dataset", self.args['square_size_cm'], "./resources/depthai.calib", flags, self.board_config, self.device)
         except AssertionError as e:
             print("[ERROR] " + str(e))
             raise SystemExit(1)
@@ -402,7 +403,7 @@ class Main:
                 raise
             self.show_info_frame()
             self.capture_images()
-            del self.device
+            # del self.device
         if 'process' in self.args['mode']:
             self.calibrate()
         print('py: DONE.')

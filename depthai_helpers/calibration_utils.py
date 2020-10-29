@@ -68,9 +68,11 @@ class StereoCalibration(object):
     def __init__(self):
         """Class to Calculate Calibration and Rectify a Stereo Camera."""
 
-    def calibrate(self, filepath, square_size, out_filepath, flags):
+    def calibrate(self, filepath, square_size, out_filepath, flags, board_config, device):
         """Function to calculate calibration for stereo camera."""
         start_time = time.time()
+        self.board_config = board_config
+        self.device = device
         # init object data
         self.objp = np.zeros((9 * 6, 3), np.float32)
         self.objp[:, :2] = np.mgrid[0:9, 0:6].T.reshape(-1, 2)
@@ -111,7 +113,12 @@ class StereoCalibration(object):
             fp.write(d2_coeff_fp32.tobytes()) # distortion coeff of right camera
             fp.write(d3_coeff_fp32.tobytes()) # distortion coeff of rgb camera - currently zeros
 
-        if 0: # Print matrices, to compare with device data
+        data_list = [R1_fp32, R2_fp32, M1_fp32, M2_fp32, R_fp32, T_fp32, M3_fp32, R_rgb_fp32, T_rgb_fp32, d1_coeff_fp32, d2_coeff_fp32, d3_coeff_fp32]
+        self.calib_data = np.array([],dtype=np.float32)
+        for data in data_list:
+            self.calib_data = np.concatenate((self.calib_data, data.reshape(-1)))
+
+        if 1: # Print matrices, to compare with device data
             np.set_printoptions(suppress=True, precision=6)
             print("\nR1 (left)");  print(R1_fp32)
             print("\nR2 (right)"); print(R2_fp32)
@@ -237,13 +244,53 @@ class StereoCalibration(object):
                 elif k == -1:  # normally -1 returned,so don't print it
                     continue
         else:            
-            self.rundepthai()
-            device = depthai.Device("", False)
-            if not device:
-                print("Error initializing device. Try to reset it.")
-                exit(1)
-            
-            if device.is_eeprom_loaded():
+            # self.rundepthai()
+            # device = depthai.Device("", False)
+            # if not device:
+                # print("Error initializing device. Try to reset it.")
+                # exit(1)
+            dev_config = {
+                'board': {},
+                '_board': {}
+            }
+            dev_config["board"]["clear-eeprom"] = False;
+            dev_config["board"]["store-to-eeprom"] = True;
+            dev_config["board"]["override-eeprom"] = False;
+            dev_config["board"]["swap-left-and-right-cameras"] = self.board_config['board_config']['swap_left_and_right_cameras']
+            dev_config["board"]["left_fov_deg"] = self.board_config['board_config']['left_fov_deg']
+            dev_config["board"]["rgb_fov_deg"] = self.board_config['board_config']['rgb_fov_deg']
+            dev_config["board"]["left_to_right_distance_m"] = self.board_config['board_config']['left_to_right_distance_cm'] / 100
+            dev_config["board"]["left_to_rgb_distance_m"] = self.board_config['board_config']['left_to_rgb_distance_cm'] / 100
+            dev_config["board"]["name"] = self.board_config['board_config']['name']
+            dev_config["board"]["stereo_center_crop"] = True
+            dev_config["board"]["revision"] = self.board_config['board_config']['revision']
+            dev_config["_board"]['calib_data'] = list(self.calib_data)
+            dev_config["_board"]['mesh_right'] = [0.0]
+            dev_config["_board"]['mesh_left'] =  [0.0]
+                
+            self.device.write_eeprom_data(dev_config)
+            pipeline = self.device.get_pipeline()
+
+            is_write_succesful = False
+            run_thread = True
+            while run_thread:
+                _, data_packets = pipeline.get_available_nnet_and_data_packets(blocking=True)
+                for packet in data_packets:
+                    if packet.stream_name == 'meta_d2h':                        
+                        str_ = packet.getDataAsStr()
+                        dict_ = json.loads(str_)
+                        # print(str_)
+                        if 'logs' in dict_:
+                            for log in dict_['logs']:
+                                print(log)
+                                if 'EEPROM' in log:
+                                    if 'write OK' in log:
+                                        is_write_succesful = True
+                                        run_thread = False
+                                    elif 'FAILED' in log:
+                                        is_write_succesful = False
+                                        run_thread = False
+            if is_write_succesful:
                 pass_img = cv2.imread(consts.resource_paths.pass_path, cv2.IMREAD_COLOR)
                 while (1):
                     cv2.imshow('Calibration test Passed and wrote to EEPROM', pass_img)
@@ -261,7 +308,6 @@ class StereoCalibration(object):
                         break
                     elif k == -1:  # normally -1 returned,so don't print it
                         continue
-            del device
 
     def rundepthai(self):
         test_cmd = """python3 depthai_demo.py -brd bw1098obc -e"""
