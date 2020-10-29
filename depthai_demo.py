@@ -220,14 +220,33 @@ class DepthAI:
                 try:
                     if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
                     cv2.waitKey(1)
+                except:
+                    pass
+
+                try:
                     if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
                     cv2.waitKey(1)
+                except:
+                    pass
+
+                try:
                     if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
                     cv2.waitKey(1)
+                except:
+                    pass
+
+                try:
                     if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
                     cv2.waitKey(1)
                 except :
                     pass
+                
+                try:
+                    if cv2.getWindowProperty('previewout-right', 0) >= 0: cv2.destroyWindow('previewout-right')  
+                    cv2.waitKey(1)
+                except :
+                    pass
+                
                 try:
                     if cv2.getWindowProperty('USB 3 connection failed', 0) >= 0: 
                         cv2.destroyWindow('USB 3 connection failed')  
