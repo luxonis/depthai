@@ -228,7 +228,14 @@ class DepthAI:
                     cv2.waitKey(1)
                 except :
                     pass
+                try:
+                    if cv2.getWindowProperty('USB 3 connection failed', 0) >= 0: 
+                        cv2.destroyWindow('USB 3 connection failed')  
+                        cv2.waitKey(1)
+                except:
+                    pass
                 self.device.reset_device_changed()
+                sleep(2)
 
             if not self.device.is_usb3():
                 fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
