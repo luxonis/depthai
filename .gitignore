@@ -22,6 +22,7 @@ parts/
 sdist/
 var/
 wheels/
+calib_dataset/*
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
@@ -39,6 +40,7 @@ mesh_right.calib
 intrinsic.json
 intrinsic_calib_m2
 
+*calib
 *.h264
 *.h265
 *.mkv
