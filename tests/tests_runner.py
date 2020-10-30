@@ -2,6 +2,7 @@ import argparse
 import os
 from pathlib import Path
 from consts.resource_paths import nn_resource_path
+from depthai_helpers.cli_utils import PrintColors
 import sys
 
 parser = argparse.ArgumentParser()
@@ -11,9 +12,9 @@ args = parser.parse_args()
 
 def print_result(name, success):
     if success:
-        print(f"\033[1;34;40mTest {name}: \033[1;32;40mPassed!\033[0m")
+        print(f"{PrintColors.BLACK_BG_BLUE}Test {name}: {PrintColors.BLACK_BG_GREEN}Passed!{PrintColors.ENDC}")
     else:
-        print(f"\033[1;34;40mTest {name}: \033[1;31;40mFailed!\033[0m")
+        print(f"{PrintColors.BLACK_BG_BLUE}Test {name}: {PrintColors.BLACK_BG_RED}Failed!{PrintColors.ENDC}")
 
 
 def rel_path(path):
