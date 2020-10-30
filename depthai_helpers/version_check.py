@@ -3,7 +3,8 @@ from pathlib import Path
 
 
 def get_version_from_requirements():
-    with Path('requirements.txt').open() as f:
+    reqirements_path = Path(__file__).parent / Path('../requirements.txt')
+    with reqirements_path.open() as f:
         datafile = f.readlines()
     for line in datafile:
         if 'depthai' in line:

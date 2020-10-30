@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 
 env = os.environ.copy()
-env["PYTHONPATH"] = str(Path(__file__).parent)
-result = subprocess.run([sys.executable, "./tests/tests_runner.py"], env=env)
+curr_dir = Path(__file__).parent
+env["PYTHONPATH"] = str(curr_dir)
+result = subprocess.run([sys.executable, curr_dir / Path("./tests/tests_runner.py")], env=env)
 exit(result.returncode)
