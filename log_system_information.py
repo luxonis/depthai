@@ -16,7 +16,7 @@ def get_usb():
     format_hex = lambda val: f"{val:#0{6}x}"
     for dev in usb.core.find(find_all=True):
         yield {
-            'port': dev.port_number,
+            "port": dev.port_number,
             "vendor_id": format_hex(dev.idVendor),
             "product_id": format_hex(dev.idProduct),
             "speed": speeds[dev.speed]
