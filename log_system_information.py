@@ -23,7 +23,7 @@ def get_usb():
                 "speed": speeds[dev.speed]
             }
     except usb.core.NoBackendError:
-        return ["No USB backend found"]
+        yield "No USB backend found"
 
 
 data = {
