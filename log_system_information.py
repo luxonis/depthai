@@ -25,7 +25,6 @@ def get_usb():
 
 data = {
     "architecture": ' '.join(platform.architecture()).strip(),
-    "libc": ' '.join(platform.libc_ver()).strip(),
     "machine": platform.machine(),
     "platform": platform.platform(),
     "processor": platform.processor(),
