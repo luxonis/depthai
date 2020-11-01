@@ -14,13 +14,16 @@ except ImportError:
 def get_usb():
     speeds = ["Unknown", "Low", "Full", "High", "Super"]
     format_hex = lambda val: f"{val:#0{6}x}"
-    for dev in usb.core.find(find_all=True):
-        yield {
-            "port": dev.port_number,
-            "vendor_id": format_hex(dev.idVendor),
-            "product_id": format_hex(dev.idProduct),
-            "speed": speeds[dev.speed]
-        }
+    try:
+        for dev in usb.core.find(find_all=True):
+            yield {
+                "port": dev.port_number,
+                "vendor_id": format_hex(dev.idVendor),
+                "product_id": format_hex(dev.idProduct),
+                "speed": speeds[dev.speed]
+            }
+    except usb.core.NoBackendError:
+        return ["No USB backend found"]
 
 
 data = {
