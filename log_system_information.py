@@ -50,3 +50,4 @@ with open("log_system_information.json", "w") as f:
     json.dump(data, f, indent=4)
 
 print(json.dumps(data, indent=4))
+print("System info gathered successfully - saved as \"log_system_information.json\"")
