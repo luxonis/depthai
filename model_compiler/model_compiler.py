@@ -22,7 +22,7 @@ def download_model(model, model_zoo_folder):
 
     model_downloader_options=f"--precisions FP16 --output_dir {download_folder_path} --cache_dir {download_folder_path}/.cache --num_attempts 5 --name {model} --model_root {model_zoo_folder}"
     model_downloader_options = model_downloader_options.split()
-    downloader_cmd = ["python3", f"{model_downloader_path}"]
+    downloader_cmd = [sys.executable, f"{model_downloader_path}"]
     downloader_cmd = np.concatenate((downloader_cmd, model_downloader_options))
     # print(downloader_cmd)
     result = subprocess.run(downloader_cmd)
@@ -44,7 +44,7 @@ def convert_model_to_ir(model, model_zoo_folder):
 
     model_converter_options=f"--precisions FP16 --output_dir {download_folder_path} --download_dir {download_folder_path} --name {model} --model_root {model_zoo_folder}"
     model_converter_options = model_converter_options.split()
-    converter_cmd = ["python3", f"{converter_path}"]
+    converter_cmd = [sys.executable, f"{converter_path}"]
     converter_cmd = np.concatenate((converter_cmd, model_converter_options))
     # print(converter_cmd)
     if subprocess.run(converter_cmd).returncode != 0:
