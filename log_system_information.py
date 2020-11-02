@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import subprocess
 import sys
@@ -12,7 +14,7 @@ except ImportError:
 
 
 def get_usb():
-    speeds = ["Unknown", "Low", "Full", "High", "Super"]
+    speeds = ["Unknown", "Low", "Full", "High", "Super", "SuperPlus"]
     format_hex = lambda val: f"{val:#0{6}x}"
     try:
         for dev in usb.core.find(find_all=True):
@@ -20,7 +22,7 @@ def get_usb():
                 "port": dev.port_number,
                 "vendor_id": format_hex(dev.idVendor),
                 "product_id": format_hex(dev.idProduct),
-                "speed": speeds[dev.speed]
+                "speed": speeds[dev.speed] if dev.speed < len(speeds) else dev.speed
             }
     except usb.core.NoBackendError:
         yield "No USB backend found"
@@ -38,7 +40,6 @@ data = {
     "release": platform.release(),
     "system": platform.system(),
     "version": platform.version(),
-    "win32_edition": platform.win32_edition(),
     "win32_ver": ' '.join(platform.win32_ver()).strip(),
     "uname": ' '.join(platform.uname()).strip(),
     "packages": list(freeze(local_only=True)),
@@ -47,3 +48,5 @@ data = {
 
 with open("log_system_information.json", "w") as f:
     json.dump(data, f, indent=4)
+
+print(json.dumps(data, indent=4))
