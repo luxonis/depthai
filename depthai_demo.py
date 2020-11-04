@@ -33,6 +33,10 @@ is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('
 
 from depthai_helpers.object_tracker_handler import show_tracklets
 
+os.environ['SDL_VIDEO_WINDOW_POS'] = '2000,10'
+
+pygame.init()
+
 global args, cnn_model2
 white  = [255, 255, 255]
 orange = [143, 122, 4]
@@ -191,7 +195,14 @@ class DepthAI:
             return
 
         def save_logs(log_list):
+            # ['time', 'test_type', 'Mx_serial_id']
+            # auto checkbox list
+            #  ["USB3", "Left camera connected", "Right camera connected", 
+            #                        "RGB camera connected", "JPEG Encoding Stream", 
+            #                        "previewout-rgb Stream", "left Stream", "right Stream"]
+            # ["JPEG Encoding", "Previewout-rgb stream", "Left Stream", "Right Stream"]
             for i in range(len(auto_checkbox_names)):
+                print(auto_checkbox_names[i])
                 if auto_checkbox_dict[auto_checkbox_names[i]].is_checked():
                     log_list.append("pass")
                 else :
@@ -264,7 +275,6 @@ class DepthAI:
             test_type = '1093_test'
 
         # pygame init and rendering
-        pygame.init()
         screen = pygame.display.set_mode((800, 600))
         screen.fill(white)
         pygame.display.set_caption(test_type)
@@ -285,7 +295,8 @@ class DepthAI:
             op_checkbox_names = ["JPEG Encoding", "Previewout-rgb stream"]
         
         mipi_streams = [val for val in auto_checkbox_names if 'Stream' in val]
-
+        print("-------------------------------------------")
+        print(mipi_streams)
         y = 110
         x = 200
 
@@ -336,10 +347,17 @@ class DepthAI:
         # <-------------------------------- initialized pygame ------------------------------------>
 
         if args['verbose']: print_packet_info_header()
-        log_file = "logs.csv"
+        log_file = "logs_" + test_type + ".csv"
+        if test_type != '1093_test':
+            header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'left_camera', 
+                    'right_camera', 'rgb_camera', 'JPEG Encoding Stream', 'previewout-rgb Stream', 'left Stream', 'right Stream', 
+                    'op JPEG Encoding', 'op Previewout-rgb stream', 'op Left Stream', 'op Right Stream']
+        else:
+            header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'rgb_camera', 'JPEG Encoding Stream', 
+                      'previewout-rgb Stream', 'op JPEG Encoding', 'op Previewout-rgb stream']
+                
         if not os.path.exists(log_file):
             with open(log_file, mode='w') as log_fopen:
-                header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'rgb_camera', 'left_camera', 'right_camera', 'IMU', 'manual_id']
                 log_csv_writer = csv.writer(log_fopen, delimiter=',')
                 log_csv_writer.writerow(header)
 
@@ -367,7 +385,38 @@ class DepthAI:
                     os._exit(10)
 
             if self.device.is_device_changed():
-                # ['time', 'test_type', 'Mx_serial_id', 'USB_3_connection', 'rgb_camera', 'left_camera', 'right_camera', 'IMU', 'manual_id']
+                try:
+                    if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
+                    cv2.waitKey(1)
+                except:
+                    pass
+
+                try:
+                    if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
+                    cv2.waitKey(1)
+                except:
+                    pass
+
+                try:
+                    if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
+                    cv2.waitKey(1)
+                except:
+                    pass
+
+                try:
+                    if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
+                    cv2.waitKey(1)
+                except :
+                    pass
+                
+                try:
+                    if cv2.getWindowProperty('previewout-right', 0) >= 0: cv2.destroyWindow('previewout-right')  
+                    cv2.waitKey(1)
+                except :
+                    pass
+
+
+                # ['time', 'test_type', 'Mx_serial_id']
                 start_time = datetime.now()
                 time_stmp = start_time.strftime("%m-%d-%Y %H:%M:%S")
                 mx_serial_id = self.device.get_mx_id()
@@ -414,25 +463,33 @@ class DepthAI:
                 #         pass
                 # sleep(3)
 
+                pygame.draw.rect(screen, orange, save_button)
+                pygame_render_text(screen, 'SAVE', (605, 440))
+
+
                 if self.device.is_usb3():
                     auto_checkbox_dict[auto_checkbox_names[0]].check()
                 else:
                     auto_checkbox_dict[auto_checkbox_names[0]].uncheck()
-
-                if self.device.is_left_connected():
-                    auto_checkbox_dict[auto_checkbox_names[1]].check()
+                
+                if test_type != '1093_test':
+                    if self.device.is_left_connected():
+                        auto_checkbox_dict[auto_checkbox_names[1]].check()
+                    else:
+                        auto_checkbox_dict[auto_checkbox_names[1]].uncheck()
+                    if self.device.is_right_connected():
+                        auto_checkbox_dict[auto_checkbox_names[2]].check()
+                    else:
+                        auto_checkbox_dict[auto_checkbox_names[2]].uncheck()
+                    if self.device.is_rgb_connected():
+                        auto_checkbox_dict[auto_checkbox_names[3]].check()
+                    else:
+                        auto_checkbox_dict[auto_checkbox_names[3]].uncheck()
                 else:
-                    auto_checkbox_dict[auto_checkbox_names[1]].uncheck()
-
-                if self.device.is_right_connected():
-                    auto_checkbox_dict[auto_checkbox_names[2]].check()
-                else:
-                    auto_checkbox_dict[auto_checkbox_names[2]].uncheck()
-
-                if self.device.is_rgb_connected():
-                    auto_checkbox_dict[auto_checkbox_names[3]].check()
-                else:
-                    auto_checkbox_dict[auto_checkbox_names[3]].uncheck()
+                    if self.device.is_rgb_connected():
+                        auto_checkbox_dict[auto_checkbox_names[1]].check()
+                    else:
+                        auto_checkbox_dict[auto_checkbox_names[1]].uncheck()
 
                 left_window_set = False
                 right_window_set = False
@@ -449,6 +506,15 @@ class DepthAI:
                 print("Is left conencted ?")
                 print(self.device.is_left_connected())
                 
+                for i in range(len(op_checkbox_names)):
+                    op_checkbox_dict[op_checkbox_names[i]][0].uncheck()
+                    op_checkbox_dict[op_checkbox_names[i]][1].check()
+                    op_checkbox_dict[op_checkbox_names[i]][2].uncheck()
+
+                fill_color =  pygame.Rect(50, 420, 400, 180)
+                pygame.draw.rect(screen, white, fill_color)
+                pygame_render_text(screen, "Saved!!", (605, 480), white)
+
                 text_pygame = "date_time: " + time_stmp
                 pygame_render_text(screen, text_pygame, (50, 430))
 
@@ -500,7 +566,6 @@ class DepthAI:
                     if active and is_saved and click:
                         click = False
                         pygame_render_text(screen, "Saved!!", (605, 480), green)
-                    
 
                 for i in range(len(op_checkbox_names)):
                     ob1 = op_checkbox_dict[op_checkbox_names[i]][0]
@@ -532,8 +597,6 @@ class DepthAI:
                 frame_count['metaout'] += 1
                 frame_count['nn'][camera] += 1
             
-            
-                
             for packet in self.data_packets:
                 window_name = packet.stream_name
                 if window_name in mipi_test.keys():
