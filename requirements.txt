@@ -2,7 +2,7 @@ numpy==1.19.3
 opencv-python==4.4.0.46
 requests==2.24.0
 argcomplete==1.12.1
-open3d==0.11.1; platform_machine != "armv7l" and platform_system != "Windows" and python_version < "3.9"
+open3d==0.11.1; platform_machine != "armv7l" and python_version < "3.9"
 pyyaml==5.3.1
 # depthai==0.3.0.0
 
