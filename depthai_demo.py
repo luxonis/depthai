@@ -740,16 +740,35 @@ class DepthAI:
                     str_ = packet.getDataAsStr()
                     dict_ = json.loads(str_)
 
-                    print('meta_d2h Temp',
-                        ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
-                        ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
-                        ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
-                        ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
-                    print('Camera: last frame tstamp: {:.6f}'.format(dict_['camera']['last_frame_timestamp']),
-                        'frame count rgb:', dict_['camera']['rgb']['frame_count'],
-                        'left:', dict_['camera']['left']['frame_count'],
-                        'right:', dict_['camera']['right']['frame_count'])
-                    # Also printed from lib/c++ side
+                    fill_color =  pygame.Rect(50, 510, 700, 100)
+                    pygame.draw.rect(screen, white, fill_color)
+                    text = 'meta_d2h Temp:'
+                    pygame_render_text(screen, text, (50, 520), color=orange, font_size=25)
+                    text = ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css'])
+                    pygame_render_text(screen, text, (50, 545), font_size=25)
+                    text = ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss'])
+                    pygame_render_text(screen, text, (50, 570), font_size=25)
+                    text = ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0'])
+                    pygame_render_text(screen, text, (150, 545), font_size=25)
+                    text = ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1'])
+                    pygame_render_text(screen, text, (150, 570), font_size=25)
+
+                    # print('meta_d2h Temp',
+                    #     ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
+                    #     ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
+                    #     ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
+                    #     ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
+                
+                    text = 'Camera: last frame tstamp: {:.6f}'.format(dict_['camera']['last_frame_timestamp'])
+                    pygame_render_text(screen, text, (400, 520), font_size=25)
+                    text = 'frame count rgb: {}'.format(dict_['camera']['rgb']['frame_count'])
+                    pygame_render_text(screen, text, (400, 570), font_size=25)
+                    text = 'left:{}'.format(dict_['camera']['left']['frame_count'])
+                    pygame_render_text(screen, text, (400, 545), font_size=25)
+                    text = 'right:{}'.format(dict_['camera']['right']['frame_count'])
+                    pygame_render_text(screen, text, (500, 545), font_size=25)
+
+                    # # Also printed from lib/c++ side
                     if 0 and 'logs' in dict_:
                         for log in dict_['logs']:
                             print('Device log:', log)
