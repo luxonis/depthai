@@ -8,6 +8,17 @@ import depthai
 class YoloParams:
     # ------------------------------------------- Extracting layer parameters ------------------------------------------
     def __init__(self, side, mask, coords, classes, anchors):
+        """
+        Initialize the mask
+
+        Args:
+            self: (todo): write your description
+            side: (int): write your description
+            mask: (array): write your description
+            coords: (array): write your description
+            classes: (todo): write your description
+            anchors: (todo): write your description
+        """
         self.num = 3 
         self.coords = coords 
         self.classes = classes
@@ -22,11 +33,27 @@ class YoloParams:
         self.side = side
    
     def log_params(self):
+        """
+        Print out the parameters of the estimators.
+
+        Args:
+            self: (todo): write your description
+        """
         params_to_print = {'classes': self.classes, 'num': self.num, 'coords': self.coords, 'anchors': self.anchors}
         [log.info("         {:8}: {}".format(param_name, param)) for param_name, param in params_to_print.items()]
 
 
 def entry_index(side, coord, classes, location, entry):
+    """
+    Return the index of the entry.
+
+    Args:
+        side: (todo): write your description
+        coord: (todo): write your description
+        classes: (list): write your description
+        location: (str): write your description
+        entry: (todo): write your description
+    """
     side_power_2 = side ** 2
     n = location // side_power_2
     loc = location % side_power_2
@@ -35,6 +62,19 @@ def entry_index(side, coord, classes, location, entry):
 
 
 def scale_bbox(x, y, h, w, class_id, confidence, h_scale, w_scale):
+    """
+    Return the bounding box.
+
+    Args:
+        x: (array): write your description
+        y: (array): write your description
+        h: (array): write your description
+        w: (array): write your description
+        class_id: (str): write your description
+        confidence: (todo): write your description
+        h_scale: (float): write your description
+        w_scale: (float): write your description
+    """
     xmin = int((x - w / 2) * w_scale)
     ymin = int((y - h / 2) * h_scale)
     xmax = int(xmin + w * w_scale)
@@ -43,6 +83,16 @@ def scale_bbox(x, y, h, w, class_id, confidence, h_scale, w_scale):
 
 
 def parse_yolo_region(blob, resized_image_shape, original_im_shape, params, threshold):
+    """
+    Parse a region of the image.
+
+    Args:
+        blob: (todo): write your description
+        resized_image_shape: (int): write your description
+        original_im_shape: (str): write your description
+        params: (dict): write your description
+        threshold: (float): write your description
+    """
     # ------------------------------------------ Validating output parameters ------------------------------------------
     _, _, out_blob_h, out_blob_w = blob.shape
     assert out_blob_w == out_blob_h, "Invalid size of output blob. It sould be in NCHW layout and height should " \
@@ -97,6 +147,13 @@ def parse_yolo_region(blob, resized_image_shape, original_im_shape, params, thre
 
 
 def intersection_over_union(box_1, box_2):
+    """
+    Returns the intersection of the intersection_overlap.
+
+    Args:
+        box_1: (todo): write your description
+        box_2: (todo): write your description
+    """
     width_of_overlap_area = min(box_1['xmax'], box_2['xmax']) - max(box_1['xmin'], box_2['xmin'])
     height_of_overlap_area = min(box_1['ymax'], box_2['ymax']) - max(box_1['ymin'], box_2['ymin'])
     if width_of_overlap_area < 0 or height_of_overlap_area < 0:
@@ -112,6 +169,12 @@ def intersection_over_union(box_1, box_2):
 
 
 def decode_tiny_yolo(nnet_packet, **kwargs):
+    """
+    Decode a bson.
+
+    Args:
+        nnet_packet: (todo): write your description
+    """
     NN_metadata = kwargs['NN_json']
     output_format = NN_metadata['NN_config']['output_format']
 
@@ -180,6 +243,12 @@ def decode_tiny_yolo(nnet_packet, **kwargs):
         return objects
 
 def decode_tiny_yolo_json(nnet_packet, **kwargs):
+    """
+    Decode yam encoded json to json into a dict. json.
+
+    Args:
+        nnet_packet: (todo): write your description
+    """
     convertList = []
 
     filtered_objects = decode_tiny_yolo(nnet_packet, **kwargs)
@@ -204,6 +273,13 @@ TEXT_COLOR = (255, 255, 255)   # white text
 TEXT_FONT = cv2.FONT_HERSHEY_SIMPLEX
 
 def show_tiny_yolo(filtered_objects, frame, **kwargs):
+    """
+    Show the yolo labels
+
+    Args:
+        filtered_objects: (todo): write your description
+        frame: (todo): write your description
+    """
     NN_metadata = kwargs['NN_json']
     labels = NN_metadata['mappings']['labels']
     config = kwargs['config']

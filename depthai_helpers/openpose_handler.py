@@ -7,6 +7,13 @@ mapIdx = [[31,32], [39,40], [33,34], [35,36], [41,42], [43,44], [19,20], [21,22]
 colors = [[0,100,255], [0,100,255], [0,255,255], [0,100,255], [0,255,255], [0,100,255], [0,255,0], [255,200,100], [255,0,255], [0,255,0], [255,200,100], [255,0,255], [0,0,255], [255,0,0], [200,200,0], [255,0,0], [200,200,0], [0,0,0]]
 
 def getKeypoints(probMap, threshold=0.2):
+    """
+    Returns a list of tuples of ( threshold.
+
+    Args:
+        probMap: (todo): write your description
+        threshold: (float): write your description
+    """
 
     mapSmooth = cv2.GaussianBlur(probMap, (3, 3), 0, 0)
     mapMask = np.uint8(mapSmooth>threshold)
@@ -30,6 +37,15 @@ def getKeypoints(probMap, threshold=0.2):
 
 
 def getValidPairs(outputs, w, h,detected_keypoints):
+    """
+    Get pairs of pairs of pairs.
+
+    Args:
+        outputs: (todo): write your description
+        w: (todo): write your description
+        h: (todo): write your description
+        detected_keypoints: (str): write your description
+    """
     valid_pairs = []
     invalid_pairs = []
     n_interp_samples = 10
@@ -86,6 +102,14 @@ def getValidPairs(outputs, w, h,detected_keypoints):
 
 
 def getPersonwiseKeypoints(valid_pairs, invalid_pairs,keypoints_list):
+    """
+    Returns a list of pairs of pairs of pairpoints ).
+
+    Args:
+        valid_pairs: (str): write your description
+        invalid_pairs: (str): write your description
+        keypoints_list: (str): write your description
+    """
     personwiseKeypoints = -1 * np.ones((0, 19))
 
     for k in range(len(mapIdx)):
@@ -123,6 +147,12 @@ w=456
 h=256
 detected_keypoints = []
 def decode_openpose(nnet_packet, **kwargs):
+    """
+    Decode opencv using the opencv using opencv.
+
+    Args:
+        nnet_packet: (todo): write your description
+    """
     # openpose from openvino has pafs in first output, keypoints in second
     output_list = nnet_packet.getOutputsList()
     heatmaps = np.copy(output_list[1])
@@ -157,6 +187,13 @@ def decode_openpose(nnet_packet, **kwargs):
     return keypoints_limbs
 
 def show_openpose(keypoints_limbs, frame, **kwargs):
+    """
+    Show the opencv figure
+
+    Args:
+        keypoints_limbs: (str): write your description
+        frame: (array): write your description
+    """
     frame = np.uint8(frame.copy())
     if len(keypoints_limbs) == 3:
         detected_keypoints = keypoints_limbs[0]

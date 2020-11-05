@@ -3,6 +3,11 @@ from pathlib import Path
 
 
 def get_version_from_requirements():
+    """
+    Extract the version from a requirements file.
+
+    Args:
+    """
     with Path('requirements.txt').open() as f:
         datafile = f.readlines()
     for line in datafile:
@@ -19,6 +24,11 @@ def get_version_from_requirements():
     return None
 
 def check_depthai_version():
+    """
+    Checks the required depthai version.
+
+    Args:
+    """
     version_required = get_version_from_requirements()
     if version_required is not None:
         print('Depthai version required:  ', version_required)

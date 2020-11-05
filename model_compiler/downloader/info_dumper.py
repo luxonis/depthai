@@ -23,6 +23,12 @@ from pathlib import Path
 import common
 
 def to_info(model):
+    """
+    Return a dict with the model.
+
+    Args:
+        model: (todo): write your description
+    """
     return {
         'name': model.name,
 
@@ -35,6 +41,11 @@ def to_info(model):
     }
 
 def main():
+    """
+    Main function.
+
+    Args:
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=Path, metavar='CONFIG.YML',
         help='model configuration file (deprecated)')

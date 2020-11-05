@@ -32,28 +32,77 @@ import common
 
 class JobContext:
     def printf(self, format, *args, flush=False):
+        """
+        Convenience method.
+
+        Args:
+            self: (todo): write your description
+            format: (str): write your description
+            flush: (float): write your description
+        """
         raise NotImplementedError
 
     def subprocess(self, args):
+        """
+        Subprocess the given arguments.
+
+        Args:
+            self: (todo): write your description
+        """
         raise NotImplementedError
 
 
 class DirectOutputContext(JobContext):
     def printf(self, format, *args, flush=False):
+        """
+        Format the given format.
+
+        Args:
+            self: (todo): write your description
+            format: (str): write your description
+            flush: (float): write your description
+        """
         print(format.format(*args), flush=flush)
 
     def subprocess(self, args):
+        """
+        Run a subprocess.
+
+        Args:
+            self: (todo): write your description
+        """
         return subprocess.run(args).returncode == 0
 
 
 class QueuedOutputContext(JobContext):
     def __init__(self, output_queue):
+        """
+        Initialize the queue.
+
+        Args:
+            self: (todo): write your description
+            output_queue: (todo): write your description
+        """
         self._output_queue = output_queue
 
     def printf(self, format, *args, flush=False):
+        """
+        Prints the queue.
+
+        Args:
+            self: (todo): write your description
+            format: (str): write your description
+            flush: (float): write your description
+        """
         self._output_queue.put(format.format(*args) + '\n')
 
     def subprocess(self, args):
+        """
+        Run a subprocess.
+
+        Args:
+            self: (todo): write your description
+        """
         with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 universal_newlines=True) as p:
             for line in p.stdout:
@@ -63,21 +112,47 @@ class QueuedOutputContext(JobContext):
 
 class JobWithQueuedOutput():
     def __init__(self, output_queue, future):
+        """
+        Initialize the queue.
+
+        Args:
+            self: (todo): write your description
+            output_queue: (todo): write your description
+            future: (todo): write your description
+        """
         self._output_queue = output_queue
         self._future = future
         self._future.add_done_callback(lambda future: self._output_queue.put(None))
 
     def complete(self):
+        """
+        Complete the queue.
+
+        Args:
+            self: (todo): write your description
+        """
         for fragment in iter(self._output_queue.get, None):
             print(fragment, end='', flush=True) # for simplicity, flush every fragment
 
         return self._future.result()
 
     def cancel(self):
+        """
+        Cancel the task.
+
+        Args:
+            self: (todo): write your description
+        """
         self._future.cancel()
 
 
 def quote_windows(arg):
+    """
+    Reverses a windows windows windows string.
+
+    Args:
+        arg: (todo): write your description
+    """
     if not arg: return '""'
     if not re.search(r'\s|"', arg): return arg
     # On Windows, only backslashes that precede a quote or the end of the argument must be escaped.
@@ -89,6 +164,14 @@ else:
     quote_arg = shlex.quote
 
 def convert_to_onnx(context, model, output_dir, args):
+    """
+    Convert onnx to onnx.
+
+    Args:
+        context: (todo): write your description
+        model: (todo): write your description
+        output_dir: (str): write your description
+    """
     context.printf('========= {}Converting {} to ONNX',
                    '(DRY RUN) ' if args.dry_run else '', model.name)
 
@@ -106,6 +189,12 @@ def convert_to_onnx(context, model, output_dir, args):
     return success
 
 def num_jobs_arg(value_str):
+    """
+    Returns the number of jobs that have a number is_jobs.
+
+    Args:
+        value_str: (str): write your description
+    """
     if value_str == 'auto':
         return os.cpu_count() or 1
 
@@ -118,6 +207,11 @@ def num_jobs_arg(value_str):
     raise argparse.ArgumentTypeError('must be a positive integer or "auto" (got {!r})'.format(value_str))
 
 def main():
+    """
+    Main function.
+
+    Args:
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=Path, metavar='CONFIG.YML',
         help='model configuration file (deprecated)')
@@ -172,6 +266,13 @@ def main():
     output_dir = args.download_dir if args.output_dir is None else args.output_dir
 
     def convert(context, model):
+        """
+        Convert given model.
+
+        Args:
+            context: (todo): write your description
+            model: (todo): write your description
+        """
         if model.mo_args is None:
             context.printf('========= Skipping {} (no conversions defined)', model.name)
             context.printf('')
@@ -225,6 +326,12 @@ def main():
     else:
         with concurrent.futures.ThreadPoolExecutor(args.jobs) as executor:
             def start(model):
+                """
+                Start a new job.
+
+                Args:
+                    model: (todo): write your description
+                """
                 output_queue = queue.Queue()
                 return JobWithQueuedOutput(
                     output_queue,

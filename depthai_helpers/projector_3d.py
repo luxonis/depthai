@@ -5,6 +5,15 @@ import open3d as o3d
 
 class PointCloudVisualizer():
     def __init__(self, intrinsic_matrix, width, height):
+        """
+        Initialize the camera.
+
+        Args:
+            self: (todo): write your description
+            intrinsic_matrix: (array): write your description
+            width: (int): write your description
+            height: (int): write your description
+        """
         self.depth_map = None
         self.rgb = None
         self.pcl = None
@@ -45,6 +54,14 @@ class PointCloudVisualizer():
     #     return pcd
 
     def rgbd_to_projection(self, depth_map, rgb):
+        """
+        Convert the color image to an rgb image.
+
+        Args:
+            self: (todo): write your description
+            depth_map: (int): write your description
+            rgb: (array): write your description
+        """
         self.depth_map = depth_map
         self.rgb = rgb
         rgb_o3d = o3d.geometry.Image(self.rgb)
@@ -60,6 +77,12 @@ class PointCloudVisualizer():
 
 
     def visualize_pcd(self):
+        """
+        Visualize geometry
+
+        Args:
+            self: (todo): write your description
+        """
         if not self.isstarted:
             self.vis.add_geometry(self.pcl)
             origin = o3d.geometry.TriangleMesh.create_coordinate_frame(size=0.3, origin=[0, 0, 0])
@@ -90,11 +113,27 @@ class PointCloudVisualizer():
     #         self.vis.update_renderer()
 
     def close_window(self):
+        """
+        Close the window.
+
+        Args:
+            self: (todo): write your description
+        """
         self.vis.destroy_window()
 
 
 
 def depthmap_to_projection(depth_map, intrinsic, stride = 1, depth_scale = 1, depth_trunc = 96):
+    """
+    Convert depthmap to depthmap
+
+    Args:
+        depth_map: (todo): write your description
+        intrinsic: (str): write your description
+        stride: (int): write your description
+        depth_scale: (float): write your description
+        depth_trunc: (todo): write your description
+    """
     # o3d_intrinsic_matrix = o3d.camera.PinholeCameraIntrinsicParameters()
     # pinhole_camera_intrinsic
     # o3d_intrinsic_matrix.set_intrinsics(depth_map.shape[1], depth_map.shape[0],
@@ -112,6 +151,12 @@ def depthmap_to_projection(depth_map, intrinsic, stride = 1, depth_scale = 1, de
     return pcd
 
 def visualize(pcd):
+    """
+    Visualize geometries
+
+    Args:
+        pcd: (todo): write your description
+    """
 
     # o3d.visualization.draw_geometries([pcd], zoom=0.3412,
     #                               front=[0.4257, -0.2125, -0.8795],

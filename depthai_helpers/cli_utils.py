@@ -6,19 +6,53 @@ import consts.resource_paths
 
 class RangeFloat(object):
     def __init__(self, start, end):
+        """
+        Initialize the start end
+
+        Args:
+            self: (todo): write your description
+            start: (int): write your description
+            end: (int): write your description
+        """
         self.start = start
         self.end = end
 
     def __eq__(self, other):
+        """
+        Determine whether two intervals are equal.
+
+        Args:
+            self: (todo): write your description
+            other: (todo): write your description
+        """
         return self.start <= other <= self.end
 
     def __contains__(self, item):
+        """
+        Return true if item is contained in the list.
+
+        Args:
+            self: (todo): write your description
+            item: (str): write your description
+        """
         return self.__eq__(item)
 
     def __iter__(self):
+        """
+        Iterate over all iterates of the iterable.
+
+        Args:
+            self: (todo): write your description
+        """
         yield self
 
     def __str__(self):
+        """
+        Return the string representation of this object.
+
+        Args:
+            self: (todo): write your description
+        """
         return '[{0},{1}]'.format(self.start, self.end)
 
 class PrintColors(Enum):

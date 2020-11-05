@@ -12,6 +12,11 @@ import argparse
 from argparse import ArgumentParser
 
 def parse_args():
+    """
+    Parse command line arguments.
+
+    Args:
+    """
     epilog_text = '''
     Integration test for DepthAI.
     Generates all combinations of streams defined in "streams", runs each of them for maximum of "timeout" seconds.
@@ -56,10 +61,22 @@ logger.addHandler(hdlr)
 logger.setLevel(logging.INFO)
 
 def kill_proc(proc, timeout):
+    """
+    Kill the child process.
+
+    Args:
+        proc: (todo): write your description
+        timeout: (float): write your description
+    """
   timeout["value"] = True
   os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
 
 def cleanup():
+    """
+    Cleanup the daemon.
+
+    Args:
+    """
     global run
     run=False
     if(p is not None):

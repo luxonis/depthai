@@ -21,6 +21,13 @@ logger.addHandler(hdlr)
 logger.setLevel(logging.INFO)
 
 def kill_proc(proc, timeout):
+    """
+    Kill the child process.
+
+    Args:
+        proc: (todo): write your description
+        timeout: (float): write your description
+    """
   timeout["value"] = True
   os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
 
@@ -28,6 +35,11 @@ global p
 p=None
 
 def cleanup():
+    """
+    Cleanup the daemon.
+
+    Args:
+    """
     global run
     run=False
     if(p is not None):

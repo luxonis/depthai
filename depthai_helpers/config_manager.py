@@ -17,6 +17,12 @@ class DepthConfigManager:
     custom_fw_commit = ''
 
     def __init__(self, args):
+        """
+        Initialize json engine.
+
+        Args:
+            self: (todo): write your description
+        """
         self.args = args
         self.stream_list = args['streams']
         self.calc_dist_to_bb = not self.args['disable_depth']
@@ -27,6 +33,12 @@ class DepthConfigManager:
 
 
     def getUsb2Mode(self):
+        """
+        Get usb mode
+
+        Args:
+            self: (todo): write your description
+        """
         usb2_mode = False
         if self.args['force_usb2']:
             cli_print("FORCE USB2 MODE", PrintColors.WARNING)
@@ -36,12 +48,25 @@ class DepthConfigManager:
         return usb2_mode
 
     def getColorPreviewScale(self):
+        """
+        Returns the color for the color.
+
+        Args:
+            self: (todo): write your description
+        """
         if self.args['color_scale']:
             return self.args['color_scale']
         else:
             return 1.0
 
     def getCustomFirmwarePath(self, commit):
+        """
+        Retrieves the path.
+
+        Args:
+            self: (todo): write your description
+            commit: (todo): write your description
+        """
         fwdir = '.fw_cache/'
         if not os.path.exists(fwdir):
             os.mkdir(fwdir)
@@ -59,6 +84,17 @@ class DepthConfigManager:
                 version = "Mozilla/5.0"
                 # FancyURLopener doesn't report by default errors like 404
                 def http_error_default(self, url, fp, errcode, errmsg, headers):
+                    """
+                    Default error handler.
+
+                    Args:
+                        self: (todo): write your description
+                        url: (str): write your description
+                        fp: (todo): write your description
+                        errcode: (str): write your description
+                        errmsg: (str): write your description
+                        headers: (dict): write your description
+                    """
                     raise ValueError(errcode)
             url_opener = CustomURLopener()
             with url_opener.open(url) as response, open(path, 'wb') as outf:
@@ -66,6 +102,12 @@ class DepthConfigManager:
         return path
 
     def getCommandFile(self):
+        """
+        Returns the file for this method
+
+        Args:
+            self: (todo): write your description
+        """
         debug_mode = False
         cmd_file = ''
         if self.args['firmware'] != None:
@@ -88,6 +130,12 @@ class DepthConfigManager:
 
 
     def importAndSetCallbacksForNN(self):
+        """
+        Imports sub - import
+
+        Args:
+            self: (todo): write your description
+        """
         # why inline imports? Could just make a dict for all these to make managing them easier and less verbose.
         from depthai_helpers.mobilenet_ssd_handler import decode_mobilenet_ssd, show_mobilenet_ssd, decode_mobilenet_ssd_json
         self.decode_nn=decode_mobilenet_ssd
@@ -146,6 +194,12 @@ class DepthConfigManager:
 
 
     def linuxCheckApplyUsbRules(self):
+        """
+        Run os os os os os os os os os os os.
+
+        Args:
+            self: (todo): write your description
+        """
         if platform.system() == 'Linux':
             ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if(ret != 0):
@@ -157,6 +211,12 @@ class DepthConfigManager:
                 os._exit(1)
 
     def getMaxShaveNumbers(self):
+        """
+        Returns the maximum max number of the stream.
+
+        Args:
+            self: (todo): write your description
+        """
         stream_names = [stream if isinstance(stream, str) else stream['name'] for stream in self.stream_list]
         max_shaves = 14
         if self.args['rgb_resolution'] != 1080:
@@ -169,6 +229,12 @@ class DepthConfigManager:
         return max_shaves
 
     def generateJsonConfig(self):
+        """
+        Generate the cave config
+
+        Args:
+            self: (todo): write your description
+        """
 
         # something to verify usb rules are good?
         self.linuxCheckApplyUsbRules()
@@ -320,6 +386,13 @@ class DepthConfigManager:
 
 
     def postProcessJsonConfig(self, config):
+        """
+        Creates a post file
+
+        Args:
+            self: (todo): write your description
+            config: (todo): write your description
+        """
         # merge board config, if exists
         if self.args['board']:
             board_path = Path(self.args['board'])
@@ -358,6 +431,16 @@ class DepthConfigManager:
 
 class BlobManager:
     def __init__(self, args, calc_dist_to_bb, shave_nr, cmx_slices, NCE_nr):
+        """
+        Initialize blobs
+
+        Args:
+            self: (todo): write your description
+            calc_dist_to_bb: (todo): write your description
+            shave_nr: (str): write your description
+            cmx_slices: (todo): write your description
+            NCE_nr: (int): write your description
+        """
         self.args = args
         self.calc_dist_to_bb = calc_dist_to_bb
         self.shave_nr = shave_nr
@@ -382,6 +465,12 @@ class BlobManager:
         self.verifyBlobFilesExist(self.blob_file, self.blob_file_config)
 
     def getNNConfig(self):
+        """
+        Retrieves the configuration file.
+
+        Args:
+            self: (todo): write your description
+        """
         # try and load labels
         NN_json = None
         if Path(self.blob_file_config).exists():
@@ -393,6 +482,14 @@ class BlobManager:
         return NN_json
 
     def verifyBlobFilesExist(self, verifyBlob, verifyConfig):
+        """
+        Verify that all the tools.
+
+        Args:
+            self: (todo): write your description
+            verifyBlob: (bool): write your description
+            verifyConfig: (todo): write your description
+        """
         verifyBlobPath = Path(verifyBlob)
         verifyConfigPath = Path(verifyConfig)
         if not verifyBlobPath.exists():
@@ -403,6 +500,14 @@ class BlobManager:
             print("NN config not found in: " + verifyConfig + '. Defaulting to "raw" output format!')
 
     def getBlobFiles(self, cnnModel, isFirstNN=True):
+        """
+        Returns a list of the blobFiles model.
+
+        Args:
+            self: (todo): write your description
+            cnnModel: (str): write your description
+            isFirstNN: (str): write your description
+        """
         cnn_model_path = consts.resource_paths.nn_resource_path + cnnModel + "/" + cnnModel
         blobFile = cnn_model_path + ".blob"
         blobFileConfig = cnn_model_path + ".json"
@@ -410,6 +515,14 @@ class BlobManager:
         return blobFile, blobFileConfig
 
     def compileBlob(self, nn_model, model_compilation_target):
+        """
+        Compile the blobuf
+
+        Args:
+            self: (todo): write your description
+            nn_model: (str): write your description
+            model_compilation_target: (str): write your description
+        """
         blob_file, _ = self.getBlobFiles(nn_model)
 
         shave_nr = self.shave_nr

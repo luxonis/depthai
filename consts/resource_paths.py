@@ -2,6 +2,12 @@ from pathlib import Path
 
 
 def relative_to_abs_path(relative_path):
+    """
+    Convert relative path to relative to relative path.
+
+    Args:
+        relative_path: (str): write your description
+    """
     dirname = Path(__file__).parent
     try:
         return str((dirname / relative_path).resolve())

@@ -3,6 +3,12 @@ import numpy as np
 import json
 
 def decode_age_gender_recognition(nnet_packet, **kwargs):
+    """
+    Decode age age age age age age.
+
+    Args:
+        nnet_packet: (todo): write your description
+    """
     config = kwargs['config']
 
     output_list = nnet_packet.getOutputsList()
@@ -26,10 +32,23 @@ def decode_age_gender_recognition(nnet_packet, **kwargs):
     return detection
 
 def decode_age_gender_recognition_json(nnet_packet, **kwargs):
+    """
+    Decode a metadata - encoded as a json string.
+
+    Args:
+        nnet_packet: (str): write your description
+    """
     detections = decode_age_gender_recognition(nnet_packet, **kwargs)
     return json.dumps(detections)
 
 def show_age_gender_recognition(decoded_nn, frame, **kwargs):
+    """
+    Show age age age age.
+
+    Args:
+        decoded_nn: (todo): write your description
+        frame: (todo): write your description
+    """
 
     if decoded_nn is not None:
         gender = decoded_nn["gender"]

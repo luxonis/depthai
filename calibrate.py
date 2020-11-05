@@ -29,6 +29,11 @@ on_embedded = platform.machine().startswith('arm') or platform.machine().startsw
 
 
 def parse_args():
+    """
+    Parse command line arguments.
+
+    Args:
+    """
     epilog_text = '''
     Captures and processes images for disparity depth calibration, generating a `depthai.calib` file
     that should be loaded when initializing depthai. By default, captures one image for each of the 13 calibration target poses.
@@ -107,6 +112,12 @@ def parse_args():
 
 
 def find_chessboard(frame):
+    """
+    Find a board board board.
+
+    Args:
+        frame: (todo): write your description
+    """
     chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
     small_frame = cv2.resize(frame, (0, 0), fx=0.3, fy=0.3)
     return cv2.findChessboardCorners(small_frame, (9, 6), chessboard_flags)[0] and \
@@ -114,6 +125,12 @@ def find_chessboard(frame):
 
 
 def ts(packet):
+    """
+    Returns the metadata for the given packet.
+
+    Args:
+        packet: (todo): write your description
+    """
     return packet.getMetadata().getTimestamp()
 
 
@@ -128,6 +145,12 @@ class Main:
     images_captured = 0
 
     def __init__(self):
+        """
+        Initialize the blob
+
+        Args:
+            self: (todo): write your description
+        """
         self.args = vars(parse_args())
         blob_man_args = {
                         'cnn_model':'mobilenet-ssd',
@@ -194,6 +217,12 @@ class Main:
 
     @contextmanager
     def get_pipeline(self):
+        """
+        Context manager that yields a pipeline.
+
+        Args:
+            self: (todo): write your description
+        """
         # Possible to try and reboot?
         # The following doesn't work (have to manually hit switch on device)
         # depthai.reboot_device
@@ -216,6 +245,14 @@ class Main:
             del pipeline
 
     def parse_frame(self, frame, stream_name):
+        """
+        Parse an image from an image.
+
+        Args:
+            self: (todo): write your description
+            frame: (todo): write your description
+            stream_name: (str): write your description
+        """
         if not find_chessboard(frame):
             return False
 
@@ -225,11 +262,24 @@ class Main:
         return True
 
     def show_info_frame(self):
+        """
+        Display image information about the image.
+
+        Args:
+            self: (todo): write your description
+        """
         info_frame = np.zeros((600, 1000, 3), np.uint8)
         print("Starting image capture. Press the [ESC] key to abort.")
         print("Will take {} total images, {} per each polygon.".format(self.total_images, self.args['count']))
 
         def show(position, text):
+            """
+            Print text in the console.
+
+            Args:
+                position: (int): write your description
+                text: (str): write your description
+            """
             cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
 
         show((25, 100), "Information about image capture:")
@@ -251,11 +301,24 @@ class Main:
                 raise SystemExit(0)
 
     def show_failed_capture_frame(self):
+        """
+        Show capture frame.
+
+        Args:
+            self: (todo): write your description
+        """
         width, height = int(self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
         info_frame = np.zeros((height, width, 3), np.uint8)
         print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
 
         def show(position, text):
+            """
+            Print text to the console.
+
+            Args:
+                position: (int): write your description
+                text: (str): write your description
+            """
             cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 255, 0))
 
         show((50, int(height / 2 - 40)), "Capture failed, unable to find chessboard!")
@@ -267,6 +330,12 @@ class Main:
         cv2.waitKey(2000)
 
     def capture_images(self):
+        """
+        Captures a single frame from an image.
+
+        Args:
+            self: (todo): write your description
+        """
         finished = False
         capturing = False
         captured_left = False
@@ -373,6 +442,12 @@ class Main:
                 frame_list.clear()
 
     def calibrate(self):
+        """
+        Calibrate calibration
+
+        Args:
+            self: (todo): write your description
+        """
         print("Starting image processing")
         flags = [self.config['board_config']['stereo_center_crop']]
         cal_data = StereoCalibration()
@@ -383,6 +458,12 @@ class Main:
             raise SystemExit(1)
 
     def run(self):
+        """
+        Main entry point
+
+        Args:
+            self: (todo): write your description
+        """
         if 'capture' in self.args['mode']:
             try:
                 if self.args['image_op'] == 'delete':

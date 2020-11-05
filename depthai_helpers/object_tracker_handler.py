@@ -2,6 +2,14 @@ import cv2
 import numpy as np
 
 def show_tracklets(tracklets, frame, labels):
+    """
+    Show a tracklet for a given tracklets.
+
+    Args:
+        tracklets: (todo): write your description
+        frame: (todo): write your description
+        labels: (list): write your description
+    """
     # img_h = frame.shape[0]
     # img_w = frame.shape[1]
 
