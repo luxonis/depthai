@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 
 import json
-from pathlib import Path
 import platform
 import os
-import subprocess
-from time import time, sleep, monotonic
-from datetime import datetime
+from time import time, monotonic
 import cv2
 import numpy as np
-import sys
 import depthai
 import csv
 print('Using depthai module from: ', depthai.__file__)
 print('Depthai version installed: ', depthai.__version__)
 
 from depthai_helpers.version_check import check_depthai_version, get_version_from_requirements
-from depthai_helpers.pygame_checkbox import Checkbox, pygame_render_text
-import pygame
-from pygame.locals import *
+from depthai_helpers.object_tracker_handler import show_tracklets
+from depthai_helpers.config_manager import DepthConfigManager
+from depthai_helpers.arg_manager import CliArgs
 
 check_depthai_version()
 
@@ -26,16 +22,17 @@ import consts.resource_paths
 from depthai_helpers import utils
 from depthai_helpers.cli_utils import cli_print, PrintColors
 
-from depthai_helpers.config_manager import DepthConfigManager
-from depthai_helpers.arg_manager import CliArgs
+from depthai_helpers.pygame_checkbox import Checkbox, pygame_render_text
+import pygame
+from pygame.locals import *
+os.environ['SDL_VIDEO_WINDOW_POS'] = '2000,10'
+pygame.init()
 
+print('Using depthai module from: ', depthai.__file__)
+print('Depthai version installed: ', depthai.__version__)
+check_depthai_version()
 is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
 
-from depthai_helpers.object_tracker_handler import show_tracklets
-
-os.environ['SDL_VIDEO_WINDOW_POS'] = '2000,10'
-
-pygame.init()
 
 global args, cnn_model2
 white  = [255, 255, 255]
@@ -43,6 +40,7 @@ orange = [143, 122, 4]
 red    = [230, 9, 9]
 green  = [4, 143, 7]
 black  = [0, 0, 0]
+
 
 class DepthAI:
     global is_rpi
@@ -53,7 +51,7 @@ class DepthAI:
 
     def reset_process_wd(self):
         global wd_cutoff
-        wd_cutoff=monotonic()+self.process_watchdog_timeout
+        wd_cutoff = monotonic() + self.process_watchdog_timeout
         return
 
     def on_trackbar_change(self, value):
@@ -121,9 +119,8 @@ class DepthAI:
         # grab video file, if option exists
         video_file = configMan.video_file
 
-
         self.device = None
-        if debug_mode: 
+        if debug_mode:
             print('Cmd file: ', cmd_file, ' args["device_id"]: ', args['device_id'])
             self.device = depthai.Device(cmd_file, args['device_id'])
         else:
@@ -140,7 +137,6 @@ class DepthAI:
         if p is None:
             print('Pipeline is not created.')
             exit(3)
-
 
         nn2depth = self.device.get_nn_to_depth_bbox_mapping()
 
@@ -176,15 +172,17 @@ class DepthAI:
             frame_count_prev[w] = 0
 
         tracklets = None
-        
+
         self.reset_process_wd()
 
         time_start = time()
+
         def print_packet_info_header():
             print('[hostTimestamp streamName] devTstamp seq camSrc width height Bpp')
+
         def print_packet_info(packet, stream_name):
             meta = packet.getMetadata()
-            print("[{:.6f} {:15s}]".format(time()-time_start, stream_name), end='')
+            print("[{:.6f} {:15s}]".format(time() - time_start, stream_name), end='')
             if meta is not None:
                 source = meta.getCameraName()
                 if stream_name.startswith('disparity') or stream_name.startswith('depth'):
@@ -225,7 +223,7 @@ class DepthAI:
             cam_l = depthai.CameraControl.CamId.LEFT
             cam_r = depthai.CameraControl.CamId.RIGHT
             cmd_ae_region = depthai.CameraControl.Command.AE_REGION
-            cmd_exp_comp  = depthai.CameraControl.Command.EXPOSURE_COMPENSATION
+            cmd_exp_comp = depthai.CameraControl.Command.EXPOSURE_COMPENSATION
             keypress_handler_lut = {
                 ord('f'): lambda: self.device.request_af_trigger(),
                 ord('1'): lambda: self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO),
@@ -255,7 +253,7 @@ class DepthAI:
                 conf_thr_slider_max = 255
                 cv2.createTrackbar(trackbar_name, stream, conf_thr_slider_min, conf_thr_slider_max, self.on_trackbar_change)
                 cv2.setTrackbarPos(trackbar_name, stream, args['disparity_confidence_threshold'])
-        
+
         right_rectified = None
         pcl_converter = None
 
@@ -365,7 +363,7 @@ class DepthAI:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
             self.nnet_packets, self.data_packets = p.get_available_nnet_and_data_packets(blocking=True)
-            
+
             ### Uncomment to print ops
             # ops = ops + 1
             # if time() - prevTime > 1.0:
@@ -378,8 +376,7 @@ class DepthAI:
             if packets_len != 0:
                 self.reset_process_wd()
             else:
-                # print("In here")
-                cur_time=monotonic()
+                cur_time = monotonic()
                 if cur_time > wd_cutoff:
                     print("process watchdog timeout")
                     os._exit(10)
@@ -604,7 +601,7 @@ class DepthAI:
                         mipi_test[window_name].check()
                 # print(window_name)
                 if packet.stream_name not in stream_names:
-                    continue # skip streams that were automatically added
+                    continue  # skip streams that were automatically added
                 if args['verbose']: print_packet_info(packet, packet.stream_name)
                 packetData = packet.getData()
                 if packetData is None:
@@ -623,16 +620,16 @@ class DepthAI:
                         mipi_test['previewout'].check()
                     # the format of previewout image is CHW (Chanel, Height, Width), but OpenCV needs HWC, so we
                     # change shape (3, 300, 300) -> (300, 300, 3)
-                    data0 = packetData[0,:,:]
-                    data1 = packetData[1,:,:]
-                    data2 = packetData[2,:,:]
+                    data0 = packetData[0, :, :]
+                    data1 = packetData[1, :, :]
+                    data2 = packetData[2, :, :]
                     frame = cv2.merge([data0, data1, data2])
                     if nnet_prev["entries_prev"][camera] is not None:
                         frame = show_nn(nnet_prev["entries_prev"][camera], frame, NN_json=NN_json, config=config)
                         if enable_object_tracker and tracklets is not None:
                             frame = show_tracklets(tracklets, frame, labels)
                     cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-                    cv2.putText(frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0]-4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
+                    cv2.putText(frame, "NN fps: " + str(frame_count_prev['nn'][camera]), (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 255, 0))
                     cv2.imshow(window_name, frame)
                     if not preview_window_set:
                         cv2.moveWindow(window_name, 0, 0)
@@ -645,7 +642,6 @@ class DepthAI:
                         right_rectified = packetData
                     cv2.putText(frame_bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
                     cv2.putText(frame_bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
-                    camera = None
                     if args['draw_bb_depth']:
                         camera = args['cnn_camera']
                         if packet.stream_name == 'disparity':
@@ -653,7 +649,7 @@ class DepthAI:
                                 camera = 'right'
                         elif camera != 'rgb':
                             camera = packet.getMetadata().getCameraName()
-                        if nnet_prev["entries_prev"][camera] is not None: 
+                        if nnet_prev["entries_prev"][camera] is not None:
                             frame_bgr = show_nn(nnet_prev["entries_prev"][camera], frame_bgr, NN_json=NN_json, config=config, nn2depth=nn2depth)
                     cv2.imshow(window_name, frame_bgr)
                     if window_name == 'left' and args['mono_resolution'] == 400:
@@ -679,10 +675,10 @@ class DepthAI:
                     frame = packetData
 
                     if len(frame.shape) == 2:
-                        if frame.dtype == np.uint8: # grayscale
+                        if frame.dtype == np.uint8:  # grayscale
                             cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
                             cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
-                        else: # uint16
+                        else:  # uint16
                             if args['pointcloud'] and "depth" in stream_names and "rectified_right" in stream_names and right_rectified is not None:
                                 try:
                                     from depthai_helpers.projector_3d import PointCloudVisualizer
@@ -693,14 +689,14 @@ class DepthAI:
                                 right_rectified = cv2.flip(right_rectified, 1)
                                 pcl_converter.rgbd_to_projection(frame, right_rectified)
                                 pcl_converter.visualize_pcd()
-                            
+
                             frame = (65535 // frame).astype(np.uint8)
-                            #colorize depth map, comment out code below to obtain grayscale
+                            # colorize depth map, comment out code below to obtain grayscale
                             frame = cv2.applyColorMap(frame, cv2.COLORMAP_HOT)
                             # frame = cv2.applyColorMap(frame, cv2.COLORMAP_JET)
                             cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
                             cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
-                    else: # bgr
+                    else:  # bgr
                         cv2.putText(frame, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
                         cv2.putText(frame, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, 255)
 
@@ -724,17 +720,17 @@ class DepthAI:
                 elif packet.stream_name == 'video':
                     videoFrame = packetData
                     videoFrame.tofile(video_file)
-                    #mjpeg = packetData
-                    #mat = cv2.imdecode(mjpeg, cv2.IMREAD_COLOR)
-                    #cv2.imshow('mjpeg', mat)
+                    # mjpeg = packetData
+                    # mat = cv2.imdecode(mjpeg, cv2.IMREAD_COLOR)
+                    # cv2.imshow('mjpeg', mat)
                 elif packet.stream_name == 'color':
                     meta = packet.getMetadata()
                     w = meta.getFrameWidth()
                     h = meta.getFrameHeight()
-                    yuv420p = packetData.reshape( (h * 3 // 2, w) )
+                    yuv420p = packetData.reshape((h * 3 // 2, w))
                     bgr = cv2.cvtColor(yuv420p, cv2.COLOR_YUV2BGR_IYUV)
                     scale = configMan.getColorPreviewScale()
-                    bgr = cv2.resize(bgr, ( int(w*scale), int(h*scale) ), interpolation = cv2.INTER_AREA) 
+                    bgr = cv2.resize(bgr, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
                     cv2.putText(bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
                     cv2.putText(bgr, "fps: " + str(frame_count_prev[window_name]), (25, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
                     cv2.imshow("color", bgr)
@@ -787,12 +783,14 @@ class DepthAI:
 
         del p  # in order to stop the pipeline object should be deleted, otherwise device will continue working. This is required if you are going to add code after the main loop, otherwise you can ommit it.
         del self.device
+        cv2.destroyAllWindows()
 
         # Close video output file if was opened
         if video_file is not None:
             video_file.close()
 
         print('py: DONE.')
+
 
 if __name__ == "__main__":
     dai = DepthAI()
