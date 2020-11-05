@@ -14,6 +14,11 @@ global return_code
 p=None
 
 def cleanup():
+    """
+    Cleanup the daemon.
+
+    Args:
+    """
     global run
     run=False
     if(p is not None):

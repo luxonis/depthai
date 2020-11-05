@@ -9,6 +9,12 @@ from depthai_helpers.cli_utils import parse_args, cli_print, PrintColors
 class TestCliUtils(unittest.TestCase):
 
     def test_parse_args_default(self):
+        """
+        Return a set of the options.
+
+        Args:
+            self: (todo): write your description
+        """
         options = parse_args()
         assert isinstance(options, Namespace)
         assert np.isclose(options.baseline, 9.0)
@@ -18,9 +24,21 @@ class TestCliUtils(unittest.TestCase):
         assert options.swap_lr is True
 
     def test_cli_print_valid(self):
+        """
+        Print the test results.
+
+        Args:
+            self: (todo): write your description
+        """
         cli_print("some message", PrintColors.WARNING)
 
     def test_cli_print_input_not_valid(self):
+        """
+        Print the test input.
+
+        Args:
+            self: (todo): write your description
+        """
         with self.assertRaises(ValueError):
             cli_print("some message", "Not a valid type")
 

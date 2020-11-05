@@ -7,6 +7,12 @@ import requests
 supported_openvino_version = '2020.1.023'
 
 def relative_to_abs_path(relative_path):
+    """
+    Convert relative path to relative to relative path.
+
+    Args:
+        relative_path: (str): write your description
+    """
     dirname = Path(__file__).parent
     try:
         return str((dirname / relative_path).resolve())
@@ -19,6 +25,13 @@ download_folder_path  = relative_to_abs_path('downloads') + "/"
 
 
 def download_model(model, model_zoo_folder):
+    """
+    Download and downloader model.
+
+    Args:
+        model: (todo): write your description
+        model_zoo_folder: (str): write your description
+    """
 
     model_downloader_options=f"--precisions FP16 --output_dir {download_folder_path} --cache_dir {download_folder_path}/.cache --num_attempts 5 --name {model} --model_root {model_zoo_folder}"
     model_downloader_options = model_downloader_options.split()
@@ -39,6 +52,13 @@ def download_model(model, model_zoo_folder):
 
 
 def convert_model_to_ir(model, model_zoo_folder):
+    """
+    Convert model_model_zoo model.
+
+    Args:
+        model: (todo): write your description
+        model_zoo_folder: (todo): write your description
+    """
 
     converter_path = Path(ir_converter_path)
 
@@ -58,6 +78,16 @@ def convert_model_to_ir(model, model_zoo_folder):
 
 
 def myriad_compile_model_local(shaves, cmx_slices, nces, xml_path, output_file):
+    """
+    Compile model.
+
+    Args:
+        shaves: (todo): write your description
+        cmx_slices: (todo): write your description
+        nces: (todo): write your description
+        xml_path: (str): write your description
+        output_file: (str): write your description
+    """
 
     myriad_compile_path = None
     if myriad_compile_path is None:
@@ -83,6 +113,17 @@ def myriad_compile_model_local(shaves, cmx_slices, nces, xml_path, output_file):
 
 
 def myriad_compile_model_cloud(xml, bin, shaves, cmx_slices, nces, output_file):
+    """
+    Compile cloud model using cloud provider.
+
+    Args:
+        xml: (str): write your description
+        bin: (todo): write your description
+        shaves: (list): write your description
+        cmx_slices: (todo): write your description
+        nces: (todo): write your description
+        output_file: (str): write your description
+    """
     PLATFORM="VPU_MYRIAD_2450" if nces == 0 else "VPU_MYRIAD_2480"
 
     # use 69.214.171 instead luxonis.com to bypass cloudflare limitation of max file size
@@ -112,6 +153,18 @@ def myriad_compile_model_cloud(xml, bin, shaves, cmx_slices, nces, output_file):
     return 0
 
 def download_and_compile_NN_model(model, model_zoo_folder, shaves, cmx_slices, nces, output_file, model_compilation_target='auto'):
+    """
+    Download and a model and saves it ascii model.
+
+    Args:
+        model: (todo): write your description
+        model_zoo_folder: (str): write your description
+        shaves: (list): write your description
+        cmx_slices: (str): write your description
+        nces: (todo): write your description
+        output_file: (str): write your description
+        model_compilation_target: (str): write your description
+    """
 
     if model_compilation_target == 'auto' or model_compilation_target == 'local':
         try:
@@ -165,6 +218,11 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, cmx_slices, n
     return 0
 
 def main(args):
+    """
+    Main function.
+
+    Args:
+    """
 
     model = args['model_name']
     model_zoo_folder = args['model_zoo_folder']
@@ -181,6 +239,11 @@ if __name__ == '__main__':
     import argparse
     from argparse import ArgumentParser
     def parse_args():
+        """
+        Parse command line arguments.
+
+        Args:
+        """
         epilog_text = '''
         Myriad blob compiler.
         '''

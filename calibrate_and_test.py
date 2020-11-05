@@ -13,6 +13,11 @@ global return_code
 p=None
 
 def cleanup():
+    """
+    Cleanup the daemon
+
+    Args:
+    """
     if(p is not None):
         print('Stopping subprocess with pid: ', str(p.pid))
         os.killpg(os.getpgid(p.pid), signal.SIGTERM)

@@ -67,51 +67,131 @@ class Reporter:
     ERROR_DECORATION = '#' * 10
 
     def __init__(self, enable_human_output=True, enable_json_output=False, event_context={}):
+        """
+        Initialize the context.
+
+        Args:
+            self: (todo): write your description
+            enable_human_output: (bool): write your description
+            enable_json_output: (bool): write your description
+            event_context: (str): write your description
+        """
         self.enable_human_output = enable_human_output
         self.enable_json_output = enable_json_output
         self.event_context = event_context
 
     def print_group_heading(self, text):
+        """
+        Print the heading of the text.
+
+        Args:
+            self: (todo): write your description
+            text: (str): write your description
+        """
         if not self.enable_human_output: return
         print(self.GROUP_DECORATION, text, self.GROUP_DECORATION[::-1])
         print()
 
     def print_section_heading(self, format, *args):
+        """
+        Print the heading.
+
+        Args:
+            self: (todo): write your description
+            format: (str): write your description
+        """
         if not self.enable_human_output: return
         print(self.SECTION_DECORATION, format.format(*args), flush=True)
 
     def print_progress(self, format, *args):
+        """
+        Print the progress bar.
+
+        Args:
+            self: (todo): write your description
+            format: (str): write your description
+        """
         if not self.enable_human_output: return
         print(format.format(*args), end='\r' if sys.stdout.isatty() else '\n', flush=True)
 
     def end_progress(self):
+        """
+        Prints the progress bar.
+
+        Args:
+            self: (todo): write your description
+        """
         if not self.enable_human_output: return
         if sys.stdout.isatty():
             print()
 
     def print(self, format='', *args, flush=False):
+        """
+        Print the output of the output.
+
+        Args:
+            self: (todo): write your description
+            format: (str): write your description
+            flush: (float): write your description
+        """
         if not self.enable_human_output: return
         print(format.format(*args), flush=flush)
 
     def log_warning(self, format, *args, exc_info=False):
+        """
+        Log a warning.
+
+        Args:
+            self: (todo): write your description
+            format: (str): write your description
+            exc_info: (todo): write your description
+        """
         if exc_info:
             traceback.print_exc(file=sys.stderr)
         print(self.ERROR_DECORATION, "Warning:", format.format(*args), file=sys.stderr)
 
     def log_error(self, format, *args, exc_info=False):
+        """
+        Log an error. stderr.
+
+        Args:
+            self: (todo): write your description
+            format: (str): write your description
+            exc_info: (todo): write your description
+        """
         if exc_info:
             traceback.print_exc(file=sys.stderr)
         print(self.ERROR_DECORATION, "Error:", format.format(*args), file=sys.stderr)
 
     def log_details(self, format, *args):
+        """
+        Print the details.
+
+        Args:
+            self: (todo): write your description
+            format: (str): write your description
+        """
         print(self.ERROR_DECORATION, '    ', format.format(*args), file=sys.stderr)
 
     def emit_event(self, type, **kwargs):
+        """
+        Dumps an event to stdout.
+
+        Args:
+            self: (todo): write your description
+            type: (todo): write your description
+        """
         if not self.enable_json_output: return
         json.dump({'$type': type, **self.event_context, **kwargs}, sys.stdout, indent=None)
         print()
 
     def with_event_context(self, **kwargs):
+        """
+        Create a context processor. context.
+
+        Args:
+            self: (todo): write your description
+        """
         return Reporter(
             enable_human_output=self.enable_human_output,
             enable_json_output=self.enable_json_output,
@@ -120,29 +200,65 @@ class Reporter:
 
 class DeserializationError(Exception):
     def __init__(self, problem, contexts=()):
+        """
+        Initialize problem.
+
+        Args:
+            self: (todo): write your description
+            problem: (todo): write your description
+            contexts: (list): write your description
+        """
         super().__init__(': '.join(contexts + (problem,)))
         self.problem = problem
         self.contexts = contexts
 
 @contextlib.contextmanager
 def deserialization_context(context):
+    """
+    Deserialize the given context.
+
+    Args:
+        context: (todo): write your description
+    """
     try:
         yield None
     except DeserializationError as exc:
         raise DeserializationError(exc.problem, (context,) + exc.contexts) from exc
 
 def validate_string(context, value):
+    """
+    Validates that the string is a string.
+
+    Args:
+        context: (todo): write your description
+        value: (str): write your description
+    """
     if not isinstance(value, str):
         raise DeserializationError('{}: expected a string, got {!r}'.format(context, value))
     return value
 
 def validate_string_enum(context, value, known_values):
+    """
+    Validate that value is a validator.
+
+    Args:
+        context: (todo): write your description
+        value: (str): write your description
+        known_values: (str): write your description
+    """
     str_value = validate_string(context, value)
     if str_value not in known_values:
         raise DeserializationError('{}: expected one of {!r}, got {!r}'.format(context, known_values, value))
     return str_value
 
 def validate_relative_path(context, value):
+    """
+    Validate a relative path is a relative path.
+
+    Args:
+        context: (todo): write your description
+        value: (todo): write your description
+    """
     path = Path(validate_string(context, value))
 
     if path.anchor or '..' in path.parts:
@@ -151,6 +267,13 @@ def validate_relative_path(context, value):
     return path
 
 def validate_nonnegative_int(context, value):
+    """
+    Validate that value is an integer.
+
+    Args:
+        context: (todo): write your description
+        value: (todo): write your description
+    """
     if not isinstance(value, int) or value < 0:
         raise DeserializationError(
             '{}: expected a non-negative integer, got {!r}'.format(context, value))
@@ -159,6 +282,13 @@ def validate_nonnegative_int(context, value):
 class TaggedBase:
     @classmethod
     def deserialize(cls, value):
+        """
+        Deserialize value into - serialized string.
+
+        Args:
+            cls: (todo): write your description
+            value: (str): write your description
+        """
         try:
             return cls.types[value['$type']].deserialize(value)
         except KeyError:
@@ -169,19 +299,48 @@ class FileSource(TaggedBase):
 
     @classmethod
     def deserialize(cls, source):
+        """
+        Deserialize source object.
+
+        Args:
+            cls: (todo): write your description
+            source: (str): write your description
+        """
         if isinstance(source, str):
             source = {'$type': 'http', 'url': source}
         return super().deserialize(source)
 
 class FileSourceHttp(FileSource):
     def __init__(self, url):
+        """
+        Initialize a url.
+
+        Args:
+            self: (todo): write your description
+            url: (str): write your description
+        """
         self.url = url
 
     @classmethod
     def deserialize(cls, source):
+        """
+        Deserialize string into a string.
+
+        Args:
+            cls: (todo): write your description
+            source: (str): write your description
+        """
         return cls(validate_string('"url"', source['url']))
 
     def start_download(self, session, chunk_size):
+        """
+        Starts a chunk.
+
+        Args:
+            self: (todo): write your description
+            session: (todo): write your description
+            chunk_size: (int): write your description
+        """
         response = session.get(self.url, stream=True, timeout=DOWNLOAD_TIMEOUT)
         response.raise_for_status()
 
@@ -191,13 +350,35 @@ FileSource.types['http'] = FileSourceHttp
 
 class FileSourceGoogleDrive(FileSource):
     def __init__(self, id):
+        """
+        Initialize the id
+
+        Args:
+            self: (todo): write your description
+            id: (str): write your description
+        """
         self.id = id
 
     @classmethod
     def deserialize(cls, source):
+        """
+        Deserialize string into a string.
+
+        Args:
+            cls: (todo): write your description
+            source: (str): write your description
+        """
         return cls(validate_string('"id"', source['id']))
 
     def start_download(self, session, chunk_size):
+        """
+        Starts a download.
+
+        Args:
+            self: (todo): write your description
+            session: (dict): write your description
+            chunk_size: (int): write your description
+        """
         URL = 'https://docs.google.com/uc?export=download'
         response = session.get(URL, params={'id' : self.id}, stream=True, timeout=DOWNLOAD_TIMEOUT)
         response.raise_for_status()
@@ -214,6 +395,16 @@ FileSource.types['google_drive'] = FileSourceGoogleDrive
 
 class ModelFile:
     def __init__(self, name, size, sha256, source):
+        """
+        Initialize a sha256 hash.
+
+        Args:
+            self: (todo): write your description
+            name: (str): write your description
+            size: (int): write your description
+            sha256: (str): write your description
+            source: (str): write your description
+        """
         self.name = name
         self.size = size
         self.sha256 = sha256
@@ -221,6 +412,13 @@ class ModelFile:
 
     @classmethod
     def deserialize(cls, file):
+        """
+        Deserialize a file : param file : file path.
+
+        Args:
+            cls: (todo): write your description
+            file: (str): write your description
+        """
         name = validate_relative_path('"name"', file['name'])
 
         with deserialization_context('In file "{}"'.format(name)):
@@ -242,6 +440,16 @@ class Postproc(TaggedBase):
 
 class PostprocRegexReplace(Postproc):
     def __init__(self, file, pattern, replacement, count):
+        """
+        Initialize pattern.
+
+        Args:
+            self: (todo): write your description
+            file: (str): write your description
+            pattern: (str): write your description
+            replacement: (str): write your description
+            count: (int): write your description
+        """
         self.file = file
         self.pattern = pattern
         self.replacement = replacement
@@ -249,6 +457,13 @@ class PostprocRegexReplace(Postproc):
 
     @classmethod
     def deserialize(cls, postproc):
+        """
+        Deserialize a postproc from a post request.
+
+        Args:
+            cls: (todo): write your description
+            postproc: (dict): write your description
+        """
         return cls(
             validate_relative_path('"file"', postproc['file']),
             re.compile(validate_string('"pattern"', postproc['pattern'])),
@@ -257,6 +472,14 @@ class PostprocRegexReplace(Postproc):
         )
 
     def apply(self, reporter, output_dir):
+        """
+        Perform post - processing.
+
+        Args:
+            self: (todo): write your description
+            reporter: (todo): write your description
+            output_dir: (str): write your description
+        """
         postproc_file = output_dir / self.file
 
         reporter.print_section_heading('Replacing text in {}', postproc_file)
@@ -283,17 +506,40 @@ Postproc.types['regex_replace'] = PostprocRegexReplace
 
 class PostprocUnpackArchive(Postproc):
     def __init__(self, file, format):
+        """
+        Initialize the file.
+
+        Args:
+            self: (todo): write your description
+            file: (str): write your description
+            format: (str): write your description
+        """
         self.file = file
         self.format = format
 
     @classmethod
     def deserialize(cls, postproc):
+        """
+        Deserialize postproc from a postproc instance.
+
+        Args:
+            cls: (todo): write your description
+            postproc: (todo): write your description
+        """
         return cls(
             validate_relative_path('"file"', postproc['file']),
             validate_string('"format"', postproc['format']),
         )
 
     def apply(self, reporter, output_dir):
+        """
+        Applies the report.
+
+        Args:
+            self: (todo): write your description
+            reporter: (todo): write your description
+            output_dir: (str): write your description
+        """
         postproc_file = output_dir / self.file
 
         reporter.print_section_heading('Unpacking {}', postproc_file)
@@ -306,6 +552,23 @@ Postproc.types['unpack_archive'] = PostprocUnpackArchive
 class Model:
     def __init__(self, name, subdirectory, files, postprocessing, mo_args, framework,
                  description, license_url, precisions, task_type, conversion_to_onnx_args):
+        """
+        Create a new subdirectory.
+
+        Args:
+            self: (todo): write your description
+            name: (str): write your description
+            subdirectory: (str): write your description
+            files: (list): write your description
+            postprocessing: (todo): write your description
+            mo_args: (todo): write your description
+            framework: (str): write your description
+            description: (str): write your description
+            license_url: (str): write your description
+            precisions: (float): write your description
+            task_type: (str): write your description
+            conversion_to_onnx_args: (todo): write your description
+        """
         self.name = name
         self.subdirectory = subdirectory
         self.files = files
@@ -321,6 +584,15 @@ class Model:
 
     @classmethod
     def deserialize(cls, model, name, subdirectory):
+        """
+        Deserializes model : class.
+
+        Args:
+            cls: (todo): write your description
+            model: (dict): write your description
+            name: (str): write your description
+            subdirectory: (str): write your description
+        """
         with deserialization_context('In model "{}"'.format(name)):
             if not RE_MODEL_NAME.fullmatch(name):
                 raise DeserializationError('Invalid name, must consist only of letters, digits or ._-')
@@ -396,10 +668,21 @@ class Model:
                 description, license_url, precisions, task_type, conversion_to_onnx_args)
 
 def load_models(args):
+    """
+    Load all sub - packages.
+
+    Args:
+    """
     models = []
     model_names = set()
 
     def add_model(model):
+        """
+        Add a new model to the model.
+
+        Args:
+            model: (list): write your description
+        """
         models.append(model)
 
         if models[-1].name in model_names:
@@ -445,6 +728,11 @@ def load_models(args):
     return models
 
 def load_models_or_die(args):
+    """
+    Load all models
+
+    Args:
+    """
     try:
         return load_models(args)
     except DeserializationError as e:
@@ -457,6 +745,12 @@ def load_models_or_die(args):
 
 # requires the --print_all, --all, --name and --list arguments to be in `args`
 def load_models_from_args(parser, args):
+    """
+    Load all model instances from a list of arguments.
+
+    Args:
+        parser: (todo): write your description
+    """
     if args.print_all:
         for model in load_models_or_die(args):
             print(model.name)

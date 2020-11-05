@@ -40,18 +40,43 @@ class DepthAI:
     runThread = True
 
     def reset_process_wd(self):
+        """
+        Reset the timeout of the current thread.
+
+        Args:
+            self: (todo): write your description
+        """
         global wd_cutoff
         wd_cutoff=monotonic()+self.process_watchdog_timeout
         return
 
     def on_trackbar_change(self, value):
+        """
+        When a change is changed.
+
+        Args:
+            self: (todo): write your description
+            value: (todo): write your description
+        """
         self.device.send_disparity_confidence_threshold(value)
         return
 
     def stopLoop(self):
+        """
+        Stops the task.
+
+        Args:
+            self: (todo): write your description
+        """
         self.runThread = False
 
     def startLoop(self):
+        """
+        Start a device
+
+        Args:
+            self: (todo): write your description
+        """
         cliArgs = CliArgs()
         args = vars(cliArgs.parse_args())
 
@@ -137,8 +162,20 @@ class DepthAI:
 
         time_start = time()
         def print_packet_info_header():
+            """
+            Print the header information.
+
+            Args:
+            """
             print('[hostTimestamp streamName] devTstamp seq camSrc width height Bpp')
         def print_packet_info(packet, stream_name):
+            """
+            Return information about a packet.
+
+            Args:
+                packet: (todo): write your description
+                stream_name: (str): write your description
+            """
             meta = packet.getMetadata()
             print("[{:.6f} {:15s}]".format(time()-time_start, stream_name), end='')
             if meta is not None:
@@ -151,6 +188,14 @@ class DepthAI:
             return
 
         def keypress_handler(self, key, stream_names):
+            """
+            Handler for key handler
+
+            Args:
+                self: (todo): write your description
+                key: (str): write your description
+                stream_names: (str): write your description
+            """
             cam_l = depthai.CameraControl.CamId.LEFT
             cam_r = depthai.CameraControl.CamId.RIGHT
             cmd_ae_region = depthai.CameraControl.Command.AE_REGION

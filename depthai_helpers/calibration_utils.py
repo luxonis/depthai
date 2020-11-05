@@ -10,6 +10,13 @@ import json
 
 # Creates a set of 13 polygon coordinates
 def setPolygonCoordinates(height, width):
+    """
+    Set the width and height of the image.
+
+    Args:
+        height: (int): write your description
+        width: (int): write your description
+    """
     horizontal_shift = width//4
     vertical_shift = height//4
 
@@ -38,13 +45,33 @@ def setPolygonCoordinates(height, width):
     return p_coordinates
 
 def getPolygonCoordinates(idx, p_coordinates):
+    """
+    Get a polygon from a p_coordinates.
+
+    Args:
+        idx: (int): write your description
+        p_coordinates: (list): write your description
+    """
     return p_coordinates[idx]
 
 def getNumOfPolygons(p_coordinates):
+    """
+    Returns the number of coordinates in p_coordinates in - 1.
+
+    Args:
+        p_coordinates: (todo): write your description
+    """
     return len(p_coordinates)
 
 # Filters polygons to just those at the given indexes.
 def select_polygon_coords(p_coordinates,indexes):
+    """
+    Returns the coordinates of a polygon.
+
+    Args:
+        p_coordinates: (todo): write your description
+        indexes: (todo): write your description
+    """
     if indexes == None:
         # The default
         return p_coordinates
@@ -53,6 +80,14 @@ def select_polygon_coords(p_coordinates,indexes):
         return [p_coordinates[i] for i in indexes]
 
 def image_filename(stream_name,polygon_index,total_num_of_captured_images):
+    """
+    Generate filename for an image.
+
+    Args:
+        stream_name: (str): write your description
+        polygon_index: (str): write your description
+        total_num_of_captured_images: (str): write your description
+    """
     return "{stream_name}_p{polygon_index}_{total_num_of_captured_images}.png".format(stream_name=stream_name,polygon_index=polygon_index,total_num_of_captured_images=total_num_of_captured_images)
 
 def polygon_from_image_name(image_name):
@@ -326,6 +361,12 @@ class StereoCalibration(object):
 
 
     def create_save_mesh(self): #, output_path):
+        """
+        Create the mesh map
+
+        Args:
+            self: (todo): write your description
+        """
 
         map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
@@ -406,6 +447,14 @@ class StereoCalibration(object):
         # mesh_right.tofile(consts.resource_paths.right_mesh_fpath)
 
     def show_rectified_images_two_calib(self, dataset_dir, use_homo):
+        """
+        Show a 2d image
+
+        Args:
+            self: (todo): write your description
+            dataset_dir: (str): write your description
+            use_homo: (bool): write your description
+        """
         images_left = glob.glob(dataset_dir + '/left/*.png')
         images_right = glob.glob(dataset_dir + '/right/*.png')
         images_left.sort()
@@ -509,6 +558,15 @@ class StereoCalibration(object):
 
 
     def rectify_map(self, M, d, R):
+        """
+        Rectify a 2d array of 2d array of 2d.
+
+        Args:
+            self: (todo): write your description
+            M: (array): write your description
+            d: (array): write your description
+            R: (array): write your description
+        """
         fx = M[0,0]
         fy = M[1,1]
         u0 = M[0,2]
@@ -624,6 +682,13 @@ class StereoCalibration(object):
                                                     self.img_shape, 2)
 
     def test_img_vis(self, dataset_dir):
+        """
+        Test for images exist.
+
+        Args:
+            self: (todo): write your description
+            dataset_dir: (str): write your description
+        """
         images_left = glob.glob(dataset_dir + '/left/*.png')
         images_right = glob.glob(dataset_dir + '/right/*.png')
         images_left.sort()
@@ -673,6 +738,13 @@ class StereoCalibration(object):
 
 
     def show_rectified_images_two_uncalib(self, dataset_dir):
+        """
+        Show the two images
+
+        Args:
+            self: (todo): write your description
+            dataset_dir: (str): write your description
+        """
         images_left = glob.glob(dataset_dir + '/left/*.png')
         images_right = glob.glob(dataset_dir + '/right/*.png')
         images_left.sort()
@@ -783,6 +855,14 @@ class StereoCalibration(object):
 
 
     def show_rectified_images(self, dataset_dir, calibration_file):
+        """
+        Show rectified by the image.
+
+        Args:
+            self: (todo): write your description
+            dataset_dir: (str): write your description
+            calibration_file: (str): write your description
+        """
         images_left = glob.glob(dataset_dir + '/left/*.png')
         images_right = glob.glob(dataset_dir + '/right/*.png')
         images_left.sort()

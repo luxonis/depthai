@@ -4,6 +4,12 @@ import numpy as np
 from datetime import datetime
 
 def decode_mobilenet_ssd(nnet_packet, **kwargs):
+    """
+    Decode mobilenet mobil mobilenet.
+
+    Args:
+        nnet_packet: (todo): write your description
+    """
     NN_metadata = kwargs['NN_json']
     output_format = NN_metadata['NN_config']['output_format']
     config = kwargs['config']
@@ -62,6 +68,12 @@ def decode_mobilenet_ssd(nnet_packet, **kwargs):
     return detections
 
 def decode_mobilenet_ssd_json(nnet_packet, **kwargs):
+    """
+    Decode mobilenet to json dict.
+
+    Args:
+        nnet_packet: (str): write your description
+    """
     convertList = []
 
     detections = decode_mobilenet_ssd(nnet_packet, **kwargs)
@@ -85,11 +97,27 @@ def decode_mobilenet_ssd_json(nnet_packet, **kwargs):
     return jsonStr
 
 def nn_to_depth_coord(x, y, nn2depth):
+    """
+    Convert a ( x y coordinates to a coordinate
+
+    Args:
+        x: (todo): write your description
+        y: (todo): write your description
+        nn2depth: (int): write your description
+    """
     x_depth = int(nn2depth['off_x'] + x * nn2depth['max_w'])
     y_depth = int(nn2depth['off_y'] + y * nn2depth['max_h'])
     return x_depth, y_depth
 
 def average_depth_coord(pt1, pt2, padding_factor):
+    """
+    Returns the maximum depth of a set of points.
+
+    Args:
+        pt1: (todo): write your description
+        pt2: (todo): write your description
+        padding_factor: (int): write your description
+    """
     factor = 1 - padding_factor
     x_shift = int((pt2[0] - pt1[0]) * factor / 2)
     y_shift = int((pt2[1] - pt1[1]) * factor / 2)
@@ -99,6 +127,13 @@ def average_depth_coord(pt1, pt2, padding_factor):
 
 
 def show_mobilenet_ssd(detections, frame, **kwargs):
+    """
+    Visualize the detector detector detector
+
+    Args:
+        detections: (str): write your description
+        frame: (str): write your description
+    """
     is_depth = 'nn2depth' in kwargs
     if is_depth:
         nn2depth = kwargs['nn2depth']

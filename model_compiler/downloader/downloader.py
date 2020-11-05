@@ -34,6 +34,15 @@ import common
 CHUNK_SIZE = 1 << 15 if sys.stdout.isatty() else 1 << 20
 
 def process_download(reporter, chunk_iterable, size, file):
+    """
+    Process download progress
+
+    Args:
+        reporter: (todo): write your description
+        chunk_iterable: (int): write your description
+        size: (int): write your description
+        file: (todo): write your description
+    """
     start_time = time.monotonic()
     progress_size = 0
 
@@ -61,6 +70,16 @@ def process_download(reporter, chunk_iterable, size, file):
         reporter.end_progress()
 
 def try_download(reporter, file, num_attempts, start_download, size):
+    """
+    Try to download a file
+
+    Args:
+        reporter: (todo): write your description
+        file: (str): write your description
+        num_attempts: (int): write your description
+        start_download: (str): write your description
+        size: (int): write your description
+    """
     for attempt in range(num_attempts):
         if attempt != 0:
             retry_delay = 10
@@ -90,6 +109,16 @@ def try_download(reporter, file, num_attempts, start_download, size):
     return False
 
 def verify_hash(reporter, file, expected_hash, path, model_name):
+    """
+    Verifies the hash of a file.
+
+    Args:
+        reporter: (todo): write your description
+        file: (str): write your description
+        expected_hash: (str): write your description
+        path: (str): write your description
+        model_name: (str): write your description
+    """
     actual_hash = hashlib.sha256()
     while True:
         chunk = file.read(1 << 20)
@@ -104,7 +133,22 @@ def verify_hash(reporter, file, expected_hash, path, model_name):
     return True
 
 class NullCache:
+    """
+    Returns true if the given hash has the given hash.
+
+    Args:
+        self: (todo): write your description
+        hash: (int): write your description
+    """
     def has(self, hash): return False
+    """
+    Put a hash to the cache.
+
+    Args:
+        self: (todo): write your description
+        hash: (bool): write your description
+        path: (str): write your description
+    """
     def put(self, hash, path): pass
 
 class DirCache:
@@ -112,6 +156,13 @@ class DirCache:
     _HASH_LEN = hashlib.sha256().digest_size * 2
 
     def __init__(self, cache_dir):
+        """
+        Initialize the cache.
+
+        Args:
+            self: (todo): write your description
+            cache_dir: (str): write your description
+        """
         self._cache_dir = cache_dir / str(self._FORMAT)
         self._cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -119,18 +170,48 @@ class DirCache:
         self._staging_dir.mkdir(exist_ok=True)
 
     def _hash_path(self, hash):
+        """
+        Return the hash of the hash.
+
+        Args:
+            self: (todo): write your description
+            hash: (str): write your description
+        """
         hash = hash.lower()
         assert len(hash) == self._HASH_LEN
         assert re.fullmatch('[0-9a-f]+', hash)
         return self._cache_dir / hash[:2] / hash[2:]
 
     def has(self, hash):
+        """
+        Checks if the given hash exists.
+
+        Args:
+            self: (todo): write your description
+            hash: (int): write your description
+        """
         return self._hash_path(hash).exists()
 
     def get(self, hash, path):
+        """
+        Get the hash of a hash.
+
+        Args:
+            self: (todo): write your description
+            hash: (str): write your description
+            path: (str): write your description
+        """
         shutil.copyfile(str(self._hash_path(hash)), str(path))
 
     def put(self, hash, path):
+        """
+        Put file to the hash.
+
+        Args:
+            self: (todo): write your description
+            hash: (bool): write your description
+            path: (str): write your description
+        """
         # A file in the cache must have the hash implied by its name. So when we upload a file,
         # we first copy it to a temporary file and then atomically move it to the desired name.
         # This prevents interrupted runs from corrupting the cache.
@@ -144,6 +225,14 @@ class DirCache:
         staging_path.replace(self._hash_path(hash))
 
 def try_retrieve_from_cache(reporter, cache, files):
+    """
+    Try to find all files in the cache.
+
+    Args:
+        reporter: (todo): write your description
+        cache: (todo): write your description
+        files: (str): write your description
+    """
     try:
         if all(cache.has(file[0]) for file in files):
             for hash, destination in files:
@@ -158,12 +247,33 @@ def try_retrieve_from_cache(reporter, cache, files):
     return False
 
 def try_update_cache(reporter, cache, hash, source):
+    """
+    Try to update the cache.
+
+    Args:
+        reporter: (todo): write your description
+        cache: (bool): write your description
+        hash: (todo): write your description
+        source: (str): write your description
+    """
     try:
         cache.put(hash, source)
     except Exception:
         reporter.log_warning('Failed to update the cache', exc_info=True)
 
 def try_retrieve(reporter, name, destination, model_file, cache, num_attempts, start_download):
+    """
+    Retrieve a file. gzip.
+
+    Args:
+        reporter: (todo): write your description
+        name: (str): write your description
+        destination: (str): write your description
+        model_file: (str): write your description
+        cache: (bool): write your description
+        num_attempts: (int): write your description
+        start_download: (bool): write your description
+    """
     destination.parent.mkdir(parents=True, exist_ok=True)
 
     if try_retrieve_from_cache(reporter, cache, [[model_file.sha256, destination]]):
@@ -185,11 +295,24 @@ def try_retrieve(reporter, name, destination, model_file, cache, num_attempts, s
 
 class DownloaderArgumentParser(argparse.ArgumentParser):
     def error(self, message):
+        """
+        Prints the exit.
+
+        Args:
+            self: (todo): write your description
+            message: (str): write your description
+        """
         sys.stderr.write('error: %s\n' % message)
         self.print_help()
         sys.exit(2)
 
 def positive_int_arg(value_str):
+    """
+    Takes a string argument to a positive integer.
+
+    Args:
+        value_str: (str): write your description
+    """
     try:
         value = int(value_str)
         if value > 0: return value
@@ -199,6 +322,11 @@ def positive_int_arg(value_str):
     raise argparse.ArgumentTypeError('must be a positive integer (got {!r})'.format(value_str))
 
 def main():
+    """
+    Main function.
+
+    Args:
+    """
     parser = DownloaderArgumentParser()
     parser.add_argument('-c', '--config', type=Path, metavar='CONFIG.YML',
         help='model configuration file (deprecated)')

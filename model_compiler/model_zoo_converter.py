@@ -4,6 +4,11 @@ from argparse import ArgumentParser
 
 
 def parse_args():
+    """
+    Parse command line arguments.
+
+    Args:
+    """
     epilog_text = '''
     Myriad blob compiler in cloud.
     '''
@@ -26,6 +31,16 @@ def parse_args():
 args = vars(parse_args())
 
 def download_model(model, shaves, cmx_slices, nces, output_file):
+    """
+    Download a model from the given model.
+
+    Args:
+        model: (todo): write your description
+        shaves: (str): write your description
+        cmx_slices: (str): write your description
+        nces: (str): write your description
+        output_file: (str): write your description
+    """
     PLATFORM="VPU_MYRIAD_2450" if nces == 0 else "VPU_MYRIAD_2480"
 
     url = "http://luxonis.com:8080/"

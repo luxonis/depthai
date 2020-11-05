@@ -11,6 +11,12 @@ import consts.resource_paths
 
 
 def _get_immediate_subdirectories(a_dir):
+    """
+    Return a list of subdirectories of a given directory.
+
+    Args:
+        a_dir: (str): write your description
+    """
     return [name for name in os.listdir(a_dir)
             if os.path.isdir(os.path.join(a_dir, name))]
 
@@ -20,6 +26,12 @@ _CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_p
 _CNN2_choices = ['landmarks-regression-retail-0009', 'facial-landmarks-35-adas-0002', 'emotions-recognition-retail-0003']
 
 def _stream_type(option):
+    """
+    Stream stream type.
+
+    Args:
+        option: (str): write your description
+    """
     max_fps = None
     option_list = option.split(",")
     option_args = len(option_list)
@@ -55,9 +67,21 @@ class CliArgs:
     args = []
 
     def __init__(self):
+        """
+        Initialize the state
+
+        Args:
+            self: (todo): write your description
+        """
         super().__init__()
 
     def parse_args(self):
+        """
+        Parse command line arguments.
+
+        Args:
+            self: (todo): write your description
+        """
         epilog_text = """
         Displays video streams captured by DepthAI.
 

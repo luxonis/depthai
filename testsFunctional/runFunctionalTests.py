@@ -5,12 +5,27 @@ class TestManager:
     results = []
 
     def printTestName(self, testName):
+        """
+        Prints the test name
+
+        Args:
+            self: (todo): write your description
+            testName: (str): write your description
+        """
         print("\033[1;34;40m----------------------------------------------------------------")
         print("Running " + testName)
         print("----------------------------------------------------------------\033[0m")
 
 
     def printResult(self, exitCode, testName):
+        """
+        Prints the results
+
+        Args:
+            self: (todo): write your description
+            exitCode: (int): write your description
+            testName: (str): write your description
+        """
         if exitCode == 0:
             print("\033[1;32;40m----------------------------------------------------------------")
             print(testName + " Passed!")
@@ -21,9 +36,22 @@ class TestManager:
             print("----------------------------------------------------------------\033[0m")
 
     def appendResult(self, result):
+        """
+        Add a result to the list.
+
+        Args:
+            self: (todo): write your description
+            result: (todo): write your description
+        """
         self.results.append(result)
 
     def printSummary(self):
+        """
+        Print the results.
+
+        Args:
+            self: (todo): write your description
+        """
         for result in self.results:
             self.printResult(result[1], result[0])
 
