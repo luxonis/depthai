@@ -109,7 +109,7 @@ def main():
             print("Module unplugged!!!")
             print("Killing test run...")
             # p.kill()
-            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            os.killpg(os.getpgid(p.pid), signal.SIGKILL)
             pwroff()
             
             printwaiting()

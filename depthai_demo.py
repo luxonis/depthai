@@ -26,7 +26,7 @@ from depthai_helpers.cli_utils import cli_print, PrintColors
 from depthai_helpers.pygame_checkbox import Checkbox, pygame_render_text
 import pygame
 from pygame.locals import *
-os.environ['SDL_VIDEO_WINDOW_POS'] = '2000,10'
+os.environ['SDL_VIDEO_WINDOW_POS'] = '1000,10'
 pygame.init()
 
 print('Using depthai module from: ', depthai.__file__)
