@@ -3,7 +3,7 @@
 import json
 import platform
 import os
-from time import time, monotonic
+from time import time, monotonic, sleep
 from datetime import datetime	
 import cv2
 import numpy as np
@@ -127,7 +127,7 @@ class DepthAI:
         else:
             self.device = depthai.Device(args['device_id'], usb2_mode)
 
-        print(stream_names)
+        # print(stream_names)
         print('Available streams---->: ' + str(self.device.get_available_streams()))
 
         # print(self.device.is_usb3())
@@ -201,7 +201,7 @@ class DepthAI:
             #                        "previewout-rgb Stream", "left Stream", "right Stream"]
             # ["JPEG Encoding", "Previewout-rgb stream", "Left Stream", "Right Stream"]
             for i in range(len(auto_checkbox_names)):
-                print(auto_checkbox_names[i])
+                # print(auto_checkbox_names[i])
                 if auto_checkbox_dict[auto_checkbox_names[i]].is_checked():
                     log_list.append("pass")
                 else :
@@ -294,8 +294,7 @@ class DepthAI:
             op_checkbox_names = ["JPEG Encoding", "Previewout-rgb stream"]
         
         mipi_streams = [val for val in auto_checkbox_names if 'Stream' in val]
-        print("-------------------------------------------")
-        print(mipi_streams)
+        # print(mipi_streams)
         y = 110
         x = 200
 
@@ -413,7 +412,7 @@ class DepthAI:
                 except :
                     pass
 
-
+                sleep(3)
                 # ['time', 'test_type', 'Mx_serial_id']
                 start_time = datetime.now()
                 time_stmp = start_time.strftime("%m-%d-%Y %H:%M:%S")
@@ -421,8 +420,8 @@ class DepthAI:
                 log_list = [time_stmp, test_type, mx_serial_id]
                 
                 mipi_test = {}
-                print(stream_names)
-                print(mipi_streams)
+                # print(stream_names)
+                # print(mipi_streams)
                 # if 'OBC' in test_type:
                 for mx_stream in stream_names:
                     for mipi_id in mipi_streams:
@@ -432,7 +431,7 @@ class DepthAI:
                         elif mx_stream == 'jpegout' and 'JPEG' in mipi_id:
                             mipi_test[mx_stream] = auto_checkbox_dict[mipi_id]
                             mipi_test[mx_stream].uncheck()
-                print(mipi_test)
+                # print(mipi_test)
                 # usb_3_connection = str(self.device.is_usb3())
 
                 # if '1093' in test_type:
