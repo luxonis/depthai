@@ -25,9 +25,9 @@ def download_model(model, model_zoo_folder):
     downloader_cmd = [sys.executable, f"{model_downloader_path}"]
     downloader_cmd = np.concatenate((downloader_cmd, model_downloader_options))
     # print(downloader_cmd)
-    result = subprocess.run(downloader_cmd, capture_output=True)
+    result = subprocess.run(downloader_cmd)
     if result.returncode != 0:
-        raise RuntimeError(f"Model downloader failed! Error: {result.stderr}")
+        raise RuntimeError("Model downloader failed!")
     
     download_location = Path(download_folder_path) / model
     if(not download_location.exists()):
@@ -47,9 +47,9 @@ def convert_model_to_ir(model, model_zoo_folder):
     converter_cmd = [sys.executable, f"{converter_path}"]
     converter_cmd = np.concatenate((converter_cmd, model_converter_options))
     # print(converter_cmd)
-    result = subprocess.run(converter_cmd, capture_output=True)
+    result = subprocess.run(converter_cmd)
     if result.returncode != 0:
-        raise RuntimeError(f"Model converter failed! Error: {result.stderr}")
+        raise RuntimeError("Model converter failed!")
     
     ir_model_location = Path(download_folder_path) / model / "FP16"
 
@@ -76,9 +76,9 @@ def myriad_compile_model_local(shaves, cmx_slices, nces, xml_path, output_file):
     myriad_compile_cmd = np.concatenate(([myriad_compile_path], myriad_compiler_options))
     # print(myriad_compile_cmd)
 
-    result = subprocess.run(myriad_compile_cmd, capture_output=True)
+    result = subprocess.run(myriad_compile_cmd)
     if result.returncode != 0:
-        raise RuntimeError(f"Myriad compiler failed! Error: {result.stderr}")
+        raise RuntimeError("Myriad compiler failed!")
     
     return 0
 
