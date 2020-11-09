@@ -132,10 +132,11 @@ class Main:
         blob_man_args = {
                         'cnn_model':'mobilenet-ssd',
                         'cnn_model2':'',
-                        'model_compilation_target':'auto'
+                        'model_compilation_target':'auto',
+                        'openvino_version' : '2020.1'
                     }
-        shaves = 7
-        cmx_slices = 7
+        shaves = 14
+        cmx_slices = 14
         NN_engines = 1
         blobMan = BlobManager(blob_man_args, True , shaves, cmx_slices,NN_engines)
 
