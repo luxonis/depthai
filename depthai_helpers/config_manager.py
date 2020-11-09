@@ -413,29 +413,15 @@ class BlobManager:
         blob_file, _ = self.getBlobFiles(nn_model)
 
         shave_nr = self.shave_nr
-        cmx_slices = self.cmx_slices
         NCE_nr = self.NCE_nr
 
         if NCE_nr == 2:
-            if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
-                raise ValueError("shave_nr and cmx_slices config must be even number when NCE is 2!")
+            if shave_nr % 2 == 1:
+                raise ValueError("shave_nr config must be even number when NCE is 2!")
             shave_nr_opt = int(shave_nr / 2)
-            cmx_slices_opt = int(cmx_slices / 2)
         else:
             shave_nr_opt = int(shave_nr)
-            cmx_slices_opt = int(cmx_slices)
 
-        outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
-        if(not Path(outblob_file).exists()):
-            cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-            ret = download_and_compile_NN_model(nn_model, model_zoo_folder, shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file, model_compilation_target)
-            if(ret != 0):
-                cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
-                raise RuntimeError("Model compilation failed! Not connected to the internet?")
-            else:
-                blob_file = outblob_file
-        else:
-            cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
-            blob_file = outblob_file
-
+        blob_file = download_and_compile_NN_model(nn_model, model_zoo_folder, shave_nr_opt, NCE_nr, model_compilation_target)
+        blob_file = str(blob_file)
         return blob_file

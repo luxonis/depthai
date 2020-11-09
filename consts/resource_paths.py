@@ -1,6 +1,8 @@
 from pathlib import Path
 
 
+default_openvino_version = '2020.1'
+
 def relative_to_abs_path(relative_path):
     dirname = Path(__file__).parent
     try:
@@ -21,9 +23,8 @@ right_map_y_fpath     = relative_to_abs_path('../resources/map_y_right.calib')
 left_map_x_fpath      = relative_to_abs_path('../resources/map_x_left.calib')
 left_map_y_fpath      = relative_to_abs_path('../resources/map_y_left.calib')
 
-nn_resource_path      = relative_to_abs_path('../resources/nn')+"/"
-blob_fpath            = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.blob')
-blob_config_fpath     = relative_to_abs_path('../resources/nn/mobilenet-ssd/mobilenet-ssd.json')
+nn_resource_path      = relative_to_abs_path(f'../resources/model_zoo/openvino_{default_openvino_version}')+"/"
+blob_config_fpath     = relative_to_abs_path(f'../resources/model_zoo/openvino_{default_openvino_version}/mobilenet-ssd/mobilenet-ssd.json')
 tests_functional_path = relative_to_abs_path('../testsFunctional/') + "/"
 
 

@@ -9,21 +9,20 @@ supported_openvino_version = '2020.1'
 def relative_to_abs_path(relative_path):
     dirname = Path(__file__).parent
     try:
-        return str((dirname / relative_path).resolve())
+        return (dirname / relative_path).resolve()
     except FileNotFoundError:
         return None
 
-model_downloader_path = relative_to_abs_path('downloader/downloader.py')
-ir_converter_path     = relative_to_abs_path('downloader/converter.py')
-download_folder_path  = relative_to_abs_path('downloads') + "/"
 
+def download_model(model, model_zoo_folder, download_folder_path):
 
-def download_model(model, model_zoo_folder):
-
-    model_downloader_options=f"--precisions FP16 --output_dir {download_folder_path} --cache_dir {download_folder_path}/.cache --num_attempts 5 --name {model} --model_root {model_zoo_folder}"
+    model_downloader_path = relative_to_abs_path(f'openvino_{supported_openvino_version}/downloader.py')
+    
+    model_downloader_options=f"--precisions FP16 --output_dir {download_folder_path} --cache_dir {download_folder_path}/.cache --num_attempts 2 --name {model} --model_root {model_zoo_folder}"
     model_downloader_options = model_downloader_options.split()
     downloader_cmd = [sys.executable, f"{model_downloader_path}"]
     downloader_cmd = np.concatenate((downloader_cmd, model_downloader_options))
+    
     # print(downloader_cmd)
     result = subprocess.run(downloader_cmd)
     if result.returncode != 0:
@@ -38,9 +37,9 @@ def download_model(model, model_zoo_folder):
 
 
 
-def convert_model_to_ir(model, model_zoo_folder):
+def convert_model_to_ir(model, model_zoo_folder, download_folder_path):
 
-    converter_path = Path(ir_converter_path)
+    converter_path = relative_to_abs_path(f'openvino_{supported_openvino_version}/converter.py' )
 
     model_converter_options=f"--precisions FP16 --output_dir {download_folder_path} --download_dir {download_folder_path} --name {model} --model_root {model_zoo_folder}"
     model_converter_options = model_converter_options.split()
@@ -58,7 +57,7 @@ def convert_model_to_ir(model, model_zoo_folder):
 
 
 
-def myriad_compile_model_local(shaves, cmx_slices, nces, xml_path, output_file):
+def myriad_compile_model_local(shaves, nces, xml_path, output_file):
 
     myriad_compile_path = None
     if myriad_compile_path is None:
@@ -68,9 +67,9 @@ def myriad_compile_model_local(shaves, cmx_slices, nces, xml_path, output_file):
             sys.exit('Unable to locate Model Optimizer. '
                 + 'Use --mo or run setupvars.sh/setupvars.bat from the OpenVINO toolkit.')
 
-    PLATFORM="VPU_MYRIAD_2450" if nces == 0 else "VPU_MYRIAD_2480"
+    PLATFORM="VPU_MYRIAD_2480"
 
-    myriad_compiler_options = f'-ip U8 -VPU_MYRIAD_PLATFORM {PLATFORM} -VPU_NUMBER_OF_SHAVES {shaves} -VPU_NUMBER_OF_CMX_SLICES {cmx_slices} -m {xml_path} -o {output_file}'
+    myriad_compiler_options = f'-ip U8 -VPU_MYRIAD_PLATFORM {PLATFORM} -VPU_NUMBER_OF_SHAVES {shaves} -VPU_NUMBER_OF_CMX_SLICES {shaves} -m {xml_path} -o {output_file}'
     myriad_compiler_options = myriad_compiler_options.split()
 
     myriad_compile_cmd = np.concatenate(([myriad_compile_path], myriad_compiler_options))
@@ -80,18 +79,18 @@ def myriad_compile_model_local(shaves, cmx_slices, nces, xml_path, output_file):
     if result.returncode != 0:
         raise RuntimeError("Myriad compiler failed!")
     
-    return 0
+    return output_file
 
 
 
-def myriad_compile_model_cloud(xml, bin, shaves, cmx_slices, nces, output_file):
-    PLATFORM="VPU_MYRIAD_2450" if nces == 0 else "VPU_MYRIAD_2480"
+def myriad_compile_model_cloud(xml, bin, shaves, nces, output_file):
+    PLATFORM="VPU_MYRIAD_2480"
 
     # use 69.214.171 instead luxonis.com to bypass cloudflare limitation of max file size
     url = "http://69.164.214.171:8083/compile"
     payload = {
         'compile_type': 'myriad',
-        'compiler_params': '-ip U8 -VPU_MYRIAD_PLATFORM ' + PLATFORM + ' -VPU_NUMBER_OF_SHAVES ' + str(shaves) +' -VPU_NUMBER_OF_CMX_SLICES ' + str(cmx_slices)
+        'compiler_params': f'-ip U8 -VPU_MYRIAD_PLATFORM {PLATFORM} -VPU_NUMBER_OF_SHAVES {shaves} -VPU_NUMBER_OF_CMX_SLICES {shaves}'
     }
     files = {
         'definition': open(Path(xml), 'rb'),
@@ -106,17 +105,29 @@ def myriad_compile_model_cloud(xml, bin, shaves, cmx_slices, nces, output_file):
     except Exception as ex:
         if getattr(ex, 'response', None) is None:
             print(f"Unknown error occured: {ex}")
-            return 1
+            raise RuntimeError("Model compiler failed! Not connected to the internet?")
         print("Model compilation failed with error code: " + str(ex.response.status_code))
         print(str(ex.response.text))
-        return 2
-    blob_file = open(output_file,'wb')
-    blob_file.write(response.content)
-    blob_file.close()
+        raise RuntimeError("Model compiler failed! Check logs for details")
 
-    return 0
+    with open(output_file, "wb") as fp:
+        fp.write(response.content)
+        print("Myriad blob written to: ",output_file)
 
-def download_and_compile_NN_model(model, model_zoo_folder, shaves, cmx_slices, nces, output_file, model_compilation_target='auto'):
+    return output_file
+
+def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_compilation_target='auto'):
+
+    myriad_blob_path = relative_to_abs_path(f'openvino_{supported_openvino_version}/myriad_blobs')
+    output_location_dir = myriad_blob_path / model
+    output_location_dir.mkdir(parents=True, exist_ok=True)
+
+    output_file = model + ".sh" + str(shaves) + "NCE" + str(nces)
+    output_location = output_location_dir / output_file
+
+    if(Path(output_location).exists()):
+        print(f"Compiled mode found in cache: compiled for {shaves} shaves and {nces} NN_engines ")
+        return output_location
 
     if model_compilation_target == 'auto' or model_compilation_target == 'local':
         try:
@@ -133,13 +144,17 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, cmx_slices, n
             model_compilation_target = 'cloud'
     
     print(f'model_compilation_target: {model_compilation_target}')
-    output_location = Path(model_zoo_folder) / model / output_file
 
-    download_location = download_model(model, model_zoo_folder)
+    print(f"Compiling model for {shaves} shaves, {nces} NN_engines ")
+
+
+    download_folder_path  = relative_to_abs_path(f'openvino_{supported_openvino_version}/downloads')
+    download_location = download_model(model, model_zoo_folder, download_folder_path)
+
     
     if model_compilation_target == 'local':
 
-        ir_model_location = convert_model_to_ir(model, model_zoo_folder)
+        ir_model_location = convert_model_to_ir(model, model_zoo_folder, download_folder_path)
 
         if(not ir_model_location.exists()):
             raise RuntimeError(f"{ir_model_location} doesn't exist for downloaded model!")
@@ -147,7 +162,7 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, cmx_slices, n
         if(not xml_path.exists()):
             raise RuntimeError(f"{xml_path} doesn't exist for downloaded model!")
     
-        return myriad_compile_model_local(shaves, cmx_slices, nces, xml_path, output_file)
+        return myriad_compile_model_local(shaves, nces, xml_path, output_location)
 
     elif model_compilation_target == 'cloud':
          
@@ -161,15 +176,12 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, cmx_slices, n
         if(not bin_path.exists()):
             raise RuntimeError(f"{bin_path} doesn't exist for downloaded model!")
 
-        result = myriad_compile_model_cloud(xml=xml_path, bin=bin_path, shaves = shaves, cmx_slices=cmx_slices, nces=nces, output_file=output_location)
-        if result == 1:
-            raise RuntimeError("Model compiler failed! Not connected to the internet?")
-        elif result == 2:
-            raise RuntimeError("Model compiler failed! Check logs for details")
+        return myriad_compile_model_cloud(xml=xml_path, bin=bin_path, shaves = shaves, nces=nces, output_file=output_location)
+
     else:
         assert 'model_compilation_target must be either : ["auto", "local", "cloud"]'
 
-    return 0
+    return
 
 def main(args):
 
@@ -177,12 +189,10 @@ def main(args):
     model_zoo_folder = args['model_zoo_folder']
 
     shaves = args['shaves']
-    cmx_slices = args['cmx_slices']
     nces =  args['nces']
-    output_file = args['output']
     model_compilation_target = args['model_compilation_target']
 
-    return download_and_compile_NN_model(model, model_zoo_folder, shaves, cmx_slices, nces, output_file, model_compilation_target)
+    return download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_compilation_target)
 
 if __name__ == '__main__':
     import argparse
@@ -195,11 +205,9 @@ if __name__ == '__main__':
         parser.add_argument("-model", "--model_name", default=None,
                             type=str, required=True,
                             help="model name")
-        parser.add_argument("-sh", "--shaves", default=4, type=int,
+        parser.add_argument("-sh", "--shaves", default=7, type=int, choices=range(1,16),
                             help="Number of shaves used by NN.")
-        parser.add_argument("-cmx", "--cmx_slices", default=4, type=int,
-                            help="Number of cmx slices used by NN.")
-        parser.add_argument("-nce", "--nces", default=1, type=int,
+        parser.add_argument("-nce", "--nces", default=1, type=int, choices=[1,2],
                             help="Number of NCEs used by NN.")
         parser.add_argument("-o", "--output", default=None,
                             type=Path, required=True,
@@ -215,4 +223,6 @@ if __name__ == '__main__':
 
     args = vars(parse_args())
     ret = main(args)
-    exit(ret)
+    print("Myriad blob written to: ",ret)
+
+    exit(0)
