@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import subprocess
 import numpy as np
 from pathlib import Path
@@ -57,7 +59,7 @@ def convert_model_to_ir(model, model_zoo_folder, download_folder_path):
 
 
 
-def myriad_compile_model_local(shaves, nces, xml_path, output_file):
+def myriad_compile_model_local(shaves, xml_path, output_file):
 
     myriad_compile_path = None
     if myriad_compile_path is None:
@@ -83,7 +85,7 @@ def myriad_compile_model_local(shaves, nces, xml_path, output_file):
 
 
 
-def myriad_compile_model_cloud(xml, bin, shaves, nces, output_file):
+def myriad_compile_model_cloud(xml, bin, shaves, output_file):
     PLATFORM="VPU_MYRIAD_2480"
 
     # use 69.214.171 instead luxonis.com to bypass cloudflare limitation of max file size
@@ -143,8 +145,7 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_c
         except:
             model_compilation_target = 'cloud'
     
-    print(f'model_compilation_target: {model_compilation_target}')
-
+    print(f'Model_compilation_target: {model_compilation_target}')
     print(f"Compiling model for {shaves} shaves, {nces} NN_engines ")
 
 
@@ -162,7 +163,7 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_c
         if(not xml_path.exists()):
             raise RuntimeError(f"{xml_path} doesn't exist for downloaded model!")
     
-        return myriad_compile_model_local(shaves, nces, xml_path, output_location)
+        return myriad_compile_model_local(shaves, xml_path, output_location)
 
     elif model_compilation_target == 'cloud':
          
@@ -176,7 +177,7 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_c
         if(not bin_path.exists()):
             raise RuntimeError(f"{bin_path} doesn't exist for downloaded model!")
 
-        return myriad_compile_model_cloud(xml=xml_path, bin=bin_path, shaves = shaves, nces=nces, output_file=output_location)
+        return myriad_compile_model_cloud(xml=xml_path, bin=bin_path, shaves=shaves, output_file=output_location)
 
     else:
         assert 'model_compilation_target must be either : ["auto", "local", "cloud"]'
@@ -205,13 +206,10 @@ if __name__ == '__main__':
         parser.add_argument("-model", "--model_name", default=None,
                             type=str, required=True,
                             help="model name")
-        parser.add_argument("-sh", "--shaves", default=7, type=int, choices=range(1,16),
+        parser.add_argument("-sh", "--shaves", default=7, type=int, choices=range(1,17), metavar="[1,16]",
                             help="Number of shaves used by NN.")
         parser.add_argument("-nce", "--nces", default=1, type=int, choices=[1,2],
                             help="Number of NCEs used by NN.")
-        parser.add_argument("-o", "--output", default=None,
-                            type=Path, required=True,
-                            help=".blob output")
         parser.add_argument("-mct", "--model-compilation-target", default="auto",
                             type=str, required=False, choices=["auto","local","cloud"],
                             help="Compile model lcoally or in cloud?")
