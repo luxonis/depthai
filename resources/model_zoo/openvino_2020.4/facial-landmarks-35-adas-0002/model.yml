@@ -1,0 +1,44 @@
+# Copyright (c) 2019 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+description: >-
+  Custom-architecture convolutional neural network for 35 facial landmarks estimation.
+task_type: object_attributes
+files:
+  - name: FP32/facial-landmarks-35-adas-0002.xml
+    size: 237289
+    sha256: 84723fbb63a19d764d0669fdbac167585b516c59a1de4e01bdce5ba2eb5d64f4
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002.xml
+  - name: FP32/facial-landmarks-35-adas-0002.bin
+    size: 18381152
+    sha256: e1a325159eb1a0a7cd918d1a1d4cde250c2f6626737aa76597fb405e37af87c6
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/facial-landmarks-35-adas-0002/FP32/facial-landmarks-35-adas-0002.bin
+  - name: FP16/facial-landmarks-35-adas-0002.xml
+    size: 237152
+    sha256: 0b8adefa360b8908450ee7472425b3a32a9e772482a868d6d0d25f5141a92c95
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/facial-landmarks-35-adas-0002/FP16/facial-landmarks-35-adas-0002.xml
+  - name: FP16/facial-landmarks-35-adas-0002.bin
+    size: 9190584
+    sha256: 69952f73ba3239f8692ee41514ceff793a014e2a7a777faa570f0a8aaf17278d
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/facial-landmarks-35-adas-0002/FP16/facial-landmarks-35-adas-0002.bin
+  - name: FP16-INT8/facial-landmarks-35-adas-0002.xml
+    size: 644943
+    sha256: e3262bc8a9c526d3bde68b370f8a3107385c730f67773ac1c4693904b18c9f97
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/facial-landmarks-35-adas-0002/FP16-INT8/facial-landmarks-35-adas-0002.xml
+  - name: FP16-INT8/facial-landmarks-35-adas-0002.bin
+    size: 4634174
+    sha256: f66ed3a2e328726b5bf7344b47c61c59af75ffd57ea60ca705663bc5cb217116
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/facial-landmarks-35-adas-0002/FP16-INT8/facial-landmarks-35-adas-0002.bin
+framework: dldt
+license: https://raw.githubusercontent.com/opencv/open_model_zoo/master/LICENSE

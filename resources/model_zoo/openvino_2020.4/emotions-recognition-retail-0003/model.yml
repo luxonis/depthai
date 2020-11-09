@@ -1,0 +1,44 @@
+# Copyright (c) 2019 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+description: >-
+  Recognizes 5 emotions for a face. Targeted for Retail Audience Analytics.
+task_type: object_attributes
+files:
+  - name: FP32/emotions-recognition-retail-0003.xml
+    size: 37806
+    sha256: 3761c73a85451c00a2fb3fa51c0c11c0fec90bd80f0246c2f854a026fd7ae8fe
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.xml
+  - name: FP32/emotions-recognition-retail-0003.bin
+    size: 9930028
+    sha256: bcb9b1a910fa3cd18a638bb1dbb0597c4ef7a080d1b83008c8e8c2c3c42b99dd
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/emotions-recognition-retail-0003/FP32/emotions-recognition-retail-0003.bin
+  - name: FP16/emotions-recognition-retail-0003.xml
+    size: 37785
+    sha256: c4f1dd801ac6b5f2190d529fa3ba9342b1c3ad9532b4346ec3491d1d7b8d9d52
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/emotions-recognition-retail-0003/FP16/emotions-recognition-retail-0003.xml
+  - name: FP16/emotions-recognition-retail-0003.bin
+    size: 4965014
+    sha256: e62fb4b819b3b3ad8aafcd308d4353db2f164a1a31d78de6cf5970837aeb6f7b
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/emotions-recognition-retail-0003/FP16/emotions-recognition-retail-0003.bin
+  - name: FP16-INT8/emotions-recognition-retail-0003.xml
+    size: 116349
+    sha256: 78955218a727adc72108204237b1783858fce8167c685c0ea72b424d95c44bd4
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/emotions-recognition-retail-0003/FP16-INT8/emotions-recognition-retail-0003.xml
+  - name: FP16-INT8/emotions-recognition-retail-0003.bin
+    size: 2494128
+    sha256: 210c2a00ae1e977a17c4c2f59c54b3f5f99186b84c9312641ec230e699beb681
+    source: https://download.01.org/opencv/2020/openvinotoolkit/2020.4/open_model_zoo/models_bin/3/emotions-recognition-retail-0003/FP16-INT8/emotions-recognition-retail-0003.bin
+framework: dldt
+license: https://raw.githubusercontent.com/opencv/open_model_zoo/master/LICENSE

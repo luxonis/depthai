@@ -1,0 +1,20 @@
+{
+    "NN_config":
+    {
+        "output_format" : "raw"
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "neutral",
+            "happy",
+            "sad",
+            "surprise",
+            "anger"
+        ]
+    }
+}
+
+
+
