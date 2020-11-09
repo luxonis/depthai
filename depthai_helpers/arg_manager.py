@@ -90,6 +90,9 @@ class CliArgs:
         parser.add_argument("-mct", "--model-compilation-target", default="auto",
                             type=str, required=False, choices=["auto","local","cloud"],
                             help="Compile model lcoally or in cloud?")
+        parser.add_argument("-op", "--openvino_version", default='2020.1',
+                            type=str, required=False, choices=["2020.1","2021.1"],
+                            help="Openvino version for compilation")
 
         parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],
                             help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
@@ -211,6 +214,13 @@ class CliArgs:
                                options.swap_lr])
         if (options.board is not None) and any_options_set:
             parser.error("[-brd] is mutually exclusive with [-fv -rfv -b -r -w]")
+
+        #tmp
+        if options.openvino_version in ['2021.1']:
+            print(f"Cloud compiler not yet supported with openvino version {options.openvino_version}, forcing to local")
+            options.model_compilation_target = 'local'
+            options.firmware = '8e5c96f396bc58b12c3cb4d2e83b292338c8861e'
+            print('Forcing firmware to :', options.firmware)
 
         # Set some defaults after the above check
         if not options.board:

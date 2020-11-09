@@ -415,6 +415,8 @@ class BlobManager:
         shave_nr = self.shave_nr
         NCE_nr = self.NCE_nr
 
+        openvino_version = self.args['openvino_version']
+
         if NCE_nr == 2:
             if shave_nr % 2 == 1:
                 raise ValueError("shave_nr config must be even number when NCE is 2!")
@@ -422,7 +424,7 @@ class BlobManager:
         else:
             shave_nr_opt = int(shave_nr)
 
-        blob_file = download_and_compile_NN_model(nn_model, model_zoo_folder, shave_nr_opt, NCE_nr, model_compilation_target)
+        blob_file = download_and_compile_NN_model(nn_model, model_zoo_folder, shave_nr_opt, NCE_nr, openvino_version, model_compilation_target)
         blob_file = str(blob_file)
         print("Using myriad blob from: ",blob_file)
         return blob_file
