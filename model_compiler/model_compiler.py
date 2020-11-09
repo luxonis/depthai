@@ -157,12 +157,21 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, openvin
         try:
             openvino_dir = os.environ['INTEL_OPENVINO_DIR']
             print(f'Openvino installation detected {openvino_dir}') 
-            if openvino_version in openvino_dir:
+
+            installed_openvino_version_path = Path(openvino_dir) / "deployment_tools/model_optimizer/version.txt"
+            installed_openvino_version = "not detected"
+            with open(installed_openvino_version_path, "r") as fp:
+                installed_openvino_version = fp.read()
+                installed_openvino_version = installed_openvino_version.strip()
+                installed_openvino_version = installed_openvino_version.split('.')
+                installed_openvino_version = f'{installed_openvino_version[0]}.{installed_openvino_version[1]}'
+            print("Installed openvino version: ",installed_openvino_version)
+            if openvino_version in installed_openvino_version:
                 model_compilation_target = 'local'
                 print(f'Supported openvino version installed: {openvino_version}')
             else:
                 model_compilation_target = 'cloud'
-                print(f'Unsupported openvino version installed at {openvino_dir}, supported version is: {openvino_version}')
+                print(f'Unsupported openvino version installed at {openvino_dir}, version {installed_openvino_version}, supported version is: {openvino_version}')
 
         except:
             model_compilation_target = 'cloud'
