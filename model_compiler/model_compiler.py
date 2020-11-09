@@ -6,7 +6,6 @@ from pathlib import Path
 import os, sys
 import requests
 
-supported_openvino_version = '2020.1'
 
 def relative_to_abs_path(relative_path):
     dirname = Path(__file__).parent
@@ -16,9 +15,9 @@ def relative_to_abs_path(relative_path):
         return None
 
 
-def download_model(model, model_zoo_folder, download_folder_path):
+def download_model(model, model_zoo_folder, download_folder_path, openvino_version):
 
-    model_downloader_path = relative_to_abs_path(f'openvino_{supported_openvino_version}/downloader.py')
+    model_downloader_path = relative_to_abs_path(f'openvino_{openvino_version}/downloader.py')
     
     model_downloader_options=f"--precisions FP16 --output_dir {download_folder_path} --cache_dir {download_folder_path}/.cache --num_attempts 2 --name {model} --model_root {model_zoo_folder}"
     model_downloader_options = model_downloader_options.split()
@@ -39,9 +38,9 @@ def download_model(model, model_zoo_folder, download_folder_path):
 
 
 
-def convert_model_to_ir(model, model_zoo_folder, download_folder_path):
+def convert_model_to_ir(model, model_zoo_folder, download_folder_path, openvino_version):
 
-    converter_path = relative_to_abs_path(f'openvino_{supported_openvino_version}/converter.py' )
+    converter_path = relative_to_abs_path(f'openvino_{openvino_version}/converter.py' )
 
     model_converter_options=f"--precisions FP16 --output_dir {download_folder_path} --download_dir {download_folder_path} --name {model} --model_root {model_zoo_folder}"
     model_converter_options = model_converter_options.split()
@@ -59,7 +58,7 @@ def convert_model_to_ir(model, model_zoo_folder, download_folder_path):
 
 
 
-def myriad_compile_model_local(shaves, xml_path, output_file):
+def myriad_compile_model_local(shaves, xml_path, output_file, openvino_version):
 
     myriad_compile_path = None
     if myriad_compile_path is None:
@@ -69,9 +68,32 @@ def myriad_compile_model_local(shaves, xml_path, output_file):
             sys.exit('Unable to locate Model Optimizer. '
                 + 'Use --mo or run setupvars.sh/setupvars.bat from the OpenVINO toolkit.')
 
-    PLATFORM="VPU_MYRIAD_2480"
+    if openvino_version.startswith('2021'):
+        config_file_content = {
+            'MYRIAD_NUMBER_OF_SHAVES' : shaves,
+            'MYRIAD_NUMBER_OF_CMX_SLICES' : shaves,
+            'MYRIAD_THROUGHPUT_STREAMS' : 1
+        }
+    else:
+        config_file_content = {
+            'VPU_MYRIAD_PLATFORM' : 'VPU_MYRIAD_2480',
+            'VPU_NUMBER_OF_SHAVES' : shaves,
+            'VPU_NUMBER_OF_CMX_SLICES' : shaves,
+            'VPU_MYRIAD_THROUGHPUT_STREAMS' : 1
+        }
 
-    myriad_compiler_options = f'-ip U8 -VPU_MYRIAD_PLATFORM {PLATFORM} -VPU_NUMBER_OF_SHAVES {shaves} -VPU_NUMBER_OF_CMX_SLICES {shaves} -m {xml_path} -o {output_file}'
+    parent_dir = Path(output_file).resolve().parents[0]
+    config_file = parent_dir / 'myriad_compile_config.txt'
+    
+    print(f'Myriad config file {config_file}')
+    with open(config_file, "w") as fp:
+        for k, v in config_file_content.items():
+            fp.write(str(k) + ' '+ str(v) + '\t\n')
+
+    with open(config_file, "r") as fp:
+        print(fp.read())
+
+    myriad_compiler_options = f'-ip U8 -c {config_file} -m {xml_path} -o {output_file}'
     myriad_compiler_options = myriad_compiler_options.split()
 
     myriad_compile_cmd = np.concatenate(([myriad_compile_path], myriad_compiler_options))
@@ -85,7 +107,7 @@ def myriad_compile_model_local(shaves, xml_path, output_file):
 
 
 
-def myriad_compile_model_cloud(xml, bin, shaves, output_file):
+def myriad_compile_model_cloud(xml, bin, shaves, output_file, openvino_version):
     PLATFORM="VPU_MYRIAD_2480"
 
     # use 69.214.171 instead luxonis.com to bypass cloudflare limitation of max file size
@@ -99,7 +121,7 @@ def myriad_compile_model_cloud(xml, bin, shaves, output_file):
         'weights': open(Path(bin), 'rb')
     }
     params = {
-        "version": supported_openvino_version
+        "version": openvino_version
     }
     try:
         response = requests.post(url, data=payload, files=files, params=params)
@@ -114,19 +136,19 @@ def myriad_compile_model_cloud(xml, bin, shaves, output_file):
 
     with open(output_file, "wb") as fp:
         fp.write(response.content)
-        print("Myriad blob written to: ",output_file)
 
     return output_file
 
-def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_compilation_target='auto'):
+def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, openvino_version, model_compilation_target='auto'):
 
-    myriad_blob_path = relative_to_abs_path(f'openvino_{supported_openvino_version}/myriad_blobs')
+    myriad_blob_path = relative_to_abs_path(f'openvino_{openvino_version}/myriad_blobs')
     output_location_dir = myriad_blob_path / model
     output_location_dir.mkdir(parents=True, exist_ok=True)
 
     output_file = model + ".sh" + str(shaves) + "NCE" + str(nces)
     output_location = output_location_dir / output_file
 
+    #TODO improve caching based on the hash of yml file ?
     if(Path(output_location).exists()):
         print(f"Compiled mode found in cache: compiled for {shaves} shaves and {nces} NN_engines ")
         return output_location
@@ -135,12 +157,12 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_c
         try:
             openvino_dir = os.environ['INTEL_OPENVINO_DIR']
             print(f'Openvino installation detected {openvino_dir}') 
-            if supported_openvino_version in openvino_dir:
+            if openvino_version in openvino_dir:
                 model_compilation_target = 'local'
-                print(f'Supported openvino version installed: {supported_openvino_version}')
+                print(f'Supported openvino version installed: {openvino_version}')
             else:
                 model_compilation_target = 'cloud'
-                print(f'Unsupported openvino version installed at {openvino_dir}, supported version is: {supported_openvino_version}')
+                print(f'Unsupported openvino version installed at {openvino_dir}, supported version is: {openvino_version}')
 
         except:
             model_compilation_target = 'cloud'
@@ -149,13 +171,13 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_c
     print(f"Compiling model for {shaves} shaves, {nces} NN_engines ")
 
 
-    download_folder_path  = relative_to_abs_path(f'openvino_{supported_openvino_version}/downloads')
-    download_location = download_model(model, model_zoo_folder, download_folder_path)
+    download_folder_path  = relative_to_abs_path(f'openvino_{openvino_version}/downloads')
+    download_location = download_model(model, model_zoo_folder, download_folder_path, openvino_version)
 
     
     if model_compilation_target == 'local':
 
-        ir_model_location = convert_model_to_ir(model, model_zoo_folder, download_folder_path)
+        ir_model_location = convert_model_to_ir(model, model_zoo_folder, download_folder_path, openvino_version)
 
         if(not ir_model_location.exists()):
             raise RuntimeError(f"{ir_model_location} doesn't exist for downloaded model!")
@@ -163,7 +185,7 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_c
         if(not xml_path.exists()):
             raise RuntimeError(f"{xml_path} doesn't exist for downloaded model!")
     
-        return myriad_compile_model_local(shaves, xml_path, output_location)
+        return myriad_compile_model_local(shaves, xml_path, output_location, openvino_version)
 
     elif model_compilation_target == 'cloud':
          
@@ -177,7 +199,7 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_c
         if(not bin_path.exists()):
             raise RuntimeError(f"{bin_path} doesn't exist for downloaded model!")
 
-        return myriad_compile_model_cloud(xml=xml_path, bin=bin_path, shaves=shaves, output_file=output_location)
+        return myriad_compile_model_cloud(xml=xml_path, bin=bin_path, shaves=shaves, output_file=output_location, openvino_version=openvino_version)
 
     else:
         assert 'model_compilation_target must be either : ["auto", "local", "cloud"]'
@@ -192,8 +214,9 @@ def main(args):
     shaves = args['shaves']
     nces =  args['nces']
     model_compilation_target = args['model_compilation_target']
+    openvino_version = args['openvino_version']
 
-    return download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, model_compilation_target)
+    return download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, openvino_version, model_compilation_target)
 
 if __name__ == '__main__':
     import argparse
@@ -216,6 +239,9 @@ if __name__ == '__main__':
         parser.add_argument("-mz", "--model-zoo-folder", default=None,
                     type=str, required=True,
                     help="Path to folder with models")
+        parser.add_argument("-op", "--openvino_version", default='2020.1',
+                    type=str,
+                    help="Openvino version for compilation")
         options = parser.parse_args()
         return options
 

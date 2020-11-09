@@ -424,4 +424,5 @@ class BlobManager:
 
         blob_file = download_and_compile_NN_model(nn_model, model_zoo_folder, shave_nr_opt, NCE_nr, model_compilation_target)
         blob_file = str(blob_file)
+        print("Using myriad blob from: ",blob_file)
         return blob_file
