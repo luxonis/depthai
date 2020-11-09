@@ -174,6 +174,8 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, nces, openvin
                 print(f'Unsupported openvino version installed at {openvino_dir}, version {installed_openvino_version}, supported version is: {openvino_version}')
 
         except:
+            if model_compilation_target == 'local':
+                raise SystemExit(f"Local model compilation was requested, but environment variables are not initialized for openvino {openvino_version}. Run setupvars.sh/setupvars.bat from the OpenVINO toolkit.")
             model_compilation_target = 'cloud'
     
     print(f'Model_compilation_target: {model_compilation_target}')
