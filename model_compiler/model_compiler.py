@@ -4,7 +4,7 @@ from pathlib import Path
 import os, sys
 import requests
 
-supported_openvino_version = '2020.1.023'
+supported_openvino_version = '2020.1'
 
 def relative_to_abs_path(relative_path):
     dirname = Path(__file__).parent
@@ -27,7 +27,7 @@ def download_model(model, model_zoo_folder):
     # print(downloader_cmd)
     result = subprocess.run(downloader_cmd)
     if result.returncode != 0:
-        raise RuntimeError("Model downloader failed! Not connected to the internet?")
+        raise RuntimeError("Model downloader failed!")
     
     download_location = Path(download_folder_path) / model
     if(not download_location.exists()):
@@ -47,7 +47,8 @@ def convert_model_to_ir(model, model_zoo_folder):
     converter_cmd = [sys.executable, f"{converter_path}"]
     converter_cmd = np.concatenate((converter_cmd, model_converter_options))
     # print(converter_cmd)
-    if subprocess.run(converter_cmd).returncode != 0:
+    result = subprocess.run(converter_cmd)
+    if result.returncode != 0:
         raise RuntimeError("Model converter failed!")
     
     ir_model_location = Path(download_folder_path) / model / "FP16"
@@ -74,8 +75,9 @@ def myriad_compile_model_local(shaves, cmx_slices, nces, xml_path, output_file):
 
     myriad_compile_cmd = np.concatenate(([myriad_compile_path], myriad_compiler_options))
     # print(myriad_compile_cmd)
-    
-    if subprocess.run(myriad_compile_cmd).returncode != 0:
+
+    result = subprocess.run(myriad_compile_cmd)
+    if result.returncode != 0:
         raise RuntimeError("Myriad compiler failed!")
     
     return 0
@@ -86,28 +88,31 @@ def myriad_compile_model_cloud(xml, bin, shaves, cmx_slices, nces, output_file):
     PLATFORM="VPU_MYRIAD_2450" if nces == 0 else "VPU_MYRIAD_2480"
 
     # use 69.214.171 instead luxonis.com to bypass cloudflare limitation of max file size
-    url = "http://69.164.214.171:8080/"
+    url = "http://69.164.214.171:8083/compile"
     payload = {
         'compile_type': 'myriad',
         'compiler_params': '-ip U8 -VPU_MYRIAD_PLATFORM ' + PLATFORM + ' -VPU_NUMBER_OF_SHAVES ' + str(shaves) +' -VPU_NUMBER_OF_CMX_SLICES ' + str(cmx_slices)
     }
-    files = [
-        ('definition', open(Path(xml), 'rb')),
-        ('weights', open(Path(bin), 'rb'))
-    ]
+    files = {
+        'definition': open(Path(xml), 'rb'),
+        'weights': open(Path(bin), 'rb')
+    }
+    params = {
+        "version": supported_openvino_version
+    }
     try:
-        response = requests.request("POST", url, data=payload, files=files)
-    except:
-        print("Connection timed out!")
-        return 1
-    if response.status_code == 200:
-        blob_file = open(output_file,'wb')
-        blob_file.write(response.content)
-        blob_file.close()
-    else:
-        print("Model compilation failed with error code: " + str(response.status_code))
-        print(str(response.text.encode('utf8')))
+        response = requests.post(url, data=payload, files=files, params=params)
+        response.raise_for_status()
+    except Exception as ex:
+        if getattr(ex, 'response', None) is None:
+            print(f"Unknown error occured: {ex}")
+            return 1
+        print("Model compilation failed with error code: " + str(ex.response.status_code))
+        print(str(ex.response.text))
         return 2
+    blob_file = open(output_file,'wb')
+    blob_file.write(response.content)
+    blob_file.close()
 
     return 0
 
@@ -157,8 +162,10 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, cmx_slices, n
             raise RuntimeError(f"{bin_path} doesn't exist for downloaded model!")
 
         result = myriad_compile_model_cloud(xml=xml_path, bin=bin_path, shaves = shaves, cmx_slices=cmx_slices, nces=nces, output_file=output_location)
-        if result != 0:
+        if result == 1:
             raise RuntimeError("Model compiler failed! Not connected to the internet?")
+        elif result == 2:
+            raise RuntimeError("Model compiler failed! Check logs for details")
     else:
         assert 'model_compilation_target must be either : ["auto", "local", "cloud"]'
 

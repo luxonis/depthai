@@ -37,6 +37,7 @@ mesh_left.calib
 mesh_right.calib
 intrinsic.json
 intrinsic_calib_m2
+log_system_information.json
 
 *.h264
 *.h265
