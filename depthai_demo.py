@@ -134,7 +134,7 @@ class DepthAI:
         
         # create the pipeline, here is the first connection with the device
         p = self.device.create_pipeline(config=config)
-
+        print(config)
         if p is None:
             print('Pipeline is not created.')
             exit(3)
@@ -151,7 +151,8 @@ class DepthAI:
         frame_count_prev['nn'] = {}
         preview_shape = None
         left_pose = None
-        
+        self.rgb_manual_focus = 0
+
         NN_cams = {'rgb', 'left', 'right'}
 
         for cam in NN_cams:
@@ -225,6 +226,8 @@ class DepthAI:
             cam_r = depthai.CameraControl.CamId.RIGHT
             cmd_ae_region = depthai.CameraControl.Command.AE_REGION
             cmd_exp_comp = depthai.CameraControl.Command.EXPOSURE_COMPENSATION
+            cam_c = depthai.CameraControl.CamId.RGB
+            cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
             keypress_handler_lut = {
                 ord('f'): lambda: self.device.request_af_trigger(),
                 ord('1'): lambda: self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO),
@@ -244,6 +247,14 @@ class DepthAI:
                     self.device.request_jpeg()
                 else:
                     print("'jpegout' stream not enabled. Try settings -s jpegout to enable it")
+            elif key == ord(',') or key == ord('.'):
+                rgb_focus_step = 3
+                if key == ord(','): self.rgb_manual_focus -= rgb_focus_step
+                if key == ord('.'): self.rgb_manual_focus += rgb_focus_step
+                if self.rgb_manual_focus < 0:   self.rgb_manual_focus = 0
+                if self.rgb_manual_focus > 255: self.rgb_manual_focus = 255
+                print("==================================== RGB set focus [0..255], current:", self.rgb_manual_focus)
+                self.device.send_camera_control(cam_c, cmd_set_focus, str(self.rgb_manual_focus))
             return
 
         for stream in stream_names:
@@ -727,8 +738,10 @@ class DepthAI:
                     meta = packet.getMetadata()
                     w = meta.getFrameWidth()
                     h = meta.getFrameHeight()
+                    # print((h,w))
                     yuv420p = packetData.reshape((h * 3 // 2, w))
                     bgr = cv2.cvtColor(yuv420p, cv2.COLOR_YUV2BGR_IYUV)
+                    # print(bgr.shape)
                     scale = configMan.getColorPreviewScale()
                     bgr = cv2.resize(bgr, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
                     cv2.putText(bgr, packet.stream_name, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 0))
