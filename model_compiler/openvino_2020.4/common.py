@@ -530,10 +530,11 @@ class Model:
                 description, license_url, precisions, task_type, conversion_to_onnx_args)
 
 def load_models(args):
+    global MODEL_ROOT
     models = []
     model_names = set()
 
-    ##lux
+    # lux
     if args.model_root is not None:
         MODEL_ROOT = Path(args.model_root)
 

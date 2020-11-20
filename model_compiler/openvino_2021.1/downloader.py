@@ -31,6 +31,8 @@ import tempfile
 import threading
 import time
 import types
+from urllib.request import url2pathname
+import os
 
 from pathlib import Path
 
@@ -270,6 +272,54 @@ def positive_int_arg(value_str):
     raise argparse.ArgumentTypeError('must be a positive integer (got {!r})'.format(value_str))
 
 
+class LocalFileAdapter(requests.adapters.BaseAdapter):
+    @staticmethod
+    def _chkpath(method, path):
+        """Return an HTTP status for the given filesystem path."""
+        if method.lower() in ('put', 'delete'):
+            return 501, "Not Implemented"  # TODO
+        elif method.lower() not in ('get', 'head'):
+            return 405, "Method Not Allowed"
+        elif os.path.isdir(path):
+            return 400, "Path Not A File"
+        elif not os.path.isfile(path):
+            return 404, "File Not Found"
+        elif not os.access(path, os.R_OK):
+            return 403, "Access Denied"
+        else:
+            return 200, "OK"
+
+    def send(self, req, **kwargs):  # pylint: disable=unused-argument
+        """Return the file specified by the given request
+        @type req: C{PreparedRequest}
+        @todo: Should I bother filling `response.headers` and processing
+               If-Modified-Since and friends using `os.stat`?
+        """
+        path = os.path.normcase(os.path.normpath(url2pathname(req.path_url)))
+        response = requests.Response()
+
+        response.status_code, response.reason = self._chkpath(req.method, path)
+        if response.status_code == 200 and req.method.lower() != 'head':
+            try:
+                response.raw = open(path, 'rb')
+            except (OSError, IOError) as err:
+                response.status_code = 500
+                response.reason = str(err)
+
+        if isinstance(req.url, bytes):
+            response.url = req.url.decode('utf-8')
+        else:
+            response.url = req.url
+
+        response.request = req
+        response.connection = self
+
+        return response
+
+    def close(self):
+        pass
+
+
 # There is no evidence that the requests.Session class is thread-safe,
 # so for safety, we use one Session per thread. This class ensures that
 # each thread gets its own Session.
@@ -285,6 +335,7 @@ class ThreadSessionFactory:
         except AttributeError:
             with self._lock: # ExitStack might not be thread-safe either
                 session = self._exit_stack.enter_context(requests.Session())
+                session.mount('file://', LocalFileAdapter())
             self._thread_local.session = session
         return session
 
@@ -312,9 +363,8 @@ def main():
     parser.add_argument('-j', '--jobs', type=positive_int_arg, metavar='N', default=1,
         help='how many downloads to perform concurrently')
 
-    ##lux
-    parser.add_argument('--model_root', type=Path, default=None,
-        help='path to models folder')
+    # lux
+    parser.add_argument('--model_root', type=Path, default=None, help='path to models folder')
 
     args = parser.parse_args()
 

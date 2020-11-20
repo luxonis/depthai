@@ -119,8 +119,6 @@ def num_jobs_arg(value_str):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', type=Path, metavar='CONFIG.YML',
-        help='model configuration file (deprecated)')
     parser.add_argument('-d', '--download_dir', type=Path, metavar='DIR',
         default=Path.cwd(), help='root of the directory tree with downloaded model files')
     parser.add_argument('-o', '--output_dir', type=Path, metavar='DIR',
@@ -143,9 +141,7 @@ def main():
         help='Print the conversion commands without running them')
     parser.add_argument('-j', '--jobs', type=num_jobs_arg, default=1,
         help='number of conversions to run concurrently')
-
     parser.add_argument('--model_root', type=Path, default=None, help='path to models folder')
-    
     args = parser.parse_args()
 
     mo_path = args.mo

@@ -18,7 +18,6 @@
 
 import argparse
 import hashlib
-import os
 import re
 import requests
 import shlex
@@ -28,6 +27,8 @@ import sys
 import tempfile
 import time
 from urllib.request import url2pathname
+import os
+
 from pathlib import Path
 
 import common
@@ -52,12 +53,6 @@ def process_download(reporter, chunk_iterable, size, file):
                     reporter.emit_event('model_file_download_progress', size=progress_size)
 
                 file.write(chunk)
-
-                # don't attempt to finish a file if it's bigger than expected
-                if progress_size > size:
-                    break
-
-        return progress_size
     finally:
         reporter.end_progress()
 
@@ -72,19 +67,8 @@ def try_download(reporter, file, num_attempts, start_download, size):
             chunk_iterable = start_download()
             file.seek(0)
             file.truncate()
-            actual_size = process_download(reporter, chunk_iterable, size, file)
-
-            if actual_size > size:
-                reporter.log_error("Remote file is longer than expected ({} B), download aborted", size)
-                # no sense in retrying - if the file is longer, there's no way it'll fix itself
-                return False
-            elif actual_size < size:
-                reporter.log_error("Downloaded file is shorter ({} B) than expected ({} B)",
-                    actual_size, size)
-                # it's possible that we got disconnected before receiving the full file,
-                # so try again
-            else:
-                return True
+            process_download(reporter, chunk_iterable, size, file)
+            return True
         except (requests.exceptions.RequestException, ssl.SSLError):
             reporter.log_error("Download failed", exc_info=True)
 
@@ -247,7 +231,6 @@ class LocalFileAdapter(requests.adapters.BaseAdapter):
     def close(self):
         pass
 
-
 def main():
     parser = DownloaderArgumentParser()
     parser.add_argument('-c', '--config', type=Path, metavar='CONFIG.YML',
@@ -268,7 +251,6 @@ def main():
         help='attempt each download up to N times')
     parser.add_argument('--progress_format', choices=('text', 'json'), default='text',
         help='which format to use for progress reporting')
-
     parser.add_argument('--model_root', type=Path, default=None, help='path to models folder')
 
     args = parser.parse_args()

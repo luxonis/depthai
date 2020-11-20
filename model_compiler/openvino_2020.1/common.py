@@ -409,7 +409,7 @@ def load_models(args):
 
     if args.config is None: # per-model configs
         if args.model_root is None:
-            model_root = (Path(__file__).resolve().parent / './models/luxonis').resolve()
+            model_root = (Path(__file__).resolve().parent / '../../models').resolve()
         else:
             model_root = Path(args.model_root)
 

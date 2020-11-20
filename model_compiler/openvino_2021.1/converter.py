@@ -79,9 +79,8 @@ def main():
     parser.add_argument('-j', '--jobs', type=num_jobs_arg, default=1,
         help='number of conversions to run concurrently')
 
-    ##lux
-    parser.add_argument('--model_root', type=str, default=None,
-        help='path to models folder')
+    # lux
+    parser.add_argument('--model_root', type=Path, default=None, help='path to models folder')
 
     # aliases for backwards compatibility
     parser.add_argument('--add-mo-arg', dest='extra_mo_args', action='append', help=argparse.SUPPRESS)
