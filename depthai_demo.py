@@ -353,12 +353,32 @@ class DepthAI:
                 elif packet.stream_name == 'meta_d2h':
                     str_ = packet.getDataAsStr()
                     dict_ = json.loads(str_)
-
+                    # Enable (1) to pretty-print entire packet
+                    if 0: print('meta_d2h', json.dumps(dict_, indent=4, sort_keys=False))
                     print('meta_d2h Temp',
                           ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
                           ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                           ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                           ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
+                    if 0: print('meta_d2h Camera',
+                          'last frame tstamp: {:.6f}'.format(dict_['camera']['last_frame_timestamp']),
+                          'frame count rgb:', dict_['camera']['rgb']['frame_count'],
+                          'left:', dict_['camera']['left']['frame_count'],
+                          'right:', dict_['camera']['right']['frame_count'])
+                    if 'imu' in dict_:
+                        print('meta_d2h IMU acceleration xyz [g]:',
+                              '{:7.4f}'.format(dict_['imu']['accel']['x']),
+                              '{:7.4f}'.format(dict_['imu']['accel']['y']),
+                              '{:7.4f}'.format(dict_['imu']['accel']['z']))
+                        print('meta_d2h IMU accel-raw    xyz [g]:',
+                              '{:7.4f}'.format(dict_['imu']['accelRaw']['x']),
+                              '{:7.4f}'.format(dict_['imu']['accelRaw']['y']),
+                              '{:7.4f}'.format(dict_['imu']['accelRaw']['z']))
+                    # Also printed from lib/c++ side
+                    if 1 and 'logs' in dict_:
+                        for log in dict_['logs']:
+                            print('meta_d2h LOG:', log)
+                    print()
                 elif packet.stream_name == 'object_tracker':
                     tracklets = packet.getObjectTracker()
 
