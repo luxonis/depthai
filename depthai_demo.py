@@ -215,6 +215,12 @@ class DepthAI:
                 else :
                     log_list.append("--")
             # log_list = [time_stmp, test_type, mx_serial_id, usb_3_connection, rgb_camera_connected, left_camera_connected, right_camera_connected, IMU, '--']
+            if test_type == '1098_OBC_test':
+                if is_IMU_found:
+                    log_list.append("pass")
+                else:
+                    log_list.append("fail")
+
             with open(log_file, mode='a') as log_fopen:
                 # header = 
                 log_csv_writer = csv.writer(log_fopen, delimiter=',')
@@ -257,7 +263,7 @@ class DepthAI:
 
         right_rectified = None
         pcl_converter = None
-
+        is_IMU_found = False
         ops = 0
         prevTime = time()
 
@@ -309,7 +315,7 @@ class DepthAI:
             auto_checkbox_dict[auto_checkbox_names[i]] = Checkbox(screen, x + 10, y_axis-5, outline_color=green, 
                                                         check_color=green, check=True)
 
-        y = 250
+        y = 150
         x = 550
         heading = "PASS"
         pygame_render_text(screen, heading, (x, y - 30), green, 30)
@@ -349,7 +355,7 @@ class DepthAI:
         if test_type != '1093_test':
             header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'left_camera', 
                     'right_camera', 'rgb_camera', 'JPEG Encoding Stream', 'previewout-rgb Stream', 'left Stream', 'right Stream', 
-                    'op JPEG Encoding', 'op Previewout-rgb stream', 'op Left Stream', 'op Right Stream']
+                    'op JPEG Encoding', 'op Previewout-rgb stream', 'op Left Stream', 'op Right Stream', 'IMU']
         else:
             header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'rgb_camera', 'JPEG Encoding Stream', 
                       'previewout-rgb Stream', 'op JPEG Encoding', 'op Previewout-rgb stream']
@@ -739,7 +745,7 @@ class DepthAI:
                     str_ = packet.getDataAsStr()
                     dict_ = json.loads(str_)
 
-                    fill_color =  pygame.Rect(50, 510, 700, 100)
+                    fill_color =  pygame.Rect(50, 510, 750, 100)
                     pygame.draw.rect(screen, white, fill_color)
                     text = 'meta_d2h Temp:'
                     pygame_render_text(screen, text, (50, 520), color=orange, font_size=25)
@@ -759,18 +765,41 @@ class DepthAI:
                     #     ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
                 
                     text = 'Camera: last frame tstamp: {:.6f}'.format(dict_['camera']['last_frame_timestamp'])
-                    pygame_render_text(screen, text, (400, 520), font_size=25)
+                    pygame_render_text(screen, text, (250, 520), font_size=25)
                     text = 'frame count rgb: {}'.format(dict_['camera']['rgb']['frame_count'])
-                    pygame_render_text(screen, text, (400, 570), font_size=25)
+                    pygame_render_text(screen, text, (275, 570), font_size=25)
                     text = 'left:{}'.format(dict_['camera']['left']['frame_count'])
-                    pygame_render_text(screen, text, (400, 545), font_size=25)
+                    pygame_render_text(screen, text, (275, 545), font_size=25)
                     text = 'right:{}'.format(dict_['camera']['right']['frame_count'])
-                    pygame_render_text(screen, text, (500, 545), font_size=25)
+                    pygame_render_text(screen, text, (375, 545), font_size=25)
+
+                    # if 'imu' in dict_:
+                    #     print('meta_d2h IMU acceleration xyz [g]:',
+                    #           '{:7.4f}'.format(dict_['imu']['accel']['x']),
+                    #           '{:7.4f}'.format(dict_['imu']['accel']['y']),
+                    #           '{:7.4f}'.format(dict_['imu']['accel']['z']))
+                    #     print('meta_d2h IMU accel-raw    xyz [g]:',
+                    #           '{:7.4f}'.format(dict_['imu']['accelRaw']['x']),
+                    #           '{:7.4f}'.format(dict_['imu']['accelRaw']['y']),
+                    #           '{:7.4f}'.format(dict_['imu']['accelRaw']['z']))
+
+                    if 'imu' in dict_:
+                        is_IMU_found = True
+                        text = 'IMU acc x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accel']['x'], dict_['imu']['accel']['y'], dict_['imu']['accel']['z'])
+                        pygame_render_text(screen, text, (470, 545), font_size=25)
+
+                        text = 'IMU acc-raw x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accelRaw']['x'], dict_['imu']['accelRaw']['y'], dict_['imu']['accelRaw']['z'])
+                        pygame_render_text(screen, text, (460, 570), font_size=25)
+
+                    if not is_IMU_found:
+                        text = 'IMU failed!!'
+                        pygame_render_text(screen, text, (470, 545), color=red ,font_size=25)
+
 
                     # # Also printed from lib/c++ side
                     if 0 and 'logs' in dict_:
                         for log in dict_['logs']:
-                            print('Device log:', log)
+                            print('Device log:-->', log)
                 elif packet.stream_name == 'object_tracker':
                     tracklets = packet.getObjectTracker()
 
