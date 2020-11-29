@@ -136,6 +136,10 @@ class DepthAI:
                 print('', meta.getFrameWidth(), meta.getFrameHeight(), meta.getFrameBytesPP(), end='')
             print()
             return
+        
+        cam_c = depthai.CameraControl.CamId.RGB
+        cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
+        self.device.send_camera_control(cam_c, cmd_set_focus, str(141))
 
         def keypress_handler(self, key, stream_names):
             cam_c = depthai.CameraControl.CamId.RGB
@@ -195,6 +199,11 @@ class DepthAI:
                 print("========================================== RGB set focus:", self.rgb_manual_focus)
                 focus_arg = str(self.rgb_manual_focus)
                 self.device.send_camera_control(cam_c, cmd_set_focus, focus_arg)
+            elif key == ord('/'):
+                cam_c = depthai.CameraControl.CamId.RGB
+                cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
+                self.device.send_camera_control(cam_c, cmd_set_focus, str(141))
+
             return
 
         for stream in stream_names:
