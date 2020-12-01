@@ -187,7 +187,7 @@ class DepthAI:
                 self.device.send_camera_control(cam_c, cmd_set_exp, exp_arg)
             elif key == ord(',') or key == ord('.'):
                 self.rgb_manual_focus = getattr(self, 'rgb_manual_focus', 200)  # initial
-                rgb_focus_step = 3
+                rgb_focus_step = 1
                 if key == ord(','): self.rgb_manual_focus -= rgb_focus_step
                 if key == ord('.'): self.rgb_manual_focus += rgb_focus_step
                 if self.rgb_manual_focus < 0:   self.rgb_manual_focus = 0
@@ -360,9 +360,10 @@ class DepthAI:
                           ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                           ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                           ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
-                    if 0: print('meta_d2h Camera',
+                    if 1: print('meta_d2h Camera',
                           'last frame tstamp: {:.6f}'.format(dict_['camera']['last_frame_timestamp']),
                           'frame count rgb:', dict_['camera']['rgb']['frame_count'],
+                          'focus rgb:', dict_['camera']['rgb']['focus_pos'],
                           'left:', dict_['camera']['left']['frame_count'],
                           'right:', dict_['camera']['right']['frame_count'])
                     if 'imu' in dict_:
