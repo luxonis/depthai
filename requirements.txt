@@ -1,5 +1,5 @@
 numpy==1.19.3
-opencv-python==4.4.0.46
+# opencv-python==4.4.0.46
 requests==2.24.0
 argcomplete==1.12.1
 open3d==0.10.0; platform_machine != "armv7l" and python_version < "3.9"
@@ -7,4 +7,4 @@ pyyaml==5.3.1
 # depthai==0.3.0.0
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.4.0.0+4c17f5aea724209e3c6b0e21e9bf2a4574361dae
+depthai==0.4.0.0+059a1b4c20e16a1cc4a0effb4fbd3a48cea919b6
