@@ -138,10 +138,13 @@ class DepthAI:
             return
 
         def keypress_handler(self, key, stream_names):
+            cam_c = depthai.CameraControl.CamId.RGB
             cam_l = depthai.CameraControl.CamId.LEFT
             cam_r = depthai.CameraControl.CamId.RIGHT
             cmd_ae_region = depthai.CameraControl.Command.AE_REGION
-            cmd_exp_comp = depthai.CameraControl.Command.EXPOSURE_COMPENSATION
+            cmd_exp_comp  = depthai.CameraControl.Command.EXPOSURE_COMPENSATION
+            cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
+            cmd_set_exp   = depthai.CameraControl.Command.AE_MANUAL
             keypress_handler_lut = {
                 ord('f'): lambda: self.device.request_af_trigger(),
                 ord('1'): lambda: self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO),
@@ -161,6 +164,37 @@ class DepthAI:
                     self.device.request_jpeg()
                 else:
                     print("'jpegout' stream not enabled. Try settings -s jpegout to enable it")
+            # RGB manual focus/exposure controls:
+            # Control:      key[dec/inc]  min..max
+            # exposure time:     i   o    1..33333 [us]
+            # sensitivity iso:   k   l    100..1600
+            # focus:             ,   .    0..255 [far..near]
+            elif key == ord('i') or key == ord('o') or key == ord('k') or key == ord('l'):
+                self.rgb_exp = getattr(self, 'rgb_exp', 20000)  # initial
+                self.rgb_iso = getattr(self, 'rgb_iso', 800)  # initial
+                rgb_iso_step = 50
+                rgb_exp_step = 500
+                if key == ord('i'): self.rgb_exp -= rgb_exp_step
+                if key == ord('o'): self.rgb_exp += rgb_exp_step
+                if key == ord('k'): self.rgb_iso -= rgb_iso_step
+                if key == ord('l'): self.rgb_iso += rgb_iso_step
+                if self.rgb_exp < 1:     self.rgb_exp = 1
+                if self.rgb_exp > 33333: self.rgb_exp = 33333
+                if self.rgb_iso < 100:   self.rgb_iso = 100
+                if self.rgb_iso > 1600:  self.rgb_iso = 1600
+                print("=================================== RGB set exposure:", self.rgb_exp, "iso:", self.rgb_iso)
+                exp_arg = str(self.rgb_exp) + ' ' + str(self.rgb_iso) + ' 33333'
+                self.device.send_camera_control(cam_c, cmd_set_exp, exp_arg)
+            elif key == ord(',') or key == ord('.'):
+                self.rgb_manual_focus = getattr(self, 'rgb_manual_focus', 200)  # initial
+                rgb_focus_step = 3
+                if key == ord(','): self.rgb_manual_focus -= rgb_focus_step
+                if key == ord('.'): self.rgb_manual_focus += rgb_focus_step
+                if self.rgb_manual_focus < 0:   self.rgb_manual_focus = 0
+                if self.rgb_manual_focus > 255: self.rgb_manual_focus = 255
+                print("========================================== RGB set focus:", self.rgb_manual_focus)
+                focus_arg = str(self.rgb_manual_focus)
+                self.device.send_camera_control(cam_c, cmd_set_focus, focus_arg)
             return
 
         for stream in stream_names:
