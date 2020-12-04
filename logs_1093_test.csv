@@ -1,0 +1,27 @@
+time,test_type,Mx_serial_id,USB_speed,rgb_camera,JPEG Encoding Stream,previewout-rgb Stream,op JPEG Encoding,op Previewout-rgb stream
+11-04-2020 09:46:59,1093_test,14442C1001069BCD00,pass,fail,pass,pass,--,--
+11-04-2020 09:55:03,1093_test,14442C1001069BCD00,pass,pass,pass,pass,--,--
+11-04-2020 09:55:24,1093_test,14442C1001069BCD00,fail,pass,pass,pass,--,--
+11-04-2020 09:58:11,1093_test,14442C1001069BCD00,fail,pass,pass,pass,pass,--
+11-04-2020 09:58:32,1093_test,14442C1001069BCD00,fail,pass,pass,pass,fail,fail
+11-04-2020 09:58:54,1093_test,14442C1001069BCD00,fail,pass,pass,pass,pass,pass
+11-04-2020 10:15:45,1093_test,14442C10313097CD00,pass,pass,pass,pass,pass,pass
+11-04-2020 10:16:11,1093_test,14442C10F12B99CD00,pass,pass,pass,pass,pass,pass
+11-04-2020 10:17:27,1093_test,14442C10F12B99CD00,pass,pass,pass,pass,pass,pass
+11-04-2020 10:18:04,1093_test,14442C10F12B99CD00,fail,pass,pass,pass,pass,pass
+11-04-2020 11:03:40,1093_test,14442C1001069BCD00,pass,pass,pass,pass,pass,pass
+11-04-2020 11:04:06,1093_test,14442C1001069BCD00,fail,pass,pass,pass,pass,pass
+11-04-2020 11:04:17,1093_test,14442C1001069BCD00,pass,pass,pass,pass,pass,pass
+11-04-2020 11:04:33,1093_test,14442C1001069BCD00,pass,pass,pass,pass,pass,pass
+11-04-2020 11:05:11,1093_test,14442C1001069BCD00,fail,pass,pass,pass,--,--
+11-04-2020 11:05:49,1093_test,14442C1031299DCD00,fail,fail,fail,fail,fail,fail
+11-04-2020 11:06:25,1093_test,14442C1001069BCD00,fail,pass,pass,pass,pass,pass
+11-04-2020 11:06:45,1093_test,14442C1001069BCD00,pass,pass,fail,fail,--,--
+11-04-2020 11:07:11,1093_test,14442C1001069BCD00,pass,pass,pass,pass,pass,pass
+11-04-2020 11:07:27,1093_test,14442C1001069BCD00,pass,pass,pass,pass,pass,pass
+11-04-2020 11:19:48,1093_test,14442C1001069BCD00,fail,pass,pass,pass,pass,pass
+11-04-2020 11:20:09,1093_test,14442C1001069BCD00,pass,pass,pass,pass,pass,fail
+11-04-2020 11:20:35,1093_test,14442C1001069BCD00,pass,pass,pass,pass,--,--
+11-04-2020 11:20:46,1093_test,14442C1001069BCD00,pass,pass,fail,fail,--,--
+11-04-2020 12:31:26,1093_test,14442C1001069BCD00,pass,pass,pass,pass,pass,pass
+11-05-2020 18:38:43,1093_test,14442C10F12B99CD00,pass,pass,pass,pass,--,--

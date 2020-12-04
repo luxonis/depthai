@@ -136,7 +136,7 @@ class DepthAI:
                 print('', meta.getFrameWidth(), meta.getFrameHeight(), meta.getFrameBytesPP(), end='')
             print()
             return
-        
+        print('Setting focus ------------>')
         cam_c = depthai.CameraControl.CamId.RGB
         cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
         self.device.send_camera_control(cam_c, cmd_set_focus, str(141))
@@ -200,6 +200,8 @@ class DepthAI:
                 focus_arg = str(self.rgb_manual_focus)
                 self.device.send_camera_control(cam_c, cmd_set_focus, focus_arg)
             elif key == ord('/'):
+                # self.device.send_camera_control(
+            # cam_c, depthai.CameraControl.Command.AF_MODE, '0')
                 cam_c = depthai.CameraControl.CamId.RGB
                 cmd_set_focus = depthai.CameraControl.Command.MOVE_LENS
                 self.device.send_camera_control(cam_c, cmd_set_focus, str(141))
@@ -368,6 +370,7 @@ class DepthAI:
                           ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                           ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                           ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
+                    print('Setup fovus --->  {}'.format(dict_['camera']['rgb']['focus_pos']))
                 elif packet.stream_name == 'object_tracker':
                     tracklets = packet.getObjectTracker()
 

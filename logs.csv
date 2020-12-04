@@ -1,0 +1,5 @@
+time,test_type,Mx_serial_id,USB_speed,rgb_camera,left_camera,right_camera,IMU,manual_id
+11-03-2020 11:09:24,1093_test,14442C10313097CD00,pass,pass,pass,pass,pass,pass
+11-03-2020 19:57:36,1098_OBC_test,14442C10313097CD00,pass,pass,pass,pass,pass,pass,pass,pass,--,--,--,--
+11-03-2020 19:59:52,1098_OBC_test,14442C10313097CD00,pass,pass,pass,pass,pass,pass,pass,pass,--,--,--,--
+11-03-2020 20:19:42,1098_OBC_test,14442C10313097CD00,pass,pass,pass,pass,pass,pass,pass,pass,--,--,--,--

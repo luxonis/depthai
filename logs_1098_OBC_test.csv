@@ -1,0 +1,25 @@
+time,test_type,Mx_serial_id,USB_speed,left_camera,right_camera,rgb_camera,JPEG Encoding Stream,previewout-rgb Stream,left Stream,right Stream,op JPEG Encoding,op Previewout-rgb stream,op Left Stream,op Right Stream
+11-03-2020 23:15:31,1098_OBC_test,14442C10313097CD00,pass,pass,fail,pass,pass,pass,fail,fail,--,--,--,--
+11-03-2020 23:16:02,1098_OBC_test,14442C10313097CD00,fail,pass,pass,pass,pass,pass,pass,pass,--,--,--,--
+11-03-2020 23:16:23,1098_OBC_test,14442C10313097CD00,pass,pass,pass,pass,pass,pass,pass,pass,--,--,--,--
+11-03-2020 23:16:39,1098_OBC_test,14442C1001069BCD00,pass,fail,fail,pass,pass,pass,fail,fail,--,--,--,--
+11-04-2020 10:19:23,1098_OBC_test,14442C10F12B99CD00,fail,pass,pass,pass,pass,pass,pass,pass,--,--,--,--
+11-04-2020 10:20:36,1098_OBC_test,14442C10F12B99CD00,fail,pass,pass,pass,pass,pass,pass,pass,pass,fail,pass,fail
+11-04-2020 10:26:09,1098_OBC_test,14442C10F12B99CD00,fail,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass
+11-04-2020 10:28:01,1098_OBC_test,14442C10F12B99CD00,fail,pass,pass,pass,pass,pass,pass,pass,fail,fail,fail,fail
+11-04-2020 10:28:18,1098_OBC_test,14442C10F12B99CD00,fail,pass,pass,pass,pass,pass,pass,pass,pass,fail,pass,fail
+11-04-2020 10:31:15,1098_OBC_test,14442C10F12B99CD00,fail,pass,pass,pass,pass,pass,pass,pass,fail,pass,--,fail
+11-04-2020 10:31:36,1098_OBC_test,14442C10F12B99CD00,fail,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass
+11-04-2020 10:48:42,1098_OBC_test,14442C10F12B99CD00,pass,pass,pass,pass,pass,pass,pass,pass,--,--,--,--
+11-04-2020 10:52:38,1098_OBC_test,14442C10F12B99CD00,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass
+11-04-2020 10:52:54,1098_OBC_test,14442C10F12B99CD00,pass,pass,pass,pass,pass,pass,pass,pass,fail,--,--,--
+11-04-2020 10:53:09,1098_OBC_test,14442C10F12B99CD00,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass
+11-04-2020 10:53:55,1098_OBC_test,14442C10F12B99CD00,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass
+11-04-2020 10:54:26,1098_OBC_test,14442C10313097CD00,pass,pass,fail,pass,pass,pass,fail,fail,pass,pass,fail,fail
+11-04-2020 10:55:04,1098_OBC_test,14442C10313097CD00,fail,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass
+11-04-2020 10:56:06,1098_OBC_test,14442C10313097CD00,fail,pass,fail,pass,pass,pass,fail,fail,pass,pass,fail,fail
+11-04-2020 10:57:24,1098_OBC_test,14442C1031299DCD00,fail,pass,pass,fail,fail,fail,pass,pass,fail,fail,pass,pass
+11-04-2020 10:58:21,1098_OBC_test,14442C1031299DCD00,pass,pass,pass,fail,fail,fail,pass,pass,fail,fail,pass,pass
+11-04-2020 12:44:00,1098_OBC_test,14442C10F12B99CD00,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass,pass
+11-05-2020 19:35:47,1098_OBC_test,14442C10F12B99CD00,pass,pass,pass,pass,pass,pass,pass,fail,--,--,--,--
+11-05-2020 19:40:54,1098_OBC_test,14442C10F12B99CD00,pass,pass,pass,pass,fail,fail,pass,pass,--,--,--,--
