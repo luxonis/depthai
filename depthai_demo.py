@@ -782,8 +782,9 @@ class DepthAI:
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['x']),
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['y']),
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['z']))
-
+                    # print(dict_['imu'])
                     if 'imu' in dict_:
+                        print(dict_['imu'])
                         is_IMU_found = True
                         text = 'IMU acc x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accel']['x'], dict_['imu']['accel']['y'], dict_['imu']['accel']['z'])
                         pygame_render_text(screen, text, (470, 545), font_size=25)
