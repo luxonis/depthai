@@ -138,6 +138,9 @@ class DepthAI:
             return
 
         def keypress_handler(self, key, stream_names):
+            cams = ['rgb', 'mono']
+            self.cam_idx = getattr(self, 'cam_idx', 0)  # default: 'rgb'
+            cam = cams[self.cam_idx]
             cam_c = depthai.CameraControl.CamId.RGB
             cam_l = depthai.CameraControl.CamId.LEFT
             cam_r = depthai.CameraControl.CamId.RIGHT
@@ -149,7 +152,7 @@ class DepthAI:
                 ord('f'): lambda: self.device.request_af_trigger(),
                 ord('1'): lambda: self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_AUTO),
                 ord('2'): lambda: self.device.request_af_mode(depthai.AutofocusMode.AF_MODE_CONTINUOUS_VIDEO),
-                # 5,6,7,8,9,0: short example for using ISP 3A controls
+                # 5,6,7,8,9,0: short example for using ISP 3A controls for Mono cameras
                 ord('5'): lambda: self.device.send_camera_control(cam_l, cmd_ae_region, '0 0 200 200 1'),
                 ord('6'): lambda: self.device.send_camera_control(cam_l, cmd_ae_region, '1000 0 200 200 1'),
                 ord('7'): lambda: self.device.send_camera_control(cam_l, cmd_exp_comp, '-2'),
@@ -164,27 +167,35 @@ class DepthAI:
                     self.device.request_jpeg()
                 else:
                     print("'jpegout' stream not enabled. Try settings -s jpegout to enable it")
+            elif key == ord('s'):  # switch selected camera for manual exposure control
+                self.cam_idx = (self.cam_idx + 1) % len(cams)
+                print("======================= Current camera to control:", cams[self.cam_idx])
             # RGB manual focus/exposure controls:
             # Control:      key[dec/inc]  min..max
             # exposure time:     i   o    1..33333 [us]
             # sensitivity iso:   k   l    100..1600
             # focus:             ,   .    0..255 [far..near]
             elif key == ord('i') or key == ord('o') or key == ord('k') or key == ord('l'):
+                max_exp_us = int(1000*1000 / config['camera'][cam]['fps'])
                 self.rgb_exp = getattr(self, 'rgb_exp', 20000)  # initial
                 self.rgb_iso = getattr(self, 'rgb_iso', 800)  # initial
                 rgb_iso_step = 50
-                rgb_exp_step = 500
+                rgb_exp_step = max_exp_us // 20  # split in 20 steps
                 if key == ord('i'): self.rgb_exp -= rgb_exp_step
                 if key == ord('o'): self.rgb_exp += rgb_exp_step
                 if key == ord('k'): self.rgb_iso -= rgb_iso_step
                 if key == ord('l'): self.rgb_iso += rgb_iso_step
                 if self.rgb_exp < 1:     self.rgb_exp = 1
-                if self.rgb_exp > 33333: self.rgb_exp = 33333
+                if self.rgb_exp > max_exp_us: self.rgb_exp = max_exp_us
                 if self.rgb_iso < 100:   self.rgb_iso = 100
                 if self.rgb_iso > 1600:  self.rgb_iso = 1600
-                print("=================================== RGB set exposure:", self.rgb_exp, "iso:", self.rgb_iso)
+                print("===================================", cam, "set exposure:", self.rgb_exp, "iso:", self.rgb_iso)
                 exp_arg = str(self.rgb_exp) + ' ' + str(self.rgb_iso) + ' 33333'
-                self.device.send_camera_control(cam_c, cmd_set_exp, exp_arg)
+                if cam == 'rgb':
+                    self.device.send_camera_control(cam_c, cmd_set_exp, exp_arg)
+                elif cam == 'mono':
+                    self.device.send_camera_control(cam_l, cmd_set_exp, exp_arg)
+                    self.device.send_camera_control(cam_r, cmd_set_exp, exp_arg)
             elif key == ord(',') or key == ord('.'):
                 self.rgb_manual_focus = getattr(self, 'rgb_manual_focus', 200)  # initial
                 rgb_focus_step = 3
