@@ -2,8 +2,6 @@
 
 This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
-![image](https://user-images.githubusercontent.com/32992551/102913939-c17f3d00-443c-11eb-8325-16bce449162f.png)
-
 __Documentation is available at [https://docs.luxonis.com](https://docs.luxonis.com).__
 
 ## Python modules (Dependencies)
