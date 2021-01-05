@@ -300,7 +300,7 @@ class Main:
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
         cv2.imshow("left + right",info_frame)
-        cv2.waitKey(5000)
+        cv2.waitKey(0)
         raise Exception("Calibration failed, Left and right camera are swapped. Fix \"swap_left_and_right_cameras\" and start again!!")
 
     def capture_images(self):
@@ -379,12 +379,9 @@ class Main:
                     frame_list.append(small_frame)
 
                     if captured_left and captured_right:
-                        print("Images captured-->")
-                        print(self.images_captured)
-                        if self.images_captured == 0:
-                            is_orientation_correct = test_camera_orientation(captured_left_frame, captured_right_frame)
-                            if not is_orientation_correct :
-                                self.show_failed_orientation()
+                        print(f"Images captured --> {self.images_captured}")
+                        if not self.images_captured and not test_camera_orientation(captured_left_frame, captured_right_frame):
+                            self.show_failed_orientation()
                         self.images_captured += 1
                         self.images_captured_polygon += 1
                         capturing = False
