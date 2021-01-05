@@ -482,6 +482,7 @@ class StereoCalibration(object):
 
         print("Average Epipolar Error: " + str(epi_error_sum / len(imgpoints_r)))
 
+        print("Displaying Stereo Pair for visual inspection. Press the [ESC] key to exit.")
         for image_data_pair in image_data_pairs:
             img_concat = cv2.hconcat([image_data_pair[0], image_data_pair[1]])
             img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
@@ -495,17 +496,14 @@ class StereoCalibration(object):
                 line_row += 30
 
             # show image
-            print("Displaying Stereo Pair for visual inspection. Press the [ESC] key to exit.")
-            while (1):
-                cv2.imshow('Stereo Pair', img_concat)
-                k = cv2.waitKey(33)
-                if k == 32:  # Esc key to stop
-                    break
-                elif k == 27:
-                    os._exit(0)
-                    # raise SystemExit()
-                elif k == -1:  # normally -1 returned,so don't print it
-                    continue
+            cv2.imshow('Stereo Pair', img_concat)
+            k = cv2.waitKey(0)
+            if k == 27:  # Esc key to stop
+                break
+                # os._exit(0)
+                # raise SystemExit()
+
+        cv2.destroyWindow('Stereo Pair')
 
 
     def rectify_map(self, M, d, R):
