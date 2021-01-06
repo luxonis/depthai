@@ -7,4 +7,4 @@ pyyaml==5.3.1
 #depthai==0.4.0.0
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.4.0.0+4f19e0e96fe468ca11faee8cf0d3f3dc38e86578
+depthai==0.4.0.0+a13b9939031c2aa794e8aa3e024d35734dc2c24c
