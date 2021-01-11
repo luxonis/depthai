@@ -21,7 +21,7 @@ If you use any other interpreter: https://kislyuk.github.io/argcomplete/
 
 ## Examples
 
-`python3 test.py` - depth & CNN inference example  
+`python3 depthai_demo.py` - depth & CNN inference example  
 
 ## Conversion of existing trained models into Intel Movidius binary format
 
