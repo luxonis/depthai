@@ -1,5 +1,5 @@
-numpy==1.19.3
-opencv-python==4.4.0.46
+numpy==1.19.5
+opencv-python==4.5.1.48
 requests==2.24.0
 argcomplete==1.12.1
 open3d==0.10.0.0; platform_machine != "armv7l" and python_version < "3.9"
