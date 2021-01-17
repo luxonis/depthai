@@ -86,6 +86,8 @@ def parse_args():
                         help="Do not swap the Left and Right cameras.")
     parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
                         help="Used by board developers for debugging.")
+    parser.add_argument("-fusb2", "--force_usb2", default=False, action="store_true",
+                        help="Force usb2 connection")
     parser.add_argument("-iv", "--invert-vertical", dest="invert_v", default=False, action="store_true",
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invert-horizontal", dest="invert_h", default=False, action="store_true",
@@ -220,7 +222,7 @@ class Main:
         pipeline = None
 
         try:
-            device = depthai.Device("", False)
+            device = depthai.Device("", self.args['force_usb2'])
             pipeline = device.create_pipeline(self.config)
         except RuntimeError:
             raise RuntimeError("Unable to initialize device. Try to reset it")
