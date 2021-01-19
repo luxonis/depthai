@@ -45,11 +45,17 @@ print(json_output)
 response_status = []
 start = time()
 
+divident = 10**9
+
 for item in all_my_disks:
-    test_cmd = "sudo dd if=/home/sachin/Downloads/2021-01-11-raspios-buster-armhf.img of=/dev/" + item["name"] + " bs=4M conv=fsync status=progress"
-    print(test_cmd)
-    p = subprocess.Popen(test_cmd, shell=True, preexec_fn=os.setsid)
-    response_status.append(p)
+    # print(int(item["size"]))
+    disk_size = int(item["size"]) / divident
+    print(disk_size)
+    if disk_size < 18 and disk_size > 14: 
+        test_cmd = "sudo dd if=/home/sachin/PiShrink/conv_rpi.img of=/dev/" + item["name"] + " bs=4M conv=fsync status=progress"
+        print(test_cmd)
+        p = subprocess.Popen(test_cmd, shell=True, preexec_fn=os.setsid)
+        response_status.append(p)
 
 is_finished = False 
 while not is_finished:
