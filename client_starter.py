@@ -6,8 +6,10 @@ import netifaces as ni
 import paramiko
 # response = os.system("nmap -sn  10.42.0.0/24 -oG - | awk '/Up$/{print $2}' ")
 
-ip = ni.ifaddresses('enp6s0')[ni.AF_INET][0]['addr']
-ip_val = ip.split('.')
+
+## TODO(sachin):Make the enp6s0 argument
+host_ip = ni.ifaddresses('enp6s0')[ni.AF_INET][0]['addr']
+ip_val = host_ip.split('.')
 print(ip_val)
 
 net_msk = str()
@@ -34,12 +36,20 @@ print(op_response)
 # print("Printing ip")
 # print(op_response[1])
 
+ip = None
+for addr in op_response:
+    if addr != host_ip:
+        ip = addr
+
+print("prinitng selected address client ")
+print(ip)
+
 ssh = paramiko.SSHClient()
 # ssh.load_system_host_keys()
 ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 print("creating ssd client")
 
-ssh.connect(op_response[1], username='pi', password='luxonis')
+ssh.connect(ip, username='pi', password='luxonis')
 
 sftp = ssh.open_sftp()
 sftp.put(localpath, remotepath)
@@ -63,12 +73,6 @@ while str_op:
 
 print("prinitng on clinet")
 ssh.close()
-
-
-
-# print(response[1])
-
-
 
 
 
