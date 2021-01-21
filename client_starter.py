@@ -4,16 +4,23 @@ from time import sleep, time
 import argparse
 import netifaces as ni
 import paramiko
+import argparse
+
 # response = os.system("nmap -sn  10.42.0.0/24 -oG - | awk '/Up$/{print $2}' ")
+parser = argparse.ArgumentParser()
+parser.add_argument("-fusb2", "--force_usb2", default=False, action="store_true",
+                            help="Force usb2 connection")
+parser.add_argument("-interface", help="display a square of a given number", default="enp6s0", type=str)
+
+args = parser.parse_args()
 
 
 ## TODO(sachin):Make the enp6s0 argument
-host_ip = ni.ifaddresses('enp6s0')[ni.AF_INET][0]['addr']
+host_ip = ni.ifaddresses(args.interface)[ni.AF_INET][0]['addr']
 ip_val = host_ip.split('.')
 print(ip_val)
 
 net_msk = str()
-print(net_msk)
 
 net_msk = ip_val[0] + '.' + ip_val[1] + '.' +ip_val[2] + '.0/24' 
 
