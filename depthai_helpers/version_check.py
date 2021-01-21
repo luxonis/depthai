@@ -22,7 +22,6 @@ def get_version_from_requirements():
 def check_depthai_version():
     version_required = get_version_from_requirements()
     if version_required is not None:
-        print('Depthai version required:  ', version_required)
         if depthai.__version__.endswith('+dev'):
             print('Depthai development version found, skipping check.')
         elif version_required != depthai.__version__:
