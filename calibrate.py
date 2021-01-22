@@ -78,14 +78,10 @@ def parse_args():
     parser.add_argument("-brd", "--board", default=None, type=str,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
                             "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
-    parser.add_argument("-fv", "--field-of-view", default=None, type=float,
-                        help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
-    parser.add_argument("-b", "--baseline", default=None, type=float,
-                        help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
-    parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=None, action="store_false",
-                        help="Do not swap the Left and Right cameras.")
     parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
                         help="Used by board developers for debugging.")
+    parser.add_argument("-fusb2", "--force_usb2", default=False, action="store_true",
+                        help="Force usb2 connection")
     parser.add_argument("-iv", "--invert-vertical", dest="invert_v", default=False, action="store_true",
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invert-horizontal", dest="invert_h", default=False, action="store_true",
@@ -93,15 +89,10 @@ def parse_args():
 
     options = parser.parse_args()
 
-    if (options.board is not None) and ((options.field_of_view is not None)
-                                     or (options.baseline      is not None)
-                                     or (options.swap_lr       is not None)):
-        parser.error("[-brd] is mutually exclusive with [-fv -b -w]")
-
-    # Set some defaults after the above check
-    if options.field_of_view is None: options.field_of_view = 71.86
-    if options.baseline      is None: options.baseline = 9.0
-    if options.swap_lr       is None: options.swap_lr = True
+    # Set some extra defaults, `-brd` would override them
+    options.field_of_view = 71.86
+    options.baseline = 7.5
+    options.swap_lr = True
 
     return options
 
@@ -220,7 +211,7 @@ class Main:
         pipeline = None
 
         try:
-            device = depthai.Device("", False)
+            device = depthai.Device("", self.args['force_usb2'])
             pipeline = device.create_pipeline(self.config)
         except RuntimeError:
             raise RuntimeError("Unable to initialize device. Try to reset it")
