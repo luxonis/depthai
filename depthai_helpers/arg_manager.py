@@ -16,8 +16,8 @@ def _get_immediate_subdirectories(a_dir):
 
 _stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth", "disparity", "disparity_color",
                    "meta_d2h", "object_tracker", "rectified_left", "rectified_right", "color")
-_CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
 _CNN2_choices = ['landmarks-regression-retail-0009', 'facial-landmarks-35-adas-0002', 'emotions-recognition-retail-0003']
+_CNN_choices = [item for item in _get_immediate_subdirectories(consts.resource_paths.nn_resource_path) if item not in _CNN2_choices]
 
 def _stream_type(option):
     max_fps = None
