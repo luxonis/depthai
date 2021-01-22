@@ -19,12 +19,14 @@ download_folder_path  = relative_to_abs_path('downloads') + "/"
 
 
 def download_model(model, model_zoo_folder):
+    model_downloader_options = ['--precisions', 'FP16', '--output_dir', f'{download_folder_path}', '--cache_dir', f'{download_folder_path}/.cache', \
+        '--num_attempts', '5', '--name', f'{model}', '--model_root', f'{model_zoo_folder}']
 
-    model_downloader_options=f"--precisions FP16 --output_dir {download_folder_path} --cache_dir {download_folder_path}/.cache --num_attempts 5 --name {model} --model_root {model_zoo_folder}"
-    model_downloader_options = model_downloader_options.split()
-    downloader_cmd = [sys.executable, f"{model_downloader_path}"]
-    downloader_cmd = np.concatenate((downloader_cmd, model_downloader_options))
-    # print(downloader_cmd)
+    downloader_cmd = [sys.executable, f'{model_downloader_path}']
+    downloader_cmd.extend(model_downloader_options)
+
+    # print('"{}"'.format('" "'.join(downloader_cmd)))
+
     result = subprocess.run(downloader_cmd)
     if result.returncode != 0:
         raise RuntimeError("Model downloader failed!")
@@ -42,11 +44,14 @@ def convert_model_to_ir(model, model_zoo_folder):
 
     converter_path = Path(ir_converter_path)
 
-    model_converter_options=f"--precisions FP16 --output_dir {download_folder_path} --download_dir {download_folder_path} --name {model} --model_root {model_zoo_folder}"
-    model_converter_options = model_converter_options.split()
-    converter_cmd = [sys.executable, f"{converter_path}"]
-    converter_cmd = np.concatenate((converter_cmd, model_converter_options))
-    # print(converter_cmd)
+    model_converter_options=['--precisions', 'FP16', '--output_dir', f'{download_folder_path}', '--download_dir', f'{download_folder_path}', \
+        '--name', f'{model}', '--model_root', f'{model_zoo_folder}']
+    converter_cmd = [sys.executable, f'{converter_path}']
+    converter_cmd.extend(model_converter_options)
+    
+    # print('"{}"'.format('" "'.join(converter_cmd)))
+
+
     result = subprocess.run(converter_cmd)
     if result.returncode != 0:
         raise RuntimeError("Model converter failed!")
@@ -70,11 +75,11 @@ def myriad_compile_model_local(shaves, cmx_slices, nces, xml_path, output_file):
 
     PLATFORM="VPU_MYRIAD_2450" if nces == 0 else "VPU_MYRIAD_2480"
 
-    myriad_compiler_options = f'-ip U8 -VPU_MYRIAD_PLATFORM {PLATFORM} -VPU_NUMBER_OF_SHAVES {shaves} -VPU_NUMBER_OF_CMX_SLICES {cmx_slices} -m {xml_path} -o {output_file}'
-    myriad_compiler_options = myriad_compiler_options.split()
+    myriad_compiler_options = ['-ip U8', '-VPU_MYRIAD_PLATFORM', f'{PLATFORM}', '-VPU_NUMBER_OF_SHAVES', f'{shaves}', \
+        '-VPU_NUMBER_OF_CMX_SLICES', f'{cmx_slices}', '-m', f'{xml_path}', '-o', f'{output_file}']
 
     myriad_compile_cmd = np.concatenate(([myriad_compile_path], myriad_compiler_options))
-    # print(myriad_compile_cmd)
+    # print('"{}"'.format('" "'.join(myriad_compile_cmd)))
 
     result = subprocess.run(myriad_compile_cmd)
     if result.returncode != 0:
@@ -122,14 +127,25 @@ def download_and_compile_NN_model(model, model_zoo_folder, shaves, cmx_slices, n
         try:
             openvino_dir = os.environ['INTEL_OPENVINO_DIR']
             print(f'Openvino installation detected {openvino_dir}') 
-            if supported_openvino_version in openvino_dir:
+
+            installed_openvino_version_path = Path(openvino_dir) / "deployment_tools/model_optimizer/version.txt"
+            installed_openvino_version = "not detected"
+            with open(installed_openvino_version_path, "r") as fp:
+                installed_openvino_version = fp.read()
+                installed_openvino_version = installed_openvino_version.strip()
+            print("Installed openvino version: ",installed_openvino_version)
+            if supported_openvino_version in installed_openvino_version:
                 model_compilation_target = 'local'
                 print(f'Supported openvino version installed: {supported_openvino_version}')
             else:
+                if model_compilation_target == 'local':
+                    raise ValueError
                 model_compilation_target = 'cloud'
-                print(f'Unsupported openvino version installed at {openvino_dir}, supported version is: {supported_openvino_version}')
+                print(f'Unsupported openvino version installed at {openvino_dir}, version {installed_openvino_version}, supported version is: {supported_openvino_version}')
 
         except:
+            if model_compilation_target == 'local':
+                raise SystemExit(f"Local model compilation was requested, but environment variables are not initialized for openvino {supported_openvino_version}. Run setupvars.sh/setupvars.bat from the OpenVINO toolkit.")
             model_compilation_target = 'cloud'
     
     print(f'model_compilation_target: {model_compilation_target}')
