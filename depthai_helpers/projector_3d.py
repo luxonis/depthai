@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
+import traceback
+import sys
 
-import numpy as np
-import open3d as o3d
+try:
+    import open3d as o3d
+except ImportError:
+    traceback.print_exc()
+    print("Importing open3d failed, please run the following command or visit https://pypi.org/project/open3d/")
+    print()
+    print(sys.executable  + " -m pip install open3d")
+
 
 class PointCloudVisualizer():
     def __init__(self, intrinsic_matrix, width, height):

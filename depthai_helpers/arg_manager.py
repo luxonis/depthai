@@ -16,8 +16,8 @@ def _get_immediate_subdirectories(a_dir):
 
 _stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth", "disparity", "disparity_color",
                    "meta_d2h", "object_tracker", "rectified_left", "rectified_right", "color")
-_CNN_choices = _get_immediate_subdirectories(consts.resource_paths.nn_resource_path)
 _CNN2_choices = ['landmarks-regression-retail-0009', 'facial-landmarks-35-adas-0002', 'emotions-recognition-retail-0003']
+_CNN_choices = [item for item in _get_immediate_subdirectories(consts.resource_paths.nn_resource_path) if item not in _CNN2_choices]
 
 def _stream_type(option):
     max_fps = None
@@ -100,7 +100,7 @@ class CliArgs:
         parser.add_argument("-cs", "--color_scale", default=1.0, type=float,
                             help="Scale factor for 'color' stream preview window. Default: %(default)s")
 
-        parser.add_argument("-monor", "--mono_resolution", default=720, type=int,  choices=[400, 720, 800],
+        parser.add_argument("-monor", "--mono_resolution", default=400, type=int,  choices=[400, 720, 800],
                             help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400 - binning. Default: %(default)s")
 
         parser.add_argument("-monof", "--mono_fps", default=30.0, type=float,
@@ -115,21 +115,7 @@ class CliArgs:
 
         parser.add_argument("-lrc", "--stereo_lr_check", default=False, action="store_true",
                         help="Enable stereo 'Left-Right check' feature.")
-        parser.add_argument("-fv", "--field-of-view", default=None, type=float,
-                            help="Horizontal field of view (HFOV) for the stereo cameras in [deg]. Default: 71.86deg.")
 
-        parser.add_argument("-rfv", "--rgb-field-of-view", default=None, type=float,
-                            help="Horizontal field of view (HFOV) for the RGB camera in [deg]. Default: 68.7938deg.")
-
-        parser.add_argument("-b", "--baseline", default=None, type=float,
-                            help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
-
-        parser.add_argument("-r", "--rgb-baseline", default=None, type=float,
-                            help="Distance the RGB camera is from the Left camera. Default: 2.0cm.")
-
-        parser.add_argument("-w", "--no-swap-lr", dest="swap_lr", default=None, action="store_false",
-                            help="Do not swap the Left and Right cameras.")
-        
         parser.add_argument("-e", "--store-eeprom", default=False, action="store_true",
                             help="Store the calibration and board_config (fov, baselines, swap-lr) in the EEPROM onboard")
         
@@ -207,17 +193,12 @@ class CliArgs:
         argcomplete.autocomplete(parser)
 
         options = parser.parse_args()
-        any_options_set = any([options.field_of_view, options.rgb_field_of_view, options.baseline, options.rgb_baseline,
-                               options.swap_lr])
-        if (options.board is not None) and any_options_set:
-            parser.error("[-brd] is mutually exclusive with [-fv -rfv -b -r -w]")
 
-        # Set some defaults after the above check
-        if not options.board:
-            options.field_of_view = 71.86
-            options.rgb_field_of_view = 68.7938
-            options.baseline = 9.0
-            options.rgb_baseline = 2.0
-            options.swap_lr = True
+        # Set some extra defaults, `-brd` would override them
+        options.field_of_view = 71.86
+        options.rgb_field_of_view = 68.7938
+        options.baseline = 7.5
+        options.rgb_baseline = 3.75
+        options.swap_lr = True
 
         return options
