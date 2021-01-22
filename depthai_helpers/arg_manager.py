@@ -100,7 +100,7 @@ class CliArgs:
         parser.add_argument("-cs", "--color_scale", default=1.0, type=float,
                             help="Scale factor for 'color' stream preview window. Default: %(default)s")
 
-        parser.add_argument("-monor", "--mono_resolution", default=720, type=int,  choices=[400, 720, 800],
+        parser.add_argument("-monor", "--mono_resolution", default=400, type=int,  choices=[400, 720, 800],
                             help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400 - binning. Default: %(default)s")
 
         parser.add_argument("-monof", "--mono_fps", default=30.0, type=float,
