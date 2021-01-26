@@ -38,7 +38,7 @@ home = str(Path.home())
 boot_pth = home + "/usbboot/rpiboot"
 boot_file = Path(boot_pth)
 if not boot_file.exists():
-    print("Couldn't fild rpi boot file at {}".format(boot_pth))
+    print("Couldn't fild rpiboot file at {}. Please update it's location to be found at this path".format(boot_pth))
     sys.exit(1)
 
 
