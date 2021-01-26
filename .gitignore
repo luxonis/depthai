@@ -51,3 +51,4 @@ log_system_information.json
 *.mvcmd
 *.so
 *.prof
+*.img
