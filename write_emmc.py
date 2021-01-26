@@ -72,16 +72,17 @@ filters = {
     }
 all_my_disks = myblkd.get_disks(filters)
 json_output = json.dumps(all_my_disks)
-print(json_output)
+# print(json_output)
 divident = 10**9
 
 print("Image will be written to the drives shown below.")
+print("---------- Device Lists -----------")
 for device_obj in all_my_disks:
     disk_size = int(device_obj["size"]) / divident
     print(disk_size)
     if disk_size < 33 and disk_size > 14: 
         print("Device name: {0}  size:{1}".format(device_obj["name"], disk_size))
-
+print()
 print("Press Enter key to continue writing the OS. [ctrl + c to abort]")
 input()
 

@@ -5,6 +5,7 @@ argcomplete==1.12.1
 open3d==0.10.0; platform_machine != "armv7l" and python_version < "3.9"
 pyyaml==5.3.1
 # depthai==0.3.0.0
-
+blkinfo
+paramiko
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 depthai==0.4.0.0+baacebe72eec4f257ddfc4d6cd45cb1725ecd6e4
