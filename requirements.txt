@@ -8,4 +8,4 @@ pyyaml==5.3.1
 blkinfo
 paramiko
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.4.0.0+baacebe72eec4f257ddfc4d6cd45cb1725ecd6e4
+depthai==0.4.0.0+96c608b4160df9851585f08b13b3b5a1b3d36b7b

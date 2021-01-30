@@ -796,6 +796,11 @@ class DepthAI:
                         text = 'IMU failed!!'
                         pygame_render_text(screen, text, (470, 545), color=red ,font_size=25)
 
+                    flash_status = dict_['flash']['status']
+                    flash_ok = ('OK' in flash_status)
+                    c = green if flash_ok else red
+                    pygame_render_text(screen, flash_status, (470, 470), color=c ,font_size=25)
+                    pygame_render_text(screen, dict_['flash']['info'], (470, 495) ,font_size=25)
 
                     # # Also printed from lib/c++ side
                     if 0 and 'logs' in dict_:
