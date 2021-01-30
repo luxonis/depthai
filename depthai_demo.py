@@ -783,7 +783,7 @@ class DepthAI:
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['y']),
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['z']))
                     # print(dict_['imu'])
-                    if 'imu' in dict_:
+                    if 'imu' in dict_ and 'accel' in dict_['imu']:
                         print(dict_['imu'])
                         is_IMU_found = True
                         text = 'IMU acc x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accel']['x'], dict_['imu']['accel']['y'], dict_['imu']['accel']['z'])
