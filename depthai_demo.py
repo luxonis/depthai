@@ -745,7 +745,7 @@ class DepthAI:
                     str_ = packet.getDataAsStr()
                     dict_ = json.loads(str_)
 
-                    fill_color =  pygame.Rect(50, 510, 750, 100)
+                    fill_color =  pygame.Rect(50, 470, 750, 140)
                     pygame.draw.rect(screen, white, fill_color)
                     text = 'meta_d2h Temp:'
                     pygame_render_text(screen, text, (50, 520), color=orange, font_size=25)
