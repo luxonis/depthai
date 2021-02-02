@@ -8,6 +8,7 @@ from time import sleep, time
 import argparse
 from pathlib import Path
 import sys
+from multiprocessing import Process
 # device_re = re.compile("Bus\s+(?P<bus>\d+)\s+Device\s+(?P<device>\d+).+ID\s(?P<id>\w+:\w+)\s(?P<tag>.+)$", re.I)
 # df = subprocess.check_output("lsusb")
 # devices = []
@@ -88,28 +89,36 @@ print()
 print("Press Enter key to continue writing the OS. [ctrl + c to abort]")
 input()
 
-response_status = []
+multi_processes = []
 start = time()
 
+
+def execute_write(emmc_write_cmd_final):
+    p = subprocess.Popen(emmc_write_cmd_final, shell=True, preexec_fn=os.setsid)
+    is_finished = False 
+    while not is_finished:
+        if p.poll() is None:
+            is_finished = False
+        else:
+            is_finished = True
+        
 
 for item in all_my_disks:
     # print(int(item["size"]))
     disk_size = int(item["size"]) / divident
     print(disk_size)
     if disk_size < 33 and disk_size > 14: 
-        test_cmd = "sudo dd if=" + img_path + " of=/dev/" + item["name"] + " bs=4M conv=fsync status=progress"
-        print(test_cmd)
-        p = subprocess.Popen(test_cmd, shell=True, preexec_fn=os.setsid)
-        response_status.append(p)
+        emmc_write_cmd = "sudo dd if=" + img_path + " of=/dev/" + item["name"] + " bs=4M conv=fsync status=progress"
+        print(emmc_write_cmd)
+        # execute_write(emmc_write_cmd)
+        emmc_write_procx = Process(target=execute_write, args=(emmc_write_cmd,))
+        emmc_write_procx.start()
+        multi_processes.append(emmc_write_procx)
 
-is_finished = False 
-while not is_finished:
-    temp_status = True
-    for proc in response_status:
-        if proc.poll() is None:
-            temp_status = False
-    
-    is_finished = temp_status
+
+
+for procx in multi_processes:
+    procx.join()
 
 end = time()
 print(end - start)
