@@ -172,12 +172,10 @@ class CliArgs:
                             type=_stream_type,
                             dest="streams",
                             default=["metaout", "previewout"],
-                            choices=_stream_choices,
-                            help=("Define which streams to enable as a space "
-                                  "delimited list (e.g. \"-s metaout "
-                                  "previewout\"). Optionally, append the FPS "
-                                  "with a comma to each stream name (e.g. \"-s "
-                                  "metaout previewout,10\")."))\
+                            help=("Define which streams to enable \n"
+                                  "Format: stream_name or stream_name,max_fps \n"
+                                  "Example: -s metaout previewout \n"
+                                  "Example: -s metaout previewout,10 depth_sipp,10"))\
                             .completer=ChoicesCompleter(_stream_choices)
         
         parser.add_argument("-v", "--video", default=None, type=str, required=False,
