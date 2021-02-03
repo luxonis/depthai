@@ -65,9 +65,10 @@ print("After pressing \"enter\" connect the device to the power source")
 input()
 for i in range(args.numDevices):
     start_rpi_boot()
-    print("Search Complete....!")
+    sleep(4)
 
-sleep(2)
+print("Found Complete....!")
+sleep(5)
 
 myblkd = BlkDiskInfo()
 filters = {
