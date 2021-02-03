@@ -47,3 +47,5 @@ intrinsic_calib_m2
 *.mvcmd
 *.so
 *.prof
+*.csv
+*.img

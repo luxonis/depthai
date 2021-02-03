@@ -202,7 +202,7 @@ class Main:
         pipeline = None
         try:
             self.device = depthai.Device("", False)
-            if not self.device.is_usb3():
+            if not self.device.is_usb3() and self.args['board'] is not "bw1097":
                 fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
                 while True:
                     cv2.imshow('Connection over usb 3 failed', fail_usb_img)
