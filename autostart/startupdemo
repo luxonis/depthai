@@ -12,5 +12,5 @@ echo Booting DepthAI
 echo Loading Start-up Demo Application...
 sleep 1
 cd /home/pi/Desktop/depthai
-python3 test.py
+python3 depthai_demo.py
 sleep 60
