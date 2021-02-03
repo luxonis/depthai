@@ -49,3 +49,4 @@ log_system_information.json
 *.so
 *.prof
 .aux_wheels
+*.whl

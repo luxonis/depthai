@@ -5,13 +5,24 @@ import sys
 import platform
 from pathlib import Path
 
-platforms_requires_build_from_source = ["armv6l"]
+this_platform = platform.machine()
+
+platforms_requires_aux_wheels = ['armv6l', 'aarch64']
+aux_wheels = {'armv6l' : [
+                {'id' : '16nq1sY2-MkgNZcRhUnndTTH5WlUNM5jS', 'name' : 'depthai-0.4.1.1-cp37-cp37m-linux_armv6l.whl'}
+            ],
+            'aarch64' : [
+                {'id' : '1CegjAQb2CD6Qagea6I34zv99Wji75LHK', 'name' : 'depthai-0.4.1.1-cp36-cp36m-linux_aarch64.whl'},
+                {'id' : '1F8qfMvxv8piIzg-X2xALNvzrPFJBEqZ5', 'name' : 'PyYAML-5.3.1-cp36-cp36m-linux_aarch64.whl'}
+            ]
+}
+
 
 # https://stackoverflow.com/a/58026969/5494277
 in_venv = getattr(sys, "real_prefix", getattr(sys, "base_prefix", sys.prefix)) != sys.prefix
 pip_call = [sys.executable, "-m", "pip"]
 pip_install = pip_call + ["install"]
-if platform.machine() in platforms_requires_build_from_source:
+if this_platform in platforms_requires_aux_wheels:
     pip_install = pip_install + ["--force-reinstall"]
 
 if not in_venv:
@@ -21,7 +32,7 @@ subprocess.check_call([*pip_install, "pip", "-U"])
 # temporary workaroud for issue between main and develop
 subprocess.check_call([*pip_call, "uninstall", "depthai", "--yes"])
 subprocess.check_call([*pip_install, "-r", "requirements.txt"])
-if platform.machine() in platforms_requires_build_from_source:
+if this_platform in platforms_requires_aux_wheels:
     import requests
     import os
 
@@ -57,9 +68,12 @@ if platform.machine() in platforms_requires_build_from_source:
     print(f"Installing wheel for {platform.machine()} platform")
     directory = Path(".aux_wheels/")
     directory.mkdir(parents=True, exist_ok=True)
-    wheel_dest = directory / Path("depthai-0.4.1.1-cp37-cp37m-linux_armv6l.whl")
-    download_file_from_google_drive('16nq1sY2-MkgNZcRhUnndTTH5WlUNM5jS', wheel_dest)
-    subprocess.check_call([*pip_install, str(wheel_dest)])
+    for wheel in aux_wheels[this_platform]:
+        dl_id = wheel['id']
+        dl_name = wheel['name']
+        wheel_dest = directory / Path(dl_name)
+        download_file_from_google_drive(dl_id, wheel_dest)
+        subprocess.check_call([*pip_install, str(wheel_dest)])
 
 try:
     subprocess.check_call([*pip_install, "-r", "requirements-optional.txt"])
