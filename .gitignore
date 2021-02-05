@@ -50,3 +50,5 @@ log_system_information.json
 *.prof
 *.csv
 *.img
+.aux_wheels
+*.whl
