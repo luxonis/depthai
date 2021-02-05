@@ -48,5 +48,7 @@ log_system_information.json
 *.mvcmd
 *.so
 *.prof
+*.csv
+*.img
 .aux_wheels
 *.whl
