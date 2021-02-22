@@ -3,7 +3,7 @@ opencv-python==4.5.1.48
 requests==2.24.0
 argcomplete==1.12.1
 pyyaml==5.3.1
-depthai==0.4.1.1
+# depthai==0.4.1.1
 
-# --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-# depthai==0.4.1.1+91ba9cbf941592371a7246887a491f0c82632e9d
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+depthai==0.4.1.1+d94e1b8e3a457dc2645d8ea9813057b569bbdd3a
