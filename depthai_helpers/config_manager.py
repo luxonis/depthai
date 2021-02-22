@@ -355,87 +355,25 @@ class DepthConfigManager:
         return config
 
 
-
 class BlobManager:
-    def __init__(self, args, calc_dist_to_bb, shave_nr, cmx_slices, NCE_nr):
-        self.args = args
-        self.calc_dist_to_bb = calc_dist_to_bb
-        self.shave_nr = shave_nr
-        self.cmx_slices = cmx_slices
-        self.NCE_nr = NCE_nr
+    def __init__(self, model_dir):
+        self.model_dir = Path(model_dir)
+        self.zoo_dir = self.model_dir.parent
+        self.model_name = self.model_dir.name
+        self.blob_path = None
 
-        if self.args['cnn_model']:
-            self.blob_file, self.blob_file_config = self.getBlobFiles(self.args['cnn_model'])
+    def compile(self, shaves, target='auto'):
+        sh, nce = (shaves // 2, 2) if shaves > 7 else (shaves, 1)
+        cmx = sh  # number of cmx slices should match the number of shaves
+        blob_path = self.model_dir / Path(self.model_name).with_suffix(f".blob.sh{shaves}")
 
-        self.blob_file2 = ""
-        self.blob_file_config2 = ""
-        if self.args['cnn_model2']:
-            print("Using CNN2:", self.args['cnn_model2'])
-            self.blob_file2, self.blob_file_config2 = self.getBlobFiles(self.args['cnn_model2'], False)
-
-        # compile models
-        self.blob_file = self.compileBlob(self.args['cnn_model'], self.args['model_compilation_target'])
-        if self.args['cnn_model2']:
-            self.blob_file2 = self.compileBlob(self.args['cnn_model2'], self.args['model_compilation_target'])
-
-        # verify the first blob files exist? I just copied this logic from before the refactor. Not sure if it's necessary. This makes it so this script won't run unless we have a blob file and config.
-        self.verifyBlobFilesExist(self.blob_file, self.blob_file_config)
-
-    def getNNConfig(self):
-        # try and load labels
-        NN_json = None
-        if Path(self.blob_file_config).exists():
-            with open(self.blob_file_config) as f:
-                if f is not None:
-                    NN_json = json.load(f)
-                    f.close()
-        
-        return NN_json
-
-    def verifyBlobFilesExist(self, verifyBlob, verifyConfig):
-        verifyBlobPath = Path(verifyBlob)
-        verifyConfigPath = Path(verifyConfig)
-        if not verifyBlobPath.exists():
-            cli_print("\nWARNING: NN blob not found in: " + verifyBlob, PrintColors.WARNING)
-            os._exit(1)
-
-        if not verifyConfigPath.exists():
-            print("NN config not found in: " + verifyConfig + '. Defaulting to "raw" output format!')
-
-    def getBlobFiles(self, cnnModel, isFirstNN=True):
-        cnn_model_path = consts.resource_paths.nn_resource_path + cnnModel + "/" + cnnModel
-        blobFile = cnn_model_path + ".blob"
-        blobFileConfig = cnn_model_path + ".json"
-
-        return blobFile, blobFileConfig
-
-    def compileBlob(self, nn_model, model_compilation_target):
-        blob_file, _ = self.getBlobFiles(nn_model)
-
-        shave_nr = self.shave_nr
-        cmx_slices = self.cmx_slices
-        NCE_nr = self.NCE_nr
-
-        if NCE_nr == 2:
-            if shave_nr % 2 == 1 or cmx_slices % 2 == 1:
-                raise ValueError("shave_nr and cmx_slices config must be even number when NCE is 2!")
-            shave_nr_opt = int(shave_nr / 2)
-            cmx_slices_opt = int(cmx_slices / 2)
+        if Path(blob_path).exists():
+            cli_print(f"Compiled model found, compiled for {shaves} shaves", PrintColors.GREEN)
         else:
-            shave_nr_opt = int(shave_nr)
-            cmx_slices_opt = int(cmx_slices)
-
-        outblob_file = blob_file + ".sh" + str(shave_nr) + "cmx" + str(cmx_slices) + "NCE" + str(NCE_nr)
-        if(not Path(outblob_file).exists()):
-            cli_print("Compiling model for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.RED)
-            ret = download_and_compile_NN_model(nn_model, model_zoo_folder, shave_nr_opt, cmx_slices_opt, NCE_nr, outblob_file, model_compilation_target)
-            if(ret != 0):
+            cli_print(f"Compiling model for {shaves} shaves", PrintColors.RED)
+            ret = download_and_compile_NN_model(self.model_name, self.zoo_dir, sh, cmx, nce, blob_path, target)
+            if ret != 0:
                 cli_print("Model compile failed. Falling back to default.", PrintColors.WARNING)
                 raise RuntimeError("Model compilation failed! Not connected to the internet?")
-            else:
-                blob_file = outblob_file
-        else:
-            cli_print("Compiled mode found: compiled for {0} shaves, {1} cmx_slices and {2} NN_engines ".format(str(shave_nr), str(cmx_slices), str(NCE_nr)), PrintColors.GREEN)
-            blob_file = outblob_file
 
-        return blob_file
+        return blob_path
