@@ -25,17 +25,45 @@ parser.add_argument('-lq', '--lowquality', action="store_true", help="Low qualit
 parser.add_argument('-nnp', '--nnet-path', type=Path, help="Path to neural network directory to be run")
 parser.add_argument('-nn', '--nnet', default="mobilenet-ssd", help="Name of the nn to be run from default depthai repository")
 parser.add_argument('-sh', '--shaves', default=13, type=int, choices=range(1, 14), help="Name of the nn to be run from default depthai repository")
-parser.add_argument('-nn-size', '--nnet-input-size', default="300x300", help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
+parser.add_argument('-nn-size', '--nnet-input-size', default=None, help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
 args = parser.parse_args()
 
 debug = not args.no_debug
 camera = not args.video
 hq = not args.lowquality
-in_w, in_h = map(int, args.nnet_input_size.split('x'))
+
+default_input_dims = {
+    # TODO remove once fetching input size from nn blob is possible
+    "mobilenet-ssd": "300x300",
+    "face-detection-adas-0001": "672x384",
+    "face-detection-retail-0004": "300x300",
+    "pedestrian-detection-adas-0002": "672x384",
+    "person-detection-retail-0013": "544x320",
+    "person-vehicle-bike-detection-crossroad-1016": "512x512",
+    "vehicle-detection-adas-0002": "672x384",
+    "vehicle-license-plate-detection-barrier-0106": "300x300",
+    "tiny-yolo-v3": "416x416",
+    "yolo-v3": "416x416"
+}
+
+if args.nnet_input_size is None:
+    if args.nnet not in default_input_dims:
+        raise RuntimeError("Unable to determine the nn input size. Please use -nn-size flag to specify it in WxW format: -nn-size <width>x<height>")
+    in_w, in_h = map(int, default_input_dims[args.nnet].split('x'))
+else:
+    in_w, in_h = map(int, args.nnet_input_size.split('x'))
 
 
 class NNetManager:
     source_choices = ("rgb", "left", "right", "host")
+    config = None
+    nn_family = None
+    confidence = None
+    metadata = None
+    output_format = None
+    device = None
+    input = None
+    output = None
 
     def __init__(self, model_dir, source):
         if source not in self.source_choices:
@@ -46,13 +74,18 @@ class NNetManager:
         self.output_name = f"{self.model_name}_out"
         self.input_name = f"{self.model_name}_in"
         self.blob_path = BlobManager(model_dir=self.model_dir).compile(args.shaves)
-        self.config = None
 
         cofig_path = self.model_dir / Path(self.model_name).with_suffix(f".json")
         if cofig_path.exists():
             with cofig_path.open() as f:
                 self.config = json.load(f)
-                self.labels = self.config.get("mappings", {}).get("labels", [])
+                nn_config = self.config.get("NN_config", {})
+                self.labels = self.config.get("mappings", {}).get("labels", None)
+                self.nn_family = nn_config.get("NN_family", None)
+                self.output_format = nn_config.get("output_format", None)
+                self.metadata = nn_config.get("NN_specific_metadata", {})
+
+                self.confidence = self.metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
 
     def addDevice(self, device):
         self.device = device
@@ -60,8 +93,23 @@ class NNetManager:
         self.output = device.getOutputQueue(self.output_name, maxSize=1, blocking=False)
 
     def create_nn_pipeline(self, p, nodes):
-        nn = p.createNeuralNetwork()
+        if self.nn_family == "mobilenet":
+            nn = p.createMobileNetDetectionNetwork()
+        elif self.nn_family == "YOLO":
+            nn = p.createYoloDetectionNetwork()
+            nn.setConfidenceThreshold(0.5)
+            nn.setNumClasses(self.metadata["classes"])
+            nn.setCoordinateSize(self.metadata["coordinates"])
+            nn.setAnchors(self.metadata["anchors"])
+            nn.setAnchorMasks(self.metadata["anchor_masks"])
+            nn.setIouThreshold(self.metadata["iou_threshold"])
+        else:
+            nn = p.createNeuralNetwork()
+
         nn.setBlobPath(str(self.blob_path))
+        nn.setConfidenceThreshold(self.confidence)
+        nn.input.setBlocking(False)
+        nn.setNumInferenceThreads(2)
         xout = p.createXLinkOut()
         xout.setStreamName(self.output_name)
         nn.out.link(xout.input)
@@ -75,8 +123,8 @@ class NNetManager:
             xin.out.link(nn.input)
             setattr(nodes, self.input_name, xout)
 
-    def decode(self, label):
-        if self.config is None:
+    def get_label_text(self, label):
+        if self.config is None or self.labels is None:
             return label
         elif int(label) < len(self.labels):
             return self.labels[int(label)]
@@ -95,14 +143,30 @@ class FPSHandler:
             self.framerate = cap.get(cv2.CAP_PROP_FPS)
 
         self.frame_cnt = 0
+        self.ticks = {}
 
-    def update(self):
+    def next_iter(self):
         frame_delay = 1.0 / self.framerate
         delay = (self.timestamp + frame_delay) - time.time()
         if delay > 0:
             time.sleep(delay)
         self.timestamp = time.time()
         self.frame_cnt += 1
+
+    def tick(self, name):
+        if name in self.ticks:
+            self.ticks[name] = {
+                "fps": 1 / (time.time() - self.ticks[name]['ts']),
+                "ts": time.time()
+            }
+        else:
+            self.ticks[name] = {
+                "fps": 0,
+                "ts": time.time()
+            }
+
+    def tick_fps(self, name):
+        return self.ticks.get(name, {}).get("fps", 0)
 
     def fps(self):
         return self.frame_cnt / (self.start - self.timestamp)
@@ -158,15 +222,14 @@ with dai.Device(p) as device:
         seq_num = 0
 
     frame = None
-    bboxes = []
-    confidences = []
-    labels = []
+    detections = []
 
     while True:
-        fps.update()
+        fps.next_iter()
         if camera:
             in_rgb = q_rgb.tryGet()
             if in_rgb is not None:
+                fps.tick('rgb')
                 if hq:
                     yuv = in_rgb.getData().reshape((in_rgb.getHeight() * 3 // 2, in_rgb.getWidth()))
                     frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)
@@ -189,27 +252,23 @@ with dai.Device(p) as device:
 
             # if high quality, send original frames
             frame = vid_frame if hq else scaled_frame
+            fps.tick('rgb')
 
         in_nn = nn_manager.output.tryGet()
         if in_nn is not None:
-            # one detection has 7 numbers, and the last detection is followed by -1 digit, which later is filled with 0
-            bboxes = np.array(in_nn.getFirstLayerFp16())
-            # transform the 1D array into Nx7 matrix
-            bboxes = bboxes.reshape((bboxes.size // 7, 7))
-            # filter out the results which confidence less than a defined threshold
-            bboxes = bboxes[bboxes[:, 2] > 0.3]
-            # Cut bboxes and labels
-            labels = bboxes[:, 1].astype(int)
-            confidences = bboxes[:, 2]
-            bboxes = bboxes[:, 3:7]
+            if nn_manager.output_format == "detection":
+                detections = in_nn.detections
+            fps.tick('nn')
 
         if frame is not None:
             # if the frame is available, draw bounding boxes on it and show the frame
-            for raw_bbox, label, conf in zip(bboxes, labels, confidences):
-                bbox = frame_norm(frame, raw_bbox)
+            for detection in detections:
+                bbox = frame_norm(frame, [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
-                cv2.putText(frame, nn_manager.decode(label), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, f"{int(conf * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, nn_manager.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(frame, f"RGB FPS: {int(fps.tick_fps('rgb'))}", (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.putText(frame, f"NN FPS:  {int(fps.tick_fps('nn'))}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
             cv2.imshow("rgb", frame)
 
         if cv2.waitKey(1) == ord('q'):
