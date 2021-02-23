@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from consts.resource_paths import nn_resource_path
 from depthai_helpers.cli_utils import PrintColors
+from depthai_helpers.arg_manager import _CNN_choices
 import sys
 
 parser = argparse.ArgumentParser()
@@ -61,8 +62,7 @@ if __name__ == "__main__":
     runner.test_streams("disparity_color")
     runner.test_streams("object_tracker")
 
-    cnnlist = os.listdir(nn_resource_path)
-    for cnn in cnnlist:
+    for cnn in _CNN_choices:
         if os.path.isdir(nn_resource_path + cnn):
             runner.test_cnn(cnn)
 
