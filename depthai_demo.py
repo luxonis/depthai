@@ -272,6 +272,7 @@ class DepthAI:
                         camera = meta.getCameraName()
 
                     window_name = 'previewout-' + camera
+                    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
                     # the format of previewout image is CHW (Chanel, Height, Width), but OpenCV needs HWC, so we
                     # change shape (3, 300, 300) -> (300, 300, 3)
                     data0 = packetData[0, :, :]
