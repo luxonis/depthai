@@ -10,6 +10,7 @@ import cv2
 import depthai as dai
 import numpy as np
 
+from depthai_helpers.arg_manager import CNN_choices
 from depthai_helpers.config_manager import BlobManager
 from gen2_helpers import frame_norm, to_planar
 
@@ -19,13 +20,11 @@ parser.add_argument('-cam', '--camera', action="store_true",
                     help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
 parser.add_argument('-vid', '--video', type=str,
                     help="Path to video file to be used for inference (conflicts with -cam)")
-parser.add_argument('-w', '--width', default=1280, type=int,
-                    help="Visualization width. Height is calculated automatically from aspect ratio")
 parser.add_argument('-lq', '--lowquality', action="store_true", help="Low quality visualization - uses resized frames")
-parser.add_argument('-nnp', '--nnet-path', type=Path, help="Path to neural network directory to be run")
-parser.add_argument('-nn', '--nnet', default="mobilenet-ssd", help="Name of the nn to be run from default depthai repository")
-parser.add_argument('-sh', '--shaves', default=13, type=int, choices=range(1, 14), help="Name of the nn to be run from default depthai repository")
-parser.add_argument('-nn-size', '--nnet-input-size', default=None, help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
+parser.add_argument('-cnnp', '--cnn_path', type=Path, help="Path to cnn model directory to be run")
+parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=CNN_choices, help="Cnn model to run on DepthAI")
+parser.add_argument('-sh', '--shaves', default=13, type=int, help="Name of the nn to be run from default depthai repository")
+parser.add_argument('-cnn-size', '--cnn-input-size', default=None, help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
 args = parser.parse_args()
 
 debug = not args.no_debug
@@ -46,12 +45,12 @@ default_input_dims = {
     "yolo-v3": "416x416"
 }
 
-if args.nnet_input_size is None:
-    if args.nnet not in default_input_dims:
+if args.cnn_input_size is None:
+    if args.cnn_model not in default_input_dims:
         raise RuntimeError("Unable to determine the nn input size. Please use -nn-size flag to specify it in WxW format: -nn-size <width>x<height>")
-    in_w, in_h = map(int, default_input_dims[args.nnet].split('x'))
+    in_w, in_h = map(int, default_input_dims[args.cnn_model].split('x'))
 else:
-    in_w, in_h = map(int, args.nnet_input_size.split('x'))
+    in_w, in_h = map(int, args.cnn_input_size.split('x'))
 
 
 class NNetManager:
@@ -144,29 +143,28 @@ class FPSHandler:
 
         self.frame_cnt = 0
         self.ticks = {}
+        self.fps_avg = {}
 
     def next_iter(self):
-        frame_delay = 1.0 / self.framerate
-        delay = (self.timestamp + frame_delay) - time.time()
-        if delay > 0:
-            time.sleep(delay)
+        if not camera:
+            frame_delay = 1.0 / self.framerate
+            delay = (self.timestamp + frame_delay) - time.time()
+            if delay > 0:
+                time.sleep(delay)
         self.timestamp = time.time()
         self.frame_cnt += 1
 
     def tick(self, name):
         if name in self.ticks:
-            self.ticks[name] = {
-                "fps": 1 / (time.time() - self.ticks[name]['ts']),
-                "ts": time.time()
-            }
+            self.fps_avg[name] = self.fps_avg[name][:-4] + [1 / (time.time() - self.ticks[name])]
+            self.ticks[name] = time.time()
         else:
-            self.ticks[name] = {
-                "fps": 0,
-                "ts": time.time()
-            }
+            self.fps_avg[name] = []
+            self.ticks[name] = time.time()
 
     def tick_fps(self, name):
-        return self.ticks.get(name, {}).get("fps", 0)
+        fps = self.fps_avg.get(name, [])
+        return np.mean(fps) if len(fps) > 0 else 0
 
     def fps(self):
         return self.frame_cnt / (self.start - self.timestamp)
@@ -196,7 +194,7 @@ def create_pipeline(use_camera, use_hq, nn_pipeline=None):
 
 
 nn_manager = NNetManager(
-    model_dir=args.nnet_path or Path(__file__).parent / Path(f"resources/nn/{args.nnet}/"),
+    model_dir=args.cnn_path or Path(__file__).parent / Path(f"resources/nn/{args.cnn_model}/"),
     source="rgb" if camera else "host"
 )
 
@@ -267,8 +265,8 @@ with dai.Device(p) as device:
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
                 cv2.putText(frame, nn_manager.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.putText(frame, f"RGB FPS: {int(fps.tick_fps('rgb'))}", (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-            cv2.putText(frame, f"NN FPS:  {int(fps.tick_fps('nn'))}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.putText(frame, f"RGB FPS: {round(fps.tick_fps('rgb'), 1)}", (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
             cv2.imshow("rgb", frame)
 
         if cv2.waitKey(1) == ord('q'):

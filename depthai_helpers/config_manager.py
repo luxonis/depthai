@@ -363,7 +363,7 @@ class BlobManager:
         self.blob_path = None
 
     def compile(self, shaves, target='auto'):
-        sh, nce = (shaves // 2, 2) if shaves > 7 else (shaves, 1)
+        sh, nce = (shaves // 2, 2) if shaves > 8 else (shaves, 1)
         cmx = sh  # number of cmx slices should match the number of shaves
         blob_path = self.model_dir / Path(self.model_name).with_suffix(f".blob.sh{shaves}")
 

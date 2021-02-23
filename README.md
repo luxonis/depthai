@@ -2,26 +2,47 @@
 
 This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
-__Documentation is available at [https://docs.luxonis.com](https://docs.luxonis.com).__
+__Documentation is available at [https://docs.luxonis.com/en/gen2/](https://docs.luxonis.com/en/gen2/).__
 
 ## Python modules (Dependencies)
 
-DepthAI Demo requires [numpy](https://numpy.org/), [opencv-python](https://pypi.org/project/opencv-python/) and [depthai](https://github.com/luxonis/depthai-api). 
+DepthAI Demo requires [numpy](https://numpy.org/), [opencv-python](https://pypi.org/project/opencv-python/) and [depthai](https://github.com/luxonis/depthai-python). 
 To get the versions of these packages you need for the program, use pip: (Make sure pip is upgraded: ` python3 -m pip install -U pip`)
 ```
 python3 install_requirements.py
 ```
 
-Optional:
-For command line autocomplete when pressing TAB, only bash interpreter supported now:
-Add to .bashrc:
-`echo 'eval "$(register-python-argcomplete depthai_demo.py)"' >> ~/.bashrc`
-
-If you use any other interpreter: https://kislyuk.github.io/argcomplete/
-
 ## Examples
 
-`python3 depthai_demo.py` - depth & CNN inference example  
+`python3 gen2_demo.py` - RGB & CNN inference example
+`python3 gen2_demo.py -vid <path_to_video>` - CNN inference on video example
+`python3 gen2_demo.py -cnn person-detection-retail-0013` - Run `person-detection-retail-0013` model from `resources/nn` directory
+`python3 gen2_demo.py -cnn tiny-yolo-v3 -sh 8` - Run `tiny-yolo-v3` model from `resources/nn` directory and compile for 8 shaves
+
+## Usage
+
+```
+$ gen2_demo.py --help
+
+usage: gen2_demo.py [-h] [-nd] [-cam] [-vid VIDEO] [-lq] [-cnnp CNN_PATH] [-cnn CNN_MODEL] [-sh SHAVES] [-cnn-size CNN_INPUT_SIZE]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -nd, --no-debug       Prevent debug output
+  -cam, --camera        Use DepthAI 4K RGB camera for inference (conflicts with -vid)
+  -vid VIDEO, --video VIDEO
+                        Path to video file to be used for inference (conflicts with -cam)
+  -lq, --lowquality     Low quality visualization - uses resized frames
+  -cnnp CNN_PATH, --cnn_path CNN_PATH
+                        Path to cnn model directory to be run
+  -cnn CNN_MODEL, --cnn_model CNN_MODEL
+                        Cnn model to run on DepthAI
+  -sh SHAVES, --shaves SHAVES
+                        Name of the nn to be run from default depthai repository
+  -cnn-size CNN_INPUT_SIZE, --cnn-input-size CNN_INPUT_SIZE
+                        Neural network input dimensions, in "WxH" format, e.g. "544x320"
+```
+
 
 ## Conversion of existing trained models into Intel Movidius binary format
 
@@ -47,7 +68,7 @@ with the help of the `myriad_compile` tool. When producing blobs, the following 
 
     Example of command execution:
 
-       <path-to-openvino-folder>/deployment_tools/inference_engine/lib/intel64/myriad_compile -m ./ResNet50.xml -o ResNet50.blob -ip U8 -VPU_MYRIAD_PLATFORM VPU_MYRIAD_2480 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
+       <path-to-openvino-folder>/deployment_tools/inference_engine/lib/intel64/myriad_compile -m ./ResNet50.xml -o ResNet50.blob -ip U8 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
 
 ## Reporting issues
 

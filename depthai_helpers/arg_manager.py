@@ -10,14 +10,14 @@ from depthai_helpers.cli_utils import cli_print, PrintColors
 import consts.resource_paths
 
 
-def _get_immediate_subdirectories(a_dir):
+def get_immediate_subdirectories(a_dir):
     return [name for name in os.listdir(a_dir)
             if os.path.isdir(os.path.join(a_dir, name))]
 
 _stream_choices = ("metaout", "previewout", "jpegout", "left", "right", "depth", "disparity", "disparity_color",
                    "meta_d2h", "object_tracker", "rectified_left", "rectified_right", "color")
-_CNN2_choices = ['landmarks-regression-retail-0009', 'facial-landmarks-35-adas-0002', 'emotions-recognition-retail-0003']
-_CNN_choices = [item for item in _get_immediate_subdirectories(consts.resource_paths.nn_resource_path) if item not in _CNN2_choices]
+CNN2_choices = ['landmarks-regression-retail-0009', 'facial-landmarks-35-adas-0002', 'emotions-recognition-retail-0003']
+CNN_choices = [item for item in get_immediate_subdirectories(consts.resource_paths.nn_resource_path) if item not in CNN2_choices]
 
 def _stream_type(option):
     max_fps = None
@@ -133,10 +133,10 @@ class CliArgs:
         parser.add_argument("-fusb2", "--force_usb2", default=None, action="store_true",
                             help="Force usb2 connection")
         
-        parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=_CNN_choices,
+        parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=CNN_choices,
                             help="Cnn model to run on DepthAI")
         
-        parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=_CNN2_choices,
+        parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=CNN2_choices,
                             help="Cnn model to run on DepthAI for second-stage inference")
         
         parser.add_argument('-cam', "--cnn_camera", default='rgb',
