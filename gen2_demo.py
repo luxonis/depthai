@@ -110,6 +110,7 @@ class NNetManager:
         nn.setConfidenceThreshold(self.confidence)
         nn.setNumInferenceThreads(2)
         nn.input.setBlocking(False)
+        nn.input.setQueueSize(2)
         xout = p.createXLinkOut()
         xout.setStreamName(self.output_name)
         nn.out.link(xout.input)
