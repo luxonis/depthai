@@ -25,6 +25,7 @@ parser.add_argument('-cnnp', '--cnn_path', type=Path, help="Path to cnn model di
 parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=CNN_choices, help="Cnn model to run on DepthAI")
 parser.add_argument('-sh', '--shaves', default=13, type=int, help="Name of the nn to be run from default depthai repository")
 parser.add_argument('-cnn-size', '--cnn-input-size', default=None, help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
+parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float, help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
 args = parser.parse_args()
 
 debug = not args.no_debug
@@ -107,8 +108,8 @@ class NNetManager:
 
         nn.setBlobPath(str(self.blob_path))
         nn.setConfidenceThreshold(self.confidence)
-        nn.input.setBlocking(False)
         nn.setNumInferenceThreads(2)
+        nn.input.setBlocking(False)
         xout = p.createXLinkOut()
         xout.setStreamName(self.output_name)
         nn.out.link(xout.input)
@@ -136,14 +137,11 @@ class FPSHandler:
     def __init__(self, cap=None):
         self.timestamp = time.time()
         self.start = time.time()
-        if cap is None:
-            self.framerate = 30.0
-        else:
-            self.framerate = cap.get(cv2.CAP_PROP_FPS)
+        self.framerate = cap.get(cv2.CAP_PROP_FPS) if cap is not None else None
 
         self.frame_cnt = 0
         self.ticks = {}
-        self.fps_avg = {}
+        self.ticks_cnt = {}
 
     def next_iter(self):
         if not camera:
@@ -156,18 +154,19 @@ class FPSHandler:
 
     def tick(self, name):
         if name in self.ticks:
-            self.fps_avg[name] = self.fps_avg[name][:-4] + [1 / (time.time() - self.ticks[name])]
-            self.ticks[name] = time.time()
+            self.ticks_cnt[name] += 1
         else:
-            self.fps_avg[name] = []
             self.ticks[name] = time.time()
+            self.ticks_cnt[name] = 0
 
     def tick_fps(self, name):
-        fps = self.fps_avg.get(name, [])
-        return np.mean(fps) if len(fps) > 0 else 0
+        if name in self.ticks:
+            return self.ticks_cnt[name] / (time.time() - self.ticks[name])
+        else:
+            return 0
 
     def fps(self):
-        return self.frame_cnt / (self.start - self.timestamp)
+        return self.frame_cnt / (self.timestamp / self.start)
 
 
 def create_pipeline(use_camera, use_hq, nn_pipeline=None):
@@ -180,6 +179,7 @@ def create_pipeline(use_camera, use_hq, nn_pipeline=None):
         nodes.cam_rgb = p.createColorCamera()
         nodes.cam_rgb.setPreviewSize(in_w, in_h)
         nodes.cam_rgb.setInterleaved(False)
+        nodes.cam_rgb.setFps(args.rgb_fps)
         xout_rgb = p.createXLinkOut()
         xout_rgb.setStreamName("rgb")
         if use_hq:
@@ -225,15 +225,15 @@ with dai.Device(p) as device:
     while True:
         fps.next_iter()
         if camera:
-            in_rgb = q_rgb.tryGet()
+            in_rgb = q_rgb.get()
             if in_rgb is not None:
-                fps.tick('rgb')
                 if hq:
                     yuv = in_rgb.getData().reshape((in_rgb.getHeight() * 3 // 2, in_rgb.getWidth()))
                     frame = cv2.cvtColor(yuv, cv2.COLOR_YUV2BGR_NV12)
                 else:
                     frame_data = in_rgb.getData().reshape(3, in_rgb.getHeight(), in_rgb.getWidth())
                     frame = np.ascontiguousarray(frame_data.transpose(1, 2, 0))
+                fps.tick('rgb')
         else:
             read_correctly, vid_frame = cap.read()
             if not read_correctly:
@@ -252,11 +252,12 @@ with dai.Device(p) as device:
             frame = vid_frame if hq else scaled_frame
             fps.tick('rgb')
 
-        in_nn = nn_manager.output.tryGet()
-        if in_nn is not None:
+        in_nn = nn_manager.output.tryGetAll()
+        if len(in_nn) > 0:
             if nn_manager.output_format == "detection":
-                detections = in_nn.detections
-            fps.tick('nn')
+                detections = in_nn[-1].detections
+            for packet in in_nn:
+                fps.tick('nn')
 
         if frame is not None:
             # if the frame is available, draw bounding boxes on it and show the frame
