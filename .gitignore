@@ -52,3 +52,5 @@ log_system_information.json
 *.img
 .aux_wheels
 *.whl
+
+*.orig

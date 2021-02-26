@@ -14,7 +14,9 @@ from depthai_helpers.arg_manager import CliArgs
 
 print('Using depthai module from: ', depthai.__file__)
 print('Depthai version installed: ', depthai.__version__)
-check_depthai_version()
+if platform.machine() not in ['armv6l', 'aarch64']:
+    check_depthai_version()
+
 is_rpi = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
 global args, cnn_model2
 
