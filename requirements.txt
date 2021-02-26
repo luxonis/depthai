@@ -7,5 +7,6 @@ pyyaml==5.3.1
 # depthai==0.3.0.0
 blkinfo
 paramiko
+pygame
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 depthai==0.4.0.0+96c608b4160df9851585f08b13b3b5a1b3d36b7b
