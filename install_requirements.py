@@ -76,6 +76,6 @@ if this_platform in platforms_requires_aux_wheels:
         subprocess.check_call([*pip_install, str(wheel_dest)])
 
 try:
-    subprocess.check_call([*pip_install, "-r", "requirements-optional.txt"])
+    subprocess.check_call([*pip_install, "-r", "requirements-optional.txt"], stderr=subprocess.DEVNULL)
 except subprocess.CalledProcessError as ex:
-    print(f"Optional dependencies were not installed (exit code {ex.returncode})")
+    print(f"Optional dependencies were not installed. This is not an error.")
