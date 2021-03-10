@@ -75,9 +75,9 @@ class NNetManager:
         self.input_name = f"{self.model_name}_in"
         self.blob_path = BlobManager(model_dir=self.model_dir).compile(args.shaves)
 
-        cofig_path = self.model_dir / Path(self.model_name).with_suffix(f".json")
-        if cofig_path.exists():
-            with cofig_path.open() as f:
+        cofnig_path = self.model_dir / Path(self.model_name).with_suffix(f".json")
+        if cofnig_path.exists():
+            with cofnig_path.open() as f:
                 self.config = json.load(f)
                 nn_config = self.config.get("NN_config", {})
                 self.labels = self.config.get("mappings", {}).get("labels", None)
