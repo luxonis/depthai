@@ -162,12 +162,13 @@ class FPSHandler:
 
     def tick_fps(self, name):
         if name in self.ticks:
-            return self.ticks_cnt[name] / (time.time() - self.ticks[name])
+            time_diff = time.time() - self.ticks[name]
+            return self.ticks_cnt[name] / time_diff if time_diff != 0 else 0
         else:
             return 0
 
     def fps(self):
-        return self.frame_cnt / (self.timestamp / self.start)
+        return self.frame_cnt / (self.timestamp - self.start)
 
 
 def create_pipeline(use_camera, use_hq, nn_pipeline=None):
