@@ -51,6 +51,7 @@ def _stream_type(option):
         stream_dict = {"name": stream_name, "max_fps": max_fps}
     return stream_dict
 
+
 class CliArgs:
     args = []
 
@@ -63,17 +64,13 @@ class CliArgs:
 
         Example usage:
 
-        ## Show the depth stream:
-        python3 test.py -s disparity_color,12
-        ## Show the depth stream and NN output:
-        python3 test.py -s metaout previewout,12 disparity_color,12
+        ## RGB & CNN inference example
+        python3 gen2_demo.py
+        
+        ## CNN inference on video example
+        python3 gen2_demo.py -vid <path_to_video>
         """
         parser = argparse.ArgumentParser(epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
-        parser.add_argument("-co", "--config_overwrite", default=None,
-                            type=str, required=False,
-                            help="JSON-formatted pipeline config object. This will be override defaults used in this "
-                                 "script.")
-
         parser.add_argument("-brd", "--board", default=None, type=str,
                             help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
                                  "Or path to a custom .json board config. Mutually exclusive with [-fv -rfv -b -r -w]")
@@ -81,14 +78,8 @@ class CliArgs:
         parser.add_argument("-sh", "--shaves", default=None, type=int, choices=range(1,15), metavar="[1-14]",
                             help="Number of shaves used by NN.")
 
-        parser.add_argument("-cmx", "--cmx_slices", default=None, type=int, choices=range(1,15), metavar="[1-14]",
-                            help="Number of cmx slices used by NN.")
-
-        parser.add_argument("-nce", "--NN_engines", default=None, type=int, choices=[1, 2], metavar="[1-2]",
-                            help="Number of NN_engines used by NN.")
-
         parser.add_argument("-mct", "--model-compilation-target", default="auto",
-                            type=str, required=False, choices=["auto","local","cloud"],
+                            type=str, required=False, choices=["auto", "local", "cloud"],
                             help="Compile model lcoally or in cloud?")
 
         parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],
@@ -116,16 +107,17 @@ class CliArgs:
         parser.add_argument("-lrc", "--stereo_lr_check", default=False, action="store_true",
                         help="Enable stereo 'Left-Right check' feature.")
 
-        parser.add_argument("-e", "--store-eeprom", default=False, action="store_true",
-                            help="Store the calibration and board_config (fov, baselines, swap-lr) in the EEPROM onboard")
+        # TODO move to calib script
+        # parser.add_argument("-e", "--store-eeprom", default=False, action="store_true",
+        #                     help="Store the calibration and board_config (fov, baselines, swap-lr) in the EEPROM onboard")
+        #
+        # parser.add_argument("--clear-eeprom", default=False, action="store_true",
+        #                     help="Invalidate the calib and board_config from EEPROM")
+        #
+        # parser.add_argument("-o", "--override-eeprom", default=False, action="store_true",
+        #                     help="Use the calib and board_config from host, ignoring the EEPROM data if programmed")
         
-        parser.add_argument("--clear-eeprom", default=False, action="store_true",
-                            help="Invalidate the calib and board_config from EEPROM")
-        
-        parser.add_argument("-o", "--override-eeprom", default=False, action="store_true",
-                            help="Use the calib and board_config from host, ignoring the EEPROM data if programmed")
-        
-        parser.add_argument("-dev", "--device-id", default="", type=str,
+        parser.add_argument("-dev", "--device-mxid", default="", type=str,
                             help="USB port number for the device to connect to. Use the word 'list' to show all devices "
                                  "and exit.")
         parser.add_argument("-debug", "--dev_debug", nargs="?", default=None, const='', type=str, required=False,
@@ -139,21 +131,21 @@ class CliArgs:
         parser.add_argument("-cnn2", "--cnn_model2", default="", type=str, choices=CNN2_choices,
                             help="Cnn model to run on DepthAI for second-stage inference")
         
-        parser.add_argument('-cam', "--cnn_camera", default='rgb',
-                            choices=['rgb', 'left', 'right', 'left_right', 'rectified_left', 'rectified_right', 'rectified_left_right'],
-                            help='Choose camera input for CNN (default: %(default)s)')
+        parser.add_argument('-cam', "--cnn_souce", default='rgb',
+                            choices=['host', 'rgb', 'left', 'right', 'left_right', 'rectified_left', 'rectified_right', 'rectified_left_right'],
+                            help='Choose input for CNN (default: %(default)s)')
         
         parser.add_argument("-dd", "--disable_depth", default=False, action="store_true",
                             help="Disable depth calculation on CNN models with bounding box output")
         
         parser.add_argument("-bb", "--draw-bb-depth", default=False, action="store_true",
-                            help="Draw the bounding boxes over the left/right/depth* streams")
+                            help="Draw the bounding boxes over the left/right/depth* frames")
         
         parser.add_argument("-ff", "--full-fov-nn", default=False, action="store_true",
                             help="Full RGB FOV for NN, not keeping the aspect ratio")
 
-        parser.add_argument("-sync", "--sync-video-meta", default=False, action="store_true",
-                            help="Synchronize 'previewout' and 'metaout' streams")
+        parser.add_argument("-sync", "--sync-nn", default=False, action="store_true",
+                            help="Synchronize arriving data")
 
         parser.add_argument("-seq", "--sync-sequence-numbers", default=False, action="store_true",
                             help="Synchronize sequence numbers for all packets. Experimental")
