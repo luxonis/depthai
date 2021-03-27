@@ -40,7 +40,7 @@ s = serial.Serial(port, 115200, timeout=5)
 is_passed = False
 start = time()
 while s.is_open:
-    str_val = s.read_until().decode("utf-8")
+    str_val = s.read_until().decode("unicode_escape")
     print(str_val)
     if 'TEST PASSED AND BO HEADER FLASHED!' in str_val:
         print(start)
