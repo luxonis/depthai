@@ -77,5 +77,5 @@ else:
 
     
 
-cv2.imshow("img",image)
+cv2.imshow("Result Image",image)
 cv2.waitKey(0)
