@@ -41,7 +41,8 @@ is_passed = False
 start = time()
 while s.is_open:
     str_val = s.read_until().decode("unicode_escape")
-    print(str_val)
+    end_str = '' if str_val[-1] == '\n' else '\n'
+    print('[ESP32]', str_val, end=end_str)
     if 'TEST PASSED AND BO HEADER FLASHED!' in str_val:
         print(start)
         print(time())
