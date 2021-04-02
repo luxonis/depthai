@@ -2,7 +2,7 @@
 
 This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
-__Documentation is available at [https://docs.luxonis.com/en/gen2/](https://docs.luxonis.com/en/gen2/).__
+__Documentation is available at [https://docs.luxonis.com/](https://docs.luxonis.com/).__
 
 ## Python modules (Dependencies)
 
