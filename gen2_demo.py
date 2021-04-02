@@ -73,7 +73,7 @@ class NNetManager:
         self.model_name = self.model_dir.name
         self.output_name = f"{self.model_name}_out"
         self.input_name = f"{self.model_name}_in"
-        self.blob_path = BlobManager(model_dir=self.model_dir).compile(args.shaves)
+        self.blob_path = BlobManager(model_dir=self.model_dir.resolve().absolute()).compile(args.shaves)
 
         cofnig_path = self.model_dir / Path(self.model_name).with_suffix(f".json")
         if cofnig_path.exists():
