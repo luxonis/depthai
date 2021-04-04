@@ -21,6 +21,7 @@ parser.add_argument('-cam', '--camera', action="store_true",
 parser.add_argument('-vid', '--video', type=str,
                     help="Path to video file to be used for inference (conflicts with -cam)")
 parser.add_argument('-lq', '--lowquality', action="store_true", help="Low quality visualization - uses resized frames")
+parser.add_argument('-d', '--depth', action="store_true", help="Use depth information")
 parser.add_argument('-cnnp', '--cnn_path', type=Path, help="Path to cnn model directory to be run")
 parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=CNN_choices, help="Cnn model to run on DepthAI")
 parser.add_argument('-sh', '--shaves', default=13, type=int, help="Name of the nn to be run from default depthai repository")
@@ -31,6 +32,7 @@ args = parser.parse_args()
 debug = not args.no_debug
 camera = not args.video
 hq = not args.lowquality
+depth = args.depth
 
 default_input_dims = {
     # TODO remove once fetching input size from nn blob is possible
@@ -65,11 +67,13 @@ class NNetManager:
     input = None
     output = None
 
-    def __init__(self, model_dir, source):
+    def __init__(self, model_dir, source, use_depth, use_hq):
         if source not in self.source_choices:
             raise RuntimeError(f"Source {source} is invalid, available {self.source_choices}")
         self.source = source
         self.model_dir = model_dir
+        self.use_depth = use_depth
+        self.use_hq = use_hq
         self.model_name = self.model_dir.name
         self.output_name = f"{self.model_name}_out"
         self.input_name = f"{self.model_name}_in"
@@ -91,12 +95,13 @@ class NNetManager:
         self.device = device
         self.input = device.getInputQueue(self.input_name, maxSize=1, blocking=False) if self.source == "host" else None
         self.output = device.getOutputQueue(self.output_name, maxSize=1, blocking=False)
+        self.bb_mapping = device.getOutputQueue("bb_mapping", maxSize=1, blocking=False) if self.use_depth else None
 
     def create_nn_pipeline(self, p, nodes):
         if self.nn_family == "mobilenet":
-            nn = p.createMobileNetDetectionNetwork()
+            nn = p.createMobileNetSpatialDetectionNetwork() if self.use_depth else p.createMobileNetDetectionNetwork()
         elif self.nn_family == "YOLO":
-            nn = p.createYoloDetectionNetwork()
+            nn = p.createYoloSpatialDetectionNetwork() if self.use_depth else p.createYoloDetectionNetwork()
             nn.setConfidenceThreshold(0.5)
             nn.setNumClasses(self.metadata["classes"])
             nn.setCoordinateSize(self.metadata["coordinates"])
@@ -104,7 +109,14 @@ class NNetManager:
             nn.setAnchorMasks(self.metadata["anchor_masks"])
             nn.setIouThreshold(self.metadata["iou_threshold"])
         else:
+            # TODO use createSpatialLocationCalculator
             nn = p.createNeuralNetwork()
+
+        # If we use depth information, we also send bounding box mapping to the host
+        if self.use_depth and (self.nn_family == "YOLO" or self.nn_family == "mobilenet"):
+            nodes.xout_bb_mapping = p.createXLinkOut()
+            nodes.xout_bb_mapping.setStreamName("bb_mapping")
+            nn.boundingBoxMapping.link(nodes.xout_bb_mapping.input)
 
         nn.setBlobPath(str(self.blob_path))
         nn.setConfidenceThreshold(self.confidence)
@@ -123,6 +135,27 @@ class NNetManager:
             xin.setStreamName(self.input_name)
             xin.out.link(nn.input)
             setattr(nodes, self.input_name, xout)
+        elif self.source == "right": # Use spatial information
+            nodes.xout_right = p.createXLinkOut()
+            nodes.xout_right.setStreamName("right")
+
+            # if self.use_hq:
+            #     nodes.mono_right.out.link(nodes.xout_right.input)
+            # else:
+            nn.passthrough.link(nodes.xout_right.input)
+
+            nodes.manip = p.createImageManip()
+            nodes.manip.initialConfig.setResize(in_w, in_h)
+            # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
+            nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            nodes.manip.out.link(nn.input)
+
+            nodes.stereo.rectifiedRight.link(nodes.manip.inputImage)
+            nodes.stereo.depth.link(nn.inputDepth)
+            # Spatial configs
+            nn.setBoundingBoxScaleFactor(0.3)
+            nn.setDepthLowerThreshold(100)
+            nn.setDepthUpperThreshold(3000)
 
     def get_label_text(self, label):
         if self.config is None or self.labels is None:
@@ -171,12 +204,27 @@ class FPSHandler:
         return self.frame_cnt / (self.timestamp - self.start)
 
 
-def create_pipeline(use_camera, use_hq, nn_pipeline=None):
+def create_pipeline(use_camera, use_hq, use_depth, nn_pipeline=None):
     # Start defining a pipeline
     p = dai.Pipeline()
     nodes = SimpleNamespace()
 
-    if use_camera:
+    if use_depth:
+        nodes.stereo = p.createStereoDepth()
+        nodes.stereo.setOutputDepth(True)
+        nodes.stereo.setConfidenceThreshold(255)
+        nodes.stereo.setOutputRectified(True)
+
+        nodes.mono_left = p.createMonoCamera()
+        nodes.mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        nodes.mono_left.out.link(nodes.stereo.left)
+
+        nodes.mono_right = p.createMonoCamera()
+        nodes.mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+        nodes.mono_right.out.link(nodes.stereo.right)
+    elif use_camera:
         # Define a source - color camera
         nodes.cam_rgb = p.createColorCamera()
         nodes.cam_rgb.setPreviewSize(in_w, in_h)
@@ -197,12 +245,15 @@ def create_pipeline(use_camera, use_hq, nn_pipeline=None):
 
 nn_manager = NNetManager(
     model_dir=args.cnn_path or Path(__file__).parent / Path(f"resources/nn/{args.cnn_model}/"),
-    source="rgb" if camera else "host"
+    source="right" if depth else "rgb" if camera else "host",
+    use_depth=depth,
+    use_hq=hq
 )
 
 p = create_pipeline(
     use_camera=camera,
     use_hq=hq,
+    use_depth=depth,
     nn_pipeline=nn_manager.create_nn_pipeline
 )
 
@@ -212,8 +263,10 @@ with dai.Device(p) as device:
     # Start pipeline
     device.startPipeline()
     nn_manager.addDevice(device)
-
-    if camera:
+    if depth:
+        q_right = device.getOutputQueue(name="right", maxSize=1, blocking=False)
+        fps = FPSHandler()
+    elif camera:
         q_rgb = device.getOutputQueue(name="rgb", maxSize=1, blocking=False)
         fps = FPSHandler()
     else:
@@ -223,10 +276,18 @@ with dai.Device(p) as device:
 
     frame = None
     detections = []
+    color = (255, 255, 255)
 
     while True:
         fps.next_iter()
-        if camera:
+        if depth:
+            in_right = q_right.get()
+            frame = in_right.getCvFrame()
+            # Since rectified frames are horizontally flipped by default
+            # if not hq:
+            frame = cv2.flip(frame, 1)
+            fps.tick('right')
+        elif camera:
             in_rgb = q_rgb.get()
             if in_rgb is not None:
                 if hq:
@@ -264,11 +325,24 @@ with dai.Device(p) as device:
         if frame is not None:
             # if the frame is available, draw bounding boxes on it and show the frame
             for detection in detections:
+                if depth: # Since rectified frames are horizontally flipped by default
+                    swap = detection.xmin
+                    detection.xmin = 1 - detection.xmax
+                    detection.xmax = 1 - swap
+
                 bbox = frame_norm(frame, [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
                 cv2.putText(frame, nn_manager.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
                 cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-            cv2.putText(frame, f"RGB FPS: {round(fps.tick_fps('rgb'), 1)}", (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+
+                if depth: # Display coordinates as well
+                    cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+
+            frame_fps = f"RIGHT FPS: {round(fps.tick_fps('right'), 1)}" if depth else f"RGB FPS: {round(fps.tick_fps('rgb'), 1)}"
+            cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+
             cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
             cv2.imshow("rgb", frame)
 
