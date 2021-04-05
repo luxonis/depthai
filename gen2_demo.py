@@ -216,12 +216,12 @@ def create_pipeline(use_camera, use_hq, use_depth, nn_pipeline=None):
         nodes.stereo.setOutputRectified(True)
 
         nodes.mono_left = p.createMonoCamera()
-        nodes.mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        nodes.mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
         nodes.mono_left.out.link(nodes.stereo.left)
 
         nodes.mono_right = p.createMonoCamera()
-        nodes.mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        nodes.mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         nodes.mono_right.out.link(nodes.stereo.right)
     elif use_camera:
