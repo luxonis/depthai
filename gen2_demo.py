@@ -46,6 +46,7 @@ parser.add_argument('-sbb', '--spatial_bounding_box', action="store_true", help=
 parser.add_argument("-sbb-sf", "--sbb_scale_factor", default=0.3, type=float, help="Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: %(default)s")
 parser.add_argument('-sync', '--sync', action="store_true", help="Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute")
 
+parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
 args = parser.parse_args()
 
 debug = not args.no_debug
@@ -73,6 +74,11 @@ if args.cnn_input_size is None:
     in_w, in_h = map(int, default_input_dims[args.cnn_model].split('x'))
 else:
     in_w, in_h = map(int, args.cnn_input_size.split('x'))
+
+if args.rgb_resolution == 1080: rgb_res = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+elif args.rgb_resolution == 2160: rgb_res = dai.ColorCameraProperties.SensorResolution.THE_4_K
+elif args.rgb_resolution == 3040: rgb_res = dai.ColorCameraProperties.SensorResolution.THE_12_MP
+else: raise RuntimeError("RGB resolution not supported! Supported values for -rgbr are [1080, 2160, 3040]")
 
 if args.stereo_median_size == 3: median = dai.StereoDepthProperties.MedianFilter.KERNEL_3x3
 elif args.stereo_median_size == 5: median = dai.StereoDepthProperties.MedianFilter.KERNEL_5x5
