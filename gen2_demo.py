@@ -27,6 +27,18 @@ parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, ch
 parser.add_argument('-sh', '--shaves', default=13, type=int, help="Name of the nn to be run from default depthai repository")
 parser.add_argument('-cnn-size', '--cnn-input-size', default=None, help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
 parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float, help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
+
+def dct_range(arg):
+    try:
+        val = int(arg)
+    except ValueError:
+        raise argparse.ArgumentTypeError("Must be an integer number")
+    if 255 < val or val < 0:
+        raise argparse.ArgumentTypeError("Argument must be between 0 and 255")
+    return val
+parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=dct_range, help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
+parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0,3,5,7], help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
+parser.add_argument('-lrc', '--stereo_lr_check', action="store_true", help="Enable stereo 'Left-Right check' feature.")
 args = parser.parse_args()
 
 debug = not args.no_debug
@@ -55,7 +67,10 @@ if args.cnn_input_size is None:
 else:
     in_w, in_h = map(int, args.cnn_input_size.split('x'))
 
-
+if args.stereo_median_size == 0: median = dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF
+elif args.stereo_median_size == 3: median = dai.StereoDepthProperties.MedianFilter.KERNEL_3x3
+elif args.stereo_median_size == 5: median = dai.StereoDepthProperties.MedianFilter.KERNEL_5x5
+elif args.stereo_median_size == 7: median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
 class NNetManager:
     source_choices = ("rgb", "left", "right", "host")
     config = None
@@ -212,8 +227,10 @@ def create_pipeline(use_camera, use_hq, use_depth, nn_pipeline=None):
     if use_depth:
         nodes.stereo = p.createStereoDepth()
         nodes.stereo.setOutputDepth(True)
-        nodes.stereo.setConfidenceThreshold(255)
+        nodes.stereo.setConfidenceThreshold(args.disparity_confidence_threshold)
         nodes.stereo.setOutputRectified(True)
+        nodes.stereo.setMedianFilter(median)
+        nodes.stereo.setLeftRightCheck(args.stereo_lr_check)
 
         nodes.mono_left = p.createMonoCamera()
         nodes.mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
