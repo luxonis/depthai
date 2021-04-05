@@ -78,7 +78,6 @@ else:
 if args.rgb_resolution == 1080: rgb_res = dai.ColorCameraProperties.SensorResolution.THE_1080_P
 elif args.rgb_resolution == 2160: rgb_res = dai.ColorCameraProperties.SensorResolution.THE_4_K
 elif args.rgb_resolution == 3040: rgb_res = dai.ColorCameraProperties.SensorResolution.THE_12_MP
-else: raise RuntimeError("RGB resolution not supported! Supported values for -rgbr are [1080, 2160, 3040]")
 
 if args.stereo_median_size == 3: median = dai.StereoDepthProperties.MedianFilter.KERNEL_3x3
 elif args.stereo_median_size == 5: median = dai.StereoDepthProperties.MedianFilter.KERNEL_5x5
