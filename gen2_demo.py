@@ -39,6 +39,7 @@ def dct_range(arg):
 parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=dct_range, help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
 parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0,3,5,7], help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
 parser.add_argument('-lrc', '--stereo_lr_check', action="store_true", help="Enable stereo 'Left-Right check' feature.")
+parser.add_argument("-s", "--scale", default=1.0, type=float, help="Scale factor for the output window. Default: %(default)s")
 args = parser.parse_args()
 
 debug = not args.no_debug
@@ -340,6 +341,11 @@ with dai.Device(p) as device:
                 fps.tick('nn')
 
         if frame is not None:
+            # Scale the frame by --scale factor
+            if not args.scale == 1.0:
+                h, w, c = frame.shape
+                frame = cv2.resize(frame, (int(w * args.scale), int(h * args.scale)), interpolation=cv2.INTER_AREA)
+
             # if the frame is available, draw bounding boxes on it and show the frame
             for detection in detections:
                 if depth: # Since rectified frames are horizontally flipped by default
