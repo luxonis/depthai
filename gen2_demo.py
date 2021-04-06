@@ -121,7 +121,8 @@ class NNetManager:
         self.output = device.getOutputQueue(self.output_name, maxSize=1, blocking=False)
 
         if self.sbb:
-            self.sbb_out = device.getOutputQueue("sbb_out", maxSize=1, blocking=False) if self.use_depth else None
+            self.sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False)
+            self.depth_out = device.getOutputQueue("depth", maxSize=1, blocking=False)
 
     def create_nn_pipeline(self, p, nodes):
         if self.nn_family == "mobilenet":
@@ -137,11 +138,6 @@ class NNetManager:
         else:
             # TODO use createSpatialLocationCalculator
             nn = p.createNeuralNetwork()
-
-        if self.sbb:
-            nodes.xout_sbb = p.createXLinkOut()
-            nodes.xout_sbb.setStreamName("sbb_out")
-            nn.boundingBoxMapping.link(nodes.xout_sbb.input)
 
         nn.setBlobPath(str(self.blob_path))
         nn.setConfidenceThreshold(self.confidence)
@@ -161,10 +157,12 @@ class NNetManager:
             xin.out.link(nn.input)
             setattr(nodes, self.input_name, xout)
         elif self.source == "right": # Use spatial information
-            # if self.use_hq:
-            #     nodes.mono_right.out.link(nodes.xout_right.input)
-            # else:
+            # Set XLinkOut sources
             nn.passthrough.link(nodes.xout_right.input)
+            if self.sbb:
+                nn.boundingBoxMapping.link(nodes.xout_sbb.input)
+                nn.passthroughDepth.link(nodes.xout_depth.input)
+
             # NN inputs
             nodes.manip.out.link(nn.input)
             nodes.stereo.depth.link(nn.inputDepth)
@@ -263,7 +261,7 @@ class PipelineManager:
         self.nodes.mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         self.nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-    def create_nn(self, nn_pipeline):
+    def create_nn(self, nn_manager):
         # If we want depth information , create ImageManip that will be the input for the NN
         if depth:
             self.nodes.manip = self.p.createImageManip()
@@ -277,8 +275,18 @@ class PipelineManager:
             self.nodes.xout_right = self.p.createXLinkOut()
             self.nodes.xout_right.setStreamName("right")
 
-        if callable(nn_pipeline):
-                nn_pipeline(self.p, self.nodes)
+            if nn_manager.sbb:
+                # If we want to display spatial bounding boxes, create XLinkOut node for:
+                # a) Spatial bounding boxes
+                self.nodes.xout_sbb = self.p.createXLinkOut()
+                self.nodes.xout_sbb.setStreamName("sbb")
+                # b) depth map
+                self.nodes.xout_depth = self.p.createXLinkOut()
+                self.nodes.xout_depth.setStreamName("depth")
+
+
+        if callable(nn_manager.create_nn_pipeline):
+            nn_manager.create_nn_pipeline(self.p, self.nodes)
 
 nn_manager = NNetManager(
     model_dir=args.cnn_path or Path(__file__).parent / Path(f"resources/nn/{args.cnn_model}/"),
@@ -294,7 +302,7 @@ if depth:
 elif camera:
     pm.create_color_cam(hq)
 
-pm.create_nn(nn_manager.create_nn_pipeline)
+pm.create_nn(nn_manager)
 
 
 # Pipeline is defined, now we can connect to the device
@@ -316,7 +324,6 @@ with dai.Device(pm.p) as device:
     frame = None
     detections = []
     # Spatial bounding box ROIs (region of interests)
-    sbb_rois = []
     color = (255, 255, 255)
 
     while True:
@@ -328,6 +335,25 @@ with dai.Device(pm.p) as device:
             # if not hq:
             frame = cv2.flip(frame, 1)
             fps.tick('right')
+
+            if nn_manager.sbb: # Get spatial bounding boxes and depth map
+                depth_frame = nn_manager.depth_out.get().getFrame()
+                sbb = nn_manager.sbb_out.tryGet()
+                sbb_rois = sbb.getConfigData() if sbb is not None else []
+                depth_frame = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+                depth_frame = cv2.equalizeHist(depth_frame)
+                depth_frame = cv2.applyColorMap(depth_frame, cv2.COLORMAP_TURBO)
+
+                for roi_data in sbb_rois:
+                    roi = roi_data.roi
+                    roi = roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
+                    top_left = roi.topLeft()
+                    bottom_right = roi.bottomRight()
+                    # Display SBB on the disparity map
+                    cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+
+                cv2.imshow("disparity", depth_frame)
+
         elif camera:
             in_rgb = q_rgb.get()
             if in_rgb is not None:
@@ -355,13 +381,6 @@ with dai.Device(pm.p) as device:
             # if high quality, send original frames
             frame = vid_frame if hq else scaled_frame
             fps.tick('rgb')
-
-        if nn_manager.sbb:
-            # Get spatial bounding boxes
-            sbb = nn_manager.sbb_out.tryGet()
-            if sbb is not None:
-                sbb_rois = sbb.getConfigData()
-            else: sbb_rois = []
 
         in_nn = nn_manager.output.tryGetAll()
         if len(in_nn) > 0:
@@ -392,13 +411,6 @@ with dai.Device(pm.p) as device:
                     cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
                     cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
                     cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-
-            for roi_data in sbb_rois:
-                roi = roi_data.roi
-                roi = roi.denormalize(frame.shape[1], frame.shape[0])
-                top_left = roi.topLeft()
-                bottom_right = roi.bottomRight()
-                cv2.rectangle(frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
 
             frame_fps = f"RIGHT FPS: {round(fps.tick_fps('right'), 1)}" if depth else f"RGB FPS: {round(fps.tick_fps('rgb'), 1)}"
             cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
