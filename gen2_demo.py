@@ -41,9 +41,10 @@ parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float, help="RGB ca
 parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=check_range(0, 255), help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
 parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0,3,5,7], help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
 parser.add_argument('-lrc', '--stereo_lr_check', action="store_true", help="Enable stereo 'Left-Right check' feature.")
-parser.add_argument("-s", "--scale", default=1.0, type=float, help="Scale factor for the output window. Default: %(default)s")
+parser.add_argument("-scale", "--scale", default=1.0, type=float, help="Scale factor for the output window. Default: %(default)s")
 parser.add_argument('-sbb', '--spatial_bounding_box', action="store_true", help="Display spatial bounding box (ROI) when displaying spatial information. The Z coordinate get's calculated from the ROI (average)")
 parser.add_argument("-sbb-sf", "--sbb_scale_factor", default=0.3, type=float, help="Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: %(default)s")
+parser.add_argument('-sync', '--sync', action="store_true", help="Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute")
 
 args = parser.parse_args()
 
@@ -158,10 +159,13 @@ class NNetManager:
             setattr(nodes, self.input_name, xout)
         elif self.source == "right": # Use spatial information
             # Set XLinkOut sources
-            nn.passthrough.link(nodes.xout_right.input)
+            if args.sync: nn.passthrough.link(nodes.xout_right.input)
             if self.sbb:
-                nn.boundingBoxMapping.link(nodes.xout_sbb.input)
-                nn.passthroughDepth.link(nodes.xout_depth.input)
+                if args.sync: nn.passthroughDepth.link(nodes.xout_depth.input)
+                # If we want to display spatial bounding boxes, create XLinkOut node SBBs:
+                xout_sbb = self.p.createXLinkOut()
+                xout_sbb.setStreamName("sbb")
+                nn.boundingBoxMapping.link(xout_sbb.input)
 
             # NN inputs
             nodes.manip.out.link(nn.input)
@@ -219,9 +223,10 @@ class FPSHandler:
 
 
 class PipelineManager:
-    def __init__(self):
+    def __init__(self, nn_manager):
         self.p = dai.Pipeline()
         self.nodes = SimpleNamespace()
+        self.nn_manager = nn_manager
 
     def create_color_cam(self, use_hq):
         # Define a source - color camera
@@ -245,23 +250,37 @@ class PipelineManager:
         self.nodes.stereo.setLeftRightCheck(lr)
 
         # Create mono left/right cameras if we haven't already
-        if 'mono_left' not in vars(self.nodes): self.create_left_cam()
-        if 'mono_right' not in vars(self.nodes): self.create_right_cam()
+        if not hasattr(self.nodes, 'mono_left'): self.create_left_cam(create_xout=False)
+        if not hasattr(self.nodes, 'mono_right'): self.create_right_cam(create_xout=True)
 
         self.nodes.mono_left.out.link(self.nodes.stereo.left)
         self.nodes.mono_right.out.link(self.nodes.stereo.right)
 
-    def create_left_cam(self):
+        if self.nn_manager.sbb: # If we want to displaty SBBs, we need to send depth frames as well (via XLink)
+            self.nodes.xout_depth = self.p.createXLinkOut()
+            self.nodes.xout_depth.setStreamName("depth")
+            # If we don't want camera/NN in sync, set the disparity as the source for the XOut
+            if not args.sync: self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
+
+    def create_left_cam(self, create_xout):
         self.nodes.mono_left = self.p.createMonoCamera()
         self.nodes.mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
 
-    def create_right_cam(self):
+        if create_xout:
+            self.nodes.xout_left = self.p.createXLinkOut()
+            self.nodes.xout_left.setStreamName("left")
+
+    def create_right_cam(self, create_xout):
         self.nodes.mono_right = self.p.createMonoCamera()
         self.nodes.mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         self.nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-    def create_nn(self, nn_manager):
+        if create_xout:
+            self.nodes.xout_right = self.p.createXLinkOut()
+            self.nodes.xout_right.setStreamName("right")
+
+    def create_nn(self):
         # If we want depth information , create ImageManip that will be the input for the NN
         if depth:
             self.nodes.manip = self.p.createImageManip()
@@ -271,22 +290,11 @@ class PipelineManager:
             # Set the stereo node's rectifiedRight stream as the ImageManip's source
             self.nodes.stereo.rectifiedRight.link(self.nodes.manip.inputImage)
 
-            # Create an XLinkOut node through which we will send right_camera stream
-            self.nodes.xout_right = self.p.createXLinkOut()
-            self.nodes.xout_right.setStreamName("right")
+            # If we don't want camera/NN in sync, set the rectifiedRight as the source for the XOut
+            if not args.sync: self.nodes.manip.out.link(self.nodes.xout_right.input)
 
-            if nn_manager.sbb:
-                # If we want to display spatial bounding boxes, create XLinkOut node for:
-                # a) Spatial bounding boxes
-                self.nodes.xout_sbb = self.p.createXLinkOut()
-                self.nodes.xout_sbb.setStreamName("sbb")
-                # b) depth map
-                self.nodes.xout_depth = self.p.createXLinkOut()
-                self.nodes.xout_depth.setStreamName("depth")
-
-
-        if callable(nn_manager.create_nn_pipeline):
-            nn_manager.create_nn_pipeline(self.p, self.nodes)
+        if callable(self.nn_manager.create_nn_pipeline):
+            self.nn_manager.create_nn_pipeline(self.p, self.nodes)
 
 nn_manager = NNetManager(
     model_dir=args.cnn_path or Path(__file__).parent / Path(f"resources/nn/{args.cnn_model}/"),
@@ -295,14 +303,14 @@ nn_manager = NNetManager(
     use_hq=hq
 )
 
-pm = PipelineManager()
+pm = PipelineManager(nn_manager)
 
 if depth:
     pm.create_depth(args.disparity_confidence_threshold, median, args.stereo_lr_check)
 elif camera:
     pm.create_color_cam(hq)
 
-pm.create_nn(nn_manager)
+pm.create_nn()
 
 
 # Pipeline is defined, now we can connect to the device
@@ -338,12 +346,12 @@ with dai.Device(pm.p) as device:
 
             if nn_manager.sbb: # Get spatial bounding boxes and depth map
                 depth_frame = nn_manager.depth_out.get().getFrame()
-                sbb = nn_manager.sbb_out.tryGet()
-                sbb_rois = sbb.getConfigData() if sbb is not None else []
                 depth_frame = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
                 depth_frame = cv2.equalizeHist(depth_frame)
                 depth_frame = cv2.applyColorMap(depth_frame, cv2.COLORMAP_TURBO)
 
+                sbb = nn_manager.sbb_out.tryGet()
+                sbb_rois = sbb.getConfigData() if sbb is not None else []
                 for roi_data in sbb_rois:
                     roi = roi_data.roi
                     roi = roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
