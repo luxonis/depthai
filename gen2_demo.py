@@ -358,8 +358,10 @@ with dai.Device(pm.p) as device:
 
         if nn_manager.sbb:
             # Get spatial bounding boxes
-            sbb = nn_manager.sbb_out.get()
-            sbb_rois = sbb.getConfigData()
+            sbb = nn_manager.sbb_out.tryGet()
+            if sbb is not None:
+                sbb_rois = sbb.getConfigData()
+            else: sbb_rois = []
 
         in_nn = nn_manager.output.tryGetAll()
         if len(in_nn) > 0:
