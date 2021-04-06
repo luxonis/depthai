@@ -14,6 +14,17 @@ from depthai_helpers.arg_manager import CNN_choices
 from depthai_helpers.config_manager import BlobManager
 from gen2_helpers import frame_norm, to_planar
 
+def check_range(min_val, max_val):
+    def check_fn(value):
+        ivalue = int(value)
+        if min_val <= ivalue <= max_val:
+            return ivalue
+        else:
+            raise argparse.ArgumentTypeError(
+                "{} is an invalid int value, must be in range {}..{}".format(value, min_val, max_val)
+            )
+    return check_fn
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
 parser.add_argument('-cam', '--camera', action="store_true",
@@ -27,19 +38,13 @@ parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, ch
 parser.add_argument('-sh', '--shaves', default=13, type=int, help="Name of the nn to be run from default depthai repository")
 parser.add_argument('-cnn-size', '--cnn-input-size', default=None, help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
 parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float, help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
-
-def dct_range(arg):
-    try:
-        val = int(arg)
-    except ValueError:
-        raise argparse.ArgumentTypeError("Must be an integer number")
-    if 255 < val or val < 0:
-        raise argparse.ArgumentTypeError("Argument must be between 0 and 255")
-    return val
-parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=dct_range, help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
+parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=check_range(0, 255), help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
 parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0,3,5,7], help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
 parser.add_argument('-lrc', '--stereo_lr_check', action="store_true", help="Enable stereo 'Left-Right check' feature.")
 parser.add_argument("-s", "--scale", default=1.0, type=float, help="Scale factor for the output window. Default: %(default)s")
+parser.add_argument('-sbb', '--spatial_bounding_box', action="store_true", help="Display spatial bounding box (ROI) when displaying spatial information. The Z coordinate get's calculated from the ROI (average)")
+parser.add_argument("-sbb-sf", "--sbb_scale_factor", default=0.3, type=float, help="Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: %(default)s")
+
 args = parser.parse_args()
 
 debug = not args.no_debug
@@ -68,10 +73,10 @@ if args.cnn_input_size is None:
 else:
     in_w, in_h = map(int, args.cnn_input_size.split('x'))
 
-if args.stereo_median_size == 0: median = dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF
-elif args.stereo_median_size == 3: median = dai.StereoDepthProperties.MedianFilter.KERNEL_3x3
+if args.stereo_median_size == 3: median = dai.StereoDepthProperties.MedianFilter.KERNEL_3x3
 elif args.stereo_median_size == 5: median = dai.StereoDepthProperties.MedianFilter.KERNEL_5x5
 elif args.stereo_median_size == 7: median = dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
+else: median = dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF
 class NNetManager:
     source_choices = ("rgb", "left", "right", "host")
     config = None
@@ -107,11 +112,16 @@ class NNetManager:
 
                 self.confidence = self.metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
 
+                # Disaply depth roi bounding boxes
+                self.sbb = True if args.spatial_bounding_box and self.use_depth and (self.nn_family == "YOLO" or self.nn_family == "mobilenet") else False
+
     def addDevice(self, device):
         self.device = device
         self.input = device.getInputQueue(self.input_name, maxSize=1, blocking=False) if self.source == "host" else None
         self.output = device.getOutputQueue(self.output_name, maxSize=1, blocking=False)
-        self.bb_mapping = device.getOutputQueue("bb_mapping", maxSize=1, blocking=False) if self.use_depth else None
+
+        if self.sbb:
+            self.sbb_out = device.getOutputQueue("sbb_out", maxSize=1, blocking=False) if self.use_depth else None
 
     def create_nn_pipeline(self, p, nodes):
         if self.nn_family == "mobilenet":
@@ -128,11 +138,10 @@ class NNetManager:
             # TODO use createSpatialLocationCalculator
             nn = p.createNeuralNetwork()
 
-        # If we use depth information, we also send bounding box mapping to the host
-        if self.use_depth and (self.nn_family == "YOLO" or self.nn_family == "mobilenet"):
-            nodes.xout_bb_mapping = p.createXLinkOut()
-            nodes.xout_bb_mapping.setStreamName("bb_mapping")
-            nn.boundingBoxMapping.link(nodes.xout_bb_mapping.input)
+        if self.sbb:
+            nodes.xout_sbb = p.createXLinkOut()
+            nodes.xout_sbb.setStreamName("sbb_out")
+            nn.boundingBoxMapping.link(nodes.xout_sbb.input)
 
         nn.setBlobPath(str(self.blob_path))
         nn.setConfidenceThreshold(self.confidence)
@@ -152,24 +161,15 @@ class NNetManager:
             xin.out.link(nn.input)
             setattr(nodes, self.input_name, xout)
         elif self.source == "right": # Use spatial information
-            nodes.xout_right = p.createXLinkOut()
-            nodes.xout_right.setStreamName("right")
-
             # if self.use_hq:
             #     nodes.mono_right.out.link(nodes.xout_right.input)
             # else:
             nn.passthrough.link(nodes.xout_right.input)
-
-            nodes.manip = p.createImageManip()
-            nodes.manip.initialConfig.setResize(in_w, in_h)
-            # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
-            nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            # NN inputs
             nodes.manip.out.link(nn.input)
-
-            nodes.stereo.rectifiedRight.link(nodes.manip.inputImage)
             nodes.stereo.depth.link(nn.inputDepth)
             # Spatial configs
-            nn.setBoundingBoxScaleFactor(0.3)
+            nn.setBoundingBoxScaleFactor(args.sbb_scale_factor)
             nn.setDepthLowerThreshold(100)
             nn.setDepthUpperThreshold(3000)
 
@@ -220,46 +220,65 @@ class FPSHandler:
         return self.frame_cnt / (self.timestamp - self.start)
 
 
-def create_pipeline(use_camera, use_hq, use_depth, nn_pipeline=None):
-    # Start defining a pipeline
-    p = dai.Pipeline()
-    nodes = SimpleNamespace()
+class PipelineManager:
+    def __init__(self):
+        self.p = dai.Pipeline()
+        self.nodes = SimpleNamespace()
 
-    if use_depth:
-        nodes.stereo = p.createStereoDepth()
-        nodes.stereo.setOutputDepth(True)
-        nodes.stereo.setConfidenceThreshold(args.disparity_confidence_threshold)
-        nodes.stereo.setOutputRectified(True)
-        nodes.stereo.setMedianFilter(median)
-        nodes.stereo.setLeftRightCheck(args.stereo_lr_check)
-
-        nodes.mono_left = p.createMonoCamera()
-        nodes.mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-        nodes.mono_left.out.link(nodes.stereo.left)
-
-        nodes.mono_right = p.createMonoCamera()
-        nodes.mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
-        nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-        nodes.mono_right.out.link(nodes.stereo.right)
-    elif use_camera:
+    def create_color_cam(self, use_hq):
         # Define a source - color camera
-        nodes.cam_rgb = p.createColorCamera()
-        nodes.cam_rgb.setPreviewSize(in_w, in_h)
-        nodes.cam_rgb.setInterleaved(False)
-        nodes.cam_rgb.setFps(args.rgb_fps)
-        xout_rgb = p.createXLinkOut()
+        self.nodes.cam_rgb = self.p.createColorCamera()
+        self.nodes.cam_rgb.setPreviewSize(in_w, in_h)
+        self.nodes.cam_rgb.setInterleaved(False)
+        self.nodes.cam_rgb.setFps(args.rgb_fps)
+        xout_rgb = self.p.createXLinkOut()
         xout_rgb.setStreamName("rgb")
         if use_hq:
-            nodes.cam_rgb.video.link(xout_rgb.input)
+            self.nodes.cam_rgb.video.link(xout_rgb.input)
         else:
-            nodes.cam_rgb.preview.link(xout_rgb.input)
+            self.nodes.cam_rgb.preview.link(xout_rgb.input)
 
-    if callable(nn_pipeline):
-        nn_pipeline(p, nodes)
+    def create_depth(self, dct, median, lr):
+        self.nodes.stereo = self.p.createStereoDepth()
+        self.nodes.stereo.setOutputDepth(True)
+        self.nodes.stereo.setOutputRectified(True)
+        self.nodes.stereo.setConfidenceThreshold(dct)
+        self.nodes.stereo.setMedianFilter(median)
+        self.nodes.stereo.setLeftRightCheck(lr)
 
-    return p
+        # Create mono left/right cameras if we haven't already
+        if 'mono_left' not in vars(self.nodes): self.create_left_cam()
+        if 'mono_right' not in vars(self.nodes): self.create_right_cam()
 
+        self.nodes.mono_left.out.link(self.nodes.stereo.left)
+        self.nodes.mono_right.out.link(self.nodes.stereo.right)
+
+    def create_left_cam(self):
+        self.nodes.mono_left = self.p.createMonoCamera()
+        self.nodes.mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+
+    def create_right_cam(self):
+        self.nodes.mono_right = self.p.createMonoCamera()
+        self.nodes.mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        self.nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+
+    def create_nn(self, nn_pipeline):
+        # If we want depth information , create ImageManip that will be the input for the NN
+        if depth:
+            self.nodes.manip = self.p.createImageManip()
+            self.nodes.manip.initialConfig.setResize(in_w, in_h)
+            # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
+            self.nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            # Set the stereo node's rectifiedRight stream as the ImageManip's source
+            self.nodes.stereo.rectifiedRight.link(self.nodes.manip.inputImage)
+
+            # Create an XLinkOut node through which we will send right_camera stream
+            self.nodes.xout_right = self.p.createXLinkOut()
+            self.nodes.xout_right.setStreamName("right")
+
+        if callable(nn_pipeline):
+                nn_pipeline(self.p, self.nodes)
 
 nn_manager = NNetManager(
     model_dir=args.cnn_path or Path(__file__).parent / Path(f"resources/nn/{args.cnn_model}/"),
@@ -268,16 +287,18 @@ nn_manager = NNetManager(
     use_hq=hq
 )
 
-p = create_pipeline(
-    use_camera=camera,
-    use_hq=hq,
-    use_depth=depth,
-    nn_pipeline=nn_manager.create_nn_pipeline
-)
+pm = PipelineManager()
+
+if depth:
+    pm.create_depth(args.disparity_confidence_threshold, median, args.stereo_lr_check)
+elif camera:
+    pm.create_color_cam(hq)
+
+pm.create_nn(nn_manager.create_nn_pipeline)
 
 
-# Pipeline defined, now the device is connected to
-with dai.Device(p) as device:
+# Pipeline is defined, now we can connect to the device
+with dai.Device(pm.p) as device:
     # Start pipeline
     device.startPipeline()
     nn_manager.addDevice(device)
@@ -294,6 +315,8 @@ with dai.Device(p) as device:
 
     frame = None
     detections = []
+    # Spatial bounding box ROIs (region of interests)
+    sbb_rois = []
     color = (255, 255, 255)
 
     while True:
@@ -333,6 +356,11 @@ with dai.Device(p) as device:
             frame = vid_frame if hq else scaled_frame
             fps.tick('rgb')
 
+        if nn_manager.sbb:
+            # Get spatial bounding boxes
+            sbb = nn_manager.sbb_out.get()
+            sbb_rois = sbb.getConfigData()
+
         in_nn = nn_manager.output.tryGetAll()
         if len(in_nn) > 0:
             if nn_manager.output_format == "detection":
@@ -363,11 +391,18 @@ with dai.Device(p) as device:
                     cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
                     cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
 
+            for roi_data in sbb_rois:
+                roi = roi_data.roi
+                roi = roi.denormalize(frame.shape[1], frame.shape[0])
+                top_left = roi.topLeft()
+                bottom_right = roi.bottomRight()
+                cv2.rectangle(frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+
             frame_fps = f"RIGHT FPS: {round(fps.tick_fps('right'), 1)}" if depth else f"RGB FPS: {round(fps.tick_fps('rgb'), 1)}"
             cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
 
             cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-            cv2.imshow("rgb", frame)
+            cv2.imshow("right" if depth else "rgb", frame)
 
         if cv2.waitKey(1) == ord('q'):
             break
