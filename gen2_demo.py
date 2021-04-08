@@ -37,6 +37,7 @@ parser.add_argument('-cnnp', '--cnn_path', type=Path, help="Path to cnn model di
 parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str, choices=CNN_choices, help="Cnn model to run on DepthAI")
 parser.add_argument('-sh', '--shaves', default=13, type=int, help="Name of the nn to be run from default depthai repository")
 parser.add_argument('-cnn-size', '--cnn-input-size', default=None, help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
+parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080,2160,3040], help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
 parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float, help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
 parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=check_range(0, 255), help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
 parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0,3,5,7], help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
@@ -45,7 +46,6 @@ parser.add_argument("-scale", "--scale", default=1.0, type=float, help="Scale fa
 parser.add_argument('-sbb', '--spatial_bounding_box', action="store_true", help="Display spatial bounding box (ROI) when displaying spatial information. The Z coordinate get's calculated from the ROI (average)")
 parser.add_argument("-sbb-sf", "--sbb_scale_factor", default=0.3, type=float, help="Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: %(default)s")
 parser.add_argument('-sync', '--sync', action="store_true", help="Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute")
-
 args = parser.parse_args()
 
 debug = not args.no_debug
@@ -73,6 +73,10 @@ if args.cnn_input_size is None:
     in_w, in_h = map(int, default_input_dims[args.cnn_model].split('x'))
 else:
     in_w, in_h = map(int, args.cnn_input_size.split('x'))
+
+if args.rgb_resolution == 2160: rgb_res = dai.ColorCameraProperties.SensorResolution.THE_4_K
+elif args.rgb_resolution == 3040: rgb_res = dai.ColorCameraProperties.SensorResolution.THE_12_MP
+else: rgb_res = dai.ColorCameraProperties.SensorResolution.THE_1080_P
 
 if args.stereo_median_size == 3: median = dai.StereoDepthProperties.MedianFilter.KERNEL_3x3
 elif args.stereo_median_size == 5: median = dai.StereoDepthProperties.MedianFilter.KERNEL_5x5
@@ -233,6 +237,7 @@ class PipelineManager:
         self.nodes.cam_rgb = self.p.createColorCamera()
         self.nodes.cam_rgb.setPreviewSize(in_w, in_h)
         self.nodes.cam_rgb.setInterleaved(False)
+        self.nodes.cam_rgb.setResolution(rgb_res)
         self.nodes.cam_rgb.setFps(args.rgb_fps)
         xout_rgb = self.p.createXLinkOut()
         xout_rgb.setStreamName("rgb")
