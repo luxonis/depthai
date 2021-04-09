@@ -60,3 +60,56 @@ If you run into a problem, please follow the steps below and email support@luxon
 4. Describe the actual running results (what you see after started your script with DepthAI)
 5. How you are using the DepthAI python API (code snippet, for example)
 6. Console output
+
+## OAK-D pass-through in KVM
+
+OAK-D camera (possibly other Luxonis products) changes the USB device type when it is used by DepthAI API. <br>
+This happens in backgound when the camera is used natively and the used does not see the change. But when the camera is used in a virtual environment the situation is different. If you are using virtual box then use the following [guide] (https://docs.luxonis.com/en/latest/pages/faq/#how-to-use-depthai-under-virtualbox). <br>
+In order to have the camera accessible in the KVM virtual machine, there is the need to attach and detach USB devices on the fly when the host machine detects changes in the USB bus. For this reason there is the need for a udev rule which will help us creating the pass-through configurations. <br>
+
+The following code is the contents of a udev rule which will call a script when OAK-D camera USB device is connected or disconnected from the USB bus. The file could be named: 80-movidius-host.rules. This file is installed in the host machine.
+```
+SUBSYSTEM=="usb", ACTION=="bind", ENV{ID_VENDOR_ID}=="03e7", MODE="0666", RUN+="/usr/local/bin/movidius_usb_hotplug.sh depthai-vm"
+SUBSYSTEM=="usb", ACTION=="remove", ENV{PRODUCT}=="3e7/2485/1", ENV{DEVTYPE}=="usb_device", MODE="0666", RUN+="/usr/local/bin/movidius_usb_hotplug.sh depthai-vm"
+SUBSYSTEM=="usb", ACTION=="remove", ENV{PRODUCT}=="3e7/f63b/100", ENV{DEVTYPE}=="usb_device", MODE="0666", RUN+="/usr/local/bin/movidius_usb_hotplug.sh depthai-vm"
+```
+
+The script that the udev rule is calling (movidius_usb_hotplug.sh) should then attach/detach the USB device to the virtual machine. In this case we need to call _virsh_ command. For example, the script could do the following:
+```
+#!/bin/bash
+
+# Abort script execution on errors
+set -e
+
+if [ "${ACTION}" == 'bind' ]; then
+  COMMAND='attach-device'
+elif [ "${ACTION}" == 'remove' ]; then
+  COMMAND='detach-device'
+  if [ "${PRODUCT}" == '3e7/2485/1' ]; then
+    ID_VENDOR_ID=03e7
+    ID_MODEL_ID=2485
+  fi
+  if [ "${PRODUCT}" == '3e7/f63b/100' ]; then
+    ID_VENDOR_ID=03e7
+    ID_MODEL_ID=f63b
+  fi
+else
+  echo "Invalid udev ACTION: ${ACTION}" >&2
+  exit 1
+fi
+
+echo "Running virsh ${COMMAND} ${DOMAIN} for ${ID_VENDOR}." >&2
+virsh "${COMMAND}" "${DOMAIN}" /dev/stdin <<END
+<hostdev mode='subsystem' type='usb'>
+  <source>
+    <vendor id='0x${ID_VENDOR_ID}'/>
+    <product id='0x${ID_MODEL_ID}'/>
+  </source>
+</hostdev>
+END
+
+exit 0
+```
+Note that when the device is disconnected from the USB bus, some udev environmental variables are not available (ID_VENDOR_ID or ID_MODEL_ID), that is why we need to use PRODUCT environmental variable to identify which device has been disconnected.
+<br>
+The virtual machine where DepthAI API application is running should have also defined a udev rules that identify the OAK-D camera. The udev rule is already decribed in the [Luxonis FAQ page](https://docs.luxonis.com/en/latest/pages/faq/).
