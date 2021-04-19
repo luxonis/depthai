@@ -3,5 +3,5 @@ opencv-python==4.5.1.48
 requests==2.24.0
 argcomplete==1.12.1
 pyyaml==5.3.1
-depthai==2.1.0.0
-blobconverter==0.0.6
+depthai==2.2.1.0
+blobconverter==0.0.7
