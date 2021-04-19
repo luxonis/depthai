@@ -17,6 +17,7 @@ conf = ConfigManager(parse_args())
 
 in_w, in_h = conf.getInputSize()
 rgb_res = conf.getRgbResolution()
+mono_res = conf.getMonoResolution()
 median = conf.getMedianFilter()
 
 
@@ -110,7 +111,7 @@ class NNetManager:
                 if conf.args.sync:
                     nn.passthroughDepth.link(nodes.xout_depth.input)
                 # If we want to display spatial bounding boxes, create XLinkOut node SBBs:
-                xout_sbb = self.p.createXLinkOut()
+                xout_sbb = p.createXLinkOut()
                 xout_sbb.setStreamName("sbb")
                 nn.boundingBoxMapping.link(xout_sbb.input)
 
@@ -214,8 +215,9 @@ class PipelineManager:
 
     def create_left_cam(self, create_xout):
         self.nodes.mono_left = self.p.createMonoCamera()
-        self.nodes.mono_left.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        self.nodes.mono_left.setResolution(mono_res)
+        self.nodes.mono_left.setFps(conf.args.mono_fps)
 
         if create_xout:
             self.nodes.xout_left = self.p.createXLinkOut()
@@ -223,8 +225,9 @@ class PipelineManager:
 
     def create_right_cam(self, create_xout):
         self.nodes.mono_right = self.p.createMonoCamera()
-        self.nodes.mono_right.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         self.nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+        self.nodes.mono_right.setResolution(mono_res)
+        self.nodes.mono_right.setFps(conf.args.mono_fps)
 
         if create_xout:
             self.nodes.xout_right = self.p.createXLinkOut()
