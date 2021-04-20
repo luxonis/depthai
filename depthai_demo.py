@@ -366,7 +366,7 @@ class DepthAI:
                           'focus rgb:', dict_['camera']['rgb']['focus_pos'],
                           'left:', dict_['camera']['left']['frame_count'],
                           'right:', dict_['camera']['right']['frame_count'])
-                    if 'imu' in dict_:
+                    if 'imu' in dict_ and 'accel' in dict_["imu"]:
                         print('meta_d2h IMU acceleration xyz [g]:',
                               '{:7.4f}'.format(dict_['imu']['accel']['x']),
                               '{:7.4f}'.format(dict_['imu']['accel']['y']),
