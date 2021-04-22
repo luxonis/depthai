@@ -4,7 +4,7 @@ import json
 import time
 from pathlib import Path
 from types import SimpleNamespace
-
+import random
 import cv2
 import depthai as dai
 import numpy as np
@@ -130,7 +130,7 @@ class NNetManager:
         elif int(label) < len(self.labels):
             return self.labels[int(label)]
         else:
-            print(f"Label of ouf bounds (label_index: {label}, available_labels: {len(self.labels)}")
+            print(f"Label out of bounds (label_index: {label}, available_labels: {len(self.labels)}")
             return label
 
 
@@ -217,7 +217,7 @@ class PipelineManager:
         self.nodes.mono_left = self.p.createMonoCamera()
         self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
         self.nodes.mono_left.setResolution(mono_res)
-        self.nodes.mono_left.setFps(conf.args.mono_fps)
+        self.nodes.mono_left.setFps(conf.args.mono_fps)        
 
         if create_xout:
             self.nodes.xout_left = self.p.createXLinkOut()
@@ -287,6 +287,7 @@ with dai.Device(pm.p) as device:
     frame = None
     detections = []
     # Spatial bounding box ROIs (region of interests)
+    colors = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes 
     color = (255, 255, 255)
 
     while True:
@@ -354,7 +355,7 @@ with dai.Device(pm.p) as device:
                     try:
                         print("Received NN packet: ", to_tensor_result(packet))
                     except Exception as ex:
-                        print("Received NN packet: <Preview unabailable: {}>".format(ex))
+                        print("Received NN packet: <Preview unavailable: {}>".format(ex))
                 fps.tick('nn')
 
         if frame is not None:
@@ -369,22 +370,28 @@ with dai.Device(pm.p) as device:
                     swap = detection.xmin
                     detection.xmin = 1 - detection.xmax
                     detection.xmax = 1 - swap
-
+                    
                 bbox = frame_norm(frame, [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
-                cv2.putText(frame, nn_manager.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), colors, 2)
+                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 78), bbox[1]), colors, cv2.FILLED)
+                cv2.putText(frame, nn_manager.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 78, bbox[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
                 if conf.useDepth: # Display coordinates as well
-                    cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    Ztrackbar = (int(detection.spatialCoordinates.z) * 0.05)
+                    cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
+                    cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
+                    cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
+                    cv2.rectangle(frame, ((bbox[0] - 10), (bbox[1] + 35)), ((bbox[0] - 35), (bbox[1] + 150)), (134, 164, 11), 2)
+                    cv2.rectangle(frame, ((bbox[0] - 10), (bbox[1] + (150 - int(Ztrackbar)))), ((bbox[0] - 35), (bbox[1] + 150)), (134, 164, 11), cv2.FILLED)
+
 
             frame_fps = f"RIGHT FPS: {round(fps.tick_fps('right'), 1)}" if conf.useDepth else f"RGB FPS: {round(fps.tick_fps('rgb'), 1)}"
-            cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.rectangle(frame, (0,0), (120, 40), (255, 255, 255), cv2.FILLED)
 
-            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0))
+            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0))
+
             cv2.imshow(conf.getModelSource(), frame)
-
         if cv2.waitKey(1) == ord('q'):
             break
