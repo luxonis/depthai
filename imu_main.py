@@ -4,6 +4,10 @@ import cv2
 import depthai as dai
 import time
 import math
+from pathlib import Path
+
+curr_path = Path(__file__).parent.resolve()
+print(curr_path)
 
 # Start defining a pipeline
 pipeline = dai.Pipeline()
@@ -16,7 +20,7 @@ xlinkOut.setStreamName("imu")
 # Link plugins CAM -> XLINK
 imu.out.link(xlinkOut.input)
 
-path = '/home/sachin/Downloads/depthai_imu_fw_update.cmd'
+path = str(curr_path) + '/depthai_imu_fw_update.cmd'
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pipeline, path) as device:
     # Start pipeline
