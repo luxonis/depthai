@@ -1,45 +1,53 @@
 #!/usr/bin/env python3
 
-import cv2
-import depthai as dai
+
+import subprocess
 import time
-import math
+import cv2
+import numpy as np
 
-# Start defining a pipeline
-pipeline = dai.Pipeline()
+font = cv2.FONT_HERSHEY_SIMPLEX
+red = (255, 0, 0)
+green = (0, 255, 0)
+image = None
 
-# Define a source - color camera
-imu = pipeline.createIMU()
-xlinkOut = pipeline.createXLinkOut()
-xlinkOut.setStreamName("imu")
+def create_blank(width, height, rgb_color=(0, 0, 0)):
+    """Create new image(numpy array) filled with certain color in RGB"""
+    # Create black blank image
+    image = np.zeros((height, width, 3), np.uint8)
 
-# Link plugins CAM -> XLINK
-imu.out.link(xlinkOut.input)
+    # Since OpenCV uses BGR, convert the color first
+    color = tuple(reversed(rgb_color))
+    # Fill image with color
+    image[:] = color
 
-path = '/home/sachin/Downloads/depthai_imu_fw_update.cmd'
-# Pipeline is defined, now we can connect to the device
-with dai.Device(pipeline, path) as device:
-    # Start pipeline
-    baseTs = time.monotonic()
-    device.startPipeline()
-    print("Starting pipeline...")
+    return image
 
-    # Output queue for imu bulk packets
-    imuQueue = device.getOutputQueue(name="imu", maxSize=4, blocking=False)
+proc = subprocess.Popen(['python3','imu_main.py'],stdout=subprocess.PIPE)
+isFlashed = False
 
-    while True:
-        imuPacket = imuQueue.get()  # blocking call, will wait until a new data has arrived
+start = time.time()
+poll = None
+while poll is None:
+  line = proc.stdout.readline()
+  if not line:
+    break
+  #the real code does filtering here
+  logLine = line.rstrip().decode("unicode_escape")
+  print("text log ->", logLine)
+  if 'Part 10004148 : Version 3.9.7 Build 224' in logLine:
+      isFlashed = True
+      end = time.time()
+      print(end - start)
 
-        imuDatas = imuPacket.imuDatas
-        for imuData in imuDatas:
-            dur = imuData.ts.getTimestamp()
-            # TODO substract base time
-            ffs = "{: .06f}"
-            accelLength = math.sqrt(imuData.accelerometer.x**2 + imuData.accelerometer.y**2 + imuData.accelerometer.z**2)
-            
-            print(f"Timestamp: {dur}")
-            print(f"Accel: {ffs.format(imuData.accelerometer.x)} {ffs.format(imuData.accelerometer.y)} {ffs.format(imuData.accelerometer.z)}, length {ffs.format(accelLength)}")
-            print(f"Gyro:  {ffs.format(imuData.gyro.x)} {ffs.format(imuData.gyro.y)} {ffs.format(imuData.gyro.z)} ")
+if isFlashed:
+    image = create_blank(512, 512, rgb_color=green)
+    cv2.putText(image,'IMU FLASH',(10,250), font, 2,(0,0,0),2)
+    cv2.putText(image,'PASSED',(10,300), font, 2,(0,0,0),2)
+else:
+    image = create_blank(512, 512, rgb_color=red)
+    cv2.putText(image,'IMU FLASH ',(10,250), font, 2,(0,0,0),2)
+    cv2.putText(image,'FAILED',(10,300), font, 2,(0,0,0),2)
 
-        if cv2.waitKey(1) == ord('q'):
-            break
+cv2.imshow("Flash Result",image)
+cv2.waitKey(0)
