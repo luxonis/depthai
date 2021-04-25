@@ -55,7 +55,7 @@ class Streams(enum.Enum):
 
 
 class NNetManager:
-    source_choices = ("rgb", "left", "right", "host")
+    source_choices = ("rgb", "left", "right", "rectified_left", "rectified_right", "host")
     config = None
     nn_family = None
     labels = None
