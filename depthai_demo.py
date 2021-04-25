@@ -151,13 +151,13 @@ class NNetManager:
                 nn.setDepthLowerThreshold(100)
                 nn.setDepthUpperThreshold(3000)
 
-            if conf.args.sbb_scale_factor:
-                nn.setBoundingBoxScaleFactor(conf.args.sbb_scale_factor)
+                if conf.args.sbb_scale_factor:
+                    nn.setBoundingBoxScaleFactor(conf.args.sbb_scale_factor)
 
-            if self.sbb:
-                nodes.xout_sbb = p.createXLinkOut()
-                nodes.xout_sbb.setStreamName("sbb")
-                nn.boundingBoxMapping.link(nodes.xout_sbb.input)
+                if self.sbb:
+                    nodes.xout_sbb = p.createXLinkOut()
+                    nodes.xout_sbb.setStreamName("sbb")
+                    nn.boundingBoxMapping.link(nodes.xout_sbb.input)
 
         return nn
 
@@ -289,7 +289,7 @@ class PipelineManager:
             nn = self.nn_manager.create_nn_pipeline(self.p, self.nodes)
 
             if conf.args.sync:
-                if self.nn_manager.source == "left":
+                if self.nn_manager.source == "rgb":
                     nn.passthrough.link(self.nodes.xout_rgb.input)
                 elif self.nn_manager.source == "left":
                     nn.passthrough.link(self.nodes.xout_left.input)
