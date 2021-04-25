@@ -3,5 +3,7 @@ opencv-python==4.5.1.48
 requests==2.24.0
 argcomplete==1.12.1
 pyyaml==5.3.1
-depthai==2.2.1.0
 blobconverter==0.0.7
+
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+depthai==2.1.0.0.dev0+ca2785cee6f5ad8e85b0844ce69f46e8f5edbc49
