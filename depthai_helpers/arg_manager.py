@@ -6,7 +6,6 @@ try:
     import argcomplete
 except ImportError:
     raise ImportError('\033[1;5;31m argcomplete module not found, run: python3 install_requirements.py \033[0m')
-from argcomplete.completers import ChoicesCompleter
 
 
 def get_immediate_subdirectories(a_dir):
@@ -30,8 +29,8 @@ def check_range(min_val, max_val):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
-    parser.add_argument('-cam', '--camera', action="store_true",
-                        help="Use DepthAI 4K RGB camera for inference (conflicts with -vid)")
+    parser.add_argument('-dev', '--device', choices=["OAK", "OAK-D"], help="Type of DepthAI target device")
+    parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str,
                         help="Path to video file to be used for inference (conflicts with -cam)")
     parser.add_argument('-hq', '--high_quality', action="store_true", default=False,
