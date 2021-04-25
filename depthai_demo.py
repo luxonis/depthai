@@ -121,8 +121,6 @@ class NNetManager:
 
         if self.source == "rgb":
             nodes.cam_rgb.preview.link(nn.input)
-            if conf.args.sync:
-                nn.passthrough.link(nodes.xout_rgb.input)
         elif self.source == "host":
             xin = p.createXLinkIn()
             xin.setStreamName(self.input_name)
