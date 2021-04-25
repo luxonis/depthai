@@ -61,4 +61,8 @@ def parse_args():
                         help="Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: %(default)s")
     parser.add_argument('-sync', '--sync', action="store_true",
                         help="Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute")
+    parser.add_argument("-monor", "--mono_resolution", default=400, type=int, choices=[400,720,800],
+                        help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
+    parser.add_argument("-monof", "--mono_fps", default=30.0, type=float,
+                        help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
     return parser.parse_args()
