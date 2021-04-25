@@ -50,12 +50,18 @@ class ConfigManager:
         return not self.args.disable_depth
 
     def getModelSource(self):
-        if self.useDepth:
-            return "right"
-        elif self.useCamera:
-            return "rgb"
-        else:
+        if not self.useCamera:
             return "host"
+        if self.args.camera == "left":
+            if self.useDepth:
+                return "rectified_left"
+            return "left"
+        if self.args.camera == "right":
+            if self.useDepth:
+                return "rectified_right"
+            return "right"
+        if self.args.camera == "color":
+            return "rgb"
 
     def getModelName(self):
         if self.args.cnn_model:
@@ -151,6 +157,27 @@ class ConfigManager:
             cmd_file = self.args['dev_debug']
 
         return cmd_file, debug_mode
+
+    def adjustParamsToDevice(self):
+        if self.args.device is None:
+            dev_type = input("Device type (OAK = 1, OAK-D = 2): ")
+            if dev_type == "1":
+                self.args.device = "OAK"
+            elif dev_type == "2":
+                self.args.device = "OAK-D"
+            else:
+                raise ValueError("Incorrect device type id supplied: {}".format(dev_type))
+
+        if self.args.device == "OAK":
+            if not self.args.disable_depth:
+                print("Disabling depth...")
+            self.args.disable_depth = True
+            if self.args.spatial_bounding_box:
+                print("Disabling spatial bounding boxes...")
+            self.args.spatial_bounding_box = False
+            if self.args.camera != 'color':
+                print("Switching source to RGB camera...")
+            self.args.camera = 'color'
 
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':
