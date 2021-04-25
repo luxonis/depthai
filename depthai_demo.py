@@ -345,6 +345,7 @@ with dai.Device(pm.p) as device:
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
     seq_num = 0
     frame = None
+    depth_frame = None
     detections = []
     # Spatial bounding box ROIs (region of interests)
     color = (255, 255, 255)
@@ -414,6 +415,9 @@ with dai.Device(pm.p) as device:
                     except Exception as ex:
                         print("Received NN packet: <Preview unabailable: {}>".format(ex))
                 fps.tick('nn')
+
+        if depth_frame is not None:
+            cv2.imshow("depth", depth_frame)
 
         if frame is not None:
             # Scale the frame by --scale factor
