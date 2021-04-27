@@ -17,7 +17,6 @@ import shutil
 from datetime import datetime
 
 import depthai as dai
-import consts.resource_paths
 from depthai_helpers.calibration_utils import *
 
 
@@ -148,7 +147,8 @@ class Main:
         if self.args['board']:
             board_path = Path(self.args['board'])
             if not board_path.exists():
-                board_path = Path(consts.resource_paths.boards_dir_path) / Path(self.args['board'].upper()).with_suffix('.json')
+                board_dir = str((Path(__file__).parent / 'resources/boards').resolve()) + '/'
+                board_path = Path(board_dir) / Path(arg['board'].upper()).with_suffix('.json')
                 if not board_path.exists():
                     raise ValueError('Board config not found: {}'.format(board_path))
             with open(board_path) as fp:
