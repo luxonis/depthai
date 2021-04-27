@@ -40,12 +40,13 @@ def create_blank(width, height, rgb_color=(0, 0, 0)):
 
 def parse_args():
     epilog_text = '''
-    Captures and processes images for disparity depth calibration, generating a `depthai.calib` file
-    that should be loaded when initializing depthai. By default, captures one image for each of the 13 calibration target poses.
+    Captures and processes images for disparity depth calibration, generating a `<device id>.json` file or `depthai_calib.json`
+    that should be loaded when initializing depthai. By default, captures one image for each of the 8 calibration target poses.
 
-    Image capture requires the use of a printed 6x9 OpenCV checkerboard target applied to a flat surface (ex: sturdy cardboard).
-    When taking photos, ensure the checkerboard fits within both the left and right image displays. The board does not need
-    to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
+    Image capture requires the use of a printed OpenCV charuco calibration target applied to a flat surface(ex: sturdy cardboard).
+    Default board size used in this script is 22x16. However you can send a customized one too.
+    When taking photos, ensure enough amount of markers are visible and images are crisp. 
+    The board does not need to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
 
     If the calibration checkerboard corners cannot be found, the user will be prompted to try that calibration pose again.
 
@@ -54,20 +55,14 @@ def parse_args():
 
     Example usage:
 
-    Run calibration with a checkerboard square size of 3.0 cm and baseline of 7.5cm:
-    python3 calibrate.py -s 3.0 -b 7.5
+    Run calibration with a checkerboard square size of 3.0cm and marker size of 2.5cm  on board config file DM2CAM:
+    python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM
 
     Only run image processing only with same board setup. Requires a set of saved capture images:
-    python3 calibrate.py -s 3.0 -b 7.5 -m process
+    python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM -m process
     
-    Change Left/Right baseline to 15cm and swap Left/Right cameras:
-    python3 calibrate.py -b 15 -w False
-
     Delete all existing images before starting image capture:
     python3 calibrate.py -i delete
-
-    Pass thru pipeline config options:
-    python3 calibrate.py -co '{"board_config": {"swap_left_and_right_cameras": true, "left_to_right_distance_cm": 7.5}}'
     '''
     parser = ArgumentParser(epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-c", "--count", default=1,
@@ -257,12 +252,12 @@ class Main:
 
         show((60, int(height / 2 - 40)), "Calibration failed, ")
         show((60, int(height /2)), "Device might be held upside down!")
-        show((60, int(height / 2 + 40)), "Fix orientation"")
+        show((60, int(height / 2 + 40)), "Fix orientation")
         show((60, int(height / 2 + 80)), "and start again")
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + right",info_frame)
+        cv2.imshow("left + right", info_frame)
         cv2.waitKey(0)
         raise Exception("Calibration failed, Camera Might be held upside down. start again!!")
 
