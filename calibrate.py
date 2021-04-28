@@ -98,6 +98,8 @@ def parse_args():
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invert-horizontal", dest="invert_h", default=False, action="store_true",
                         help="Invert horizontal axis of the camera for the display")
+    parser.add_argument("-ep", "--max-epiploar-error", dest="max_epipolar_error", default="1.0", type=float, required=False,
+                        help="Sets the maximum epiploar allowed with rectification")
 
     options = parser.parse_args()
 
@@ -406,16 +408,18 @@ class Main:
 
     def calibrate(self):
         print("Starting image processing")
-        flags = [self.config['board_config']['stereo_center_crop']]
         cal_data = StereoCalibration()
         dest_path = str(Path('resources').absolute())
         
         try:
-            epiploar_error, calibData = cal_data.calibrate(self.dataset_path, self.args['square_size_cm'], "./resources/depthai.calib", 'charuco', arg["squares_x"], arg["squares_y"], self.args['marker_size_cm'])
-            if epiploar_error > 0.6:
+            epiploar_error, calibData = cal_data.calibrate(self.dataset_path, self.args['square_size_cm'], "./resources/depthai.calib", 'charuco', self.args["squares_x"], self.args["squares_y"], self.args['marker_size_cm'])
+            if epiploar_error > self.args['max_epipolar_error']:
                 image = create_blank(900, 512, rgb_color=red)
                 text = "High epiploar_error: " + str(epiploar_error)
                 cv2.putText(image,text ,(10,250), font, 2,(0,0,0),2)
+                text = "Requires Recalibration "
+                cv2.putText(image,text ,(10,300), font, 2,(0,0,0),2)
+
                 cv2.imshow("Result Image",image)
                 cv2.waitKey(0)
                 print("Requires Recalibration.....!!")
@@ -424,18 +428,18 @@ class Main:
             calibration_handler = dai.CalibrationHandler()
             calibration_handler.setBoardInfo(self.board_config['board_config']['swap_left_and_right_cameras'], self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
-            calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.LEFT, calib_data[2], 1280, 800)
-            calibration_handler.setDistortionCoefficients(dai.CameraBoardSocket.LEFT, calib_data[6])
+            calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.LEFT, calibData[2], 1280, 800)
+            calibration_handler.setDistortionCoefficients(dai.CameraBoardSocket.LEFT, calibData[6])
             calibration_handler.setFov(dai.CameraBoardSocket.LEFT, self.board_config['board_config']['left_fov_deg'])
             measuredTranslation = [self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
-            calibration_handler.setCameraExtrinsics(dai.CameraBoardSocket.LEFT, dai.CameraBoardSocket.RGB, calib_data[4], calib_data[5], measuredTranslation)
+            calibration_handler.setCameraExtrinsics(dai.CameraBoardSocket.LEFT, dai.CameraBoardSocket.RGB, calibData[4], calibData[5], measuredTranslation)
 
-            calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.RGB, calib_data[3], 1920, 1080)
-            calibration_handler.setDistortionCoefficients(dai.CameraBoardSocket.RGB, calib_data[7])
+            calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.RGB, calibData[3], 1920, 1080)
+            calibration_handler.setDistortionCoefficients(dai.CameraBoardSocket.RGB, calibData[7])
             calibration_handler.setFov(dai.CameraBoardSocket.RGB, self.board_config['board_config']['rgb_fov_deg'])
             calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, self.focus_value)
-            calibration_handler.setStereoLeft(dai.CameraBoardSocket.LEFT, calib_data[0])
-            calibration_handler.setStereoRight(dai.CameraBoardSocket.RGB, calib_data[1])
+            calibration_handler.setStereoLeft(dai.CameraBoardSocket.LEFT, calibData[0])
+            calibration_handler.setStereoRight(dai.CameraBoardSocket.RGB, calibData[1])
                         
             resImage = None
             if not self.device.isClosed():
@@ -452,19 +456,25 @@ class Main:
                     is_write_succesful = self.device.flashCalibration(calibration_handler)
                 if is_write_succesful:
                     resImage = create_blank(900, 512, rgb_color=green)
-                    text = "Calibration Succesful with Epipolar error of " + str(epiploar_error)
+                    text = "Calibration Succesful with" + str(epiploar_error)
                     cv2.putText(resImage, text ,(10,250), font, 2,(0,0,0),2)
+                    text = "Epipolar error of " + str(epiploar_error)
+                    cv2.putText(resImage, text ,(10,300), font, 2,(0,0,0),2)
                 else :
                     resImage = create_blank(900, 512, rgb_color=red)
-                    text = "EEprom Write Failed!! Try recalibrating " + str(epiploar_error)
+                    text = "EEprom Write Failed!! " + str(epiploar_error)
                     cv2.putText(resImage, text ,(10,250), font, 2,(0,0,0),2)
+                    text = "Try recalibrating !!"
+                    cv2.putText(resImage, text ,(10,300), font, 2,(0,0,0),2)
             else :
                 calib_dest_path = dest_path + '/depthai_calib.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
                 resImage = create_blank(900, 512, rgb_color=red)
-                text = "Calibratin succesful. Device not found to write to EEPROM " + str(epiploar_error)
+                text = "Calibratin succesful. " + str(epiploar_error)
                 cv2.putText(resImage, text ,(10,250), font, 2,(0,0,0),2)
-
+                text = "Device not found to write to EEPROM"
+                cv2.putText(resImage, text ,(10,300), font, 2,(0,0,0),2)
+                
             if resImage is not None :
                 cv2.imshow("Result Image",resImage)
                 cv2.waitKey(0)

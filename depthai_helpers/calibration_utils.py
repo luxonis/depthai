@@ -23,19 +23,19 @@ def setPolygonCoordinates(height, width):
 
             [[margin,0], [margin,height], [width//2, height-slope], [width//2, slope]],
             [[horizontal_shift, 0], [horizontal_shift, height], [width//2 + horizontal_shift, height-slope], [width//2 + horizontal_shift, slope]],
-            [[horizontal_shift*2-margin, 0], [horizontal_shift*2-margin, height], [width//2 + horizontal_shift*2-margin, height-slope], [width//2 + horizontal_shift*2-margin, slope]],
+            # [[horizontal_shift*2-margin, 0], [horizontal_shift*2-margin, height], [width//2 + horizontal_shift*2-margin, height-slope], [width//2 + horizontal_shift*2-margin, slope]],
 
             [[width-margin, 0], [width-margin, height], [width//2, height-slope], [width//2, slope]],
             [[width-horizontal_shift, 0], [width-horizontal_shift, height], [width//2-horizontal_shift, height-slope], [width//2-horizontal_shift, slope]],
-            [[width-horizontal_shift*2+margin, 0], [width-horizontal_shift*2+margin, height], [width//2-horizontal_shift*2+margin, height-slope], [width//2-horizontal_shift*2+margin, slope]],
+            # [[width-horizontal_shift*2+margin, 0], [width-horizontal_shift*2+margin, height], [width//2-horizontal_shift*2+margin, height-slope], [width//2-horizontal_shift*2+margin, slope]],
 
             [[0,margin], [width, margin], [width-slope, height//2], [slope, height//2]],
             [[0,vertical_shift], [width, vertical_shift], [width-slope, height//2+vertical_shift], [slope, height//2+vertical_shift]],
-            [[0,vertical_shift*2-margin], [width, vertical_shift*2-margin], [width-slope, height//2+vertical_shift*2-margin], [slope, height//2+vertical_shift*2-margin]],
+            # [[0,vertical_shift*2-margin], [width, vertical_shift*2-margin], [width-slope, height//2+vertical_shift*2-margin], [slope, height//2+vertical_shift*2-margin]],
 
             [[0,height-margin], [width, height-margin], [width-slope, height//2], [slope, height//2]],
             [[0,height-vertical_shift], [width, height-vertical_shift], [width-slope, height//2-vertical_shift], [slope, height//2-vertical_shift]],
-            [[0,height-vertical_shift*2+margin], [width, height-vertical_shift*2+margin], [width-slope, height//2-vertical_shift*2+margin], [slope, height//2-vertical_shift*2+margin]]
+            # [[0,height-vertical_shift*2+margin], [width, height-vertical_shift*2+margin], [width-slope, height//2-vertical_shift*2+margin], [slope, height//2-vertical_shift*2+margin]]
         ]
     return p_coordinates
 
@@ -887,23 +887,23 @@ class StereoCalibration(object):
 
     def test_epipolar_charuco_rgb(self, dataset_dir):
         images_rgb = glob.glob(dataset_dir + '/rgb/*.png')
-        images_right = glob.glob(dataset_dir + '/left/*.png')
+        images_left = glob.glob(dataset_dir + '/left/*.png')
         images_rgb.sort()
-        images_right.sort()
-        print("HU IHER")
+        images_left.sort()
+        print("<-----------------HU IHER---------------->")
         assert len(images_rgb) != 0, "ERROR: Images not read correctly"
-        assert len(images_right) != 0, "ERROR: Images not read correctly"
+        assert len(images_left) != 0, "ERROR: Images not read correctly"
         # criteria for marker detection/corner detections
         criteria = (cv2.TERM_CRITERIA_EPS +
                     cv2.TERM_CRITERIA_MAX_ITER, 100, 0.00001)
-        scale_width = 1280/self.img_shape_rgb[0]
-        print('scaled using {0}'.format(self.img_shape_rgb[0]))
+        scale_width = 1280/self.img_shape_rgb_scaled[0]
+        print('scaled using {0}'.format(self.img_shape_rgb_scaled[0]))
 
         # if not use_homo:
         mapx_rgb, mapy_rgb = cv2.initUndistortRectifyMap(
-            self.M3_scaled, self.d3_scaled, self.R2_rgb, self.P1_rgb, self.img_shape_rgb_scaled, cv2.CV_32FC1)
+            self.M3_scaled, self.d3_scaled, self.R2_rgb, self.M3_scaled, self.img_shape_rgb_scaled, cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
-            self.M2_rgb, self.d2_rgb, self.R1_rgb, self.P2_rgb, self.img_shape_rgb_scaled, cv2.CV_32FC1)
+            self.M2_rgb, self.d2_rgb, self.R1_rgb, self.M3_scaled, self.img_shape_rgb_scaled, cv2.CV_32FC1)
 
         # self.H1_rgb = np.matmul(np.matmul(self.M2, self.R1_rgb),
         #                     np.linalg.inv(M_rgb))
@@ -912,16 +912,18 @@ class StereoCalibration(object):
 
         image_data_pairs = []
         count = 0
-        for image_rgb, image_right in zip(images_rgb, images_right):
+        for image_rgb, image_right in zip(images_rgb, images_left):
             # read images
             img_rgb = cv2.imread(image_rgb, 0)
-            img_r = cv2.imread(image_right, 0)
-            img_r = img_r[40: 760, :]
+            img_l = cv2.imread(image_right, 0)
+            img_l = img_l[40: 760, :]
             # TODO(sachin): replace Hard coded scaleratio for rgb resize
             dest_res = (int(img_rgb.shape[1] * scale_width),
                         int(img_rgb.shape[0] * scale_width))
-            img_rgb = cv2.resize(
-                img_rgb, dest_res, interpolation=cv2.INTER_CUBIC)
+            print("RGB size ....")
+            print(img_rgb.shape)
+            print(dest_res)
+
             if img_rgb.shape[0] < 720:
                 raise RuntimeError("resizeed height of rgb is smaller than required. {0} < {1}".format(
                     img_rgb.shape[0], req_resolution[0]))
@@ -947,9 +949,9 @@ class StereoCalibration(object):
             #                             cv2.WARP_INVERSE_MAP)
 
             img_rgb = cv2.remap(img_rgb, mapx_rgb, mapy_rgb, cv2.INTER_LINEAR)
-            img_r = cv2.remap(img_r, mapx_r, mapy_r, cv2.INTER_LINEAR)
+            img_l = cv2.remap(img_l, mapx_r, mapy_r, cv2.INTER_LINEAR)
             # self.parse_frame(img_rgb, "rectified_rgb", "rectified_"+str(count))
-            image_data_pairs.append((img_rgb, img_r))
+            image_data_pairs.append((img_l, img_rgb))
             count += 1
 
         # here anything with _l represents rgb camera
@@ -957,7 +959,7 @@ class StereoCalibration(object):
         # compute metrics
         imgpoints_r = []
         imgpoints_l = []
-        for image_data_pair in image_data_pairs:
+        for i, image_data_pair in enumerate(image_data_pairs):
             #             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             marker_corners_l, ids_l, rejectedImgPoints = cv2.aruco.detectMarkers(
                 image_data_pair[0], self.aruco_dictionary)
@@ -971,17 +973,6 @@ class StereoCalibration(object):
                                                                             marker_corners_r, ids_r,
                                                                             rejectedCorners=rejectedImgPoints)
 
-#             if len(marker_corners_l)>0 and len(marker_corners_r)>0:
-#                 for corner in marker_corners_l:
-#                     cv2.cornerSubPix(image_data_pair[0], corner,
-#                                      winSize = (5,5),
-#                                      zeroZone = (-1,-1),
-#                                      criteria = criteria)
-#                 for corner in marker_corners_r:
-#                     cv2.cornerSubPix(image_data_pair[1], corner,
-#                                      winSize = (5,5),
-#                                      zeroZone = (-1,-1),
-#                                      criteria = criteria)
             res2_l = cv2.aruco.interpolateCornersCharuco(
                 marker_corners_l, ids_l, image_data_pair[0], self.board)
             res2_r = cv2.aruco.interpolateCornersCharuco(
@@ -1006,21 +997,17 @@ class StereoCalibration(object):
                     continue
                 corners_l.append(res2_l[1][j])
                 corners_r.append(res2_r[1][idx])
-#                 obj_pts_sub.append(one_pts[allIds_l[i][j]])
-
-#             obj_pts.append(np.array(obj_pts_sub, dtype=np.float32))
-#             left_sub_corners_sampled.append(np.array(left_sub_corners, dtype=np.float32))
-#             right_sub_corners_sampled.append(np.array(right_sub_corners, dtype=np.float32))
 
             imgpoints_l.extend(corners_l)
             imgpoints_r.extend(corners_r)
             epi_error_sum = 0
             for l_pt, r_pt in zip(corners_l, corners_r):
                 epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
-
-            print("Average Epipolar Error per image on host on rgb_right: " +
+            img_pth = Path(images_left[i])
+            # name = img_pth.name
+            print("Average Epipolar Error per image on host in " + img_pth.name + " : " +
                   str(epi_error_sum / len(corners_l)))
-
+            
         epi_error_sum = 0
         for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):
             epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
@@ -1029,3 +1016,4 @@ class StereoCalibration(object):
         print("Average Epipolar Error of rgb_right: " + str(avg_epipolar))
 
         return avg_epipolar
+
