@@ -10,7 +10,7 @@ from types import SimpleNamespace
 import cv2
 import depthai as dai
 from depthai_helpers.version_check import check_depthai_version
-import numpy as np
+import platform
 
 from depthai_helpers.arg_manager import parse_args
 from depthai_helpers.config_manager import BlobManager, ConfigManager
