@@ -9,11 +9,17 @@ from types import SimpleNamespace
 
 import cv2
 import depthai as dai
+from depthai_helpers.version_check import check_depthai_version
 import numpy as np
 
 from depthai_helpers.arg_manager import parse_args
 from depthai_helpers.config_manager import BlobManager, ConfigManager
 from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result
+
+print('Using depthai module from: ', dai.__file__)
+print('Depthai version installed: ', dai.__version__)
+if platform.machine() not in ['armv6l', 'aarch64']:
+    check_depthai_version()
 
 conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
@@ -300,7 +306,7 @@ class PipelineManager:
 
                 if hasattr(self.nodes, 'xout_depth'):
                     nn.passthroughDepth.link(self.nodes.xout_depth.input)
-    
+
 
 nn_manager = NNetManager(
     model_name=conf.getModelName(),
@@ -347,6 +353,10 @@ with dai.Device(pm.p) as device:
     detections = []
     # Spatial bounding box ROIs (region of interests)
     color = (255, 255, 255)
+
+    if depth_out is not None:
+        cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
+    cv2.namedWindow(current_stream.name, cv2.WINDOW_NORMAL)
 
     while True:
         fps.next_iter()

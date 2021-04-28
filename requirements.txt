@@ -1,7 +1,7 @@
-numpy==1.19.5
-opencv-python==4.5.1.48
+numpy==1.19.5; platform_machine != "aarch64"
+opencv-python==4.5.1.48; platform_machine != "aarch64"
 requests==2.24.0
 argcomplete==1.12.1
-pyyaml==5.3.1
+pyyaml==5.4; platform_machine != "aarch64"
 depthai==2.2.1.0
 blobconverter==0.0.7

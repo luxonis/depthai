@@ -12,6 +12,7 @@ def get_version_from_requirements():
             if not line.startswith('#'):
                 try:
                     version = line.split('==')[1]
+                    version = version.split(';')[0]
                     #remove any whitespace
                     version = version.strip()
                 except:

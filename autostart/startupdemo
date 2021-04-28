@@ -1,0 +1,16 @@
+#!/bin/bash
+sleep 1
+echo Loading OpenVINO Paths
+source /opt/intel/openvino/bin/setupvars.sh
+source /home/pi/.bashrc
+echo Resetting the Myriad X module
+raspi-gpio set 33 op  # set 33 as output
+raspi-gpio set 33 dh  # drive high to reset Myriad X
+sleep 1
+raspi-gpio set 33 dl  # drive low to allow Myriad X to run
+echo Booting DepthAI
+echo Loading Start-up Demo Application...
+sleep 1
+cd /home/pi/Desktop/depthai
+python3 depthai_demo.py
+sleep 60
