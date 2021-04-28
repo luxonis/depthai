@@ -108,24 +108,22 @@ def parse_args():
 
     return options
 
-def test_camera_orientation(frame_l, frame_r):
-    chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
-    # termination criteria
-    frame_l = cv2.cvtColor(frame_l, cv2.COLOR_RGB2GRAY)
-    frame_r = cv2.cvtColor(frame_r, cv2.COLOR_RGB2GRAY)
-    criteria = (cv2.TERM_CRITERIA_MAX_ITER +
-                    cv2.TERM_CRITERIA_EPS, 30, 0.001)
-    ret, corners_l =  cv2.findChessboardCorners(frame_l, (9, 6), chessboard_flags)
-    ret, corners_r =  cv2.findChessboardCorners(frame_r, (9, 6), chessboard_flags)
-    rt = cv2.cornerSubPix(frame_l, corners_l, (5, 5),
-                                      (-1, -1), criteria)
-    rt = cv2.cornerSubPix(frame_r, corners_r, (5, 5),
-                                      (-1, -1), criteria)
+# def test_camera_orientation(frame_l, frame_r):
+#     chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
+#     # termination criteria
+#     criteria = (cv2.TERM_CRITERIA_MAX_ITER +
+#                     cv2.TERM_CRITERIA_EPS, 30, 0.001)
+#     ret, corners_l =  cv2.findChessboardCorners(frame_l, (9, 6), chessboard_flags)
+#     ret, corners_r =  cv2.findChessboardCorners(frame_r, (9, 6), chessboard_flags)
+#     rt = cv2.cornerSubPix(frame_l, corners_l, (5, 5),
+#                                       (-1, -1), criteria)
+#     rt = cv2.cornerSubPix(frame_r, corners_r, (5, 5),
+#                                       (-1, -1), criteria)
     
-    for left, right in zip(corners_l, corners_r):
-        if left[0][0] - right[0][0] < 0:
-            return False
-    return True
+#     for left, right in zip(corners_l, corners_r):
+#         if left[0][0] - right[0][0] < 0:
+#             return False
+#     return True
 
 class Main:
     output_scale_factor = 0.5
@@ -359,10 +357,10 @@ class Main:
                 # cv2.imshow(packet.stream_name, small_frame)
                 frame_list.append(small_frame)
 
-                if captured_left and captured_right:
+                if captured_left and captured_color:
                     print(f"Images captured --> {self.images_captured}")
-                    if not self.images_captured and not test_camera_orientation(captured_left_frame, captured_right_frame):
-                        self.show_failed_orientation()
+                    # if not self.images_captured and not test_camera_orientation(captured_left_frame, captured_color_frame):
+                    #     self.show_failed_orientation()
                     self.images_captured += 1
                     self.images_captured_polygon += 1
                     capturing = False
