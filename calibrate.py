@@ -15,6 +15,8 @@ import os
 from pathlib import Path
 import shutil
 from datetime import datetime
+from argparse import ArgumentParser
+import argparse
 
 import depthai as dai
 from depthai_helpers.calibration_utils import *
@@ -85,7 +87,7 @@ def parse_args():
     parser.add_argument("-m", "--mode", default=['capture','process'], nargs='*',
                         type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
-    parser.add_argument("-brd", "--board", default=None, type=str,
+    parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
                             "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
     # parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
@@ -138,12 +140,13 @@ class Main:
         self.args = vars(parse_args())
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
-
+        self.focus_value = 135
+         
         if self.args['board']:
             board_path = Path(self.args['board'])
             if not board_path.exists():
                 board_dir = str((Path(__file__).parent / 'resources/boards').resolve()) + '/'
-                board_path = Path(board_dir) / Path(arg['board'].upper()).with_suffix('.json')
+                board_path = Path(board_dir) / Path(self.args['board'].upper()).with_suffix('.json')
                 if not board_path.exists():
                     raise ValueError('Board config not found: {}'.format(board_path))
             with open(board_path) as fp:
@@ -156,8 +159,8 @@ class Main:
         self.device = dai.Device(pipeline)
         self.device.startPipeline()
 
-        self.left_camera_queue = self.device.getOutputQueue("left", 5, False)
-        self.rgb_camera_queue  = self.device.getOutputQueue("rgb", 5, False)
+        self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
+        self.rgb_camera_queue  = self.device.getOutputQueue("rgb", 30, True)
         
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
@@ -173,10 +176,12 @@ class Main:
         xout_left     = pipeline.createXLinkOut()
         xout_rgb_isp  = pipeline.createXLinkOut()
 
-        rgb_cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        rgb_cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
         rgb_cam.setInterleaved(False)
         rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-        rgb_cam.initialControl.setManualFocus(135)
+        rgb_cam.setIspScale(1, 3)
+        rgb_cam.initialControl.setManualFocus(self.focus_value)
+        # rgb_cam.initialControl.setManualFocus(135)
         rgb_cam.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 
         cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
@@ -187,9 +192,10 @@ class Main:
         cam_left.out.link(xout_left.input)
 
         xout_rgb_isp.setStreamName("rgb")
-        rgb_cam.video.link(xout_rgb_isp.input)
+        rgb_cam.isp.link(xout_rgb_isp.input)
         # rgb_cam.isp.link(xout_rgb_isp.input)
         return pipeline
+
 
     def parse_frame(self, frame, stream_name):
         if not is_markers_found(frame):
@@ -272,8 +278,8 @@ class Main:
         recent_color = None
         # with self.get_pipeline() as pipeline:
         while not finished:
-            recent_left = self.left_camera_queue.get()
-            recent_color = self.rgb_camera_queue.get()
+            recent_left = self.left_camera_queue.tryGet()
+            recent_color = self.rgb_camera_queue.tryGet()
 
             recent_frames = [('left', recent_left), ('rgb', recent_color)]
             # recent_left = left_frame.getCvFrame()
@@ -291,19 +297,25 @@ class Main:
                 capturing = True
 
             frame_list = []
-            if self.polygons is None:
-                self.height, self.width, _ = frame.shape
-                self.polygons = setPolygonCoordinates(self.height, self.width)
-
             # left_frame = recent_left.getCvFrame()
             # rgb_frame = recent_color.getCvFrame()
 
             for packet in recent_frames:
                 frame = packet[1].getCvFrame()
-                frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+                print(packet[0])
+                # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+                if packet[0] == 'rgb':
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                print(frame.shape)
+                if self.polygons is None:
+                    self.height, self.width = frame.shape
+                    print(self.height, self.width)
+                    self.polygons = setPolygonCoordinates(self.height, self.width)
+
                 print("Timestamp difference ---> ")
-                print(abs(recent_left.getTimestamp() - recent_color.getTimestamp()))
-                if capturing and abs(recent_left.getTimestamp() - recent_color.getTimestamp()) < 0.001:
+                print((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds)
+                # print(type(recent_left.getTimestamp())
+                if capturing and abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds) < 40000:
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
                         tried_left = True
@@ -324,7 +336,7 @@ class Main:
                     frame = cv2.flip(frame, 1)
 
                 cv2.putText(
-                    left_frame,
+                    frame,
                     "Polygon Position: {}. Captured {} of {} images.".format(
                         self.current_polygon + 1, self.images_captured, self.total_images
                     ),
@@ -370,6 +382,8 @@ class Main:
                         break
             
             # combine_img = np.hstack((frame_list[0], frame_list[1]))
+            print(frame_list[0].shape)
+            print(frame_list[1].shape)
             combine_img = np.vstack((frame_list[0], frame_list[1]))
 
             cv2.imshow("left + rgb",combine_img)

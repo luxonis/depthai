@@ -5,7 +5,6 @@ import shutil
 import numpy as np
 import re
 import time
-import consts.resource_paths
 import json
 import cv2.aruco as aruco
 from pathlib import Path
@@ -364,7 +363,8 @@ class StereoCalibration(object):
         print("~~~~~~~~~~~~~RMS error of left~~~~~~~~~~~~~~")
         print(ret_l)
 
-''' COmmenting out RGB calibration here............
+        ''' 
+        COmmenting out RGB calibration here............
         if self.calibrate_rgb:
             print("~~~~~~~~~~~ POSE ESTIMATION RGB CAMERA FULL RES~~~~~~~~~~~~~")
             allCorners_rgb, allIds_rgb, _, _, imsize_rgb, _ = self.analyze_charuco(
@@ -377,7 +377,8 @@ class StereoCalibration(object):
         if self.calibrate_rgb:
             print(ret_rgb)
         print(ret_l)
-'''
+        '''
+        
         # left_corners_sampled = []
         # right_corners_sampled = []
         # obj_pts = []
