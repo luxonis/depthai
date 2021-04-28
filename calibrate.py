@@ -108,22 +108,7 @@ def parse_args():
 
     return options
 
-# def test_camera_orientation(frame_l, frame_r):
-#     chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
-#     # termination criteria
-#     criteria = (cv2.TERM_CRITERIA_MAX_ITER +
-#                     cv2.TERM_CRITERIA_EPS, 30, 0.001)
-#     ret, corners_l =  cv2.findChessboardCorners(frame_l, (9, 6), chessboard_flags)
-#     ret, corners_r =  cv2.findChessboardCorners(frame_r, (9, 6), chessboard_flags)
-#     rt = cv2.cornerSubPix(frame_l, corners_l, (5, 5),
-#                                       (-1, -1), criteria)
-#     rt = cv2.cornerSubPix(frame_r, corners_r, (5, 5),
-#                                       (-1, -1), criteria)
-    
-#     for left, right in zip(corners_l, corners_r):
-#         if left[0][0] - right[0][0] < 0:
-#             return False
-#     return True
+
 
 class Main:
     output_scale_factor = 0.5
@@ -165,7 +150,31 @@ class Main:
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
         return not (len(marker_corners) < 30)
-    
+
+    def test_camera_orientation(self, frame_l, frame_r):
+        marker_corners_l, id_l, _ = cv2.aruco.detectMarkers(
+                                frame_l, self.aruco_dictionary)
+        marker_corners_r, id_r, _ = cv2.aruco.detectMarkers(
+                                frame_r, self.aruco_dictionary)
+        print(marker_corners_l)
+        print("-------------------------------")
+        print(marker_corners_r)
+        print("-------------------------------")
+        print(id_l)
+        print("-------------------------------")
+        print(id_r)
+        print("-------------------------------")
+        print(id_l[0])
+        for i, left_id in enumerate(id_l):
+            idx = np.where(id_r == left_id)
+            print(idx)
+            if idx[0].size == 0:
+                continue
+            for left_corner, right_corner in zip(marker_corners_l[i], marker_corners_r[idx[0][0]]):
+                if left_corner[0][0] - right_corner[0][0] < 0:
+                    return False
+        return True
+
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
@@ -359,8 +368,8 @@ class Main:
 
                 if captured_left and captured_color:
                     print(f"Images captured --> {self.images_captured}")
-                    # if not self.images_captured and not test_camera_orientation(captured_left_frame, captured_color_frame):
-                    #     self.show_failed_orientation()
+                    if not self.images_captured and not self.test_camera_orientation(captured_left_frame, captured_color_frame):
+                        self.show_failed_orientation()
                     self.images_captured += 1
                     self.images_captured_polygon += 1
                     capturing = False
