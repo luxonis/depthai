@@ -198,7 +198,7 @@ class Main:
 
 
     def parse_frame(self, frame, stream_name):
-        if not is_markers_found(frame):
+        if not self.is_markers_found(frame):
             return False
 
         filename = image_filename(stream_name, self.current_polygon, self.images_captured)
@@ -278,15 +278,22 @@ class Main:
         recent_color = None
         # with self.get_pipeline() as pipeline:
         while not finished:
-            recent_left = self.left_camera_queue.tryGet()
-            recent_color = self.rgb_camera_queue.tryGet()
-
-            recent_frames = [('left', recent_left), ('rgb', recent_color)]
+            current_left = self.left_camera_queue.tryGet()
+            current_color = self.rgb_camera_queue.tryGet()
+            # print("HI")
+            
             # recent_left = left_frame.getCvFrame()
             # recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
+            if not current_left is None:
+                recent_left = current_left
+            if not current_color is None:
+                recent_color = current_color
 
             if recent_left is None or recent_color is None:
+                print("Continuing...")
                 continue
+
+            recent_frames = [('left', recent_left), ('rgb', recent_color)]
 
             key = cv2.waitKey(1)
             if key == 27 or key == ord("q"):
@@ -315,12 +322,12 @@ class Main:
                 print("Timestamp difference ---> ")
                 print((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds)
                 # print(type(recent_left.getTimestamp())
-                if capturing and abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds) < 40000:
+                if capturing and abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds) < 30000:
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
                         tried_left = True
                         captured_left_frame = frame.copy()
-                    elif packet[0] == 'rgb' and not tried_right:
+                    elif packet[0] == 'rgb' and not tried_color:
                         captured_color = self.parse_frame(frame, packet[0])
                         tried_color = True
                         captured_color_frame = frame.copy()
@@ -363,7 +370,7 @@ class Main:
                     tried_color = False
                     captured_left = False
                     captured_color = False
-                elif tried_left and tried_right:
+                elif tried_left and tried_color:
                     self.show_failed_capture_frame()
                     capturing = False
                     tried_left = False
