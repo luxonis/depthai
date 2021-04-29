@@ -166,7 +166,9 @@ class ConfigManager:
 
         return cmd_file, debug_mode
 
-    def adjustParamsToDevice(self):
+    def adjustParamsToDevice(self, device):
+        cams = device.getConnectedCameras()
+        print(cams)
         if self.args.device is None:
             dev_type = input("Device type (OAK = 1, OAK-D = 2): ")
             if dev_type == "1":

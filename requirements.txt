@@ -3,5 +3,7 @@ opencv-python==4.5.1.48; platform_machine != "aarch64"
 requests==2.24.0
 argcomplete==1.12.1
 pyyaml==5.4; platform_machine != "aarch64"
-depthai==2.2.1.0
 blobconverter==0.0.8
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+depthai==2.2.1.0.dev+d42e8ab024956bc828c499d54f567959f06aaaea
+

@@ -23,7 +23,6 @@ if platform.machine() not in ['armv6l', 'aarch64']:
 
 conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
-conf.adjustParamsToDevice()
 
 in_w, in_h = conf.getInputSize()
 rgb_res = conf.getRgbResolution()
@@ -308,33 +307,34 @@ class PipelineManager:
                     nn.passthroughDepth.link(self.nodes.xout_depth.input)
 
 
-nn_manager = NNetManager(
-    model_name=conf.getModelName(),
-    model_dir=conf.getModelDir(),
-    source=conf.getModelSource(),
-    use_depth=conf.useDepth,
-    use_hq=conf.useHQ
-)
-
-pm = PipelineManager(nn_manager)
-
-if conf.args.camera == "left":
-    pm.create_left_cam()
-elif conf.args.camera == "right":
-    pm.create_right_cam()
-elif conf.args.camera == "color":
-    pm.create_color_cam(conf.useHQ)
-
-if conf.useDepth:
-    pm.create_depth(conf.args.disparity_confidence_threshold, median, conf.args.stereo_lr_check)
-
-pm.create_nn()
-
-
 # Pipeline is defined, now we can connect to the device
-with dai.Device(pm.p) as device:
+with dai.Device() as device:
+    conf.adjustParamsToDevice(device)
+
+    nn_manager = NNetManager(
+        model_name=conf.getModelName(),
+        model_dir=conf.getModelDir(),
+        source=conf.getModelSource(),
+        use_depth=conf.useDepth,
+        use_hq=conf.useHQ
+    )
+
+    pm = PipelineManager(nn_manager)
+
+    if conf.args.camera == "left":
+        pm.create_left_cam()
+    elif conf.args.camera == "right":
+        pm.create_right_cam()
+    elif conf.args.camera == "color":
+        pm.create_color_cam(conf.useHQ)
+
+    if conf.useDepth:
+        pm.create_depth(conf.args.disparity_confidence_threshold, median, conf.args.stereo_lr_check)
+
+    pm.create_nn()
+
     # Start pipeline
-    device.startPipeline()
+    device.startPipeline(pm.p)
     pm.create_default_queues(device)
     nn_in = device.getInputQueue(nn_manager.input_name, maxSize=1, blocking=False) if not conf.useCamera else None
     nn_out = device.getOutputQueue(nn_manager.output_name, maxSize=1, blocking=False)
