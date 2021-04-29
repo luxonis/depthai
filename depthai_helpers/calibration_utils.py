@@ -185,13 +185,6 @@ class StereoCalibration(object):
                 print()
                 print(h2)
 
-        # self.create_save_mesh()
-
-        # append specific flags to file
-        # with open(out_filepath, "ab") as fp:
-        #     fp.write(bytearray(flags))
-
-        print("Calibration file written to %s." % (out_filepath))
         print("\tTook %i seconds to run image processing." %
               (round(time.time() - start_time, 2)))
 
@@ -954,8 +947,6 @@ class StereoCalibration(object):
             image_data_pairs.append((img_l, img_rgb))
             count += 1
 
-        # here anything with _l represents rgb camera
-        # TODO(sachin): change it to _rgb once everything is stable
         # compute metrics
         imgpoints_r = []
         imgpoints_l = []
