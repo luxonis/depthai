@@ -177,7 +177,7 @@ class NNetManager:
 
 class FPSHandler:
     def __init__(self, cap=None):
-        self.timestamp = time.time()
+        self.timestamp = time.monotonic()
         self.start = None
         self.framerate = cap.get(cv2.CAP_PROP_FPS) if cap is not None else None
 
@@ -187,26 +187,26 @@ class FPSHandler:
 
     def next_iter(self):
         if self.start is None:
-            self.start = time.time()
+            self.start = time.monotonic()
 
         if not conf.useCamera:
             frame_delay = 1.0 / self.framerate
-            delay = (self.timestamp + frame_delay) - time.time()
+            delay = (self.timestamp + frame_delay) - time.monotonic()
             if delay > 0:
                 time.sleep(delay)
-        self.timestamp = time.time()
+        self.timestamp = time.monotonic()
         self.frame_cnt += 1
 
     def tick(self, name):
         if name in self.ticks:
             self.ticks_cnt[name] += 1
         else:
-            self.ticks[name] = time.time()
+            self.ticks[name] = time.monotonic()
             self.ticks_cnt[name] = 0
 
     def tick_fps(self, name):
         if name in self.ticks:
-            time_diff = time.time() - self.ticks[name]
+            time_diff = time.monotonic() - self.ticks[name]
             return self.ticks_cnt[name] / time_diff if time_diff != 0 else 0
         else:
             return 0
@@ -214,7 +214,8 @@ class FPSHandler:
     def fps(self):
         if self.start is None:
             return 0
-        return self.frame_cnt / (self.timestamp - self.start)
+        time_diff = self.timestamp - self.start
+        return self.frame_cnt / time_diff if time_diff != 0 else 0
 
 
 class PipelineManager:
