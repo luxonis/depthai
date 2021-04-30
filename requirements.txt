@@ -5,5 +5,5 @@ argcomplete==1.12.1
 pyyaml==5.4; platform_machine != "aarch64"
 blobconverter==0.0.8
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.2.1.0.dev+311b68de0b0cfcdc3aaf4ba5f233acc4b93527de
+depthai==2.2.1.0.dev+8c74305ed35e85d2f0cb301718e09bfae5267100
 

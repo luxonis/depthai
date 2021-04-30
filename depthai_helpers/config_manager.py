@@ -191,6 +191,22 @@ class ConfigManager:
                 "Disconnect/connect usb cable on host! \n", PrintColors.RED)
                 os._exit(1)
 
+    def getDeviceInfo(self):
+        device_infos = dai.Device.getAllAvailableDevices()
+        if len(device_infos) == 0:
+            raise RuntimeError("No DepthAI device found!")
+        elif len(device_infos) == 1:
+            return device_infos[0]
+        else:
+            print("Available devices:")
+            for i, device_info in enumerate(device_infos):
+                print(f"[{i}] {device_info.getMxId()} [{device_info.state.name}]")
+            val = input("Which DepthAI Device you want to use: ")
+            try:
+                return device_infos[int(val)]
+            except:
+                raise ValueError("Incorrect value supplied: {}".format(val))
+
 
 class BlobManager:
     def __init__(self, model_name=None, model_dir=None):

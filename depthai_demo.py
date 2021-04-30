@@ -308,8 +308,10 @@ class PipelineManager:
                     nn.passthroughDepth.link(self.nodes.xout_depth.input)
 
 
+device_info = conf.getDeviceInfo()
+
 # Pipeline is defined, now we can connect to the device
-with dai.Device() as device:
+with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     conf.adjustParamsToDevice(device)
 
     nn_manager = NNetManager(
