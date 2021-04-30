@@ -168,17 +168,9 @@ class ConfigManager:
 
     def adjustParamsToDevice(self, device):
         cams = device.getConnectedCameras()
-        print(cams)
-        if self.args.device is None:
-            dev_type = input("Device type (OAK = 1, OAK-D = 2): ")
-            if dev_type == "1":
-                self.args.device = "OAK"
-            elif dev_type == "2":
-                self.args.device = "OAK-D"
-            else:
-                raise ValueError("Incorrect device type id supplied: {}".format(dev_type))
+        depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
 
-        if self.args.device == "OAK":
+        if not depth_enabled:
             if not self.args.disable_depth:
                 print("Disabling depth...")
             self.args.disable_depth = True
