@@ -24,7 +24,7 @@ python3 install_requirements.py
 ```
 $ depthai_demo.py --help
 
-usage: depthai_demo.py [-h] [-nd] [-dev {OAK,OAK-D}] [-cam {left,right,color}]
+usage: depthai_demo.py [-h] [-nd] [-cam {left,right,color}]
                        [-vid VIDEO] [-hq] [-dd] [-cnnp CNN_PATH]
                        [-cnn CNN_MODEL] [-sh SHAVES]
                        [-cnn-size CNN_INPUT_SIZE] [-rgbr {1080,2160,3040}]
@@ -36,8 +36,6 @@ usage: depthai_demo.py [-h] [-nd] [-dev {OAK,OAK-D}] [-cam {left,right,color}]
 optional arguments:
   -h, --help            show this help message and exit
   -nd, --no-debug       Prevent debug output
-  -dev {OAK,OAK-D}, --device {OAK,OAK-D}
-                        Type of DepthAI target device
   -cam {left,right,color}, --camera {left,right,color}
                         Use one of DepthAI cameras for inference (conflicts
                         with -vid)
