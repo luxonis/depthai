@@ -29,7 +29,6 @@ def check_range(min_val, max_val):
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-nd', '--no-debug', action="store_true", help="Prevent debug output")
-    parser.add_argument('-dev', '--device', choices=["OAK", "OAK-D"], help="Type of DepthAI target device")
     parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str,
                         help="Path to video file to be used for inference (conflicts with -cam)")
