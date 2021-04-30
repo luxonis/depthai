@@ -75,7 +75,6 @@ class ConfigManager:
             return self.args.cnn_path
         if self.args.cnn_model is not None and (DEPTHAI_ZOO / self.args.cnn_model).exists():
             return DEPTHAI_ZOO / self.args.cnn_model
-        print("dupa")
 
     def getInputSize(self):
         if self.args.cnn_input_size is None:
