@@ -439,12 +439,9 @@ with dai.Device(pm.p) as device:
                 cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 78, bbox[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
                 if conf.useDepth: # Display coordinates as well
-                    Ztrackbar = (int(detection.spatialCoordinates.z) * 0.05)
                     cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
                     cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
                     cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
-                    cv2.rectangle(frame, ((bbox[0] - 10), (bbox[1] + 35)), ((bbox[0] - 35), (bbox[1] + 150)), (134, 164, 11), 2)
-                    cv2.rectangle(frame, ((bbox[0] - 10), (bbox[1] + (150 - int(Ztrackbar)))), ((bbox[0] - 35), (bbox[1] + 150)), (134, 164, 11), cv2.FILLED)
 
 
             if conf.useCamera:
