@@ -11,6 +11,7 @@ from depthai_helpers.cli_utils import cli_print, PrintColors
 
 default_input_dims = {
     # TODO remove once fetching input size from nn blob is possible
+    "deeplabv3p_person": "256x256",
     "mobilenet-ssd": "300x300",
     "face-detection-adas-0001": "672x384",
     "face-detection-retail-0004": "300x300",
