@@ -8,14 +8,10 @@ from depthai_helpers.calibration_utils import *
 from depthai_helpers import utils
 import argparse
 from argparse import ArgumentParser
-import time
 import numpy as np
-import os
 from pathlib import Path
 import shutil
-import consts.resource_paths
 import json
-from depthai_helpers.config_manager import BlobManager
 from depthai_helpers.version_check import check_depthai_version
 check_depthai_version()
 
@@ -128,7 +124,6 @@ def ts(packet):
 
 class Main:
     output_scale_factor = 0.5
-    cmd_file = consts.resource_paths.device_cmd_fpath
     polygons = None
     width = None
     height = None
@@ -138,15 +133,6 @@ class Main:
 
     def __init__(self):
         self.args = vars(parse_args())
-        blob_man_args = {
-                        'cnn_model':'mobilenet-ssd',
-                        'cnn_model2':'',
-                        'model_compilation_target':'auto'
-                    }
-        shaves = 7
-        cmx_slices = 7
-        NN_engines = 1
-        blobMan = BlobManager(blob_man_args, True , shaves, cmx_slices,NN_engines)
 
         self.config = {
             'streams':
@@ -195,9 +181,6 @@ class Main:
         if self.args['config_overwrite']:
             utils.merge(json.loads(self.args['config_overwrite']), self.config)
             print("Merged Pipeline config with overwrite", self.config)
-        if self.args['dev_debug']:
-            self.cmd_file = ''
-            print('depthai will not load cmd file into device.')
         self.total_images = self.args['count'] * len(setPolygonCoordinates(1000, 600))  # random polygons for count
         print("Using Arguments=", self.args)
 
