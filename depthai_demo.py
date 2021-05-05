@@ -89,7 +89,7 @@ class NNetManager:
             if config_path.exists():
                 with config_path.open() as f:
                     self.config = json.load(f)
-                    nn_config = self.config.get("NN_config", {})
+                    nn_config = self.config.get("nn_config", {})
                     self.labels = self.config.get("mappings", {}).get("labels", None)
                     self.nn_family = nn_config.get("NN_family", None)
                     self.output_format = nn_config.get("output_format", None)

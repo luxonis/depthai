@@ -28,7 +28,6 @@ DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
 
 class ConfigManager:
     labels = ""
-    NN_config = None
     custom_fw_commit = ''
 
     def __init__(self, args):
