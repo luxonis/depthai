@@ -37,30 +37,53 @@ def convert_depth_frame(packet):
     return depth_frame
 
 
-class Streams(enum.Enum):
-    rgb = partial(lambda packet: packet.getCvFrame())
+class Previews(enum.Enum):
+    color = partial(lambda packet: packet.getCvFrame())
     left = partial(lambda packet: packet.getCvFrame())
     right = partial(lambda packet: packet.getCvFrame())
     rectified_left = partial(lambda packet: cv2.flip(packet.getCvFrame(), 1))
     rectified_right = partial(lambda packet: cv2.flip(packet.getCvFrame(), 1))
     depth = partial(convert_depth_frame)
 
-    @staticmethod
-    def get_current_stream():
-        if conf.args.camera == "left":
-            if conf.useDepth:
-                return Streams.rectified_left
-            return Streams.left
-        elif conf.args.camera == "right":
-            if conf.useDepth:
-                return Streams.rectified_right
-            return Streams.right
-        elif conf.args.camera == "color":
-            return Streams.rgb
 
+class PreviewManager:
+    def __init__(self, fps):
+        self.frames = {}
+        self.raw_frames = {}
+        self.fps = fps
+
+    def create_queues(self, device):
+        def get_output_queue(name):
+            cv2.namedWindow(name)
+            return device.getOutputQueue(name=name, maxSize=1, blocking=False)
+        self.output_queues = [get_output_queue(name) for name in conf.args.show]
+
+    def prepare_frames(self):
+        for queue in self.output_queues:
+            frame = queue.tryGet()
+            if frame is not None:
+                fps.tick(queue.getName())
+                self.raw_frames[queue.getName()] = getattr(Previews, queue.getName()).value(frame)
+
+            if queue.getName() in self.raw_frames:
+                self.frames[queue.getName()] = self.raw_frames[queue.getName()].copy()
+    
+    def show_frames(self):
+        for name, frame in self.frames.items():
+            if not conf.args.scale == 1.0:
+                h, w, c = frame.shape
+                frame = cv2.resize(frame, (int(w * conf.args.scale), int(h * conf.args.scale)), interpolation=cv2.INTER_AREA)
+            cv2.imshow(name, frame)
+    
+    def has(self, name):
+        return name in self.frames
+    
+    def get(self, name):
+        return self.frames.get(name, None)
+        
 
 class NNetManager:
-    source_choices = ("rgb", "left", "right", "rectified_left", "rectified_right", "host")
+    source_choices = ("color", "left", "right", "rectified_left", "rectified_right", "host")
     config = None
     nn_family = None
     labels = None
@@ -124,7 +147,7 @@ class NNetManager:
         setattr(nodes, self.model_name, nn)
         setattr(nodes, self.output_name, xout)
 
-        if self.source == "rgb":
+        if self.source == "color":
             nodes.cam_rgb.preview.link(nn.input)
         elif self.source == "host":
             xin = p.createXLinkIn()
@@ -171,7 +194,36 @@ class NNetManager:
             return self.labels[int(label)]
         else:
             print(f"Label of ouf bounds (label_index: {label}, available_labels: {len(self.labels)}")
-            return label
+            return str(label)
+    
+    def draw_detections(self, source, detections):
+        def draw_detection(frame, detection):
+            bbox = frame_norm(frame, [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
+            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
+            cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20),
+                        cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+            cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40),
+                        cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+
+            if conf.useDepth:  # Display coordinates as well
+                cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 60),
+                            cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 75),
+                            cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 90),
+                            cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+        for detection in detections:
+            if self.source in ("rectified_left", "rectified_right"):
+                # Since rectified frames are horizontally flipped by default
+                swap = detection.xmin
+                detection.xmin = 1 - detection.xmax
+                detection.xmax = 1 - swap
+            if isinstance(source, PreviewManager):
+                for frame in pv.frames.values():
+                    draw_detection(frame, detection)
+            else:
+                draw_detection(source, detection)
+
 
 
 class FPSHandler:
@@ -216,6 +268,18 @@ class FPSHandler:
         time_diff = self.timestamp - self.start
         return self.frame_cnt / time_diff if time_diff != 0 else 0
 
+    def draw_fps(self, source):
+        def draw(frame, name: str):
+            frame_fps = f"{name.upper()} FPS: {round(fps.tick_fps(name), 1)}"
+            cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+
+            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        if isinstance(source, PreviewManager):
+            for name, frame in pv.frames.items():
+                draw(frame, name)
+        else:
+            draw(source, "host")
+
 
 class PipelineManager:
     def __init__(self, nn_manager):
@@ -234,13 +298,14 @@ class PipelineManager:
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(rgb_res)
         self.nodes.cam_rgb.setFps(conf.args.rgb_fps)
-        self.nodes.xout_rgb = self.p.createXLinkOut()
-        self.nodes.xout_rgb.setStreamName("rgb")
-        if not conf.args.sync:
-            if use_hq:
-                self.nodes.cam_rgb.video.link(self.nodes.xout_rgb.input)
-            else:
-                self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
+        if Previews.color.name in conf.args.show:
+            self.nodes.xout_rgb = self.p.createXLinkOut()
+            self.nodes.xout_rgb.setStreamName("color")
+            if not conf.args.sync:
+                if use_hq:
+                    self.nodes.cam_rgb.video.link(self.nodes.xout_rgb.input)
+                else:
+                    self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
 
     def create_depth(self, dct, median, lr):
         self.nodes.stereo = self.p.createStereoDepth()
@@ -255,18 +320,21 @@ class PipelineManager:
         self.nodes.mono_left.out.link(self.nodes.stereo.left)
         self.nodes.mono_right.out.link(self.nodes.stereo.right)
 
-        self.nodes.xout_depth = self.p.createXLinkOut()
-        self.nodes.xout_depth.setStreamName("depth")
-        self.nodes.xout_rect_left = self.p.createXLinkOut()
-        self.nodes.xout_rect_left.setStreamName("rectified_left")
-        self.nodes.xout_rect_right = self.p.createXLinkOut()
-        self.nodes.xout_rect_right.setStreamName("rectified_right")
-
-        # If we don't want camera/NN in sync, set the disparity as the source for the XOut
-        if not conf.args.sync:
-            self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
-            self.nodes.stereo.rectifiedLeft.link(self.nodes.xout_rect_left.input)
-            self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
+        if Previews.depth.name in conf.args.show:
+            self.nodes.xout_depth = self.p.createXLinkOut()
+            self.nodes.xout_depth.setStreamName("depth")
+            if not conf.args.sync:
+                self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
+        if Previews.rectified_left.name in conf.args.show:
+            self.nodes.xout_rect_left = self.p.createXLinkOut()
+            self.nodes.xout_rect_left.setStreamName("rectified_left")
+            if not conf.args.sync:
+                self.nodes.stereo.rectifiedLeft.link(self.nodes.xout_rect_left.input)
+        if Previews.rectified_right.name in conf.args.show:
+            self.nodes.xout_rect_right = self.p.createXLinkOut()
+            self.nodes.xout_rect_right.setStreamName("rectified_right")
+            if not conf.args.sync:
+                self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
 
     def create_left_cam(self):
         self.nodes.mono_left = self.p.createMonoCamera()
@@ -274,8 +342,10 @@ class PipelineManager:
         self.nodes.mono_left.setResolution(mono_res)
         self.nodes.mono_left.setFps(conf.args.mono_fps)
 
-        self.nodes.xout_left = self.p.createXLinkOut()
-        self.nodes.xout_left.setStreamName("left")
+        if Previews.left.name in conf.args.show:
+            self.nodes.xout_left = self.p.createXLinkOut()
+            self.nodes.xout_left.setStreamName("left")
+            self.nodes.mono_left.out.link(self.nodes.xout_left.input)
 
     def create_right_cam(self):
         self.nodes.mono_right = self.p.createMonoCamera()
@@ -283,23 +353,25 @@ class PipelineManager:
         self.nodes.mono_right.setResolution(mono_res)
         self.nodes.mono_right.setFps(conf.args.mono_fps)
 
-        self.nodes.xout_right = self.p.createXLinkOut()
-        self.nodes.xout_right.setStreamName("right")
+        if Previews.right.name in conf.args.show:
+            self.nodes.xout_right = self.p.createXLinkOut()
+            self.nodes.xout_right.setStreamName("right")
+            self.nodes.mono_right.out.link(self.nodes.xout_right.input)
 
     def create_nn(self):
         if callable(self.nn_manager.create_nn_pipeline):
             nn = self.nn_manager.create_nn_pipeline(self.p, self.nodes)
 
             if conf.args.sync:
-                if self.nn_manager.source == "rgb":
+                if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
                     nn.passthrough.link(self.nodes.xout_rgb.input)
-                elif self.nn_manager.source == "left":
+                elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
                     nn.passthrough.link(self.nodes.xout_left.input)
-                elif self.nn_manager.source == "right":
+                elif self.nn_manager.source == "right" and hasattr(self.nodes, "right"):
                     nn.passthrough.link(self.nodes.xout_right.input)
-                elif self.nn_manager.source == "rectified_left":
+                elif self.nn_manager.source == "rectified_left" and hasattr(self.nodes, "rectified_left"):
                     nn.passthrough.link(self.nodes.xout_rect_left.input)
-                elif self.nn_manager.source == "rectified_right":
+                elif self.nn_manager.source == "rectified_right" and hasattr(self.nodes, "rectified_right"):
                     nn.passthrough.link(self.nodes.xout_rect_right.input)
 
                 if hasattr(self.nodes, 'xout_depth'):
@@ -321,16 +393,21 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     )
 
     pm = PipelineManager(nn_manager)
+    cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
+    fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
-    if conf.args.camera == "left":
-        pm.create_left_cam()
-    elif conf.args.camera == "right":
-        pm.create_right_cam()
-    elif conf.args.camera == "color":
-        pm.create_color_cam(conf.useHQ)
+    if conf.useCamera:
+        pv = PreviewManager(fps)
 
-    if conf.useDepth:
-        pm.create_depth(conf.args.disparity_confidence_threshold, median, conf.args.stereo_lr_check)
+        if conf.args.camera == "left":
+            pm.create_left_cam()
+        elif conf.args.camera == "right":
+            pm.create_right_cam()
+        elif conf.args.camera == "color":
+            pm.create_color_cam(conf.useHQ)
+
+        if conf.useDepth:
+            pm.create_depth(conf.args.disparity_confidence_threshold, median, conf.args.stereo_lr_check)
 
     pm.create_nn()
 
@@ -341,34 +418,37 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     nn_out = device.getOutputQueue(nn_manager.output_name, maxSize=1, blocking=False)
 
     sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if nn_manager.sbb else None
-    depth_out = device.getOutputQueue("depth", maxSize=1, blocking=False) if conf.useDepth else None
 
-    current_stream = Streams.get_current_stream()
-    cam_out = device.getOutputQueue(name=current_stream.name, maxSize=4, blocking=False) if conf.useCamera else None
+    if conf.useCamera:
+        pv.create_queues(device)
+    # cam_out = device.getOutputQueue(name=current_stream.name, maxSize=4, blocking=False) if conf.useCamera else None
 
-    cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
-    fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
     seq_num = 0
-    frame = None
-    depth_frame = None
+    host_frame = None
     detections = []
     # Spatial bounding box ROIs (region of interests)
     color = (255, 255, 255)
 
-    if depth_out is not None:
-        cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
-    cv2.namedWindow(current_stream.name, cv2.WINDOW_NORMAL)
-
     while True:
         fps.next_iter()
         if conf.useCamera:
-            frame = current_stream.value(cam_out.get())
+            pv.prepare_frames()
+
+            if sbb_out is not None and pv.has("depth"):
+                sbb = sbb_out.tryGet()
+                sbb_rois = sbb.getConfigData() if sbb is not None else []
+                for roi_data in sbb_rois:
+                    roi = roi_data.roi.denormalize(pv.get("depth").shape[1], pv.get("depth").shape[0])
+                    top_left = roi.topLeft()
+                    bottom_right = roi.bottomRight()
+                    # Display SBB on the disparity map
+                    cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
         else:
-            read_correctly, vid_frame = cap.read()
+            read_correctly, host_frame = cap.read()
             if not read_correctly:
                 break
 
-            scaled_frame = cv2.resize(vid_frame, (in_w, in_h))
+            scaled_frame = cv2.resize(host_frame, (in_w, in_h))
             frame_nn = dai.ImgFrame()
             frame_nn.setSequenceNum(seq_num)
             frame_nn.setWidth(in_w)
@@ -378,40 +458,9 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             seq_num += 1
 
             # if high quality, send original frames
-            frame = vid_frame if conf.useHQ else scaled_frame
+            if not conf.useHQ:
+                host_frame = scaled_frame
             fps.tick('host')
-
-        if depth_out is not None:
-            raw_frame = depth_out.tryGet()
-            depth_frame = Streams.depth.value(raw_frame) if raw_frame is not None else None
-        if sbb_out is not None and depth_frame is not None:
-            sbb = sbb_out.tryGet()
-            sbb_rois = sbb.getConfigData() if sbb is not None else []
-            for roi_data in sbb_rois:
-                roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
-                top_left = roi.topLeft()
-                bottom_right = roi.bottomRight()
-                # Display SBB on the disparity map
-                cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
-            # if nn_manager.sbb: # Get spatial bounding boxes and depth map
-            #     depth_frame = nn_manager.depth_out.get().getFrame()
-            #     depth_frame = cv2.normalize(depth_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-            #     depth_frame = cv2.equalizeHist(depth_frame)
-            #     depth_frame = cv2.applyColorMap(depth_frame, cv2.COLORMAP_TURBO)
-            #
-            #     sbb = nn_manager.sbb_out.tryGet()
-            #     sbb_rois = sbb.getConfigData() if sbb is not None else []
-            #     for roi_data in sbb_rois:
-            #         roi = roi_data.roi
-            #         roi = roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
-            #         top_left = roi.topLeft()
-            #         bottom_right = roi.bottomRight()
-            #         # Display SBB on the disparity map
-            #         cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
-            #
-            #     cv2.imshow("disparity", depth_frame)
-
-
 
         in_nn = nn_out.tryGetAll()
         if len(in_nn) > 0:
@@ -425,41 +474,14 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
                         print("Received NN packet: <Preview unabailable: {}>".format(ex))
                 fps.tick('nn')
 
-        if depth_frame is not None:
-            cv2.imshow("depth", depth_frame)
-
-        if frame is not None:
-            # Scale the frame by --scale factor
-            if not conf.args.scale == 1.0:
-                h, w, c = frame.shape
-                frame = cv2.resize(frame, (int(w * conf.args.scale), int(h * conf.args.scale)), interpolation=cv2.INTER_AREA)
-
-            # if the frame is available, draw bounding boxes on it and show the frame
-            for detection in detections:
-                if current_stream in (Streams.rectified_left, Streams.rectified_right):
-                    # Since rectified frames are horizontally flipped by default
-                    swap = detection.xmin
-                    detection.xmin = 1 - detection.xmax
-                    detection.xmax = 1 - swap
-
-                bbox = frame_norm(frame, [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
-                cv2.putText(frame, nn_manager.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-
-                if conf.useDepth: # Display coordinates as well
-                    cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-
-            if conf.useCamera:
-                frame_fps = f"{current_stream.name.upper()} FPS: {round(fps.fps(), 1)}"
-            else:
-                frame_fps = f"HOST FPS: {round(fps.tick_fps('host'), 1)}"
-            cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-
-            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
-            cv2.imshow(current_stream.name, frame)
+        if conf.useCamera:
+            nn_manager.draw_detections(pv, detections)
+            fps.draw_fps(pv)
+            pv.show_frames()
+        else:
+            nn_manager.draw_detections(host_frame, detections)
+            fps.draw_fps(host_frame)
+            cv2.imshow("host", host_frame)
 
         if cv2.waitKey(1) == ord('q'):
             break

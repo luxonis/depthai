@@ -48,7 +48,7 @@ class ConfigManager:
 
     @property
     def useDepth(self):
-        return not self.args.disable_depth
+        return not self.args.disable_depth and self.useCamera
 
     def getModelSource(self):
         if not self.useCamera:
@@ -62,7 +62,7 @@ class ConfigManager:
                 return "rectified_right"
             return "right"
         if self.args.camera == "color":
-            return "rgb"
+            return "color"
 
     def getModelName(self):
         if self.args.cnn_model:
@@ -180,6 +180,13 @@ class ConfigManager:
             if self.args.camera != 'color':
                 print("Switching source to RGB camera...")
             self.args.camera = 'color'
+            updated_show_arg = []
+            for name in self.args.show:
+                if name in ("nn_input", "color"):
+                    updated_show_arg.append(name)
+                else:
+                    print("Disabling {} window...".format(name))
+            self.args.show = updated_show_arg
 
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':
