@@ -6,23 +6,18 @@ import time
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
-
+import random
 import cv2
 import depthai as dai
-from depthai_helpers.version_check import check_depthai_version
-import platform
+import numpy as np
 
 from depthai_helpers.arg_manager import parse_args
 from depthai_helpers.config_manager import BlobManager, ConfigManager
 from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result
 
-print('Using depthai module from: ', dai.__file__)
-print('Depthai version installed: ', dai.__version__)
-if platform.machine() not in ['armv6l', 'aarch64']:
-    check_depthai_version()
-
 conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
+conf.adjustParamsToDevice()
 
 in_w, in_h = conf.getInputSize()
 rgb_res = conf.getRgbResolution()
@@ -170,13 +165,13 @@ class NNetManager:
         elif int(label) < len(self.labels):
             return self.labels[int(label)]
         else:
-            print(f"Label of ouf bounds (label_index: {label}, available_labels: {len(self.labels)}")
+            print(f"Label out of bounds (label_index: {label}, available_labels: {len(self.labels)}")
             return label
 
 
 class FPSHandler:
     def __init__(self, cap=None):
-        self.timestamp = time.monotonic()
+        self.timestamp = time.time()
         self.start = None
         self.framerate = cap.get(cv2.CAP_PROP_FPS) if cap is not None else None
 
@@ -186,26 +181,26 @@ class FPSHandler:
 
     def next_iter(self):
         if self.start is None:
-            self.start = time.monotonic()
+            self.start = time.time()
 
         if not conf.useCamera:
             frame_delay = 1.0 / self.framerate
-            delay = (self.timestamp + frame_delay) - time.monotonic()
+            delay = (self.timestamp + frame_delay) - time.time()
             if delay > 0:
                 time.sleep(delay)
-        self.timestamp = time.monotonic()
+        self.timestamp = time.time()
         self.frame_cnt += 1
 
     def tick(self, name):
         if name in self.ticks:
             self.ticks_cnt[name] += 1
         else:
-            self.ticks[name] = time.monotonic()
+            self.ticks[name] = time.time()
             self.ticks_cnt[name] = 0
 
     def tick_fps(self, name):
         if name in self.ticks:
-            time_diff = time.monotonic() - self.ticks[name]
+            time_diff = time.time() - self.ticks[name]
             return self.ticks_cnt[name] / time_diff if time_diff != 0 else 0
         else:
             return 0
@@ -213,8 +208,7 @@ class FPSHandler:
     def fps(self):
         if self.start is None:
             return 0
-        time_diff = self.timestamp - self.start
-        return self.frame_cnt / time_diff if time_diff != 0 else 0
+        return self.frame_cnt / (self.timestamp - self.start)
 
 
 class PipelineManager:
@@ -244,6 +238,8 @@ class PipelineManager:
 
     def create_depth(self, dct, median, lr):
         self.nodes.stereo = self.p.createStereoDepth()
+        self.nodes.stereo.setOutputDepth(True)
+        self.nodes.stereo.setOutputRectified(True)
         self.nodes.stereo.setConfidenceThreshold(dct)
         self.nodes.stereo.setMedianFilter(median)
         self.nodes.stereo.setLeftRightCheck(lr)
@@ -272,7 +268,7 @@ class PipelineManager:
         self.nodes.mono_left = self.p.createMonoCamera()
         self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
         self.nodes.mono_left.setResolution(mono_res)
-        self.nodes.mono_left.setFps(conf.args.mono_fps)
+        self.nodes.mono_left.setFps(conf.args.mono_fps)        
 
         self.nodes.xout_left = self.p.createXLinkOut()
         self.nodes.xout_left.setStreamName("left")
@@ -304,38 +300,35 @@ class PipelineManager:
 
                 if hasattr(self.nodes, 'xout_depth'):
                     nn.passthroughDepth.link(self.nodes.xout_depth.input)
+    
 
+nn_manager = NNetManager(
+    model_name=conf.getModelName(),
+    model_dir=conf.getModelDir(),
+    source=conf.getModelSource(),
+    use_depth=conf.useDepth,
+    use_hq=conf.useHQ
+)
 
-device_info = conf.getDeviceInfo()
+pm = PipelineManager(nn_manager)
+
+if conf.args.camera == "left":
+    pm.create_left_cam()
+elif conf.args.camera == "right":
+    pm.create_right_cam()
+elif conf.args.camera == "color":
+    pm.create_color_cam(conf.useHQ)
+
+if conf.useDepth:
+    pm.create_depth(conf.args.disparity_confidence_threshold, median, conf.args.stereo_lr_check)
+
+pm.create_nn()
+
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
-    conf.adjustParamsToDevice(device)
-
-    nn_manager = NNetManager(
-        model_name=conf.getModelName(),
-        model_dir=conf.getModelDir(),
-        source=conf.getModelSource(),
-        use_depth=conf.useDepth,
-        use_hq=conf.useHQ
-    )
-
-    pm = PipelineManager(nn_manager)
-
-    if conf.args.camera == "left":
-        pm.create_left_cam()
-    elif conf.args.camera == "right":
-        pm.create_right_cam()
-    elif conf.args.camera == "color":
-        pm.create_color_cam(conf.useHQ)
-
-    if conf.useDepth:
-        pm.create_depth(conf.args.disparity_confidence_threshold, median, conf.args.stereo_lr_check)
-
-    pm.create_nn()
-
+with dai.Device(pm.p) as device:
     # Start pipeline
-    device.startPipeline(pm.p)
+    device.startPipeline()
     pm.create_default_queues(device)
     nn_in = device.getInputQueue(nn_manager.input_name, maxSize=1, blocking=False) if not conf.useCamera else None
     nn_out = device.getOutputQueue(nn_manager.output_name, maxSize=1, blocking=False)
@@ -353,11 +346,8 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     depth_frame = None
     detections = []
     # Spatial bounding box ROIs (region of interests)
+    colors = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes 
     color = (255, 255, 255)
-
-    if depth_out is not None:
-        cv2.namedWindow("depth", cv2.WINDOW_NORMAL)
-    cv2.namedWindow(current_stream.name, cv2.WINDOW_NORMAL)
 
     while True:
         fps.next_iter()
@@ -422,7 +412,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
                     try:
                         print("Received NN packet: ", to_tensor_result(packet))
                     except Exception as ex:
-                        print("Received NN packet: <Preview unabailable: {}>".format(ex))
+                        print("Received NN packet: <Preview unavailable: {}>".format(ex))
                 fps.tick('nn')
 
         if depth_frame is not None:
@@ -441,25 +431,28 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
                     swap = detection.xmin
                     detection.xmin = 1 - detection.xmax
                     detection.xmax = 1 - swap
-
+                    
                 bbox = frame_norm(frame, [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
-                cv2.putText(frame, nn_manager.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), colors, 2)
+                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 78), bbox[1]), colors, cv2.FILLED)
+                cv2.putText(frame, nn_manager.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
+                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 78, bbox[1] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0))
 
                 if conf.useDepth: # Display coordinates as well
-                    cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 60), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 75), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
-                    cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                    cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
+                    cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
+                    cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
+
 
             if conf.useCamera:
                 frame_fps = f"{current_stream.name.upper()} FPS: {round(fps.fps(), 1)}"
             else:
                 frame_fps = f"HOST FPS: {round(fps.tick_fps('host'), 1)}"
-            cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.rectangle(frame, (0,0), (120, 40), (255, 255, 255), cv2.FILLED)
 
-            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0))
+            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 0, 0))
+
             cv2.imshow(current_stream.name, frame)
-
         if cv2.waitKey(1) == ord('q'):
             break
