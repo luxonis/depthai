@@ -244,8 +244,6 @@ class PipelineManager:
 
     def create_depth(self, dct, median, lr):
         self.nodes.stereo = self.p.createStereoDepth()
-        self.nodes.stereo.setOutputDepth(True)
-        self.nodes.stereo.setOutputRectified(True)
         self.nodes.stereo.setConfidenceThreshold(dct)
         self.nodes.stereo.setMedianFilter(median)
         self.nodes.stereo.setLeftRightCheck(lr)
