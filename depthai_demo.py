@@ -52,6 +52,7 @@ def convert_disparity_to_color(disparity):
 
 
 class Previews(enum.Enum):
+    nn_input = partial(lambda packet: packet.getCvFrame())
     color = partial(lambda packet: packet.getCvFrame())
     left = partial(lambda packet: packet.getCvFrame())
     right = partial(lambda packet: packet.getCvFrame())
@@ -389,6 +390,11 @@ class PipelineManager:
     def create_nn(self):
         if callable(self.nn_manager.create_nn_pipeline):
             nn = self.nn_manager.create_nn_pipeline(self.p, self.nodes)
+
+            if Previews.nn_input.name in conf.args.show:
+                self.nodes.xout_nn_input = self.p.createXLinkOut()
+                self.nodes.xout_nn_input.setStreamName(Previews.nn_input.name)
+                nn.passthrough.link(self.nodes.xout_nn_input.input)
 
             if conf.args.sync:
                 if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
