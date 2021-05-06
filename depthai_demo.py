@@ -9,6 +9,8 @@ from types import SimpleNamespace
 
 import cv2
 import depthai as dai
+import numpy as np
+
 from depthai_helpers.version_check import check_depthai_version
 import platform
 
@@ -33,8 +35,20 @@ median = conf.getMedianFilter()
 def convert_depth_frame(packet):
     depth_frame = cv2.normalize(packet.getFrame(), None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
     depth_frame = cv2.equalizeHist(depth_frame)
-    depth_frame = cv2.applyColorMap(depth_frame, cv2.COLORMAP_TURBO)
+    depth_frame = cv2.applyColorMap(depth_frame, conf.getColorMap())
     return depth_frame
+
+
+disp_multiplier = 255 / conf.args.max_disparity
+
+
+def convert_disparity_frame(packet):
+    disparity_frame = (packet.getFrame()*disp_multiplier).astype(np.uint8)
+    return disparity_frame
+
+
+def convert_disparity_to_color(disparity):
+    return cv2.applyColorMap(disparity, conf.getColorMap())
 
 
 class Previews(enum.Enum):
@@ -44,6 +58,8 @@ class Previews(enum.Enum):
     rectified_left = partial(lambda packet: cv2.flip(packet.getCvFrame(), 1))
     rectified_right = partial(lambda packet: cv2.flip(packet.getCvFrame(), 1))
     depth = partial(convert_depth_frame)
+    disparity = partial(convert_disparity_frame)
+    disparity_color = partial(convert_disparity_to_color)
 
 
 class PreviewManager:
@@ -56,17 +72,25 @@ class PreviewManager:
         def get_output_queue(name):
             cv2.namedWindow(name)
             return device.getOutputQueue(name=name, maxSize=1, blocking=False)
-        self.output_queues = [get_output_queue(name) for name in conf.args.show]
+        self.output_queues = [get_output_queue(name) for name in conf.args.show if name != Previews.disparity_color.name]
 
     def prepare_frames(self):
         for queue in self.output_queues:
             frame = queue.tryGet()
             if frame is not None:
                 fps.tick(queue.getName())
-                self.raw_frames[queue.getName()] = getattr(Previews, queue.getName()).value(frame)
+                frame = getattr(Previews, queue.getName()).value(frame)
+                self.raw_frames[queue.getName()] = frame
+
+                if queue.getName() == Previews.disparity.name:
+                    fps.tick(Previews.disparity_color.name)
+                    self.raw_frames[Previews.disparity_color.name] = Previews.disparity_color.value(frame)
 
             if queue.getName() in self.raw_frames:
                 self.frames[queue.getName()] = self.raw_frames[queue.getName()].copy()
+
+                if queue.getName() == Previews.disparity.name:
+                    self.frames[Previews.disparity_color.name] = self.raw_frames[Previews.disparity_color.name].copy()
     
     def show_frames(self):
         for name, frame in self.frames.items():
@@ -225,7 +249,6 @@ class NNetManager:
                 draw_detection(source, detection)
 
 
-
 class FPSHandler:
     def __init__(self, cap=None):
         self.timestamp = time.monotonic()
@@ -298,9 +321,10 @@ class PipelineManager:
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(rgb_res)
         self.nodes.cam_rgb.setFps(conf.args.rgb_fps)
+        self.nodes.cam_rgb.setPreviewKeepAspectRatio(False)
         if Previews.color.name in conf.args.show:
             self.nodes.xout_rgb = self.p.createXLinkOut()
-            self.nodes.xout_rgb.setStreamName("color")
+            self.nodes.xout_rgb.setStreamName(Previews.color.name)
             if not conf.args.sync:
                 if use_hq:
                     self.nodes.cam_rgb.video.link(self.nodes.xout_rgb.input)
@@ -322,17 +346,21 @@ class PipelineManager:
 
         if Previews.depth.name in conf.args.show:
             self.nodes.xout_depth = self.p.createXLinkOut()
-            self.nodes.xout_depth.setStreamName("depth")
+            self.nodes.xout_depth.setStreamName(Previews.depth.name)
             if not conf.args.sync:
                 self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
+        if Previews.disparity.name in conf.args.show:
+            self.nodes.xout_disparity = self.p.createXLinkOut()
+            self.nodes.xout_disparity.setStreamName(Previews.disparity.name)
+            self.nodes.stereo.disparity.link(self.nodes.xout_disparity.input)
         if Previews.rectified_left.name in conf.args.show:
             self.nodes.xout_rect_left = self.p.createXLinkOut()
-            self.nodes.xout_rect_left.setStreamName("rectified_left")
+            self.nodes.xout_rect_left.setStreamName(Previews.rectified_left.name)
             if not conf.args.sync:
                 self.nodes.stereo.rectifiedLeft.link(self.nodes.xout_rect_left.input)
         if Previews.rectified_right.name in conf.args.show:
             self.nodes.xout_rect_right = self.p.createXLinkOut()
-            self.nodes.xout_rect_right.setStreamName("rectified_right")
+            self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
             if not conf.args.sync:
                 self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
 
@@ -344,7 +372,7 @@ class PipelineManager:
 
         if Previews.left.name in conf.args.show:
             self.nodes.xout_left = self.p.createXLinkOut()
-            self.nodes.xout_left.setStreamName("left")
+            self.nodes.xout_left.setStreamName(Previews.left.name)
             self.nodes.mono_left.out.link(self.nodes.xout_left.input)
 
     def create_right_cam(self):
@@ -355,7 +383,7 @@ class PipelineManager:
 
         if Previews.right.name in conf.args.show:
             self.nodes.xout_right = self.p.createXLinkOut()
-            self.nodes.xout_right.setStreamName("right")
+            self.nodes.xout_right.setStreamName(Previews.right.name)
             self.nodes.mono_right.out.link(self.nodes.xout_right.input)
 
     def create_nn(self):
@@ -434,11 +462,12 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
         if conf.useCamera:
             pv.prepare_frames()
 
-            if sbb_out is not None and pv.has("depth"):
+            if sbb_out is not None and pv.has(Previews.depth.name):
                 sbb = sbb_out.tryGet()
                 sbb_rois = sbb.getConfigData() if sbb is not None else []
+                depth_frame = pv.get(Previews.depth.name)
                 for roi_data in sbb_rois:
-                    roi = roi_data.roi.denormalize(pv.get("depth").shape[1], pv.get("depth").shape[0])
+                    roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
                     top_left = roi.topLeft()
                     bottom_right = roi.bottomRight()
                     # Display SBB on the disparity map

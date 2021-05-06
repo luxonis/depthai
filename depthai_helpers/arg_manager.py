@@ -1,6 +1,7 @@
 import os
 import argparse
 from pathlib import Path
+import cv2
 
 try:
     import argcomplete
@@ -27,6 +28,7 @@ def check_range(min_val, max_val):
 
 
 _stream_choices = ("nn_input", "color", "left", "right", "depth", "disparity", "disparity_color", "rectified_left", "rectified_right")
+color_maps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -52,10 +54,13 @@ def parse_args():
                         help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
     parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
+    parser.add_argument("-maxd", "--max-disparity", default=95, type=int,
+                        help="Normalizes disparity values range from 0 to <max-disparity>. Default: %(default)s")
     parser.add_argument('-lrc', '--stereo_lr_check', action="store_true",
                         help="Enable stereo 'Left-Right check' feature.")
     parser.add_argument("-scale", "--scale", default=1.0, type=float,
                         help="Scale factor for the output window. Default: %(default)s")
+    parser.add_argument("-cm", "--color-map", default="JET", choices=color_maps, help="Change color map used to apply colors to depth/disparity frames. Default: %(default)s")
     parser.add_argument('-sbb', '--spatial_bounding_box', action="store_true",
                         help="Display spatial bounding box (ROI) when displaying spatial information. The Z coordinate get's calculated from the ROI (average)")
     parser.add_argument("-sbb-sf", "--sbb_scale_factor", default=0.3, type=float,

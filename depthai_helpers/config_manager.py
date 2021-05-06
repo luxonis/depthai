@@ -3,6 +3,8 @@ import platform
 import subprocess
 import urllib.request
 from pathlib import Path
+
+import cv2
 import depthai as dai
 
 import blobconverter
@@ -85,6 +87,9 @@ class ConfigManager:
             return map(int, default_input_dims[self.args.cnn_model].split('x'))
         else:
             return map(int, self.args.cnn_input_size.split('x'))
+
+    def getColorMap(self):
+        return getattr(cv2, "COLORMAP_{}".format(self.args.color_map))
 
     def getRgbResolution(self):
         if self.args.rgb_resolution == 2160:
