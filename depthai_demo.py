@@ -29,7 +29,11 @@ conf.linuxCheckApplyUsbRules()
 in_w, in_h = conf.getInputSize()
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
-median = conf.getMedianFilter()
+bbox_color = (255, 255, 255)
+text_color = (255, 255, 255)
+fps_color = (0, 255, 0)
+fps_type = cv2.FONT_HERSHEY_SIMPLEX
+text_type = cv2.FONT_HERSHEY_TRIPLEX
 
 
 def convert_depth_frame(packet):
@@ -39,7 +43,7 @@ def convert_depth_frame(packet):
     return depth_frame
 
 
-disp_multiplier = 255 / conf.args.max_disparity
+disp_multiplier = 255 / conf.maxDisparity
 
 
 def convert_disparity_frame(packet):
@@ -145,6 +149,18 @@ class NNetManager:
 
                     self.confidence = self.metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
 
+    @property
+    def should_flip_detection(self):
+        return self.source in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
+
+    def normFrame(self, frame):
+        h = frame.shape[0]
+        return np.zeros((h, h))
+
+    def cropOffsetX(self, frame):
+        h, w = frame.shape[:2]
+        return (w - h) // 2
+
     def create_nn_pipeline(self, p, nodes):
         if self.nn_family == "mobilenet":
             nn = p.createMobileNetSpatialDetectionNetwork() if self.use_depth else p.createMobileNetDetectionNetwork()
@@ -223,22 +239,23 @@ class NNetManager:
     
     def draw_detections(self, source, detections):
         def draw_detection(frame, detection):
-            bbox = frame_norm(frame, [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
-            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (255, 0, 0), 2)
+            bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
+            bbox[::2] += self.cropOffsetX(frame)
+            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color, 2)
             cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20),
-                        cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                        text_type, 0.5, text_color)
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40),
-                        cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                        text_type, 0.5, text_color)
 
             if conf.useDepth:  # Display coordinates as well
                 cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 60),
-                            cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                            text_type, 0.5, text_color)
                 cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 75),
-                            cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                            text_type, 0.5, text_color)
                 cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 90),
-                            cv2.FONT_HERSHEY_TRIPLEX, 0.5, color)
+                            text_type, 0.5, text_color)
         for detection in detections:
-            if self.source in ("rectified_left", "rectified_right"):
+            if self.should_flip_detection:
                 # Since rectified frames are horizontally flipped by default
                 swap = detection.xmin
                 detection.xmin = 1 - detection.xmax
@@ -295,9 +312,9 @@ class FPSHandler:
     def draw_fps(self, source):
         def draw(frame, name: str):
             frame_fps = f"{name.upper()} FPS: {round(fps.tick_fps(name), 1)}"
-            cv2.putText(frame, frame_fps, (5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.putText(frame, frame_fps, (5, 15), fps_type, 0.5, fps_color)
 
-            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), fps_type, 0.5, fps_color)
         if isinstance(source, PreviewManager):
             for name, frame in pv.frames.items():
                 draw(frame, name)
@@ -322,7 +339,6 @@ class PipelineManager:
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(rgb_res)
         self.nodes.cam_rgb.setFps(conf.args.rgb_fps)
-        self.nodes.cam_rgb.setPreviewKeepAspectRatio(False)
         if Previews.color.name in conf.args.show:
             self.nodes.xout_rgb = self.p.createXLinkOut()
             self.nodes.xout_rgb.setStreamName(Previews.color.name)
@@ -332,11 +348,13 @@ class PipelineManager:
                 else:
                     self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
 
-    def create_depth(self, dct, median, lr):
+    def create_depth(self, dct, median, lr, extended, subpixel):
         self.nodes.stereo = self.p.createStereoDepth()
         self.nodes.stereo.setConfidenceThreshold(dct)
         self.nodes.stereo.setMedianFilter(median)
         self.nodes.stereo.setLeftRightCheck(lr)
+        self.nodes.stereo.setExtendedDisparity(extended)
+        self.nodes.stereo.setSubpixel(subpixel)
 
         # Create mono left/right cameras if we haven't already
         if not hasattr(self.nodes, 'mono_left'): self.create_left_cam()
@@ -441,7 +459,13 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             pm.create_color_cam(conf.useHQ)
 
         if conf.useDepth:
-            pm.create_depth(conf.args.disparity_confidence_threshold, median, conf.args.stereo_lr_check)
+            pm.create_depth(
+                conf.args.disparity_confidence_threshold,
+                conf.getMedianFilter(),
+                conf.args.stereo_lr_check,
+                conf.args.extended_disparity,
+                conf.args.subpixel,
+            )
 
     pm.create_nn()
 
@@ -460,8 +484,6 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     seq_num = 0
     host_frame = None
     detections = []
-    # Spatial bounding box ROIs (region of interests)
-    color = (255, 255, 255)
 
     while True:
         fps.next_iter()
@@ -477,7 +499,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
                     top_left = roi.topLeft()
                     bottom_right = roi.bottomRight()
                     # Display SBB on the disparity map
-                    cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+                    cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), bbox_color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
         else:
             read_correctly, host_frame = cap.read()
             if not read_correctly:

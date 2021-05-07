@@ -52,6 +52,16 @@ class ConfigManager:
     def useDepth(self):
         return not self.args.disable_depth and self.useCamera
 
+    @property
+    def maxDisparity(self):
+        max_disparity = 96
+        if (self.args.extended_disparity):
+            max_disparity *= 2
+        if (self.args.subpixel):
+            max_disparity *= 32
+
+        return max_disparity
+
     def getModelSource(self):
         if not self.useCamera:
             return "host"
