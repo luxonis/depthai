@@ -54,7 +54,7 @@ def parse_args():
                         help="Enable stereo 'Left-Right check' feature.")
     parser.add_argument("-scale", "--scale", default=1.0, type=float,
                         help="Scale factor for the output window. Default: %(default)s")
-    parser.add_argument("-maxd", "--max_depth", default=3000, type=int,
+    parser.add_argument("-maxd", "--max_depth", default=10000, type=int,
                         help="Maximum expected depth distance, 1000 = 1m. Default: %(default)s")
     parser.add_argument("-mind", "--min_depth", default=100, type=int,
                         help="Minimum expected depth distance, 1000 = 1m. Default: %(default)s")
