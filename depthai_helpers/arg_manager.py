@@ -54,6 +54,10 @@ def parse_args():
                         help="Enable stereo 'Left-Right check' feature.")
     parser.add_argument("-scale", "--scale", default=1.0, type=float,
                         help="Scale factor for the output window. Default: %(default)s")
+    parser.add_argument("-maxd", "--max_depth", default=3000, type=int,
+                        help="Maximum expected depth distance, 1000 = 1m. Default: %(default)s")
+    parser.add_argument("-mind", "--min_depth", default=100, type=int,
+                        help="Minimum expected depth distance, 1000 = 1m. Default: %(default)s")
     parser.add_argument('-sbb', '--spatial_bounding_box', action="store_true",
                         help="Display spatial bounding box (ROI) when displaying spatial information. The Z coordinate get's calculated from the ROI (average)")
     parser.add_argument("-sbb-sf", "--sbb_scale_factor", default=0.3, type=float,
