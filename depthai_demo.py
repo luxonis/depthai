@@ -120,6 +120,7 @@ class NNetManager:
     metadata = None
     output_format = None
     sbb = False
+    source_camera = None
 
     def __init__(self, source, use_depth, use_hq, model_dir=None, model_name=None):
         if source not in self.source_choices:
@@ -154,12 +155,19 @@ class NNetManager:
         return self.source in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
 
     def normFrame(self, frame):
-        h = frame.shape[0]
-        return np.zeros((h, h))
+        if not conf.args.full_fov_nn:
+            h = frame.shape[0]
+            return np.zeros((h, h))
+        else:
+            return frame
 
     def cropOffsetX(self, frame):
-        h, w = frame.shape[:2]
-        return (w - h) // 2
+        if not conf.args.full_fov_nn:
+            h, w = frame.shape[:2]
+            return (w - h) // 2
+        else:
+            return 0
+
 
     def create_nn_pipeline(self, p, nodes):
         if self.nn_family == "mobilenet":
@@ -190,6 +198,7 @@ class NNetManager:
 
         if self.source == "color":
             nodes.cam_rgb.preview.link(nn.input)
+            self.source_camera = nodes.cam_rgb
         elif self.source == "host":
             xin = p.createXLinkIn()
             xin.setStreamName(self.input_name)
@@ -204,9 +213,11 @@ class NNetManager:
             nodes.manip.out.link(nn.input)
 
             if self.source == "left":
+                self.source_camera = nodes.cam_rgb
                 nodes.mono_left.out.link(nodes.manip.inputImage)
             elif self.source == "right":
                 nodes.mono_right.out.link(nodes.manip.inputImage)
+                self.source_camera = nodes.cam_rgb
             elif self.source == "rectified_left":
                 nodes.stereo.rectifiedLeft.link(nodes.manip.inputImage)
             elif self.source == "rectified_right":
@@ -339,6 +350,7 @@ class PipelineManager:
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(rgb_res)
         self.nodes.cam_rgb.setFps(conf.args.rgb_fps)
+        self.nodes.cam_rgb.setPreviewKeepAspectRatio(not conf.args.full_fov_nn)
         if Previews.color.name in conf.args.show:
             self.nodes.xout_rgb = self.p.createXLinkOut()
             self.nodes.xout_rgb.setStreamName(Previews.color.name)

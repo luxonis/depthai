@@ -60,6 +60,8 @@ def parse_args():
                         help="Enable stereo 'Extended Disparity' feature.")
     parser.add_argument('-sub', '--subpixel', action="store_true",
                         help="Enable stereo 'Subpixel' feature.")
+    parser.add_argument("-ff", "--full_fov_nn", default=False, action="store_true",
+                        help="Full RGB FOV for NN, not keeping the aspect ratio")
     parser.add_argument("-scale", "--scale", default=1.0, type=float,
                         help="Scale factor for the output window. Default: %(default)s")
     parser.add_argument("-cm", "--color_map", default="JET", choices=color_maps, help="Change color map used to apply colors to depth/disparity frames. Default: %(default)s")
