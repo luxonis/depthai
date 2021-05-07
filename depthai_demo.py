@@ -258,12 +258,16 @@ class NNetManager:
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40),
                         text_type, 0.5, text_color)
 
+            x_meters = detection.spatialCoordinates.x / 1000
+            y_meters = detection.spatialCoordinates.y / 1000
+            z_meters = detection.spatialCoordinates.z / 1000
+
             if conf.useDepth:  # Display coordinates as well
-                cv2.putText(frame, f"X: {int(detection.spatialCoordinates.x)} mm", (bbox[0] + 10, bbox[1] + 60),
+                cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
                             text_type, 0.5, text_color)
-                cv2.putText(frame, f"Y: {int(detection.spatialCoordinates.y)} mm", (bbox[0] + 10, bbox[1] + 75),
+                cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
                             text_type, 0.5, text_color)
-                cv2.putText(frame, f"Z: {int(detection.spatialCoordinates.z)} mm", (bbox[0] + 10, bbox[1] + 90),
+                cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 90),
                             text_type, 0.5, text_color)
         for detection in detections:
             if self.should_flip_detection:
