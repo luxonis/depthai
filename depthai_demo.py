@@ -58,6 +58,16 @@ class Streams(enum.Enum):
         elif conf.args.camera == "color":
             return Streams.rgb
 
+def print_sys_info(info):
+    m = 1024 * 1024 # MiB
+    print(f"Drr used / total - {info.ddrMemoryUsage.used / m:.2f} / {info.ddrMemoryUsage.total / m:.2f} MiB")
+    print(f"Cmx used / total - {info.cmxMemoryUsage.used / m:.2f} / {info.cmxMemoryUsage.total / m:.2f} MiB")
+    print(f"LeonCss heap used / total - {info.leonCssMemoryUsage.used / m:.2f} / {info.leonCssMemoryUsage.total / m:.2f} MiB")
+    print(f"LeonMss heap used / total - {info.leonMssMemoryUsage.used / m:.2f} / {info.leonMssMemoryUsage.total / m:.2f} MiB")
+    t = info.chipTemperature
+    print(f"Chip temperature - average: {t.average:.2f}, css: {t.css:.2f}, mss: {t.mss:.2f}, upa0: {t.upa:.2f}, upa1: {t.dss:.2f}")
+    print(f"Cpu usage - Leon OS: {info.leonCssCpuUsage.average * 100:.2f}%, Leon RT: {info.leonMssCpuUsage.average * 100:.2f} %")
+    print("----------------------------------------")
 
 class NNetManager:
     source_choices = ("rgb", "left", "right", "rectified_left", "rectified_right", "host")
@@ -305,6 +315,15 @@ class PipelineManager:
                 if hasattr(self.nodes, 'xout_depth'):
                     nn.passthroughDepth.link(self.nodes.xout_depth.input)
 
+    def create_system_logger(self):
+        self.nodes.system_logger = self.p.createSystemLogger()
+        self.nodes.system_logger.setRate(1)
+
+        if conf.args.meta:
+            self.nodes.xout_system_logger = self.p.createXLinkOut()
+            self.nodes.xout_system_logger.setStreamName("system_logger")
+            self.nodes.system_logger.out.link(self.nodes.xout_system_logger.input)
+
 
 device_info = conf.getDeviceInfo()
 
@@ -332,6 +351,9 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     if conf.useDepth:
         pm.create_depth(conf.args.disparity_confidence_threshold, median, conf.args.stereo_lr_check)
 
+    if conf.args.meta:
+        pm.create_system_logger()
+
     pm.create_nn()
 
     # Start pipeline
@@ -342,6 +364,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
     sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if nn_manager.sbb else None
     depth_out = device.getOutputQueue("depth", maxSize=1, blocking=False) if conf.useDepth else None
+    log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if conf.args.meta else None
 
     current_stream = Streams.get_current_stream()
     cam_out = device.getOutputQueue(name=current_stream.name, maxSize=4, blocking=False) if conf.useCamera else None
@@ -460,6 +483,11 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
             cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
             cv2.imshow(current_stream.name, frame)
+
+        if log_out:
+            logs = log_out.tryGetAll()
+            for log in logs:
+                print_sys_info(log)
 
         if cv2.waitKey(1) == ord('q'):
             break
