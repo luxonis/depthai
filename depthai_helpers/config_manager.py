@@ -299,6 +299,7 @@ class DepthConfigManager:
                 'sync_sequence_numbers'  : self.args['sync_sequence_numbers'],
                 'usb_chunk_KiB' : self.args['usb_chunk_KiB'],
                 'enable_imu' : True,
+                #'imu_fw_upgrade' : 86,
             },
             #'video_config':
             #{

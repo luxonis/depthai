@@ -354,7 +354,8 @@ class DepthAI:
                     str_ = packet.getDataAsStr()
                     dict_ = json.loads(str_)
                     # Enable (1) to pretty-print entire packet
-                    if 0: print('meta_d2h', json.dumps(dict_, indent=4, sort_keys=False))
+                    if 1 and args['verbose']:
+                        print('meta_d2h', json.dumps(dict_, indent=4, sort_keys=False))
                     print('meta_d2h Temp',
                           ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
                           ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
