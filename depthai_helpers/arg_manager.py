@@ -58,7 +58,7 @@ def parse_args():
                         help="Display spatial bounding box (ROI) when displaying spatial information. The Z coordinate get's calculated from the ROI (average)")
     parser.add_argument("-sbb-sf", "--sbb_scale_factor", default=0.3, type=float,
                         help="Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: %(default)s")
-    parser.add_argument('--meta', action="store_true", help="Display device utilization data")
+    parser.add_argument('--meta', nargs="+", choices=["temp", "cpu", "memory"], help="Display device utilization data")
     parser.add_argument('-sync', '--sync', action="store_true",
                         help="Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute")
     parser.add_argument("-monor", "--mono_resolution", default=400, type=int, choices=[400,720,800],
