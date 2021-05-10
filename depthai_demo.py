@@ -96,20 +96,74 @@ class PreviewManager:
 
                 if queue.getName() == Previews.disparity.name:
                     self.frames[Previews.disparity_color.name] = self.raw_frames[Previews.disparity_color.name].copy()
-    
+
     def show_frames(self):
         for name, frame in self.frames.items():
             if not conf.args.scale == 1.0:
                 h, w, c = frame.shape
                 frame = cv2.resize(frame, (int(w * conf.args.scale), int(h * conf.args.scale)), interpolation=cv2.INTER_AREA)
             cv2.imshow(name, frame)
-    
+
     def has(self, name):
         return name in self.frames
-    
+
     def get(self, name):
         return self.frames.get(name, None)
-        
+
+
+if conf.args.report_file:
+    report_file_p = Path(conf.args.report_file).with_suffix('.csv')
+    report_file_p.parent.mkdir(parents=True, exist_ok=True)
+    report_file = open(conf.args.report_file, 'a')
+
+def print_sys_info(info):
+    m = 1024 * 1024 # MiB
+    if not conf.args.report_file:
+        if "memory" in conf.args.report:
+            print(f"Drr used / total - {info.ddrMemoryUsage.used / m:.2f} / {info.ddrMemoryUsage.total / m:.2f} MiB")
+            print(f"Cmx used / total - {info.cmxMemoryUsage.used / m:.2f} / {info.cmxMemoryUsage.total / m:.2f} MiB")
+            print(f"LeonCss heap used / total - {info.leonCssMemoryUsage.used / m:.2f} / {info.leonCssMemoryUsage.total / m:.2f} MiB")
+            print(f"LeonMss heap used / total - {info.leonMssMemoryUsage.used / m:.2f} / {info.leonMssMemoryUsage.total / m:.2f} MiB")
+        if "temp" in conf.args.report:
+            t = info.chipTemperature
+            print(f"Chip temperature - average: {t.average:.2f}, css: {t.css:.2f}, mss: {t.mss:.2f}, upa0: {t.upa:.2f}, upa1: {t.dss:.2f}")
+        if "cpu" in conf.args.report:
+            print(f"Cpu usage - Leon OS: {info.leonCssCpuUsage.average * 100:.2f}%, Leon RT: {info.leonMssCpuUsage.average * 100:.2f} %")
+        print("----------------------------------------")
+    else:
+        data = {}
+        if "memory" in conf.args.report:
+            data = {
+                **data,
+                "ddr_used": info.ddrMemoryUsage.used,
+                "ddr_total": info.ddrMemoryUsage.total,
+                "cmx_used": info.cmxMemoryUsage.used,
+                "cmx_total": info.cmxMemoryUsage.total,
+                "leon_css_used": info.leonCssMemoryUsage.used,
+                "leon_css_total": info.leonCssMemoryUsage.total,
+                "leon_mss_used": info.leonMssMemoryUsage.used,
+                "leon_mss_total": info.leonMssMemoryUsage.total,
+            }
+        if "temp" in conf.args.report:
+            data = {
+                **data,
+                "temp_avg": info.chipTemperature.average,
+                "temp_css": info.chipTemperature.css,
+                "temp_mss": info.chipTemperature.mss,
+                "temp_upa0": info.chipTemperature.upa,
+                "temp_upa1": info.chipTemperature.dss,
+            }
+        if "cpu" in conf.args.report:
+            data = {
+                **data,
+                "cpu_css_avg": info.leonCssCpuUsage.average,
+                "cpu_mss_avg": info.leonMssCpuUsage.average,
+            }
+
+        if report_file.tell() == 0:
+            print(','.join(data.keys()), file=report_file)
+        print(','.join(map(str, data.values())), file=report_file)
+
 
 class NNetManager:
     source_choices = ("color", "left", "right", "rectified_left", "rectified_right", "host")
@@ -247,7 +301,7 @@ class NNetManager:
         else:
             print(f"Label of ouf bounds (label_index: {label}, available_labels: {len(self.labels)}")
             return str(label)
-    
+
     def draw_detections(self, source, detections):
         def draw_detection(frame, detection):
             bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
@@ -445,6 +499,15 @@ class PipelineManager:
                 if hasattr(self.nodes, 'xout_depth'):
                     nn.passthroughDepth.link(self.nodes.xout_depth.input)
 
+    def create_system_logger(self):
+        self.nodes.system_logger = self.p.createSystemLogger()
+        self.nodes.system_logger.setRate(1)
+
+        if len(conf.args.report) > 0:
+            self.nodes.xout_system_logger = self.p.createXLinkOut()
+            self.nodes.xout_system_logger.setStreamName("system_logger")
+            self.nodes.system_logger.out.link(self.nodes.xout_system_logger.input)
+
 
 device_info = conf.getDeviceInfo()
 
@@ -483,6 +546,9 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
                 conf.args.subpixel,
             )
 
+    if len(conf.args.report) > 0:
+        pm.create_system_logger()
+
     pm.create_nn()
 
     # Start pipeline
@@ -492,6 +558,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     nn_out = device.getOutputQueue(nn_manager.output_name, maxSize=1, blocking=False)
 
     sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if nn_manager.sbb else None
+    log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None
 
     if conf.useCamera:
         pv.create_queues(device)
@@ -556,5 +623,13 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             fps.draw_fps(host_frame)
             cv2.imshow("host", host_frame)
 
+        if log_out:
+            logs = log_out.tryGetAll()
+            for log in logs:
+                print_sys_info(log)
+
         if cv2.waitKey(1) == ord('q'):
             break
+
+if conf.args.report_file:
+    report_file.close()
