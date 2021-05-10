@@ -59,19 +59,59 @@ class Streams(enum.Enum):
             return Streams.rgb
 
 
+if conf.args.report_file:
+    report_file_p = Path(conf.args.report_file).with_suffix('.csv')
+    report_file_p.parent.mkdir(parents=True, exist_ok=True)
+    report_file = open(conf.args.report_file, 'a')
+
 def print_sys_info(info):
     m = 1024 * 1024 # MiB
-    if "memory" in conf.args.meta:
-        print(f"Drr used / total - {info.ddrMemoryUsage.used / m:.2f} / {info.ddrMemoryUsage.total / m:.2f} MiB")
-        print(f"Cmx used / total - {info.cmxMemoryUsage.used / m:.2f} / {info.cmxMemoryUsage.total / m:.2f} MiB")
-        print(f"LeonCss heap used / total - {info.leonCssMemoryUsage.used / m:.2f} / {info.leonCssMemoryUsage.total / m:.2f} MiB")
-        print(f"LeonMss heap used / total - {info.leonMssMemoryUsage.used / m:.2f} / {info.leonMssMemoryUsage.total / m:.2f} MiB")
-    if "temp" in conf.args.meta:
-        t = info.chipTemperature
-        print(f"Chip temperature - average: {t.average:.2f}, css: {t.css:.2f}, mss: {t.mss:.2f}, upa0: {t.upa:.2f}, upa1: {t.dss:.2f}")
-    if "cpu" in conf.args.meta:
-        print(f"Cpu usage - Leon OS: {info.leonCssCpuUsage.average * 100:.2f}%, Leon RT: {info.leonMssCpuUsage.average * 100:.2f} %")
-    print("----------------------------------------")
+    if not conf.args.report_file:
+        if "memory" in conf.args.report:
+            print(f"Drr used / total - {info.ddrMemoryUsage.used / m:.2f} / {info.ddrMemoryUsage.total / m:.2f} MiB")
+            print(f"Cmx used / total - {info.cmxMemoryUsage.used / m:.2f} / {info.cmxMemoryUsage.total / m:.2f} MiB")
+            print(f"LeonCss heap used / total - {info.leonCssMemoryUsage.used / m:.2f} / {info.leonCssMemoryUsage.total / m:.2f} MiB")
+            print(f"LeonMss heap used / total - {info.leonMssMemoryUsage.used / m:.2f} / {info.leonMssMemoryUsage.total / m:.2f} MiB")
+        if "temp" in conf.args.report:
+            t = info.chipTemperature
+            print(f"Chip temperature - average: {t.average:.2f}, css: {t.css:.2f}, mss: {t.mss:.2f}, upa0: {t.upa:.2f}, upa1: {t.dss:.2f}")
+        if "cpu" in conf.args.report:
+            print(f"Cpu usage - Leon OS: {info.leonCssCpuUsage.average * 100:.2f}%, Leon RT: {info.leonMssCpuUsage.average * 100:.2f} %")
+        print("----------------------------------------")
+    else:
+        data = {}
+        if "memory" in conf.args.report:
+            data = {
+                **data,
+                "ddr_used": info.ddrMemoryUsage.used,
+                "ddr_total": info.ddrMemoryUsage.total,
+                "cmx_used": info.cmxMemoryUsage.used,
+                "cmx_total": info.cmxMemoryUsage.total,
+                "leon_css_used": info.leonCssMemoryUsage.used,
+                "leon_css_total": info.leonCssMemoryUsage.total,
+                "leon_mss_used": info.leonMssMemoryUsage.used,
+                "leon_mss_total": info.leonMssMemoryUsage.total,
+            }
+        if "temp" in conf.args.report:
+            data = {
+                **data,
+                "temp_avg": info.chipTemperature.average,
+                "temp_css": info.chipTemperature.css,
+                "temp_mss": info.chipTemperature.mss,
+                "temp_upa0": info.chipTemperature.upa,
+                "temp_upa1": info.chipTemperature.dss,
+            }
+        if "cpu" in conf.args.report:
+            data = {
+                **data,
+                "cpu_css_avg": info.leonCssCpuUsage.average,
+                "cpu_mss_avg": info.leonMssCpuUsage.average,
+            }
+
+        if report_file.tell() == 0:
+            print(','.join(data.keys()), file=report_file)
+        print(','.join(map(str, data.values())), file=report_file)
+
 
 class NNetManager:
     source_choices = ("rgb", "left", "right", "rectified_left", "rectified_right", "host")
@@ -323,7 +363,7 @@ class PipelineManager:
         self.nodes.system_logger = self.p.createSystemLogger()
         self.nodes.system_logger.setRate(1)
 
-        if len(conf.args.meta) > 0:
+        if len(conf.args.report) > 0:
             self.nodes.xout_system_logger = self.p.createXLinkOut()
             self.nodes.xout_system_logger.setStreamName("system_logger")
             self.nodes.system_logger.out.link(self.nodes.xout_system_logger.input)
@@ -355,7 +395,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     if conf.useDepth:
         pm.create_depth(conf.args.disparity_confidence_threshold, median, conf.args.stereo_lr_check)
 
-    if len(conf.args.meta) > 0:
+    if len(conf.args.report) > 0:
         pm.create_system_logger()
 
     pm.create_nn()
@@ -368,7 +408,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
     sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if nn_manager.sbb else None
     depth_out = device.getOutputQueue("depth", maxSize=1, blocking=False) if conf.useDepth else None
-    log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.meta) > 0 else None
+    log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None
 
     current_stream = Streams.get_current_stream()
     cam_out = device.getOutputQueue(name=current_stream.name, maxSize=4, blocking=False) if conf.useCamera else None
@@ -495,3 +535,6 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
         if cv2.waitKey(1) == ord('q'):
             break
+
+if conf.args.report_file:
+    report_file.close()
