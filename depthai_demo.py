@@ -226,8 +226,8 @@ class NNetManager:
         if self.nn_family in ("YOLO", "mobilenet"):
             if self.use_depth:
                 nodes.stereo.depth.link(nn.inputDepth)
-                nn.setDepthLowerThreshold(100)
-                nn.setDepthUpperThreshold(3000)
+                nn.setDepthLowerThreshold(conf.args.min_depth)
+                nn.setDepthUpperThreshold(conf.args.max_depth)
 
                 if conf.args.sbb_scale_factor:
                     nn.setBoundingBoxScaleFactor(conf.args.sbb_scale_factor)
