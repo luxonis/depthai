@@ -74,38 +74,24 @@ class StereoCalibration(object):
     def __init__(self):
         """Class to Calculate Calibration and Rectify a Stereo Camera."""
 
-    def calibrate(self, filepath, square_size, out_filepath, type, squaresX, squaresY, mrk_size=None):
+    def calibrate(self, filepath, square_size, mrk_size, squaresX, squaresY, camera_model):
         """Function to calculate calibration for stereo camera."""
         start_time = time.time()
         # init object data
         self.calibrate_rgb = True
-        if type == 'charuco':
-            self.aruco_dictionary = aruco.Dictionary_get(aruco.DICT_4X4_1000)
-            # parameters = aruco.DetectorParameters_create()
-            assert mrk_size != None,  "ERROR: marker size not set"
-            self.board = aruco.CharucoBoard_create(
+        self.data_path = filepath
+        self.board = aruco.CharucoBoard_create(
                 # 22, 16,
                 squaresX, squaresY,
                 square_size,
                 mrk_size,
                 self.aruco_dictionary)
-            # self.board = aruco.CharucoBoard_create(
-            #     11, 8,
-            #     square_size,
-            #     mrk_size,
-            #     self.aruco_dictionary)
-            self.data_path = filepath
-            self.calibrate_charuco3D(filepath)
-        else:
-            self.objp = np.zeros((9 * 6, 3), np.float32)
-            self.objp[:, :2] = np.mgrid[0:9, 0:6].T.reshape(-1, 2)
-            for pt in self.objp:
-                pt *= square_size
 
-            # process images, detect corners, refine and save data
-            self.process_images(filepath)
-            self.calibrate_camera()
-            # run calibration procedure and construct Homography and mesh
+        self.aruco_dictionary = aruco.Dictionary_get(aruco.DICT_4X4_1000)
+            # parameters = aruco.DetectorParameters_create()
+        assert mrk_size != None,  "ERROR: marker size not set"
+        self.calibrate_charuco3D(filepath)
+
             # self.stereo_calibrate_two_homography_calib()
         print('~~~~~ Starting Stereo Calibratin ~~~~~')
         # self.stereo_calib_two_homo()
@@ -317,18 +303,18 @@ class StereoCalibration(object):
         # calids_r = []  # ids found in imag
 
         images_left = glob.glob(filepath + "/left/*")
-        # images_right = glob.glob(filepath + "/right/*")
+        images_right = glob.glob(filepath + "/right/*")
         images_rgb = glob.glob(filepath + "/rgb/*")
         # print("Images left path------------------->")
         # print(images_left)
         images_left.sort()
-        # images_right.sort()
+        images_right.sort()
         images_rgb.sort()
 
         assert len(
             images_left) != 0, "ERROR: Images not read correctly, check directory"
-        # assert len(
-        #     images_right) != 0, "ERROR: Images not read correctly, check directory"
+        assert len(
+            images_right) != 0, "ERROR: Images not read correctly, check directory"
         assert len(
             images_rgb) != 0, "ERROR: Images not read correctly, check directory"
 
@@ -526,98 +512,6 @@ class StereoCalibration(object):
             self.d3_scaled,
             self.img_shape_rgb_scaled, self.R_rgb, self.T_rgb)
 
-    def process_images(self, filepath):
-        """Read images, detect corners, refine corners, and save data."""
-        # Arrays to store object points and image points from all the images.
-        self.objpoints = []  # 3d point in real world space
-        self.imgpoints_l = []  # 2d points in image plane.
-        self.imgpoints_r = []  # 2d points in image plane.
-        # polygon ids of left/right image sets with checkerboard corners.
-        self.calib_successes = []
-
-        # images_left = glob.glob(filepath + "/left/*")
-        # images_right = glob.glob(filepath + "/right/*")
-        images_left = glob.glob(filepath + "/left/*")
-        images_right = glob.glob(filepath + "/right/*")
-        print("Images left path------------------->")
-        print(images_left)
-        images_left.sort()
-        images_right.sort()
-
-        print("\nAttempting to read images for left camera from dir: " +
-              filepath + "/left/")
-        print("Attempting to read images for right camera from dir: " +
-              filepath + "/right/")
-
-        assert len(
-            images_left) != 0, "ERROR: Images not read correctly, check directory"
-        assert len(
-            images_right) != 0, "ERROR: Images not read correctly, check directory"
-
-        self.temp_img_r_point_list = []
-        self.temp_img_l_point_list = []
-
-        for image_left, image_right in zip(images_left, images_right):
-            img_l = cv2.imread(image_left, 0)
-            img_r = cv2.imread(image_right, 0)
-
-            assert img_l is not None, "ERROR: Images not read correctly"
-            assert img_r is not None, "ERROR: Images not read correctly"
-
-            print("Finding chessboard corners for %s and %s..." %
-                  (os.path.basename(image_left), os.path.basename(image_right)))
-            start_time = time.time()
-
-            # Find the chess board corners
-            flags = 0
-            flags |= cv2.CALIB_CB_ADAPTIVE_THRESH
-            flags |= cv2.CALIB_CB_NORMALIZE_IMAGE
-            ret_l, corners_l = cv2.findChessboardCorners(img_l, (9, 6), flags)
-            ret_r, corners_r = cv2.findChessboardCorners(img_r, (9, 6), flags)
-
-            # termination criteria
-            self.criteria = (cv2.TERM_CRITERIA_MAX_ITER +
-                             cv2.TERM_CRITERIA_EPS, 30, 0.001)
-
-            # if corners are found in both images, refine and add data
-            if ret_l and ret_r:
-                self.objpoints.append(self.objp)
-                rt = cv2.cornerSubPix(img_l, corners_l, (5, 5),
-                                      (-1, -1), self.criteria)
-                self.imgpoints_l.append(corners_l)
-                rt = cv2.cornerSubPix(img_r, corners_r, (5, 5),
-                                      (-1, -1), self.criteria)
-                self.imgpoints_r.append(corners_r)
-                self.temp_img_l_point_list.append([corners_l])
-                self.temp_img_r_point_list.append([corners_r])
-                # self.calib_successes.append(polygon_from_image_name(image_left))
-                print("\t[OK]. Took %i seconds." %
-                      (round(time.time() - start_time, 2)))
-            else:
-                print("\t[ERROR] - Corners not detected. Took %i seconds." %
-                      (round(time.time() - start_time, 2)))
-
-            self.img_shape = img_r.shape[::-1]
-        print(str(len(self.objpoints)) + " of " + str(len(images_left)) +
-              " images being used for calibration")
-        # self.ensure_valid_images()
-
-    def ensure_valid_images(self):
-        """
-        Ensures there is one set of left/right images for each polygon. If not, raises an raises an
-        AssertionError with instructions on re-running calibration for the invalid polygons.
-        """
-        expected_polygons = len(setPolygonCoordinates(
-            1000, 600))  # inseted values are placeholders
-        unique_calib_successes = set(self.calib_successes)
-        if len(unique_calib_successes) != expected_polygons:
-            valid = set(np.arange(0, expected_polygons))
-            missing = valid - unique_calib_successes
-            arg_value = ' '.join(map(str, missing))
-            raise AssertionError(
-                "Missing valid image sets for %i polygons. Re-run calibration with the\n'-p %s' argument to re-capture images for these polygons." % (len(missing), arg_value))
-        else:
-            return True
 
     def calibrate_camera(self):
         """Calibrate camera and construct Homography."""
