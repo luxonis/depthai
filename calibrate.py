@@ -87,16 +87,15 @@ def parse_args():
     parser.add_argument("-i", "--imageOp", default="modify",
                         type=str, required=False,
                         help="Whether existing images should be modified or all images should be deleted before running image capture. The default is 'modify'. Change to 'delete' to delete all image files.")
+    parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
+                        help="Display rectified images with lines drawn for epipolar check")
     parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*',
                         type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
                         "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
-    # parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
-    #                     help="Used by board developers for debugging.")
-    # parser.add_argument("-fusb2", "--force_usb2", default=False, action="store_true",
-    #                     help="Force usb2 connection")
+
     parser.add_argument("-iv", "--invertVertical", dest="invert_v", default=False, action="store_true",
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
@@ -459,7 +458,7 @@ class Main:
 
         try:
             epiploar_error, calibData = cal_data.calibrate(self.dataset_path, self.args.squareSizeCm,
-                 self.args.markerSizeCm, self.args.squaresX, self.args.squaresY, self.args.cameraMode)
+                 self.args.markerSizeCm, self.args.squaresX, self.args.squaresY, self.args.cameraMode, True, self.args.rectifiedDisp)
             if epiploar_error > self.args.maxEpiploarError:
                 image = create_blank(900, 512, rgb_color=red)
                 text = "High epiploar_error: " + str(epiploar_error)
