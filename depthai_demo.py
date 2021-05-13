@@ -25,6 +25,7 @@ if platform.machine() not in ['armv6l', 'aarch64']:
 
 conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
+conf.adjustPreviewToOptions()
 
 in_w, in_h = conf.getInputSize()
 rgb_res = conf.getRgbResolution()
@@ -312,11 +313,10 @@ class NNetManager:
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40),
                         text_type, 0.5, text_color)
 
-            x_meters = detection.spatialCoordinates.x / 1000
-            y_meters = detection.spatialCoordinates.y / 1000
-            z_meters = detection.spatialCoordinates.z / 1000
-
             if conf.useDepth:  # Display coordinates as well
+                x_meters = detection.spatialCoordinates.x / 1000
+                y_meters = detection.spatialCoordinates.y / 1000
+                z_meters = detection.spatialCoordinates.z / 1000
                 cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
                             text_type, 0.5, text_color)
                 cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),

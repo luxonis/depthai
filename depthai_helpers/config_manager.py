@@ -181,6 +181,14 @@ class ConfigManager:
 
         return cmd_file, debug_mode
 
+    def adjustPreviewToOptions(self):
+        if self.args.camera == "color" and "color" not in self.args.show:
+            self.args.show.append("color")
+        if self.args.camera == "left" and "left" not in self.args.show:
+            self.args.show.append("left")
+        if self.args.camera == "right" and "right" not in self.args.show:
+            self.args.show.append("right")
+
     def adjustParamsToDevice(self, device):
         cams = device.getConnectedCameras()
         depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
