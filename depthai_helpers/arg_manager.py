@@ -72,7 +72,7 @@ def parse_args():
                         help="Display spatial bounding box (ROI) when displaying spatial information. The Z coordinate get's calculated from the ROI (average)")
     parser.add_argument("-sbb_sf", "--sbb_scale_factor", default=0.3, type=float,
                         help="Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: %(default)s")
-    parser.add_argument('-s', '--show', default=["color"], nargs="+", choices=_stream_choices, help="Choose which previews to show. Default: %(default)s")
+    parser.add_argument('-s', '--show', default=[], nargs="+", choices=_stream_choices, help="Choose which previews to show. Default: %(default)s")
     parser.add_argument('--report', nargs="+", default=[], choices=["temp", "cpu", "memory"], help="Display device utilization data")
     parser.add_argument('--report_file', help="Save report data to specified target file in CSV format")
     parser.add_argument('-sync', '--sync', action="store_true",

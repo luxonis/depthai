@@ -181,6 +181,16 @@ class ConfigManager:
 
         return cmd_file, debug_mode
 
+    def adjustPreviewToOptions(self):
+        if self.args.camera == "color" and "color" not in self.args.show:
+            self.args.show.append("color")
+        if self.args.camera == "left" and "left" not in self.args.show:
+            self.args.show.append("left")
+        if self.args.camera == "right" and "right" not in self.args.show:
+            self.args.show.append("right")
+        if self.useDepth and "depth" not in self.args.show:
+            self.args.show.append("depth")
+
     def adjustParamsToDevice(self, device):
         cams = device.getConnectedCameras()
         depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
@@ -200,7 +210,7 @@ class ConfigManager:
                 if name in ("nn_input", "color"):
                     updated_show_arg.append(name)
                 else:
-                    print("Disabling {} window...".format(name))
+                    print("Disabling {} preview...".format(name))
             self.args.show = updated_show_arg
 
     def linuxCheckApplyUsbRules(self):
