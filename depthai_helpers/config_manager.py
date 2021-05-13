@@ -188,6 +188,8 @@ class ConfigManager:
             self.args.show.append("left")
         if self.args.camera == "right" and "right" not in self.args.show:
             self.args.show.append("right")
+        if self.useDepth and "depth" not in self.args.show:
+            self.args.show.append("depth")
 
     def adjustParamsToDevice(self, device):
         cams = device.getConnectedCameras()
@@ -208,7 +210,7 @@ class ConfigManager:
                 if name in ("nn_input", "color"):
                     updated_show_arg.append(name)
                 else:
-                    print("Disabling {} window...".format(name))
+                    print("Disabling {} preview...".format(name))
             self.args.show = updated_show_arg
 
     def linuxCheckApplyUsbRules(self):
