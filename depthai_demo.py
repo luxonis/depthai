@@ -26,7 +26,6 @@ if platform.machine() not in ['armv6l', 'aarch64']:
 conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
 
-in_w, in_h = conf.getInputSize()
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
 bbox_color = (255, 255, 255)
@@ -170,9 +169,10 @@ class NNetManager:
     config = None
     nn_family = None
     labels = None
+    input_size = None
     confidence = None
     metadata = None
-    output_format = None
+    output_format = "raw"
     sbb = False
     source_camera = None
 
@@ -199,10 +199,18 @@ class NNetManager:
                     nn_config = self.config.get("nn_config", {})
                     self.labels = self.config.get("mappings", {}).get("labels", None)
                     self.nn_family = nn_config.get("NN_family", None)
-                    self.output_format = nn_config.get("output_format", None)
+                    self.output_format = nn_config.get("output_format", "raw")
                     self.metadata = nn_config.get("NN_specific_metadata", {})
+                    if "input_size" in nn_config:
+                        self.input_size = tuple(map(int, nn_config.get("input_size").split('x')))
 
                     self.confidence = self.metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
+
+        if conf.args.cnn_input_size is None and self.input_size is None:
+            raise RuntimeError("Unable to determine the nn input size. Please use --cnn_input_size flag to specify it in WxH format: -nn-size <width>x<height>")
+
+        if conf.args.cnn_input_size:
+            self.input_size = tuple(map(int, conf.args.cnn_input_size.split('x')))
 
     @property
     def should_flip_detection(self):
@@ -260,7 +268,7 @@ class NNetManager:
             setattr(nodes, self.input_name, xout)
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
             nodes.manip = p.createImageManip()
-            nodes.manip.initialConfig.setResize(in_w, in_h)
+            nodes.manip.initialConfig.setResize(*self.input_size)
             # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
             nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             # NN inputs
@@ -312,11 +320,11 @@ class NNetManager:
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40),
                         text_type, 0.5, text_color)
 
-            x_meters = detection.spatialCoordinates.x / 1000
-            y_meters = detection.spatialCoordinates.y / 1000
-            z_meters = detection.spatialCoordinates.z / 1000
-
             if conf.useDepth:  # Display coordinates as well
+                x_meters = detection.spatialCoordinates.x / 1000
+                y_meters = detection.spatialCoordinates.y / 1000
+                z_meters = detection.spatialCoordinates.z / 1000
+
                 cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
                             text_type, 0.5, text_color)
                 cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
@@ -404,7 +412,7 @@ class PipelineManager:
     def create_color_cam(self, use_hq):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
-        self.nodes.cam_rgb.setPreviewSize(in_w, in_h)
+        self.nodes.cam_rgb.setPreviewSize(*self.nn_manager.input_size)
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(rgb_res)
         self.nodes.cam_rgb.setFps(conf.args.rgb_fps)
@@ -588,11 +596,11 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             if not read_correctly:
                 break
 
-            scaled_frame = cv2.resize(host_frame, (in_w, in_h))
+            scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
             frame_nn = dai.ImgFrame()
             frame_nn.setSequenceNum(seq_num)
-            frame_nn.setWidth(in_w)
-            frame_nn.setHeight(in_h)
+            frame_nn.setWidth(nn_manager.input_size[0])
+            frame_nn.setHeight(nn_manager.input_size[1])
             frame_nn.setData(to_planar(scaled_frame))
             nn_in.send(frame_nn)
             seq_num += 1
@@ -606,10 +614,12 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
         if len(in_nn) > 0:
             if nn_manager.output_format == "detection":
                 detections = in_nn[-1].detections
+            print(in_nn)
             for packet in in_nn:
-                if nn_manager.output_format is None:
+                if nn_manager.output_format == "raw":
                     try:
-                        print("Received NN packet: ", to_tensor_result(packet))
+                        data = to_tensor_result(packet)
+                        print("Received NN packet: ", ", ".join([f"{key}: {value.shape}" for key, value in data.items()]))
                     except Exception as ex:
                         print("Received NN packet: <Preview unabailable: {}>".format(ex))
                 fps.tick('nn')

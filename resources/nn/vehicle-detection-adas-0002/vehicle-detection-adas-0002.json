@@ -3,7 +3,8 @@
     {
         "output_format" : "detection",
         "NN_family" : "mobilenet",
-        "confidence_threshold" : 0.5
+        "confidence_threshold" : 0.5,
+        "input_size": "256x256"
     },
     "mappings":
     {
