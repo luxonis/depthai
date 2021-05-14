@@ -382,10 +382,10 @@ class FPSHandler:
     def draw_fps(self, source):
         def draw(frame, name: str):
             frame_fps = f"{name.upper()} FPS: {round(fps.tick_fps(name), 1)}"
-            cv2.rectangle(frame, (0, 260), (120, 300), (255, 255, 255), cv2.FILLED)
-            cv2.putText(frame, frame_fps, (5, 285), text_type, 0.4, fps_color)
+            cv2.rectangle(frame, (0, 0), (120, 40), (255, 255, 255), cv2.FILLED)
+            cv2.putText(frame, frame_fps, (5, 15), text_type, 0.4, fps_color)
 
-            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 270), text_type, 0.4, fps_color)
+            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), text_type, 0.4, fps_color)
         if isinstance(source, PreviewManager):
             for name, frame in pv.frames.items():
                 draw(frame, name)
