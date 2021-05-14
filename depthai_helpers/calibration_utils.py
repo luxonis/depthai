@@ -80,7 +80,9 @@ class StereoCalibration(object):
         # init object data
         self.calibrate_rgb = calibrate_rgb
         self.enable_rectification_disp = enable_disp_rectify
+        self.camera_model = camera_model
         self.data_path = filepath
+        self.aruco_dictionary = aruco.Dictionary_get(aruco.DICT_4X4_1000)
         self.board = aruco.CharucoBoard_create(
                 # 22, 16,
                 squaresX, squaresY,
@@ -88,7 +90,7 @@ class StereoCalibration(object):
                 mrk_size,
                 self.aruco_dictionary)
 
-        self.aruco_dictionary = aruco.Dictionary_get(aruco.DICT_4X4_1000)
+        
             # parameters = aruco.DetectorParameters_create()
         assert mrk_size != None,  "ERROR: marker size not set"
         self.calibrate_charuco3D(filepath)
@@ -280,8 +282,8 @@ class StereoCalibration(object):
                                      winSize=(5, 5),
                                      zeroZone=(-1, -1),
                                      criteria=criteria)
-                    allCorners.append(res2[1])
-                    allIds.append(res2[2])
+                    allCorners.append(res2[1]) # Charco chess corners
+                    allIds.append(res2[2]) # charuco chess corner id's
                     all_marker_corners.append(marker_corners)
                     all_marker_ids.append(ids)
                     all_recovered.append(recoverd)
@@ -414,7 +416,7 @@ class StereoCalibration(object):
         flags = (cv2.CALIB_USE_INTRINSIC_GUESS +
                  cv2.CALIB_RATIONAL_MODEL + cv2.CALIB_FIX_ASPECT_RATIO)
     #     flags = (cv2.CALIB_RATIONAL_MODEL)
-        (ret, camera_matrix, distortion_coefficients0,
+        (ret, camera_matrix, distortion_coefficients,
          rotation_vectors, translation_vectors,
          stdDeviationsIntrinsics, stdDeviationsExtrinsics,
          perViewErrors) = cv2.aruco.calibrateCameraCharucoExtended(
@@ -427,7 +429,7 @@ class StereoCalibration(object):
             flags=flags,
             criteria=(cv2.TERM_CRITERIA_EPS & cv2.TERM_CRITERIA_COUNT, 10000, 1e-9))
 
-        return ret, camera_matrix, distortion_coefficients0, rotation_vectors, translation_vectors
+        return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors
 
     def rgb_calibrate(self, filepath):
         images_right = glob.glob(filepath + "/right/*")
@@ -796,7 +798,7 @@ class StereoCalibration(object):
         cv2.destroyWindow('Stereo Pair')
 
 
- def create_save_mesh(self): #, output_path):
+    def create_save_mesh(self): #, output_path):
 
         map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)

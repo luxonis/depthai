@@ -128,7 +128,6 @@ class Main:
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = 135
-
         if self.args['board']:
             board_path = Path(self.args['board'])
             if not board_path.exists():
@@ -406,7 +405,7 @@ class Main:
 
                 if captured_left and captured_right and captured_color:
                     print(f"Images captured --> {self.images_captured}")
-                    if not self.images_captured
+                    if not self.images_captured:
                         if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
                             self.show_failed_orientation()
                         if not self.test_camera_orientation(captured_left_frame, captured_color_frame):
