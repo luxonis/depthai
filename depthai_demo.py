@@ -59,6 +59,7 @@ def convert_disparity_to_color(disparity):
 class Previews(enum.Enum):
     nn_input = partial(lambda packet: packet.getCvFrame())
     color = partial(lambda packet: packet.getCvFrame())
+    host_out = partial(lambda packet: packet.getCvFrame())
     left = partial(lambda packet: packet.getCvFrame())
     right = partial(lambda packet: packet.getCvFrame())
     rectified_left = partial(lambda packet: cv2.flip(packet.getCvFrame(), 1))
@@ -210,14 +211,14 @@ class NNetManager:
         return self.source in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
 
     def normFrame(self, frame):
-        if not conf.args.full_fov_nn:
+        if not conf.args.full_fov_nn and conf.useCamera:
             h = frame.shape[0]
             return np.zeros((h, h))
         else:
             return frame
 
     def cropOffsetX(self, frame):
-        if not conf.args.full_fov_nn:
+        if not conf.args.full_fov_nn and conf.useCamera:
             h, w = frame.shape[:2]
             return (w - h) // 2
         else:
@@ -259,6 +260,11 @@ class NNetManager:
             xin.setStreamName(self.input_name)
             xin.out.link(nn.input)
             setattr(nodes, self.input_name, xout)
+            # Send the video frame back to the host
+            if conf.args.sync:
+                nodes.xout_rgb = p.createXLinkOut()
+                nodes.xout_rgb.setStreamName("host")
+
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
             nodes.manip = p.createImageManip()
             nodes.manip.initialConfig.setResize(in_w, in_h)
@@ -313,7 +319,7 @@ class NNetManager:
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40),
                         text_type, 0.5, text_color)
 
-            if conf.useDepth:  # Display coordinates as well
+            if conf.useDepth:  # Display spatial coordinates as well
                 x_meters = detection.spatialCoordinates.x / 1000
                 y_meters = detection.spatialCoordinates.y / 1000
                 z_meters = detection.spatialCoordinates.z / 1000
@@ -485,7 +491,7 @@ class PipelineManager:
                 nn.passthrough.link(self.nodes.xout_nn_input.input)
 
             if conf.args.sync:
-                if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
+                if self.nn_manager.source in ["color", "host"] and hasattr(self.nodes, "xout_rgb"):
                     nn.passthrough.link(self.nodes.xout_rgb.input)
                 elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
                     nn.passthrough.link(self.nodes.xout_left.input)
@@ -527,7 +533,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
-    if conf.useCamera:
+    if conf.useCamera or conf.args.sync:
         pv = PreviewManager(fps)
 
         if conf.args.camera == "left":
@@ -561,6 +567,9 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None
 
     if conf.useCamera:
+        pv.create_queues(device)
+    elif conf.args.sync:
+        conf.args.show = ["host"]
         pv.create_queues(device)
     # cam_out = device.getOutputQueue(name=current_stream.name, maxSize=4, blocking=False) if conf.useCamera else None
 
@@ -600,6 +609,10 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             # if high quality, send original frames
             if not conf.useHQ:
                 host_frame = scaled_frame
+            # If sync, wait for the NN passthrough frame from the device
+            if conf.args.sync:
+                host_frame_in = np.array(pv.output_queues[0].get().getData()).reshape((3, in_h, in_w)).transpose(1, 2, 0).copy()
+                host_frame = host_frame_in
             fps.tick('host')
 
         in_nn = nn_out.tryGetAll()
