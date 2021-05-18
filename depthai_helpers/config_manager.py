@@ -3,6 +3,8 @@ import platform
 import subprocess
 import urllib.request
 from pathlib import Path
+
+import cv2
 import depthai as dai
 
 import blobconverter
@@ -48,7 +50,17 @@ class ConfigManager:
 
     @property
     def useDepth(self):
-        return not self.args.disable_depth
+        return not self.args.disable_depth and self.useCamera
+
+    @property
+    def maxDisparity(self):
+        max_disparity = 96
+        if (self.args.extended_disparity):
+            max_disparity *= 2
+        if (self.args.subpixel):
+            max_disparity *= 32
+
+        return max_disparity
 
     def getModelSource(self):
         if not self.useCamera:
@@ -62,7 +74,7 @@ class ConfigManager:
                 return "rectified_right"
             return "right"
         if self.args.camera == "color":
-            return "rgb"
+            return "color"
 
     def getModelName(self):
         if self.args.cnn_model:
@@ -85,6 +97,9 @@ class ConfigManager:
             return map(int, default_input_dims[self.args.cnn_model].split('x'))
         else:
             return map(int, self.args.cnn_input_size.split('x'))
+
+    def getColorMap(self):
+        return getattr(cv2, "COLORMAP_{}".format(self.args.color_map))
 
     def getRgbResolution(self):
         if self.args.rgb_resolution == 2160:
@@ -166,6 +181,16 @@ class ConfigManager:
 
         return cmd_file, debug_mode
 
+    def adjustPreviewToOptions(self):
+        if self.args.camera == "color" and "color" not in self.args.show:
+            self.args.show.append("color")
+        if self.args.camera == "left" and "left" not in self.args.show:
+            self.args.show.append("left")
+        if self.args.camera == "right" and "right" not in self.args.show:
+            self.args.show.append("right")
+        if self.useDepth and "depth" not in self.args.show:
+            self.args.show.append("depth")
+
     def adjustParamsToDevice(self, device):
         cams = device.getConnectedCameras()
         depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
@@ -180,6 +205,13 @@ class ConfigManager:
             if self.args.camera != 'color':
                 print("Switching source to RGB camera...")
             self.args.camera = 'color'
+            updated_show_arg = []
+            for name in self.args.show:
+                if name in ("nn_input", "color"):
+                    updated_show_arg.append(name)
+                else:
+                    print("Disabling {} preview...".format(name))
+            self.args.show = updated_show_arg
 
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':

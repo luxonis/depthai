@@ -25,11 +25,12 @@ if platform.machine() not in ['armv6l', 'aarch64']:
 
 conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
+conf.adjustPreviewToOptions()
 
 in_w, in_h = conf.getInputSize()
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
-bbox_color = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes 
+bbox_color = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes
 text_color = (255, 255, 255)
 fps_color = (134, 164, 11)
 fps_type = cv2.FONT_HERSHEY_SIMPLEX
@@ -303,26 +304,25 @@ class NNetManager:
             return str(label)
 
     def draw_detections(self, source, detections):
-        def draw_detection(frame, detection):     
+        def draw_detection(frame, detection):
             bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
             bbox[::2] += self.cropOffsetX(frame)
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color, 2)
-            cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color, cv2.FILLED)            
+            cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color, cv2.FILLED)
             cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
                         text_type, 0.5, (0, 0, 0))
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 58, bbox[1] - 10),
                         text_type, 0.5, (0, 0, 0))
 
-            x_meters = detection.spatialCoordinates.x / 1000
-            y_meters = detection.spatialCoordinates.y / 1000
-            z_meters = detection.spatialCoordinates.z / 1000
-
             if conf.useDepth:  # Display coordinates as well
-                cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 30),
+                x_meters = detection.spatialCoordinates.x / 1000
+                y_meters = detection.spatialCoordinates.y / 1000
+                z_meters = detection.spatialCoordinates.z / 1000
+                cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
                             text_type, 0.5, text_color)
-                cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 45),
+                cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
                             text_type, 0.5, text_color)
-                cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 60),
+                cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 90),
                             text_type, 0.5, text_color)
         for detection in detections:
             if self.should_flip_detection:
@@ -383,9 +383,9 @@ class FPSHandler:
         def draw(frame, name: str):
             frame_fps = f"{name.upper()} FPS: {round(fps.tick_fps(name), 1)}"
             cv2.rectangle(frame, (0, 0), (120, 40), (255, 255, 255), cv2.FILLED)
-            cv2.putText(frame, frame_fps, (5, 15), text_type, 0.4, fps_color)
+            cv2.putText(frame, frame_fps, (5, 15), fps_type, 0.4, fps_color)
 
-            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), text_type, 0.4, fps_color)
+            cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), fps_type, 0.5, fps_color)
         if isinstance(source, PreviewManager):
             for name, frame in pv.frames.items():
                 draw(frame, name)
