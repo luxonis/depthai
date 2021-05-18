@@ -30,11 +30,11 @@ conf.adjustPreviewToOptions()
 in_w, in_h = conf.getInputSize()
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
-bbox_color = (255, 255, 255)
+bbox_color = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes
 text_color = (255, 255, 255)
-fps_color = (0, 255, 0)
+fps_color = (134, 164, 11)
 fps_type = cv2.FONT_HERSHEY_SIMPLEX
-text_type = cv2.FONT_HERSHEY_TRIPLEX
+text_type = cv2.FONT_HERSHEY_SIMPLEX
 
 
 def convert_depth_frame(packet):
@@ -308,10 +308,11 @@ class NNetManager:
             bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
             bbox[::2] += self.cropOffsetX(frame)
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color, 2)
-            cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20),
-                        text_type, 0.5, text_color)
-            cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40),
-                        text_type, 0.5, text_color)
+            cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color, cv2.FILLED)
+            cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
+                        text_type, 0.5, (0, 0, 0))
+            cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 58, bbox[1] - 10),
+                        text_type, 0.5, (0, 0, 0))
 
             if conf.useDepth:  # Display coordinates as well
                 x_meters = detection.spatialCoordinates.x / 1000
@@ -381,7 +382,8 @@ class FPSHandler:
     def draw_fps(self, source):
         def draw(frame, name: str):
             frame_fps = f"{name.upper()} FPS: {round(fps.tick_fps(name), 1)}"
-            cv2.putText(frame, frame_fps, (5, 15), fps_type, 0.5, fps_color)
+            cv2.rectangle(frame, (0, 0), (120, 40), (255, 255, 255), cv2.FILLED)
+            cv2.putText(frame, frame_fps, (5, 15), fps_type, 0.4, fps_color)
 
             cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), fps_type, 0.5, fps_color)
         if isinstance(source, PreviewManager):
