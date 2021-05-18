@@ -181,6 +181,25 @@ class ConfigManager:
 
         return cmd_file, debug_mode
 
+    def downloadYTVideo(self):
+        try:
+            from pytube import YouTube
+        except ImportError as ex:
+            raise RuntimeError("Unable to use YouTube video due to the following import error: {}".format(ex))
+        path = None
+        for _ in range(10):
+            try:
+                path = YouTube(self.args.yt_video).streams.first().download()
+            except urllib.error.HTTPError:
+                # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
+                # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
+                pass
+            else:
+                break
+        if path is None:
+            raise RuntimeError("Unable to download YouTube video. Please try again")
+        self.args.video = path
+
     def adjustPreviewToOptions(self):
         if self.args.camera == "color" and "color" not in self.args.show:
             self.args.show.append("color")

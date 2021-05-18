@@ -25,6 +25,8 @@ if platform.machine() not in ['armv6l', 'aarch64']:
 
 conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
+if conf.args.yt_video:
+    conf.downloadYTVideo()
 conf.adjustPreviewToOptions()
 
 in_w, in_h = conf.getInputSize()
