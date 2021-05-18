@@ -26,6 +26,8 @@ default_input_dims = {
     "yolo-v3": "416x416"
 }
 DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
+DEPTHAI_VIDEOS = Path(__file__).parent.parent / Path(f"videos/")
+DEPTHAI_VIDEOS.mkdir(exist_ok=True)
 
 
 class ConfigManager:
@@ -189,7 +191,7 @@ class ConfigManager:
         path = None
         for _ in range(10):
             try:
-                path = YouTube(self.args.video).streams.first().download()
+                path = YouTube(self.args.video).streams.first().download(output_path=DEPTHAI_VIDEOS)
             except urllib.error.HTTPError:
                 # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
                 # Often, downloading YT video will fail with 404 exception, but sometimes it's successful

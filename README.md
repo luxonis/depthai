@@ -15,7 +15,7 @@ python3 install_requirements.py
 ## Examples
 
 `python3 depthai_demo.py` - RGB & CNN inference example
-`python3 depthai_demo.py -vid <path_to_video>` - CNN inference on video example
+`python3 depthai_demo.py -vid <path_to_video_or_yt_link>` - CNN inference on video example
 `python3 depthai_demo.py -cnn person-detection-retail-0013` - Run `person-detection-retail-0013` model from `resources/nn` directory
 `python3 depthai_demo.py -cnn tiny-yolo-v3 -sh 8` - Run `tiny-yolo-v3` model from `resources/nn` directory and compile for 8 shaves
 
