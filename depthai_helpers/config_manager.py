@@ -1,6 +1,7 @@
 import os
 import platform
 import subprocess
+import sys
 import urllib.request
 from pathlib import Path
 
@@ -29,6 +30,12 @@ DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
 DEPTHAI_VIDEOS = Path(__file__).parent.parent / Path(f"videos/")
 DEPTHAI_VIDEOS.mkdir(exist_ok=True)
 
+previousprogress = 0
+
+def show_progress(curr, max):
+    done = int(50 * curr / max)
+    sys.stdout.write("\r[{}{}]".format('=' * done, ' ' * (50-done)) )
+    sys.stdout.flush()
 
 class ConfigManager:
     labels = ""
@@ -184,6 +191,16 @@ class ConfigManager:
         return cmd_file, debug_mode
 
     def downloadYTVideo(self):
+        def progress_func(stream, chunk, bytes_remaining):
+            global previousprogress
+            total_size = stream.filesize
+            bytes_downloaded = total_size - bytes_remaining
+            if bytes_downloaded > previousprogress:
+                show_progress(bytes_downloaded, total_size)
+                previousprogress = bytes_downloaded
+            elif bytes_downloaded < previousprogress:
+                previousprogress = 0
+
         try:
             from pytube import YouTube
         except ImportError as ex:
@@ -191,7 +208,7 @@ class ConfigManager:
         path = None
         for _ in range(10):
             try:
-                path = YouTube(self.args.video).streams.first().download(output_path=DEPTHAI_VIDEOS)
+                path = YouTube(self.args.video, on_progress_callback=progress_func).streams.first().download(output_path=DEPTHAI_VIDEOS)
             except urllib.error.HTTPError:
                 # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
                 # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
