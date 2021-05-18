@@ -9,8 +9,6 @@ import json
 import cv2.aruco as aruco
 from pathlib import Path
 
-
-
 aruco_dictionary = aruco.Dictionary_get(aruco.DICT_4X4_1000)
 board = aruco.CharucoBoard_create(
         22, 16,
@@ -26,8 +24,6 @@ print(len(board.nearestMarkerCorners))
 print("Nearest Markers id")
 print(board.nearestMarkerIdx[0])
 print(len(board.nearestMarkerIdx))
-
-
 
 def calibrate_fisheye(self, allCorners, allIds, imsize):
     one_pts = board.chessboardCorners
@@ -86,7 +82,7 @@ def calibrate_stereo(self, allCorners_l, allIds_l, allCorners_r, allIds_r, imsiz
     elif self.fisheye.cameraModel == 'fisheye':
         flags = 0
         flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
-        cv2.stereoCalibrate(
+        return cv2.stereoCalibrate(
             obj_pts, left_corners_sampled, right_corners_sampled,
             cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
             criteria=stereocalib_criteria, flags=flags)
