@@ -25,7 +25,7 @@ if platform.machine() not in ['armv6l', 'aarch64']:
 
 conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
-if conf.args.yt_video:
+if not conf.useCamera and str(conf.args.video).startswith('https'):
     conf.downloadYTVideo()
 conf.adjustPreviewToOptions()
 
