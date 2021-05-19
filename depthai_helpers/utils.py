@@ -23,11 +23,11 @@ def to_tensor_result(packet):
     data = {}
     for tensor in packet.getRaw().tensors:
         if tensor.dataType == dai.TensorInfo.DataType.INT:
-            data[tensor.name] = packet.getLayerInt32(tensor.name)
+            data[tensor.name] = np.array(packet.getLayerInt32(tensor.name)).reshape(tensor.dims)
         elif tensor.dataType == dai.TensorInfo.DataType.FP16:
-            data[tensor.name] = packet.getLayerFp16(tensor.name)
+            data[tensor.name] = np.array(packet.getLayerFp16(tensor.name)).reshape(tensor.dims)
         elif tensor.dataType == dai.TensorInfo.DataType.I8:
-            data[tensor.name] = packet.getLayerUInt8(tensor.name)
+            data[tensor.name] = np.array(packet.getLayerUInt8(tensor.name)).reshape(tensor.dims)
         else:
             print("Unsupported tensor layer type: {}".format(tensor.dataType))
     return data

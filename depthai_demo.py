@@ -6,7 +6,7 @@ import time
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
-
+import importlib.util
 import cv2
 import depthai as dai
 import numpy as np
@@ -172,6 +172,7 @@ class NNetManager:
     source_choices = ("color", "left", "right", "rectified_left", "rectified_right", "host")
     config = None
     nn_family = None
+    handler = None
     labels = None
     input_size = None
     confidence = None
@@ -209,6 +210,13 @@ class NNetManager:
                         self.input_size = tuple(map(int, nn_config.get("input_size").split('x')))
 
                     self.confidence = self.metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
+                    if 'handler' in self.config:
+                        spec = importlib.util.spec_from_file_location("nn_handler", str(config_path.parent / self.config["handler"]))
+                        self.handler = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(self.handler)
+
+                        if not callable(getattr(self.handler, "draw", None)) or not callable(getattr(self.handler, "decode", None)):
+                            raise RuntimeError("Custom model handler does not contain 'draw' or 'decode' methods!")
 
         if conf.args.cnn_input_size is None and self.input_size is None:
             raise RuntimeError("Unable to determine the nn input size. Please use --cnn_input_size flag to specify it in WxH format: -nn-size <width>x<height>")
@@ -319,38 +327,61 @@ class NNetManager:
             print(f"Label of ouf bounds (label_index: {label}, available_labels: {len(self.labels)}")
             return str(label)
 
-    def draw_detections(self, source, detections):
-        def draw_detection(frame, detection):
-            bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
-            bbox[::2] += self.cropOffsetX(frame)
-            cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color, 2)
-            cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color, cv2.FILLED)
-            cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
-                        text_type, 0.5, (0, 0, 0))
-            cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 58, bbox[1] - 10),
-                        text_type, 0.5, (0, 0, 0))
-
-            if conf.useDepth:  # Display spatial coordinates as well
-                x_meters = detection.spatialCoordinates.x / 1000
-                y_meters = detection.spatialCoordinates.y / 1000
-                z_meters = detection.spatialCoordinates.z / 1000
-                cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
-                            text_type, 0.5, text_color)
-                cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
-                            text_type, 0.5, text_color)
-                cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 90),
-                            text_type, 0.5, text_color)
-        for detection in detections:
-            if self.should_flip_detection:
-                # Since rectified frames are horizontally flipped by default
-                swap = detection.xmin
-                detection.xmin = 1 - detection.xmax
-                detection.xmax = 1 - swap
-            if isinstance(source, PreviewManager):
-                for frame in pv.frames.values():
-                    draw_detection(frame, detection)
+    def decode(self, in_nn):
+        if self.output_format == "detection":
+            return in_nn.detections
+        elif self.output_format == "raw":
+            if self.handler is not None:
+                return self.handler.decode(self, in_nn)
             else:
-                draw_detection(source, detection)
+                try:
+                    data = to_tensor_result(in_nn)
+                    print("Received NN packet: ", ", ".join([f"{key}: {value.shape}" for key, value in data.items()]))
+                except Exception as ex:
+                    print("Received NN packet: <Preview unabailable: {}>".format(ex))
+        else:
+            raise RuntimeError("Unknown output format: {}".format(self.output_format))
+
+    def draw(self, source, decoded_data):
+        if self.output_format == "detection":
+            def draw_detection(frame, detection):
+                bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
+                bbox[::2] += self.cropOffsetX(frame)
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color, 2)
+                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color, cv2.FILLED)
+                cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
+                            text_type, 0.5, (0, 0, 0))
+                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 58, bbox[1] - 10),
+                            text_type, 0.5, (0, 0, 0))
+
+                if conf.useDepth:  # Display spatial coordinates as well
+                    x_meters = detection.spatialCoordinates.x / 1000
+                    y_meters = detection.spatialCoordinates.y / 1000
+                    z_meters = detection.spatialCoordinates.z / 1000
+                    cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
+                                text_type, 0.5, text_color)
+                    cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
+                                text_type, 0.5, text_color)
+                    cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 90),
+                                text_type, 0.5, text_color)
+            for detection in decoded_data:
+                if self.should_flip_detection:
+                    # Since rectified frames are horizontally flipped by default
+                    swap = detection.xmin
+                    detection.xmin = 1 - detection.xmax
+                    detection.xmax = 1 - swap
+                if isinstance(source, PreviewManager):
+                    for frame in pv.frames.values():
+                        draw_detection(frame, detection)
+                else:
+                    draw_detection(source, detection)
+        elif self.output_format == "raw" and self.handler is not None:
+            if isinstance(source, PreviewManager):
+                frames = list(pv.frames.items())
+            else:
+                frames = {"host": source}
+            self.handler.draw(self, decoded_data, frames)
+
 
 
 class FPSHandler:
@@ -588,7 +619,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
     seq_num = 0
     host_frame = None
-    detections = []
+    nn_data = []
 
     while True:
         fps.next_iter()
@@ -629,22 +660,15 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
         if in_nn is not None:
             if not conf.useCamera and conf.args.sync:
                 host_frame = Previews.host.value(host_out.get())
-            if nn_manager.output_format == "detection":
-                detections = in_nn.detections
-            elif nn_manager.output_format == "raw":
-                try:
-                        data = to_tensor_result(in_nn)
-                        print("Received NN packet: ", ", ".join([f"{key}: {value.shape}" for key, value in data.items()]))
-                except Exception as ex:
-                    print("Received NN packet: <Preview unabailable: {}>".format(ex))
+            nn_data = nn_manager.decode(in_nn)
             fps.tick('nn')
 
         if conf.useCamera:
-            nn_manager.draw_detections(pv, detections)
+            nn_manager.draw(pv, nn_data)
             fps.draw_fps(pv)
             pv.show_frames()
         else:
-            nn_manager.draw_detections(host_frame, detections)
+            nn_manager.draw(host_frame, nn_data)
             fps.draw_fps(host_frame)
             cv2.imshow("host", host_frame)
 
