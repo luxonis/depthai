@@ -60,6 +60,7 @@ def convert_disparity_to_color(disparity):
 
 class Previews(enum.Enum):
     nn_input = partial(lambda packet: packet.getCvFrame())
+    host = partial(lambda packet: packet.getCvFrame())
     color = partial(lambda packet: packet.getCvFrame())
     host_out = partial(lambda packet: packet.getCvFrame())
     left = partial(lambda packet: packet.getCvFrame())
@@ -264,8 +265,8 @@ class NNetManager:
             setattr(nodes, self.input_name, xout)
             # Send the video frame back to the host
             if conf.args.sync:
-                nodes.xout_rgb = p.createXLinkOut()
-                nodes.xout_rgb.setStreamName("host")
+                nodes.xout_host = p.createXLinkOut()
+                nodes.xout_host.setStreamName(Previews.host.name)
 
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
             nodes.manip = p.createImageManip()
@@ -495,8 +496,10 @@ class PipelineManager:
                 nn.passthrough.link(self.nodes.xout_nn_input.input)
 
             if conf.args.sync:
-                if self.nn_manager.source in ["color", "host"] and hasattr(self.nodes, "xout_rgb"):
+                if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
                     nn.passthrough.link(self.nodes.xout_rgb.input)
+                elif self.nn_manager.source == "host" and hasattr(self.nodes, "xout_host"):
+                    nn.passthrough.link(self.nodes.xout_host.input)
                 elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
                     nn.passthrough.link(self.nodes.xout_left.input)
                 elif self.nn_manager.source == "right" and hasattr(self.nodes, "right"):
@@ -573,9 +576,8 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     if conf.useCamera:
         pv.create_queues(device)
     elif conf.args.sync:
-        conf.args.show = ["host"]
-        pv.create_queues(device)
-    # cam_out = device.getOutputQueue(name=current_stream.name, maxSize=4, blocking=False) if conf.useCamera else None
+        host_out = device.getOutputQueue(Previews.host.name, maxSize=1, blocking=False)
+
 
     seq_num = 0
     host_frame = None
@@ -604,6 +606,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             scaled_frame = cv2.resize(host_frame, (in_w, in_h))
             frame_nn = dai.ImgFrame()
             frame_nn.setSequenceNum(seq_num)
+            frame_nn.setType(dai.RawImgFrame.Type.BGR888p)
             frame_nn.setWidth(in_w)
             frame_nn.setHeight(in_h)
             frame_nn.setData(to_planar(scaled_frame))
@@ -613,23 +616,20 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             # if high quality, send original frames
             if not conf.useHQ:
                 host_frame = scaled_frame
-            # If sync, wait for the NN passthrough frame from the device
-            if conf.args.sync:
-                host_frame_in = np.array(pv.output_queues[0].get().getData()).reshape((3, in_h, in_w)).transpose(1, 2, 0).copy()
-                host_frame = host_frame_in
             fps.tick('host')
 
-        in_nn = nn_out.tryGetAll()
-        if len(in_nn) > 0:
+        in_nn = nn_out.tryGet()
+        if in_nn is not None:
+            if not conf.useCamera and conf.args.sync:
+                host_frame = Previews.host.value(host_out.get())
             if nn_manager.output_format == "detection":
-                detections = in_nn[-1].detections
-            for packet in in_nn:
-                if nn_manager.output_format is None:
-                    try:
-                        print("Received NN packet: ", to_tensor_result(packet))
-                    except Exception as ex:
-                        print("Received NN packet: <Preview unabailable: {}>".format(ex))
-                fps.tick('nn')
+                detections = in_nn.detections
+            elif nn_manager.output_format is None:
+                try:
+                    print("Received NN packet: ", to_tensor_result(in_nn))
+                except Exception as ex:
+                    print("Received NN packet: <Preview unabailable: {}>".format(ex))
+            fps.tick('nn')
 
         if conf.useCamera:
             nn_manager.draw_detections(pv, detections)
