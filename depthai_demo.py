@@ -60,6 +60,7 @@ def convert_disparity_to_color(disparity):
 
 class Previews(enum.Enum):
     nn_input = partial(lambda packet: packet.getCvFrame())
+    host = partial(lambda packet: packet.getCvFrame())
     color = partial(lambda packet: packet.getCvFrame())
     left = partial(lambda packet: packet.getCvFrame())
     right = partial(lambda packet: packet.getCvFrame())
@@ -212,14 +213,14 @@ class NNetManager:
         return self.source in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
 
     def normFrame(self, frame):
-        if not conf.args.full_fov_nn:
+        if not conf.args.full_fov_nn and conf.useCamera:
             h = frame.shape[0]
             return np.zeros((h, h))
         else:
             return frame
 
     def cropOffsetX(self, frame):
-        if not conf.args.full_fov_nn:
+        if not conf.args.full_fov_nn and conf.useCamera:
             h, w = frame.shape[:2]
             return (w - h) // 2
         else:
@@ -261,6 +262,11 @@ class NNetManager:
             xin.setStreamName(self.input_name)
             xin.out.link(nn.input)
             setattr(nodes, self.input_name, xout)
+            # Send the video frame back to the host
+            if conf.args.sync:
+                nodes.xout_host = p.createXLinkOut()
+                nodes.xout_host.setStreamName(Previews.host.name)
+
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
             nodes.manip = p.createImageManip()
             nodes.manip.initialConfig.setResize(in_w, in_h)
@@ -316,7 +322,7 @@ class NNetManager:
             cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 58, bbox[1] - 10),
                         text_type, 0.5, (0, 0, 0))
 
-            if conf.useDepth:  # Display coordinates as well
+            if conf.useDepth:  # Display spatial coordinates as well
                 x_meters = detection.spatialCoordinates.x / 1000
                 y_meters = detection.spatialCoordinates.y / 1000
                 z_meters = detection.spatialCoordinates.z / 1000
@@ -491,6 +497,8 @@ class PipelineManager:
             if conf.args.sync:
                 if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
                     nn.passthrough.link(self.nodes.xout_rgb.input)
+                elif self.nn_manager.source == "host" and hasattr(self.nodes, "xout_host"):
+                    nn.passthrough.link(self.nodes.xout_host.input)
                 elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
                     nn.passthrough.link(self.nodes.xout_left.input)
                 elif self.nn_manager.source == "right" and hasattr(self.nodes, "right"):
@@ -531,7 +539,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
-    if conf.useCamera:
+    if conf.useCamera or conf.args.sync:
         pv = PreviewManager(fps)
 
         if conf.args.camera == "left":
@@ -566,7 +574,9 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
     if conf.useCamera:
         pv.create_queues(device)
-    # cam_out = device.getOutputQueue(name=current_stream.name, maxSize=4, blocking=False) if conf.useCamera else None
+    elif conf.args.sync:
+        host_out = device.getOutputQueue(Previews.host.name, maxSize=1, blocking=False)
+
 
     seq_num = 0
     host_frame = None
@@ -595,6 +605,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             scaled_frame = cv2.resize(host_frame, (in_w, in_h))
             frame_nn = dai.ImgFrame()
             frame_nn.setSequenceNum(seq_num)
+            frame_nn.setType(dai.RawImgFrame.Type.BGR888p)
             frame_nn.setWidth(in_w)
             frame_nn.setHeight(in_h)
             frame_nn.setData(to_planar(scaled_frame))
@@ -606,17 +617,18 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
                 host_frame = scaled_frame
             fps.tick('host')
 
-        in_nn = nn_out.tryGetAll()
-        if len(in_nn) > 0:
+        in_nn = nn_out.tryGet()
+        if in_nn is not None:
+            if not conf.useCamera and conf.args.sync:
+                host_frame = Previews.host.value(host_out.get())
             if nn_manager.output_format == "detection":
-                detections = in_nn[-1].detections
-            for packet in in_nn:
-                if nn_manager.output_format is None:
-                    try:
-                        print("Received NN packet: ", to_tensor_result(packet))
-                    except Exception as ex:
-                        print("Received NN packet: <Preview unabailable: {}>".format(ex))
-                fps.tick('nn')
+                detections = in_nn.detections
+            elif nn_manager.output_format is None:
+                try:
+                    print("Received NN packet: ", to_tensor_result(in_nn))
+                except Exception as ex:
+                    print("Received NN packet: <Preview unabailable: {}>".format(ex))
+            fps.tick('nn')
 
         if conf.useCamera:
             nn_manager.draw_detections(pv, detections)
