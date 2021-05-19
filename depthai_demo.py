@@ -422,7 +422,7 @@ class PipelineManager:
     def create_color_cam(self, use_hq):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
-        self.nodes.cam_rgb.setPreviewSize(in_w, in_h)
+        self.nodes.cam_rgb.setPreviewSize(*self.nn_manager.input_size)
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(rgb_res)
         self.nodes.cam_rgb.setFps(conf.args.rgb_fps)
