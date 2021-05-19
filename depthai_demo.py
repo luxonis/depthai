@@ -379,7 +379,7 @@ class NNetManager:
             if isinstance(source, PreviewManager):
                 frames = list(pv.frames.items())
             else:
-                frames = {"host": source}
+                frames = [("host", source)]
             self.handler.draw(self, decoded_data, frames)
 
 
