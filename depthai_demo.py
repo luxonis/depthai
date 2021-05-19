@@ -62,7 +62,6 @@ class Previews(enum.Enum):
     nn_input = partial(lambda packet: packet.getCvFrame())
     host = partial(lambda packet: packet.getCvFrame())
     color = partial(lambda packet: packet.getCvFrame())
-    host_out = partial(lambda packet: packet.getCvFrame())
     left = partial(lambda packet: packet.getCvFrame())
     right = partial(lambda packet: packet.getCvFrame())
     rectified_left = partial(lambda packet: cv2.flip(packet.getCvFrame(), 1))
