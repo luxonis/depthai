@@ -1,6 +1,7 @@
 import os
 import platform
 import subprocess
+import sys
 import urllib.request
 from pathlib import Path
 
@@ -26,6 +27,14 @@ default_input_dims = {
     "yolo-v3": "416x416"
 }
 DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
+DEPTHAI_VIDEOS = Path(__file__).parent.parent / Path(f"videos/")
+DEPTHAI_VIDEOS.mkdir(exist_ok=True)
+
+
+def show_progress(curr, max):
+    done = int(50 * curr / max)
+    sys.stdout.write("\r[{}{}] ".format('=' * done, ' ' * (50-done)) )
+    sys.stdout.flush()
 
 
 class ConfigManager:
@@ -171,6 +180,39 @@ class ConfigManager:
 
         return cmd_file, debug_mode
 
+    def downloadYTVideo(self):
+        def progress_func(stream, chunk, bytes_remaining):
+            show_progress(stream.filesize - bytes_remaining, stream.filesize)
+
+        try:
+            from pytube import YouTube
+        except ImportError as ex:
+            raise RuntimeError("Unable to use YouTube video due to the following import error: {}".format(ex))
+        path = None
+        for _ in range(10):
+            try:
+                path = YouTube(self.args.video, on_progress_callback=progress_func).streams.first().download(output_path=DEPTHAI_VIDEOS)
+            except urllib.error.HTTPError:
+                # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
+                # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
+                pass
+            else:
+                break
+        if path is None:
+            raise RuntimeError("Unable to download YouTube video. Please try again")
+        print("Youtube video downloaded.")
+        self.args.video = path
+
+    def adjustPreviewToOptions(self):
+        if self.args.camera == "color" and "color" not in self.args.show:
+            self.args.show.append("color")
+        if self.args.camera == "left" and "left" not in self.args.show:
+            self.args.show.append("left")
+        if self.args.camera == "right" and "right" not in self.args.show:
+            self.args.show.append("right")
+        if self.useDepth and "depth" not in self.args.show:
+            self.args.show.append("depth")
+
     def adjustParamsToDevice(self, device):
         cams = device.getConnectedCameras()
         depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
@@ -190,7 +232,7 @@ class ConfigManager:
                 if name in ("nn_input", "color"):
                     updated_show_arg.append(name)
                 else:
-                    print("Disabling {} window...".format(name))
+                    print("Disabling {} preview...".format(name))
             self.args.show = updated_show_arg
 
     def linuxCheckApplyUsbRules(self):

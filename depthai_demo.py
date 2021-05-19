@@ -25,14 +25,17 @@ if platform.machine() not in ['armv6l', 'aarch64']:
 
 conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
+if not conf.useCamera and str(conf.args.video).startswith('https'):
+    conf.downloadYTVideo()
+conf.adjustPreviewToOptions()
 
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
-bbox_color = (255, 255, 255)
+bbox_color = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes
 text_color = (255, 255, 255)
-fps_color = (0, 255, 0)
+fps_color = (134, 164, 11)
 fps_type = cv2.FONT_HERSHEY_SIMPLEX
-text_type = cv2.FONT_HERSHEY_TRIPLEX
+text_type = cv2.FONT_HERSHEY_SIMPLEX
 
 
 def convert_depth_frame(packet):
@@ -56,6 +59,7 @@ def convert_disparity_to_color(disparity):
 
 class Previews(enum.Enum):
     nn_input = partial(lambda packet: packet.getCvFrame())
+    host = partial(lambda packet: packet.getCvFrame())
     color = partial(lambda packet: packet.getCvFrame())
     left = partial(lambda packet: packet.getCvFrame())
     right = partial(lambda packet: packet.getCvFrame())
@@ -217,14 +221,14 @@ class NNetManager:
         return self.source in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
 
     def normFrame(self, frame):
-        if not conf.args.full_fov_nn:
+        if not conf.args.full_fov_nn and conf.useCamera:
             h = frame.shape[0]
             return np.zeros((h, h))
         else:
             return frame
 
     def cropOffsetX(self, frame):
-        if not conf.args.full_fov_nn:
+        if not conf.args.full_fov_nn and conf.useCamera:
             h, w = frame.shape[:2]
             return (w - h) // 2
         else:
@@ -266,6 +270,11 @@ class NNetManager:
             xin.setStreamName(self.input_name)
             xin.out.link(nn.input)
             setattr(nodes, self.input_name, xout)
+            # Send the video frame back to the host
+            if conf.args.sync:
+                nodes.xout_host = p.createXLinkOut()
+                nodes.xout_host.setStreamName(Previews.host.name)
+
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
             nodes.manip = p.createImageManip()
             nodes.manip.initialConfig.setResize(*self.input_size)
@@ -315,16 +324,16 @@ class NNetManager:
             bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
             bbox[::2] += self.cropOffsetX(frame)
             cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color, 2)
-            cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 10, bbox[1] + 20),
-                        text_type, 0.5, text_color)
-            cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40),
-                        text_type, 0.5, text_color)
+            cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color, cv2.FILLED)
+            cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
+                        text_type, 0.5, (0, 0, 0))
+            cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 58, bbox[1] - 10),
+                        text_type, 0.5, (0, 0, 0))
 
-            if conf.useDepth:  # Display coordinates as well
+            if conf.useDepth:  # Display spatial coordinates as well
                 x_meters = detection.spatialCoordinates.x / 1000
                 y_meters = detection.spatialCoordinates.y / 1000
                 z_meters = detection.spatialCoordinates.z / 1000
-
                 cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
                             text_type, 0.5, text_color)
                 cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
@@ -389,7 +398,8 @@ class FPSHandler:
     def draw_fps(self, source):
         def draw(frame, name: str):
             frame_fps = f"{name.upper()} FPS: {round(fps.tick_fps(name), 1)}"
-            cv2.putText(frame, frame_fps, (5, 15), fps_type, 0.5, fps_color)
+            cv2.rectangle(frame, (0, 0), (120, 40), (255, 255, 255), cv2.FILLED)
+            cv2.putText(frame, frame_fps, (5, 15), fps_type, 0.4, fps_color)
 
             cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), fps_type, 0.5, fps_color)
         if isinstance(source, PreviewManager):
@@ -412,7 +422,7 @@ class PipelineManager:
     def create_color_cam(self, use_hq):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
-        self.nodes.cam_rgb.setPreviewSize(*self.nn_manager.input_size)
+        self.nodes.cam_rgb.setPreviewSize(in_w, in_h)
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(rgb_res)
         self.nodes.cam_rgb.setFps(conf.args.rgb_fps)
@@ -495,6 +505,8 @@ class PipelineManager:
             if conf.args.sync:
                 if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
                     nn.passthrough.link(self.nodes.xout_rgb.input)
+                elif self.nn_manager.source == "host" and hasattr(self.nodes, "xout_host"):
+                    nn.passthrough.link(self.nodes.xout_host.input)
                 elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
                     nn.passthrough.link(self.nodes.xout_left.input)
                 elif self.nn_manager.source == "right" and hasattr(self.nodes, "right"):
@@ -535,7 +547,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
-    if conf.useCamera:
+    if conf.useCamera or conf.args.sync:
         pv = PreviewManager(fps)
 
         if conf.args.camera == "left":
@@ -570,7 +582,9 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
     if conf.useCamera:
         pv.create_queues(device)
-    # cam_out = device.getOutputQueue(name=current_stream.name, maxSize=4, blocking=False) if conf.useCamera else None
+    elif conf.args.sync:
+        host_out = device.getOutputQueue(Previews.host.name, maxSize=1, blocking=False)
+
 
     seq_num = 0
     host_frame = None
@@ -599,6 +613,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
             scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
             frame_nn = dai.ImgFrame()
             frame_nn.setSequenceNum(seq_num)
+            frame_nn.setType(dai.RawImgFrame.Type.BGR888p)
             frame_nn.setWidth(nn_manager.input_size[0])
             frame_nn.setHeight(nn_manager.input_size[1])
             frame_nn.setData(to_planar(scaled_frame))
@@ -610,19 +625,19 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
                 host_frame = scaled_frame
             fps.tick('host')
 
-        in_nn = nn_out.tryGetAll()
-        if len(in_nn) > 0:
+        in_nn = nn_out.tryGet()
+        if in_nn is not None:
+            if not conf.useCamera and conf.args.sync:
+                host_frame = Previews.host.value(host_out.get())
             if nn_manager.output_format == "detection":
-                detections = in_nn[-1].detections
-            print(in_nn)
-            for packet in in_nn:
-                if nn_manager.output_format == "raw":
-                    try:
-                        data = to_tensor_result(packet)
+                detections = in_nn.detections
+            elif nn_manager.output_format == "raw":
+                try:
+                        data = to_tensor_result(in_nn)
                         print("Received NN packet: ", ", ".join([f"{key}: {value.shape}" for key, value in data.items()]))
-                    except Exception as ex:
-                        print("Received NN packet: <Preview unabailable: {}>".format(ex))
-                fps.tick('nn')
+                except Exception as ex:
+                    print("Received NN packet: <Preview unabailable: {}>".format(ex))
+            fps.tick('nn')
 
         if conf.useCamera:
             nn_manager.draw_detections(pv, detections)
