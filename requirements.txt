@@ -3,7 +3,7 @@ opencv-python==4.5.1.48; platform_machine != "aarch64"
 requests==2.24.0
 argcomplete==1.12.1
 pyyaml==5.4; platform_machine != "aarch64"
-blobconverter==0.0.9
+blobconverter==0.0.10
 depthai==2.3.0.0
 pytube==10.8.1
 

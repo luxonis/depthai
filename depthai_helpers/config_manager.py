@@ -3,6 +3,7 @@ import platform
 import subprocess
 import sys
 import urllib.request
+from difflib import get_close_matches
 from pathlib import Path
 
 import cv2
@@ -279,6 +280,7 @@ class BlobManager:
         self.zoo_dir = None
         self.config_file = None
         self.use_zoo = False
+        self.zoo_models = [f.stem for f in DEPTHAI_ZOO.iterdir() if f.is_dir()]
         if model_dir is None:
             self.model_name = model_name
             self.use_zoo = True
@@ -294,7 +296,21 @@ class BlobManager:
 
     def compile(self, shaves, target='auto'):
         if self.use_zoo:
-            return blobconverter.from_zoo(name=self.model_name, shaves=shaves)
+            try:
+                return blobconverter.from_zoo(name=self.model_name, shaves=shaves)
+            except Exception as e:
+                if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                    if "not found in model zoo" in e.response.text:
+                        all_models = set(self.zoo_models + blobconverter.zoo_list())
+                        suggested = get_close_matches(self.model_name, all_models)
+                        if len(suggested) > 0:
+                            print("Model {} not found in model zoo. Did you mean: {} ?".format(self.model_name, " / ".join(suggested)), file=sys.stderr)
+                        else:
+                            print("Model {} not found in model zoo", file=sys.stderr)
+                        raise SystemExit(1)
+                    raise RuntimeError("Blob conversion failed with status {}! Error: \"{}\"".format(e.response.status_code, e.response.text))
+                else:
+                    raise
         else:
             return blobconverter.compile_blob(
                 blob_name=self.model_name,
