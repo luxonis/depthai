@@ -1,7 +1,8 @@
 {
-    "NN_config":
+    "nn_config":
     {
-        "output_format" : "raw"
+        "output_format" : "raw",
+        "input_size": "64x64"
     },
     "mappings":
     {
@@ -18,3 +19,4 @@
 
 
 
+1782

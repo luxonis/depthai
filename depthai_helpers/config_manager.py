@@ -39,7 +39,6 @@ def show_progress(curr, max):
 
 class ConfigManager:
     labels = ""
-    NN_config = None
     custom_fw_commit = ''
 
     def __init__(self, args):
@@ -97,15 +96,6 @@ class ConfigManager:
             return self.args.cnn_path
         if self.args.cnn_model is not None and (DEPTHAI_ZOO / self.args.cnn_model).exists():
             return DEPTHAI_ZOO / self.args.cnn_model
-
-    def getInputSize(self):
-        if self.args.cnn_input_size is None:
-            if self.args.cnn_model not in default_input_dims:
-                raise RuntimeError(
-                    "Unable to determine the nn input size. Please use --cnn_input_size flag to specify it in WxW format: -nn-size <width>x<height>")
-            return map(int, default_input_dims[self.args.cnn_model].split('x'))
-        else:
-            return map(int, self.args.cnn_input_size.split('x'))
 
     def getColorMap(self):
         return getattr(cv2, "COLORMAP_{}".format(self.args.color_map))

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import depthai as dai
 
 
 def cos_dist(a, b):
@@ -19,10 +20,17 @@ def to_planar(arr: np.ndarray, shape: tuple = None) -> np.ndarray:
 
 
 def to_tensor_result(packet):
-    return {
-        tensor.name: np.array(packet.getLayerFp16(tensor.name)).reshape(tensor.dims)
-        for tensor in packet.getRaw().tensors
-    }
+    data = {}
+    for tensor in packet.getRaw().tensors:
+        if tensor.dataType == dai.TensorInfo.DataType.INT:
+            data[tensor.name] = np.array(packet.getLayerInt32(tensor.name)).reshape(tensor.dims)
+        elif tensor.dataType == dai.TensorInfo.DataType.FP16:
+            data[tensor.name] = np.array(packet.getLayerFp16(tensor.name)).reshape(tensor.dims)
+        elif tensor.dataType == dai.TensorInfo.DataType.I8:
+            data[tensor.name] = np.array(packet.getLayerUInt8(tensor.name)).reshape(tensor.dims)
+        else:
+            print("Unsupported tensor layer type: {}".format(tensor.dataType))
+    return data
 
 
 # https://stackoverflow.com/questions/20656135/python-deep-merge-dictionary-data#20666342
