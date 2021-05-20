@@ -1,4 +1,4 @@
-# Gen1 DepthAI API Demo Program
+# DepthAI API Demo Program
 
 This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
