@@ -80,7 +80,7 @@ class StereoCalibration(object):
         # init object data
         self.calibrate_rgb = calibrate_rgb
         self.enable_rectification_disp = enable_disp_rectify
-        self.camera_model = camera_model
+        self.cameraModel  = camera_model
         self.data_path = filepath
         self.aruco_dictionary = aruco.Dictionary_get(aruco.DICT_4X4_1000)
         self.board = aruco.CharucoBoard_create(
@@ -96,7 +96,7 @@ class StereoCalibration(object):
         self.calibrate_charuco3D(filepath)
 
             # self.stereo_calibrate_two_homography_calib()
-        print('~~~~~ Starting Stereo Calibratin ~~~~~')
+        print('~~~~~ Starting Stereo Calibration ~~~~~')
         # self.stereo_calib_two_homo()
 
         # rgb-right extrinsic calibration
@@ -139,14 +139,13 @@ class StereoCalibration(object):
         
         if 1:  # Print matrices, to compare with device data
             np.set_printoptions(suppress=True, precision=6)
-            print("\nR1 (left)")
-            print(R1_fp32)
-            print("\nR2 (rgb)")
-            print(R2_fp32)
-            print("\nM1 (left)")
-            print(M1_fp32)
-            print("\nM3 (rgb)")
-            print(M3_fp32)
+            print("\nR1 (left)");  print(R1_fp32)
+            print("\nR2 (right)"); print(R2_fp32)
+            print("\nM1 (left)");  print(M1_fp32)
+            print("\nM2 (right)"); print(M2_fp32)
+            print("\nR");          print(R_fp32)
+            print("\nT");          print(T_fp32)
+            print("\nM3 (rgb)");   print(M3_fp32)
             print("\R (rgb)")
             print(R_rgb_fp32)
             print("\nT (rgb)")
@@ -178,11 +177,13 @@ class StereoCalibration(object):
         print("\tTook %i seconds to run image processing." %
               (round(time.time() - start_time, 2)))
 
-        if type == 'charuco':
-            if self.calibrate_rgb:
-                avg_epipolar_rgb_r = self.test_epipolar_charuco_rgb(filepath)
-            return avg_epipolar_rgb_r, self.calib_data
+        self.create_save_mesh()
 
+        if self.calibrate_rgb:
+            return self.test_epipolar_charuco_lr(filepath), self.test_epipolar_charuco_rgbr(filepath), self.calib_data
+        else:
+            return self.test_epipolar_checker(filepath), None, self.calib_data
+        
 
     def parse_frame(self, frame, stream_name, file_name):
         file_name += '.png'
@@ -308,19 +309,19 @@ class StereoCalibration(object):
 
         images_left = glob.glob(filepath + "/left/*")
         images_right = glob.glob(filepath + "/right/*")
-        images_rgb = glob.glob(filepath + "/rgb/*")
+        # images_rgb = glob.glob(filepath + "/rgb/*")
         # print("Images left path------------------->")
         # print(images_left)
         images_left.sort()
         images_right.sort()
-        images_rgb.sort()
+        # images_rgb.sort()
 
         assert len(
             images_left) != 0, "ERROR: Images not read correctly, check directory"
         assert len(
             images_right) != 0, "ERROR: Images not read correctly, check directory"
-        assert len(
-            images_rgb) != 0, "ERROR: Images not read correctly, check directory"
+        # assert len(
+        #     images_rgb) != 0, "ERROR: Images not read correctly, check directory"
 
         print("~~~~~~~~~~~ POSE ESTIMATION LEFT CAMERA ~~~~~~~~~~~~~")
         allCorners_l, allIds_l, _, _, imsize, _ = self.analyze_charuco(
@@ -338,16 +339,23 @@ class StereoCalibration(object):
         else:
             ret_l, self.M1, self.d1, rvecs, tvecs = self.calibrate_fisheye(allCorners_l, allIds_l, self.img_shape)
             ret_r, self.M2, self.d2, rvecs, tvecs = self.calibrate_fisheye(allCorners_r, allIds_r, self.img_shape)
+        # self.fisheye_undistort_visualizaation(images_left, self.M1, self.d1, self.img_shape)
+        # self.fisheye_undistort_visualizaation(images_right, self.M2, self.d2, self.img_shape)
+
 
         print("~~~~~~~~~~~~~RMS error of left~~~~~~~~~~~~~~")
         print(ret_l)
         print(ret_r)
-
-        if self.cameraModel == 'perspective':
-            ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T, E, F = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
-        else:
-            ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
-        
+        print(self.M1)
+        print(self.M2)
+        print(self.d1)
+        print(self.d2)
+        # if self.cameraModel == 'perspective':
+        ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T, E, F = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
+        # else:
+            # ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
+        print("~~~~~~~~~~~~~RMS error of L-R~~~~~~~~~~~~~~")
+        print(ret)
         """         
         left_corners_sampled = []
         right_corners_sampled = []
@@ -391,18 +399,42 @@ class StereoCalibration(object):
         print("<~~ ~~~~~~~~~~~ RMS of stereo ~~~~~~~~~~~ ~~>")
         print('RMS error of stereo calibration of left-right is {0}'.format(ret)) """
 
-        self.R1, self.R2, self.P1, self.P2, self.Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
-            self.M1,
-            self.d1,
-            self.M2,
-            self.d2,
-            self.img_shape, self.R, self.T)
+        # TODO(sachin): Fix rectify for Fisheye
+        if self.cameraModel == 'perspective':
+
+            self.R1, self.R2, self.P1, self.P2, self.Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
+                                                                                        self.M1,
+                                                                                        self.d1,
+                                                                                        self.M2,
+                                                                                        self.d2,
+                                                                                        self.img_shape, self.R, self.T)
+        else:
+            self.R1, self.R2, self.P1, self.P2, self.Q = cv2.fisheye.stereoRectify(self.M1,
+                self.d1,
+                self.M2,
+                self.d2,
+                self.img_shape, self.R, self.T)	
 
         self.H1 = np.matmul(np.matmul(self.M2, self.R1),
                             np.linalg.inv(self.M1))
         self.H2 = np.matmul(np.matmul(self.M2, self.R2),
                             np.linalg.inv(self.M2))
 
+    def fisheye_undistort_visualizaation(self, img_list, K, D, img_size):
+        for im in img_list:
+            # print(im)
+            img = cv2.imread(im)
+            # h, w = img.shape[:2]
+            if self.cameraModel == 'perspective':
+                map1, map2 = cv2.initUndistortRectifyMap(
+                                K, D, np.eye(3), K, img_size, cv2.CV_32FC1)
+            else:
+                map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, img_size, cv2.CV_32FC1)
+    
+            undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+            cv2.imshow("undistorted", undistorted_img)
+            cv2.waitKey(0)
+            # cv2.destroyAllWindows()        
 
 
     def calibrate_camera_charuco(self, allCorners, allIds, imsize):
@@ -424,7 +456,7 @@ class StereoCalibration(object):
         print(cameraMatrixInit)
 
         distCoeffsInit = np.zeros((5, 1))
-        flags = (cv2.CALIB_USE_INTRINSIC_GUESS +
+        flags = (cv2.CALIB_USE_INTRINSIC_GUESS + 
                  cv2.CALIB_RATIONAL_MODEL + cv2.CALIB_FIX_ASPECT_RATIO)
     #     flags = (cv2.CALIB_RATIONAL_MODEL)
         (ret, camera_matrix, distortion_coefficients,
@@ -443,24 +475,41 @@ class StereoCalibration(object):
         return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors
 
     def calibrate_fisheye(self, allCorners, allIds, imsize):
-        one_pts = board.chessboardCorners
+        one_pts = self.board.chessboardCorners
         obj_points = []
         for i in range(len(allIds)):
             obj_pts_sub = []
             for j in range(len(allIds[i])):
                 obj_pts_sub.append(one_pts[allIds[i][j]])
-            obj_points.append(np.array(obj_pts_sub, dtype=np.float32))\
+            obj_points.append(np.array(obj_pts_sub, dtype=np.float32))
+        
 
+        cameraMatrixInit = np.array([[500,    0.0,      643.9126],
+                                    [0.0,     500,  387.56018],
+                                    [0.0,        0.0,        1.0]])
+        
+        print("Camera Matrix initialization.............")
+        print(cameraMatrixInit)
+        flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
+        distCoeffsInit = np.zeros((4, 1))
         term_criteria = (cv2.TERM_CRITERIA_COUNT +
                                     cv2.TERM_CRITERIA_EPS, 100, 1e-5)
         
-        return cv2.fisheye.calibrate(obj_points, allCorners, imsize, criteria = term_criteria)
+        return cv2.fisheye.calibrate(obj_points, allCorners, imsize, cameraMatrixInit, distCoeffsInit, flags = flags, criteria = term_criteria)
     
     def calibrate_stereo(self, allCorners_l, allIds_l, allCorners_r, allIds_r, imsize, cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r):
         left_corners_sampled = []
         right_corners_sampled = []
         obj_pts = []
         one_pts = self.board.chessboardCorners
+        print('allIds_l')
+        print(len(allIds_l))
+        print(len(allIds_r))
+        print('allIds_l')
+        # print(allIds_l)
+        print('allIds_r')
+        # print(allIds_r)
+
         for i in range(len(allIds_l)):
             left_sub_corners = []
             right_sub_corners = []
@@ -481,7 +530,6 @@ class StereoCalibration(object):
             right_corners_sampled.append(
                 np.array(right_sub_corners, dtype=np.float32))
 
-        
         stereocalib_criteria = (cv2.TERM_CRITERIA_COUNT +
                                 cv2.TERM_CRITERIA_EPS, 100, 1e-5)
 
@@ -494,13 +542,28 @@ class StereoCalibration(object):
                 obj_pts, left_corners_sampled, right_corners_sampled,
                 cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
                 criteria=stereocalib_criteria, flags=flags)
-        elif self.fisheye.cameraModel == 'fisheye':
+        elif self.cameraModel == 'fisheye':
+            print(len(obj_pts))
+            print('obj_pts')
+            # print(obj_pts) 
+            print(len(left_corners_sampled))
+            print('left_corners_sampled')
+            # print(left_corners_sampled) 
+            print(len(right_corners_sampled))
+            print('right_corners_sampled')
+            # print(right_corners_sampled)
+            for i in range(len(obj_pts)):
+                print('---------------------')
+                print(i)
+                print(len(obj_pts[i]))
+                print(len(left_corners_sampled[i]))
+                print(len(right_corners_sampled[i]))
             flags = 0
-            flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
-            return cv2.stereoCalibrate(
+            # flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC # TODO(sACHIN): Try without intrinsic guess
+            return cv2.fisheye.stereoCalibrate(
                 obj_pts, left_corners_sampled, right_corners_sampled,
                 cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
-                criteria=stereocalib_criteria, flags=flags)
+                flags=flags, criteria=stereocalib_criteria), None, None
         
 
     def rgb_calibrate(self, filepath):
@@ -588,6 +651,7 @@ class StereoCalibration(object):
         self.M2_rgb = np.copy(self.M2)
         self.M2_rgb[1, 2] -= 40
         self.d2_rgb = np.copy(self.d1)
+        
         ret, _, _, _, _, self.R_rgb, self.T_rgb, E, F = cv2.stereoCalibrate(
             self.objpoints_rgb_r, self.imgpoints_rgb, self.imgpoints_rgb_right,
             self.M3_scaled, self.d3_scaled, self.M2_rgb, self.d2_rgb, self.img_shape_rgb_scaled,
@@ -604,6 +668,7 @@ class StereoCalibration(object):
             self.img_shape_rgb_scaled, self.R_rgb, self.T_rgb)
 
 
+    
     def test_epipolar_charuco_lr(self, dataset_dir):
         images_left = glob.glob(dataset_dir + '/left/*.png')
         images_right = glob.glob(dataset_dir + '/right/*.png')
@@ -620,7 +685,9 @@ class StereoCalibration(object):
             self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
             self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
-
+        print("Printing p1 and p2")
+        print(self.P1)
+        print(self.P2)
         image_data_pairs = []
         for image_left, image_right in zip(images_left, images_right):
             # read images
@@ -676,6 +743,9 @@ class StereoCalibration(object):
                                  criteria=criteria)
 
             # termination criteria
+            img_pth = Path(images_right[i])
+            name = img_pth.name
+            print("Image name {}".format(name))
             corners_l = []
             corners_r = []
             for j in range(len(res2_l[2])):
@@ -695,8 +765,7 @@ class StereoCalibration(object):
             epi_error_sum = 0
             for l_pt, r_pt in zip(corners_l, corners_r):
                 epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
-            img_pth = Path(images_right[i])
-            name = img_pth.name
+            
             print("Average Epipolar Error per image on host in " + img_pth.name + " : " +
                   str(epi_error_sum / len(corners_l)))
 
@@ -728,9 +797,9 @@ class StereoCalibration(object):
 
         # if not use_homo:
         mapx_rgb, mapy_rgb = cv2.initUndistortRectifyMap(
-            self.M3_scaled, self.d3_scaled, self.R2_rgb, self.M3_scaled, self.img_shape_rgb_scaled, cv2.CV_32FC1)
+            self.M3_scaled, self.d3_scaled, self.R1_rgb, self.M3_scaled, self.img_shape_rgb_scaled, cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
-            self.M2_rgb, self.d2_rgb, self.R1_rgb, self.M3_scaled, self.img_shape_rgb_scaled, cv2.CV_32FC1)
+            self.M2_rgb, self.d2_rgb, self.R2_rgb, self.M3_scaled, self.img_shape_rgb_scaled, cv2.CV_32FC1)
 
         # self.H1_rgb = np.matmul(np.matmul(self.M2, self.R1_rgb),
         #                     np.linalg.inv(M_rgb))
@@ -739,7 +808,7 @@ class StereoCalibration(object):
 
         image_data_pairs = []
         count = 0
-        for image_rgb, image_right in zip(images_rgb, images_left):
+        for image_rgb, image_right in zip(images_rgb, images_right):
             # read images
             img_rgb = cv2.imread(image_rgb, 0)
             img_r = cv2.imread(image_right, 0)
@@ -776,7 +845,7 @@ class StereoCalibration(object):
             #                             cv2.WARP_INVERSE_MAP)
 
             img_rgb = cv2.remap(img_rgb, mapx_rgb, mapy_rgb, cv2.INTER_LINEAR)
-            img_l = cv2.remap(img_r, mapx_r, mapy_r, cv2.INTER_LINEAR)
+            img_r = cv2.remap(img_r, mapx_r, mapy_r, cv2.INTER_LINEAR)
             # self.parse_frame(img_rgb, "rectified_rgb", "rectified_"+str(count))
             image_data_pairs.append((img_rgb, img_r))
             count += 1
@@ -845,7 +914,7 @@ class StereoCalibration(object):
 
         return avg_epipolar
 
-    def display_rectification(self, image_data_pair):
+    def display_rectification(self, image_data_pairs):
         print("Displaying Stereo Pair for visual inspection. Press the [ESC] key to exit.")
         for image_data_pair in image_data_pairs:
             img_concat = cv2.hconcat([image_data_pair[0], image_data_pair[1]])
@@ -864,13 +933,42 @@ class StereoCalibration(object):
             k = cv2.waitKey(0)
             if k == 27:  # Esc key to stop
                 break
+            
                 # os._exit(0)
                 # raise SystemExit()
 
         cv2.destroyWindow('Stereo Pair')
 
+    def display_rectification(self, image_data_pairs):
+        print("Displaying Stereo Pair for visual inspection. Press the [ESC] key to exit.")
+        for image_data_pair in image_data_pairs:
+            img_concat = cv2.hconcat([image_data_pair[0], image_data_pair[1]])
+            img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
+
+            # draw epipolar lines for debug purposes
+            line_row = 0
+            while line_row < img_concat.shape[0]:
+                cv2.line(img_concat,
+                         (0, line_row), (img_concat.shape[1], line_row),
+                         (0, 255, 0), 1)
+                line_row += 30
+
+            # show image
+            cv2.imshow('Stereo Pair', img_concat)
+            k = cv2.waitKey(0)
+            if k == 27:  # Esc key to stop
+                break
+            
+                # os._exit(0)
+                # raise SystemExit()
+
+        cv2.destroyWindow('Stereo Pair')
 
     def create_save_mesh(self): #, output_path):
+
+        curr_path = Path(__file__).parent.resolve()
+        print("Mesh path")
+        print(curr_path)
 
         map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
@@ -945,5 +1043,7 @@ class StereoCalibration(object):
         
         mesh_left = np.array(mesh_left)
         mesh_right = np.array(mesh_right)
-        mesh_left.tofile(consts.resource_paths.left_mesh_fpath)
-        mesh_right.tofile(consts.resource_paths.right_mesh_fpath)
+        left_mesh_fpath = str(curr_path) + '/left_mesh.calib'
+        right_mesh_fpath = str(curr_path) + '/right_mesh.calib'
+        mesh_left.tofile(left_mesh_fpath)
+        mesh_right.tofile(right_mesh_fpath)

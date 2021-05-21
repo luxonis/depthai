@@ -48,3 +48,4 @@ resources/*.json
 *.mvcmd
 *.so
 *.prof
+*.calib

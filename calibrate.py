@@ -314,8 +314,6 @@ class Main:
             current_left  = self.left_camera_queue.tryGet()
             current_right = self.right_camera_queue.tryGet()
             current_color = self.rgb_camera_queue.tryGet()
-            
-            # print("HI")
 
             # recent_left = left_frame.getCvFrame()
             # recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
@@ -456,9 +454,9 @@ class Main:
         dest_path = str(Path('resources').absolute())
 
         try:
-            epiploar_error, calibData = cal_data.calibrate(self.dataset_path, self.args.squareSizeCm,
-                 self.args.markerSizeCm, self.args.squaresX, self.args.squaresY, self.args.cameraMode, True, self.args.rectifiedDisp)
-            if epiploar_error > self.args.maxEpiploarError:
+            epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args['squareSizeCm'],
+                 self.args['markerSizeCm'], self.args['squaresX'], self.args['squaresY'], self.args['cameraMode'], True, self.args['rectifiedDisp'])
+            if epiploar_error > self.args['maxEpiploarError']:
                 image = create_blank(900, 512, rgb_color=red)
                 text = "High epiploar_error: " + str(epiploar_error)
                 cv2.putText(image, text, (10, 250), font, 2, (0, 0, 0), 2)
@@ -469,7 +467,7 @@ class Main:
                 cv2.waitKey(0)
                 print("Requires Recalibration.....!!")
                 raise SystemExit(1)
-
+        
             calibration_handler = dai.CalibrationHandler()
             calibration_handler.setBoardInfo(self.board_config['board_config']['swap_left_and_right_cameras'],
                                              self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
@@ -541,16 +539,15 @@ class Main:
             if resImage is not None:
                 cv2.imshow("Result Image", resImage)
                 cv2.waitKey(0)
-
         except AssertionError as e:
             print("[ERROR] " + str(e))
             raise SystemExit(1)
 
     def run(self):
-        if 'capture' in self.args.mode:
+        if 'capture' in self.args['mode']:
 
             try:
-                if self.args.imageOp == 'delete':
+                if self.args['imageOp'] == 'delete':
                     shutil.rmtree('dataset/')
                 Path("dataset/left").mkdir(parents=True, exist_ok=True)
                 Path("dataset/right").mkdir(parents=True, exist_ok=True)
@@ -561,7 +558,7 @@ class Main:
             self.show_info_frame()
             self.capture_images()
         self.dataset_path = str(Path("dataset").absolute())
-        if 'process' in self.args.mode:
+        if 'process' in self.args['mode']:
             self.calibrate()
         print('py: DONE.')
 
