@@ -29,6 +29,7 @@ def check_range(min_val, max_val):
 
 _stream_choices = ("nn_input", "color", "left", "right", "depth", "disparity", "disparity_color", "rectified_left", "rectified_right")
 color_maps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
+project_root = Path(__file__).parent.parent
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -80,4 +81,5 @@ def parse_args():
                         help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
     parser.add_argument("-monof", "--mono_fps", default=30.0, type=float,
                         help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
+    parser.add_argument('-cb', '--callback', type=Path, default=project_root / 'callbacks.py', help="Path to callbacks file to be used. Default: %(default)s")
     return parser.parse_args()

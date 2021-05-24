@@ -10,13 +10,12 @@ import importlib.util
 import cv2
 import depthai as dai
 import numpy as np
-
 from depthai_helpers.version_check import check_depthai_version
 import platform
 
 from depthai_helpers.arg_manager import parse_args
 from depthai_helpers.config_manager import BlobManager, ConfigManager
-from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result
+from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result, load_module
 
 print('Using depthai module from: ', dai.__file__)
 print('Depthai version installed: ', dai.__version__)
@@ -29,6 +28,7 @@ if not conf.useCamera and str(conf.args.video).startswith('https'):
     conf.downloadYTVideo()
 conf.adjustPreviewToOptions()
 
+callbacks = load_module(conf.args.callback)
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
 bbox_color = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes
@@ -88,6 +88,7 @@ class PreviewManager:
             if frame is not None:
                 fps.tick(queue.getName())
                 frame = getattr(Previews, queue.getName()).value(frame)
+                callbacks.on_new_frame(frame, queue.getName())
                 self.raw_frames[queue.getName()] = frame
 
                 if queue.getName() == Previews.disparity.name:
@@ -105,6 +106,7 @@ class PreviewManager:
             if not conf.args.scale == 1.0:
                 h, w, c = frame.shape
                 frame = cv2.resize(frame, (int(w * conf.args.scale), int(h * conf.args.scale)), interpolation=cv2.INTER_AREA)
+            callbacks.on_show_frame(frame, name)
             cv2.imshow(name, frame)
 
     def has(self, name):
@@ -165,6 +167,7 @@ def print_sys_info(info):
 
         if report_file.tell() == 0:
             print(','.join(data.keys()), file=report_file)
+        callbacks.on_report(data)
         print(','.join(map(str, data.values())), file=report_file)
 
 
@@ -211,9 +214,7 @@ class NNetManager:
 
                     self.confidence = self.metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
                     if 'handler' in self.config:
-                        spec = importlib.util.spec_from_file_location("nn_handler", str(config_path.parent / self.config["handler"]))
-                        self.handler = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(self.handler)
+                        self.handler = load_module(config_path.parent / self.config["handler"])
 
                         if not callable(getattr(self.handler, "draw", None)) or not callable(getattr(self.handler, "decode", None)):
                             raise RuntimeError("Custom model handler does not contain 'draw' or 'decode' methods!")
@@ -381,7 +382,6 @@ class NNetManager:
             else:
                 frames = [("host", source)]
             self.handler.draw(self, decoded_data, frames)
-
 
 
 class FPSHandler:
@@ -620,9 +620,11 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
     seq_num = 0
     host_frame = None
     nn_data = []
+    callbacks.on_setup(**locals())
 
     while True:
         fps.next_iter()
+        callbacks.on_iter(**locals())
         if conf.useCamera:
             pv.prepare_frames()
 
@@ -658,6 +660,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
         in_nn = nn_out.tryGet()
         if in_nn is not None:
+            callbacks.on_nn(in_nn)
             if not conf.useCamera and conf.args.sync:
                 host_frame = Previews.host.value(host_out.get())
             nn_data = nn_manager.decode(in_nn)
@@ -682,3 +685,5 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
 
 if conf.args.report_file:
     report_file.close()
+
+callbacks.on_teardown(**locals())
