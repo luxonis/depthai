@@ -1,3 +1,6 @@
+import importlib
+from pathlib import Path
+
 import cv2
 import numpy as np
 import depthai as dai
@@ -52,3 +55,10 @@ def merge(source, destination):
             destination[key] = value
 
     return destination
+
+
+def load_module(path: Path):
+    spec = importlib.util.spec_from_file_location(path.stem, str(path.absolute()))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module

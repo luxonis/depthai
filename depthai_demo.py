@@ -10,13 +10,12 @@ import importlib.util
 import cv2
 import depthai as dai
 import numpy as np
-import callbacks
 from depthai_helpers.version_check import check_depthai_version
 import platform
 
 from depthai_helpers.arg_manager import parse_args
 from depthai_helpers.config_manager import BlobManager, ConfigManager
-from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result
+from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result, load_module
 
 print('Using depthai module from: ', dai.__file__)
 print('Depthai version installed: ', dai.__version__)
@@ -29,6 +28,7 @@ if not conf.useCamera and str(conf.args.video).startswith('https'):
     conf.downloadYTVideo()
 conf.adjustPreviewToOptions()
 
+callbacks = load_module(conf.args.callback)
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
 bbox_color = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes
@@ -214,9 +214,7 @@ class NNetManager:
 
                     self.confidence = self.metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
                     if 'handler' in self.config:
-                        spec = importlib.util.spec_from_file_location("nn_handler", str(config_path.parent / self.config["handler"]))
-                        self.handler = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(self.handler)
+                        self.handler = load_module(config_path.parent / self.config["handler"])
 
                         if not callable(getattr(self.handler, "draw", None)) or not callable(getattr(self.handler, "decode", None)):
                             raise RuntimeError("Custom model handler does not contain 'draw' or 'decode' methods!")
