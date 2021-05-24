@@ -23,19 +23,19 @@ def setPolygonCoordinates(height, width):
 
             [[margin,0], [margin,height], [width//2, height-slope], [width//2, slope]],
             [[horizontal_shift, 0], [horizontal_shift, height], [width//2 + horizontal_shift, height-slope], [width//2 + horizontal_shift, slope]],
-            # [[horizontal_shift*2-margin, 0], [horizontal_shift*2-margin, height], [width//2 + horizontal_shift*2-margin, height-slope], [width//2 + horizontal_shift*2-margin, slope]],
+            [[horizontal_shift*2-margin, 0], [horizontal_shift*2-margin, height], [width//2 + horizontal_shift*2-margin, height-slope], [width//2 + horizontal_shift*2-margin, slope]],
 
             [[width-margin, 0], [width-margin, height], [width//2, height-slope], [width//2, slope]],
             [[width-horizontal_shift, 0], [width-horizontal_shift, height], [width//2-horizontal_shift, height-slope], [width//2-horizontal_shift, slope]],
-            # [[width-horizontal_shift*2+margin, 0], [width-horizontal_shift*2+margin, height], [width//2-horizontal_shift*2+margin, height-slope], [width//2-horizontal_shift*2+margin, slope]],
+            [[width-horizontal_shift*2+margin, 0], [width-horizontal_shift*2+margin, height], [width//2-horizontal_shift*2+margin, height-slope], [width//2-horizontal_shift*2+margin, slope]],
 
             [[0,margin], [width, margin], [width-slope, height//2], [slope, height//2]],
             [[0,vertical_shift], [width, vertical_shift], [width-slope, height//2+vertical_shift], [slope, height//2+vertical_shift]],
-            # [[0,vertical_shift*2-margin], [width, vertical_shift*2-margin], [width-slope, height//2+vertical_shift*2-margin], [slope, height//2+vertical_shift*2-margin]],
+            [[0,vertical_shift*2-margin], [width, vertical_shift*2-margin], [width-slope, height//2+vertical_shift*2-margin], [slope, height//2+vertical_shift*2-margin]],
 
             [[0,height-margin], [width, height-margin], [width-slope, height//2], [slope, height//2]],
             [[0,height-vertical_shift], [width, height-vertical_shift], [width-slope, height//2-vertical_shift], [slope, height//2-vertical_shift]],
-            # [[0,height-vertical_shift*2+margin], [width, height-vertical_shift*2+margin], [width-slope, height//2-vertical_shift*2+margin], [slope, height//2-vertical_shift*2+margin]]
+            [[0,height-vertical_shift*2+margin], [width, height-vertical_shift*2+margin], [width-slope, height//2-vertical_shift*2+margin], [slope, height//2-vertical_shift*2+margin]]
         ]
     return p_coordinates
 
@@ -232,7 +232,7 @@ class StereoCalibration(object):
                     # resolution to capture extrinsics of the rgb-right camera
                     gray = cv2.resize(gray, req_resolution[::-1],
                                       interpolation=cv2.INTER_CUBIC)
-                    print('~~~~~~~~~~ Only resizing.... ~~~~~~~~~~~~~~~~')
+                    # print('~~~~~~~~~~ Only resizing.... ~~~~~~~~~~~~~~~~')
                 else:
                     # resizing and cropping to have both stereo and rgb to have same resolution
                     # to calculate extrinsics of the rgb-right camera
@@ -253,9 +253,9 @@ class StereoCalibration(object):
                     # gray = gray[: req_resolution[0], :]
                     gray = gray[del_height: del_height + req_resolution[0], :]
 
-                    print("del height ??")
-                    print(del_height)
-                    print(gray.shape)
+                    # print("del height ??")
+                    # print(del_height)
+                    # print(gray.shape)
                 count += 1
                 self.parse_frame(gray, 'rgb_resized',
                                  'rgb_resized_'+str(count))
@@ -1043,7 +1043,7 @@ class StereoCalibration(object):
         
         mesh_left = np.array(mesh_left)
         mesh_right = np.array(mesh_right)
-        left_mesh_fpath = str(curr_path) + '/left_mesh.calib'
-        right_mesh_fpath = str(curr_path) + '/right_mesh.calib'
+        left_mesh_fpath = str(curr_path) + '/../resources/left_mesh.calib'
+        right_mesh_fpath = str(curr_path) + '/../resources/right_mesh.calib'
         mesh_left.tofile(left_mesh_fpath)
         mesh_right.tofile(right_mesh_fpath)

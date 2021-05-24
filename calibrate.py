@@ -78,10 +78,10 @@ def parse_args():
     parser.add_argument("-ms", "--markerSizeCm", default="1.5",
                         type=float, required=False,
                         help="Marker size in charuco boards.")
-    parser.add_argument("-nx", "--squaresX", default="22",
+    parser.add_argument("-nx", "--squaresX", default="11",
                         type=int, required=False,
                         help="number of chessboard squares in X direction in charuco boards.")
-    parser.add_argument("-ny", "--squaresY", default="16",
+    parser.add_argument("-ny", "--squaresY", default="8",
                         type=int, required=False,
                         help="number of chessboard squares in Y direction in charuco boards.")
     parser.add_argument("-i", "--imageOp", default="modify",
@@ -100,7 +100,7 @@ def parse_args():
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
                         help="Invert horizontal axis of the camera for the display")
-    parser.add_argument("-ep", "--maxEpiploarError", dest="max_epipolar_error", default="1.0", type=float, required=False,
+    parser.add_argument("-ep", "--maxEpiploarError", default="1.0", type=float, required=False,
                         help="Sets the maximum epiploar allowed with rectification")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
@@ -158,7 +158,7 @@ class Main:
         marker_corners, _, _ = cv2.aruco.detectMarkers(
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
-        return not (len(marker_corners) < 30)
+        return not (len(marker_corners) < self.args['squaresX']*self.args['squaresY'] / 4)
 
     def test_camera_orientation(self, frame_l, frame_r):
         marker_corners_l, id_l, _ = cv2.aruco.detectMarkers(
@@ -271,7 +271,7 @@ class Main:
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + right", info_frame)
+        cv2.imshow("left + rgb + right", info_frame)
         cv2.waitKey(2000)
 
     def show_failed_orientation(self):
@@ -334,8 +334,8 @@ class Main:
             if key == 27 or key == ord("q"):
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
-
-            if key == ord(" "):
+            elif key == ord(" "):
+                print("setting capture true------------------------")
                 capturing = True
 
             frame_list = []
@@ -344,22 +344,29 @@ class Main:
 
             for packet in recent_frames:
                 frame = packet[1].getCvFrame()
-                print(packet[0])
+                # print(packet[0])
                 # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 if packet[0] == 'rgb':
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                print(frame.shape)
+                # print(frame.shape)
                 if self.polygons is None:
                     self.height, self.width = frame.shape
                     print(self.height, self.width)
                     self.polygons = setPolygonCoordinates(
                         self.height, self.width)
 
-                print("Timestamp difference ---> ")
-                print((recent_left.getTimestamp() -
-                      recent_color.getTimestamp()).microseconds)
+                print("Timestamp difference ---> l & rgb")
+                
+                print((recent_left.getTimestamp()))
+                print((recent_right.getTimestamp()))
                 # print(type(recent_left.getTimestamp())
-                if capturing and abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds) < 30000 and abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds) < 30000:
+                lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                lr_time   = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                print(lrgb_time)
+                print(lr_time)
+
+                if capturing and lrgb_time < 30000 and lr_time < 30000:
+                    print("Capturing  ------------------------")
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
                         tried_left = True
@@ -406,8 +413,8 @@ class Main:
                     if not self.images_captured:
                         if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
                             self.show_failed_orientation()
-                        if not self.test_camera_orientation(captured_left_frame, captured_color_frame):
-                            self.show_failed_orientation()
+                        # if not self.test_camera_orientation(captured_left_frame, captured_color_frame):
+                        #     self.show_failed_orientation()
 
                     self.images_captured += 1
                     self.images_captured_polygon += 1
@@ -438,13 +445,9 @@ class Main:
                         cv2.destroyAllWindows()
                         break
             
-            print(frame_list[0].shape)
-            print(frame_list[1].shape)
-            print(frame_list[2].shape)
-            
+            frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
             combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
-            
-            # combine_img = np.vstack((frame_list[0], frame_list[1]))
+
             cv2.imshow("left + rgb + right", combine_img)
             frame_list.clear()
 
@@ -452,7 +455,7 @@ class Main:
         print("Starting image processing")
         cal_data = StereoCalibration()
         dest_path = str(Path('resources').absolute())
-
+        self.args['cameraMode'] = 'perspective' # hardcoded for now
         try:
             epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args['squareSizeCm'],
                  self.args['markerSizeCm'], self.args['squaresX'], self.args['squaresY'], self.args['cameraMode'], True, self.args['rectifiedDisp'])
@@ -468,6 +471,7 @@ class Main:
                 print("Requires Recalibration.....!!")
                 raise SystemExit(1)
         
+            """         
             calibration_handler = dai.CalibrationHandler()
             calibration_handler.setBoardInfo(self.board_config['board_config']['swap_left_and_right_cameras'],
                                              self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
@@ -495,25 +499,29 @@ class Main:
                 dai.CameraBoardSocket.LEFT, calibData[0])
             calibration_handler.setStereoRight(
                 dai.CameraBoardSocket.RGB, calibData[1])
-
+            """
             resImage = None
-            if not self.device.isClosed():
-                dev_info = self.device.getCurrentDeviceInfo()
+            # if not self.device.isClosed():
+            if 1:
+                """             
+                dev_info = self.device.getDeviceInfo()
                 mx_serial_id = dev_info.getMxId()
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
-
-                is_write_succesful = False
+                """
+                is_write_succesful = True
+                
+                """                 
                 try:
                     is_write_succesful = self.device.flashCalibration(
                         calibration_handler)
                 except:
                     print("Writing in except...")
                     is_write_succesful = self.device.flashCalibration(
-                        calibration_handler)
+                        calibration_handler) """
                 if is_write_succesful:
                     resImage = create_blank(900, 512, rgb_color=green)
-                    text = "Calibration Succesful with" + str(epiploar_error)
+                    text = "Calibration Succesful with"
                     cv2.putText(resImage, text, (10, 250),
                                 font, 2, (0, 0, 0), 2)
                     text = "Epipolar error of " + str(epiploar_error)
@@ -529,12 +537,12 @@ class Main:
                                 font, 2, (0, 0, 0), 2)
             else:
                 calib_dest_path = dest_path + '/depthai_calib.json'
-                calibration_handler.eepromToJsonFile(calib_dest_path)
+                # calibration_handler.eepromToJsonFile(calib_dest_path)
                 resImage = create_blank(900, 512, rgb_color=red)
                 text = "Calibratin succesful. " + str(epiploar_error)
                 cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
-                text = "Device not found to write to EEPROM"
-                cv2.putText(resImage, text, (10, 300), font, 2, (0, 0, 0), 2)
+                # text = "Device not found to write to EEPROM"
+                # cv2.putText(resImage, text, (10, 300), font, 2, (0, 0, 0), 2)
 
             if resImage is not None:
                 cv2.imshow("Result Image", resImage)
