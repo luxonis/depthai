@@ -204,6 +204,10 @@ class CliArgs:
         parser.add_argument("-mirror_rectified", "--mirror_rectified", default='true', choices=['true', 'false'],
                         help="Normally, rectified_left/_right are mirrored for Stereo engine constraints. "
                              "If false, disparity/depth will be mirrored instead. Default: true")
+
+        parser.add_argument("-focus", "--focus", default=-1, type=int, choices=range(0,256),
+                            help="Set manual focus / lens position: 0 .. 255")
+
         argcomplete.autocomplete(parser)
 
         options = parser.parse_args()

@@ -4,6 +4,7 @@ import json
 import platform
 import os
 from time import time, monotonic
+from datetime import datetime
 import cv2
 import numpy as np
 import depthai
@@ -67,6 +68,18 @@ class DepthAI:
 
         # grab video file, if option exists
         video_file = configMan.video_file
+
+        last_focus = -1
+        if 'jpegout' in stream_names:
+            # Make window resizable, and configure initial size
+            cv2.namedWindow('jpegout', cv2.WINDOW_NORMAL)
+            cv2.resizeWindow('jpegout', (1440, 900))
+            frame = np.zeros((900, 1440, 3), np.uint8)
+            cv2.putText(frame, "Resize as desired.", (25, 50), cv2.FONT_HERSHEY_DUPLEX, 2.0, (255, 255, 255))
+            cv2.putText(frame, "Press 'C' to capture,", (25, 120), cv2.FONT_HERSHEY_DUPLEX, 2.0, (255, 255, 255))
+            cv2.putText(frame, "and 'S' to save captured image to disk", (25, 190), cv2.FONT_HERSHEY_DUPLEX, 2.0, (255, 255, 255))
+            cv2.imshow('jpegout', frame)
+            last_jpeg = None
 
         self.device = None
         if debug_mode:
@@ -186,7 +199,7 @@ class DepthAI:
                 exp_arg = str(self.rgb_exp) + ' ' + str(self.rgb_iso) + ' 33333'
                 self.device.send_camera_control(cam_c, cmd_set_exp, exp_arg)
             elif key == ord(',') or key == ord('.'):
-                self.rgb_manual_focus = getattr(self, 'rgb_manual_focus', 200)  # initial
+                self.rgb_manual_focus = getattr(self, 'rgb_manual_focus', args['focus'])  # initial
                 rgb_focus_step = 1
                 if key == ord(','): self.rgb_manual_focus -= rgb_focus_step
                 if key == ord('.'): self.rgb_manual_focus += rgb_focus_step
@@ -329,6 +342,8 @@ class DepthAI:
 
                 elif packet.stream_name == 'jpegout':
                     jpg = packetData
+                    last_jpeg = jpg
+                    last_jpeg_focus = last_focus
                     mat = cv2.imdecode(jpg, cv2.IMREAD_COLOR)
                     cv2.imshow('jpegout', mat)
 
@@ -356,18 +371,18 @@ class DepthAI:
                     # Enable (1) to pretty-print entire packet
                     if 1 and args['verbose']:
                         print('meta_d2h', json.dumps(dict_, indent=4, sort_keys=False))
-                    print('meta_d2h Temp',
+                    if args['verbose']: print('meta_d2h Temp',
                           ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
                           ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss']),
                           ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0']),
                           ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
-                    if 1: print('meta_d2h Camera',
+                    if 0: print('meta_d2h Camera',
                           'last frame tstamp: {:.6f}'.format(dict_['camera']['last_frame_timestamp']),
                           'frame count rgb:', dict_['camera']['rgb']['frame_count'],
                           'focus rgb:', dict_['camera']['rgb']['focus_pos'],
                           'left:', dict_['camera']['left']['frame_count'],
                           'right:', dict_['camera']['right']['frame_count'])
-                    if 'imu' in dict_ and 'accel' in dict_["imu"]:
+                    if 0 and 'imu' in dict_ and 'accel' in dict_["imu"]:
                         print('meta_d2h IMU acceleration xyz [g]:',
                               '{:7.4f}'.format(dict_['imu']['accel']['x']),
                               '{:7.4f}'.format(dict_['imu']['accel']['y']),
@@ -380,7 +395,7 @@ class DepthAI:
                     if 1 and 'logs' in dict_:
                         for log in dict_['logs']:
                             print('meta_d2h LOG:', log)
-                    print()
+                    last_focus = dict_['camera']['rgb']['focus_pos']
                 elif packet.stream_name == 'object_tracker':
                     tracklets = packet.getObjectTracker()
 
@@ -407,6 +422,16 @@ class DepthAI:
             key = cv2.waitKey(1)
             if key == ord('q'):
                 break
+            elif key == ord('s'):
+                if last_jpeg is not None:
+                    now = datetime.now()
+                    current_time = now.strftime("%H_%M_%S_%f")
+                    name = 'capture_' + current_time + '_focus_' + str(last_jpeg_focus) + '.jpg'
+                    last_jpeg.tofile(name)
+                    print("======== Saved to:", name)
+                    last_jpeg = None
+                else:
+                    print("No (new) image captured! Press 'C' to capture first")
             else:
                 keypress_handler(self, key, stream_names)
 

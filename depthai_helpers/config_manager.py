@@ -285,6 +285,8 @@ class DepthConfigManager:
                     # only UHD/1080p/30 fps supported for now
                     'resolution_h': self.args['rgb_resolution'],
                     'fps': self.args['rgb_fps'],
+                    'enable_autofocus': self.args['focus'] == -1,
+                    'initial_focus': self.args['focus'] if self.args['focus'] != -1 else 0,
                 },
                 'mono':
                 {
