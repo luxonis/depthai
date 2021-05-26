@@ -269,7 +269,9 @@ class BlobManager:
         self.model_dir = None
         self.zoo_dir = None
         self.config_file = None
+        self.blob_path = None
         self.use_zoo = False
+        self.use_blob = False
         self.zoo_models = [f.stem for f in DEPTHAI_ZOO.iterdir() if f.is_dir()]
         if model_dir is None:
             self.model_name = model_name
@@ -279,15 +281,21 @@ class BlobManager:
             self.zoo_dir = self.model_dir.parent
             self.model_name = model_name or self.model_dir.name
             self.config_file = self.model_dir / "model.yml"
+            blob = next(self.model_dir.glob("*.blob"), None)
+            if blob is not None:
+                self.use_blob = True
+                self.blob_path = blob
             if not self.config_file.exists():
                 self.use_zoo = True
 
-        self.blob_path = None
 
     def compile(self, shaves, target='auto'):
-        if self.use_zoo:
+        if self.use_blob:
+            return self.blob_path
+        elif self.use_zoo:
             try:
-                return blobconverter.from_zoo(name=self.model_name, shaves=shaves)
+                self.blob_path = blobconverter.from_zoo(name=self.model_name, shaves=shaves)
+                return self.blob_path
             except Exception as e:
                 if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
                     if "not found in model zoo" in e.response.text:
@@ -302,7 +310,7 @@ class BlobManager:
                 else:
                     raise
         else:
-            return blobconverter.compile_blob(
+            self.blob_path = blobconverter.compile_blob(
                 blob_name=self.model_name,
                 req_data={
                     "name": self.model_name,
@@ -314,3 +322,4 @@ class BlobManager:
                 data_type="FP16",
                 shaves=shaves,
             )
+            return self.blob_path
