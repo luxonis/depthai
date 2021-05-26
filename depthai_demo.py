@@ -441,9 +441,13 @@ class FPSHandler:
 
 
 class PipelineManager:
-    def __init__(self, nn_manager):
+    def __init__(self):
         self.p = dai.Pipeline()
+        if conf.args.openvino_version:
+            self.p.setOpenVINOVersion(getattr(dai.OpenVINO.Version, 'VERSION_' + conf.args.openvino_version))
         self.nodes = SimpleNamespace()
+
+    def set_nn_manager(self, nn_manager):
         self.nn_manager = nn_manager
 
     def create_default_queues(self, device):
@@ -561,9 +565,10 @@ class PipelineManager:
 
 
 device_info = conf.getDeviceInfo()
+pm = PipelineManager()
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
+with dai.Device(pm.p.getOpenVINOVersion(), device_info) as device:
     conf.adjustParamsToDevice(device)
 
     nn_manager = NNetManager(
@@ -573,8 +578,7 @@ with dai.Device(dai.OpenVINO.Version.VERSION_2021_3, device_info) as device:
         use_depth=conf.useDepth,
         use_hq=conf.useHQ
     )
-
-    pm = PipelineManager(nn_manager)
+    pm.set_nn_manager(nn_manager)
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
