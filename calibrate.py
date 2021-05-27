@@ -107,6 +107,9 @@ def parse_args():
                         help="Sets the maximum epiploar allowed with rectification")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
+    parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
+                        required=False, help="Set the manual lens position of the camera for calibration")
+    
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -127,7 +130,7 @@ class Main:
         self.args = vars(parse_args())
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
-        self.focus_value = 135
+        self.focus_value = self.args['rgbLensPosition']
         if self.args['board']:
             board_path = Path(self.args['board'])
             if not board_path.exists():
@@ -319,7 +322,8 @@ class Main:
             current_right = self.right_camera_queue.tryGet()
             if not self.args['disableRgb']:
                 current_color = self.rgb_camera_queue.tryGet()
-
+            else:
+                current_color = None
             # recent_left = left_frame.getCvFrame()
             # recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
             if not current_left is None:
@@ -471,10 +475,10 @@ class Main:
         self.args['cameraMode'] = 'perspective' # hardcoded for now
         try:
             epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args['squareSizeCm'],
-                 self.args['markerSizeCm'], self.args['squaresX'], self.args['squaresY'], self.args['cameraMode'], self.args['disableRgb'], self.args['rectifiedDisp'])
+                 self.args['markerSizeCm'], self.args['squaresX'], self.args['squaresY'], self.args['cameraMode'], not self.args['disableRgb'], self.args['rectifiedDisp'])
             if epiploar_error > self.args['maxEpiploarError']:
                 image = create_blank(900, 512, rgb_color=red)
-                text = "High epiploar_error: " + str(epiploar_error)
+                text = "High L-r epiploar_error: " + str(epiploar_error)
                 cv2.putText(image, text, (10, 250), font, 2, (0, 0, 0), 2)
                 text = "Requires Recalibration "
                 cv2.putText(image, text, (10, 300), font, 2, (0, 0, 0), 2)
@@ -483,55 +487,71 @@ class Main:
                 cv2.waitKey(0)
                 print("Requires Recalibration.....!!")
                 raise SystemExit(1)
-        
-            """         
+            elif epiploar_error_rRgb is not None and epiploar_error_rRgb > self.args['maxEpiploarError']:
+                image = create_blank(900, 512, rgb_color=red)
+                text = "High RGB-R epiploar_error: " + str(epiploar_error_rRgb)
+                cv2.putText(image, text, (10, 250), font, 2, (0, 0, 0), 2)
+                text = "Requires Recalibration "
+                cv2.putText(image, text, (10, 300), font, 2, (0, 0, 0), 2)
+
+                cv2.imshow("Result Image", image)
+                cv2.waitKey(0)
+                print("Requires Recalibration.....!!")
+                raise SystemExit(1)
+
+            left = dai.CameraBoardSocket.LEFT
+            right = dai.CameraBoardSocket.RIGHT
+            if self.args['swapLR']:
+                left = dai.CameraBoardSocket.RIGHT
+                right = dai.CameraBoardSocket.LEFT
+
             calibration_handler = dai.CalibrationHandler()
-            calibration_handler.setBoardInfo(self.board_config['board_config']['swap_left_and_right_cameras'],
-                                             self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+            calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
-            calibration_handler.setCameraIntrinsics(
-                dai.CameraBoardSocket.LEFT, calibData[2], 1280, 800)
-            calibration_handler.setDistortionCoefficients(
-                dai.CameraBoardSocket.LEFT, calibData[6])
-            calibration_handler.setFov(
-                dai.CameraBoardSocket.LEFT, self.board_config['board_config']['left_fov_deg'])
+            calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
+            calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
             measuredTranslation = [
-                self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
+                -self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
             calibration_handler.setCameraExtrinsics(
-                dai.CameraBoardSocket.LEFT, dai.CameraBoardSocket.RGB, calibData[4], calibData[5], measuredTranslation)
+                left, right, calibData[5], calibData[6], measuredTranslation)
 
-            calibration_handler.setCameraIntrinsics(
-                dai.CameraBoardSocket.RGB, calibData[3], 1920, 1080)
-            calibration_handler.setDistortionCoefficients(
-                dai.CameraBoardSocket.RGB, calibData[7])
-            calibration_handler.setFov(
-                dai.CameraBoardSocket.RGB, self.board_config['board_config']['rgb_fov_deg'])
-            calibration_handler.setLensPosition(
-                dai.CameraBoardSocket.RGB, self.focus_value)
+            calibration_handler.setDistortionCoefficients(left, calibData[9] )
+            calibration_handler.setDistortionCoefficients(right, calibData[10])
+
+            calibration_handler.setFov(left, self.board_config['board_config']['left_fov_deg'])
+            calibration_handler.setFov(right, self.board_config['board_config']['left_fov_deg'])
+
             calibration_handler.setStereoLeft(
-                dai.CameraBoardSocket.LEFT, calibData[0])
+                left, calibData[0])
             calibration_handler.setStereoRight(
-                dai.CameraBoardSocket.RGB, calibData[1])
-            """
+                right, calibData[1])
+
+            if not self.args['disableRgb']:
+                calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.RGB, calibData[4], 1920, 1080)
+                calibration_handler.setDistortionCoefficients(dai.CameraBoardSocket.RGB, calibData[11])
+                calibration_handler.setFov(dai.CameraBoardSocket.RGB, self.board_config['board_config']['rgb_fov_deg'])
+                calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, self.focus_value)
+
+                measuredTranslation = [
+                    self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
+                calibration_handler.setCameraExtrinsics(
+                    right, dai.CameraBoardSocket.RGB, calibData[7], calibData[8], measuredTranslation)
+            
             resImage = None
-            # if not self.device.isClosed():
-            if 1:
-                """             
+            if not self.device.isClosed():
                 dev_info = self.device.getDeviceInfo()
                 mx_serial_id = dev_info.getMxId()
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
-                """
-                is_write_succesful = True
+                is_write_succesful = False
                 
-                """                 
                 try:
                     is_write_succesful = self.device.flashCalibration(
                         calibration_handler)
                 except:
                     print("Writing in except...")
                     is_write_succesful = self.device.flashCalibration(
-                        calibration_handler) """
+                        calibration_handler)
                 if is_write_succesful:
                     resImage = create_blank(900, 512, rgb_color=green)
                     text = "Calibration Succesful with"
@@ -566,16 +586,16 @@ class Main:
 
     def run(self):
         if 'capture' in self.args['mode']:
-
             try:
-                if self.args['imageOp'] == 'delete':
-                    shutil.rmtree('dataset/')
+                # if self.args['imageOp'] == 'delete':
+                shutil.rmtree('dataset/')
                 Path("dataset/left").mkdir(parents=True, exist_ok=True)
                 Path("dataset/right").mkdir(parents=True, exist_ok=True)
-                Path("dataset/rgb").mkdir(parents=True, exist_ok=True)
+                if not self.args['disableRgb']:
+                    Path("dataset/rgb").mkdir(parents=True, exist_ok=True)
             except OSError:
                 print("An error occurred trying to create image dataset directories!")
-                raise
+                raise SystemExit(1)
             self.show_info_frame()
             self.capture_images()
         self.dataset_path = str(Path("dataset").absolute())

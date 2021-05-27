@@ -129,11 +129,11 @@ class StereoCalibration(object):
         d2_coeff_fp32 = self.d2.astype(np.float32)
         d3_coeff_fp32 = self.d3.astype(np.float32)
 
-
-        R_rgb_fp32 = np.linalg.inv(R_rgb_fp32)
-        T_rgb_fp32[0] = -T_rgb_fp32[0] 
-        T_rgb_fp32[1] = -T_rgb_fp32[1]
-        T_rgb_fp32[2] = -T_rgb_fp32[2]
+        if self.calibrate_rgb:
+            R_rgb_fp32 = np.linalg.inv(R_rgb_fp32)
+            T_rgb_fp32[0] = -T_rgb_fp32[0] 
+            T_rgb_fp32[1] = -T_rgb_fp32[1]
+            T_rgb_fp32[2] = -T_rgb_fp32[2]
 
         self.calib_data = [R1_fp32, R2_fp32, M1_fp32, M2_fp32, M3_fp32, R_fp32, T_fp32, R_rgb_fp32, T_rgb_fp32, d1_coeff_fp32, d2_coeff_fp32, d3_coeff_fp32]
         
@@ -182,7 +182,7 @@ class StereoCalibration(object):
         if self.calibrate_rgb:
             return self.test_epipolar_charuco_lr(filepath), self.test_epipolar_charuco_rgbr(filepath), self.calib_data
         else:
-            return self.test_epipolar_checker(filepath), None, self.calib_data
+            return self.test_epipolar_charuco_lr(filepath), None, self.calib_data
         
 
     def parse_frame(self, frame, stream_name, file_name):
@@ -565,10 +565,13 @@ class StereoCalibration(object):
                 cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
                 flags=flags, criteria=stereocalib_criteria), None, None
         
-
     def rgb_calibrate(self, filepath):
         images_right = glob.glob(filepath + "/right/*")
         images_rgb = glob.glob(filepath + "/rgb/*")
+        
+        images_rgb_pth = Path(filepath + "/rgb")
+        if not images_rgb_pth.exists():
+            raise RuntimeError("RGB dataset folder not found!! To skip rgb calibration use -drgb argument")
 
         images_right.sort()
         images_rgb.sort()
@@ -972,29 +975,11 @@ class StereoCalibration(object):
 
         map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
-        print("Distortion coeff left cam")
-        print(self.d1)
-        print("Distortion coeff right cam ")
-        print(self.d2)
-
-        # print(str(type(map_x_l)))
-        # map_x_l.tofile(consts.resource_paths.left_mesh_fpath)
-        # map_y_l.tofile(out_filepath)
-        # map_x_r.tofile(out_filepath)
-        # map_y_r.tofile(out_filepath)
 
         map_x_l_fp32 = map_x_l.astype(np.float32)
         map_y_l_fp32 = map_y_l.astype(np.float32)
         map_x_r_fp32 = map_x_r.astype(np.float32)
         map_y_r_fp32 = map_y_r.astype(np.float32)
-
-        # with open(consts.resource_paths.left_mesh_fpath, "ab") as fp:
-        #     fp.write(map_x_l_fp32.tobytes())
-        #     fp.write(map_y_l_fp32.tobytes())
-        
-        # with open(consts.resource_paths.right_mesh_fpath, "ab") as fp:    
-        #     fp.write(map_x_r_fp32.tobytes())
-        #     fp.write(map_y_r_fp32.tobytes())
         
         print("shape of maps")
         print(map_x_l.shape)
