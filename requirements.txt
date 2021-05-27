@@ -6,4 +6,4 @@ pyyaml==5.3.1
 blobconverter==0.0.7
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.3.0.0.dev+677f56d767465baecedcef406582a7f5aa1b56db
+depthai==2.3.0.0.dev+29155916a16cc4d1630c67423b8eda8ffdf65737

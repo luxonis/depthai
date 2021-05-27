@@ -89,13 +89,16 @@ def parse_args():
                         help="Whether existing images should be modified or all images should be deleted before running image capture. The default is 'modify'. Change to 'delete' to delete all image files.")
     parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
                         help="Display rectified images with lines drawn for epipolar check")
+    parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
+                        help="Disable rgb camera Calibration")
+    parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
+                        help="Interchange Left and right camera port.")  
     parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*',
                         type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
                         "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
-
     parser.add_argument("-iv", "--invertVertical", dest="invert_v", default=False, action="store_true",
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
@@ -107,9 +110,6 @@ def parse_args():
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
-    options.field_of_view = 71.86
-    options.baseline = 7.5
-    options.swap_lr = True
 
     return options
 
@@ -148,11 +148,12 @@ class Main:
 
         pipeline = self.create_pipeline()
         self.device = dai.Device(pipeline)
-        self.device.startPipeline()
+        # self.device.startPipeline()
 
         self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
-        self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
         self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
+        if not self.args['disableRgb']:
+            self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
@@ -179,41 +180,44 @@ class Main:
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
-        rgb_cam = pipeline.createColorCamera()
         cam_left = pipeline.createMonoCamera()
         cam_right = pipeline.createMonoCamera()
 
-        xout_rgb_isp = pipeline.createXLinkOut()
         xout_left = pipeline.createXLinkOut()
         xout_right = pipeline.createXLinkOut()
 
-        rgb_cam.setResolution(
-            dai.ColorCameraProperties.SensorResolution.THE_4_K)
-        rgb_cam.setInterleaved(False)
-        rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-        rgb_cam.setIspScale(1, 3)
-        rgb_cam.initialControl.setManualFocus(self.focus_value)
-        # rgb_cam.initialControl.setManualFocus(135)
-        # rgb_cam.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
-
-        cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        if self.args['swapLR']:
+            cam_left.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+            cam_right.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        else:
+            cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+            cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+                
         cam_left.setResolution(
             dai.MonoCameraProperties.SensorResolution.THE_800_P)
 
-        cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         cam_right.setResolution(
             dai.MonoCameraProperties.SensorResolution.THE_800_P)
 
-        xout_rgb_isp.setStreamName("rgb")
-        rgb_cam.isp.link(xout_rgb_isp.input)
-        
         xout_left.setStreamName("left")
         cam_left.out.link(xout_left.input)
 
         xout_right.setStreamName("right")
         cam_right.out.link(xout_right.input)
 
-        # rgb_cam.isp.link(xout_rgb_isp.input)
+        if not self.args['disableRgb']:
+            rgb_cam = pipeline.createColorCamera()
+            rgb_cam.setResolution(
+                dai.ColorCameraProperties.SensorResolution.THE_4_K)
+            rgb_cam.setInterleaved(False)
+            rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+            rgb_cam.setIspScale(1, 3)
+            rgb_cam.initialControl.setManualFocus(self.focus_value)
+
+            xout_rgb_isp = pipeline.createXLinkOut()
+            xout_rgb_isp.setStreamName("rgb")
+            rgb_cam.isp.link(xout_rgb_isp.input)        
+
         return pipeline
 
     def parse_frame(self, frame, stream_name):
@@ -313,7 +317,8 @@ class Main:
         while not finished:
             current_left  = self.left_camera_queue.tryGet()
             current_right = self.right_camera_queue.tryGet()
-            current_color = self.rgb_camera_queue.tryGet()
+            if not self.args['disableRgb']:
+                current_color = self.rgb_camera_queue.tryGet()
 
             # recent_left = left_frame.getCvFrame()
             # recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
@@ -324,11 +329,13 @@ class Main:
             if not current_color is None:
                 recent_color = current_color
 
-            if recent_left is None or recent_color is None or recent_right is None:
+            if recent_left is None or recent_right is None or (recent_color is None and not self.args['disableRgb']):
                 print("Continuing...")
                 continue
 
-            recent_frames = [('left', recent_left), ('right', recent_right), ('rgb', recent_color)]
+            recent_frames = [('left', recent_left), ('right', recent_right)]
+            if not self.args['disableRgb']:
+                recent_frames.append(('rgb', recent_color))
 
             key = cv2.waitKey(1)
             if key == 27 or key == ord("q"):
@@ -356,11 +363,11 @@ class Main:
                         self.height, self.width)
 
                 print("Timestamp difference ---> l & rgb")
-                
-                print((recent_left.getTimestamp()))
-                print((recent_right.getTimestamp()))
-                # print(type(recent_left.getTimestamp())
-                lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                lrgb_time = None
+                if not self.args['disableRgb']:
+                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                else :
+                    lrgb_time = 0
                 lr_time   = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
                 print(lrgb_time)
                 print(lr_time)
@@ -371,7 +378,7 @@ class Main:
                         captured_left = self.parse_frame(frame, packet[0])
                         tried_left = True
                         captured_left_frame = frame.copy()
-                    elif packet[0] == 'rgb' and not tried_color:
+                    elif packet[0] == 'rgb' and not tried_color and not self.args['disableRgb']:
                         captured_color = self.parse_frame(frame, packet[0])
                         tried_color = True
                         captured_color_frame = frame.copy()
@@ -379,6 +386,7 @@ class Main:
                         captured_right = self.parse_frame(frame, packet[0])
                         tried_right = True
                         captured_right_frame = frame.copy()
+
 
                 has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
                     (packet[0] == "rgb" and captured_color)
@@ -408,6 +416,8 @@ class Main:
                 # cv2.imshow(packet.stream_name, small_frame)
                 frame_list.append(small_frame)
 
+                if self.args['disableRgb']:
+                    captured_color = True
                 if captured_left and captured_right and captured_color:
                     print(f"Images captured --> {self.images_captured}")
                     if not self.images_captured:
@@ -445,9 +455,12 @@ class Main:
                         cv2.destroyAllWindows()
                         break
             
-            frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
-            combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
-
+            combine_img = None
+            if not self.args['disableRgb']:
+                frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
+                combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
+            else:
+                combine_img = np.vstack((frame_list[0], frame_list[1]))
             cv2.imshow("left + rgb + right", combine_img)
             frame_list.clear()
 
@@ -458,7 +471,7 @@ class Main:
         self.args['cameraMode'] = 'perspective' # hardcoded for now
         try:
             epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args['squareSizeCm'],
-                 self.args['markerSizeCm'], self.args['squaresX'], self.args['squaresY'], self.args['cameraMode'], True, self.args['rectifiedDisp'])
+                 self.args['markerSizeCm'], self.args['squaresX'], self.args['squaresY'], self.args['cameraMode'], self.args['disableRgb'], self.args['rectifiedDisp'])
             if epiploar_error > self.args['maxEpiploarError']:
                 image = create_blank(900, 512, rgb_color=red)
                 text = "High epiploar_error: " + str(epiploar_error)
