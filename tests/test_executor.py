@@ -16,9 +16,10 @@ if __name__ == "__main__":
 
     start = time.time()
     timeout_s = 20
-    missing_streams = set(filter(lambda stream: stream != "metaout", args.streams))
+    missing_streams = set(filter(lambda stream: stream not in ["metaout", "meta_d2h"], args.streams))
     data_success = False if len(missing_streams) > 0 else True
     nn_success = False if args.cnn_model is not None else True
+    meta_success = False if "meta_d2h" in args.streams else True
 
     while time.time() - start < timeout_s:
         if dai.data_packets is not None and not data_success:
@@ -28,8 +29,10 @@ if __name__ == "__main__":
         if dai.nnet_packets is not None and not nn_success:
             if len(dai.nnet_packets) > 0:
                 nn_success = True
+        if hasattr(dai, 'meta') and isinstance(dai.meta, dict) and not meta_success:
+            meta_success = True
 
-        if data_success and nn_success:
+        if data_success and nn_success and meta_success:
             break
 
     success = data_success and nn_success

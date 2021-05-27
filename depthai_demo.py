@@ -367,6 +367,7 @@ class DepthAI:
                 elif packet.stream_name == 'meta_d2h':
                     str_ = packet.getDataAsStr()
                     dict_ = json.loads(str_)
+                    self.meta = dict_
 
                     print('meta_d2h Temp',
                           ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
