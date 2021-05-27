@@ -15,7 +15,8 @@ subprocess.check_call([*pip_install, "pip", "-U"])
 # temporary workaroud for issue between main and develop
 subprocess.check_call([*pip_call, "uninstall", "depthai", "--yes"])
 subprocess.check_call([*pip_install, "-r", "requirements.txt"])
+
 try:
-    subprocess.check_call([*pip_install, "-r", "requirements-optional.txt"])
+    subprocess.check_call([*pip_install, "-r", "requirements-optional.txt"], stderr=subprocess.DEVNULL)
 except subprocess.CalledProcessError as ex:
-    print(f"Optional dependencies were not installed (exit code {ex.returncode})")
+    print(f"Optional dependencies were not installed. This is not an error.")

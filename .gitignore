@@ -49,3 +49,9 @@ resources/*.json
 *.so
 *.prof
 *.calib
+*.csv
+*.img
+.aux_wheels
+*.whl
+
+*.orig

@@ -1,8 +1,9 @@
 {
-    "NN_config":
+    "nn_config":
     {
         "output_format" : "detection",
         "NN_family" : "YOLO",
+        "input_size": "416x416",
         "NN_specific_metadata" :
         { 
             "classes" : 80,

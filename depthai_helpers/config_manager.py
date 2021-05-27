@@ -1,8 +1,12 @@
 import os
 import platform
 import subprocess
+import sys
 import urllib.request
+from difflib import get_close_matches
 from pathlib import Path
+
+import cv2
 import depthai as dai
 
 import blobconverter
@@ -11,6 +15,7 @@ from depthai_helpers.cli_utils import cli_print, PrintColors
 
 default_input_dims = {
     # TODO remove once fetching input size from nn blob is possible
+    "deeplabv3p_person": "256x256",
     "mobilenet-ssd": "300x300",
     "face-detection-adas-0001": "672x384",
     "face-detection-retail-0004": "300x300",
@@ -23,11 +28,18 @@ default_input_dims = {
     "yolo-v3": "416x416"
 }
 DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
+DEPTHAI_VIDEOS = Path(__file__).parent.parent / Path(f"videos/")
+DEPTHAI_VIDEOS.mkdir(exist_ok=True)
+
+
+def show_progress(curr, max):
+    done = int(50 * curr / max)
+    sys.stdout.write("\r[{}{}] ".format('=' * done, ' ' * (50-done)) )
+    sys.stdout.flush()
 
 
 class ConfigManager:
     labels = ""
-    NN_config = None
     custom_fw_commit = ''
 
     def __init__(self, args):
@@ -47,7 +59,17 @@ class ConfigManager:
 
     @property
     def useDepth(self):
-        return not self.args.disable_depth
+        return not self.args.disable_depth and self.useCamera
+
+    @property
+    def maxDisparity(self):
+        max_disparity = 96
+        if (self.args.extended_disparity):
+            max_disparity *= 2
+        if (self.args.subpixel):
+            max_disparity *= 32
+
+        return max_disparity
 
     def getModelSource(self):
         if not self.useCamera:
@@ -61,7 +83,7 @@ class ConfigManager:
                 return "rectified_right"
             return "right"
         if self.args.camera == "color":
-            return "rgb"
+            return "color"
 
     def getModelName(self):
         if self.args.cnn_model:
@@ -75,16 +97,9 @@ class ConfigManager:
             return self.args.cnn_path
         if self.args.cnn_model is not None and (DEPTHAI_ZOO / self.args.cnn_model).exists():
             return DEPTHAI_ZOO / self.args.cnn_model
-        print("dupa")
 
-    def getInputSize(self):
-        if self.args.cnn_input_size is None:
-            if self.args.cnn_model not in default_input_dims:
-                raise RuntimeError(
-                    "Unable to determine the nn input size. Please use --cnn_input_size flag to specify it in WxW format: -nn-size <width>x<height>")
-            return map(int, default_input_dims[self.args.cnn_model].split('x'))
-        else:
-            return map(int, self.args.cnn_input_size.split('x'))
+    def getColorMap(self):
+        return getattr(cv2, "COLORMAP_{}".format(self.args.color_map))
 
     def getRgbResolution(self):
         if self.args.rgb_resolution == 2160:
@@ -166,17 +181,44 @@ class ConfigManager:
 
         return cmd_file, debug_mode
 
-    def adjustParamsToDevice(self):
-        if self.args.device is None:
-            dev_type = input("Device type (OAK = 1, OAK-D = 2): ")
-            if dev_type == "1":
-                self.args.device = "OAK"
-            elif dev_type == "2":
-                self.args.device = "OAK-D"
-            else:
-                raise ValueError("Incorrect device type id supplied: {}".format(dev_type))
+    def downloadYTVideo(self):
+        def progress_func(stream, chunk, bytes_remaining):
+            show_progress(stream.filesize - bytes_remaining, stream.filesize)
 
-        if self.args.device == "OAK":
+        try:
+            from pytube import YouTube
+        except ImportError as ex:
+            raise RuntimeError("Unable to use YouTube video due to the following import error: {}".format(ex))
+        path = None
+        for _ in range(10):
+            try:
+                path = YouTube(self.args.video, on_progress_callback=progress_func).streams.first().download(output_path=DEPTHAI_VIDEOS)
+            except urllib.error.HTTPError:
+                # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
+                # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
+                pass
+            else:
+                break
+        if path is None:
+            raise RuntimeError("Unable to download YouTube video. Please try again")
+        print("Youtube video downloaded.")
+        self.args.video = path
+
+    def adjustPreviewToOptions(self):
+        if self.args.camera == "color" and "color" not in self.args.show:
+            self.args.show.append("color")
+        if self.args.camera == "left" and "left" not in self.args.show:
+            self.args.show.append("left")
+        if self.args.camera == "right" and "right" not in self.args.show:
+            self.args.show.append("right")
+        if self.useDepth and "depth" not in self.args.show:
+            self.args.show.append("depth")
+
+    def adjustParamsToDevice(self, device):
+        cams = device.getConnectedCameras()
+        depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+
+        if not depth_enabled:
             if not self.args.disable_depth:
                 print("Disabling depth...")
             self.args.disable_depth = True
@@ -186,6 +228,13 @@ class ConfigManager:
             if self.args.camera != 'color':
                 print("Switching source to RGB camera...")
             self.args.camera = 'color'
+            updated_show_arg = []
+            for name in self.args.show:
+                if name in ("nn_input", "color"):
+                    updated_show_arg.append(name)
+                else:
+                    print("Disabling {} preview...".format(name))
+            self.args.show = updated_show_arg
 
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':
@@ -198,13 +247,32 @@ class ConfigManager:
                 "Disconnect/connect usb cable on host! \n", PrintColors.RED)
                 os._exit(1)
 
+    def getDeviceInfo(self):
+        device_infos = dai.Device.getAllAvailableDevices()
+        if len(device_infos) == 0:
+            raise RuntimeError("No DepthAI device found!")
+        elif len(device_infos) == 1:
+            return device_infos[0]
+        else:
+            print("Available devices:")
+            for i, device_info in enumerate(device_infos):
+                print(f"[{i}] {device_info.getMxId()} [{device_info.state.name}]")
+            val = input("Which DepthAI Device you want to use: ")
+            try:
+                return device_infos[int(val)]
+            except:
+                raise ValueError("Incorrect value supplied: {}".format(val))
+
 
 class BlobManager:
     def __init__(self, model_name=None, model_dir=None):
         self.model_dir = None
         self.zoo_dir = None
         self.config_file = None
+        self.blob_path = None
         self.use_zoo = False
+        self.use_blob = False
+        self.zoo_models = [f.stem for f in DEPTHAI_ZOO.iterdir() if f.is_dir()]
         if model_dir is None:
             self.model_name = model_name
             self.use_zoo = True
@@ -213,16 +281,36 @@ class BlobManager:
             self.zoo_dir = self.model_dir.parent
             self.model_name = model_name or self.model_dir.name
             self.config_file = self.model_dir / "model.yml"
+            blob = next(self.model_dir.glob("*.blob"), None)
+            if blob is not None:
+                self.use_blob = True
+                self.blob_path = blob
             if not self.config_file.exists():
                 self.use_zoo = True
 
-        self.blob_path = None
 
     def compile(self, shaves, target='auto'):
-        if self.use_zoo:
-            return blobconverter.from_zoo(name=self.model_name, shaves=shaves)
+        if self.use_blob:
+            return self.blob_path
+        elif self.use_zoo:
+            try:
+                self.blob_path = blobconverter.from_zoo(name=self.model_name, shaves=shaves)
+                return self.blob_path
+            except Exception as e:
+                if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                    if "not found in model zoo" in e.response.text:
+                        all_models = set(self.zoo_models + blobconverter.zoo_list())
+                        suggested = get_close_matches(self.model_name, all_models)
+                        if len(suggested) > 0:
+                            print("Model {} not found in model zoo. Did you mean: {} ?".format(self.model_name, " / ".join(suggested)), file=sys.stderr)
+                        else:
+                            print("Model {} not found in model zoo", file=sys.stderr)
+                        raise SystemExit(1)
+                    raise RuntimeError("Blob conversion failed with status {}! Error: \"{}\"".format(e.response.status_code, e.response.text))
+                else:
+                    raise
         else:
-            return blobconverter.compile_blob(
+            self.blob_path = blobconverter.compile_blob(
                 blob_name=self.model_name,
                 req_data={
                     "name": self.model_name,
@@ -234,3 +322,4 @@ class BlobManager:
                 data_type="FP16",
                 shaves=shaves,
             )
+            return self.blob_path

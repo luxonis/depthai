@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import cv2
 import glob
 import os
@@ -568,7 +570,7 @@ class StereoCalibration(object):
     def rgb_calibrate(self, filepath):
         images_right = glob.glob(filepath + "/right/*")
         images_rgb = glob.glob(filepath + "/rgb/*")
-        
+
         images_rgb_pth = Path(filepath + "/rgb")
         if not images_rgb_pth.exists():
             raise RuntimeError("RGB dataset folder not found!! To skip rgb calibration use -drgb argument")
@@ -670,8 +672,6 @@ class StereoCalibration(object):
             self.d2_rgb,
             self.img_shape_rgb_scaled, self.R_rgb, self.T_rgb)
 
-
-    
     def test_epipolar_charuco_lr(self, dataset_dir):
         images_left = glob.glob(dataset_dir + '/left/*.png')
         images_right = glob.glob(dataset_dir + '/right/*.png')
