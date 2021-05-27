@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+# Calibration script is not yet migrated to Gen2
+raise NotImplementedError("Calibration is not yet available in Gen2 demo. To calibrate your device, switch to \"gen1_main\" branch and try again")
 import os
 import signal
 import subprocess
