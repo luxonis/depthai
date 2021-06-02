@@ -19,8 +19,7 @@ from argparse import ArgumentParser
 import argparse
 
 import depthai as dai
-from depthai_helpers.calibration_utils import *
-
+import depthai_helpers.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -127,17 +126,14 @@ class Main:
     images_captured = 0
 
     def __init__(self):
-        self.args = vars(parse_args())
+        self.args = parse_args()
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
-        self.focus_value = self.args['rgbLensPosition']
-        if self.args['board']:
-            board_path = Path(self.args['board'])
+        self.focus_value = self.args.rgbLensPosition
+        if self.args.board:
+            board_path = Path(self.args.board)
             if not board_path.exists():
-                board_dir = str(
-                    (Path(__file__).parent / 'resources/boards').resolve()) + '/'
-                board_path = Path(
-                    board_dir) / Path(self.args['board'].upper()).with_suffix('.json')
+                board_path = (Path(__file__).parent / 'resources/boards' / self.args.board.upper()).with_suffix('.json').resolve()
                 if not board_path.exists():
                     raise ValueError(
                         'Board config not found: {}'.format(board_path))
@@ -145,24 +141,23 @@ class Main:
                 self.board_config = json.load(fp)
         # TODO: set the total images
         # random polygons for count
-        self.total_images = self.args['count'] * \
-            len(setPolygonCoordinates(1000, 600))
+        self.total_images = self.args.count * \
+            len(calibUtils.setPolygonCoordinates(1000, 600))
         print("Using Arguments=", self.args)
 
         pipeline = self.create_pipeline()
         self.device = dai.Device(pipeline)
-        # self.device.startPipeline()
 
         self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
         self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
-        if not self.args['disableRgb']:
+        if not self.args.disableRgb:
             self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
-        return not (len(marker_corners) < self.args['squaresX']*self.args['squaresY'] / 4)
+        return not (len(marker_corners) < self.args.squaresX*self.args.squaresY / 4)
 
     def test_camera_orientation(self, frame_l, frame_r):
         marker_corners_l, id_l, _ = cv2.aruco.detectMarkers(
@@ -189,7 +184,7 @@ class Main:
         xout_left = pipeline.createXLinkOut()
         xout_right = pipeline.createXLinkOut()
 
-        if self.args['swapLR']:
+        if self.args.swapLR:
             cam_left.setBoardSocket(dai.CameraBoardSocket.RIGHT)
             cam_right.setBoardSocket(dai.CameraBoardSocket.LEFT)
         else:
@@ -208,7 +203,7 @@ class Main:
         xout_right.setStreamName("right")
         cam_right.out.link(xout_right.input)
 
-        if not self.args['disableRgb']:
+        if not self.args.disableRgb:
             rgb_cam = pipeline.createColorCamera()
             rgb_cam.setResolution(
                 dai.ColorCameraProperties.SensorResolution.THE_4_K)
@@ -227,7 +222,7 @@ class Main:
         if not self.is_markers_found(frame):
             return False
 
-        filename = image_filename(
+        filename = calibUtils.image_filename(
             stream_name, self.current_polygon, self.images_captured)
         cv2.imwrite("dataset/{}/{}".format(stream_name, filename), frame)
         print("py: Saved image as: " + str(filename))
@@ -237,7 +232,7 @@ class Main:
         info_frame = np.zeros((600, 1000, 3), np.uint8)
         print("Starting image capture. Press the [ESC] key to abort.")
         print("Will take {} total images, {} per each polygon.".format(
-            self.total_images, self.args['count']))
+            self.total_images, self.args.count))
 
         def show(position, text):
             cv2.putText(info_frame, text, position,
@@ -249,7 +244,7 @@ class Main:
         show((25, 300), "Polygon on the image represents the desired chessboard")
         show((25, 340), "position, that will provide best calibration score.")
         show((25, 400), "Will take {} total images, {} per each polygon.".format(
-            self.total_images, self.args['count']))
+            self.total_images, self.args.count))
         show((25, 550), "To continue, press [spacebar]...")
 
         cv2.imshow("info", info_frame)
@@ -320,7 +315,7 @@ class Main:
         while not finished:
             current_left  = self.left_camera_queue.tryGet()
             current_right = self.right_camera_queue.tryGet()
-            if not self.args['disableRgb']:
+            if not self.args.disableRgb:
                 current_color = self.rgb_camera_queue.tryGet()
             else:
                 current_color = None
@@ -333,12 +328,12 @@ class Main:
             if not current_color is None:
                 recent_color = current_color
 
-            if recent_left is None or recent_right is None or (recent_color is None and not self.args['disableRgb']):
+            if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
                 print("Continuing...")
                 continue
 
             recent_frames = [('left', recent_left), ('right', recent_right)]
-            if not self.args['disableRgb']:
+            if not self.args.disableRgb:
                 recent_frames.append(('rgb', recent_color))
 
             key = cv2.waitKey(1)
@@ -363,12 +358,12 @@ class Main:
                 if self.polygons is None:
                     self.height, self.width = frame.shape
                     print(self.height, self.width)
-                    self.polygons = setPolygonCoordinates(
+                    self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
 
                 print("Timestamp difference ---> l & rgb")
                 lrgb_time = None
-                if not self.args['disableRgb']:
+                if not self.args.disableRgb:
                     lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
                 else :
                     lrgb_time = 0
@@ -382,7 +377,7 @@ class Main:
                         captured_left = self.parse_frame(frame, packet[0])
                         tried_left = True
                         captured_left_frame = frame.copy()
-                    elif packet[0] == 'rgb' and not tried_color and not self.args['disableRgb']:
+                    elif packet[0] == 'rgb' and not tried_color and not self.args.disableRgb:
                         captured_color = self.parse_frame(frame, packet[0])
                         tried_color = True
                         captured_color_frame = frame.copy()
@@ -395,11 +390,11 @@ class Main:
                 has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
                     (packet[0] == "rgb" and captured_color)
 
-                if self.args['invert_v'] and self.args['invert_h']:
+                if self.args.invert_v and self.args.invert_h:
                     frame = cv2.flip(frame, -1)
-                elif self.args['invert_v']:
+                elif self.args.invert_v:
                     frame = cv2.flip(frame, 0)
-                elif self.args['invert_h']:
+                elif self.args.invert_h:
                     frame = cv2.flip(frame, 1)
 
                 cv2.putText(
@@ -420,7 +415,7 @@ class Main:
                 # cv2.imshow(packet.stream_name, small_frame)
                 frame_list.append(small_frame)
 
-                if self.args['disableRgb']:
+                if self.args.disableRgb:
                     captured_color = True
                 if captured_left and captured_right and captured_color:
                     print(f"Images captured --> {self.images_captured}")
@@ -450,7 +445,7 @@ class Main:
                     captured_color = False
                     break
 
-                if self.images_captured_polygon == self.args['count']:
+                if self.images_captured_polygon == self.args.count:
                     self.images_captured_polygon = 0
                     self.current_polygon += 1
 
@@ -460,7 +455,7 @@ class Main:
                         break
             
             combine_img = None
-            if not self.args['disableRgb']:
+            if not self.args.disableRgb:
                 frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
@@ -470,13 +465,13 @@ class Main:
 
     def calibrate(self):
         print("Starting image processing")
-        cal_data = StereoCalibration()
+        cal_data = calibUtils.StereoCalibration()
         dest_path = str(Path('resources').absolute())
-        self.args['cameraMode'] = 'perspective' # hardcoded for now
+        self.args.cameraMode = 'perspective' # hardcoded for now
         try:
-            epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args['squareSizeCm'],
-                 self.args['markerSizeCm'], self.args['squaresX'], self.args['squaresY'], self.args['cameraMode'], not self.args['disableRgb'], self.args['rectifiedDisp'])
-            if epiploar_error > self.args['maxEpiploarError']:
+            epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args.squareSizeCm,
+                 self.args.markerSizeCm, self.args.squaresX, self.args.squaresY, self.args.cameraMode, not self.args.disableRgb, self.args.rectifiedDisp)
+            if epiploar_error > self.args.maxEpiploarError:
                 image = create_blank(900, 512, rgb_color=red)
                 text = "High L-r epiploar_error: " + str(epiploar_error)
                 cv2.putText(image, text, (10, 250), font, 2, (0, 0, 0), 2)
@@ -487,7 +482,7 @@ class Main:
                 cv2.waitKey(0)
                 print("Requires Recalibration.....!!")
                 raise SystemExit(1)
-            elif epiploar_error_rRgb is not None and epiploar_error_rRgb > self.args['maxEpiploarError']:
+            elif epiploar_error_rRgb is not None and epiploar_error_rRgb > self.args.maxEpiploarError:
                 image = create_blank(900, 512, rgb_color=red)
                 text = "High RGB-R epiploar_error: " + str(epiploar_error_rRgb)
                 cv2.putText(image, text, (10, 250), font, 2, (0, 0, 0), 2)
@@ -501,7 +496,7 @@ class Main:
 
             left = dai.CameraBoardSocket.LEFT
             right = dai.CameraBoardSocket.RIGHT
-            if self.args['swapLR']:
+            if self.args.swapLR:
                 left = dai.CameraBoardSocket.RIGHT
                 right = dai.CameraBoardSocket.LEFT
 
@@ -526,7 +521,7 @@ class Main:
             calibration_handler.setStereoRight(
                 right, calibData[1])
 
-            if not self.args['disableRgb']:
+            if not self.args.disableRgb:
                 calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.RGB, calibData[4], 1920, 1080)
                 calibration_handler.setDistortionCoefficients(dai.CameraBoardSocket.RGB, calibData[11])
                 calibration_handler.setFov(dai.CameraBoardSocket.RGB, self.board_config['board_config']['rgb_fov_deg'])
@@ -585,13 +580,13 @@ class Main:
             raise SystemExit(1)
 
     def run(self):
-        if 'capture' in self.args['mode']:
+        if 'capture' in self.args.mode:
             try:
-                # if self.args['imageOp'] == 'delete':
+                # if self.args.imageOp == 'delete':
                 shutil.rmtree('dataset/')
                 Path("dataset/left").mkdir(parents=True, exist_ok=True)
                 Path("dataset/right").mkdir(parents=True, exist_ok=True)
-                if not self.args['disableRgb']:
+                if not self.args.disableRgb:
                     Path("dataset/rgb").mkdir(parents=True, exist_ok=True)
             except OSError:
                 print("An error occurred trying to create image dataset directories!")
@@ -599,7 +594,7 @@ class Main:
             self.show_info_frame()
             self.capture_images()
         self.dataset_path = str(Path("dataset").absolute())
-        if 'process' in self.args['mode']:
+        if 'process' in self.args.mode:
             self.calibrate()
         print('py: DONE.')
 

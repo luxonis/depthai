@@ -185,21 +185,6 @@ class StereoCalibration(object):
             return self.test_epipolar_charuco_lr(filepath), self.test_epipolar_charuco_rgbr(filepath), self.calib_data
         else:
             return self.test_epipolar_charuco_lr(filepath), None, self.calib_data
-        
-
-    def parse_frame(self, frame, stream_name, file_name):
-        file_name += '.png'
-        # filename = image_filename(stream_name, self.current_polygon, self.images_captured)
-        # print(self.data_path + "/{}/{}".format(stream_name, file_name))
-        ds_path = self.data_path + "/{}".format(stream_name)
-        print(ds_path)
-        if not os.path.exists(ds_path):
-            os.makedirs(ds_path)
-
-        cv2.imwrite(self.data_path +
-                    "/{}/{}".format(stream_name, file_name), frame)
-        print("py: Saved image as: " + str(file_name))
-        return True
 
     def analyze_charuco(self, images, scale_req=False, req_resolution=(800, 1280)):
         """
@@ -259,8 +244,8 @@ class StereoCalibration(object):
                     # print(del_height)
                     # print(gray.shape)
                 count += 1
-                self.parse_frame(gray, 'rgb_resized',
-                                 'rgb_resized_'+str(count))
+                # self.parse_frame(gray, 'rgb_resized',
+                #                  'rgb_resized_'+str(count))
             marker_corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(
                 gray, self.aruco_dictionary)
             marker_corners, ids, refusd, recoverd = cv2.aruco.refineDetectedMarkers(gray, self.board,
