@@ -1,39 +1,54 @@
 #!/usr/bin/env python3
-# Calibration script is not yet migrated to Gen2
-raise NotImplementedError("Calibration is not yet available in Gen2 demo. To calibrate your device, switch to \"gen1_main\" branch and try again")
 
+import cv2
+import sys
+import copy
 import platform
-from contextlib import contextmanager
-
-import depthai
-from depthai_helpers.calibration_utils import *
-from depthai_helpers import utils
-import argparse
-from argparse import ArgumentParser
+import signal
+import subprocess
+import json
+import datetime
+import csv
+import time
 import numpy as np
+import os
 from pathlib import Path
 import shutil
-import json
-from depthai_helpers.version_check import check_depthai_version
-check_depthai_version()
+from datetime import datetime
+from argparse import ArgumentParser
+import argparse
 
-use_cv = True
-try:
-    import cv2
-except ImportError:
-    use_cv = False
+import depthai as dai
+import depthai_helpers.calibration_utils as calibUtils
 
-on_embedded = platform.machine().startswith('arm') or platform.machine().startswith('aarch64')
+font = cv2.FONT_HERSHEY_SIMPLEX
+
+red = (255, 0, 0)
+green = (0, 255, 0)
+
+
+def create_blank(width, height, rgb_color=(0, 0, 0)):
+    """Create new image(numpy array) filled with certain color in RGB"""
+    # Create black blank image
+    image = np.zeros((height, width, 3), np.uint8)
+
+    # Since OpenCV uses BGR, convert the color first
+    color = tuple(reversed(rgb_color))
+    # Fill image with color
+    image[:] = color
+
+    return image
 
 
 def parse_args():
     epilog_text = '''
-    Captures and processes images for disparity depth calibration, generating a `depthai.calib` file
-    that should be loaded when initializing depthai. By default, captures one image for each of the 13 calibration target poses.
+    Captures and processes images for disparity depth calibration, generating a `<device id>.json` file or `depthai_calib.json`
+    that should be loaded when initializing depthai. By default, captures one image for each of the 8 calibration target poses.
 
-    Image capture requires the use of a printed 6x9 OpenCV checkerboard target applied to a flat surface (ex: sturdy cardboard).
-    When taking photos, ensure the checkerboard fits within both the left and right image displays. The board does not need
-    to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
+    Image capture requires the use of a printed OpenCV charuco calibration target applied to a flat surface(ex: sturdy cardboard).
+    Default board size used in this script is 22x16. However you can send a customized one too.
+    When taking photos, ensure enough amount of markers are visible and images are crisp. 
+    The board does not need to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
 
     If the calibration checkerboard corners cannot be found, the user will be prompted to try that calibration pose again.
 
@@ -42,86 +57,63 @@ def parse_args():
 
     Example usage:
 
-    Run calibration with a checkerboard square size of 3.0 cm and baseline of 7.5cm:
-    python3 calibrate.py -s 3.0 -b 7.5
+    Run calibration with a checkerboard square size of 3.0cm and marker size of 2.5cm  on board config file DM2CAM:
+    python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM
 
     Only run image processing only with same board setup. Requires a set of saved capture images:
-    python3 calibrate.py -s 3.0 -b 7.5 -m process
+    python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM -m process
     
-    Change Left/Right baseline to 15cm and swap Left/Right cameras:
-    python3 calibrate.py -b 15 -w False
-
     Delete all existing images before starting image capture:
     python3 calibrate.py -i delete
-
-    Pass thru pipeline config options:
-    python3 calibrate.py -co '{"board_config": {"swap_left_and_right_cameras": true, "left_to_right_distance_cm": 7.5}}'
     '''
-    parser = ArgumentParser(epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = ArgumentParser(
+        epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-c", "--count", default=1,
                         type=int, required=False,
                         help="Number of images per polygon to capture. Default: 1.")
-    parser.add_argument("-s", "--square_size_cm", default="2.5",
+    parser.add_argument("-s", "--squareSizeCm", default="2.0",
                         type=float, required=False,
-                        help="Square size of calibration pattern used in centimeters. Default: 2.5cm.")
-    parser.add_argument("-i", "--image_op", default="modify",
+                        help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
+    parser.add_argument("-ms", "--markerSizeCm", default="1.5",
+                        type=float, required=False,
+                        help="Marker size in charuco boards.")
+    parser.add_argument("-nx", "--squaresX", default="11",
+                        type=int, required=False,
+                        help="number of chessboard squares in X direction in charuco boards.")
+    parser.add_argument("-ny", "--squaresY", default="8",
+                        type=int, required=False,
+                        help="number of chessboard squares in Y direction in charuco boards.")
+    parser.add_argument("-i", "--imageOp", default="modify",
                         type=str, required=False,
                         help="Whether existing images should be modified or all images should be deleted before running image capture. The default is 'modify'. Change to 'delete' to delete all image files.")
-    parser.add_argument("-m", "--mode", default=['capture','process'], nargs='*',
+    parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
+                        help="Display rectified images with lines drawn for epipolar check")
+    parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
+                        help="Disable rgb camera Calibration")
+    parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
+                        help="Interchange Left and right camera port.")  
+    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*',
                         type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
-    parser.add_argument("-co", "--config_overwrite", default=None,
-                        type=str, required=False,
-                        help="JSON-formatted pipeline config object. This will be override defaults used in this script.")
-    parser.add_argument("-brd", "--board", default=None, type=str,
+    parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
-                            "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
-    parser.add_argument("-debug", "--dev_debug", default=None, action='store_true',
-                        help="Used by board developers for debugging.")
-    parser.add_argument("-fusb2", "--force_usb2", default=False, action="store_true",
-                        help="Force usb2 connection")
-    parser.add_argument("-iv", "--invert-vertical", dest="invert_v", default=False, action="store_true",
+                        "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
+    parser.add_argument("-iv", "--invertVertical", dest="invert_v", default=False, action="store_true",
                         help="Invert vertical axis of the camera for the display")
-    parser.add_argument("-ih", "--invert-horizontal", dest="invert_h", default=False, action="store_true",
+    parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
                         help="Invert horizontal axis of the camera for the display")
-
+    parser.add_argument("-ep", "--maxEpiploarError", default="1.0", type=float, required=False,
+                        help="Sets the maximum epiploar allowed with rectification")
+    parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
+                        required=False, help="Choose between perspective and Fisheye")
+    parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
+                        required=False, help="Set the manual lens position of the camera for calibration")
+    
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
-    options.field_of_view = 71.86
-    options.baseline = 7.5
-    options.swap_lr = True
 
     return options
-
-
-def find_chessboard(frame):
-    chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
-    small_frame = cv2.resize(frame, (0, 0), fx=0.3, fy=0.3)
-    return cv2.findChessboardCorners(small_frame, (9, 6), chessboard_flags)[0] and \
-           cv2.findChessboardCorners(frame, (9, 6), chessboard_flags)[0]
-
-def test_camera_orientation(frame_l, frame_r):
-    chessboard_flags = cv2.CALIB_CB_ADAPTIVE_THRESH + cv2.CALIB_CB_FAST_CHECK + cv2.CALIB_CB_NORMALIZE_IMAGE
-    # termination criteria
-    frame_l = cv2.cvtColor(frame_l, cv2.COLOR_RGB2GRAY)
-    frame_r = cv2.cvtColor(frame_r, cv2.COLOR_RGB2GRAY)
-    criteria = (cv2.TERM_CRITERIA_MAX_ITER +
-                    cv2.TERM_CRITERIA_EPS, 30, 0.001)
-    ret, corners_l =  cv2.findChessboardCorners(frame_l, (9, 6), chessboard_flags)
-    ret, corners_r =  cv2.findChessboardCorners(frame_r, (9, 6), chessboard_flags)
-    rt = cv2.cornerSubPix(frame_l, corners_l, (5, 5),
-                                      (-1, -1), criteria)
-    rt = cv2.cornerSubPix(frame_r, corners_r, (5, 5),
-                                      (-1, -1), criteria)
-    
-    for left, right in zip(corners_l, corners_r):
-        if left[0][0] - right[0][0] < 0:
-            return False
-    return True
-
-def ts(packet):
-    return packet.getMetadata().getTimestamp()
 
 
 class Main:
@@ -134,86 +126,104 @@ class Main:
     images_captured = 0
 
     def __init__(self):
-        self.args = vars(parse_args())
-
-        self.config = {
-            'streams':
-                ['left', 'right'] if not on_embedded else
-                [{'name': 'left', "max_fps": 10.0}, {'name': 'right', "max_fps": 10.0}],
-            'depth':
-                {
-                    'calibration_file': consts.resource_paths.calib_fpath,
-                    'padding_factor': 0.3
-                },
-            'ai':
-                {
-                    'blob_file': blobMan.blob_file,
-                    'blob_file_config': blobMan.blob_file_config,
-                    'shaves' : shaves,
-                    'cmx_slices' : cmx_slices,
-                    'NN_engines' : NN_engines,
-                },
-            'board_config':
-                {
-                    'swap_left_and_right_cameras': self.args['swap_lr'],
-                    'left_fov_deg':  self.args['field_of_view'],
-                    'left_to_right_distance_cm': self.args['baseline'],
-                    'override_eeprom': True,
-                    'stereo_center_crop': True,
-                },
-            'camera':
-                {
-                    'mono':
-                    {
-                        # 1280x720, 1280x800, 640x400 (binning enabled)
-                        'resolution_h': 800,
-                        'fps': 30.0,
-                    },
-                },
-        }
-        if self.args['board']:
-            board_path = Path(self.args['board'])
+        self.args = parse_args()
+        self.aruco_dictionary = cv2.aruco.Dictionary_get(
+            cv2.aruco.DICT_4X4_1000)
+        self.focus_value = self.args.rgbLensPosition
+        if self.args.board:
+            board_path = Path(self.args.board)
             if not board_path.exists():
-                board_path = Path(consts.resource_paths.boards_dir_path) / Path(self.args['board'].upper()).with_suffix('.json')
+                board_path = (Path(__file__).parent / 'resources/boards' / self.args.board.upper()).with_suffix('.json').resolve()
                 if not board_path.exists():
-                    raise ValueError('Board config not found: {}'.format(board_path))
+                    raise ValueError(
+                        'Board config not found: {}'.format(board_path))
             with open(board_path) as fp:
-                board_config = json.load(fp)
-            utils.merge(board_config, self.config)
-        if self.args['config_overwrite']:
-            utils.merge(json.loads(self.args['config_overwrite']), self.config)
-            print("Merged Pipeline config with overwrite", self.config)
-        self.total_images = self.args['count'] * len(setPolygonCoordinates(1000, 600))  # random polygons for count
+                self.board_config = json.load(fp)
+        # TODO: set the total images
+        # random polygons for count
+        self.total_images = self.args.count * \
+            len(calibUtils.setPolygonCoordinates(1000, 600))
         print("Using Arguments=", self.args)
 
-    @contextmanager
-    def get_pipeline(self):
-        # Possible to try and reboot?
-        # The following doesn't work (have to manually hit switch on device)
-        # depthai.reboot_device
-        # time.sleep(1)
+        pipeline = self.create_pipeline()
+        self.device = dai.Device(pipeline)
 
-        pipeline = None
+        self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
+        self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
+        if not self.args.disableRgb:
+            self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
 
-        try:
-            device = depthai.Device("", self.args['force_usb2'])
-            pipeline = device.create_pipeline(self.config)
-        except RuntimeError:
-            raise RuntimeError("Unable to initialize device. Try to reset it")
+    def is_markers_found(self, frame):
+        marker_corners, _, _ = cv2.aruco.detectMarkers(
+            frame, self.aruco_dictionary)
+        print("Markers count ... {}".format(len(marker_corners)))
+        return not (len(marker_corners) < self.args.squaresX*self.args.squaresY / 4)
 
-        if pipeline is None:
-            raise RuntimeError("Unable to create pipeline")
+    def test_camera_orientation(self, frame_l, frame_r):
+        marker_corners_l, id_l, _ = cv2.aruco.detectMarkers(
+            frame_l, self.aruco_dictionary)
+        marker_corners_r, id_r, _ = cv2.aruco.detectMarkers(
+            frame_r, self.aruco_dictionary)
 
-        try:
-            yield pipeline
-        finally:
-            del pipeline
+        for i, left_id in enumerate(id_l):
+            idx = np.where(id_r == left_id)
+            print(idx)
+            if idx[0].size == 0:
+                continue
+            for left_corner, right_corner in zip(marker_corners_l[i], marker_corners_r[idx[0][0]]):
+                if left_corner[0][0] - right_corner[0][0] < 0:
+                    return False
+        return True
+
+    def create_pipeline(self):
+        pipeline = dai.Pipeline()
+
+        cam_left = pipeline.createMonoCamera()
+        cam_right = pipeline.createMonoCamera()
+
+        xout_left = pipeline.createXLinkOut()
+        xout_right = pipeline.createXLinkOut()
+
+        if self.args.swapLR:
+            cam_left.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+            cam_right.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        else:
+            cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+            cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+                
+        cam_left.setResolution(
+            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+
+        cam_right.setResolution(
+            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+
+        xout_left.setStreamName("left")
+        cam_left.out.link(xout_left.input)
+
+        xout_right.setStreamName("right")
+        cam_right.out.link(xout_right.input)
+
+        if not self.args.disableRgb:
+            rgb_cam = pipeline.createColorCamera()
+            rgb_cam.setResolution(
+                dai.ColorCameraProperties.SensorResolution.THE_4_K)
+            rgb_cam.setInterleaved(False)
+            rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
+            rgb_cam.setIspScale(1, 3)
+            rgb_cam.initialControl.setManualFocus(self.focus_value)
+
+            xout_rgb_isp = pipeline.createXLinkOut()
+            xout_rgb_isp.setStreamName("rgb")
+            rgb_cam.isp.link(xout_rgb_isp.input)        
+
+        return pipeline
 
     def parse_frame(self, frame, stream_name):
-        if not find_chessboard(frame):
+        if not self.is_markers_found(frame):
             return False
 
-        filename = image_filename(stream_name, self.current_polygon, self.images_captured)
+        filename = calibUtils.image_filename(
+            stream_name, self.current_polygon, self.images_captured)
         cv2.imwrite("dataset/{}/{}".format(stream_name, filename), frame)
         print("py: Saved image as: " + str(filename))
         return True
@@ -221,17 +231,20 @@ class Main:
     def show_info_frame(self):
         info_frame = np.zeros((600, 1000, 3), np.uint8)
         print("Starting image capture. Press the [ESC] key to abort.")
-        print("Will take {} total images, {} per each polygon.".format(self.total_images, self.args['count']))
+        print("Will take {} total images, {} per each polygon.".format(
+            self.total_images, self.args.count))
 
         def show(position, text):
-            cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
+            cv2.putText(info_frame, text, position,
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
 
         show((25, 100), "Information about image capture:")
         show((25, 160), "Press the [ESC] key to abort.")
         show((25, 220), "Press the [spacebar] key to capture the image.")
         show((25, 300), "Polygon on the image represents the desired chessboard")
         show((25, 340), "position, that will provide best calibration score.")
-        show((25, 400), "Will take {} total images, {} per each polygon.".format(self.total_images, self.args['count']))
+        show((25, 400), "Will take {} total images, {} per each polygon.".format(
+            self.total_images, self.args.count))
         show((25, 550), "To continue, press [spacebar]...")
 
         cv2.imshow("info", info_frame)
@@ -245,174 +258,343 @@ class Main:
                 raise SystemExit(0)
 
     def show_failed_capture_frame(self):
-        width, height = int(self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
+        width, height = int(
+            self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
         info_frame = np.zeros((height, width, 3), np.uint8)
         print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
 
         def show(position, text):
-            cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 255, 0))
+            cv2.putText(info_frame, text, position,
+                        cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 255, 0))
 
-        show((50, int(height / 2 - 40)), "Capture failed, unable to find chessboard!")
+        show((50, int(height / 2 - 40)),
+             "Capture failed, unable to find chessboard!")
         show((60, int(height / 2 + 40)), "Fix position and press spacebar again")
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + right",info_frame)
+        cv2.imshow("left + rgb + right", info_frame)
         cv2.waitKey(2000)
-    
+
     def show_failed_orientation(self):
-        width, height = int(self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
+        width, height = int(
+            self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
         info_frame = np.zeros((height, width, 3), np.uint8)
         print("py: Capture failed, Swap the camera's ")
 
         def show(position, text):
-            cv2.putText(info_frame, text, position, cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 255, 0))
+            cv2.putText(info_frame, text, position,
+                        cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 255, 0))
 
-        show((60, int(height / 2 - 40)), "Calibration failed, Left and ")
-        show((60, int(height /2)), "right camera are swapped!")
-        show((60, int(height / 2 + 40)), "Fix \"swap_left_and_right_cameras\"")
+        show((60, int(height / 2 - 40)), "Calibration failed, ")
+        show((60, int(height / 2)), "Device might be held upside down!")
+        show((60, int(height / 2)), "Or ports connected might be inverted!")
+        show((60, int(height / 2 + 40)), "Fix orientation")
         show((60, int(height / 2 + 80)), "and start again")
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + right",info_frame)
+        cv2.imshow("left + right", info_frame)
         cv2.waitKey(0)
-        raise Exception("Calibration failed, Left and right camera are swapped. Fix \"swap_left_and_right_cameras\" and start again!!")
+        raise Exception(
+            "Calibration failed, Camera Might be held upside down. start again!!")
 
     def capture_images(self):
         finished = False
         capturing = False
         captured_left = False
         captured_right = False
+        captured_color = False
         tried_left = False
         tried_right = False
+        tried_color = False
         recent_left = None
         recent_right = None
-        with self.get_pipeline() as pipeline:
-            while not finished:
-                _, data_list = pipeline.get_available_nnet_and_data_packets()
-                for packet in data_list:
-                    if packet.stream_name == "left" and (recent_left is None or ts(recent_left) < ts(packet)):
-                        recent_left = packet
-                    elif packet.stream_name == "right" and (recent_right is None or ts(recent_right) < ts(packet)):
-                        recent_right = packet
+        recent_color = None
+        # with self.get_pipeline() as pipeline:
+        while not finished:
+            current_left  = self.left_camera_queue.tryGet()
+            current_right = self.right_camera_queue.tryGet()
+            if not self.args.disableRgb:
+                current_color = self.rgb_camera_queue.tryGet()
+            else:
+                current_color = None
+            # recent_left = left_frame.getCvFrame()
+            # recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
+            if not current_left is None:
+                recent_left = current_left
+            if not current_right is None:
+                recent_right = current_right
+            if not current_color is None:
+                recent_color = current_color
 
-                if recent_left is None or recent_right is None:
-                    continue
+            if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
+                print("Continuing...")
+                continue
 
-                key = cv2.waitKey(1)
-                if key == 27 or key == ord("q"):
-                    print("py: Calibration has been interrupted!")
-                    raise SystemExit(0)
+            recent_frames = [('left', recent_left), ('right', recent_right)]
+            if not self.args.disableRgb:
+                recent_frames.append(('rgb', recent_color))
 
-                if key == ord(" "):
-                    capturing = True
-                
-                frame_list = []
-                for packet in (recent_left, recent_right):
-                    frame = packet.getData()
-                    frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+            key = cv2.waitKey(1)
+            if key == 27 or key == ord("q"):
+                print("py: Calibration has been interrupted!")
+                raise SystemExit(0)
+            elif key == ord(" "):
+                print("setting capture true------------------------")
+                capturing = True
 
-                    if self.polygons is None:
-                        self.height, self.width, _ = frame.shape
-                        self.polygons = setPolygonCoordinates(self.height, self.width)
+            frame_list = []
+            # left_frame = recent_left.getCvFrame()
+            # rgb_frame = recent_color.getCvFrame()
 
-                    if capturing and abs(ts(recent_left) - ts(recent_right)) < 0.001:
-                        if packet.stream_name == 'left' and not tried_left:
-                            captured_left = self.parse_frame(frame, packet.stream_name)
-                            tried_left = True
-                            captured_left_frame = frame.copy()
-                        elif packet.stream_name == 'right' and not tried_right:
-                            captured_right = self.parse_frame(frame, packet.stream_name)
-                            tried_right = True
-                            captured_right_frame = frame.copy()
+            for packet in recent_frames:
+                frame = packet[1].getCvFrame()
+                # print(packet[0])
+                # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
+                if packet[0] == 'rgb':
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                # print(frame.shape)
+                if self.polygons is None:
+                    self.height, self.width = frame.shape
+                    print(self.height, self.width)
+                    self.polygons = calibUtils.setPolygonCoordinates(
+                        self.height, self.width)
 
-                    has_success = (packet.stream_name == "left" and captured_left) or \
-                                  (packet.stream_name == "right" and captured_right)
+                print("Timestamp difference ---> l & rgb")
+                lrgb_time = None
+                if not self.args.disableRgb:
+                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                else :
+                    lrgb_time = 0
+                lr_time   = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                print(lrgb_time)
+                print(lr_time)
 
-                    if self.args['invert_v'] and self.args['invert_h']:
-                        frame = cv2.flip(frame, -1)
-                    elif self.args['invert_v']:
-                        frame = cv2.flip(frame, 0)
-                    elif self.args['invert_h']:
-                        frame = cv2.flip(frame, 1)
+                if capturing and lrgb_time < 30000 and lr_time < 30000:
+                    print("Capturing  ------------------------")
+                    if packet[0] == 'left' and not tried_left:
+                        captured_left = self.parse_frame(frame, packet[0])
+                        tried_left = True
+                        captured_left_frame = frame.copy()
+                    elif packet[0] == 'rgb' and not tried_color and not self.args.disableRgb:
+                        captured_color = self.parse_frame(frame, packet[0])
+                        tried_color = True
+                        captured_color_frame = frame.copy()
+                    elif packet[0] == 'right' and not tried_right:
+                        captured_right = self.parse_frame(frame, packet[0])
+                        tried_right = True
+                        captured_right_frame = frame.copy()
 
-                    cv2.putText(
-                        frame,
-                        "Polygon Position: {}. Captured {} of {} images.".format(
-                            self.current_polygon + 1, self.images_captured, self.total_images
-                        ),
-                        (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0)
+
+                has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
+                    (packet[0] == "rgb" and captured_color)
+
+                if self.args.invert_v and self.args.invert_h:
+                    frame = cv2.flip(frame, -1)
+                elif self.args.invert_v:
+                    frame = cv2.flip(frame, 0)
+                elif self.args.invert_h:
+                    frame = cv2.flip(frame, 1)
+
+                cv2.putText(
+                    frame,
+                    "Polygon Position: {}. Captured {} of {} {} images".format(
+                        self.current_polygon + 1, self.images_captured, self.total_images, packet[0]
+                    ),
+                    (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0)
+                )
+                if self.polygons is not None:
+                    cv2.polylines(
+                        frame, np.array([self.polygons[self.current_polygon]]),
+                        True, (0, 255, 0) if captured_left else (0, 0, 255), 4
                     )
-                    if self.polygons is not None:
-                        cv2.polylines(
-                            frame, np.array([self.polygons[self.current_polygon]]),
-                            True, (0, 255, 0) if has_success else (0, 0, 255), 4
-                        )
 
-                    small_frame = cv2.resize(frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
-                    # cv2.imshow(packet.stream_name, small_frame)
-                    frame_list.append(small_frame)
+                small_frame = cv2.resize(
+                    frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
+                # cv2.imshow(packet.stream_name, small_frame)
+                frame_list.append(small_frame)
 
-                    if captured_left and captured_right:
-                        print(f"Images captured --> {self.images_captured}")
-                        if not self.images_captured and not test_camera_orientation(captured_left_frame, captured_right_frame):
+                if self.args.disableRgb:
+                    captured_color = True
+                if captured_left and captured_right and captured_color:
+                    print(f"Images captured --> {self.images_captured}")
+                    if not self.images_captured:
+                        if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
                             self.show_failed_orientation()
-                        self.images_captured += 1
-                        self.images_captured_polygon += 1
-                        capturing = False
-                        tried_left = False
-                        tried_right = False
-                        captured_left = False
-                        captured_right = False
+                        # if not self.test_camera_orientation(captured_left_frame, captured_color_frame):
+                        #     self.show_failed_orientation()
 
-                    elif tried_left and tried_right:
-                        self.show_failed_capture_frame()
-                        capturing = False
-                        tried_left = False
-                        tried_right = False
-                        captured_left = False
-                        captured_right = False
+                    self.images_captured += 1
+                    self.images_captured_polygon += 1
+                    capturing = False
+                    tried_left = False
+                    tried_right = False
+                    tried_color = False
+                    captured_left = False
+                    captured_right = False
+                    captured_color = False
+                elif tried_left and tried_color:
+                    self.show_failed_capture_frame()
+                    capturing = False
+                    tried_left = False
+                    tried_right = False
+                    tried_color = False
+                    captured_left = False
+                    captured_right = False
+                    captured_color = False
+                    break
+
+                if self.images_captured_polygon == self.args.count:
+                    self.images_captured_polygon = 0
+                    self.current_polygon += 1
+
+                    if self.current_polygon == len(self.polygons):
+                        finished = True
+                        cv2.destroyAllWindows()
                         break
-
-                    if self.images_captured_polygon == self.args['count']:
-                        self.images_captured_polygon = 0
-                        self.current_polygon += 1
-
-                        if self.current_polygon == len(self.polygons):
-                            finished = True
-                            cv2.destroyAllWindows()
-                            break
-                
-                # combine_img = np.hstack((frame_list[0], frame_list[1]))
+            
+            combine_img = None
+            if not self.args.disableRgb:
+                frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
+                combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
+            else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
-
-                cv2.imshow("left + right",combine_img)
-                frame_list.clear()
+            cv2.imshow("left + rgb + right", combine_img)
+            frame_list.clear()
 
     def calibrate(self):
         print("Starting image processing")
-        flags = [self.config['board_config']['stereo_center_crop']]
-        cal_data = StereoCalibration()
+        cal_data = calibUtils.StereoCalibration()
+        dest_path = str(Path('resources').absolute())
+        self.args.cameraMode = 'perspective' # hardcoded for now
         try:
-            cal_data.calibrate("dataset", self.args['square_size_cm'], "./resources/depthai.calib", flags)
+            epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args.squareSizeCm,
+                 self.args.markerSizeCm, self.args.squaresX, self.args.squaresY, self.args.cameraMode, not self.args.disableRgb, self.args.rectifiedDisp)
+            if epiploar_error > self.args.maxEpiploarError:
+                image = create_blank(900, 512, rgb_color=red)
+                text = "High L-r epiploar_error: " + str(epiploar_error)
+                cv2.putText(image, text, (10, 250), font, 2, (0, 0, 0), 2)
+                text = "Requires Recalibration "
+                cv2.putText(image, text, (10, 300), font, 2, (0, 0, 0), 2)
+
+                cv2.imshow("Result Image", image)
+                cv2.waitKey(0)
+                print("Requires Recalibration.....!!")
+                raise SystemExit(1)
+            elif epiploar_error_rRgb is not None and epiploar_error_rRgb > self.args.maxEpiploarError:
+                image = create_blank(900, 512, rgb_color=red)
+                text = "High RGB-R epiploar_error: " + str(epiploar_error_rRgb)
+                cv2.putText(image, text, (10, 250), font, 2, (0, 0, 0), 2)
+                text = "Requires Recalibration "
+                cv2.putText(image, text, (10, 300), font, 2, (0, 0, 0), 2)
+
+                cv2.imshow("Result Image", image)
+                cv2.waitKey(0)
+                print("Requires Recalibration.....!!")
+                raise SystemExit(1)
+
+            left = dai.CameraBoardSocket.LEFT
+            right = dai.CameraBoardSocket.RIGHT
+            if self.args.swapLR:
+                left = dai.CameraBoardSocket.RIGHT
+                right = dai.CameraBoardSocket.LEFT
+
+            calibration_handler = dai.CalibrationHandler()
+            calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+
+            calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
+            calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
+            measuredTranslation = [
+                -self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
+            calibration_handler.setCameraExtrinsics(
+                left, right, calibData[5], calibData[6], measuredTranslation)
+
+            calibration_handler.setDistortionCoefficients(left, calibData[9] )
+            calibration_handler.setDistortionCoefficients(right, calibData[10])
+
+            calibration_handler.setFov(left, self.board_config['board_config']['left_fov_deg'])
+            calibration_handler.setFov(right, self.board_config['board_config']['left_fov_deg'])
+
+            calibration_handler.setStereoLeft(
+                left, calibData[0])
+            calibration_handler.setStereoRight(
+                right, calibData[1])
+
+            if not self.args.disableRgb:
+                calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.RGB, calibData[4], 1920, 1080)
+                calibration_handler.setDistortionCoefficients(dai.CameraBoardSocket.RGB, calibData[11])
+                calibration_handler.setFov(dai.CameraBoardSocket.RGB, self.board_config['board_config']['rgb_fov_deg'])
+                calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, self.focus_value)
+
+                measuredTranslation = [
+                    self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
+                calibration_handler.setCameraExtrinsics(
+                    right, dai.CameraBoardSocket.RGB, calibData[7], calibData[8], measuredTranslation)
+            
+            resImage = None
+            if not self.device.isClosed():
+                dev_info = self.device.getDeviceInfo()
+                mx_serial_id = dev_info.getMxId()
+                calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
+                calibration_handler.eepromToJsonFile(calib_dest_path)
+                is_write_succesful = False
+                
+                try:
+                    is_write_succesful = self.device.flashCalibration(
+                        calibration_handler)
+                except:
+                    print("Writing in except...")
+                    is_write_succesful = self.device.flashCalibration(
+                        calibration_handler)
+                if is_write_succesful:
+                    resImage = create_blank(900, 512, rgb_color=green)
+                    text = "Calibration Succesful with"
+                    cv2.putText(resImage, text, (10, 250),
+                                font, 2, (0, 0, 0), 2)
+                    text = "Epipolar error of " + str(epiploar_error)
+                    cv2.putText(resImage, text, (10, 300),
+                                font, 2, (0, 0, 0), 2)
+                else:
+                    resImage = create_blank(900, 512, rgb_color=red)
+                    text = "EEprom Write Failed!! " + str(epiploar_error)
+                    cv2.putText(resImage, text, (10, 250),
+                                font, 2, (0, 0, 0), 2)
+                    text = "Try recalibrating !!"
+                    cv2.putText(resImage, text, (10, 300),
+                                font, 2, (0, 0, 0), 2)
+            else:
+                calib_dest_path = dest_path + '/depthai_calib.json'
+                # calibration_handler.eepromToJsonFile(calib_dest_path)
+                resImage = create_blank(900, 512, rgb_color=red)
+                text = "Calibratin succesful. " + str(epiploar_error)
+                cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+                # text = "Device not found to write to EEPROM"
+                # cv2.putText(resImage, text, (10, 300), font, 2, (0, 0, 0), 2)
+
+            if resImage is not None:
+                cv2.imshow("Result Image", resImage)
+                cv2.waitKey(0)
         except AssertionError as e:
             print("[ERROR] " + str(e))
             raise SystemExit(1)
 
     def run(self):
-        if 'capture' in self.args['mode']:
+        if 'capture' in self.args.mode:
             try:
-                if self.args['image_op'] == 'delete':
-                    shutil.rmtree('dataset/')
+                # if self.args.imageOp == 'delete':
+                shutil.rmtree('dataset/')
                 Path("dataset/left").mkdir(parents=True, exist_ok=True)
                 Path("dataset/right").mkdir(parents=True, exist_ok=True)
+                if not self.args.disableRgb:
+                    Path("dataset/rgb").mkdir(parents=True, exist_ok=True)
             except OSError:
                 print("An error occurred trying to create image dataset directories!")
-                raise
+                raise SystemExit(1)
             self.show_info_frame()
             self.capture_images()
-        if 'process' in self.args['mode']:
+        self.dataset_path = str(Path("dataset").absolute())
+        if 'process' in self.args.mode:
             self.calibrate()
         print('py: DONE.')
 
