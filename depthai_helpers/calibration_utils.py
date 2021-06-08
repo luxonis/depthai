@@ -658,6 +658,7 @@ class StereoCalibration(object):
             self.img_shape_rgb_scaled, self.R_rgb, self.T_rgb)
 
     def test_epipolar_charuco_lr(self, dataset_dir):
+        print("<-----------------Epipolar error of LEFT-right camera---------------->")
         images_left = glob.glob(dataset_dir + '/left/*.png')
         images_right = glob.glob(dataset_dir + '/right/*.png')
         images_left.sort()
@@ -774,7 +775,7 @@ class StereoCalibration(object):
         images_right = glob.glob(dataset_dir + '/right/*.png')
         images_rgb.sort()
         images_right.sort()
-        print("<-----------------HU IHER---------------->")
+        print("<-----------------Epipolar error of rgb-right camera---------------->")
         assert len(images_rgb) != 0, "ERROR: Images not read correctly"
         assert len(images_right) != 0, "ERROR: Images not read correctly"
         # criteria for marker detection/corner detections
@@ -804,19 +805,19 @@ class StereoCalibration(object):
 
             dest_res = (int(img_rgb.shape[1] * scale_width),
                         int(img_rgb.shape[0] * scale_width))
-            print("RGB size ....")
-            print(img_rgb.shape)
-            print(dest_res)
+            # print("RGB size ....")
+            # print(img_rgb.shape)
+            # print(dest_res)
 
             if img_rgb.shape[0] < 720:
                 raise RuntimeError("resizeed height of rgb is smaller than required. {0} < {1}".format(
                     img_rgb.shape[0], req_resolution[0]))
             del_height = (img_rgb.shape[0] - 720) // 2
-            print("del height ??")
-            print(del_height)
+            # print("del height ??")
+            # print(del_height)
             img_rgb = img_rgb[del_height: del_height + 720, :]
-            print("resized_shape")
-            print(img_rgb.shape)
+            # print("resized_shape")
+            # print(img_rgb.shape)
             # self.parse_frame(img_rgb, "rectified_rgb_before",
             #                  "rectified_"+str(count))
 
