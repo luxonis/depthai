@@ -3,13 +3,13 @@
     {
         "output_format" : "detection",
         "NN_family" : "YOLO",
-        "input_size": "256x256",
+        "input_size": "416x416",
         "NN_specific_metadata" :
-        { 
+        {
             "classes" : 80,
             "coordinates" : 4,
             "anchors" : [10,14, 23,27, 37,58, 81,82, 135,169, 344,319],
-            "anchor_masks" : 
+            "anchor_masks" :
             {
                 "side26" : [1,2,3],
                 "side13" : [3,4,5]
