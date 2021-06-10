@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import traceback
 
 import cv2
 import sys
@@ -22,7 +23,7 @@ import depthai as dai
 import depthai_helpers.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-
+debug = False
 red = (255, 0, 0)
 green = (0, 255, 0)
 
@@ -143,7 +144,8 @@ class Main:
         # random polygons for count
         self.total_images = self.args.count * \
             len(calibUtils.setPolygonCoordinates(1000, 600))
-        print("Using Arguments=", self.args)
+        if debug:
+            print("Using Arguments=", self.args)
 
         pipeline = self.create_pipeline()
         self.device = dai.Device(pipeline)
@@ -341,7 +343,8 @@ class Main:
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
             elif key == ord(" "):
-                print("setting capture true------------------------")
+                if debug:
+                    print("setting capture true------------------------")
                 capturing = True
 
             frame_list = []
@@ -361,15 +364,16 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
 
-                print("Timestamp difference ---> l & rgb")
-                lrgb_time = None
+                if debug:
+                    print("Timestamp difference ---> l & rgb")
+                lrgb_time = 0
                 if not self.args.disableRgb:
                     lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
-                else :
-                    lrgb_time = 0
-                lr_time   = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
-                print(lrgb_time)
-                print(lr_time)
+                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+
+                if debug:
+                    print(lrgb_time)
+                    print(lr_time)
 
                 if capturing and lrgb_time < 30000 and lr_time < 30000:
                     print("Capturing  ------------------------")
@@ -582,13 +586,14 @@ class Main:
     def run(self):
         if 'capture' in self.args.mode:
             try:
-                # if self.args.imageOp == 'delete':
-                shutil.rmtree('dataset/')
+                if self.args.imageOp == 'delete' and Path('dataset').exists():
+                    shutil.rmtree('dataset/')
                 Path("dataset/left").mkdir(parents=True, exist_ok=True)
                 Path("dataset/right").mkdir(parents=True, exist_ok=True)
                 if not self.args.disableRgb:
                     Path("dataset/rgb").mkdir(parents=True, exist_ok=True)
             except OSError:
+                traceback.print_exc()
                 print("An error occurred trying to create image dataset directories!")
                 raise SystemExit(1)
             self.show_info_frame()
