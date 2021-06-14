@@ -289,12 +289,17 @@ class BlobManager:
                 self.use_zoo = True
 
 
-    def compile(self, shaves, target='auto'):
+    def compile(self, shaves, openvino_version, target='auto'):
+        version = openvino_version.name.replace("VERSION_", "").replace("_", ".")
         if self.use_blob:
             return self.blob_path
         elif self.use_zoo:
             try:
-                self.blob_path = blobconverter.from_zoo(name=self.model_name, shaves=shaves)
+                self.blob_path = blobconverter.from_zoo(
+                    name=self.model_name,
+                    shaves=shaves,
+                    version=version
+                )
                 return self.blob_path
             except Exception as e:
                 if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
@@ -311,6 +316,7 @@ class BlobManager:
                     raise
         else:
             self.blob_path = blobconverter.compile_blob(
+                version=version,
                 blob_name=self.model_name,
                 req_data={
                     "name": self.model_name,
