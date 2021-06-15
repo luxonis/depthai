@@ -9,4 +9,4 @@ blkinfo
 paramiko
 pygame
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.4.0.0+bbe830812bac9c0d67088b51147c56d5ffc643c6
+depthai==0.4.0.0+2dd32a84ad8ae65a0daa26c4adb1ceec58a67312

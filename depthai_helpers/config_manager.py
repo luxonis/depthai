@@ -300,6 +300,7 @@ class DepthConfigManager:
                 'usb_chunk_KiB' : self.args['usb_chunk_KiB'],
                 'enable_flash_test': True,
                 'enable_imu': True,
+                'imu_fw_upgrade': 86,
             },
             #'video_config':
             #{

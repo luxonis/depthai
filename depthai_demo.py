@@ -804,6 +804,11 @@ class DepthAI:
                     pygame_render_text(screen, flash_status, (470, 470), color=c ,font_size=25)
                     pygame_render_text(screen, dict_['flash']['info'], (470, 495) ,font_size=25)
 
+                    imu_status = dict_['imu']['status']
+                    imu_ok = ('OK' in imu_status)
+                    c = green if imu_ok else red
+                    pygame_render_text(screen, imu_status, (40, 480), color=c ,font_size=25)
+
                     # # Also printed from lib/c++ side
                     if 0 and 'logs' in dict_:
                         for log in dict_['logs']:
