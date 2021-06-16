@@ -180,30 +180,31 @@ class NNetManager:
     input_size = None
     confidence = None
     metadata = None
+    openvino_version = None
     output_format = "raw"
     sbb = False
     source_camera = None
+    blob_path = None
 
-    def __init__(self, source, use_depth, use_hq, model_dir=None, model_name=None):
+    def __init__(self, source, model_dir=None, model_name=None):
         if source not in self.source_choices:
             raise RuntimeError(f"Source {source} is invalid, available {self.source_choices}")
 
         self.model_name = model_name
         self.model_dir = model_dir
         self.source = source
-        self.use_depth = use_depth
-        self.use_hq = use_hq
         self.output_name = f"{self.model_name}_out"
         self.input_name = f"{self.model_name}_in"
-        self.blob_path = BlobManager(model_dir=self.model_dir, model_name=self.model_name).compile(conf.args.shaves)
+        self.blob_manager = BlobManager(model_dir=self.model_dir, model_name=self.model_name)
         # Disaply depth roi bounding boxes
-        self.sbb = conf.args.spatial_bounding_box and self.use_depth
 
         if model_dir is not None:
             config_path = self.model_dir / Path(self.model_name).with_suffix(f".json")
             if config_path.exists():
                 with config_path.open() as f:
                     self.config = json.load(f)
+                    if "openvino_version" in self.config:
+                        self.openvino_version =getattr(dai.OpenVINO.Version, 'VERSION_' + self.config.get("openvino_version")) 
                     nn_config = self.config.get("nn_config", {})
                     self.labels = self.config.get("mappings", {}).get("labels", None)
                     self.nn_family = nn_config.get("NN_family", None)
@@ -244,12 +245,13 @@ class NNetManager:
             return 0
 
 
-    def create_nn_pipeline(self, p, nodes):
+    def create_nn_pipeline(self, p, nodes, use_depth):
+        self.sbb = conf.args.spatial_bounding_box and use_depth
         if self.nn_family == "mobilenet":
-            nn = p.createMobileNetSpatialDetectionNetwork() if self.use_depth else p.createMobileNetDetectionNetwork()
+            nn = p.createMobileNetSpatialDetectionNetwork() if use_depth else p.createMobileNetDetectionNetwork()
             nn.setConfidenceThreshold(self.confidence)
         elif self.nn_family == "YOLO":
-            nn = p.createYoloSpatialDetectionNetwork() if self.use_depth else p.createYoloDetectionNetwork()
+            nn = p.createYoloSpatialDetectionNetwork() if use_depth else p.createYoloDetectionNetwork()
             nn.setConfidenceThreshold(self.confidence)
             nn.setNumClasses(self.metadata["classes"])
             nn.setCoordinateSize(self.metadata["coordinates"])
@@ -259,7 +261,8 @@ class NNetManager:
         else:
             # TODO use createSpatialLocationCalculator
             nn = p.createNeuralNetwork()
-
+        
+        self.blob_path = self.blob_manager.compile(conf.args.shaves, self.openvino_version)
         nn.setBlobPath(str(self.blob_path))
         nn.setNumInferenceThreads(2)
         nn.input.setBlocking(False)
@@ -304,7 +307,7 @@ class NNetManager:
                 nodes.stereo.rectifiedRight.link(nodes.manip.inputImage)
 
         if self.nn_family in ("YOLO", "mobilenet"):
-            if self.use_depth:
+            if use_depth:
                 nodes.stereo.depth.link(nn.inputDepth)
                 nn.setDepthLowerThreshold(conf.args.min_depth)
                 nn.setDepthUpperThreshold(conf.args.max_depth)
@@ -449,6 +452,10 @@ class PipelineManager:
 
     def set_nn_manager(self, nn_manager):
         self.nn_manager = nn_manager
+        if not conf.args.openvino_version and self.nn_manager.openvino_version:
+            self.p.setOpenVINOVersion(self.nn_manager.openvino_version)
+        else:
+            self.nn_manager.openvino_version = self.p.getOpenVINOVersion()
 
     def create_default_queues(self, device):
         for xout in filter(lambda node: isinstance(node, dai.XLinkOut), vars(self.nodes).values()):
@@ -530,7 +537,7 @@ class PipelineManager:
 
     def create_nn(self):
         if callable(self.nn_manager.create_nn_pipeline):
-            nn = self.nn_manager.create_nn_pipeline(self.p, self.nodes)
+            nn = self.nn_manager.create_nn_pipeline(self.p, self.nodes, use_depth=conf.useDepth)
 
             if Previews.nn_input.name in conf.args.show:
                 self.nodes.xout_nn_input = self.p.createXLinkOut()
@@ -566,19 +573,16 @@ class PipelineManager:
 
 device_info = conf.getDeviceInfo()
 pm = PipelineManager()
+nn_manager = NNetManager(
+    model_name=conf.getModelName(),
+    model_dir=conf.getModelDir(),
+    source=conf.getModelSource(),
+)
+pm.set_nn_manager(nn_manager)
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.p.getOpenVINOVersion(), device_info) as device:
     conf.adjustParamsToDevice(device)
-
-    nn_manager = NNetManager(
-        model_name=conf.getModelName(),
-        model_dir=conf.getModelDir(),
-        source=conf.getModelSource(),
-        use_depth=conf.useDepth,
-        use_hq=conf.useHQ
-    )
-    pm.set_nn_manager(nn_manager)
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
