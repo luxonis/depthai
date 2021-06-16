@@ -31,7 +31,7 @@ conf.adjustPreviewToOptions()
 callbacks = load_module(conf.args.callback)
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
-bbox_color = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes
+bbox_color = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
 text_color = (255, 255, 255)
 fps_color = (134, 164, 11)
 fps_type = cv2.FONT_HERSHEY_SIMPLEX
@@ -351,8 +351,8 @@ class NNetManager:
             def draw_detection(frame, detection):
                 bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
                 bbox[::2] += self.cropOffsetX(frame)
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color, 2)
-                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color, cv2.FILLED)
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color[detection.label], 2)
+                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color[detection.label], cv2.FILLED)
                 cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
                             text_type, 0.5, (0, 0, 0))
                 cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 58, bbox[1] - 10),
@@ -645,7 +645,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info) as device:
                     top_left = roi.topLeft()
                     bottom_right = roi.bottomRight()
                     # Display SBB on the disparity map
-                    cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), bbox_color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+                    cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
         else:
             read_correctly, host_frame = cap.read()
             if not read_correctly:
