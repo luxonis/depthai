@@ -226,6 +226,9 @@ class NNetManager:
         if conf.args.cnn_input_size:
             self.input_size = tuple(map(int, conf.args.cnn_input_size.split('x')))
 
+        # Count objects detected on the frame
+        self.count = conf.getCountLabel(self)
+
     @property
     def should_flip_detection(self):
         return self.source in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
@@ -261,7 +264,7 @@ class NNetManager:
         else:
             # TODO use createSpatialLocationCalculator
             nn = p.createNeuralNetwork()
-        
+
         self.blob_path = self.blob_manager.compile(conf.args.shaves, self.openvino_version)
         nn.setBlobPath(str(self.blob_path))
         nn.setNumInferenceThreads(2)
@@ -379,6 +382,21 @@ class NNetManager:
                         draw_detection(frame, detection)
                 else:
                     draw_detection(source, detection)
+
+            if self.count is not None:
+                def draw_cnt(frame, cnt):
+                    cv2.rectangle(frame, (0, 35), (120, 50), (255, 255, 255), cv2.FILLED)
+                    cv2.putText(frame, f"{cnt} {self.count}", (5, 46), fps_type, 0.5, fps_color)
+
+                # Count the number of detected objects
+                cnt_iter = filter(lambda x: self.get_label_text(x.label) == self.count, decoded_data)
+                cnt = sum(1 for _ in cnt_iter)
+                if isinstance(source, PreviewManager):
+                    for frame in pv.frames.values():
+                        draw_cnt(frame, cnt)
+                else:
+                    draw_cnt(source, cnt)
+
         elif self.output_format == "raw" and self.handler is not None:
             if isinstance(source, PreviewManager):
                 frames = list(pv.frames.items())
@@ -432,7 +450,7 @@ class FPSHandler:
     def draw_fps(self, source):
         def draw(frame, name: str):
             frame_fps = f"{name.upper()} FPS: {round(fps.tick_fps(name), 1)}"
-            cv2.rectangle(frame, (0, 0), (120, 40), (255, 255, 255), cv2.FILLED)
+            cv2.rectangle(frame, (0, 0), (120, 35), (255, 255, 255), cv2.FILLED)
             cv2.putText(frame, frame_fps, (5, 15), fps_type, 0.4, fps_color)
 
             cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), fps_type, 0.5, fps_color)
