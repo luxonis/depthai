@@ -386,7 +386,7 @@ class NNetManager:
             if self.count is not None:
                 def draw_cnt(frame, cnt):
                     cv2.rectangle(frame, (0, 35), (120, 50), (255, 255, 255), cv2.FILLED)
-                    cv2.putText(frame, f"{cnt} {self.count}", (5, 46), fps_type, 0.5, fps_color)
+                    cv2.putText(frame, f"{self.count}: {cnt}", (5, 46), fps_type, 0.5, fps_color)
 
                 # Count the number of detected objects
                 cnt_iter = filter(lambda x: self.get_label_text(x.label) == self.count, decoded_data)
