@@ -298,7 +298,7 @@ class DepthConfigManager:
                 'sync_video_meta_streams': self.args['sync_video_meta'],
                 'sync_sequence_numbers'  : self.args['sync_sequence_numbers'],
                 'usb_chunk_KiB' : self.args['usb_chunk_KiB'],
-                'enable_flash_test': True,
+                'enable_flash_test': self.args['flashBootloader'],
                 'enable_imu': True,
                 'imu_fw_upgrade': 86,
             },
