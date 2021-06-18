@@ -84,4 +84,6 @@ def parse_args():
                         help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
     parser.add_argument('-cb', '--callback', type=Path, default=project_root / 'callbacks.py', help="Path to callbacks file to be used. Default: %(default)s")
     parser.add_argument("--openvino_version", type=str, choices=openvino_versions, help="Specify which OpenVINO version to use in the pipeline")
+    parser.add_argument("-dev", "--device_id", type=str,
+                        help="DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.")
     return parser.parse_args()
