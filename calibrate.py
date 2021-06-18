@@ -69,32 +69,23 @@ def parse_args():
     '''
     parser = ArgumentParser(
         epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-c", "--count", default=1,
-                        type=int, required=False,
+    parser.add_argument("-c", "--count", default=1, type=int, required=False,
                         help="Number of images per polygon to capture. Default: 1.")
-    parser.add_argument("-s", "--squareSizeCm", default="2.0",
-                        type=float, required=False,
+    parser.add_argument("-s", "--squareSizeCm", type=float, required=False,
                         help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
-    parser.add_argument("-ms", "--markerSizeCm", default="1.5",
-                        type=float, required=False,
+    parser.add_argument("-ms", "--markerSizeCm", type=float, required=False,
                         help="Marker size in charuco boards.")
-    parser.add_argument("-nx", "--squaresX", default="11",
-                        type=int, required=False,
+    parser.add_argument("-nx", "--squaresX", default="11", type=int, required=False,
                         help="number of chessboard squares in X direction in charuco boards.")
-    parser.add_argument("-ny", "--squaresY", default="8",
-                        type=int, required=False,
+    parser.add_argument("-ny", "--squaresY", default="8", type=int, required=False,
                         help="number of chessboard squares in Y direction in charuco boards.")
-    parser.add_argument("-i", "--imageOp", default="modify",
-                        type=str, required=False,
-                        help="Whether existing images should be modified or all images should be deleted before running image capture. The default is 'modify'. Change to 'delete' to delete all image files.")
     parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
                         help="Display rectified images with lines drawn for epipolar check")
     parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
                         help="Disable rgb camera Calibration")
     parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
                         help="Interchange Left and right camera port.")  
-    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*',
-                        type=str, required=False,
+    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
@@ -586,7 +577,7 @@ class Main:
     def run(self):
         if 'capture' in self.args.mode:
             try:
-                if self.args.imageOp == 'delete' and Path('dataset').exists():
+                if Path('dataset').exists():
                     shutil.rmtree('dataset/')
                 Path("dataset/left").mkdir(parents=True, exist_ok=True)
                 Path("dataset/right").mkdir(parents=True, exist_ok=True)
