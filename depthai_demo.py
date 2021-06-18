@@ -581,7 +581,7 @@ nn_manager = NNetManager(
 pm.set_nn_manager(nn_manager)
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(pm.p.getOpenVINOVersion(), device_info) as device:
+with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.force_usb2) as device:
     conf.adjustParamsToDevice(device)
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
