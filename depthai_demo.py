@@ -227,7 +227,7 @@ class NNetManager:
             self.input_size = tuple(map(int, conf.args.cnn_input_size.split('x')))
 
         # Count objects detected on the frame
-        self.count = conf.getCountLabel(self)
+        self.count_label = conf.getCountLabel(self)
 
     @property
     def should_flip_detection(self):
@@ -383,19 +383,18 @@ class NNetManager:
                 else:
                     draw_detection(source, detection)
 
-            if self.count is not None:
+            if self.count_label is not None:
                 def draw_cnt(frame, cnt):
                     cv2.rectangle(frame, (0, 35), (120, 50), (255, 255, 255), cv2.FILLED)
-                    cv2.putText(frame, f"{self.count}: {cnt}", (5, 46), fps_type, 0.5, fps_color)
+                    cv2.putText(frame, f"{self.count_label}: {cnt}", (5, 46), fps_type, 0.5, fps_color)
 
                 # Count the number of detected objects
-                cnt_iter = filter(lambda x: self.get_label_text(x.label) == self.count, decoded_data)
-                cnt = sum(1 for _ in cnt_iter)
+                cnt_list = list(filter(lambda x: self.get_label_text(x.label) == self.count_label, decoded_data))
                 if isinstance(source, PreviewManager):
                     for frame in pv.frames.values():
-                        draw_cnt(frame, cnt)
+                        draw_cnt(frame, len(cnt_list))
                 else:
-                    draw_cnt(source, cnt)
+                    draw_cnt(source, len(cnt_list))
 
         elif self.output_format == "raw" and self.handler is not None:
             if isinstance(source, PreviewManager):
