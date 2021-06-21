@@ -68,14 +68,14 @@ while not is_timeout:
         boot_mode = parsed_data[4]
 
         # get test result
+        if len(mxid) < TEST_MXID_LEN_PASS:
+            failed_msg_list.append("mxid length")
         if speed != TEST_SPEED_PASS:
             failed_msg_list.append("speed")
         if full_duplex != TEST_FULL_DUPLEX_PASS:
             failed_msg_list.append("full duplex")
         if boot_mode != TEST_BOOT_MODE_PASS:
             failed_msg_list.append("boot mode")
-        if len(mxid) < TEST_MXID_LEN_PASS:
-            failed_msg_list.append("mxid length")
 
         if len(failed_msg_list) == 0:
             is_passed = True
@@ -111,9 +111,12 @@ else:
     image = create_blank(CV_FRAME_WIDTH, CV_FRAME_HEIGHT, rgb_color=CV_RED_COLOR)
     cv2.putText(image, 'POE TEST ', (10,200), CV_FONT, 2, CV_BLACK_COLOR, 2)
     cv2.putText(image, 'FAILED', (10,255), CV_FONT, 2, CV_BLACK_COLOR, 2)
-    # combine failed message list to string
-    failed_msg_str = "FAILED: " + ", ".join(failed_msg_list)
-    cv2.putText(image, failed_msg_str, (10,400), CV_FONT, 1, CV_BLACK_COLOR, 2)
+    # print out all failed test
+    cv2.putText(image, 'FAILED:', (10,400), CV_FONT, 1, CV_BLACK_COLOR, 2)
+    height_offset = 435
+    for i in range(len(failed_msg_list)):
+        cv2.putText(image, failed_msg_list[i], (10,height_offset), CV_FONT, 1, CV_BLACK_COLOR, 2)
+        height_offset += 35
 
 cv2.imshow("Result Image", image)
 if cv2.waitKey(0):
