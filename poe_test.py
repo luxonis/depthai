@@ -65,11 +65,11 @@ while not is_passed and not is_timeout:
 image = None
 if is_passed:
     image = create_blank(CV_FRAME_WIDTH, CV_FRAME_HEIGHT, rgb_color=CV_GREEN_COLOR)
-    cv2.putText(image, 'FLASH TEST', (10,250), CV_FONT, 2, (0,0,0), 2)
+    cv2.putText(image, 'POE TEST', (10,250), CV_FONT, 2, (0,0,0), 2)
     cv2.putText(image, 'PASSED', (10,300), CV_FONT, 2, (0,0,0), 2)
 else:
     image = create_blank(CV_FRAME_WIDTH, CV_FRAME_HEIGHT, rgb_color=CV_RED_COLOR)
-    cv2.putText(image, 'FLASH TEST ', (10,250), CV_FONT, 2, (0,0,0), 2)
+    cv2.putText(image, 'POE TEST ', (10,250), CV_FONT, 2, (0,0,0), 2)
     cv2.putText(image, 'FAILED', (10,300), CV_FONT, 2, (0,0,0), 2)
 
 cv2.imshow("Result Image", image)
