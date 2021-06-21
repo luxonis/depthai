@@ -251,17 +251,27 @@ class ConfigManager:
         device_infos = dai.Device.getAllAvailableDevices()
         if len(device_infos) == 0:
             raise RuntimeError("No DepthAI device found!")
-        elif len(device_infos) == 1:
-            return device_infos[0]
         else:
             print("Available devices:")
             for i, device_info in enumerate(device_infos):
                 print(f"[{i}] {device_info.getMxId()} [{device_info.state.name}]")
-            val = input("Which DepthAI Device you want to use: ")
-            try:
-                return device_infos[int(val)]
-            except:
-                raise ValueError("Incorrect value supplied: {}".format(val))
+
+            if self.args.device_id == "list":
+                raise SystemExit(0)
+            elif self.args.device_id is not None:
+                matching_device = next(filter(lambda info: info.getMxId() == self.args.device_id, device_infos), None)
+                if matching_device is None:
+                    raise RuntimeError(f"No DepthAI device found with id matching {self.args.device_id} !")
+                return matching_device
+            elif len(device_infos) == 1:
+                return device_infos[0]
+            else:
+                val = input("Which DepthAI Device you want to use: ")
+                try:
+                    return device_infos[int(val)]
+                except:
+                    raise ValueError("Incorrect value supplied: {}".format(val))
+
     def getCountLabel(self, nnet_manager):
         if self.args.count_label is None:
             return None

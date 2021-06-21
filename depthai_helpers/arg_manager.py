@@ -86,5 +86,7 @@ def parse_args():
     parser.add_argument("--openvino_version", type=str, choices=openvino_versions, help="Specify which OpenVINO version to use in the pipeline")
     parser.add_argument("--count", type=str, dest='count_label',
                         help="Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).")
+    parser.add_argument("-dev", "--device_id", type=str,
+                        help="DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.")
     parser.add_argument('-usbs', '--usb_speed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
     return parser.parse_args()
