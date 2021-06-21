@@ -3,22 +3,29 @@ import struct
 import cv2
 import numpy as np
 import time
+import select
 
-DEVICE_IP = "192.168.1.222"
+# command to send to device
 DEVICE_COMMAND = 2
+
+DEVICE_IP = "169.254.1.222"
 BROADCAST_PORT = 11491
 
-SEND_MSG_TIMEOUT_SEC = 30
+SEND_MSG_TIMEOUT_SEC = 5
 SEND_MSG_FREQ_SEC = 0.2
 
-TEST_SPEED_PASS = 100
+TEST_SPEED_PASS = 1000
 TEST_FULL_DUPLEX_PASS = 1
+TEST_BOOT_MODE_PASS = 3
+TEST_MXID_LEN_PASS = 32
+TEST_MAX_RETRY = 3
 
-CV_FRAME_HEIGHT = 512
-CV_FRAME_WIDTH = 512
+CV_FRAME_HEIGHT = 640
+CV_FRAME_WIDTH = 720
 CV_FONT = cv2.FONT_HERSHEY_SIMPLEX
-CV_RED_COLOR = (255, 0, 0)
-CV_GREEN_COLOR = (0, 255, 0)
+CV_RED_COLOR = (255,0,0)
+CV_GREEN_COLOR = (0,255,0)
+CV_BLACK_COLOR = (0,0,0)
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """ Create new image(numpy array) filled with certain color in RGB """
@@ -33,44 +40,76 @@ def create_blank(width, height, rgb_color=(0, 0, 0)):
 # message type
 DEVICE_INFO_MSG = struct.pack('I', DEVICE_COMMAND)
 socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-socket.settimeout(SEND_MSG_FREQ_SEC)
+socket.setblocking(False)
+
+# sockets from which we expect to read
+inputs = [socket]
+# sockets to which we expect to write
+outputs = [socket]
 
 is_passed = False
 is_timeout = False
+retry_count = 0
+failed_msg_list = list()
+
 prev_time = time.time()
 
-while not is_passed and not is_timeout:
-    # check for timeout
-    if (time.time() - prev_time) > SEND_MSG_TIMEOUT_SEC:
-        is_timeout = True
-
-    # send message
-    socket.sendto(DEVICE_INFO_MSG, (DEVICE_IP, BROADCAST_PORT))
-    try:
+while not is_timeout:
+    ready_to_read, ready_to_write, in_error = select.select(inputs, outputs, inputs)
+    if ready_to_read:
         data = socket.recvfrom(1024)
 
         # parse data
         parsed_data = struct.unpack('I32siii', data[0])
+        command = parsed_data[0]
         mxid = parsed_data[1].decode('ascii')
         speed = parsed_data[2]
         full_duplex = parsed_data[3]
         boot_mode = parsed_data[4]
 
-        if speed == TEST_SPEED_PASS and full_duplex == TEST_FULL_DUPLEX_PASS:
+        # get test result
+        if speed != TEST_SPEED_PASS:
+            failed_msg_list.append("speed")
+        if full_duplex != TEST_FULL_DUPLEX_PASS:
+            failed_msg_list.append("full duplex")
+        if boot_mode != TEST_BOOT_MODE_PASS:
+            failed_msg_list.append("boot mode")
+        if len(mxid) < TEST_MXID_LEN_PASS:
+            failed_msg_list.append("mxid length")
+
+        if len(failed_msg_list) == 0:
             is_passed = True
-    except:
-        continue
+        else:
+            retry_count += 1
+
+    # exit immediately when test passed
+    if is_passed: break
+    # check number of retry
+    if retry_count >= TEST_MAX_RETRY: break
+    else: failed_msg_list.clear()
+
+    # send message if test not passed
+    time.sleep(SEND_MSG_FREQ_SEC)
+    socket.sendto(DEVICE_INFO_MSG, (DEVICE_IP, BROADCAST_PORT))
+
+    # check for timeout
+    if (time.time() - prev_time) > SEND_MSG_TIMEOUT_SEC:
+        failed_msg_list.append("timeout")
+        is_timeout = True
 
 # display result
 image = None
 if is_passed:
     image = create_blank(CV_FRAME_WIDTH, CV_FRAME_HEIGHT, rgb_color=CV_GREEN_COLOR)
-    cv2.putText(image, 'POE TEST', (10,250), CV_FONT, 2, (0,0,0), 2)
-    cv2.putText(image, 'PASSED', (10,300), CV_FONT, 2, (0,0,0), 2)
+    cv2.putText(image, 'POE TEST', (10,200), CV_FONT, 2, CV_BLACK_COLOR, 2)
+    cv2.putText(image, 'PASSED', (10,250), CV_FONT, 2, CV_BLACK_COLOR, 2)
 else:
     image = create_blank(CV_FRAME_WIDTH, CV_FRAME_HEIGHT, rgb_color=CV_RED_COLOR)
-    cv2.putText(image, 'POE TEST ', (10,250), CV_FONT, 2, (0,0,0), 2)
-    cv2.putText(image, 'FAILED', (10,300), CV_FONT, 2, (0,0,0), 2)
+    cv2.putText(image, 'POE TEST ', (10,200), CV_FONT, 2, CV_BLACK_COLOR, 2)
+    cv2.putText(image, 'FAILED', (10,250), CV_FONT, 2, CV_BLACK_COLOR, 2)
+    # combine failed message list to string
+    failed_msg_str = "FAILED: " + ", ".join(failed_msg_list)
+    cv2.putText(image, failed_msg_str, (10,400), CV_FONT, 1, CV_BLACK_COLOR, 2)
 
 cv2.imshow("Result Image", image)
 if cv2.waitKey(0):
