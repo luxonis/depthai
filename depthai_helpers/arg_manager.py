@@ -54,7 +54,7 @@ color_maps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: 
 project_root = Path(__file__).parent.parent
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
     parser.add_argument('-hq', '--high_quality', action="store_true", default=False,
