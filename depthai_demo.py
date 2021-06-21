@@ -31,7 +31,7 @@ conf.adjustPreviewToOptions()
 callbacks = load_module(conf.args.callback)
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
-bbox_color = list(np.random.random(size=3) * 256) # Random Colors for bounding boxes
+bbox_color = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
 text_color = (255, 255, 255)
 fps_color = (134, 164, 11)
 fps_type = cv2.FONT_HERSHEY_SIMPLEX
@@ -226,6 +226,9 @@ class NNetManager:
         if conf.args.cnn_input_size:
             self.input_size = tuple(map(int, conf.args.cnn_input_size.split('x')))
 
+        # Count objects detected on the frame
+        self.count_label = conf.getCountLabel(self)
+
     @property
     def should_flip_detection(self):
         return self.source in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
@@ -261,7 +264,7 @@ class NNetManager:
         else:
             # TODO use createSpatialLocationCalculator
             nn = p.createNeuralNetwork()
-        
+
         self.blob_path = self.blob_manager.compile(conf.args.shaves, self.openvino_version)
         nn.setBlobPath(str(self.blob_path))
         nn.setNumInferenceThreads(2)
@@ -351,8 +354,8 @@ class NNetManager:
             def draw_detection(frame, detection):
                 bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
                 bbox[::2] += self.cropOffsetX(frame)
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color, 2)
-                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color, cv2.FILLED)
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), bbox_color[detection.label], 2)
+                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), bbox_color[detection.label], cv2.FILLED)
                 cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
                             text_type, 0.5, (0, 0, 0))
                 cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 58, bbox[1] - 10),
@@ -379,6 +382,20 @@ class NNetManager:
                         draw_detection(frame, detection)
                 else:
                     draw_detection(source, detection)
+
+            if self.count_label is not None:
+                def draw_cnt(frame, cnt):
+                    cv2.rectangle(frame, (0, 35), (120, 50), (255, 255, 255), cv2.FILLED)
+                    cv2.putText(frame, f"{self.count_label}: {cnt}", (5, 46), fps_type, 0.5, fps_color)
+
+                # Count the number of detected objects
+                cnt_list = list(filter(lambda x: self.get_label_text(x.label) == self.count_label, decoded_data))
+                if isinstance(source, PreviewManager):
+                    for frame in pv.frames.values():
+                        draw_cnt(frame, len(cnt_list))
+                else:
+                    draw_cnt(source, len(cnt_list))
+
         elif self.output_format == "raw" and self.handler is not None:
             if isinstance(source, PreviewManager):
                 frames = list(pv.frames.items())
@@ -432,7 +449,7 @@ class FPSHandler:
     def draw_fps(self, source):
         def draw(frame, name: str):
             frame_fps = f"{name.upper()} FPS: {round(fps.tick_fps(name), 1)}"
-            cv2.rectangle(frame, (0, 0), (120, 40), (255, 255, 255), cv2.FILLED)
+            cv2.rectangle(frame, (0, 0), (120, 35), (255, 255, 255), cv2.FILLED)
             cv2.putText(frame, frame_fps, (5, 15), fps_type, 0.4, fps_color)
 
             cv2.putText(frame, f"NN FPS:  {round(fps.tick_fps('nn'), 1)}", (5, 30), fps_type, 0.5, fps_color)
@@ -645,7 +662,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                     top_left = roi.topLeft()
                     bottom_right = roi.bottomRight()
                     # Display SBB on the disparity map
-                    cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), bbox_color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+                    cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
         else:
             read_correctly, host_frame = cap.read()
             if not read_correctly:

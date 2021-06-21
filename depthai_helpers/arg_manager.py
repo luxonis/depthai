@@ -84,5 +84,7 @@ def parse_args():
                         help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
     parser.add_argument('-cb', '--callback', type=Path, default=project_root / 'callbacks.py', help="Path to callbacks file to be used. Default: %(default)s")
     parser.add_argument("--openvino_version", type=str, choices=openvino_versions, help="Specify which OpenVINO version to use in the pipeline")
+    parser.add_argument("--count", type=str, dest='count_label',
+                        help="Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).")
     parser.add_argument('-usbs', '--usb_speed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
     return parser.parse_args()

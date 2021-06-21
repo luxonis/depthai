@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import traceback
 
 import cv2
 import sys
@@ -22,7 +23,7 @@ import depthai as dai
 import depthai_helpers.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-
+debug = False
 red = (255, 0, 0)
 green = (0, 255, 0)
 
@@ -68,32 +69,23 @@ def parse_args():
     '''
     parser = ArgumentParser(
         epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-c", "--count", default=1,
-                        type=int, required=False,
+    parser.add_argument("-c", "--count", default=1, type=int, required=False,
                         help="Number of images per polygon to capture. Default: 1.")
-    parser.add_argument("-s", "--squareSizeCm", default="2.0",
-                        type=float, required=False,
+    parser.add_argument("-s", "--squareSizeCm", type=float, required=True,
                         help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
-    parser.add_argument("-ms", "--markerSizeCm", default="1.5",
-                        type=float, required=False,
+    parser.add_argument("-ms", "--markerSizeCm", type=float, required=True,
                         help="Marker size in charuco boards.")
-    parser.add_argument("-nx", "--squaresX", default="11",
-                        type=int, required=False,
+    parser.add_argument("-nx", "--squaresX", default="11", type=int, required=False,
                         help="number of chessboard squares in X direction in charuco boards.")
-    parser.add_argument("-ny", "--squaresY", default="8",
-                        type=int, required=False,
+    parser.add_argument("-ny", "--squaresY", default="8", type=int, required=False,
                         help="number of chessboard squares in Y direction in charuco boards.")
-    parser.add_argument("-i", "--imageOp", default="modify",
-                        type=str, required=False,
-                        help="Whether existing images should be modified or all images should be deleted before running image capture. The default is 'modify'. Change to 'delete' to delete all image files.")
     parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
                         help="Display rectified images with lines drawn for epipolar check")
     parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
                         help="Disable rgb camera Calibration")
     parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
                         help="Interchange Left and right camera port.")  
-    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*',
-                        type=str, required=False,
+    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
@@ -143,7 +135,8 @@ class Main:
         # random polygons for count
         self.total_images = self.args.count * \
             len(calibUtils.setPolygonCoordinates(1000, 600))
-        print("Using Arguments=", self.args)
+        if debug:
+            print("Using Arguments=", self.args)
 
         pipeline = self.create_pipeline()
         self.device = dai.Device(pipeline)
@@ -341,7 +334,8 @@ class Main:
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
             elif key == ord(" "):
-                print("setting capture true------------------------")
+                if debug:
+                    print("setting capture true------------------------")
                 capturing = True
 
             frame_list = []
@@ -361,15 +355,16 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
 
-                print("Timestamp difference ---> l & rgb")
-                lrgb_time = None
+                if debug:
+                    print("Timestamp difference ---> l & rgb")
+                lrgb_time = 0
                 if not self.args.disableRgb:
                     lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
-                else :
-                    lrgb_time = 0
-                lr_time   = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
-                print(lrgb_time)
-                print(lr_time)
+                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+
+                if debug:
+                    print(lrgb_time)
+                    print(lr_time)
 
                 if capturing and lrgb_time < 30000 and lr_time < 30000:
                     print("Capturing  ------------------------")
@@ -582,13 +577,14 @@ class Main:
     def run(self):
         if 'capture' in self.args.mode:
             try:
-                # if self.args.imageOp == 'delete':
-                shutil.rmtree('dataset/')
+                if Path('dataset').exists():
+                    shutil.rmtree('dataset/')
                 Path("dataset/left").mkdir(parents=True, exist_ok=True)
                 Path("dataset/right").mkdir(parents=True, exist_ok=True)
                 if not self.args.disableRgb:
                     Path("dataset/rgb").mkdir(parents=True, exist_ok=True)
             except OSError:
+                traceback.print_exc()
                 print("An error occurred trying to create image dataset directories!")
                 raise SystemExit(1)
             self.show_info_frame()
