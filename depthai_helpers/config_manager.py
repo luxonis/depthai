@@ -262,6 +262,15 @@ class ConfigManager:
                 return device_infos[int(val)]
             except:
                 raise ValueError("Incorrect value supplied: {}".format(val))
+    def getCountLabel(self, nnet_manager):
+        if self.args.count_label is None:
+            return None
+
+        if self.args.count_label.isdigit():
+            obj = nnet_manager.get_label_text(int(self.args.count_label)).lower()
+            print(f"Counting number of {obj} in the frame")
+            return obj
+        else: return self.args.count_label.lower()
 
 
 class BlobManager:
