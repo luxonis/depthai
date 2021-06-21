@@ -27,6 +27,27 @@ def check_range(min_val, max_val):
     return check_fn
 
 
+def _coma_separated(default, cast=str):
+    def _fun(option):
+        option_list = option.split(",")
+        if len(option_list) not in [1, 2]:
+            raise argparse.ArgumentTypeError(
+                "{0} format is invalid. See --help".format(option)
+            )
+        elif len(option_list) == 1:
+            return option_list[0], default
+        else:
+            try:
+                float(option_list[1])
+            except ValueError:
+                raise argparse.ArgumentTypeError(
+                    "In option: {0} {1} is not a number!".format(option, option_list[1])
+                )
+            return option_list[0], cast(option_list[1])
+
+    return _fun
+
+
 openvino_versions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
 _stream_choices = ("nn_input", "color", "left", "right", "depth", "disparity", "disparity_color", "rectified_left", "rectified_right")
 color_maps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
@@ -86,4 +107,10 @@ def parse_args():
     parser.add_argument("--openvino_version", type=str, choices=openvino_versions, help="Specify which OpenVINO version to use in the pipeline")
     parser.add_argument("--count", type=str, dest='count_label',
                         help="Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).")
+    parser.add_argument('-enc', '--encode', type=_coma_separated(default=30.0, cast=float), nargs="+", default=[],
+                        help="Define which cameras to encode (record) \n"
+                             "Format: camera_name or camera_name,enc_fps \n"
+                             "Example: -enc left color \n"
+                             "Example: -enc color right,10 left,10")
+    parser.add_argument('-encout', '--encode_output', type=Path, default=project_root, help="Path to directory where to store encoded files. Default: %(default)s")
     return parser.parse_args()

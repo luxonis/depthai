@@ -552,6 +552,44 @@ class PipelineManager:
             self.nodes.xout_right.setStreamName(Previews.right.name)
             self.nodes.mono_right.out.link(self.nodes.xout_right.input)
 
+    def create_encoder(self, camera_name, enc_fps):
+        allowed_sources = [Previews.left.name, Previews.right.name, Previews.color.name]
+        if camera_name not in allowed_sources:
+            raise ValueError("Camera param invalid, received {}, available choices: {}".format(camera_name, allowed_sources))
+        node_name = camera_name.lower() + '_enc'
+        xout_name = node_name + "_xout"
+        enc_profile = dai.VideoEncoderProperties.Profile.H264_MAIN
+        
+        if camera_name == Previews.color.name:
+            if not hasattr(self.nodes, 'cam_rgb'):
+                self.create_color_cam(use_hq=conf.useHQ)
+            enc_resolution = (self.nodes.cam_rgb.getResolutionWidth(), self.nodes.cam_rgb.getResolutionHeight())
+            enc_profile = dai.VideoEncoderProperties.Profile.H265_MAIN
+            enc_in = self.nodes.cam_rgb.video
+
+        elif camera_name == Previews.left.name:
+            if not hasattr(self.nodes, 'mono_left'):
+                self.create_left_cam()
+            enc_resolution = (self.nodes.mono_left.getResolutionWidth(), self.nodes.mono_left.getResolutionHeight())
+            enc_in = self.nodes.mono_left.out
+        elif camera_name == Previews.right.name:
+            if not hasattr(self.nodes, 'mono_right'):
+                self.create_right_cam()
+            enc_resolution = (self.nodes.mono_right.getResolutionWidth(), self.nodes.mono_right.getResolutionHeight())
+            enc_in = self.nodes.mono_right.out
+        else:
+            raise NotImplementedError("Unable to create encoder for {]".format(camera_name))
+
+        enc = self.p.createVideoEncoder()
+        enc.setDefaultProfilePreset(*enc_resolution, enc_fps, enc_profile)
+        enc_in.link(enc.input)
+        setattr(self.nodes, node_name, enc)
+
+        enc_xout = self.p.createXLinkOut()
+        enc.bitstream.link(enc_xout.input)
+        enc_xout.setStreamName(xout_name)
+        setattr(self.nodes, xout_name, enc_xout)
+
     def create_nn(self):
         if callable(self.nn_manager.create_nn_pipeline):
             nn = self.nn_manager.create_nn_pipeline(self.p, self.nodes, use_depth=conf.useDepth)
@@ -588,6 +626,35 @@ class PipelineManager:
             self.nodes.system_logger.out.link(self.nodes.xout_system_logger.input)
 
 
+class EncodingManager():
+    def __init__(self, pm):
+        self.encoding_queues = {}
+        self.encoding_nodes = {}
+        self.encoding_files = {}
+        for camera_name, enc_fps in conf.args.encode:
+            pm.create_encoder(camera_name, enc_fps)
+            self.encoding_nodes[camera_name] = getattr(pm.nodes, camera_name + "_enc")
+
+    def create_default_queues(self, device):
+        for camera_name, enc_fps in conf.args.encode:
+            self.encoding_queues[camera_name] = device.getOutputQueue(camera_name + "_enc_xout", maxSize=30, blocking=True)
+            self.encoding_files[camera_name] = (conf.args.encode_output / camera_name).with_suffix(
+                    ".h265" if self.encoding_nodes[camera_name].getProfile() == dai.VideoEncoderProperties.Profile.H265_MAIN else ".h264"
+                ).open('wb')
+
+    def parse_queues(self):
+        for name, queue in self.encoding_queues.items():
+            while queue.has():
+                queue.get().getData().tofile(self.encoding_files[name])
+
+    def close(self):
+        print("To view the encoded data, convert the stream file (.h264/.h265) into a video file (.mp4), using commands below:")
+        cmd = "ffmpeg -framerate {} -i {} -c copy {}"
+        for name, file in self.encoding_files.items():
+            print(cmd.format(self.encoding_nodes[name].getFrameRate(), file.name, str(Path(file.name).with_suffix('.mp4'))))
+            file.close()
+
+
 device_info = conf.getDeviceInfo()
 pm = PipelineManager()
 nn_manager = NNetManager(
@@ -622,6 +689,8 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info) as device:
                 conf.args.subpixel,
             )
 
+        enc_manager = EncodingManager(pm) if len(conf.args.encode) > 0 else None
+
     if len(conf.args.report) > 0:
         pm.create_system_logger()
 
@@ -638,75 +707,82 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info) as device:
 
     if conf.useCamera:
         pv.create_queues(device)
+        if enc_manager is not None:
+            enc_manager.create_default_queues(device)
     elif conf.args.sync:
         host_out = device.getOutputQueue(Previews.host.name, maxSize=1, blocking=False)
-
 
     seq_num = 0
     host_frame = None
     nn_data = []
     callbacks.on_setup(**locals())
 
-    while True:
-        fps.next_iter()
-        callbacks.on_iter(**locals())
-        if conf.useCamera:
-            pv.prepare_frames()
+    try:
+        while True:
+            fps.next_iter()
+            callbacks.on_iter(**locals())
+            if conf.useCamera:
+                pv.prepare_frames()
+                if enc_manager is not None:
+                    enc_manager.parse_queues()
 
-            if sbb_out is not None and pv.has(Previews.depth.name):
-                sbb = sbb_out.tryGet()
-                sbb_rois = sbb.getConfigData() if sbb is not None else []
-                depth_frame = pv.get(Previews.depth.name)
-                for roi_data in sbb_rois:
-                    roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
-                    top_left = roi.topLeft()
-                    bottom_right = roi.bottomRight()
-                    # Display SBB on the disparity map
-                    cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
-        else:
-            read_correctly, host_frame = cap.read()
-            if not read_correctly:
+                if sbb_out is not None and pv.has(Previews.depth.name):
+                    sbb = sbb_out.tryGet()
+                    sbb_rois = sbb.getConfigData() if sbb is not None else []
+                    depth_frame = pv.get(Previews.depth.name)
+                    for roi_data in sbb_rois:
+                        roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
+                        top_left = roi.topLeft()
+                        bottom_right = roi.bottomRight()
+                        # Display SBB on the disparity map
+                        cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+            else:
+                read_correctly, host_frame = cap.read()
+                if not read_correctly:
+                    break
+
+                scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
+                frame_nn = dai.ImgFrame()
+                frame_nn.setSequenceNum(seq_num)
+                frame_nn.setType(dai.RawImgFrame.Type.BGR888p)
+                frame_nn.setWidth(nn_manager.input_size[0])
+                frame_nn.setHeight(nn_manager.input_size[1])
+                frame_nn.setData(to_planar(scaled_frame))
+                nn_in.send(frame_nn)
+                seq_num += 1
+
+                # if high quality, send original frames
+                if not conf.useHQ:
+                    host_frame = scaled_frame
+                fps.tick('host')
+
+            in_nn = nn_out.tryGet()
+            if in_nn is not None:
+                callbacks.on_nn(in_nn)
+                if not conf.useCamera and conf.args.sync:
+                    host_frame = Previews.host.value(host_out.get())
+                nn_data = nn_manager.decode(in_nn)
+                fps.tick('nn')
+
+            if conf.useCamera:
+                nn_manager.draw(pv, nn_data)
+                fps.draw_fps(pv)
+                pv.show_frames()
+            else:
+                nn_manager.draw(host_frame, nn_data)
+                fps.draw_fps(host_frame)
+                cv2.imshow("host", host_frame)
+
+            if log_out:
+                logs = log_out.tryGetAll()
+                for log in logs:
+                    print_sys_info(log)
+
+            if cv2.waitKey(1) == ord('q'):
                 break
-
-            scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
-            frame_nn = dai.ImgFrame()
-            frame_nn.setSequenceNum(seq_num)
-            frame_nn.setType(dai.RawImgFrame.Type.BGR888p)
-            frame_nn.setWidth(nn_manager.input_size[0])
-            frame_nn.setHeight(nn_manager.input_size[1])
-            frame_nn.setData(to_planar(scaled_frame))
-            nn_in.send(frame_nn)
-            seq_num += 1
-
-            # if high quality, send original frames
-            if not conf.useHQ:
-                host_frame = scaled_frame
-            fps.tick('host')
-
-        in_nn = nn_out.tryGet()
-        if in_nn is not None:
-            callbacks.on_nn(in_nn)
-            if not conf.useCamera and conf.args.sync:
-                host_frame = Previews.host.value(host_out.get())
-            nn_data = nn_manager.decode(in_nn)
-            fps.tick('nn')
-
-        if conf.useCamera:
-            nn_manager.draw(pv, nn_data)
-            fps.draw_fps(pv)
-            pv.show_frames()
-        else:
-            nn_manager.draw(host_frame, nn_data)
-            fps.draw_fps(host_frame)
-            cv2.imshow("host", host_frame)
-
-        if log_out:
-            logs = log_out.tryGetAll()
-            for log in logs:
-                print_sys_info(log)
-
-        if cv2.waitKey(1) == ord('q'):
-            break
+    finally:
+        if conf.useCamera and enc_manager is not None:
+            enc_manager.close()
 
 if conf.args.report_file:
     report_file.close()
