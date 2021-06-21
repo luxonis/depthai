@@ -11,7 +11,7 @@ DEVICE_COMMAND = 2
 DEVICE_IP = "169.254.1.222"
 BROADCAST_PORT = 11491
 
-SEND_MSG_TIMEOUT_SEC = 5
+SEND_MSG_TIMEOUT_SEC = 30
 SEND_MSG_FREQ_SEC = 0.2
 
 TEST_SPEED_PASS = 1000
@@ -102,11 +102,15 @@ image = None
 if is_passed:
     image = create_blank(CV_FRAME_WIDTH, CV_FRAME_HEIGHT, rgb_color=CV_GREEN_COLOR)
     cv2.putText(image, 'POE TEST', (10,200), CV_FONT, 2, CV_BLACK_COLOR, 2)
-    cv2.putText(image, 'PASSED', (10,250), CV_FONT, 2, CV_BLACK_COLOR, 2)
+    cv2.putText(image, 'PASSED', (10,255), CV_FONT, 2, CV_BLACK_COLOR, 2)
+    cv2.putText(image, 'mxid: {}'.format(mxid), (10, 400), CV_FONT, 1, CV_BLACK_COLOR, 2)
+    cv2.putText(image, 'speed: {}'.format(speed), (10, 435), CV_FONT, 1, CV_BLACK_COLOR, 2)
+    cv2.putText(image, 'full duplex: {}'.format(full_duplex), (10, 470), CV_FONT, 1, CV_BLACK_COLOR, 2)
+    cv2.putText(image, 'boot mode: {}'.format(boot_mode), (10, 505), CV_FONT, 1, CV_BLACK_COLOR, 2)
 else:
     image = create_blank(CV_FRAME_WIDTH, CV_FRAME_HEIGHT, rgb_color=CV_RED_COLOR)
     cv2.putText(image, 'POE TEST ', (10,200), CV_FONT, 2, CV_BLACK_COLOR, 2)
-    cv2.putText(image, 'FAILED', (10,250), CV_FONT, 2, CV_BLACK_COLOR, 2)
+    cv2.putText(image, 'FAILED', (10,255), CV_FONT, 2, CV_BLACK_COLOR, 2)
     # combine failed message list to string
     failed_msg_str = "FAILED: " + ", ".join(failed_msg_list)
     cv2.putText(image, failed_msg_str, (10,400), CV_FONT, 1, CV_BLACK_COLOR, 2)
