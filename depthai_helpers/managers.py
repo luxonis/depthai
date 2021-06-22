@@ -161,7 +161,6 @@ class NNetManager:
         else:
             return 0
 
-
     def create_nn_pipeline(self, p, nodes, shaves=6, use_depth=False, use_sbb=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3):
         self.sbb = use_sbb
         if self.nn_family == "mobilenet":
@@ -242,7 +241,14 @@ class NNetManager:
 
     def decode(self, in_nn):
         if self.output_format == "detection":
-            return in_nn.detections
+            detections = in_nn.detections
+            if self.flip_detection:
+                for detection in detections:
+                    # Since rectified frames are horizontally flipped by default
+                    swap = detection.xmin
+                    detection.xmin = 1 - detection.xmax
+                    detection.xmax = 1 - swap
+            return detections
         elif self.output_format == "raw":
             if self.handler is not None:
                 return self.handler.decode(self, in_nn)
@@ -291,11 +297,6 @@ class NNetManager:
                     cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 90),
                                 self.text_type, 0.5, self.text_color)
             for detection in decoded_data:
-                if self.flip_detection:
-                    # Since rectified frames are horizontally flipped by default
-                    swap = detection.xmin
-                    detection.xmin = 1 - detection.xmax
-                    detection.xmax = 1 - swap
                 if isinstance(source, PreviewManager):
                     for frame in source.frames.values():
                         draw_detection(frame, detection)
