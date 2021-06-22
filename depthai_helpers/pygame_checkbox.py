@@ -26,28 +26,30 @@ class Checkbox:
         self.fc = font_color
         self.to = text_offset
         if not disable_pass:
-            self.test_pass = "PASS"
-            self.test_fail = "FAIL"
+            self.test_pass     = "PASS        "
+            self.test_fail     = "FAIL        "
+            self.test_untested = "WAITING"
         else:
             self.test_pass = ""
             self.test_fail = ""
+            self.test_untested = ""
         # checkbox object
         self.checkbox_obj = pg.Rect(self.x, self.y, 35, 35)
         self.checkbox_outline = self.checkbox_obj.copy()
-        self.write_box =  pg.Rect(self.x + 42, self.y, 60, 35)
+        self.write_box =  pg.Rect(self.x + 42, self.y, 120, 35)
         # variables to test the different states of the checkbox
         self.checked = check    
         if check:
             self.unchecked = False
+            self.Unattended = False
         else:
+            self.Unattended = True
             self.unchecked = True
-            
         self.active = False
         self.click = False
 
     def _draw_button_text(self):
         self.font = pg.font.Font(None, self.fs)
-        # w, h = self.font.size(self.test_fail)
         self.font_pos = (self.x + 45, self.y)
         if self.checked:
             pg.draw.rect(self.surface, (255,255,255), self.write_box)
@@ -56,6 +58,10 @@ class Checkbox:
         else:
             pg.draw.rect(self.surface, (255,255,255), self.write_box)
             self.font_surf = self.font.render(self.test_fail, True, red)
+            self.surface.blit(self.font_surf, self.font_pos)
+        if self.Unattended:
+            pg.draw.rect(self.surface, (255,255,255), self.write_box)
+            self.font_surf = self.font.render(self.test_untested, True, orange)
             self.surface.blit(self.font_surf, self.font_pos)
         
     def render_checkbox(self):
@@ -104,12 +110,19 @@ class Checkbox:
             cb2.uncheck()
 
     def uncheck(self):
+        self.Unattended = False
         self.checked = False
         self.unchecked = True
     
     def check(self):
+        self.Unattended = False
         self.checked = True
         self.unchecked = False
-
+    
+    def setUnattended(self):
+        self.Unattended = True
+        self.checked = False
+        self.unchecked = True
+    
     def is_checked(self):
         return self.checked

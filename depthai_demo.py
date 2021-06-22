@@ -280,7 +280,7 @@ class DepthAI:
             test_type = 'OAK_1_POE_test'
 
         # pygame init and rendering
-        screen = pygame.display.set_mode((800, 600))
+        screen = pygame.display.set_mode((900, 700))
         screen.fill(white)
         pygame.display.set_caption(test_type)
 
@@ -290,10 +290,10 @@ class DepthAI:
         heading = "Automated Tests                  Operator Tests"
         pygame_render_text(screen, heading, (250,70), black, 30)
 
-        if '1093' not in test_type:
+        if 'OAK_1' not in test_type:
             auto_checkbox_names = ["USB3", "Left camera connected", "Right camera connected", 
                                    "RGB camera connected", "JPEG Encoding Stream", 
-                                   "previewout-rgb Stream", "left Stream", "right Stream"]
+                                   "previewout-rgb Stream", "left Stream", "right Stream", "IMU"]
             op_checkbox_names = ["JPEG Encoding", "Previewout-rgb stream", "Left Stream", "Right Stream"]
         else:
             auto_checkbox_names = ["USB3", "RGB camera connected", "JPEG Encoding Stream", "previewout-rgb Stream"]
@@ -313,7 +313,7 @@ class DepthAI:
             font_surf = font.render(auto_checkbox_names[i], True, green)
             screen.blit(font_surf, (x_axis,y_axis))
             auto_checkbox_dict[auto_checkbox_names[i]] = Checkbox(screen, x + 10, y_axis-5, outline_color=green, 
-                                                        check_color=green, check=True)
+                                                        check_color=green)
 
         y = 150
         x = 550
@@ -508,24 +508,26 @@ class DepthAI:
                 print(self.device.is_right_connected())
                 print("Is left conencted ?")
                 print(self.device.is_left_connected())
-                
+
+                auto_checkbox_dict['IMU'].setUnattended()
+
                 for i in range(len(op_checkbox_names)):
                     op_checkbox_dict[op_checkbox_names[i]][0].uncheck()
                     op_checkbox_dict[op_checkbox_names[i]][1].check()
                     op_checkbox_dict[op_checkbox_names[i]][2].uncheck()
 
-                fill_color =  pygame.Rect(50, 420, 400, 180)
+                fill_color =  pygame.Rect(50, 460, 400, 180)
                 pygame.draw.rect(screen, white, fill_color)
                 pygame_render_text(screen, "Saved!!", (605, 480), white)
 
                 text_pygame = "date_time: " + time_stmp
-                pygame_render_text(screen, text_pygame, (50, 430))
+                pygame_render_text(screen, text_pygame, (50, 490))
 
                 text_pygame = "test_type: " + test_type
-                pygame_render_text(screen, text_pygame, (50, 460))
+                pygame_render_text(screen, text_pygame, (50, 515))
 
                 text_pygame = "mx_serial_id: " + mx_serial_id
-                pygame_render_text(screen, text_pygame, (50, 490))
+                pygame_render_text(screen, text_pygame, (50, 540))
 
                 # text_pygame = "Depthai commit version: " + get_version_from_requirements()
                 # pygame_render_text(screen, text_pygame, (50, 520))
@@ -547,7 +549,6 @@ class DepthAI:
                 # continue
             
             for event in pygame.event.get():
-
                 # catching save button
                 if event.type == pygame.MOUSEMOTION:
                     x, y = event.pos
@@ -748,18 +749,18 @@ class DepthAI:
                     if 0:
                         print(json.dumps(dict_, indent=4))
 
-                    fill_color =  pygame.Rect(50, 470, 750, 140)
+                    fill_color =  pygame.Rect(50, 570, 850, 170)
                     pygame.draw.rect(screen, white, fill_color)
                     text = 'meta_d2h Temp:'
-                    pygame_render_text(screen, text, (50, 520), color=orange, font_size=25)
+                    pygame_render_text(screen, text, (50, 590), color=orange, font_size=25)
                     text = ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css'])
-                    pygame_render_text(screen, text, (50, 545), font_size=25)
+                    pygame_render_text(screen, text, (50,620), font_size=25)
                     text = ' MSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['mss'])
-                    pygame_render_text(screen, text, (50, 570), font_size=25)
+                    pygame_render_text(screen, text, (50, 650), font_size=25)
                     text = ' UPA:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa0'])
-                    pygame_render_text(screen, text, (150, 545), font_size=25)
+                    pygame_render_text(screen, text, (150, 620), font_size=25)
                     text = ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1'])
-                    pygame_render_text(screen, text, (150, 570), font_size=25)
+                    pygame_render_text(screen, text, (150, 650), font_size=25)
 
                     # print('meta_d2h Temp',
                     #     ' CSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['css']),
@@ -768,13 +769,13 @@ class DepthAI:
                     #     ' DSS:' + '{:6.2f}'.format(dict_['sensors']['temperature']['upa1']))
                 
                     text = 'Camera: last frame tstamp: {:.6f}'.format(dict_['camera']['last_frame_timestamp'])
-                    pygame_render_text(screen, text, (250, 520), font_size=25)
+                    pygame_render_text(screen, text, (200, 590), font_size=25)
                     text = 'frame count rgb: {}'.format(dict_['camera']['rgb']['frame_count'])
-                    pygame_render_text(screen, text, (275, 570), font_size=25)
+                    pygame_render_text(screen, text, (275, 620), font_size=25)
                     text = 'left:{}'.format(dict_['camera']['left']['frame_count'])
-                    pygame_render_text(screen, text, (275, 545), font_size=25)
+                    pygame_render_text(screen, text, (275, 650), font_size=25)
                     text = 'right:{}'.format(dict_['camera']['right']['frame_count'])
-                    pygame_render_text(screen, text, (375, 545), font_size=25)
+                    pygame_render_text(screen, text, (375, 650), font_size=25)
 
                     # if 'imu' in dict_:
                     #     print('meta_d2h IMU acceleration xyz [g]:',
@@ -790,25 +791,38 @@ class DepthAI:
                         # print(dict_['imu'])
                         is_IMU_found = True
                         text = 'IMU acc x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accel']['x'], dict_['imu']['accel']['y'], dict_['imu']['accel']['z'])
-                        pygame_render_text(screen, text, (470, 545), font_size=25)
+                        pygame_render_text(screen, text, (470, 620), font_size=25)
 
                         text = 'IMU acc-raw x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accelRaw']['x'], dict_['imu']['accelRaw']['y'], dict_['imu']['accelRaw']['z'])
-                        pygame_render_text(screen, text, (460, 570), font_size=25)
+                        pygame_render_text(screen, text, (460, 650), font_size=25)
 
                     if not is_IMU_found:
                         text = 'IMU failed!!'
-                        pygame_render_text(screen, text, (470, 545), color=red ,font_size=25)
+                        pygame_render_text(screen, text, (470, 575), color=red ,font_size=25)
 
+                    fill_color =  pygame.Rect(520, 520, 250, 70)
+                    pygame.draw.rect(screen, white, fill_color)
+                    
                     flash_status = dict_['flash']['status']
                     flash_ok = ('OK' in flash_status)
                     c = green if flash_ok else red
-                    pygame_render_text(screen, flash_status, (470, 470), color=c ,font_size=25)
-                    pygame_render_text(screen, dict_['flash']['info'], (470, 495) ,font_size=25)
+                    pygame_render_text(screen, flash_status, (550, 540), color=c ,font_size=25)
+                    pygame_render_text(screen, dict_['flash']['info'], (550, 570) ,font_size=25)
 
                     imu_status = dict_['imu']['status']
-                    imu_ok = ('OK' in imu_status)
-                    c = green if imu_ok else red
-                    pygame_render_text(screen, imu_status, (40, 480), color=c ,font_size=25)
+                    c = None
+                    if 'OK' in imu_status:
+                        c = green
+                        auto_checkbox_dict['IMU'].check()
+                    elif '%' in imu_status:
+                        c = orange
+                    else:
+                        auto_checkbox_dict['IMU'].uncheck()
+                        c = red
+                    # imu_ok = ('OK' in imu_status)
+                    # c = green if imu_ok else red
+
+                    pygame_render_text(screen, imu_status, (40, 570), color=c ,font_size=25)
 
                     # # Also printed from lib/c++ side
                     if 0 and 'logs' in dict_:
