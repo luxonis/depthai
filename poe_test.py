@@ -53,7 +53,10 @@ retry_count = 0
 failed_msg_list = list()
 
 prev_time = time.time()
-
+mxid = None
+speed = None
+full_duplex = None
+boot_mode = None
 while not is_timeout:
     ready_to_read, ready_to_write, in_error = select.select(inputs, outputs, inputs)
     if ready_to_read:
