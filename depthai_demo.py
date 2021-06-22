@@ -275,9 +275,9 @@ class DepthAI:
         if 'depth' in stream_names:
             test_type = '1099_test'
         elif 'left' in stream_names and 'right' in stream_names:
-            test_type = '1098_OBC_test'
+            test_type = 'OAK_D_POE_test'
         else:
-            test_type = '1093_test'
+            test_type = 'OAK_1_POE_test'
 
         # pygame init and rendering
         screen = pygame.display.set_mode((800, 600))
@@ -745,7 +745,8 @@ class DepthAI:
                     str_ = packet.getDataAsStr()
                     dict_ = json.loads(str_)
                     # Pretty-print meta_d2h
-                    print(json.dumps(dict_, indent=4))
+                    if 0:
+                        print(json.dumps(dict_, indent=4))
 
                     fill_color =  pygame.Rect(50, 470, 750, 140)
                     pygame.draw.rect(screen, white, fill_color)
