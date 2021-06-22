@@ -669,7 +669,6 @@ class EncodingManager():
                     )
                     print("Running conversion command... [{}]".format(ff.cmd))
                     ff.run()
-                    print("Done! Video ready: {}".format(out_name))
                 except ffmpy3.FFExecutableNotFoundError:
                     print("FFMPEG executable not found!")
                     traceback.print_exc()
@@ -678,6 +677,9 @@ class EncodingManager():
                     print("FFMPEG runtime error!")
                     traceback.print_exc()
                     print_manual()
+            for name, file in self.encoding_files.items():
+                print("Video conversion complete!")
+                print("Produced file: {}".format(str(Path(file.name).with_suffix('.mp4'))))
         except ImportError:
             print("Module ffmpy3 not found!")
             traceback.print_exc()
