@@ -101,7 +101,6 @@ class NNetManager:
     metadata = None
     openvino_version = None
     output_format = "raw"
-    source_camera = None
     blob_path = None
     count_label = None
     text_color = (255, 255, 255)
@@ -194,15 +193,15 @@ class NNetManager:
 
         if self.source == "color":
             nodes.cam_rgb.preview.link(nn.input)
-            self.source_camera = nodes.cam_rgb
         elif self.source == "host":
             xin = p.createXLinkIn()
             xin.setStreamName(self.input_name)
             xin.out.link(nn.input)
-            setattr(nodes, self.input_name, xout)
+            setattr(nodes, self.input_name, xin)
             # Send the video frame back to the host
             nodes.xout_host = p.createXLinkOut()
             nodes.xout_host.setStreamName(Previews.host.name)
+            xin.out.link(nodes.xout_host.input)
 
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
             nodes.manip = p.createImageManip()
@@ -213,11 +212,9 @@ class NNetManager:
             nodes.manip.out.link(nn.input)
 
             if self.source == "left":
-                self.source_camera = nodes.cam_rgb
                 nodes.mono_left.out.link(nodes.manip.inputImage)
             elif self.source == "right":
                 nodes.mono_right.out.link(nodes.manip.inputImage)
-                self.source_camera = nodes.cam_rgb
             elif self.source == "rectified_left":
                 nodes.stereo.rectifiedLeft.link(nodes.manip.inputImage)
             elif self.source == "rectified_right":
@@ -470,19 +467,27 @@ class PipelineManager:
 
         if sync:
             if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
+                self.nodes.cam_rgb.video.unlink(self.nodes.xout_rgb.input)
+                self.nodes.cam_rgb.preview.unlink(self.nodes.xout_rgb.input)
                 nn.passthrough.link(self.nodes.xout_rgb.input)
             elif self.nn_manager.source == "host" and hasattr(self.nodes, "xout_host"):
+                getattr(self.nodes, self.nn_manager.input_name).out.unlink(self.nodes.xout_host.input)
                 nn.passthrough.link(self.nodes.xout_host.input)
             elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
+                self.nodes.mono_left.out.unlink(self.nodes.xout_left.input)
                 nn.passthrough.link(self.nodes.xout_left.input)
             elif self.nn_manager.source == "right" and hasattr(self.nodes, "right"):
+                self.nodes.mono_right.out.unlink(self.nodes.xout_right.input)
                 nn.passthrough.link(self.nodes.xout_right.input)
             elif self.nn_manager.source == "rectified_left" and hasattr(self.nodes, "rectified_left"):
+                self.nodes.stereo.rectifiedLeft.unlink(self.nodes.xout_rect_left.input)
                 nn.passthrough.link(self.nodes.xout_rect_left.input)
             elif self.nn_manager.source == "rectified_right" and hasattr(self.nodes, "rectified_right"):
+                self.nodes.stereo.rectifiedRight.unlink(self.nodes.xout_rect_right.input)
                 nn.passthrough.link(self.nodes.xout_rect_right.input)
 
             if hasattr(self.nodes, 'xout_depth'):
+                self.nodes.stereo.depth.unlink(self.nodes.xout_depth.input)
                 nn.passthroughDepth.link(self.nodes.xout_depth.input)
 
     def create_system_logger(self):
