@@ -121,9 +121,9 @@ class CliArgs:
         parser.add_argument("-rfv", "--rgb-field-of-view", default=None, type=float,
                             help="Horizontal field of view (HFOV) for the RGB camera in [deg]. Default: 68.7938deg.")
         
-        parser.add_argument("-fb", "--flashBootloader", default=False, type=bool, required=False,
+        parser.add_argument("-fb", "--flashBootloader", default=False, action="store_true",
                             help="Enables flashing bootloader to the device")
-        
+                            
         parser.add_argument("-b", "--baseline", default=None, type=float,
                             help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
 
