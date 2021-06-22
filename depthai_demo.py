@@ -3,6 +3,7 @@ import argparse
 import enum
 import json
 import time
+import traceback
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
@@ -648,11 +649,43 @@ class EncodingManager():
                 queue.get().getData().tofile(self.encoding_files[name])
 
     def close(self):
-        print("To view the encoded data, convert the stream file (.h264/.h265) into a video file (.mp4), using commands below:")
-        cmd = "ffmpeg -framerate {} -i {} -c copy {}"
+        def print_manual():
+            print("To view the encoded data, convert the stream file (.h264/.h265) into a video file (.mp4), using commands below:")
+            cmd = "ffmpeg -framerate {} -i {} -c copy {}"
+            for name, file in self.encoding_files.items():
+                print(cmd.format(self.encoding_nodes[name].getFrameRate(), file.name, str(Path(file.name).with_suffix('.mp4'))))
+
         for name, file in self.encoding_files.items():
-            print(cmd.format(self.encoding_nodes[name].getFrameRate(), file.name, str(Path(file.name).with_suffix('.mp4'))))
             file.close()
+        try:
+            import ffmpy3
+            for name, file in self.encoding_files.items():
+                fps = self.encoding_nodes[name].getFrameRate()
+                out_name = str(Path(file.name).with_suffix('.mp4'))
+                try:
+                    ff = ffmpy3.FFmpeg(
+                        inputs={file.name: "-y"},
+                        outputs={out_name: "-c copy -framerate {}".format(fps)}
+                    )
+                    print("Running conversion command... [{}]".format(ff.cmd))
+                    ff.run()
+                    print("Done! Video ready: {}".format(out_name))
+                except ffmpy3.FFExecutableNotFoundError:
+                    print("FFMPEG executable not found!")
+                    traceback.print_exc()
+                    print_manual()
+                except ffmpy3.FFRuntimeError:
+                    print("FFMPEG runtime error!")
+                    traceback.print_exc()
+                    print_manual()
+        except ImportError:
+            print("Module ffmpy3 not found!")
+            traceback.print_exc()
+            print_manual()
+        except:
+            print("Unknown error!")
+            traceback.print_exc()
+            print_manual()
 
 
 device_info = conf.getDeviceInfo()
