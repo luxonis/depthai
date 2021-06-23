@@ -352,7 +352,7 @@ class DepthAI:
 
         if args['verbose']: print_packet_info_header()
         log_file = "logs_" + test_type + ".csv"
-        if test_type != '1093_test':
+        if test_type != 'OAK_1_POE_test':
             header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'left_camera', 
                     'right_camera', 'rgb_camera', 'JPEG Encoding Stream', 'previewout-rgb Stream', 'left Stream', 'right Stream', 
                     'op JPEG Encoding', 'op Previewout-rgb stream', 'op Left Stream', 'op Right Stream', 'IMU']
@@ -475,7 +475,7 @@ class DepthAI:
                 else:
                     auto_checkbox_dict[auto_checkbox_names[0]].uncheck()
                 
-                if test_type != '1093_test':
+                if test_type != 'OAK_1_POE_test':
                     if self.device.is_left_connected():
                         auto_checkbox_dict[auto_checkbox_names[1]].check()
                     else:
@@ -509,7 +509,8 @@ class DepthAI:
                 print("Is left conencted ?")
                 print(self.device.is_left_connected())
 
-                auto_checkbox_dict['IMU'].setUnattended()
+                if test_type == 'OAK_D_POE_test':
+                    auto_checkbox_dict['IMU'].setUnattended()
 
                 for i in range(len(op_checkbox_names)):
                     op_checkbox_dict[op_checkbox_names[i]][0].uncheck()
@@ -787,18 +788,20 @@ class DepthAI:
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['y']),
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['z']))
                     # print(dict_['imu'])
-                    if 'imu' in dict_ and 'accel' in dict_['imu']:
-                        # print(dict_['imu'])
-                        is_IMU_found = True
-                        text = 'IMU acc x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accel']['x'], dict_['imu']['accel']['y'], dict_['imu']['accel']['z'])
-                        pygame_render_text(screen, text, (470, 620), font_size=25)
+                    if test_type == 'OAK_D_POE_test':
 
-                        text = 'IMU acc-raw x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accelRaw']['x'], dict_['imu']['accelRaw']['y'], dict_['imu']['accelRaw']['z'])
-                        pygame_render_text(screen, text, (460, 650), font_size=25)
+                        if 'imu' in dict_ and 'accel' in dict_['imu']:
+                            # print(dict_['imu'])
+                            is_IMU_found = True
+                            text = 'IMU acc x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accel']['x'], dict_['imu']['accel']['y'], dict_['imu']['accel']['z'])
+                            pygame_render_text(screen, text, (470, 620), font_size=25)
 
-                    if not is_IMU_found:
-                        text = 'IMU failed!!'
-                        pygame_render_text(screen, text, (470, 575), color=red ,font_size=25)
+                            text = 'IMU acc-raw x: {:7.4f}  y:{:7.4f}  z:{:7.4f}'.format(dict_['imu']['accelRaw']['x'], dict_['imu']['accelRaw']['y'], dict_['imu']['accelRaw']['z'])
+                            pygame_render_text(screen, text, (460, 650), font_size=25)
+
+                        if not is_IMU_found:
+                            text = 'IMU failed!!'
+                            pygame_render_text(screen, text, (470, 575), color=red ,font_size=25)
 
                     fill_color =  pygame.Rect(520, 520, 250, 70)
                     pygame.draw.rect(screen, white, fill_color)
@@ -808,21 +811,23 @@ class DepthAI:
                     c = green if flash_ok else red
                     pygame_render_text(screen, flash_status, (550, 540), color=c ,font_size=25)
                     pygame_render_text(screen, dict_['flash']['info'], (550, 570) ,font_size=25)
+        
+                    if test_type == 'OAK_D_POE_test':
 
-                    imu_status = dict_['imu']['status']
-                    c = None
-                    if 'OK' in imu_status:
-                        c = green
-                        auto_checkbox_dict['IMU'].check()
-                    elif '%' in imu_status:
-                        c = orange
-                    else:
-                        auto_checkbox_dict['IMU'].uncheck()
-                        c = red
-                    # imu_ok = ('OK' in imu_status)
-                    # c = green if imu_ok else red
+                        imu_status = dict_['imu']['status']
+                        c = None
+                        if 'OK' in imu_status:
+                            c = green
+                            auto_checkbox_dict['IMU'].check()
+                        elif '%' in imu_status:
+                            c = orange
+                        else:
+                            auto_checkbox_dict['IMU'].uncheck()
+                            c = red
+                        # imu_ok = ('OK' in imu_status)
+                        # c = green if imu_ok else red
 
-                    pygame_render_text(screen, imu_status, (40, 570), color=c ,font_size=25)
+                        pygame_render_text(screen, imu_status, (40, 570), color=c ,font_size=25)
 
                     # # Also printed from lib/c++ side
                     if 0 and 'logs' in dict_:
