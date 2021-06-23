@@ -73,8 +73,10 @@ def parse_args():
                         help="Number of images per polygon to capture. Default: 1.")
     parser.add_argument("-s", "--squareSizeCm", type=float, required=True,
                         help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
-    parser.add_argument("-ms", "--markerSizeCm", type=float, required=True,
+    parser.add_argument("-ms", "--markerSizeCm", type=float, required=False,
                         help="Marker size in charuco boards.")
+    parser.add_argument("-db", "--defaultBoard", default=False, action="store_true",
+                        help="Calculates the -ms parameter automatically based on aspect ratio of charuco board in the repository")
     parser.add_argument("-nx", "--squaresX", default="11", type=int, required=False,
                         help="number of chessboard squares in X direction in charuco boards.")
     parser.add_argument("-ny", "--squaresY", default="8", type=int, required=False,
@@ -84,7 +86,7 @@ def parse_args():
     parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
                         help="Disable rgb camera Calibration")
     parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
-                        help="Interchange Left and right camera port.")  
+                        help="Interchange Left and right camera port.")
     parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
@@ -104,6 +106,11 @@ def parse_args():
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
+    if options.markerSizeCm is None:
+        if options.defaultBoard:
+            options.markerSizeCm = options.squareSizeCm * 0.75
+        else:
+            raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
 
     return options
 
