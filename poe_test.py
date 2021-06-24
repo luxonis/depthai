@@ -5,6 +5,8 @@ import numpy as np
 import time
 import select
 
+time.sleep(2)
+
 # command to send to device
 DEVICE_COMMAND = 2
 
