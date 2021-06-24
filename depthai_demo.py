@@ -3,7 +3,7 @@ from pathlib import Path
 import cv2
 import depthai as dai
 
-from depthai_helpers.managers import NNetManager, PreviewManager, FPSHandler, PipelineManager, Previews
+from depthai_helpers.managers import NNetManager, PreviewManager, FPSHandler, PipelineManager, Previews, EncodingManager
 from depthai_helpers.version_check import check_depthai_version
 import platform
 
@@ -130,7 +130,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 conf.args.subpixel,
             )
 
-        enc_manager = EncodingManager(pm) if len(conf.args.encode) > 0 else None
+        enc_manager = EncodingManager(pm, dict(conf.args.encode), conf.args.encode_output) if len(conf.args.encode) > 0 else None
 
     if len(conf.args.report) > 0:
         pm.create_system_logger()

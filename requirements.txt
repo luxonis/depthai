@@ -6,3 +6,4 @@ requests==2.24.0
 argcomplete==1.12.1
 blobconverter==0.0.10
 depthai==2.5.0.0
+pytube==10.8.5
