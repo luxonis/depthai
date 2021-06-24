@@ -50,7 +50,7 @@ def parse_args():
                         help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
     parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float,
                         help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
-    parser.add_argument("-dct", "--disparity_confidence_threshold", default=200, type=check_range(0, 255),
+    parser.add_argument("-dct", "--disparity_confidence_threshold", default=245, type=check_range(0, 255),
                         help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
     parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
