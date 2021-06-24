@@ -13,20 +13,6 @@ import blobconverter
 
 from depthai_helpers.cli_utils import cli_print, PrintColors
 
-default_input_dims = {
-    # TODO remove once fetching input size from nn blob is possible
-    "deeplabv3p_person": "256x256",
-    "mobilenet-ssd": "300x300",
-    "face-detection-adas-0001": "672x384",
-    "face-detection-retail-0004": "300x300",
-    "pedestrian-detection-adas-0002": "672x384",
-    "person-detection-retail-0013": "544x320",
-    "person-vehicle-bike-detection-crossroad-1016": "512x512",
-    "vehicle-detection-adas-0002": "672x384",
-    "vehicle-license-plate-detection-barrier-0106": "300x300",
-    "tiny-yolo-v3": "416x416",
-    "yolo-v3": "416x416"
-}
 DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
 DEPTHAI_VIDEOS = Path(__file__).parent.parent / Path(f"videos/")
 DEPTHAI_VIDEOS.mkdir(exist_ok=True)
