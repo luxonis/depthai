@@ -5,5 +5,6 @@ opencv-contrib-python==4.4.0.46; platform_machine == "aarch64" or platform_machi
 requests==2.24.0
 argcomplete==1.12.1
 blobconverter==0.0.10
-depthai==2.5.0.0
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+depthai==2.5.0.0.dev0+5e078c0cc6f1a16e14b6417a9b59e42c46135411
 pytube==10.8.5
