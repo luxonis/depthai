@@ -3,7 +3,7 @@ from pathlib import Path
 import cv2
 import depthai as dai
 
-from depthai_helpers.managers import NNetManager, PreviewManager, FPSHandler, PipelineManager, Previews
+from depthai_helpers.managers import NNetManager, PreviewManager, FPSHandler, PipelineManager, Previews, EncodingManager
 from depthai_helpers.version_check import check_depthai_version
 import platform
 
@@ -130,6 +130,8 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 conf.args.subpixel,
             )
 
+        enc_manager = EncodingManager(pm, dict(conf.args.encode), conf.args.encode_output) if len(conf.args.encode) > 0 else None
+
     if len(conf.args.report) > 0:
         pm.create_system_logger()
 
@@ -150,9 +152,10 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
 
     if conf.useCamera:
         pv.create_queues(device)
+        if enc_manager is not None:
+            enc_manager.create_default_queues(device)
     elif conf.args.sync:
         host_out = device.getOutputQueue(Previews.host.name, maxSize=1, blocking=False)
-
 
     seq_num = 0
     host_frame = None
@@ -160,67 +163,73 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     sbb_rois = []
     callbacks.on_setup(**locals())
 
-    while True:
-        fps.next_iter()
-        callbacks.on_iter(**locals())
-        if conf.useCamera:
-            pv.prepare_frames(callback=callbacks.on_new_frame)
+    try:
+        while True:
+            fps.next_iter()
+            callbacks.on_iter(**locals())
+            if conf.useCamera:
+                pv.prepare_frames(callback=callbacks.on_new_frame)
+                if enc_manager is not None:
+                    enc_manager.parse_queues()
 
-            if sbb_out is not None and pv.has(Previews.depth.name):
-                sbb = sbb_out.tryGet()
-                if sbb is not None:
-                    sbb_rois = sbb.getConfigData()
-                depth_frame = pv.get(Previews.depth.name)
-                for roi_data in sbb_rois:
-                    roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
-                    top_left = roi.topLeft()
-                    bottom_right = roi.bottomRight()
-                    # Display SBB on the disparity map
-                    cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager.bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
-        else:
-            read_correctly, host_frame = cap.read()
-            if not read_correctly:
+                if sbb_out is not None and pv.has(Previews.depth.name):
+                    sbb = sbb_out.tryGet()
+                    if sbb is not None:
+                        sbb_rois = sbb.getConfigData()
+                    depth_frame = pv.get(Previews.depth.name)
+                    for roi_data in sbb_rois:
+                        roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
+                        top_left = roi.topLeft()
+                        bottom_right = roi.bottomRight()
+                        # Display SBB on the disparity map
+                        cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager.bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+            else:
+                read_correctly, host_frame = cap.read()
+                if not read_correctly:
+                    break
+
+                scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
+                frame_nn = dai.ImgFrame()
+                frame_nn.setSequenceNum(seq_num)
+                frame_nn.setType(dai.RawImgFrame.Type.BGR888p)
+                frame_nn.setWidth(nn_manager.input_size[0])
+                frame_nn.setHeight(nn_manager.input_size[1])
+                frame_nn.setData(to_planar(scaled_frame))
+                nn_in.send(frame_nn)
+                seq_num += 1
+
+                # if high quality, send original frames
+                if not conf.useHQ:
+                    host_frame = scaled_frame
+                fps.tick('host')
+
+            in_nn = nn_out.tryGet()
+            if in_nn is not None:
+                callbacks.on_nn(in_nn)
+                if not conf.useCamera and conf.args.sync:
+                    host_frame = Previews.host.value(host_out.get())
+                nn_data = nn_manager.decode(in_nn)
+                fps.tick('nn')
+
+            if conf.useCamera:
+                nn_manager.draw(pv, nn_data)
+                fps.draw_fps(pv)
+                pv.show_frames(scale=conf.args.scale, callback=callbacks.on_show_frame)
+            else:
+                nn_manager.draw(host_frame, nn_data)
+                fps.draw_fps(host_frame)
+                cv2.imshow("host", host_frame)
+
+            if log_out:
+                logs = log_out.tryGetAll()
+                for log in logs:
+                    print_sys_info(log)
+
+            if cv2.waitKey(1) == ord('q'):
                 break
-
-            scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
-            frame_nn = dai.ImgFrame()
-            frame_nn.setSequenceNum(seq_num)
-            frame_nn.setType(dai.RawImgFrame.Type.BGR888p)
-            frame_nn.setWidth(nn_manager.input_size[0])
-            frame_nn.setHeight(nn_manager.input_size[1])
-            frame_nn.setData(to_planar(scaled_frame))
-            nn_in.send(frame_nn)
-            seq_num += 1
-
-            # if high quality, send original frames
-            if not conf.useHQ:
-                host_frame = scaled_frame
-            fps.tick('host')
-
-        in_nn = nn_out.tryGet()
-        if in_nn is not None:
-            callbacks.on_nn(in_nn)
-            if not conf.useCamera and conf.args.sync:
-                host_frame = Previews.host.value(host_out.get())
-            nn_data = nn_manager.decode(in_nn)
-            fps.tick('nn')
-
-        if conf.useCamera:
-            nn_manager.draw(pv, nn_data)
-            fps.draw_fps(pv)
-            pv.show_frames(scale=conf.args.scale, callback=callbacks.on_show_frame)
-        else:
-            nn_manager.draw(host_frame, nn_data)
-            fps.draw_fps(host_frame)
-            cv2.imshow("host", host_frame)
-
-        if log_out:
-            logs = log_out.tryGetAll()
-            for log in logs:
-                print_sys_info(log)
-
-        if cv2.waitKey(1) == ord('q'):
-            break
+    finally:
+        if conf.useCamera and enc_manager is not None:
+            enc_manager.close()
 
 if conf.args.report_file:
     report_file.close()

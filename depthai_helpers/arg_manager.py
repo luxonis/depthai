@@ -27,13 +27,34 @@ def check_range(min_val, max_val):
     return check_fn
 
 
+def _coma_separated(default, cast=str):
+    def _fun(option):
+        option_list = option.split(",")
+        if len(option_list) not in [1, 2]:
+            raise argparse.ArgumentTypeError(
+                "{0} format is invalid. See --help".format(option)
+            )
+        elif len(option_list) == 1:
+            return option_list[0], default
+        else:
+            try:
+                float(option_list[1])
+            except ValueError:
+                raise argparse.ArgumentTypeError(
+                    "In option: {0} {1} is not a number!".format(option, option_list[1])
+                )
+            return option_list[0], cast(option_list[1])
+
+    return _fun
+
+
 openvino_versions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
 _stream_choices = ("nn_input", "color", "left", "right", "depth", "disparity", "disparity_color", "rectified_left", "rectified_right")
 color_maps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
 project_root = Path(__file__).parent.parent
 
 def parse_args():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
     parser.add_argument('-hq', '--high_quality', action="store_true", default=False,
@@ -89,4 +110,10 @@ def parse_args():
     parser.add_argument("-dev", "--device_id", type=str,
                         help="DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.")
     parser.add_argument('-usbs', '--usb_speed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
+    parser.add_argument('-enc', '--encode', type=_coma_separated(default=30.0, cast=float), nargs="+", default=[],
+                        help="Define which cameras to encode (record) \n"
+                             "Format: camera_name or camera_name,enc_fps \n"
+                             "Example: -enc left color \n"
+                             "Example: -enc color right,10 left,10")
+    parser.add_argument('-encout', '--encode_output', type=Path, default=project_root, help="Path to directory where to store encoded files. Default: %(default)s")
     return parser.parse_args()
