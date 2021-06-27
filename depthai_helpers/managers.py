@@ -62,7 +62,7 @@ class PreviewManager:
         for name in self.display:
             cv2.namedWindow(name)
             callback(name)
-            if name != Previews.disparity_color.name:
+            if name != Previews.disparity_color.name:  # Disparity color frame is generated on host
                 self.output_queues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
 
     def prepare_frames(self, callback):
