@@ -15,8 +15,14 @@ from depthai_helpers.utils import load_module, frame_norm, to_tensor_result
 
 
 def convert_depth_frame(packet, manager):
-    depth_frame = cv2.normalize(packet.getFrame(), None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-    depth_frame = cv2.equalizeHist(depth_frame)
+    raw_frame = packet.getFrame()
+    min_d, max_d = np.quantile(raw_frame, [0.05, 0.95])
+    if max_d == min_d:
+        max_d = 65535
+    factor = 255 / (max_d - min_d)
+    init_offset = min_d
+
+    depth_frame = ((raw_frame - init_offset) * factor).astype(np.uint8)
     depth_frame = cv2.applyColorMap(depth_frame, manager.colorMap)
     return depth_frame
 
@@ -51,11 +57,13 @@ class PreviewManager:
         self.colorMap = colorMap
         self.disp_multiplier = disp_multiplier
 
-    def create_queues(self, device):
-        def get_output_queue(name):
+    def create_queues(self, device, callback=lambda *a, **k: None):
+        self.output_queues = []
+        for name in self.display:
             cv2.namedWindow(name)
-            return device.getOutputQueue(name=name, maxSize=1, blocking=False)
-        self.output_queues = [get_output_queue(name) for name in self.display if name != Previews.disparity_color.name]
+            callback(name)
+            if name != Previews.disparity_color.name:
+                self.output_queues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
 
     def prepare_frames(self, callback):
         for queue in self.output_queues:
@@ -66,14 +74,14 @@ class PreviewManager:
                 callback(frame, queue.getName())
                 self.raw_frames[queue.getName()] = frame
 
-                if queue.getName() == Previews.disparity.name:
+                if queue.getName() == Previews.disparity.name and Previews.disparity_color.name in self.display:
                     self.fps.tick(Previews.disparity_color.name)
                     self.raw_frames[Previews.disparity_color.name] = Previews.disparity_color.value(frame, self)
 
             if queue.getName() in self.raw_frames:
                 self.frames[queue.getName()] = self.raw_frames[queue.getName()].copy()
 
-                if queue.getName() == Previews.disparity.name:
+                if queue.getName() == Previews.disparity.name and Previews.disparity_color.name in self.display:
                     self.frames[Previews.disparity_color.name] = self.raw_frames[Previews.disparity_color.name].copy()
 
     def show_frames(self, scale=1.0, callback=lambda *a, **k: None):
@@ -81,8 +89,8 @@ class PreviewManager:
             if not scale == 1.0:
                 h, w, c = frame.shape
                 frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-            callback(frame, name)
-            cv2.imshow(name, frame)
+            return_frame = callback(frame, name)  # Can be None, can be other frame e.g. after copy()
+            cv2.imshow(name, return_frame if return_frame is not None else frame)
 
     def has(self, name):
         return name in self.frames
@@ -382,6 +390,7 @@ class PipelineManager:
         if openvino_version is not None:
             self.p.setOpenVINOVersion(openvino_version)
         self.nodes = SimpleNamespace()
+        self.depthConfig = dai.StereoDepthConfig()
 
     def set_nn_manager(self, nn_manager):
         self.nn_manager = nn_manager
@@ -393,6 +402,8 @@ class PipelineManager:
     def create_default_queues(self, device):
         for xout in filter(lambda node: isinstance(node, dai.XLinkOut), vars(self.nodes).values()):
             device.getOutputQueue(xout.getStreamName(), maxSize=1, blocking=False)
+        for xin in filter(lambda node: isinstance(node, dai.XLinkIn), vars(self.nodes).values()):
+            device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
 
     def create_color_cam(self, res, fps, full_fov, use_hq):
         # Define a source - color camera
@@ -409,10 +420,18 @@ class PipelineManager:
         else:
             self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
 
-    def create_depth(self, dct, median, lr, extended, subpixel):
+    def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel):
         self.nodes.stereo = self.p.createStereoDepth()
-        self.nodes.stereo.setConfidenceThreshold(dct)
-        self.nodes.stereo.setMedianFilter(median)
+
+        self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
+        self.depthConfig.setConfidenceThreshold(dct)
+        self.nodes.stereo.initialConfig.setMedianFilter(median)
+        self.depthConfig.setMedianFilter(median)
+        self.nodes.stereo.initialConfig.setBilateralFilterSigma(sigma)
+        self.depthConfig.setBilateralFilterSigma(sigma)
+        self.nodes.stereo.initialConfig.setLeftRightCheckThreshold(lrc_threshold)
+        self.depthConfig.setLeftRightCheckThreshold(lrc_threshold)
+
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
@@ -441,6 +460,23 @@ class PipelineManager:
         self.nodes.xout_rect_right = self.p.createXLinkOut()
         self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
         self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
+
+        self.nodes.xin_stereo_config = self.p.createXLinkIn()
+        self.nodes.xin_stereo_config.setStreamName("stereo_config")
+        self.nodes.xin_stereo_config.out.link(self.nodes.stereo.inputConfig)
+
+    def update_depth_config(self, device, dct=None, sigma=None, median=None, lrc_threshold=None):
+        if dct is not None:
+            self.depthConfig.setConfidenceThreshold(dct)
+        if sigma is not None:
+            self.depthConfig.setBilateralFilterSigma(sigma)
+        if median is not None:
+            self.depthConfig.setMedianFilter(median)
+        if lrc_threshold is not None:
+            self.depthConfig.setLeftRightCheckThreshold(lrc_threshold)
+
+        device.getInputQueue("stereo_config").send(self.depthConfig)
+
 
     def create_left_cam(self, res, fps):
         self.nodes.mono_left = self.p.createMonoCamera()

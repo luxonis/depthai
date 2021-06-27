@@ -105,13 +105,13 @@ class ConfigManager:
 
     def getMedianFilter(self):
         if self.args.stereo_median_size == 3:
-            return dai.StereoDepthProperties.MedianFilter.KERNEL_3x3
+            return dai.MedianFilter.KERNEL_3x3
         elif self.args.stereo_median_size == 5:
-            return dai.StereoDepthProperties.MedianFilter.KERNEL_5x5
+            return dai.MedianFilter.KERNEL_5x5
         elif self.args.stereo_median_size == 7:
-            return dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
+            return dai.MedianFilter.KERNEL_7x7
         else:
-            return dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF
+            return dai.MedianFilter.MEDIAN_OFF
 
     def getUsb2Mode(self):
         usb2_mode = False
@@ -191,6 +191,9 @@ class ConfigManager:
         self.args.video = path
 
     def adjustPreviewToOptions(self):
+        if len(self.args.show) != 0:
+            return
+
         if self.args.camera == "color" and "color" not in self.args.show:
             self.args.show.append("color")
         if self.args.camera == "left" and "left" not in self.args.show:

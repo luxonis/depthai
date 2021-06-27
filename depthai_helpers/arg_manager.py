@@ -73,6 +73,10 @@ def parse_args():
                         help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
     parser.add_argument("-dct", "--disparity_confidence_threshold", default=245, type=check_range(0, 255),
                         help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
+    parser.add_argument("-lrct", "--lrc_threshold", default=4, type=check_range(0, 10),
+                        help="Left right check threshold, used for depth measurement. Default: %(default)s")
+    parser.add_argument("-sig", "--sigma", default=0, type=check_range(0, 250),
+                        help="Sigma value for Bilateral Filter applied on depth. Default: %(default)s")
     parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
     parser.add_argument('-lrc', '--stereo_lr_check', action="store_true",

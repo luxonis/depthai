@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from itertools import cycle
 from pathlib import Path
 import cv2
 import depthai as dai
@@ -85,6 +86,22 @@ def print_sys_info(info):
         print(','.join(map(str, data.values())), file=report_file)
 
 
+class Trackbars:
+    instances = {}
+
+    @staticmethod
+    def create_trackbar(name, window, min_val, max_val, default_val, callback):
+        def fn(value):
+            if Trackbars.instances[name][window] != value:
+                callback(value)
+            for other_window, previous_value in Trackbars.instances[name].items():
+                if other_window != window and previous_value != value:
+                    Trackbars.instances[name][other_window] = value
+                    cv2.setTrackbarPos(name, other_window, value)
+
+        cv2.createTrackbar(name, window, min_val, max_val, fn)
+        Trackbars.instances[name] = {**Trackbars.instances.get(name, {}), window: default_val}
+        cv2.setTrackbarPos(name, window, default_val)
 
 device_info = conf.getDeviceInfo()
 openvino_version = None
@@ -125,7 +142,9 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
             pm.create_depth(
                 conf.args.disparity_confidence_threshold,
                 conf.getMedianFilter(),
+                conf.args.sigma,
                 conf.args.stereo_lr_check,
+                conf.args.lrc_threshold,
                 conf.args.extended_disparity,
                 conf.args.subpixel,
             )
@@ -150,8 +169,23 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if nn_manager.sbb else None
     log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None
 
+    median_filters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
+    for med_filter in median_filters:
+        # move the cycle to the current median filter
+        if med_filter == pm.depthConfig.getMedianFilter():
+            break
+
     if conf.useCamera:
-        pv.create_queues(device)
+        def create_queue_callback(queue_name):
+            if queue_name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name]:
+                Trackbars.create_trackbar('Disparity confidence', queue_name, 0, 255, conf.args.disparity_confidence_threshold,
+                         lambda value: pm.update_depth_config(device, dct=value))
+                Trackbars.create_trackbar('Bilateral sigma', queue_name, 0, 250, conf.args.sigma,
+                         lambda value: pm.update_depth_config(device, sigma=value))
+                if conf.args.stereo_lr_check:
+                    Trackbars.create_trackbar('LR-check threshold', queue_name, 0, 10, conf.args.lrc_threshold,
+                             lambda value: pm.update_depth_config(device, lrc_threshold=value))
+        pv.create_queues(device, create_queue_callback)
         if enc_manager is not None:
             enc_manager.create_default_queues(device)
     elif conf.args.sync:
@@ -214,7 +248,22 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
             if conf.useCamera:
                 nn_manager.draw(pv, nn_data)
                 fps.draw_fps(pv)
-                pv.show_frames(scale=conf.args.scale, callback=callbacks.on_show_frame)
+
+                def show_frames_callback(frame, name):
+                    if name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name]:
+                        h, w = frame.shape[:2]
+                        text = "Median filter: {} [M]".format(pm.depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
+                        text_config = {
+                            "fontFace": cv2.FONT_HERSHEY_TRIPLEX,
+                            "fontScale": 0.4,
+                            "thickness": 1
+                        }
+                        text_w = cv2.getTextSize(text, **text_config)[0][0]
+                        cv2.rectangle(frame, (0, h - 30), (text_w + 20, h), (255, 255, 255), cv2.FILLED)
+                        cv2.putText(frame, text, (10, h - 10), color=fps.fps_color, **text_config)
+                        return_frame = callbacks.on_show_frame(frame, name)
+                        return return_frame if return_frame is not None else frame
+                pv.show_frames(scale=conf.args.scale, callback=show_frames_callback)
             else:
                 nn_manager.draw(host_frame, nn_data)
                 fps.draw_fps(host_frame)
@@ -225,8 +274,12 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 for log in logs:
                     print_sys_info(log)
 
-            if cv2.waitKey(1) == ord('q'):
+            key = cv2.waitKey(1)
+            if key == ord('q'):
                 break
+            elif key == ord('m'):
+                next_filter = next(median_filters)
+                pm.update_depth_config(device, median=next_filter)
     finally:
         if conf.useCamera and enc_manager is not None:
             enc_manager.close()
