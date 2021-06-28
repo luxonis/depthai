@@ -15,14 +15,8 @@ from depthai_helpers.utils import load_module, frame_norm, to_tensor_result
 
 
 def convert_depth_frame(packet, manager):
-    raw_frame = packet.getFrame()
-    min_d, max_d = np.quantile(raw_frame, [0.05, 0.95])
-    if max_d == min_d:
-        max_d = 65535
-    factor = 255 / (max_d - min_d)
-    init_offset = min_d
-
-    depth_frame = ((raw_frame - init_offset) * factor).astype(np.uint8)
+    depth_frame = cv2.normalize(packet.getFrame(), None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+    depth_frame = cv2.equalizeHist(depth_frame)
     depth_frame = cv2.applyColorMap(depth_frame, manager.colorMap)
     return depth_frame
 
@@ -34,6 +28,7 @@ def convert_disparity_frame(packet, manager):
 
 def convert_disparity_to_color(disparity, manager):
     return cv2.applyColorMap(disparity, manager.colorMap)
+
 
 class Previews(enum.Enum):
     nn_input = partial(lambda packet, _: packet.getCvFrame())
