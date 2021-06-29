@@ -177,10 +177,10 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
 
     if conf.useCamera:
         def create_queue_callback(queue_name):
-            if queue_name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name]:
+            if queue_name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
                 Trackbars.create_trackbar('Disparity confidence', queue_name, 0, 255, conf.args.disparity_confidence_threshold,
                          lambda value: pm.update_depth_config(device, dct=value))
-                if queue_name == Previews.depth.name:
+                if queue_name in [Previews.depth_raw.name, Previews.depth.name]:
                     Trackbars.create_trackbar('Bilateral sigma', queue_name, 0, 250, conf.args.sigma,
                              lambda value: pm.update_depth_config(device, sigma=value))
                 if conf.args.stereo_lr_check:
@@ -207,17 +207,21 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 if enc_manager is not None:
                     enc_manager.parse_queues()
 
-                if sbb_out is not None and pv.has(Previews.depth.name):
+                if sbb_out is not None:
                     sbb = sbb_out.tryGet()
                     if sbb is not None:
                         sbb_rois = sbb.getConfigData()
-                    depth_frame = pv.get(Previews.depth.name)
-                    for roi_data in sbb_rois:
-                        roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
-                        top_left = roi.topLeft()
-                        bottom_right = roi.bottomRight()
-                        # Display SBB on the disparity map
-                        cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager.bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+                    depth_frames = [pv.get(Previews.depth_raw.name), pv.get(Previews.depth.name)]
+                    for depth_frame in depth_frames:
+                        if depth_frame is None:
+                            continue
+
+                        for roi_data in sbb_rois:
+                            roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
+                            top_left = roi.topLeft()
+                            bottom_right = roi.bottomRight()
+                            # Display SBB on the disparity map
+                            cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager.bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
             else:
                 read_correctly, host_frame = cap.read()
                 if not read_correctly:
@@ -251,7 +255,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 fps.draw_fps(pv)
 
                 def show_frames_callback(frame, name):
-                    if name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name]:
+                    if name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
                         h, w = frame.shape[:2]
                         text = "Median filter: {} [M]".format(pm.depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
                         text_config = {

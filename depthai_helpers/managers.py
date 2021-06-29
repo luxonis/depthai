@@ -24,16 +24,15 @@ def convert_disparity_to_color(disparity, manager):
     return cv2.applyColorMap(disparity, manager.colorMap)
 
 
-def convert_depth_frame(packet, manager):
-    depth_frame = packet.getFrame()
+def convert_depth_raw_to_depth(depth_raw, manager):
     dispScaleFactor = getattr(manager, "dispScaleFactor", None)
     if dispScaleFactor is None:
         baseline = 75  # mm
         fov = 71.86
-        focal = depth_frame.shape[1] / (2. * math.tan(math.radians(fov / 2)))
+        focal = depth_raw.shape[1] / (2. * math.tan(math.radians(fov / 2)))
         dispScaleFactor = baseline * focal
         setattr(manager, "dispScaleFactor", dispScaleFactor)
-    disp_frame = dispScaleFactor / depth_frame
+    disp_frame = dispScaleFactor / depth_raw
     disp_frame = (disp_frame * manager.disp_multiplier).astype(np.uint8)
     return convert_disparity_to_color(disp_frame, manager)
 
@@ -46,7 +45,8 @@ class Previews(enum.Enum):
     right = partial(lambda packet, _: packet.getCvFrame())
     rectified_left = partial(lambda packet, _: cv2.flip(packet.getCvFrame(), 1))
     rectified_right = partial(lambda packet, _: cv2.flip(packet.getCvFrame(), 1))
-    depth = partial(convert_depth_frame)
+    depth_raw = partial(lambda packet, _: packet.getFrame())
+    depth = partial(convert_depth_raw_to_depth)
     disparity = partial(convert_disparity_frame)
     disparity_color = partial(convert_disparity_to_color)
 
@@ -65,8 +65,12 @@ class PreviewManager:
         for name in self.display:
             cv2.namedWindow(name)
             callback(name)
-            if name != Previews.disparity_color.name:  # Disparity color frame is generated on host
+            if name not in (Previews.disparity_color.name, Previews.depth.name):  # generated on host
                 self.output_queues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
+        if Previews.disparity_color.name in self.display and Previews.disparity.name not in self.display:
+            self.output_queues.append(device.getOutputQueue(name=Previews.disparity.name, maxSize=1, blocking=False))
+        if Previews.depth.name in self.display and Previews.depth_raw.name not in self.display:
+            self.output_queues.append(device.getOutputQueue(name=Previews.depth_raw.name, maxSize=1, blocking=False))
 
     def prepare_frames(self, callback):
         for queue in self.output_queues:
@@ -74,18 +78,20 @@ class PreviewManager:
             if frame is not None:
                 self.fps.tick(queue.getName())
                 frame = getattr(Previews, queue.getName()).value(frame, self)
-                callback(frame, queue.getName())
-                self.raw_frames[queue.getName()] = frame
+                if queue.getName() in self.display:
+                    callback(frame, queue.getName())
+                    self.raw_frames[queue.getName()] = frame
 
                 if queue.getName() == Previews.disparity.name and Previews.disparity_color.name in self.display:
                     self.fps.tick(Previews.disparity_color.name)
                     self.raw_frames[Previews.disparity_color.name] = Previews.disparity_color.value(frame, self)
 
-            if queue.getName() in self.raw_frames:
-                self.frames[queue.getName()] = self.raw_frames[queue.getName()].copy()
+                if queue.getName() == Previews.depth_raw.name and Previews.depth.name in self.display:
+                    self.fps.tick(Previews.depth.name)
+                    self.raw_frames[Previews.depth.name] = Previews.depth.value(frame, self)
 
-                if queue.getName() == Previews.disparity.name and Previews.disparity_color.name in self.display:
-                    self.frames[Previews.disparity_color.name] = self.raw_frames[Previews.disparity_color.name].copy()
+            for name in self.raw_frames:
+                self.frames[name] = self.raw_frames[name].copy()
 
     def show_frames(self, scale=1.0, callback=lambda *a, **k: None):
         for name, frame in self.frames.items():
@@ -449,7 +455,7 @@ class PipelineManager:
         self.nodes.mono_right.out.link(self.nodes.stereo.right)
 
         self.nodes.xout_depth = self.p.createXLinkOut()
-        self.nodes.xout_depth.setStreamName(Previews.depth.name)
+        self.nodes.xout_depth.setStreamName(Previews.depth_raw.name)
         self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
 
         self.nodes.xout_disparity = self.p.createXLinkOut()

@@ -49,7 +49,7 @@ def _coma_separated(default, cast=str):
 
 
 openvino_versions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
-_stream_choices = ("nn_input", "color", "left", "right", "depth", "disparity", "disparity_color", "rectified_left", "rectified_right")
+_stream_choices = ("nn_input", "color", "left", "right", "depth", "depth_raw", "disparity", "disparity_color", "rectified_left", "rectified_right")
 color_maps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
 project_root = Path(__file__).parent.parent
 
