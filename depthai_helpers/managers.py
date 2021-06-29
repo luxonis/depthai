@@ -1,4 +1,5 @@
 import json
+import math
 import time
 import traceback
 from functools import partial
@@ -14,13 +15,6 @@ from depthai_helpers.config_manager import BlobManager
 from depthai_helpers.utils import load_module, frame_norm, to_tensor_result
 
 
-def convert_depth_frame(packet, manager):
-    depth_frame = cv2.normalize(packet.getFrame(), None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-    depth_frame = cv2.equalizeHist(depth_frame)
-    depth_frame = cv2.applyColorMap(depth_frame, manager.colorMap)
-    return depth_frame
-
-
 def convert_disparity_frame(packet, manager):
     disparity_frame = (packet.getFrame()*manager.disp_multiplier).astype(np.uint8)
     return disparity_frame
@@ -28,6 +22,20 @@ def convert_disparity_frame(packet, manager):
 
 def convert_disparity_to_color(disparity, manager):
     return cv2.applyColorMap(disparity, manager.colorMap)
+
+
+def convert_depth_frame(packet, manager):
+    depth_frame = packet.getFrame()
+    dispScaleFactor = getattr(manager, "dispScaleFactor", None)
+    if dispScaleFactor is None:
+        baseline = 75  # mm
+        fov = 71.86
+        focal = depth_frame.shape[1] / (2. * math.tan(math.radians(fov / 2)))
+        dispScaleFactor = baseline * focal
+        setattr(manager, "dispScaleFactor", dispScaleFactor)
+    disp_frame = dispScaleFactor / depth_frame
+    disp_frame = (disp_frame * manager.disp_multiplier).astype(np.uint8)
+    return convert_disparity_to_color(disp_frame, manager)
 
 
 class Previews(enum.Enum):
