@@ -32,7 +32,8 @@ def convert_depth_raw_to_depth(depth_raw, manager):
         focal = depth_raw.shape[1] / (2. * math.tan(math.radians(fov / 2)))
         dispScaleFactor = baseline * focal
         setattr(manager, "dispScaleFactor", dispScaleFactor)
-    disp_frame = dispScaleFactor / depth_raw
+    with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
+        disp_frame = dispScaleFactor / depth_raw
     disp_frame = (disp_frame * manager.disp_multiplier).astype(np.uint8)
     return convert_disparity_to_color(disp_frame, manager)
 
