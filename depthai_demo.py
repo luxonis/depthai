@@ -9,7 +9,7 @@ from depthai_helpers.version_check import check_depthai_version
 import platform
 
 from depthai_helpers.arg_manager import parse_args
-from depthai_helpers.config_manager import BlobManager, ConfigManager
+from depthai_helpers.config_manager import ConfigManager
 from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result, load_module
 
 print('Using depthai module from: ', dai.__file__)
@@ -132,11 +132,11 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     if conf.useCamera or conf.args.sync:
         pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), disp_multiplier=disp_multiplier)
 
-        if conf.args.camera == "left" or conf.useDepth:
+        if conf.leftCameraEnabled:
             pm.create_left_cam(mono_res, conf.args.mono_fps)
-        if conf.args.camera == "right" or conf.useDepth:
+        if conf.rightCameraEnabled:
             pm.create_right_cam(mono_res, conf.args.mono_fps)
-        if conf.args.camera == "color":
+        if conf.rgbCameraEnabled:
             pm.create_color_cam(nn_manager.input_size if conf.useNN else (300, 300), rgb_res, conf.args.rgb_fps, conf.args.full_fov_nn, conf.useHQ)
 
         if conf.useDepth:

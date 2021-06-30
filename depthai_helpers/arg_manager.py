@@ -7,6 +7,7 @@ try:
     import argcomplete
 except ImportError:
     raise ImportError('\033[1;5;31m argcomplete module not found, run: python3 install_requirements.py \033[0m')
+from depthai_helpers.managers import Previews
 
 
 def get_immediate_subdirectories(a_dir):
@@ -55,7 +56,7 @@ project_root = Path(__file__).parent.parent
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
+    parser.add_argument('-cam', '--camera', choices=[Previews.left.name, Previews.right.name, Previews.color.name], default=Previews.color.name, help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
     parser.add_argument('-hq', '--high_quality', action="store_true", default=False,
                         help="Low quality visualization - uses resized frames")
