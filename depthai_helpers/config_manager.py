@@ -40,6 +40,10 @@ class ConfigManager:
         return not self.args.video
 
     @property
+    def useNN(self):
+        return not self.args.disable_neural_network
+
+    @property
     def useHQ(self):
         return self.args.high_quality
 

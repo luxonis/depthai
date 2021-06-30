@@ -385,7 +385,8 @@ class FPSHandler:
             cv2.rectangle(frame, (0, 0), (120, 35), (255, 255, 255), cv2.FILLED)
             cv2.putText(frame, frame_fps, (5, 15), self.fps_type, 0.4, self.fps_color)
 
-            cv2.putText(frame, f"NN FPS:  {round(self.tick_fps('nn'), 1)}", (5, 30), self.fps_type, 0.5, self.fps_color)
+            if "nn" in self.ticks:
+                cv2.putText(frame, f"NN FPS:  {round(self.tick_fps('nn'), 1)}", (5, 30), self.fps_type, 0.5, self.fps_color)
         if isinstance(source, PreviewManager):
             for name, frame in source.frames.items():
                 draw(frame, name)
@@ -415,10 +416,10 @@ class PipelineManager:
         for xin in filter(lambda node: isinstance(node, dai.XLinkIn), vars(self.nodes).values()):
             device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
 
-    def create_color_cam(self, res, fps, full_fov, use_hq):
+    def create_color_cam(self, preview_size, res, fps, full_fov, use_hq):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
-        self.nodes.cam_rgb.setPreviewSize(*self.nn_manager.input_size)
+        self.nodes.cam_rgb.setPreviewSize(*preview_size)
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(res)
         self.nodes.cam_rgb.setFps(fps)
@@ -430,7 +431,7 @@ class PipelineManager:
         else:
             self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
 
-    def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel):
+    def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
         self.nodes.stereo = self.p.createStereoDepth()
 
         self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
@@ -455,25 +456,29 @@ class PipelineManager:
         self.nodes.mono_left.out.link(self.nodes.stereo.left)
         self.nodes.mono_right.out.link(self.nodes.stereo.right)
 
-        self.nodes.xout_depth = self.p.createXLinkOut()
-        self.nodes.xout_depth.setStreamName(Previews.depth_raw.name)
-        self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
-
-        self.nodes.xout_disparity = self.p.createXLinkOut()
-        self.nodes.xout_disparity.setStreamName(Previews.disparity.name)
-        self.nodes.stereo.disparity.link(self.nodes.xout_disparity.input)
-
-        self.nodes.xout_rect_left = self.p.createXLinkOut()
-        self.nodes.xout_rect_left.setStreamName(Previews.rectified_left.name)
-        self.nodes.stereo.rectifiedLeft.link(self.nodes.xout_rect_left.input)
-
-        self.nodes.xout_rect_right = self.p.createXLinkOut()
-        self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
-        self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
-
         self.nodes.xin_stereo_config = self.p.createXLinkIn()
         self.nodes.xin_stereo_config.setStreamName("stereo_config")
         self.nodes.xin_stereo_config.out.link(self.nodes.stereo.inputConfig)
+
+        if useDepth:
+            self.nodes.xout_depth = self.p.createXLinkOut()
+            self.nodes.xout_depth.setStreamName(Previews.depth_raw.name)
+            self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
+
+        if useDisparity:
+            self.nodes.xout_disparity = self.p.createXLinkOut()
+            self.nodes.xout_disparity.setStreamName(Previews.disparity.name)
+            self.nodes.stereo.disparity.link(self.nodes.xout_disparity.input)
+
+        if useRectifiedLeft:
+            self.nodes.xout_rect_left = self.p.createXLinkOut()
+            self.nodes.xout_rect_left.setStreamName(Previews.rectified_left.name)
+            self.nodes.stereo.rectifiedLeft.link(self.nodes.xout_rect_left.input)
+
+        if useRectifiedRight:
+            self.nodes.xout_rect_right = self.p.createXLinkOut()
+            self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
+            self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
 
     def update_depth_config(self, device, dct=None, sigma=None, median=None, lrc_threshold=None):
         if dct is not None:

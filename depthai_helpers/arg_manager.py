@@ -60,6 +60,7 @@ def parse_args():
     parser.add_argument('-hq', '--high_quality', action="store_true", default=False,
                         help="Low quality visualization - uses resized frames")
     parser.add_argument('-dd', '--disable_depth', action="store_true", help="Disable depth information")
+    parser.add_argument('-dnn', '--disable_neural_network', action="store_true", help="Disable neural network inference")
     parser.add_argument('-cnnp', '--cnn_path', type=Path, help="Path to cnn model directory to be run")
     parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str,
                         help="Cnn model to run on DepthAI")
