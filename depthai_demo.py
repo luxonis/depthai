@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 from itertools import cycle
 from pathlib import Path
 import cv2
@@ -11,6 +12,13 @@ import platform
 from depthai_helpers.arg_manager import parse_args
 from depthai_helpers.config_manager import ConfigManager
 from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result, load_module
+
+DISP_CONF_MIN = int(os.getenv("DISP_CONF_MIN", 0))
+DISP_CONF_MAX = int(os.getenv("DISP_CONF_MAX", 255))
+SIGMA_MIN = int(os.getenv("SIGMA_MIN", 0))
+SIGMA_MAX = int(os.getenv("SIGMA_MAX", 250))
+LRCT_MIN = int(os.getenv("LRCT_MIN", 0))
+LRCT_MAX = int(os.getenv("LRCT_MAX", 10))
 
 print('Using depthai module from: ', dai.__file__)
 print('Depthai version installed: ', dai.__version__)
@@ -182,13 +190,13 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     if conf.useCamera:
         def create_queue_callback(queue_name):
             if queue_name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
-                Trackbars.create_trackbar('Disparity confidence', queue_name, 0, 255, conf.args.disparity_confidence_threshold,
+                Trackbars.create_trackbar('Disparity confidence', queue_name, DISP_CONF_MIN, DISP_CONF_MAX, conf.args.disparity_confidence_threshold,
                          lambda value: pm.update_depth_config(device, dct=value))
                 if queue_name in [Previews.depth_raw.name, Previews.depth.name]:
-                    Trackbars.create_trackbar('Bilateral sigma', queue_name, 0, 250, conf.args.sigma,
+                    Trackbars.create_trackbar('Bilateral sigma', queue_name, SIGMA_MIN, SIGMA_MAX, conf.args.sigma,
                              lambda value: pm.update_depth_config(device, sigma=value))
                 if conf.args.stereo_lr_check:
-                    Trackbars.create_trackbar('LR-check threshold', queue_name, 0, 10, conf.args.lrc_threshold,
+                    Trackbars.create_trackbar('LR-check threshold', queue_name, LRCT_MIN, LRCT_MAX, conf.args.lrc_threshold,
                              lambda value: pm.update_depth_config(device, lrc_threshold=value))
         pv.create_queues(device, create_queue_callback)
         if enc_manager is not None:
