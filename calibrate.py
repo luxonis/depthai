@@ -111,7 +111,9 @@ def parse_args():
             options.markerSizeCm = options.squareSizeCm * 0.75
         else:
             raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
-
+    if options.squareSizeCm < 2.2:
+        raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
+        
     return options
 
 
@@ -126,6 +128,7 @@ class Main:
 
     def __init__(self):
         self.args = parse_args()
+
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
