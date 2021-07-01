@@ -191,15 +191,18 @@ class PreviewManager:
 
     def prepare_frames(self, callback):
         for queue in self.output_queues:
-            frame = queue.tryGet()
-            if frame is not None:
+            packet = queue.tryGet()
+            if packet is not None:
                 self.fps.tick(queue.getName())
-                frame = getattr(Previews, queue.getName()).value(frame, self)
+                frame = getattr(Previews, queue.getName()).value(packet, self)
                 if queue.getName() in self.display:
                     callback(frame, queue.getName())
                     self.raw_frames[queue.getName()] = frame
                 if self.mouse_tracker is not None:
-                    self.mouse_tracker.extract_value(queue.getName(), frame)
+                    if queue.getName() in (Previews.disparity.name, Previews.depth_raw.name):
+                        self.mouse_tracker.extract_value(queue.getName(), packet.getFrame())
+                    else:
+                        self.mouse_tracker.extract_value(queue.getName(), frame)
 
                 if queue.getName() == Previews.disparity.name and Previews.disparity_color.name in self.display:
                     self.fps.tick(Previews.disparity_color.name)
