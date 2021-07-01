@@ -195,6 +195,7 @@ class PreviewManager:
             if packet is not None:
                 self.fps.tick(queue.getName())
                 frame = getattr(Previews, queue.getName()).value(packet, self)
+                print(queue.getName(), frame.shape)
                 if queue.getName() in self.display:
                     callback(frame, queue.getName())
                     self.raw_frames[queue.getName()] = frame
@@ -569,7 +570,7 @@ class PipelineManager:
         else:
             self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
 
-    def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
+    def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel, align=Previews.color.name, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
         self.nodes.stereo = self.p.createStereoDepth()
 
         self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
@@ -584,6 +585,12 @@ class PipelineManager:
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
+        if align in (Previews.left.name, Previews.rectified_left.name):
+            self.nodes.stereo.setDepthAlign(dai.CameraBoardSocket.LEFT)
+        elif align in (Previews.right.name, Previews.rectified_right.name):
+            self.nodes.stereo.setDepthAlign(dai.CameraBoardSocket.RIGHT)
+        else:
+            self.nodes.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
 
         # Create mono left/right cameras if we haven't already
         if not hasattr(self.nodes, 'mono_left'):

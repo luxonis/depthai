@@ -118,7 +118,7 @@ if conf.useNN:
         model_dir=conf.getModelDir(),
         source=conf.getModelSource(),
         full_fov=conf.args.full_fov_nn or not conf.useCamera,
-        flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
+        flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and conf.args.disable_stereo_lr_check
     )
     nn_manager.count_label = conf.getCountLabel(nn_manager)
     pm.set_nn_manager(nn_manager)
@@ -144,10 +144,11 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 conf.args.disparity_confidence_threshold,
                 conf.getMedianFilter(),
                 conf.args.sigma,
-                conf.args.stereo_lr_check,
+                not conf.args.disable_stereo_lr_check,
                 conf.args.lrc_threshold,
                 conf.args.extended_disparity,
                 conf.args.subpixel,
+                align=conf.getModelSource(),
                 useDepth=Previews.depth.name in conf.args.show or Previews.depth_raw.name in conf.args.show,
                 useDisparity=Previews.disparity.name in conf.args.show or Previews.disparity_color.name in conf.args.show,
                 useRectifiedLeft=Previews.rectified_left.name in conf.args.show,
@@ -189,7 +190,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 if queue_name in [Previews.depth_raw.name, Previews.depth.name]:
                     Trackbars.create_trackbar('Bilateral sigma', queue_name, 0, 250, conf.args.sigma,
                              lambda value: pm.update_depth_config(device, sigma=value))
-                if conf.args.stereo_lr_check:
+                if not conf.args.disable_stereo_lr_check:
                     Trackbars.create_trackbar('LR-check threshold', queue_name, 0, 10, conf.args.lrc_threshold,
                              lambda value: pm.update_depth_config(device, lrc_threshold=value))
         pv.create_queues(device, create_queue_callback)

@@ -66,8 +66,8 @@ optional arguments:
   -med {0,3,5,7}, --stereo_median_size {0,3,5,7}
                         Disparity / depth median filter kernel size (N x N) .
                         0 = filtering disabled. Default: 7
-  -lrc, --stereo_lr_check
-                        Enable stereo 'Left-Right check' feature.
+  -dlrc, --disable_stereo_lr_check
+                        Disable stereo 'Left-Right check' feature.
   -scale SCALE, --scale SCALE
                         Scale factor for the output window. Default: 1.0
   -sbb, --spatial_bounding_box
