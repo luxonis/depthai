@@ -136,7 +136,10 @@ class MouseClickTracker:
 
     def extract_value(self, name, frame: np.ndarray):
         if self.point is not None:
-            self.values[name] = frame[self.point[1]][self.point[0]].copy()
+            try:
+                self.values[name] = frame[self.point[1]][self.point[0]].copy()
+            except:
+                pass
 
 
 class PreviewManager:
