@@ -1,33 +1,111 @@
 import json
+import math
+import sys
 import time
 import traceback
+from difflib import get_close_matches
 from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 
+import blobconverter
 import cv2
 import depthai as dai
 import numpy as np
 
 import enum
-from depthai_helpers.config_manager import BlobManager
 from depthai_helpers.utils import load_module, frame_norm, to_tensor_result
 
 
-def convert_depth_frame(packet, manager):
-    depth_frame = cv2.normalize(packet.getFrame(), None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-    depth_frame = cv2.equalizeHist(depth_frame)
-    depth_frame = cv2.applyColorMap(depth_frame, manager.colorMap)
-    return depth_frame
-
-
-def convert_disparity_frame(packet, manager):
-    disparity_frame = (packet.getFrame()*manager.disp_multiplier).astype(np.uint8)
+def convert_disparity_frame(packet, manager=None):
+    disparity_frame = (packet.getFrame()*manager.disp_multiplier if manager is not None else 255/96).astype(np.uint8)
     return disparity_frame
 
 
-def convert_disparity_to_color(disparity, manager):
-    return cv2.applyColorMap(disparity, manager.colorMap)
+def convert_disparity_to_color(disparity, manager=None):
+    return cv2.applyColorMap(disparity, manager.colorMap if manager is not None else cv2.COLORMAP_JET)
+
+
+def convert_depth_raw_to_depth(depth_raw, manager=None):
+    dispScaleFactor = getattr(manager, "dispScaleFactor", None)
+    if dispScaleFactor is None:
+        baseline = getattr(manager, 'baseline', 75)  # mm
+        fov = getattr(manager, 'fov', 71.86)
+        focal = getattr(manager, 'focal', depth_raw.shapesin[1] / (2. * math.tan(math.radians(fov / 2))))
+        dispScaleFactor = baseline * focal
+        if manager is not None:
+            setattr(manager, "dispScaleFactor", dispScaleFactor)
+    with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
+        disp_frame = dispScaleFactor / depth_raw
+    disp_frame = (disp_frame * manager.disp_multiplier).astype(np.uint8)
+    return convert_disparity_to_color(disp_frame, manager)
+
+
+class BlobManager:
+    def __init__(self, model_name=None, model_dir:Path=None):
+        self.model_dir = None
+        self.zoo_dir = None
+        self.config_file = None
+        self.blob_path = None
+        self.use_zoo = False
+        self.use_blob = False
+        self.zoo_models = [f.stem for f in model_dir.parent.iterdir() if f.is_dir()] if model_dir is not None else []
+        if model_dir is None:
+            self.model_name = model_name
+            self.use_zoo = True
+        else:
+            self.model_dir = Path(model_dir)
+            self.zoo_dir = self.model_dir.parent
+            self.model_name = model_name or self.model_dir.name
+            self.config_file = self.model_dir / "model.yml"
+            blob = next(self.model_dir.glob("*.blob"), None)
+            if blob is not None:
+                self.use_blob = True
+                self.blob_path = blob
+            if not self.config_file.exists():
+                self.use_zoo = True
+
+    def compile(self, shaves, openvino_version, target='auto'):
+        version = openvino_version.name.replace("VERSION_", "").replace("_", ".")
+        if self.use_blob:
+            return self.blob_path
+        elif self.use_zoo:
+            try:
+                self.blob_path = blobconverter.from_zoo(
+                    name=self.model_name,
+                    shaves=shaves,
+                    version=version
+                )
+                return self.blob_path
+            except Exception as e:
+                if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
+                    if "not found in model zoo" in e.response.text:
+                        all_models = set(self.zoo_models + blobconverter.zoo_list())
+                        suggested = get_close_matches(self.model_name, all_models)
+                        if len(suggested) > 0:
+                            print("Model {} not found in model zoo. Did you mean: {} ?".format(self.model_name, " / ".join(suggested)), file=sys.stderr)
+                        else:
+                            print("Model {} not found in model zoo", file=sys.stderr)
+                        raise SystemExit(1)
+                    raise RuntimeError("Blob conversion failed with status {}! Error: \"{}\"".format(e.response.status_code, e.response.text))
+                else:
+                    raise
+        else:
+            self.blob_path = blobconverter.compile_blob(
+                version=version,
+                blob_name=self.model_name,
+                req_data={
+                    "name": self.model_name,
+                    "use_zoo": True,
+                },
+                req_files={
+                    'config': self.config_file,
+                },
+                data_type="FP16",
+                shaves=shaves,
+            )
+            return self.blob_path
+
 
 class Previews(enum.Enum):
     nn_input = partial(lambda packet, _: packet.getCvFrame())
@@ -37,52 +115,131 @@ class Previews(enum.Enum):
     right = partial(lambda packet, _: packet.getCvFrame())
     rectified_left = partial(lambda packet, _: cv2.flip(packet.getCvFrame(), 1))
     rectified_right = partial(lambda packet, _: cv2.flip(packet.getCvFrame(), 1))
-    depth = partial(convert_depth_frame)
+    depth_raw = partial(lambda packet, _: packet.getFrame())
+    depth = partial(convert_depth_raw_to_depth)
     disparity = partial(convert_disparity_frame)
     disparity_color = partial(convert_disparity_to_color)
 
 
+class MouseClickTracker:
+    def __init__(self):
+        self.points = {}
+        self.values = {}
+
+    def select_point(self, name):
+        def cb(event, x, y, flags, param):
+            if event == cv2.EVENT_LBUTTONUP:
+                self.values = {}
+                if self.points.get(name) == (x, y):
+                    del self.points[name]
+                else:
+                    self.points[name] = (x, y)
+        return cb
+
+    def extract_value(self, name, frame: np.ndarray):
+        point = self.points.get(name, None)
+        if point is not None:
+            try:
+                if name in (Previews.depth_raw.name, Previews.depth.name):
+                    self.values[name] = "{}mm".format(frame[point[1]][point[0]])
+                elif name in (Previews.disparity_color.name, Previews.disparity.name):
+                    self.values[name] = "{}px".format(frame[point[1]][point[0]])
+                elif frame.shape[2] == 3:
+                    self.values[name] = "R:{},G:{},B:{}".format(*frame[point[1]][point[0]][::-1])
+                else:
+                    self.values[name] = str(frame[point[1]][point[0]])
+            except:
+                pass
+
+
 class PreviewManager:
-    def __init__(self, fps, display, colorMap=cv2.COLORMAP_JET, disp_multiplier=255/96):
+    def __init__(self, fps, display, colorMap=cv2.COLORMAP_JET, disp_multiplier=255/96, mouseTracker=False):
         self.display = display
         self.frames = {}
         self.raw_frames = {}
         self.fps = fps
         self.colorMap = colorMap
         self.disp_multiplier = disp_multiplier
+        self.mouse_tracker = MouseClickTracker() if mouseTracker else None
 
-    def create_queues(self, device):
-        def get_output_queue(name):
+    def create_queues(self, device, callback=lambda *a, **k: None):
+        if dai.CameraBoardSocket.LEFT in device.getConnectedCameras():
+            calib = device.readCalibration()
+            eeprom = calib.getEepromData()
+            cam_info = eeprom.cameraData[calib.getStereoLeftCameraId()]
+            self.baseline = abs(cam_info.extrinsics.specTranslation.x * 10)  # cm -> mm
+            self.fov = calib.getFov(calib.getStereoLeftCameraId())
+            self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
+            self.dispScaleFactor = self.baseline * self.focal
+        self.output_queues = []
+        for name in self.display:
             cv2.namedWindow(name)
-            return device.getOutputQueue(name=name, maxSize=1, blocking=False)
-        self.output_queues = [get_output_queue(name) for name in self.display if name != Previews.disparity_color.name]
+            callback(name)
+            if self.mouse_tracker is not None:
+                if name == Previews.disparity_color.name:
+                    cv2.setMouseCallback(name, self.mouse_tracker.select_point(Previews.disparity.name))
+                elif name == Previews.depth.name:
+                    cv2.setMouseCallback(name, self.mouse_tracker.select_point(Previews.depth_raw.name))
+                else:
+                    cv2.setMouseCallback(name, self.mouse_tracker.select_point(name))
+            if name not in (Previews.disparity_color.name, Previews.depth.name):  # generated on host
+                self.output_queues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
+
+        if Previews.disparity_color.name in self.display and Previews.disparity.name not in self.display:
+            self.output_queues.append(device.getOutputQueue(name=Previews.disparity.name, maxSize=1, blocking=False))
+        if Previews.depth.name in self.display and Previews.depth_raw.name not in self.display:
+            self.output_queues.append(device.getOutputQueue(name=Previews.depth_raw.name, maxSize=1, blocking=False))
 
     def prepare_frames(self, callback):
         for queue in self.output_queues:
-            frame = queue.tryGet()
-            if frame is not None:
+            packet = queue.tryGet()
+            if packet is not None:
                 self.fps.tick(queue.getName())
-                frame = getattr(Previews, queue.getName()).value(frame, self)
-                callback(frame, queue.getName())
-                self.raw_frames[queue.getName()] = frame
+                frame = getattr(Previews, queue.getName()).value(packet, self)
+                if queue.getName() in self.display:
+                    callback(frame, queue.getName())
+                    self.raw_frames[queue.getName()] = frame
+                if self.mouse_tracker is not None:
+                    if queue.getName() in (Previews.disparity.name, Previews.depth_raw.name):
+                        self.mouse_tracker.extract_value(queue.getName(), packet.getFrame())
+                    else:
+                        self.mouse_tracker.extract_value(queue.getName(), frame)
 
-                if queue.getName() == Previews.disparity.name:
+                if queue.getName() == Previews.disparity.name and Previews.disparity_color.name in self.display:
                     self.fps.tick(Previews.disparity_color.name)
                     self.raw_frames[Previews.disparity_color.name] = Previews.disparity_color.value(frame, self)
 
-            if queue.getName() in self.raw_frames:
-                self.frames[queue.getName()] = self.raw_frames[queue.getName()].copy()
+                if queue.getName() == Previews.depth_raw.name and Previews.depth.name in self.display:
+                    self.fps.tick(Previews.depth.name)
+                    self.raw_frames[Previews.depth.name] = Previews.depth.value(frame, self)
 
-                if queue.getName() == Previews.disparity.name:
-                    self.frames[Previews.disparity_color.name] = self.raw_frames[Previews.disparity_color.name].copy()
+            for name in self.raw_frames:
+                new_frame = self.raw_frames[name].copy()
+                if name == Previews.depth_raw.name:
+                    new_frame = cv2.normalize(new_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+                self.frames[name] = new_frame
 
     def show_frames(self, scale=1.0, callback=lambda *a, **k: None):
         for name, frame in self.frames.items():
             if not scale == 1.0:
                 h, w, c = frame.shape
                 frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
-            callback(frame, name)
-            cv2.imshow(name, frame)
+
+            if self.mouse_tracker is not None:
+                if name == Previews.disparity_color.name:
+                    point = self.mouse_tracker.points.get(Previews.disparity.name)
+                    value = self.mouse_tracker.values.get(Previews.disparity.name)
+                elif name == Previews.depth.name:
+                    point = self.mouse_tracker.points.get(Previews.depth_raw.name)
+                    value = self.mouse_tracker.values.get(Previews.depth_raw.name)
+                else:
+                    point = self.mouse_tracker.points.get(name)
+                    value = self.mouse_tracker.values.get(name)
+                if point is not None:
+                    cv2.circle(frame, point, 3, (255, 255, 255), -1)
+                    cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255))
+            return_frame = callback(frame, name)  # Can be None, can be other frame e.g. after copy()
+            cv2.imshow(name, return_frame if return_frame is not None else frame)
 
     def has(self, name):
         return name in self.frames
@@ -367,7 +524,8 @@ class FPSHandler:
             cv2.rectangle(frame, (0, 0), (120, 35), (255, 255, 255), cv2.FILLED)
             cv2.putText(frame, frame_fps, (5, 15), self.fps_type, 0.4, self.fps_color)
 
-            cv2.putText(frame, f"NN FPS:  {round(self.tick_fps('nn'), 1)}", (5, 30), self.fps_type, 0.5, self.fps_color)
+            if "nn" in self.ticks:
+                cv2.putText(frame, f"NN FPS:  {round(self.tick_fps('nn'), 1)}", (5, 30), self.fps_type, 0.5, self.fps_color)
         if isinstance(source, PreviewManager):
             for name, frame in source.frames.items():
                 draw(frame, name)
@@ -382,6 +540,7 @@ class PipelineManager:
         if openvino_version is not None:
             self.p.setOpenVINOVersion(openvino_version)
         self.nodes = SimpleNamespace()
+        self.depthConfig = dai.StereoDepthConfig()
 
     def set_nn_manager(self, nn_manager):
         self.nn_manager = nn_manager
@@ -393,11 +552,13 @@ class PipelineManager:
     def create_default_queues(self, device):
         for xout in filter(lambda node: isinstance(node, dai.XLinkOut), vars(self.nodes).values()):
             device.getOutputQueue(xout.getStreamName(), maxSize=1, blocking=False)
+        for xin in filter(lambda node: isinstance(node, dai.XLinkIn), vars(self.nodes).values()):
+            device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
 
-    def create_color_cam(self, res, fps, full_fov, use_hq):
+    def create_color_cam(self, preview_size, res, fps, full_fov, use_hq):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
-        self.nodes.cam_rgb.setPreviewSize(*self.nn_manager.input_size)
+        self.nodes.cam_rgb.setPreviewSize(*preview_size)
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(res)
         self.nodes.cam_rgb.setFps(fps)
@@ -409,10 +570,18 @@ class PipelineManager:
         else:
             self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
 
-    def create_depth(self, dct, median, lr, extended, subpixel):
+    def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
         self.nodes.stereo = self.p.createStereoDepth()
-        self.nodes.stereo.setConfidenceThreshold(dct)
-        self.nodes.stereo.setMedianFilter(median)
+
+        self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
+        self.depthConfig.setConfidenceThreshold(dct)
+        self.nodes.stereo.initialConfig.setMedianFilter(median)
+        self.depthConfig.setMedianFilter(median)
+        self.nodes.stereo.initialConfig.setBilateralFilterSigma(sigma)
+        self.depthConfig.setBilateralFilterSigma(sigma)
+        self.nodes.stereo.initialConfig.setLeftRightCheckThreshold(lrc_threshold)
+        self.depthConfig.setLeftRightCheckThreshold(lrc_threshold)
+
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
@@ -426,21 +595,42 @@ class PipelineManager:
         self.nodes.mono_left.out.link(self.nodes.stereo.left)
         self.nodes.mono_right.out.link(self.nodes.stereo.right)
 
-        self.nodes.xout_depth = self.p.createXLinkOut()
-        self.nodes.xout_depth.setStreamName(Previews.depth.name)
-        self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
+        self.nodes.xin_stereo_config = self.p.createXLinkIn()
+        self.nodes.xin_stereo_config.setStreamName("stereo_config")
+        self.nodes.xin_stereo_config.out.link(self.nodes.stereo.inputConfig)
 
-        self.nodes.xout_disparity = self.p.createXLinkOut()
-        self.nodes.xout_disparity.setStreamName(Previews.disparity.name)
-        self.nodes.stereo.disparity.link(self.nodes.xout_disparity.input)
+        if useDepth:
+            self.nodes.xout_depth = self.p.createXLinkOut()
+            self.nodes.xout_depth.setStreamName(Previews.depth_raw.name)
+            self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
 
-        self.nodes.xout_rect_left = self.p.createXLinkOut()
-        self.nodes.xout_rect_left.setStreamName(Previews.rectified_left.name)
-        self.nodes.stereo.rectifiedLeft.link(self.nodes.xout_rect_left.input)
+        if useDisparity:
+            self.nodes.xout_disparity = self.p.createXLinkOut()
+            self.nodes.xout_disparity.setStreamName(Previews.disparity.name)
+            self.nodes.stereo.disparity.link(self.nodes.xout_disparity.input)
 
-        self.nodes.xout_rect_right = self.p.createXLinkOut()
-        self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
-        self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
+        if useRectifiedLeft:
+            self.nodes.xout_rect_left = self.p.createXLinkOut()
+            self.nodes.xout_rect_left.setStreamName(Previews.rectified_left.name)
+            self.nodes.stereo.rectifiedLeft.link(self.nodes.xout_rect_left.input)
+
+        if useRectifiedRight:
+            self.nodes.xout_rect_right = self.p.createXLinkOut()
+            self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
+            self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
+
+    def update_depth_config(self, device, dct=None, sigma=None, median=None, lrc_threshold=None):
+        if dct is not None:
+            self.depthConfig.setConfidenceThreshold(dct)
+        if sigma is not None:
+            self.depthConfig.setBilateralFilterSigma(sigma)
+        if median is not None:
+            self.depthConfig.setMedianFilter(median)
+        if lrc_threshold is not None:
+            self.depthConfig.setLeftRightCheckThreshold(lrc_threshold)
+
+        device.getInputQueue("stereo_config").send(self.depthConfig)
+
 
     def create_left_cam(self, res, fps):
         self.nodes.mono_left = self.p.createMonoCamera()

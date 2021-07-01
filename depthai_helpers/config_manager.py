@@ -3,25 +3,24 @@ import platform
 import subprocess
 import sys
 import urllib.request
-from difflib import get_close_matches
 from pathlib import Path
 
 import cv2
 import depthai as dai
 
-import blobconverter
-
 from depthai_helpers.cli_utils import cli_print, PrintColors
-
-DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
-DEPTHAI_VIDEOS = Path(__file__).parent.parent / Path(f"videos/")
-DEPTHAI_VIDEOS.mkdir(exist_ok=True)
+from depthai_helpers.managers import Previews
 
 
 def show_progress(curr, max):
     done = int(50 * curr / max)
     sys.stdout.write("\r[{}{}] ".format('=' * done, ' ' * (50-done)) )
     sys.stdout.flush()
+
+
+DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
+DEPTHAI_VIDEOS = Path(__file__).parent.parent / Path(f"videos/")
+DEPTHAI_VIDEOS.mkdir(exist_ok=True)
 
 
 class ConfigManager:
@@ -38,6 +37,10 @@ class ConfigManager:
     @property
     def useCamera(self):
         return not self.args.video
+
+    @property
+    def useNN(self):
+        return not self.args.disable_neural_network
 
     @property
     def useHQ(self):
@@ -104,14 +107,16 @@ class ConfigManager:
             return dai.MonoCameraProperties.SensorResolution.THE_400_P
 
     def getMedianFilter(self):
+        if self.args.subpixel:
+            return dai.MedianFilter.MEDIAN_OFF
         if self.args.stereo_median_size == 3:
-            return dai.StereoDepthProperties.MedianFilter.KERNEL_3x3
+            return dai.MedianFilter.KERNEL_3x3
         elif self.args.stereo_median_size == 5:
-            return dai.StereoDepthProperties.MedianFilter.KERNEL_5x5
+            return dai.MedianFilter.KERNEL_5x5
         elif self.args.stereo_median_size == 7:
-            return dai.StereoDepthProperties.MedianFilter.KERNEL_7x7
+            return dai.MedianFilter.KERNEL_7x7
         else:
-            return dai.StereoDepthProperties.MedianFilter.MEDIAN_OFF
+            return dai.MedianFilter.MEDIAN_OFF
 
     def getUsb2Mode(self):
         usb2_mode = False
@@ -191,6 +196,9 @@ class ConfigManager:
         self.args.video = path
 
     def adjustPreviewToOptions(self):
+        if len(self.args.show) != 0:
+            return
+
         if self.args.camera == "color" and "color" not in self.args.show:
             self.args.show.append("color")
         if self.args.camera == "left" and "left" not in self.args.show:
@@ -220,6 +228,9 @@ class ConfigManager:
                     updated_show_arg.append(name)
                 else:
                     print("Disabling {} preview...".format(name))
+            if len(updated_show_arg) == 0:
+                print("No previews available, adding color...")
+                updated_show_arg.append("color")
             self.args.show = updated_show_arg
 
     def linuxCheckApplyUsbRules(self):
@@ -268,69 +279,31 @@ class ConfigManager:
             return obj
         else: return self.args.count_label.lower()
 
+    @property
+    def leftCameraEnabled(self):
+        return (self.args.camera == Previews.left.name and self.useNN) or \
+               Previews.left.name in self.args.show or \
+               Previews.rectified_left.name in self.args.show or \
+               self.useDepth
 
-class BlobManager:
-    def __init__(self, model_name=None, model_dir=None):
-        self.model_dir = None
-        self.zoo_dir = None
-        self.config_file = None
-        self.blob_path = None
-        self.use_zoo = False
-        self.use_blob = False
-        self.zoo_models = [f.stem for f in DEPTHAI_ZOO.iterdir() if f.is_dir()]
-        if model_dir is None:
-            self.model_name = model_name
-            self.use_zoo = True
-        else:
-            self.model_dir = Path(model_dir)
-            self.zoo_dir = self.model_dir.parent
-            self.model_name = model_name or self.model_dir.name
-            self.config_file = self.model_dir / "model.yml"
-            blob = next(self.model_dir.glob("*.blob"), None)
-            if blob is not None:
-                self.use_blob = True
-                self.blob_path = blob
-            if not self.config_file.exists():
-                self.use_zoo = True
+    @property
+    def rightCameraEnabled(self):
+        return (self.args.camera == Previews.right.name and self.useNN) or \
+               Previews.left.name in self.args.show or \
+               Previews.rectified_left.name in self.args.show or \
+               self.useDepth
+
+    @property
+    def rgbCameraEnabled(self):
+        return (self.args.camera == Previews.color.name and self.useNN) or \
+               Previews.color.name in self.args.show
+
+    @property
+    def inputSize(self):
+        return tuple(map(int, self.args.cnn_input_size.split('x'))) if self.args.cnn_input_size else None
+
+    @property
+    def previewSize(self):
+        return self.inputSize or (576, 324)
 
 
-    def compile(self, shaves, openvino_version, target='auto'):
-        version = openvino_version.name.replace("VERSION_", "").replace("_", ".")
-        if self.use_blob:
-            return self.blob_path
-        elif self.use_zoo:
-            try:
-                self.blob_path = blobconverter.from_zoo(
-                    name=self.model_name,
-                    shaves=shaves,
-                    version=version
-                )
-                return self.blob_path
-            except Exception as e:
-                if hasattr(e, 'response') and hasattr(e.response, 'status_code'):
-                    if "not found in model zoo" in e.response.text:
-                        all_models = set(self.zoo_models + blobconverter.zoo_list())
-                        suggested = get_close_matches(self.model_name, all_models)
-                        if len(suggested) > 0:
-                            print("Model {} not found in model zoo. Did you mean: {} ?".format(self.model_name, " / ".join(suggested)), file=sys.stderr)
-                        else:
-                            print("Model {} not found in model zoo", file=sys.stderr)
-                        raise SystemExit(1)
-                    raise RuntimeError("Blob conversion failed with status {}! Error: \"{}\"".format(e.response.status_code, e.response.text))
-                else:
-                    raise
-        else:
-            self.blob_path = blobconverter.compile_blob(
-                version=version,
-                blob_name=self.model_name,
-                req_data={
-                    "name": self.model_name,
-                    "use_zoo": True,
-                },
-                req_files={
-                    'config': self.config_file,
-                },
-                data_type="FP16",
-                shaves=shaves,
-            )
-            return self.blob_path

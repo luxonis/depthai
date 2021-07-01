@@ -7,6 +7,7 @@ try:
     import argcomplete
 except ImportError:
     raise ImportError('\033[1;5;31m argcomplete module not found, run: python3 install_requirements.py \033[0m')
+from depthai_helpers.managers import Previews
 
 
 def get_immediate_subdirectories(a_dir):
@@ -49,17 +50,18 @@ def _coma_separated(default, cast=str):
 
 
 openvino_versions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
-_stream_choices = ("nn_input", "color", "left", "right", "depth", "disparity", "disparity_color", "rectified_left", "rectified_right")
+_stream_choices = ("nn_input", "color", "left", "right", "depth", "depth_raw", "disparity", "disparity_color", "rectified_left", "rectified_right")
 color_maps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
 project_root = Path(__file__).parent.parent
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
+    parser.add_argument('-cam', '--camera', choices=[Previews.left.name, Previews.right.name, Previews.color.name], default=Previews.color.name, help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
     parser.add_argument('-hq', '--high_quality', action="store_true", default=False,
                         help="Low quality visualization - uses resized frames")
     parser.add_argument('-dd', '--disable_depth', action="store_true", help="Disable depth information")
+    parser.add_argument('-dnn', '--disable_neural_network', action="store_true", help="Disable neural network inference")
     parser.add_argument('-cnnp', '--cnn_path', type=Path, help="Path to cnn model directory to be run")
     parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str,
                         help="Cnn model to run on DepthAI")
@@ -73,6 +75,10 @@ def parse_args():
                         help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
     parser.add_argument("-dct", "--disparity_confidence_threshold", default=245, type=check_range(0, 255),
                         help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
+    parser.add_argument("-lrct", "--lrc_threshold", default=4, type=check_range(0, 10),
+                        help="Left right check threshold, used for depth measurement. Default: %(default)s")
+    parser.add_argument("-sig", "--sigma", default=0, type=check_range(0, 250),
+                        help="Sigma value for Bilateral Filter applied on depth. Default: %(default)s")
     parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
     parser.add_argument('-lrc', '--stereo_lr_check', action="store_true",

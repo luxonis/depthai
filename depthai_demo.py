@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+from itertools import cycle
 from pathlib import Path
 import cv2
 import depthai as dai
@@ -8,8 +10,15 @@ from depthai_helpers.version_check import check_depthai_version
 import platform
 
 from depthai_helpers.arg_manager import parse_args
-from depthai_helpers.config_manager import BlobManager, ConfigManager
+from depthai_helpers.config_manager import ConfigManager
 from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result, load_module
+
+DISP_CONF_MIN = int(os.getenv("DISP_CONF_MIN", 0))
+DISP_CONF_MAX = int(os.getenv("DISP_CONF_MAX", 255))
+SIGMA_MIN = int(os.getenv("SIGMA_MIN", 0))
+SIGMA_MAX = int(os.getenv("SIGMA_MAX", 250))
+LRCT_MIN = int(os.getenv("LRCT_MIN", 0))
+LRCT_MAX = int(os.getenv("LRCT_MAX", 10))
 
 print('Using depthai module from: ', dai.__file__)
 print('Depthai version installed: ', dai.__version__)
@@ -85,6 +94,22 @@ def print_sys_info(info):
         print(','.join(map(str, data.values())), file=report_file)
 
 
+class Trackbars:
+    instances = {}
+
+    @staticmethod
+    def create_trackbar(name, window, min_val, max_val, default_val, callback):
+        def fn(value):
+            if Trackbars.instances[name][window] != value:
+                callback(value)
+            for other_window, previous_value in Trackbars.instances[name].items():
+                if other_window != window and previous_value != value:
+                    Trackbars.instances[name][other_window] = value
+                    cv2.setTrackbarPos(name, other_window, value)
+
+        cv2.createTrackbar(name, window, min_val, max_val, fn)
+        Trackbars.instances[name] = {**Trackbars.instances.get(name, {}), window: default_val}
+        cv2.setTrackbarPos(name, window, default_val)
 
 device_info = conf.getDeviceInfo()
 openvino_version = None
@@ -92,18 +117,17 @@ if conf.args.openvino_version:
     openvino_version = getattr(dai.OpenVINO.Version, 'VERSION_' + conf.args.openvino_version)
 pm = PipelineManager(openvino_version)
 
-input_size = tuple(map(int, conf.args.cnn_input_size.split('x'))) if conf.args.cnn_input_size else None
-
-nn_manager = NNetManager(
-    input_size=input_size,
-    model_name=conf.getModelName(),
-    model_dir=conf.getModelDir(),
-    source=conf.getModelSource(),
-    full_fov=conf.args.full_fov_nn or not conf.useCamera,
-    flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
-)
-nn_manager.count_label = conf.getCountLabel(nn_manager)
-pm.set_nn_manager(nn_manager)
+if conf.useNN:
+    nn_manager = NNetManager(
+        input_size=conf.inputSize,
+        model_name=conf.getModelName(),
+        model_dir=conf.getModelDir(),
+        source=conf.getModelSource(),
+        full_fov=conf.args.full_fov_nn or not conf.useCamera,
+        flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
+    )
+    nn_manager.count_label = conf.getCountLabel(nn_manager)
+    pm.set_nn_manager(nn_manager)
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
@@ -112,22 +136,28 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
     if conf.useCamera or conf.args.sync:
-        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), disp_multiplier=disp_multiplier)
+        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), disp_multiplier=disp_multiplier, mouseTracker=True)
 
-        if conf.args.camera == "left" or conf.useDepth:
+        if conf.leftCameraEnabled:
             pm.create_left_cam(mono_res, conf.args.mono_fps)
-        if conf.args.camera == "right" or conf.useDepth:
+        if conf.rightCameraEnabled:
             pm.create_right_cam(mono_res, conf.args.mono_fps)
-        if conf.args.camera == "color":
-            pm.create_color_cam(rgb_res, conf.args.rgb_fps, conf.args.full_fov_nn, conf.useHQ)
+        if conf.rgbCameraEnabled:
+            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, conf.args.full_fov_nn, conf.useHQ)
 
         if conf.useDepth:
             pm.create_depth(
                 conf.args.disparity_confidence_threshold,
                 conf.getMedianFilter(),
+                conf.args.sigma,
                 conf.args.stereo_lr_check,
+                conf.args.lrc_threshold,
                 conf.args.extended_disparity,
                 conf.args.subpixel,
+                useDepth=Previews.depth.name in conf.args.show or Previews.depth_raw.name in conf.args.show,
+                useDisparity=Previews.disparity.name in conf.args.show or Previews.disparity_color.name in conf.args.show,
+                useRectifiedLeft=Previews.rectified_left.name in conf.args.show,
+                useRectifiedRight=Previews.rectified_right.name in conf.args.show,
             )
 
         enc_manager = EncodingManager(pm, dict(conf.args.encode), conf.args.encode_output) if len(conf.args.encode) > 0 else None
@@ -135,23 +165,40 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     if len(conf.args.report) > 0:
         pm.create_system_logger()
 
-    nn_pipeline = nn_manager.create_nn_pipeline(pm.p, pm.nodes, shaves=conf.args.shaves, use_depth=conf.useDepth,
-                                                use_sbb=conf.args.spatial_bounding_box and conf.useDepth,
-                                                minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth,
-                                                sbbScaleFactor=conf.args.sbb_scale_factor)
-    pm.create_nn(nn=nn_pipeline, sync=conf.args.sync)
+    if conf.useNN:
+        nn_pipeline = nn_manager.create_nn_pipeline(pm.p, pm.nodes, shaves=conf.args.shaves, use_depth=conf.useDepth,
+                                                    use_sbb=conf.args.spatial_bounding_box and conf.useDepth,
+                                                    minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth,
+                                                    sbbScaleFactor=conf.args.sbb_scale_factor)
+        pm.create_nn(nn=nn_pipeline, sync=conf.args.sync)
 
     # Start pipeline
     device.startPipeline(pm.p)
     pm.create_default_queues(device)
-    nn_in = device.getInputQueue(nn_manager.input_name, maxSize=1, blocking=False) if not conf.useCamera else None
-    nn_out = device.getOutputQueue(nn_manager.output_name, maxSize=1, blocking=False)
+    nn_in = device.getInputQueue(nn_manager.input_name, maxSize=1, blocking=False) if not conf.useCamera and conf.useNN else None
+    nn_out = device.getOutputQueue(nn_manager.output_name, maxSize=1, blocking=False) if conf.useNN else None
 
-    sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if nn_manager.sbb else None
+    sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if conf.useNN and nn_manager.sbb else None
     log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None
 
+    median_filters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
+    for med_filter in median_filters:
+        # move the cycle to the current median filter
+        if med_filter == pm.depthConfig.getMedianFilter():
+            break
+
     if conf.useCamera:
-        pv.create_queues(device)
+        def create_queue_callback(queue_name):
+            if queue_name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
+                Trackbars.create_trackbar('Disparity confidence', queue_name, DISP_CONF_MIN, DISP_CONF_MAX, conf.args.disparity_confidence_threshold,
+                         lambda value: pm.update_depth_config(device, dct=value))
+                if queue_name in [Previews.depth_raw.name, Previews.depth.name]:
+                    Trackbars.create_trackbar('Bilateral sigma', queue_name, SIGMA_MIN, SIGMA_MAX, conf.args.sigma,
+                             lambda value: pm.update_depth_config(device, sigma=value))
+                if conf.args.stereo_lr_check:
+                    Trackbars.create_trackbar('LR-check threshold', queue_name, LRCT_MIN, LRCT_MAX, conf.args.lrc_threshold,
+                             lambda value: pm.update_depth_config(device, lrc_threshold=value))
+        pv.create_queues(device, create_queue_callback)
         if enc_manager is not None:
             enc_manager.create_default_queues(device)
     elif conf.args.sync:
@@ -172,51 +219,74 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 if enc_manager is not None:
                     enc_manager.parse_queues()
 
-                if sbb_out is not None and pv.has(Previews.depth.name):
+                if sbb_out is not None:
                     sbb = sbb_out.tryGet()
                     if sbb is not None:
                         sbb_rois = sbb.getConfigData()
-                    depth_frame = pv.get(Previews.depth.name)
-                    for roi_data in sbb_rois:
-                        roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
-                        top_left = roi.topLeft()
-                        bottom_right = roi.bottomRight()
-                        # Display SBB on the disparity map
-                        cv2.rectangle(pv.get("depth"), (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager.bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+                    depth_frames = [pv.get(Previews.depth_raw.name), pv.get(Previews.depth.name)]
+                    for depth_frame in depth_frames:
+                        if depth_frame is None:
+                            continue
+
+                        for roi_data in sbb_rois:
+                            roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
+                            top_left = roi.topLeft()
+                            bottom_right = roi.bottomRight()
+                            # Display SBB on the disparity map
+                            cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager.bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
             else:
                 read_correctly, host_frame = cap.read()
                 if not read_correctly:
                     break
 
-                scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
-                frame_nn = dai.ImgFrame()
-                frame_nn.setSequenceNum(seq_num)
-                frame_nn.setType(dai.RawImgFrame.Type.BGR888p)
-                frame_nn.setWidth(nn_manager.input_size[0])
-                frame_nn.setHeight(nn_manager.input_size[1])
-                frame_nn.setData(to_planar(scaled_frame))
-                nn_in.send(frame_nn)
-                seq_num += 1
+                if nn_in is not None:
+                    scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
+                    frame_nn = dai.ImgFrame()
+                    frame_nn.setSequenceNum(seq_num)
+                    frame_nn.setType(dai.ImgFrame.Type.BGR888p)
+                    frame_nn.setWidth(nn_manager.input_size[0])
+                    frame_nn.setHeight(nn_manager.input_size[1])
+                    frame_nn.setData(to_planar(scaled_frame))
+                    nn_in.send(frame_nn)
+                    seq_num += 1
 
-                # if high quality, send original frames
-                if not conf.useHQ:
-                    host_frame = scaled_frame
+                    # if high quality, send original frames
+                    if not conf.useHQ:
+                        host_frame = scaled_frame
                 fps.tick('host')
 
-            in_nn = nn_out.tryGet()
-            if in_nn is not None:
-                callbacks.on_nn(in_nn)
-                if not conf.useCamera and conf.args.sync:
-                    host_frame = Previews.host.value(host_out.get())
-                nn_data = nn_manager.decode(in_nn)
-                fps.tick('nn')
+            if nn_out is not None:
+                in_nn = nn_out.tryGet()
+                if in_nn is not None:
+                    callbacks.on_nn(in_nn)
+                    if not conf.useCamera and conf.args.sync:
+                        host_frame = Previews.host.value(host_out.get())
+                    nn_data = nn_manager.decode(in_nn)
+                    fps.tick('nn')
 
             if conf.useCamera:
-                nn_manager.draw(pv, nn_data)
+                if conf.useNN:
+                    nn_manager.draw(pv, nn_data)
                 fps.draw_fps(pv)
-                pv.show_frames(scale=conf.args.scale, callback=callbacks.on_show_frame)
+
+                def show_frames_callback(frame, name):
+                    if name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
+                        h, w = frame.shape[:2]
+                        text = "Median filter: {} [M]".format(pm.depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
+                        text_config = {
+                            "fontFace": cv2.FONT_HERSHEY_TRIPLEX,
+                            "fontScale": 0.4,
+                            "thickness": 1
+                        }
+                        text_w = cv2.getTextSize(text, **text_config)[0][0]
+                        cv2.rectangle(frame, (0, h - 30), (text_w + 20, h), (255, 255, 255), cv2.FILLED)
+                        cv2.putText(frame, text, (10, h - 10), color=fps.fps_color, **text_config)
+                        return_frame = callbacks.on_show_frame(frame, name)
+                        return return_frame if return_frame is not None else frame
+                pv.show_frames(scale=conf.args.scale, callback=show_frames_callback)
             else:
-                nn_manager.draw(host_frame, nn_data)
+                if conf.useNN:
+                    nn_manager.draw(host_frame, nn_data)
                 fps.draw_fps(host_frame)
                 cv2.imshow("host", host_frame)
 
@@ -225,8 +295,12 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 for log in logs:
                     print_sys_info(log)
 
-            if cv2.waitKey(1) == ord('q'):
+            key = cv2.waitKey(1)
+            if key == ord('q'):
                 break
+            elif key == ord('m'):
+                next_filter = next(median_filters)
+                pm.update_depth_config(device, median=next_filter)
     finally:
         if conf.useCamera and enc_manager is not None:
             enc_manager.close()
