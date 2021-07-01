@@ -235,16 +235,16 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                     scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
                     frame_nn = dai.ImgFrame()
                     frame_nn.setSequenceNum(seq_num)
-                    frame_nn.setType(dai.RawImgFrame.Type.BGR888p)
+                    frame_nn.setType(dai.ImgFrame.Type.BGR888p)
                     frame_nn.setWidth(nn_manager.input_size[0])
                     frame_nn.setHeight(nn_manager.input_size[1])
                     frame_nn.setData(to_planar(scaled_frame))
                     nn_in.send(frame_nn)
                     seq_num += 1
 
-                # if high quality, send original frames
-                if not conf.useHQ:
-                    host_frame = scaled_frame
+                    # if high quality, send original frames
+                    if not conf.useHQ:
+                        host_frame = scaled_frame
                 fps.tick('host')
 
             if nn_out is not None:
