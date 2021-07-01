@@ -130,7 +130,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
     if conf.useCamera or conf.args.sync:
-        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), disp_multiplier=disp_multiplier)
+        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), disp_multiplier=disp_multiplier, mouseTracker=True)
 
         if conf.leftCameraEnabled:
             pm.create_left_cam(mono_res, conf.args.mono_fps)
