@@ -17,23 +17,24 @@ import enum
 from depthai_helpers.utils import load_module, frame_norm, to_tensor_result
 
 
-def convert_disparity_frame(packet, manager):
-    disparity_frame = (packet.getFrame()*manager.disp_multiplier).astype(np.uint8)
+def convert_disparity_frame(packet, manager=None):
+    disparity_frame = (packet.getFrame()*manager.disp_multiplier if manager is not None else 255/96).astype(np.uint8)
     return disparity_frame
 
 
-def convert_disparity_to_color(disparity, manager):
-    return cv2.applyColorMap(disparity, manager.colorMap)
+def convert_disparity_to_color(disparity, manager=None):
+    return cv2.applyColorMap(disparity, manager.colorMap if manager is not None else cv2.COLORMAP_JET)
 
 
-def convert_depth_raw_to_depth(depth_raw, manager):
+def convert_depth_raw_to_depth(depth_raw, manager=None):
     dispScaleFactor = getattr(manager, "dispScaleFactor", None)
     if dispScaleFactor is None:
-        baseline = 75  # mm
-        fov = 71.86
-        focal = depth_raw.shape[1] / (2. * math.tan(math.radians(fov / 2)))
+        baseline = getattr(manager, 'baseline', 75)  # mm
+        fov = getattr(manager, 'fov', 71.86)
+        focal = getattr(manager, 'focal', depth_raw.shape[1] / (2. * math.tan(math.radians(fov / 2))))
         dispScaleFactor = baseline * focal
-        setattr(manager, "dispScaleFactor", dispScaleFactor)
+        if manager is not None:
+            setattr(manager, "dispScaleFactor", dispScaleFactor)
     with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
         disp_frame = dispScaleFactor / depth_raw
     disp_frame = (disp_frame * manager.disp_multiplier).astype(np.uint8)
@@ -130,6 +131,13 @@ class PreviewManager:
         self.disp_multiplier = disp_multiplier
 
     def create_queues(self, device, callback=lambda *a, **k: None):
+        calib = device.readCalibration()
+        eeprom = calib.getEepromData()
+        cam_info = eeprom.cameraData[calib.getStereoLeftCameraId()]
+        self.baseline = cam_info.extrinsics.specTranslation.x * 10  # cm -> mm
+        self.fov = calib.getFov(calib.getStereoLeftCameraId())
+        self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
+        self.dispScaleFactor = self.baseline * self.focal
         self.output_queues = []
         for name in self.display:
             cv2.namedWindow(name)
