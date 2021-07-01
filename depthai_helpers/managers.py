@@ -181,7 +181,6 @@ class PreviewManager:
                     self.raw_frames[queue.getName()] = frame
                     if self.mouse_tracker is not None:
                         self.mouse_tracker.extract_value(queue.getName(), frame)
-                        print(self.mouse_tracker.values)
 
                 if queue.getName() == Previews.disparity.name and Previews.disparity_color.name in self.display:
                     self.fps.tick(Previews.disparity_color.name)
