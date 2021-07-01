@@ -31,7 +31,7 @@ def convert_depth_raw_to_depth(depth_raw, manager=None):
     if dispScaleFactor is None:
         baseline = getattr(manager, 'baseline', 75)  # mm
         fov = getattr(manager, 'fov', 71.86)
-        focal = getattr(manager, 'focal', depth_raw.shape[1] / (2. * math.tan(math.radians(fov / 2))))
+        focal = getattr(manager, 'focal', depth_raw.shapesin[1] / (2. * math.tan(math.radians(fov / 2))))
         dispScaleFactor = baseline * focal
         if manager is not None:
             setattr(manager, "dispScaleFactor", dispScaleFactor)
@@ -167,7 +167,7 @@ class PreviewManager:
             calib = device.readCalibration()
             eeprom = calib.getEepromData()
             cam_info = eeprom.cameraData[calib.getStereoLeftCameraId()]
-            self.baseline = cam_info.extrinsics.specTranslation.x * 10  # cm -> mm
+            self.baseline = abs(cam_info.extrinsics.specTranslation.x * 10)  # cm -> mm
             self.fov = calib.getFov(calib.getStereoLeftCameraId())
             self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
             self.dispScaleFactor = self.baseline * self.focal
