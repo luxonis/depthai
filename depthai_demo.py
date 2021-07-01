@@ -16,7 +16,7 @@ from depthai_helpers.utils import frame_norm, to_planar, to_tensor_result, load_
 DISP_CONF_MIN = int(os.getenv("DISP_CONF_MIN", 0))
 DISP_CONF_MAX = int(os.getenv("DISP_CONF_MAX", 255))
 SIGMA_MIN = int(os.getenv("SIGMA_MIN", 0))
-SIGMA_MAX = int(os.getenv("SIGMA_MAX", 250))
+SIGMA_MAX = int(os.getenv("SIGMA_MAX", 65535))
 LRCT_MIN = int(os.getenv("LRCT_MIN", 0))
 LRCT_MAX = int(os.getenv("LRCT_MAX", 10))
 
