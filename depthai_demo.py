@@ -109,11 +109,9 @@ if conf.args.openvino_version:
     openvino_version = getattr(dai.OpenVINO.Version, 'VERSION_' + conf.args.openvino_version)
 pm = PipelineManager(openvino_version)
 
-input_size = tuple(map(int, conf.args.cnn_input_size.split('x'))) if conf.args.cnn_input_size else None
-
 if conf.useNN:
     nn_manager = NNetManager(
-        input_size=input_size,
+        input_size=conf.inputSize,
         model_name=conf.getModelName(),
         model_dir=conf.getModelDir(),
         source=conf.getModelSource(),
@@ -137,7 +135,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
         if conf.rightCameraEnabled:
             pm.create_right_cam(mono_res, conf.args.mono_fps)
         if conf.rgbCameraEnabled:
-            pm.create_color_cam(nn_manager.input_size if conf.useNN else (300, 300), rgb_res, conf.args.rgb_fps, conf.args.full_fov_nn, conf.useHQ)
+            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, conf.args.full_fov_nn, conf.useHQ)
 
         if conf.useDepth:
             pm.create_depth(

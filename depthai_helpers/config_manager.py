@@ -298,4 +298,12 @@ class ConfigManager:
         return (self.args.camera == Previews.color.name and self.useNN) or \
                Previews.color.name in self.args.show
 
+    @property
+    def inputSize(self):
+        return tuple(map(int, self.args.cnn_input_size.split('x'))) if self.args.cnn_input_size else None
+
+    @property
+    def previewSize(self):
+        return self.inputSize or (576, 324)
+
 
