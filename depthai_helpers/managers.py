@@ -123,21 +123,31 @@ class Previews(enum.Enum):
 
 class MouseClickTracker:
     def __init__(self):
-        self.point = None
+        self.points = {}
         self.values = {}
 
-    def select_point(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONUP:
-            self.values = {}
-            if self.point == (x, y):
-                self.point = None
-            else:
-                self.point = (x, y)
+    def select_point(self, name):
+        def cb(event, x, y, flags, param):
+            if event == cv2.EVENT_LBUTTONUP:
+                self.values = {}
+                if self.points.get(name) == (x, y):
+                    del self.points[name]
+                else:
+                    self.points[name] = (x, y)
+        return cb
 
     def extract_value(self, name, frame: np.ndarray):
-        if self.point is not None:
+        point = self.points.get(name, None)
+        if point is not None:
             try:
-                self.values[name] = frame[self.point[1]][self.point[0]].copy()
+                if name in (Previews.depth_raw.name, Previews.depth.name):
+                    self.values[name] = "{}mm".format(frame[point[1]][point[0]])
+                elif name in (Previews.disparity_color.name, Previews.disparity.name):
+                    self.values[name] = "{}px".format(frame[point[1]][point[0]])
+                elif frame.shape[2] == 3:
+                    self.values[name] = "R:{},G:{},B:{}".format(*frame[point[1]][point[0]][::-1])
+                else:
+                    self.values[name] = str(frame[point[1]][point[0]])
             except:
                 pass
 
@@ -164,7 +174,7 @@ class PreviewManager:
         for name in self.display:
             cv2.namedWindow(name)
             if self.mouse_tracker is not None:
-                cv2.setMouseCallback(name, self.mouse_tracker.select_point)
+                cv2.setMouseCallback(name, self.mouse_tracker.select_point(name))
             callback(name)
             if name not in (Previews.disparity_color.name, Previews.depth.name):  # generated on host
                 self.output_queues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
@@ -210,8 +220,9 @@ class PreviewManager:
                 frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
 
             if self.mouse_tracker is not None and name in self.mouse_tracker.values:
-                cv2.circle(frame, self.mouse_tracker.point, 3, (255, 255, 255), -1)
-                cv2.putText(frame, str(self.mouse_tracker.values[name]), self.mouse_tracker.point, cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255))
+                point = self.mouse_tracker.points[name]
+                cv2.circle(frame, point, 3, (255, 255, 255), -1)
+                cv2.putText(frame, str(self.mouse_tracker.values[name]), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255))
             return_frame = callback(frame, name)  # Can be None, can be other frame e.g. after copy()
             cv2.imshow(name, return_frame if return_frame is not None else frame)
 
