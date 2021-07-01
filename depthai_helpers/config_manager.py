@@ -228,6 +228,9 @@ class ConfigManager:
                     updated_show_arg.append(name)
                 else:
                     print("Disabling {} preview...".format(name))
+            if len(updated_show_arg) == 0:
+                print("No previews available, adding color...")
+                updated_show_arg.append("color")
             self.args.show = updated_show_arg
 
     def linuxCheckApplyUsbRules(self):

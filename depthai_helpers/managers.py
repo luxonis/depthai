@@ -163,13 +163,14 @@ class PreviewManager:
         self.mouse_tracker = MouseClickTracker() if mouseTracker else None
 
     def create_queues(self, device, callback=lambda *a, **k: None):
-        calib = device.readCalibration()
-        eeprom = calib.getEepromData()
-        cam_info = eeprom.cameraData[calib.getStereoLeftCameraId()]
-        self.baseline = cam_info.extrinsics.specTranslation.x * 10  # cm -> mm
-        self.fov = calib.getFov(calib.getStereoLeftCameraId())
-        self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
-        self.dispScaleFactor = self.baseline * self.focal
+        if dai.CameraBoardSocket.LEFT in device.getConnectedCameras():
+            calib = device.readCalibration()
+            eeprom = calib.getEepromData()
+            cam_info = eeprom.cameraData[calib.getStereoLeftCameraId()]
+            self.baseline = cam_info.extrinsics.specTranslation.x * 10  # cm -> mm
+            self.fov = calib.getFov(calib.getStereoLeftCameraId())
+            self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
+            self.dispScaleFactor = self.baseline * self.focal
         self.output_queues = []
         for name in self.display:
             cv2.namedWindow(name)
