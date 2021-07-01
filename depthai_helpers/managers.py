@@ -173,11 +173,17 @@ class PreviewManager:
         self.output_queues = []
         for name in self.display:
             cv2.namedWindow(name)
-            if self.mouse_tracker is not None:
-                cv2.setMouseCallback(name, self.mouse_tracker.select_point(name))
             callback(name)
+            if self.mouse_tracker is not None:
+                if name == Previews.disparity_color.name:
+                    cv2.setMouseCallback(name, self.mouse_tracker.select_point(Previews.disparity.name))
+                elif name == Previews.depth.name:
+                    cv2.setMouseCallback(name, self.mouse_tracker.select_point(Previews.depth_raw.name))
+                else:
+                    cv2.setMouseCallback(name, self.mouse_tracker.select_point(name))
             if name not in (Previews.disparity_color.name, Previews.depth.name):  # generated on host
                 self.output_queues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
+
         if Previews.disparity_color.name in self.display and Previews.disparity.name not in self.display:
             self.output_queues.append(device.getOutputQueue(name=Previews.disparity.name, maxSize=1, blocking=False))
         if Previews.depth.name in self.display and Previews.depth_raw.name not in self.display:
@@ -192,20 +198,16 @@ class PreviewManager:
                 if queue.getName() in self.display:
                     callback(frame, queue.getName())
                     self.raw_frames[queue.getName()] = frame
-                    if self.mouse_tracker is not None:
-                        self.mouse_tracker.extract_value(queue.getName(), frame)
+                if self.mouse_tracker is not None:
+                    self.mouse_tracker.extract_value(queue.getName(), frame)
 
                 if queue.getName() == Previews.disparity.name and Previews.disparity_color.name in self.display:
                     self.fps.tick(Previews.disparity_color.name)
                     self.raw_frames[Previews.disparity_color.name] = Previews.disparity_color.value(frame, self)
-                    if self.mouse_tracker is not None:
-                        self.mouse_tracker.extract_value(Previews.disparity_color.name, frame)
 
                 if queue.getName() == Previews.depth_raw.name and Previews.depth.name in self.display:
                     self.fps.tick(Previews.depth.name)
                     self.raw_frames[Previews.depth.name] = Previews.depth.value(frame, self)
-                    if self.mouse_tracker is not None:
-                        self.mouse_tracker.extract_value(Previews.depth.name, frame)
 
             for name in self.raw_frames:
                 new_frame = self.raw_frames[name].copy()
@@ -219,10 +221,19 @@ class PreviewManager:
                 h, w, c = frame.shape
                 frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
 
-            if self.mouse_tracker is not None and name in self.mouse_tracker.values:
-                point = self.mouse_tracker.points[name]
-                cv2.circle(frame, point, 3, (255, 255, 255), -1)
-                cv2.putText(frame, str(self.mouse_tracker.values[name]), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255))
+            if self.mouse_tracker is not None:
+                if name == Previews.disparity_color.name:
+                    point = self.mouse_tracker.points.get(Previews.disparity.name)
+                    value = self.mouse_tracker.values.get(Previews.disparity.name)
+                elif name == Previews.depth.name:
+                    point = self.mouse_tracker.points.get(Previews.depth_raw.name)
+                    value = self.mouse_tracker.values.get(Previews.depth_raw.name)
+                else:
+                    point = self.mouse_tracker.points.get(name)
+                    value = self.mouse_tracker.values.get(name)
+                if point is not None:
+                    cv2.circle(frame, point, 3, (255, 255, 255), -1)
+                    cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255))
             return_frame = callback(frame, name)  # Can be None, can be other frame e.g. after copy()
             cv2.imshow(name, return_frame if return_frame is not None else frame)
 
