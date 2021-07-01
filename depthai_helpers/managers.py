@@ -192,8 +192,6 @@ class PreviewManager:
                 if queue.getName() == Previews.depth_raw.name and Previews.depth.name in self.display:
                     self.fps.tick(Previews.depth.name)
                     self.raw_frames[Previews.depth.name] = Previews.depth.value(frame, self)
-                    self.raw_frames[Previews.depth_raw.name] = self.raw_frames[Previews.depth_raw.name].copy()
-                    print(self.raw_frames[Previews.depth_raw.name].dtype)
                     if self.mouse_tracker is not None:
                         self.mouse_tracker.extract_value(Previews.depth.name, frame)
 
