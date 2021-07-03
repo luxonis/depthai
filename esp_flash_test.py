@@ -76,7 +76,7 @@ else:
     cv2.putText(image,'FLASH TEST ',(10,250), font, 2,(0,0,0),2)
     cv2.putText(image,'FAILED',(10,300), font, 2,(0,0,0),2)
 
-    
+cv2.putText(image,'custom-1',(160,490), font, 2,(255,0,0),3)
 
 cv2.imshow("Result Image",image)
 cv2.waitKey(0)
