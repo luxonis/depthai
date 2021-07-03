@@ -8,5 +8,5 @@ esptool
 # depthai==0.2.0.1
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.3.0.0+f4a3594fe4c8ac2b87e5c021920d5147d44beaab
+depthai==0.4.0.0+7232f40284fc60ac35595449390718294e25ea25
 pyyaml==5.3.1
