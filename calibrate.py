@@ -23,7 +23,7 @@ import depthai as dai
 import depthai_helpers.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-debug = False
+debug = True
 red = (255, 0, 0)
 green = (0, 255, 0)
 
@@ -195,10 +195,10 @@ class Main:
             cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
                 
         cam_left.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+            dai.MonoCameraProperties.SensorResolution.THE_480_P)
 
         cam_right.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+            dai.MonoCameraProperties.SensorResolution.THE_480_P)
 
         xout_left.setStreamName("left")
         cam_left.out.link(xout_left.input)
@@ -508,8 +508,8 @@ class Main:
             calibration_handler = dai.CalibrationHandler()
             calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
-            calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
-            calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
+            calibration_handler.setCameraIntrinsics(left, calibData[2], 640, 480)
+            calibration_handler.setCameraIntrinsics(right, calibData[3], 640, 480)
             measuredTranslation = [
                 -self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
             calibration_handler.setCameraExtrinsics(
