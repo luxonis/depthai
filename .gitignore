@@ -51,4 +51,5 @@ resources/*.json
 *.mvcmd
 *.so
 *.prof
+*.csv
 *.img

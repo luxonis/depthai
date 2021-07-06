@@ -377,6 +377,61 @@ class DepthAI:
             #     ops = 0
             #     prevTime = time()
 
+
+            if self.device.is_device_changed():
+                try:
+                    if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
+                    cv2.waitKey(1)
+                except:
+                    pass
+
+                try:
+                    if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
+                    cv2.waitKey(1)
+                except:
+                    pass
+
+                try:
+                    if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
+                    cv2.waitKey(1)
+                except:
+                    pass
+
+                try:
+                    if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
+                    cv2.waitKey(1)
+                except :
+                    pass
+                
+                try:
+                    if cv2.getWindowProperty('previewout-right', 0) >= 0: cv2.destroyWindow('previewout-right')  
+                    cv2.waitKey(1)
+                except :
+                    pass
+                
+                try:
+                    if cv2.getWindowProperty('USB 3 connection failed', 0) >= 0: 
+                        cv2.destroyWindow('USB 3 connection failed')  
+                        cv2.waitKey(1)
+                except:
+                    pass
+                self.device.reset_device_changed()
+                sleep(2)
+
+            if not self.device.is_usb3():
+                fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
+                # while True:
+                h, w, _ = fail_usb_img.shape
+                fail_usb_img = cv2.resize(fail_usb_img, (int(w*0.7), int(h*0.7)), interpolation = cv2.INTER_AREA)
+                cv2.imshow('USB 3 connection failed', fail_usb_img)
+                # k = cv2.waitKey(33)
+            else:
+                    try:
+                        if cv2.getWindowProperty('USB 3 connection failed', 0) >= 0: 
+                            cv2.destroyWindow('USB 3 connection failed')  
+                            cv2.waitKey(1)
+                    except:
+                        pass
             packets_len = len(self.nnet_packets) + len(self.data_packets)
             # print(packets_len)
             if packets_len != 0:
