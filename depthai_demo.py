@@ -278,7 +278,7 @@ class DepthAI:
             test_type = 'OAK_D_POE_test'
         else:
             test_type = 'OAK_1_POE_test'
-
+        test_type = args['testMode']
         # pygame init and rendering
         screen = pygame.display.set_mode((900, 700))
         screen.fill(white)
@@ -352,7 +352,7 @@ class DepthAI:
 
         if args['verbose']: print_packet_info_header()
         log_file = "logs_" + test_type + ".csv"
-        if test_type != 'OAK_1_POE_test':
+        if 'OAK_1' not in test_type:
             header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'left_camera', 
                     'right_camera', 'rgb_camera', 'JPEG Encoding Stream', 'previewout-rgb Stream', 'left Stream', 'right Stream', 
                     'op JPEG Encoding', 'op Previewout-rgb stream', 'op Left Stream', 'op Right Stream', 'IMU']
@@ -364,7 +364,7 @@ class DepthAI:
             with open(log_file, mode='w') as log_fopen:
                 log_csv_writer = csv.writer(log_fopen, delimiter=',')
                 log_csv_writer.writerow(header)
-
+    
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
@@ -376,62 +376,6 @@ class DepthAI:
             #     print('OPS: ', ops)
             #     ops = 0
             #     prevTime = time()
-
-
-            if self.device.is_device_changed():
-                try:
-                    if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
-                    cv2.waitKey(1)
-                except:
-                    pass
-
-                try:
-                    if cv2.getWindowProperty('left', 0) >= 0: cv2.destroyWindow('left')  
-                    cv2.waitKey(1)
-                except:
-                    pass
-
-                try:
-                    if cv2.getWindowProperty('right', 0) >= 0: cv2.destroyWindow('right')  
-                    cv2.waitKey(1)
-                except:
-                    pass
-
-                try:
-                    if cv2.getWindowProperty('previewout-rgb', 0) >= 0: cv2.destroyWindow('previewout-rgb')  
-                    cv2.waitKey(1)
-                except :
-                    pass
-                
-                try:
-                    if cv2.getWindowProperty('previewout-right', 0) >= 0: cv2.destroyWindow('previewout-right')  
-                    cv2.waitKey(1)
-                except :
-                    pass
-                
-                try:
-                    if cv2.getWindowProperty('USB 3 connection failed', 0) >= 0: 
-                        cv2.destroyWindow('USB 3 connection failed')  
-                        cv2.waitKey(1)
-                except:
-                    pass
-                self.device.reset_device_changed()
-                sleep(2)
-
-            if not self.device.is_usb3():
-                fail_usb_img = cv2.imread(consts.resource_paths.usb_3_failed, cv2.IMREAD_COLOR)
-                # while True:
-                h, w, _ = fail_usb_img.shape
-                fail_usb_img = cv2.resize(fail_usb_img, (int(w*0.7), int(h*0.7)), interpolation = cv2.INTER_AREA)
-                cv2.imshow('USB 3 connection failed', fail_usb_img)
-                # k = cv2.waitKey(33)
-            else:
-                    try:
-                        if cv2.getWindowProperty('USB 3 connection failed', 0) >= 0: 
-                            cv2.destroyWindow('USB 3 connection failed')  
-                            cv2.waitKey(1)
-                    except:
-                        pass
             packets_len = len(self.nnet_packets) + len(self.data_packets)
             # print(packets_len)
             if packets_len != 0:
@@ -530,7 +474,7 @@ class DepthAI:
                 else:
                     auto_checkbox_dict[auto_checkbox_names[0]].uncheck()
                 
-                if test_type != 'OAK_1_POE_test':
+                if 'OAK_1' not in test_type:
                     if self.device.is_left_connected():
                         auto_checkbox_dict[auto_checkbox_names[1]].check()
                     else:
@@ -564,7 +508,7 @@ class DepthAI:
                 print("Is left conencted ?")
                 print(self.device.is_left_connected())
 
-                if test_type == 'OAK_D_POE_test':
+                if 'OAK_D' in test_type:
                     auto_checkbox_dict['IMU'].setUnattended()
 
                 for i in range(len(op_checkbox_names)):
@@ -585,25 +529,7 @@ class DepthAI:
                 text_pygame = "mx_serial_id: " + mx_serial_id
                 pygame_render_text(screen, text_pygame, (50, 540))
 
-                # text_pygame = "Depthai commit version: " + get_version_from_requirements()
-                # pygame_render_text(screen, text_pygame, (50, 520))
 
-                # text_pygame = "date_time: " + time_stmp
-                # pygame_render_text(screen, text_pygame, (50, 300))
-
-            # if self.error_check(test_type):
-            #     available_streams = self.device.get_available_streams()
-            #     for view_name in available_streams:
-            #         if 'previewout' in view_name:
-            #             view_name = view_name + '-rgb' 
-            #         try:
-            #             if cv2.getWindowProperty(view_name, 0) >= 0: 
-            #                 cv2.destroyWindow(view_name)  
-            #                 cv2.waitKey(1)
-            #         except :
-            #             pass
-                # continue
-            
             for event in pygame.event.get():
                 # catching save button
                 if event.type == pygame.MOUSEMOTION:
@@ -843,7 +769,7 @@ class DepthAI:
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['y']),
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['z']))
                     # print(dict_['imu'])
-                    if test_type == 'OAK_D_POE_test':
+                    if 'OAK_D' in test_type:
 
                         if 'imu' in dict_ and 'accel' in dict_['imu']:
                             # print(dict_['imu'])
@@ -867,7 +793,7 @@ class DepthAI:
                     pygame_render_text(screen, flash_status, (550, 540), color=c ,font_size=25)
                     pygame_render_text(screen, dict_['flash']['info'], (550, 570) ,font_size=25)
         
-                    if test_type == 'OAK_D_POE_test':
+                    if 'OAK_D' in test_type:
 
                         imu_status = dict_['imu']['status']
                         c = None

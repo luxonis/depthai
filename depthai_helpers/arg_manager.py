@@ -181,7 +181,10 @@ class CliArgs:
 
         parser.add_argument("-fw", "--firmware", default=None, type=str,
                             help="Commit hash for custom FW, downloaded from Artifactory")
-
+        
+        parser.add_argument("-tm", "--testMode", default=None, type=str, required=True,
+                            help="Enter the test mode name")
+        
         parser.add_argument("-vv", "--verbose", default=False, action="store_true",
                         help="Verbose, print info about received packets.")
         parser.add_argument("-s", "--streams",
