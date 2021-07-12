@@ -349,7 +349,7 @@ class NNetManager:
         setattr(nodes, self.output_name, xout)
 
         if self.source == "color":
-            nodes.cam_rgb.preview.link(nn.input)
+            nodes.manip_nn.out.link(nn.input)
         elif self.source == "host":
             xin = p.createXLinkIn()
             xin.setStreamName(self.input_name)
@@ -555,20 +555,28 @@ class PipelineManager:
         for xin in filter(lambda node: isinstance(node, dai.XLinkIn), vars(self.nodes).values()):
             device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
 
-    def create_color_cam(self, preview_size, res, fps, full_fov, use_hq):
+    def create_color_cam(self, preview_size, res, fps, full_fov, nn_size=None, xout_preview=False, xout_nn_input=False):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
         self.nodes.cam_rgb.setPreviewSize(*preview_size)
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(res)
         self.nodes.cam_rgb.setFps(fps)
-        self.nodes.cam_rgb.setPreviewKeepAspectRatio(not full_fov)
-        self.nodes.xout_rgb = self.p.createXLinkOut()
-        self.nodes.xout_rgb.setStreamName(Previews.color.name)
-        if use_hq:
-            self.nodes.cam_rgb.video.link(self.nodes.xout_rgb.input)
-        else:
+        self.nodes.cam_rgb.setPreviewKeepAspectRatio(False)
+        if xout_preview:
+            self.nodes.xout_rgb = self.p.createXLinkOut()
+            self.nodes.xout_rgb.setStreamName(Previews.color.name)
             self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
+        if nn_size is not None:
+            self.nodes.manip_nn = self.p.createImageManip()
+            self.nodes.manip_nn.initialConfig.setResize(*nn_size)
+            self.nodes.manip_nn.initialConfig.setFrameType(dai.ImgFrame.Type.RGB888p)
+            self.nodes.manip_nn.setKeepAspectRatio(not full_fov)
+            self.nodes.cam_rgb.preview.link(self.nodes.manip_nn.inputImage)
+            if xout_nn_input:
+                self.nodes.xout_nn_input = self.p.createXLinkOut()
+                self.nodes.xout_nn_input.setStreamName(Previews.nn_input.name)
+                self.nodes.manip_nn.out.link(self.nodes.xout_nn_input.input)
 
     def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
         self.nodes.stereo = self.p.createStereoDepth()
@@ -632,31 +640,29 @@ class PipelineManager:
         device.getInputQueue("stereo_config").send(self.depthConfig)
 
 
-    def create_left_cam(self, res, fps):
+    def create_left_cam(self, res, fps, xout=False):
         self.nodes.mono_left = self.p.createMonoCamera()
         self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
         self.nodes.mono_left.setResolution(res)
         self.nodes.mono_left.setFps(fps)
 
-        self.nodes.xout_left = self.p.createXLinkOut()
-        self.nodes.xout_left.setStreamName(Previews.left.name)
-        self.nodes.mono_left.out.link(self.nodes.xout_left.input)
+        if xout:
+            self.nodes.xout_left = self.p.createXLinkOut()
+            self.nodes.xout_left.setStreamName(Previews.left.name)
+            self.nodes.mono_left.out.link(self.nodes.xout_left.input)
 
-    def create_right_cam(self, res, fps):
+    def create_right_cam(self, res, fps, xout=False):
         self.nodes.mono_right = self.p.createMonoCamera()
         self.nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         self.nodes.mono_right.setResolution(res)
         self.nodes.mono_right.setFps(fps)
 
-        self.nodes.xout_right = self.p.createXLinkOut()
-        self.nodes.xout_right.setStreamName(Previews.right.name)
-        self.nodes.mono_right.out.link(self.nodes.xout_right.input)
+        if xout:
+            self.nodes.xout_right = self.p.createXLinkOut()
+            self.nodes.xout_right.setStreamName(Previews.right.name)
+            self.nodes.mono_right.out.link(self.nodes.xout_right.input)
 
     def create_nn(self, nn, sync):
-        self.nodes.xout_nn_input = self.p.createXLinkOut()
-        self.nodes.xout_nn_input.setStreamName(Previews.nn_input.name)
-        nn.passthrough.link(self.nodes.xout_nn_input.input)
-
         if sync:
             if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
                 self.nodes.cam_rgb.video.unlink(self.nodes.xout_rgb.input)
@@ -665,16 +671,16 @@ class PipelineManager:
             elif self.nn_manager.source == "host" and hasattr(self.nodes, "xout_host"):
                 getattr(self.nodes, self.nn_manager.input_name).out.unlink(self.nodes.xout_host.input)
                 nn.passthrough.link(self.nodes.xout_host.input)
-            elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
+            elif self.nn_manager.source == "left" and hasattr(self.nodes, "xout_left"):
                 self.nodes.mono_left.out.unlink(self.nodes.xout_left.input)
                 nn.passthrough.link(self.nodes.xout_left.input)
-            elif self.nn_manager.source == "right" and hasattr(self.nodes, "right"):
+            elif self.nn_manager.source == "right" and hasattr(self.nodes, "xout_right"):
                 self.nodes.mono_right.out.unlink(self.nodes.xout_right.input)
                 nn.passthrough.link(self.nodes.xout_right.input)
-            elif self.nn_manager.source == "rectified_left" and hasattr(self.nodes, "rectified_left"):
+            elif self.nn_manager.source == "rectified_left" and hasattr(self.nodes, "xout_rect_left"):
                 self.nodes.stereo.rectifiedLeft.unlink(self.nodes.xout_rect_left.input)
                 nn.passthrough.link(self.nodes.xout_rect_left.input)
-            elif self.nn_manager.source == "rectified_right" and hasattr(self.nodes, "rectified_right"):
+            elif self.nn_manager.source == "rectified_right" and hasattr(self.nodes, "xout_rect_right"):
                 self.nodes.stereo.rectifiedRight.unlink(self.nodes.xout_rect_right.input)
                 nn.passthrough.link(self.nodes.xout_rect_right.input)
 

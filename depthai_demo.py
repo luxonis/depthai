@@ -123,7 +123,7 @@ if conf.useNN:
         model_name=conf.getModelName(),
         model_dir=conf.getModelDir(),
         source=conf.getModelSource(),
-        full_fov=conf.args.full_fov_nn or not conf.useCamera,
+        full_fov=not conf.args.disable_full_fov_nn or not conf.useCamera,
         flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
     )
     nn_manager.count_label = conf.getCountLabel(nn_manager)
@@ -139,11 +139,19 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
         pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), disp_multiplier=disp_multiplier, mouseTracker=True)
 
         if conf.leftCameraEnabled:
-            pm.create_left_cam(mono_res, conf.args.mono_fps)
+            pm.create_left_cam(mono_res, conf.args.mono_fps, xout=Previews.left.name in conf.args.show)
         if conf.rightCameraEnabled:
-            pm.create_right_cam(mono_res, conf.args.mono_fps)
+            pm.create_right_cam(mono_res, conf.args.mono_fps, xout=Previews.right.name in conf.args.show)
         if conf.rgbCameraEnabled:
-            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, conf.args.full_fov_nn, conf.useHQ)
+            pm.create_color_cam(
+                nn_size=nn_manager.input_size if conf.useNN else None,
+                preview_size=conf.previewSize,
+                res=rgb_res,
+                fps=conf.args.rgb_fps,
+                full_fov=not conf.args.disable_full_fov_nn,
+                xout_preview=Previews.color.name in conf.args.show,
+                xout_nn_input=Previews.nn_input.name in conf.args.show
+            )
 
         if conf.useDepth:
             pm.create_depth(

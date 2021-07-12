@@ -304,6 +304,5 @@ class ConfigManager:
 
     @property
     def previewSize(self):
-        return self.inputSize or (576, 324)
-
+        return (self.args.rgb_resolution * (16/9), self.args.rgb_resolution) if self.useHQ else (576, 324)
 
