@@ -62,17 +62,17 @@ class ConfigManager:
 
     def getModelSource(self):
         if not self.useCamera:
-            return "host"
-        if self.args.camera == "left":
+            return Previews.host.name
+        if self.args.camera == Previews.left.name:
             if self.useDepth:
-                return "rectified_left"
-            return "left"
-        if self.args.camera == "right":
+                return Previews.rectified_left.name
+            return Previews.left.name
+        if self.args.camera == Previews.right.name:
             if self.useDepth:
-                return "rectified_right"
-            return "right"
-        if self.args.camera == "color":
-            return "color"
+                return Previews.rectified_right.name
+            return Previews.right.name
+        if self.args.camera == Previews.color.name:
+            return Previews.color.name
 
     def getModelName(self):
         if self.args.cnn_model:
