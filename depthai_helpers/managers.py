@@ -172,7 +172,6 @@ class PreviewManager:
                 self.baseline = abs(cam_info.extrinsics.specTranslation.x * 10)  # cm -> mm
                 self.fov = calib.getFov(calib.getStereoLeftCameraId())
                 self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
-                print(self.baseline, self.fov, self.focal)
             else:
                 print("Warning: calibration data missing, using OAK-D defaults")
                 self.baseline = 75
