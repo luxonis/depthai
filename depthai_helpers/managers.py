@@ -166,10 +166,17 @@ class PreviewManager:
         if dai.CameraBoardSocket.LEFT in device.getConnectedCameras():
             calib = device.readCalibration()
             eeprom = calib.getEepromData()
-            cam_info = eeprom.cameraData[calib.getStereoLeftCameraId()]
-            self.baseline = abs(cam_info.extrinsics.specTranslation.x * 10)  # cm -> mm
-            self.fov = calib.getFov(calib.getStereoLeftCameraId())
-            self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
+            left_cam = calib.getStereoLeftCameraId()
+            if left_cam != dai.CameraBoardSocket.AUTO:
+                cam_info = eeprom.cameraData[left_cam]
+                self.baseline = abs(cam_info.extrinsics.specTranslation.x * 10)  # cm -> mm
+                self.fov = calib.getFov(calib.getStereoLeftCameraId())
+                self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
+            else:
+                print("Warning: calibration data missing, using OAK-D defaults")
+                self.baseline = 75
+                self.fov = 71.86
+                self.focal = 440
             self.dispScaleFactor = self.baseline * self.focal
         self.output_queues = []
         for name in self.display:
