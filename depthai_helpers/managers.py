@@ -166,17 +166,10 @@ class PreviewManager:
         if dai.CameraBoardSocket.LEFT in device.getConnectedCameras():
             calib = device.readCalibration()
             eeprom = calib.getEepromData()
-            left_cam = calib.getStereoLeftCameraId()
-            if left_cam != dai.CameraBoardSocket.AUTO:
-                cam_info = eeprom.cameraData[left_cam]
-                self.baseline = abs(cam_info.extrinsics.specTranslation.x * 10)  # cm -> mm
-                self.fov = calib.getFov(calib.getStereoLeftCameraId())
-                self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
-            else:
-                print("Warning: calibration data missing, using OAK-D defaults")
-                self.baseline = 75
-                self.fov = 71.86
-                self.focal = 440
+            cam_info = eeprom.cameraData[calib.getStereoLeftCameraId()]
+            self.baseline = abs(cam_info.extrinsics.specTranslation.x * 10)  # cm -> mm
+            self.fov = calib.getFov(calib.getStereoLeftCameraId())
+            self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(self.fov / 2)))
             self.dispScaleFactor = self.baseline * self.focal
         self.output_queues = []
         for name in self.display:
@@ -368,24 +361,29 @@ class NNetManager:
             xin.out.link(nodes.xout_host.input)
 
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
-            nodes.manip = p.createImageManip()
-            nodes.manip.initialConfig.setResize(*self.input_size)
+            nodes.nn_manip = p.createImageManip()
+            nodes.nn_manip.initialConfig.setResize(*self.input_size)
             # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
-            nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            nodes.nn_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             # NN inputs
-            nodes.manip.out.link(nn.input)
+            nodes.nn_manip.out.link(nn.input)
 
             if self.source == "left":
-                nodes.mono_left.out.link(nodes.manip.inputImage)
+                nodes.mono_left.out.link(nodes.nn_manip.inputImage)
             elif self.source == "right":
-                nodes.mono_right.out.link(nodes.manip.inputImage)
+                nodes.mono_right.out.link(nodes.nn_manip.inputImage)
             elif self.source == "rectified_left":
-                nodes.stereo.rectifiedLeft.link(nodes.manip.inputImage)
+                nodes.stereo.rectifiedLeft.link(nodes.nn_manip.inputImage)
             elif self.source == "rectified_right":
-                nodes.stereo.rectifiedRight.link(nodes.manip.inputImage)
+                nodes.stereo.rectifiedRight.link(nodes.nn_manip.inputImage)
 
         if self.nn_family in ("YOLO", "mobilenet") and use_depth:
-            nodes.stereo.depth.link(nn.inputDepth)
+            nodes.nn_depth_manip = p.createImageManip()
+            nodes.nn_depth_manip.initialConfig.setResize(*self.input_size)
+            nodes.nn_depth_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RAW16)
+            nodes.stereo.depth.link(nodes.nn_depth_manip.inputImage)
+            nodes.nn_depth_manip.out.link(nn.inputDepth)
+
             nn.setDepthLowerThreshold(minDepth)
             nn.setDepthUpperThreshold(maxDepth)
             nn.setBoundingBoxScaleFactor(sbbScaleFactor)
@@ -577,9 +575,15 @@ class PipelineManager:
         else:
             self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
 
-    def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
+    def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel, alignment=None, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
         self.nodes.stereo = self.p.createStereoDepth()
-
+        if alignment is not None:
+            self.nodes.stereo.setDepthAlign(
+                dai.CameraBoardSocket.RIGHT if alignment == Previews.right.name else
+                dai.CameraBoardSocket.LEFT if alignment == Previews.left.name else
+                dai.CameraBoardSocket.RGB if alignment == Previews.color.name else
+                None
+            )
         self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
         self.depthConfig.setConfidenceThreshold(dct)
         self.nodes.stereo.initialConfig.setMedianFilter(median)
@@ -606,10 +610,21 @@ class PipelineManager:
         self.nodes.xin_stereo_config.setStreamName("stereo_config")
         self.nodes.xin_stereo_config.out.link(self.nodes.stereo.inputConfig)
 
+        self.nodes.manip_depth = self.p.createImageManip()
+        if alignment == dai.CameraBoardSocket.RGB:
+            if not hasattr(self.nodes, 'cam_rgb'):
+                raise RuntimeError("RGB camera not initialized. Call create_color_cam(res, fps) first!")
+            target_size = self.nodes.cam_rgb.getPreviewSize()
+        else:
+            target_size = self.nodes.mono_right.getResolutionSize()
+        self.nodes.manip_depth.initialConfig.setResize(*target_size)
+        self.nodes.manip_depth.initialConfig.setFrameType(dai.RawImgFrame.Type.RAW16)
+        self.nodes.stereo.depth.link(self.nodes.manip_depth.inputImage)
+
         if useDepth:
             self.nodes.xout_depth = self.p.createXLinkOut()
             self.nodes.xout_depth.setStreamName(Previews.depth_raw.name)
-            self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
+            self.nodes.manip_depth.out.link(self.nodes.xout_depth.input)
 
         if useDisparity:
             self.nodes.xout_disparity = self.p.createXLinkOut()
@@ -686,7 +701,7 @@ class PipelineManager:
                 nn.passthrough.link(self.nodes.xout_rect_right.input)
 
             if hasattr(self.nodes, 'xout_depth'):
-                self.nodes.stereo.depth.unlink(self.nodes.xout_depth.input)
+                self.nodes.manip_depth.out.unlink(self.nodes.xout_depth.input)
                 nn.passthroughDepth.link(self.nodes.xout_depth.input)
 
     def create_system_logger(self):

@@ -154,6 +154,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 conf.args.lrc_threshold,
                 conf.args.extended_disparity,
                 conf.args.subpixel,
+                alignment=conf.getModelSource(),
                 useDepth=Previews.depth.name in conf.args.show or Previews.depth_raw.name in conf.args.show,
                 useDisparity=Previews.disparity.name in conf.args.show or Previews.disparity_color.name in conf.args.show,
                 useRectifiedLeft=Previews.rectified_left.name in conf.args.show,
