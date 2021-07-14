@@ -240,7 +240,7 @@ class ConfigManager:
                 cli_print("\nWARNING: Usb rules not found", PrintColors.WARNING)
                 cli_print("\nSet rules: \n"
                 """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n"""
-                "sudo udevadm control --reload-rules && udevadm trigger \n"
+                "sudo udevadm control --reload-rules && sudo udevadm trigger \n"
                 "Disconnect/connect usb cable on host! \n", PrintColors.RED)
                 os._exit(1)
 
