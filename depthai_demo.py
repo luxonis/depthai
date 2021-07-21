@@ -131,6 +131,11 @@ if conf.useNN:
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
+    actual_speed = device.getUsbSpeed()
+    usb_msg = 'Connected at USB speed: ' + actual_speed.name
+    if actual_speed.value < dai.UsbSpeed.SUPER.value:
+        usb_msg += ' -- not USB3, may impact performance!'
+    print(usb_msg)
     conf.adjustParamsToDevice(device)
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
