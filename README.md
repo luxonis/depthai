@@ -6,7 +6,7 @@ __Documentation is available at [https://docs.luxonis.com/](https://docs.luxonis
 
 ## Python modules (Dependencies)
 
-DepthAI Demo requires [numpy](https://numpy.org/), [opencv-python](https://pypi.org/project/opencv-python/) and [depthai](https://github.com/luxonis/depthai-python). 
+DepthAI Demo requires [numpy](https://numpy.org/), [opencv-python](https://pypi.org/project/opencv-python/) and [depthai](https://github.com/luxonis/depthai-python).
 To get the versions of these packages you need for the program, use pip: (Make sure pip is upgraded: ` python3 -m pip install -U pip`)
 ```
 python3 install_requirements.py
@@ -15,8 +15,11 @@ python3 install_requirements.py
 ## Examples
 
 `python3 depthai_demo.py` - RGB & CNN inference example
+
 `python3 depthai_demo.py -vid <path_to_video_or_yt_link>` - CNN inference on video example
+
 `python3 depthai_demo.py -cnn person-detection-retail-0013` - Run `person-detection-retail-0013` model from `resources/nn` directory
+
 `python3 depthai_demo.py -cnn tiny-yolo-v3 -sh 8` - Run `tiny-yolo-v3` model from `resources/nn` directory and compile for 8 shaves
 
 ## Usage
@@ -25,13 +28,20 @@ python3 install_requirements.py
 $ depthai_demo.py --help
 
 usage: depthai_demo.py [-h] [-nd] [-cam {left,right,color}]
-                       [-vid VIDEO] [-hq] [-dd] [-cnnp CNN_PATH]
+                       [-vid VIDEO] [-hq] [-dd] [-dnn] [-cnnp CNN_PATH]
                        [-cnn CNN_MODEL] [-sh SHAVES]
                        [-cnn-size CNN_INPUT_SIZE] [-rgbr {1080,2160,3040}]
                        [-rgbf RGB_FPS] [-dct DISPARITY_CONFIDENCE_THRESHOLD]
-                       [-med {0,3,5,7}] [-lrc] [-scale SCALE] [-sbb]
-                       [-sbb-sf SBB_SCALE_FACTOR] [-sync]
-                       [-monor {400,720,800}] [-monof MONO_FPS]
+                       [-lrct LEFT_RIGHT_CHECK_THRESHOLD]
+                       [-sig SIGMA] [-med {0,3,5,7}] [-lrc] [-ext] [-sub] [-ff]
+                       [-scale SCALE] [-cm COLOR_MAP]
+                       [-maxd MAX_DEPTH] [-mind MIN_DEPTH]
+                       [-sbb] [-sbb-sf SBB_SCALE_FACTOR] [-s]
+                       [--report REPORT_TYPE] [--report_file]
+                       [-sync] [-monor {400,720,800}] [-monof MONO_FPS]
+                       [-cb CALLBACK_PATH] [--openvino_version OPENVINO_VERSION]
+                       [--count COUNT] [-dev DEVICE_ID] [-usbs USB_SPEED]
+                       [-enc ENCODING] [-encout ENCODING_PATH]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -44,6 +54,8 @@ optional arguments:
                         with -cam)
   -hq, --high_quality   Low quality visualization - uses resized frames
   -dd, --disable_depth  Disable depth information
+  -dnn, --disable-neural-network
+                        Disable neural network inference
   -cnnp CNN_PATH, --cnn_path CNN_PATH
                         Path to cnn model directory to be run
   -cnn CNN_MODEL, --cnn_model CNN_MODEL
@@ -62,22 +74,43 @@ optional arguments:
                         H:2160. Default: 30.0
   -dct DISPARITY_CONFIDENCE_THRESHOLD, --disparity_confidence_threshold DISPARITY_CONFIDENCE_THRESHOLD
                         Disparity confidence threshold, used for depth
-                        measurement. Default: 200
+                        measurement. Default: 245
+  -lrct LEFT_RIGHT_CHECK_THRESHOLD, --lrc_threshold LEFT_RIGHT_CHECK_THRESHOLD
+                        Left right check threshold, used for depth measurement. Default: 4.
+  -sig SIGMA, --sigma SIGMA
+                        Sigma value for Bilateral Filter applied on depth. Default: 0.
   -med {0,3,5,7}, --stereo_median_size {0,3,5,7}
                         Disparity / depth median filter kernel size (N x N) .
-                        0 = filtering disabled. Default: 7
+                        0 = filtering disabled. Default: 7.
   -lrc, --stereo_lr_check
                         Enable stereo 'Left-Right check' feature.
+  -ext, --extended_disparity
+                        Enable stereo 'Extended Disparity' feature.
+  -sub, --subpixel      Enable stereo 'Subpixel' feature.
+  -ff, --full_fov_nn    Full RGB FOV for NN, not keeping the aspect ratio.
   -scale SCALE, --scale SCALE
-                        Scale factor for the output window. Default: 1.0
+                        Scale factor for the output window. Default: 1.0.
+  -cm COLOR_MAP, --color_map COLOR_MAP     
+                        Change color map used to apply colors to depth/disparity
+                        frames. Default: JET.
+  -maxd MAX_DEPTH, --max_depth MAX_DEPTH   
+                        Maximum depth distance for spatial coordinates in mm.
+                        Default: 10000.
+  -mind MIN_DEPTH, --min_depth MIN_DEPTH
+                        Minimum depth distance for spatial coordinates in mm.
+                        Default: 100.
   -sbb, --spatial_bounding_box
                         Display spatial bounding box (ROI) when displaying
                         spatial information. The Z coordinate get's calculated
                         from the ROI (average)
-  -sbb-sf SBB_SCALE_FACTOR, --sbb_scale_factor SBB_SCALE_FACTOR
+  -sbb_sf SBB_SCALE_FACTOR, --sbb_scale_factor SBB_SCALE_FACTOR
                         Spatial bounding box scale factor. Sometimes lower
                         scale factor can give better depth (Z) result.
                         Default: 0.3
+  -s, --show            Choose which previews to show. Default: None.
+  --report REPORT_TYPE
+                        Display device utilization data
+  --report_file         Save report data to specified target file in CSV format
   -sync, --sync         Enable NN/camera synchronization. If enabled, camera
                         source will be from the NN's passthrough attribute
   -monor {400,720,800}, --mono_resolution {400,720,800}
@@ -86,6 +119,29 @@ optional arguments:
   -monof MONO_FPS, --mono_fps MONO_FPS
                         Mono cam fps: max 60.0 for H:720 or H:800, max 120.0
                         for H:400. Default: 30.0
+  -cb CALLBACK_PATH, --callback CALLBACK_PATH
+                        Path to callbacks file to be used. Default: callbacks.py
+                        in the project root
+  --openvino_version OPENVINO_VERSION
+                        Specify which OpenVINO version to use in the pipeline
+  --count COUNT
+                        Count and display the number of specified objects on the
+                        frame. You can enter either the name of the object or
+                        its label id (number).
+  -dev DEVICE_ID, --device_id DEVICE_ID
+                        DepthAI MX id of the device to connect to. Use the word
+                        'list' to show all devices and exit.
+  -usbs USB_SPEED, --usb_speed USB_SPEED
+                        Force USB communication speed. Default: usb3.
+  -enc ENCODING, --encode ENCODING
+                        Define which cameras to encode (record)
+                        Format: camera_name or camera_name,enc_fps
+                        Example: -enc left color
+                        Example: -enc color right,10 left,10
+  -encout ENCODING_PATH, --encode_output ENCODING_PATH
+                        Path to directory where to store encoded files.
+                        Default: project root.
+
 
 ```
 
@@ -107,9 +163,9 @@ Example of the conversion:
 2. The weights (`.bin`) and graph (`.xml`) files produced above (or from the Intel Model Zoo) will be required for building a blob file,
 with the help of the `myriad_compile` tool. When producing blobs, the following constraints must be applied:
 
-       CMX-SLICES = 4 
-       SHAVES = 4 
-       INPUT-FORMATS = 8 
+       CMX-SLICES = 4
+       SHAVES = 4
+       INPUT-FORMATS = 8
        OUTPUT-FORMATS = FP16/FP32 (host code for meta frame display should be updated accordingly)
 
     Example of command execution:
@@ -119,11 +175,11 @@ with the help of the `myriad_compile` tool. When producing blobs, the following 
 ## Reporting issues
 
 We are actively developing the DepthAI framework, and it's crucial for us to know what kind of problems you are facing.  
-If you run into a problem, please follow the steps below and email support@luxonis.com: 
+If you run into a problem, please follow the steps below and email support@luxonis.com:
 
 1. Run `log_system_information.sh` and share the output from (`log_system_information.txt`).
 2. Take a photo of a device you are using (or provide us a device model)
-3. Describe the expected results; 
+3. Describe the expected results;
 4. Describe the actual running results (what you see after started your script with DepthAI)
 5. How you are using the DepthAI python API (code snippet, for example)
 6. Console output
