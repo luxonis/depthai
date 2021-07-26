@@ -308,4 +308,5 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
 if conf.args.report_file:
     report_file.close()
 
+fps.print_status()
 callbacks.on_teardown(**locals())

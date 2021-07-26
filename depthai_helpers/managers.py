@@ -525,6 +525,11 @@ class FPSHandler:
         time_diff = self.timestamp - self.start
         return self.frame_cnt / time_diff if time_diff != 0 else 0
 
+    def print_status(self):
+        print("=== TOTAL FPS ===")
+        for name in self.ticks:
+            print(f"[{name}]: {self.tick_fps(name):.1f}")
+
     def draw_fps(self, source):
         def draw(frame, name: str):
             frame_fps = f"{name.upper()} FPS: {round(self.tick_fps(name), 1)}"
