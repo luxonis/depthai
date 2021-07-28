@@ -79,4 +79,5 @@ else:
     
 
 cv2.imshow("Result Image",image)
-cv2.waitKey(0)
+# Allow Ctrl-C to work
+while cv2.waitKey(10) < 0: pass
