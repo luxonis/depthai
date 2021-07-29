@@ -69,7 +69,7 @@ def parse_args():
                         help="Name of the nn to be run from default depthai repository")
     parser.add_argument('-cnn_size', '--cnn_input_size', default=None, type=str,
                         help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
-    parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],
+    parser.add_argument("-rgbr", "--rgb_resolution", default=3040, type=int, choices=[3040],  # 1080, 2160,
                         help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
     parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float,
                         help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
