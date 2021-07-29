@@ -17,30 +17,6 @@ import enum
 from depthai_helpers.utils import load_module, frame_norm, to_tensor_result
 
 
-def convert_disparity_frame(packet, manager=None):
-    disparity_frame = (packet.getFrame()*manager.disp_multiplier if manager is not None else 255/96).astype(np.uint8)
-    return disparity_frame
-
-
-def convert_disparity_to_color(disparity, manager=None):
-    return cv2.applyColorMap(disparity, manager.colorMap if manager is not None else cv2.COLORMAP_JET)
-
-
-def convert_depth_raw_to_depth(depth_raw, manager=None):
-    dispScaleFactor = getattr(manager, "dispScaleFactor", None)
-    if dispScaleFactor is None:
-        baseline = getattr(manager, 'baseline', 75)  # mm
-        fov = getattr(manager, 'fov', 71.86)
-        focal = getattr(manager, 'focal', depth_raw.shapesin[1] / (2. * math.tan(math.radians(fov / 2))))
-        dispScaleFactor = baseline * focal
-        if manager is not None:
-            setattr(manager, "dispScaleFactor", dispScaleFactor)
-    with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
-        disp_frame = dispScaleFactor / depth_raw
-    disp_frame = (disp_frame * manager.disp_multiplier).astype(np.uint8)
-    return convert_disparity_to_color(disp_frame, manager)
-
-
 class BlobManager:
     def __init__(self, model_name=None, model_dir:Path=None):
         self.model_dir = None
@@ -107,18 +83,97 @@ class BlobManager:
             return self.blob_path
 
 
+class PreviewDecoder:
+    @staticmethod
+    def nn_input(packet, manager=None):
+        # if manager is not None and manager.lowBandwidth: TODO change once passthrough frame type (8) is supported by VideoEncoder
+        if False:
+            return cv2.imdecode(packet.getData(), cv2.IMREAD_COLOR)
+        else:
+            return packet.getCvFrame()
+
+    @staticmethod
+    def color(packet, manager=None):
+        if manager is not None and manager.lowBandwidth:
+            return cv2.imdecode(packet.getData(), cv2.IMREAD_COLOR)
+        else:
+            return packet.getCvFrame()
+
+    @staticmethod
+    def left(packet, manager=None):
+        if manager is not None and manager.lowBandwidth:
+            return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+        else:
+            return packet.getCvFrame()
+
+    @staticmethod
+    def right(packet, manager=None):
+        if manager is not None and manager.lowBandwidth:
+            return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+        else:
+            return packet.getCvFrame()
+
+    @staticmethod
+    def rectified_left(packet, manager=None):
+        if manager is not None and manager.lowBandwidth:
+            return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
+        else:
+            return packet.getCvFrame()
+
+    @staticmethod
+    def rectified_right(packet, manager=None):
+        if manager is not None and manager.lowBandwidth:
+            return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
+        else:
+            return packet.getCvFrame()
+
+    @staticmethod
+    def depth_raw(packet, manager=None):
+        # if manager is not None and manager.lowBandwidth:  TODO change once depth frame type (14) is supported by VideoEncoder
+        if False:
+            return cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED)
+        else:
+            return packet.getFrame()
+
+    @staticmethod
+    def depth(depth_raw, manager=None):
+        dispScaleFactor = getattr(manager, "dispScaleFactor", None)
+        if dispScaleFactor is None:
+            baseline = getattr(manager, 'baseline', 75)  # mm
+            fov = getattr(manager, 'fov', 71.86)
+            focal = getattr(manager, 'focal', depth_raw.shapesin[1] / (2. * math.tan(math.radians(fov / 2))))
+            dispScaleFactor = baseline * focal
+            if manager is not None:
+                setattr(manager, "dispScaleFactor", dispScaleFactor)
+        with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
+            disp_frame = dispScaleFactor / depth_raw
+        disp_frame = (disp_frame * manager.dispMultiplier).astype(np.uint8)
+        return PreviewDecoder.disparity_color(disp_frame, manager)
+
+    @staticmethod
+    def disparity(packet, manager=None):
+        if manager is not None and manager.lowBandwidth:
+            raw_frame = cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED)
+        else:
+            raw_frame = packet.getFrame()
+        return (raw_frame*(manager.dispMultiplier if manager is not None else 255/96)).astype(np.uint8)
+
+    @staticmethod
+    def disparity_color(disparity, manager=None):
+        return cv2.applyColorMap(disparity, manager.colorMap if manager is not None else cv2.COLORMAP_JET)
+
+
 class Previews(enum.Enum):
-    nn_input = partial(lambda packet, _: packet.getCvFrame())
-    host = partial(lambda packet, _: packet.getCvFrame())
-    color = partial(lambda packet, _: packet.getCvFrame())
-    left = partial(lambda packet, _: packet.getCvFrame())
-    right = partial(lambda packet, _: packet.getCvFrame())
-    rectified_left = partial(lambda packet, _: cv2.flip(packet.getCvFrame(), 1))
-    rectified_right = partial(lambda packet, _: cv2.flip(packet.getCvFrame(), 1))
-    depth_raw = partial(lambda packet, _: packet.getFrame())
-    depth = partial(convert_depth_raw_to_depth)
-    disparity = partial(convert_disparity_frame)
-    disparity_color = partial(convert_disparity_to_color)
+    nn_input = partial(PreviewDecoder.nn_input)
+    color = partial(PreviewDecoder.color)
+    left = partial(PreviewDecoder.left)
+    right = partial(PreviewDecoder.right)
+    rectified_left = partial(PreviewDecoder.rectified_left)
+    rectified_right = partial(PreviewDecoder.rectified_right)
+    depth_raw = partial(PreviewDecoder.depth_raw)
+    depth = partial(PreviewDecoder.depth)
+    disparity = partial(PreviewDecoder.disparity)
+    disparity_color = partial(PreviewDecoder.disparity_color)
 
 
 class MouseClickTracker:
@@ -153,13 +208,14 @@ class MouseClickTracker:
 
 
 class PreviewManager:
-    def __init__(self, fps, display, colorMap=cv2.COLORMAP_JET, disp_multiplier=255/96, mouseTracker=False):
+    def __init__(self, fps, display, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False):
         self.display = display
         self.frames = {}
         self.raw_frames = {}
         self.fps = fps
         self.colorMap = colorMap
-        self.disp_multiplier = disp_multiplier
+        self.lowBandwidth = lowBandwidth
+        self.dispMultiplier = dispMultiplier
         self.mouse_tracker = MouseClickTracker() if mouseTracker else None
 
     def create_queues(self, device, callback=lambda *a, **k: None):
@@ -203,6 +259,8 @@ class PreviewManager:
             if packet is not None:
                 self.fps.tick(queue.getName())
                 frame = getattr(Previews, queue.getName()).value(packet, self)
+                if frame is None:
+                    raise RuntimeError("Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
                 if queue.getName() in self.display:
                     callback(frame, queue.getName())
                     self.raw_frames[queue.getName()] = frame
@@ -226,11 +284,11 @@ class PreviewManager:
                     new_frame = cv2.normalize(new_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
                 self.frames[name] = new_frame
 
-    def show_frames(self, scale=1.0, callback=lambda *a, **k: None):
+    def show_frames(self, scale:dict=None, callback=lambda *a, **k: None):
         for name, frame in self.frames.items():
-            if not scale == 1.0:
-                h, w, c = frame.shape
-                frame = cv2.resize(frame, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_AREA)
+            if scale is not None and name in scale:
+                h, w, _ = frame.shape
+                frame = cv2.resize(frame, (int(w * scale[name]), int(h * scale[name])), interpolation=cv2.INTER_AREA)
 
             if self.mouse_tracker is not None:
                 if name == Previews.disparity_color.name:
@@ -362,11 +420,6 @@ class NNetManager:
             xin.setStreamName(self.input_name)
             xin.out.link(nn.input)
             setattr(nodes, self.input_name, xin)
-            # Send the video frame back to the host
-            nodes.xout_host = p.createXLinkOut()
-            nodes.xout_host.setStreamName(Previews.host.name)
-            xin.out.link(nodes.xout_host.input)
-
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
             nodes.manip = p.createImageManip()
             nodes.manip.initialConfig.setResize(*self.input_size)
@@ -389,9 +442,6 @@ class NNetManager:
             nn.setDepthLowerThreshold(minDepth)
             nn.setDepthUpperThreshold(maxDepth)
             nn.setBoundingBoxScaleFactor(sbbScaleFactor)
-            nodes.xout_sbb = p.createXLinkOut()
-            nodes.xout_sbb.setStreamName("sbb")
-            nn.boundingBoxMapping.link(nodes.xout_sbb.input)
 
         return nn
 
@@ -530,29 +580,24 @@ class FPSHandler:
         for name in self.ticks:
             print(f"[{name}]: {self.tick_fps(name):.1f}")
 
-    def draw_fps(self, source):
-        def draw(frame, name: str):
-            frame_fps = f"{name.upper()} FPS: {round(self.tick_fps(name), 1)}"
-            cv2.rectangle(frame, (0, 0), (120, 35), (255, 255, 255), cv2.FILLED)
-            cv2.putText(frame, frame_fps, (5, 15), self.fps_type, 0.4, self.fps_color)
+    def draw_fps(self, frame, name):
+        frame_fps = f"{name.upper()} FPS: {round(self.tick_fps(name), 1)}"
+        cv2.rectangle(frame, (0, 0), (120, 35), (255, 255, 255), cv2.FILLED)
+        cv2.putText(frame, frame_fps, (5, 15), self.fps_type, 0.4, self.fps_color)
 
-            if "nn" in self.ticks:
-                cv2.putText(frame, f"NN FPS:  {round(self.tick_fps('nn'), 1)}", (5, 30), self.fps_type, 0.5, self.fps_color)
-        if isinstance(source, PreviewManager):
-            for name, frame in source.frames.items():
-                draw(frame, name)
-        else:
-            draw(source, "host")
+        if "nn" in self.ticks:
+            cv2.putText(frame, f"NN FPS:  {round(self.tick_fps('nn'), 1)}", (5, 30), self.fps_type, 0.5, self.fps_color)
 
 
 class PipelineManager:
-    def __init__(self, openvino_version=None):
+    def __init__(self, openvino_version=None, lowBandwidth=False):
         self.p = dai.Pipeline()
         self.openvino_version=openvino_version
         if openvino_version is not None:
             self.p.setOpenVINOVersion(openvino_version)
         self.nodes = SimpleNamespace()
         self.depthConfig = dai.StereoDepthConfig()
+        self.lowBandwidth = lowBandwidth
 
     def set_nn_manager(self, nn_manager):
         self.nn_manager = nn_manager
@@ -567,7 +612,37 @@ class PipelineManager:
         for xin in filter(lambda node: isinstance(node, dai.XLinkIn), vars(self.nodes).values()):
             device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
 
-    def create_color_cam(self, preview_size, res, fps, full_fov, use_hq):
+    def mjpeg_link(self, node, xout, node_output):
+        print("Creating MJPEG link for {} node and {} xlink stream...".format(node.getName(), xout.getStreamName()))
+        videnc = self.p.createVideoEncoder()
+        if isinstance(node, dai.ColorCamera) or isinstance(node, dai.MonoCamera):
+            videnc.setDefaultProfilePreset(node.getResolutionWidth(), node.getResolutionHeight(), node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            node_output.link(videnc.input)
+        elif isinstance(node, dai.StereoDepth):
+            camera_node = getattr(self.nodes, 'mono_left', getattr(self.nodes, 'mono_right', None))
+            if camera_node is None:
+                raise RuntimeError("Unable to find mono camera node to determine frame size!")
+            videnc.setDefaultProfilePreset(camera_node.getResolutionWidth(), camera_node.getResolutionHeight(), camera_node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            node_output.link(videnc.input)
+        elif isinstance(node, dai.NeuralNetwork):
+            w, h = self.nn_manager.input_size
+            if w % 16 > 0:
+                new_w = w - (w % 16)
+                h = int((new_w / w) * h)
+                w = int(new_w)
+            if h % 2 > 0:
+                h -= 1
+            manip = self.p.createImageManip()
+            manip.initialConfig.setResize(w, h)
+
+            videnc.setDefaultProfilePreset(w, h, 30, dai.VideoEncoderProperties.Profile.MJPEG)
+            node_output.link(manip.inputImage)
+            manip.out.link(videnc.input)
+        else:
+            raise NotImplementedError("Unable to create mjpeg link for encountered node type: {}".format(type(node)))
+        videnc.bitstream.link(xout.input)
+
+    def create_color_cam(self, preview_size, res, fps, full_fov, xout=False):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
         self.nodes.cam_rgb.setPreviewSize(*preview_size)
@@ -577,10 +652,11 @@ class PipelineManager:
         self.nodes.cam_rgb.setPreviewKeepAspectRatio(not full_fov)
         self.nodes.xout_rgb = self.p.createXLinkOut()
         self.nodes.xout_rgb.setStreamName(Previews.color.name)
-        if use_hq:
-            self.nodes.cam_rgb.video.link(self.nodes.xout_rgb.input)
-        else:
-            self.nodes.cam_rgb.preview.link(self.nodes.xout_rgb.input)
+        if xout:
+            if self.lowBandwidth:
+                self.mjpeg_link(self.nodes.cam_rgb, self.nodes.xout_rgb, self.nodes.cam_rgb.video)
+            else:
+                self.nodes.cam_rgb.video.link(self.nodes.xout_rgb.input)
 
     def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
         self.nodes.stereo = self.p.createStereoDepth()
@@ -614,22 +690,35 @@ class PipelineManager:
         if useDepth:
             self.nodes.xout_depth = self.p.createXLinkOut()
             self.nodes.xout_depth.setStreamName(Previews.depth_raw.name)
-            self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
+            # if self.lowBandwidth:  TODO change once depth frame type (14) is supported by VideoEncoder
+            if False:
+                self.mjpeg_link(self.nodes.stereo, self.nodes.xout_depth, self.nodes.stereo.depth)
+            else:
+                self.nodes.stereo.depth.link(self.nodes.xout_depth.input)
 
         if useDisparity:
             self.nodes.xout_disparity = self.p.createXLinkOut()
             self.nodes.xout_disparity.setStreamName(Previews.disparity.name)
-            self.nodes.stereo.disparity.link(self.nodes.xout_disparity.input)
+            if self.lowBandwidth:
+                self.mjpeg_link(self.nodes.stereo, self.nodes.xout_disparity, self.nodes.stereo.disparity)
+            else:
+                self.nodes.stereo.disparity.link(self.nodes.xout_disparity.input)
 
         if useRectifiedLeft:
             self.nodes.xout_rect_left = self.p.createXLinkOut()
             self.nodes.xout_rect_left.setStreamName(Previews.rectified_left.name)
-            self.nodes.stereo.rectifiedLeft.link(self.nodes.xout_rect_left.input)
+            if self.lowBandwidth:
+                self.mjpeg_link(self.nodes.stereo, self.nodes.xout_rect_left, self.nodes.stereo.rectifiedLeft)
+            else:
+                self.nodes.stereo.rectifiedLeft.link(self.nodes.xout_rect_left.input)
 
         if useRectifiedRight:
             self.nodes.xout_rect_right = self.p.createXLinkOut()
             self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
-            self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
+            if self.lowBandwidth:
+                self.mjpeg_link(self.nodes.stereo, self.nodes.xout_rect_right, self.nodes.stereo.rectifiedRight)
+            else:
+                self.nodes.stereo.rectifiedRight.link(self.nodes.xout_rect_right.input)
 
     def update_depth_config(self, device, dct=None, sigma=None, median=None, lrc_threshold=None):
         if dct is not None:
@@ -644,7 +733,7 @@ class PipelineManager:
         device.getInputQueue("stereo_config").send(self.depthConfig)
 
 
-    def create_left_cam(self, res, fps):
+    def create_left_cam(self, res, fps, xout=False):
         self.nodes.mono_left = self.p.createMonoCamera()
         self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
         self.nodes.mono_left.setResolution(res)
@@ -652,9 +741,13 @@ class PipelineManager:
 
         self.nodes.xout_left = self.p.createXLinkOut()
         self.nodes.xout_left.setStreamName(Previews.left.name)
-        self.nodes.mono_left.out.link(self.nodes.xout_left.input)
+        if xout:
+            if self.lowBandwidth:
+                self.mjpeg_link(self.nodes.mono_left, self.nodes.xout_left, self.nodes.mono_left.out)
+            else:
+                self.nodes.mono_left.out.link(self.nodes.xout_left.input)
 
-    def create_right_cam(self, res, fps):
+    def create_right_cam(self, res, fps, xout=False):
         self.nodes.mono_right = self.p.createMonoCamera()
         self.nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         self.nodes.mono_right.setResolution(res)
@@ -662,12 +755,26 @@ class PipelineManager:
 
         self.nodes.xout_right = self.p.createXLinkOut()
         self.nodes.xout_right.setStreamName(Previews.right.name)
-        self.nodes.mono_right.out.link(self.nodes.xout_right.input)
+        if xout:
+            if self.lowBandwidth:
+                self.mjpeg_link(self.nodes.mono_right, self.nodes.xout_right, self.nodes.mono_right.out)
+            else:
+                self.nodes.mono_right.out.link(self.nodes.xout_right.input)
 
-    def create_nn(self, nn, sync):
-        self.nodes.xout_nn_input = self.p.createXLinkOut()
-        self.nodes.xout_nn_input.setStreamName(Previews.nn_input.name)
-        nn.passthrough.link(self.nodes.xout_nn_input.input)
+    def create_nn(self, nn, sync, xout_nn_input=False, xout_sbb=False):
+        if xout_nn_input:
+            self.nodes.xout_nn_input = self.p.createXLinkOut()
+            self.nodes.xout_nn_input.setStreamName(Previews.nn_input.name)
+            # if self.lowBandwidth: TODO change once passthrough frame type (8) is supported by VideoEncoder
+            if False:
+                self.mjpeg_link(nn, self.nodes.xout_nn_input, nn.passthrough)
+            else:
+                nn.passthrough.link(self.nodes.xout_nn_input.input)
+
+        if xout_sbb and self.nn_manager.nn_family in ("YOLO", "mobilenet"):
+            self.nodes.xout_sbb = self.p.createXLinkOut()
+            self.nodes.xout_sbb.setStreamName("sbb")
+            nn.boundingBoxMapping.link(self.nodes.xout_sbb.input)
 
         if sync:
             if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
@@ -700,6 +807,10 @@ class PipelineManager:
         self.nodes.xout_system_logger = self.p.createXLinkOut()
         self.nodes.xout_system_logger.setStreamName("system_logger")
         self.nodes.system_logger.out.link(self.nodes.xout_system_logger.input)
+
+    def enableLowBandwidth(self):
+        self.lowBandwidth = True
+
 
 
 class EncodingManager:
