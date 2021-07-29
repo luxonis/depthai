@@ -725,7 +725,7 @@ class EncodingManager:
         if camera_name == Previews.color.name:
             if not hasattr(self.pm.nodes, 'cam_rgb'):
                 raise RuntimeError("RGB camera not initialized. Call create_color_cam(res, fps) first!")
-            enc_resolution = (self.pm.nodes.cam_rgb.getResolutionWidth(), self.pm.nodes.pm.cam_rgb.getResolutionHeight())
+            enc_resolution = (self.pm.nodes.cam_rgb.getVideoWidth(), self.pm.nodes.cam_rgb.getVideoHeight())
             enc_profile = dai.VideoEncoderProperties.Profile.H265_MAIN
             enc_in = self.pm.nodes.cam_rgb.video
 
