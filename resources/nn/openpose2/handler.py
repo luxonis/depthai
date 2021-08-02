@@ -164,7 +164,7 @@ def draw(nn_manager, keypoints_limbs, frames):
         def scale(point):
             return int(point[0] * factor_w), int(point[1] * factor_h)
 
-        if name == nn_manager.source and len(keypoints_limbs) == 3:
+        if len(keypoints_limbs) == 3:
             detected_keypoints = keypoints_limbs[0]
             personwiseKeypoints = keypoints_limbs[1]
             keypoints_list = keypoints_limbs[2]
