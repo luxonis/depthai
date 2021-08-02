@@ -29,7 +29,6 @@ conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
 if not conf.useCamera and str(conf.args.video).startswith('https'):
     conf.downloadYTVideo()
-conf.adjustPreviewToOptions()
 
 callbacks = load_module(conf.args.callback)
 rgb_res = conf.getRgbResolution()
@@ -132,6 +131,7 @@ if conf.useNN:
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
     conf.adjustParamsToDevice(device)
+    conf.adjustPreviewToOptions()
     if conf.lowBandwidth:
         pm.enableLowBandwidth()
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
