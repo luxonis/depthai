@@ -302,7 +302,8 @@ class PreviewManager:
                     value = self.mouse_tracker.values.get(name)
                 if point is not None:
                     cv2.circle(frame, point, 3, (255, 255, 255), -1)
-                    cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255))
+                    cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4, cv2.LINE_AA)
+                    cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
             return_frame = callback(frame, name)  # Can be None, can be other frame e.g. after copy()
             cv2.imshow(name, return_frame if return_frame is not None else frame)
 
@@ -326,7 +327,9 @@ class NNetManager:
     output_format = "raw"
     blob_path = None
     count_label = None
+    text_bg_color = (0, 0, 0)
     text_color = (255, 255, 255)
+    line_type = cv2.LINE_AA
     text_type = cv2.FONT_HERSHEY_SIMPLEX
     bbox_color = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
 
@@ -478,8 +481,8 @@ class NNetManager:
 
     def draw_count(self, source, decoded_data):
         def draw_cnt(frame, cnt):
-            cv2.rectangle(frame, (0, 35), (120, 50), (255, 255, 255), cv2.FILLED)
-            cv2.putText(frame, f"{self.count_label}: {cnt}", (5, 46), self.text_type, 0.5, self.text_color)
+            cv2.putText(frame, f"{self.count_label}: {cnt}", (5, 46), self.text_type, 0.5, self.text_bg_color, 4, self.line_type)
+            cv2.putText(frame, f"{self.count_label}: {cnt}", (5, 46), self.text_type, 0.5, self.text_color, 1, self.line_type)
 
         # Count the number of detected objects
         cnt_list = list(filter(lambda x: self.get_label_text(x.label) == self.count_label, decoded_data))
@@ -495,22 +498,28 @@ class NNetManager:
                 bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
                 bbox[::2] += self.cropOffsetX(frame)
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), self.bbox_color[detection.label], 2)
-                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 98), bbox[1]), self.bbox_color[detection.label], cv2.FILLED)
+                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 110), bbox[1]), self.bbox_color[detection.label], cv2.FILLED)
                 cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
-                            self.text_type, 0.5, (0, 0, 0))
-                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 58, bbox[1] - 10),
-                            self.text_type, 0.5, (0, 0, 0))
+                            self.text_type, 0.5, (0, 0, 0), 1, self.line_type)
+                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 62, bbox[1] - 10),
+                            self.text_type, 0.5, (0, 0, 0), 1, self.line_type)
 
                 if hasattr(detection, 'spatialCoordinates'):  # Display spatial coordinates as well
                     x_meters = detection.spatialCoordinates.x / 1000
                     y_meters = detection.spatialCoordinates.y / 1000
                     z_meters = detection.spatialCoordinates.z / 1000
                     cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
-                                self.text_type, 0.5, self.text_color)
+                                self.text_type, 0.5, self.text_bg_color, 4, self.line_type)
+                    cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
+                                self.text_type, 0.5, self.text_color, 1, self.line_type)
                     cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
-                                self.text_type, 0.5, self.text_color)
+                                self.text_type, 0.5, self.text_bg_color, 4, self.line_type)
+                    cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
+                                self.text_type, 0.5, self.text_color, 1, self.line_type)
                     cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 90),
-                                self.text_type, 0.5, self.text_color)
+                                self.text_type, 0.5, self.text_bg_color, 4, self.line_type)
+                    cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 90),
+                                self.text_type, 0.5, self.text_color, 1, self.line_type)
             for detection in decoded_data:
                 if isinstance(source, PreviewManager):
                     for frame in source.frames.values():
@@ -530,8 +539,10 @@ class NNetManager:
 
 
 class FPSHandler:
-    fps_color = (134, 164, 11)
+    fps_bg_color = (0, 0, 0)
+    fps_color = (255, 255, 255)
     fps_type = cv2.FONT_HERSHEY_SIMPLEX
+    fps_line_type = cv2.LINE_AA
 
     def __init__(self, cap=None):
         self.timestamp = time.monotonic()
@@ -582,11 +593,13 @@ class FPSHandler:
 
     def draw_fps(self, frame, name):
         frame_fps = f"{name.upper()} FPS: {round(self.tick_fps(name), 1)}"
-        cv2.rectangle(frame, (0, 0), (120, 35), (255, 255, 255), cv2.FILLED)
-        cv2.putText(frame, frame_fps, (5, 15), self.fps_type, 0.4, self.fps_color)
+        # cv2.rectangle(frame, (0, 0), (120, 35), (255, 255, 255), cv2.FILLED)
+        cv2.putText(frame, frame_fps, (5, 15), self.fps_type, 0.5, self.fps_bg_color, 4, self.fps_line_type)
+        cv2.putText(frame, frame_fps, (5, 15), self.fps_type, 0.5, self.fps_color, 1, self.fps_line_type)
 
         if "nn" in self.ticks:
-            cv2.putText(frame, f"NN FPS:  {round(self.tick_fps('nn'), 1)}", (5, 30), self.fps_type, 0.5, self.fps_color)
+            cv2.putText(frame, f"NN FPS:  {round(self.tick_fps('nn'), 1)}", (5, 30), self.fps_type, 0.5, self.fps_bg_color, 4, self.fps_line_type)
+            cv2.putText(frame, f"NN FPS:  {round(self.tick_fps('nn'), 1)}", (5, 30), self.fps_type, 0.5, self.fps_color, 1, self.fps_line_type)
 
 
 class PipelineManager:

@@ -278,9 +278,8 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                             "fontScale": 0.4,
                             "thickness": 1
                         }
-                        text_w = cv2.getTextSize(text, **text_config)[0][0]
-                        cv2.rectangle(frame, (0, h - 30), (text_w + 20, h), (255, 255, 255), cv2.FILLED)
-                        cv2.putText(frame, text, (10, h - 10), color=fps.fps_color, **text_config)
+                        cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_bg_color, 4, fps.fps_line_type)
+                        cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_color, 1, fps.fps_line_type)
                         return_frame = callbacks.on_show_frame(frame, name)
                         return return_frame if return_frame is not None else frame
                 pv.show_frames(callback=show_frames_callback)
