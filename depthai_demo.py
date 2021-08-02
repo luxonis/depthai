@@ -138,7 +138,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
     if conf.useCamera or conf.args.sync:
-        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), dispMultiplier=dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth)
+        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), dispMultiplier=dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth, scale=conf.args.scale)
 
         if conf.leftCameraEnabled:
             pm.create_left_cam(mono_res, conf.args.mono_fps, xout=Previews.left.name in conf.args.show)
@@ -283,7 +283,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                         cv2.putText(frame, text, (10, h - 10), color=fps.fps_color, **text_config)
                         return_frame = callbacks.on_show_frame(frame, name)
                         return return_frame if return_frame is not None else frame
-                pv.show_frames(scale=conf.args.scale, callback=show_frames_callback)
+                pv.show_frames(callback=show_frames_callback)
             else:
                 if conf.useNN:
                     nn_manager.draw(host_frame, nn_data)

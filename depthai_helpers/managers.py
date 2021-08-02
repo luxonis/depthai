@@ -208,7 +208,7 @@ class MouseClickTracker:
 
 
 class PreviewManager:
-    def __init__(self, fps, display, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False):
+    def __init__(self, fps, display, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None):
         self.display = display
         self.frames = {}
         self.raw_frames = {}
@@ -217,6 +217,7 @@ class PreviewManager:
         self.lowBandwidth = lowBandwidth
         self.dispMultiplier = dispMultiplier
         self.mouse_tracker = MouseClickTracker() if mouseTracker else None
+        self.scale = scale
 
     def create_queues(self, device, callback=lambda *a, **k: None):
         if dai.CameraBoardSocket.LEFT in device.getConnectedCameras():
@@ -261,6 +262,9 @@ class PreviewManager:
                 frame = getattr(Previews, queue.getName()).value(packet, self)
                 if frame is None:
                     raise RuntimeError("Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
+                if self.scale is not None and queue.getName() in self.scale:
+                    h, w, _ = frame.shape
+                    frame = cv2.resize(frame, (int(w * self.scale[queue.getName()]), int(h * self.scale[queue.getName()])), interpolation=cv2.INTER_AREA)
                 if queue.getName() in self.display:
                     callback(frame, queue.getName())
                     self.raw_frames[queue.getName()] = frame
@@ -284,12 +288,8 @@ class PreviewManager:
                     new_frame = cv2.normalize(new_frame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
                 self.frames[name] = new_frame
 
-    def show_frames(self, scale:dict=None, callback=lambda *a, **k: None):
+    def show_frames(self, callback=lambda *a, **k: None):
         for name, frame in self.frames.items():
-            if scale is not None and name in scale:
-                h, w, _ = frame.shape
-                frame = cv2.resize(frame, (int(w * scale[name]), int(h * scale[name])), interpolation=cv2.INTER_AREA)
-
             if self.mouse_tracker is not None:
                 if name == Previews.disparity_color.name:
                     point = self.mouse_tracker.points.get(Previews.disparity.name)
