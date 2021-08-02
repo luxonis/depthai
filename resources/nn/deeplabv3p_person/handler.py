@@ -19,4 +19,4 @@ def draw(nn_manager, data, frames):
 
     for name, frame in frames:
         if name == nn_manager.source:
-            cv2.addWeighted(frame, 1, data, 0.2, 0, frame)
+            cv2.addWeighted(frame, 1, cv2.resize(data, frame.shape[0:2][::-1]), 0.2, 0, frame)
