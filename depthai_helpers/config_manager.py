@@ -202,8 +202,11 @@ class ConfigManager:
             self.args.show.append("left")
         if self.args.camera == "right" and "right" not in self.args.show:
             self.args.show.append("right")
-        if self.useDepth and "depth" not in self.args.show:
-            self.args.show.append("depth")
+        if self.useDepth:
+            if self.lowBandwidth and "disparity_color" not in self.args.show:
+                self.args.show.append("disparity_color")
+            elif not self.lowBandwidth and "depth" not in self.args.show:
+                self.args.show.append("depth")
 
     def adjustParamsToDevice(self, device):
         device_info = device.getDeviceInfo()

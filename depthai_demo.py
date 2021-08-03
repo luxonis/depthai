@@ -29,7 +29,6 @@ conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
 if not conf.useCamera and str(conf.args.video).startswith('https'):
     conf.downloadYTVideo()
-conf.adjustPreviewToOptions()
 
 callbacks = load_module(conf.args.callback)
 rgb_res = conf.getRgbResolution()
@@ -132,13 +131,14 @@ if conf.useNN:
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
     conf.adjustParamsToDevice(device)
+    conf.adjustPreviewToOptions()
     if conf.lowBandwidth:
         pm.enableLowBandwidth()
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
     if conf.useCamera or conf.args.sync:
-        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), dispMultiplier=dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth)
+        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), dispMultiplier=dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth, scale=conf.args.scale)
 
         if conf.leftCameraEnabled:
             pm.create_left_cam(mono_res, conf.args.mono_fps, xout=Previews.left.name in conf.args.show)
@@ -278,12 +278,11 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                             "fontScale": 0.4,
                             "thickness": 1
                         }
-                        text_w = cv2.getTextSize(text, **text_config)[0][0]
-                        cv2.rectangle(frame, (0, h - 30), (text_w + 20, h), (255, 255, 255), cv2.FILLED)
-                        cv2.putText(frame, text, (10, h - 10), color=fps.fps_color, **text_config)
+                        cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_bg_color, 4, fps.fps_line_type)
+                        cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_color, 1, fps.fps_line_type)
                         return_frame = callbacks.on_show_frame(frame, name)
                         return return_frame if return_frame is not None else frame
-                pv.show_frames(scale=conf.args.scale, callback=show_frames_callback)
+                pv.show_frames(callback=show_frames_callback)
             else:
                 if conf.useNN:
                     nn_manager.draw(host_frame, nn_data)
