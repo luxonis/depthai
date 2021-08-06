@@ -158,14 +158,20 @@ def decode(nn_manager, packet):
 
 def draw(nn_manager, keypoints_limbs, frames):
     for name, frame in frames:
-        if name == nn_manager.source and len(keypoints_limbs) == 3:
+        factor_w = frame.shape[1] / nn_manager.input_size[0]
+        factor_h = frame.shape[0] / nn_manager.input_size[1]
+
+        def scale(point):
+            return int(point[0] * factor_w), int(point[1] * factor_h)
+
+        if len(keypoints_limbs) == 3:
             detected_keypoints = keypoints_limbs[0]
             personwiseKeypoints = keypoints_limbs[1]
             keypoints_list = keypoints_limbs[2]
 
             for i in range(nPoints):
                 for j in range(len(detected_keypoints[i])):
-                    cv2.circle(frame, detected_keypoints[i][j][0:2], 5, colors[i], -1, cv2.LINE_AA)
+                    cv2.circle(frame, scale(detected_keypoints[i][j][0:2]), 5, colors[i], -1, cv2.LINE_AA)
             for i in range(17):
                 for n in range(len(personwiseKeypoints)):
                     index = personwiseKeypoints[n][np.array(POSE_PAIRS[i])]
@@ -173,5 +179,5 @@ def draw(nn_manager, keypoints_limbs, frames):
                         continue
                     B = np.int32(keypoints_list[index.astype(int), 0])
                     A = np.int32(keypoints_list[index.astype(int), 1])
-                    cv2.line(frame, (B[0], A[0]), (B[1], A[1]), colors[i], 3, cv2.LINE_AA)
+                    cv2.line(frame, scale((B[0], A[0])), scale((B[1], A[1])), colors[i], 3, cv2.LINE_AA)
 

@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+from depthai_helpers.managers import Previews
 from depthai_helpers.utils import to_tensor_result
 
 
@@ -18,5 +19,5 @@ def draw(nn_manager, data, frames):
         return
 
     for name, frame in frames:
-        if name == nn_manager.source:
-            cv2.addWeighted(frame, 1, data, 0.2, 0, frame)
+        if name in (Previews.color.name, Previews.nn_input.name):
+            cv2.addWeighted(frame, 1, cv2.resize(data, frame.shape[0:2][::-1]), 0.2, 0, frame)
