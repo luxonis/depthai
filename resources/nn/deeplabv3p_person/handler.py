@@ -20,4 +20,10 @@ def draw(nn_manager, data, frames):
 
     for name, frame in frames:
         if name in (Previews.color.name, Previews.nn_input.name):
-            cv2.addWeighted(frame, 1, cv2.resize(data, frame.shape[0:2][::-1]), 0.2, 0, frame)
+            scale_factor = frame.shape[0] / nn_manager.input_size[1]
+            resize_w = int(nn_manager.input_size[0] * scale_factor)
+            resized = cv2.resize(data, (resize_w, frame.shape[0])).astype(data.dtype)
+            offset_w = int(frame.shape[1] - nn_manager.input_size[0] * scale_factor) // 2
+            tail_w = frame.shape[1] - offset_w - resize_w
+            stacked = np.hstack((np.zeros((frame.shape[0], offset_w, 3)).astype(resized.dtype), resized, np.zeros((frame.shape[0], tail_w, 3)).astype(resized.dtype)))
+            cv2.addWeighted(frame, 1, stacked, 0.2, 0, frame)

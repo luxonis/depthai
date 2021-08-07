@@ -158,11 +158,11 @@ def decode(nn_manager, packet):
 
 def draw(nn_manager, keypoints_limbs, frames):
     for name, frame in frames:
-        factor_w = frame.shape[1] / nn_manager.input_size[0]
-        factor_h = frame.shape[0] / nn_manager.input_size[1]
+        scale_factor = frame.shape[0] / nn_manager.input_size[1]
+        offset_w = int(frame.shape[1] - nn_manager.input_size[0] * scale_factor) // 2
 
         def scale(point):
-            return int(point[0] * factor_w), int(point[1] * factor_h)
+            return int(point[0] * scale_factor) + offset_w, int(point[1] * scale_factor)
 
         if len(keypoints_limbs) == 3:
             detected_keypoints = keypoints_limbs[0]
