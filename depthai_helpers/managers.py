@@ -141,7 +141,7 @@ class PreviewDecoder:
         if dispScaleFactor is None:
             baseline = getattr(manager, 'baseline', 75)  # mm
             fov = getattr(manager, 'fov', 71.86)
-            focal = getattr(manager, 'focal', depth_raw.shapesin[1] / (2. * math.tan(math.radians(fov / 2))))
+            focal = getattr(manager, 'focal', depth_raw.shape[1] / (2. * math.tan(math.radians(fov / 2))))
             dispScaleFactor = baseline * focal
             if manager is not None:
                 setattr(manager, "dispScaleFactor", dispScaleFactor)
