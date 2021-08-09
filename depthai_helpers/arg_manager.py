@@ -75,7 +75,7 @@ def parse_args():
                         help="Disparity confidence threshold, used for depth measurement. Default: %(default)s")
     parser.add_argument("-lrct", "--lrc_threshold", default=4, type=check_range(0, 10),
                         help="Left right check threshold, used for depth measurement. Default: %(default)s")
-    parser.add_argument("-sig", "--sigma", default=0, type=check_range(0, 65535),
+    parser.add_argument("-sig", "--sigma", default=0, type=check_range(0, 250),
                         help="Sigma value for Bilateral Filter applied on depth. Default: %(default)s")
     parser.add_argument("-med", "--stereo_median_size", default=7, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
