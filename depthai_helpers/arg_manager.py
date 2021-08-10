@@ -63,8 +63,7 @@ def parse_args():
     parser.add_argument('-cnnp', '--cnn_path', type=Path, help="Path to cnn model directory to be run")
     parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str,
                         help="Cnn model to run on DepthAI")
-    parser.add_argument('-sh', '--shaves', default=13, type=int,
-                        help="Name of the nn to be run from default depthai repository")
+    parser.add_argument('-sh', '--shaves', type=int, help="Number of MyriadX SHAVEs to use for neural network blob compilation")
     parser.add_argument('-cnn_size', '--cnn_input_size', default=None, type=str,
                         help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
     parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],

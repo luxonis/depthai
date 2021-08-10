@@ -168,7 +168,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
         pm.create_system_logger()
 
     if conf.useNN:
-        nn_pipeline = nn_manager.create_nn_pipeline(pm.p, pm.nodes, shaves=conf.args.shaves, use_depth=conf.useDepth,
+        nn_pipeline = nn_manager.create_nn_pipeline(pm.p, pm.nodes, shaves=conf.shaves, use_depth=conf.useDepth,
                                                     use_sbb=conf.args.spatial_bounding_box and conf.useDepth,
                                                     minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth,
                                                     sbbScaleFactor=conf.args.sbb_scale_factor)
