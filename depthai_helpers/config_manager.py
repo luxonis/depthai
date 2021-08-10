@@ -314,8 +314,17 @@ class ConfigManager:
     @property
     def previewSize(self):
         return self.inputSize or (576, 324)
+
     @property
     def lowBandwidth(self):
         return self.args.low_bandwidth
+
+    @property
+    def shaves(self):
+        if self.args.shaves is not None:
+            return self.args.shaves
+        if self.args.rgb_resolution > 1080:
+            return 5
+        return 6
 
 
