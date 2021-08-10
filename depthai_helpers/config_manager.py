@@ -29,7 +29,10 @@ class ConfigManager:
     def __init__(self, args):
         self.args = args
         self.args.encode = dict(self.args.encode)
-        self.args.scale = dict(self.args.scale)
+        if self.args.scale is None:
+            self.args.scale = {"color": 0.37 if not self.args.sync else 1}
+        else:
+            self.args.scale = dict(self.args.scale)
 
     @property
     def debug(self):
@@ -326,5 +329,10 @@ class ConfigManager:
         if self.args.rgb_resolution > 1080:
             return 5
         return 6
+
+    @property
+    def dispMultiplier(self):
+        val = 255 / self.maxDisparity
+        return val
 
 

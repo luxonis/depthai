@@ -86,7 +86,7 @@ def parse_args():
                         help="Enable stereo 'Subpixel' feature.")
     parser.add_argument("-ff", "--full_fov_nn", default=False, action="store_true",
                         help="Full RGB FOV for NN, not keeping the aspect ratio")
-    parser.add_argument('-scale', '--scale', type=_coma_separated(default=0.5, cast=float), nargs="+", default=[("color", 0.37)],
+    parser.add_argument('-scale', '--scale', type=_coma_separated(default=0.5, cast=float), nargs="+",
                         help="Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5 \n"
                              "Format: preview_name or preview_name,scale_factor \n"
                              "Example: -scale color \n"

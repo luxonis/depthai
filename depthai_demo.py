@@ -35,9 +35,6 @@ rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
 
 
-dispMultiplier = 255 / conf.maxDisparity
-
-
 if conf.args.report_file:
     report_file_p = Path(conf.args.report_file).with_suffix('.csv')
     report_file_p.parent.mkdir(parents=True, exist_ok=True)
@@ -138,7 +135,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
     if conf.useCamera or conf.args.sync:
-        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), dispMultiplier=dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth, scale=conf.args.scale)
+        pv = PreviewManager(fps, display=conf.args.show, nn_source=conf.getModelSource(), colorMap=conf.getColorMap(), dispMultiplier=conf.dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth, scale=conf.args.scale)
 
         if conf.leftCameraEnabled:
             pm.create_left_cam(mono_res, conf.args.mono_fps, xout=Previews.left.name in conf.args.show)

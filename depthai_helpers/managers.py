@@ -88,9 +88,12 @@ class PreviewDecoder:
     def nn_input(packet, manager=None):
         # if manager is not None and manager.lowBandwidth: TODO change once passthrough frame type (8) is supported by VideoEncoder
         if False:
-            return cv2.imdecode(packet.getData(), cv2.IMREAD_COLOR)
+            frame = cv2.imdecode(packet.getData(), cv2.IMREAD_COLOR)
         else:
-            return packet.getCvFrame()
+            frame = packet.getCvFrame()
+        if hasattr(manager, "nn_source") and manager.nn_source in (Previews.rectified_left.name, Previews.rectified_right.name):
+            frame = cv2.flip(frame, 1)
+        return frame
 
     @staticmethod
     def color(packet, manager=None):
@@ -145,6 +148,7 @@ class PreviewDecoder:
             dispScaleFactor = baseline * focal
             if manager is not None:
                 setattr(manager, "dispScaleFactor", dispScaleFactor)
+
         with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
             disp_frame = dispScaleFactor / depth_raw
         disp_frame = (disp_frame * manager.dispMultiplier).astype(np.uint8)
@@ -199,18 +203,21 @@ class MouseClickTracker:
                 self.values[name] = "{}mm".format(frame[point[1]][point[0]])
             elif name in (Previews.disparity_color.name, Previews.disparity.name):
                 self.values[name] = "{}px".format(frame[point[1]][point[0]])
-            elif frame.shape[2] == 3:
+            elif len(frame.shape) == 3:
                 self.values[name] = "R:{},G:{},B:{}".format(*frame[point[1]][point[0]][::-1])
+            elif len(frame.shape) == 2:
+                self.values[name] = "Gray:{}".format(frame[point[1]][point[0]])
             else:
                 self.values[name] = str(frame[point[1]][point[0]])
 
 
 class PreviewManager:
-    def __init__(self, fps, display, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None):
+    def __init__(self, fps, display, nn_source, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None):
         self.display = display
         self.frames = {}
         self.raw_frames = {}
         self.fps = fps
+        self.nn_source = nn_source
         self.colorMap = colorMap
         self.lowBandwidth = lowBandwidth
         self.dispMultiplier = dispMultiplier
@@ -256,7 +263,7 @@ class PreviewManager:
                 if frame is None:
                     raise RuntimeError("Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
                 if self.scale is not None and queue.getName() in self.scale:
-                    h, w, _ = frame.shape
+                    h, w = frame.shape[0:2]
                     frame = cv2.resize(frame, (int(w * self.scale[queue.getName()]), int(h * self.scale[queue.getName()])), interpolation=cv2.INTER_AREA)
                 if queue.getName() in self.display:
                     callback(frame, queue.getName())
@@ -367,15 +374,15 @@ class NNetManager:
 
     def normFrame(self, frame):
         if not self.full_fov:
-            h = frame.shape[0]
-            return np.zeros((h, h))
+            scale_f = frame.shape[0] / self.input_size[1]
+            return np.zeros((int(self.input_size[1] * scale_f), int(self.input_size[0] * scale_f)))
         else:
             return frame
 
     def cropOffsetX(self, frame):
         if not self.full_fov:
-            h, w = frame.shape[:2]
-            return (w - h) // 2
+            cropped_w = (frame.shape[0] / self.input_size[1]) * self.input_size[0]
+            return int((frame.shape[1] - cropped_w) // 2)
         else:
             return 0
 
@@ -486,9 +493,10 @@ class NNetManager:
 
     def draw(self, source, decoded_data):
         if self.output_format == "detection":
-            def draw_detection(frame, detection):
+            def draw_detection(frame, name, detection):
                 bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
-                bbox[::2] += self.cropOffsetX(frame)
+                if name == Previews.color.name:
+                    bbox[::2] += self.cropOffsetX(frame)
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), self.bbox_color[detection.label], 2)
                 cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 110), bbox[1]), self.bbox_color[detection.label], cv2.FILLED)
                 cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
@@ -514,8 +522,8 @@ class NNetManager:
                                 self.text_type, 0.5, self.text_color, 1, self.line_type)
             for detection in decoded_data:
                 if isinstance(source, PreviewManager):
-                    for frame in source.frames.values():
-                        draw_detection(frame, detection)
+                    for name, frame in source.frames.items():
+                        draw_detection(frame, name, detection)
                 else:
                     draw_detection(source, detection)
 
@@ -783,27 +791,48 @@ class PipelineManager:
 
         if sync:
             if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
-                self.nodes.cam_rgb.video.unlink(self.nodes.xout_rgb.input)
-                self.nodes.cam_rgb.preview.unlink(self.nodes.xout_rgb.input)
+                try:
+                    self.nodes.cam_rgb.video.unlink(self.nodes.xout_rgb.input)
+                    self.nodes.cam_rgb.preview.unlink(self.nodes.xout_rgb.input)
+                except RuntimeError:
+                    pass # unlink throws RuntimeError if unlinking when not linked
                 nn.passthrough.link(self.nodes.xout_rgb.input)
             elif self.nn_manager.source == "host" and hasattr(self.nodes, "xout_host"):
-                getattr(self.nodes, self.nn_manager.input_name).out.unlink(self.nodes.xout_host.input)
+                try:
+                    getattr(self.nodes, self.nn_manager.input_name).out.unlink(self.nodes.xout_host.input)
+                except RuntimeError:
+                    pass # unlink throws RuntimeError if unlinking when not linked
                 nn.passthrough.link(self.nodes.xout_host.input)
             elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
-                self.nodes.mono_left.out.unlink(self.nodes.xout_left.input)
+                try:
+                    self.nodes.mono_left.out.unlink(self.nodes.xout_left.input)
+                except RuntimeError:
+                    pass # unlink throws RuntimeError if unlinking when not linked
                 nn.passthrough.link(self.nodes.xout_left.input)
             elif self.nn_manager.source == "right" and hasattr(self.nodes, "right"):
-                self.nodes.mono_right.out.unlink(self.nodes.xout_right.input)
+                try:
+                    self.nodes.mono_right.out.unlink(self.nodes.xout_right.input)
+                except RuntimeError:
+                    pass # unlink throws RuntimeError if unlinking when not linked
                 nn.passthrough.link(self.nodes.xout_right.input)
             elif self.nn_manager.source == "rectified_left" and hasattr(self.nodes, "rectified_left"):
-                self.nodes.stereo.rectifiedLeft.unlink(self.nodes.xout_rect_left.input)
+                try:
+                    self.nodes.stereo.rectifiedLeft.unlink(self.nodes.xout_rect_left.input)
+                except RuntimeError:
+                    pass # unlink throws RuntimeError if unlinking when not linked
                 nn.passthrough.link(self.nodes.xout_rect_left.input)
             elif self.nn_manager.source == "rectified_right" and hasattr(self.nodes, "rectified_right"):
-                self.nodes.stereo.rectifiedRight.unlink(self.nodes.xout_rect_right.input)
+                try:
+                    self.nodes.stereo.rectifiedRight.unlink(self.nodes.xout_rect_right.input)
+                except RuntimeError:
+                    pass # unlink throws RuntimeError if unlinking when not linked
                 nn.passthrough.link(self.nodes.xout_rect_right.input)
 
             if hasattr(self.nodes, 'xout_depth'):
-                self.nodes.stereo.depth.unlink(self.nodes.xout_depth.input)
+                try:
+                    self.nodes.stereo.depth.unlink(self.nodes.xout_depth.input)
+                except RuntimeError:
+                    pass # unlink throws RuntimeError if unlinking when not linked
                 nn.passthroughDepth.link(self.nodes.xout_depth.input)
 
     def create_system_logger(self):
