@@ -28,7 +28,7 @@ def show_info_frame():
     cv2.imshow("info", info_frame)
 
 
-demo_call = [sys.executable, str((Path(__file__).parent.parent / "depthai_demo.py").absolute()), "-dev", "14442C10A182BFD200"]
+demo_call = [sys.executable, str((Path(__file__).parent.parent / "depthai_demo.py").absolute())]
 
 
 def show_test_def(*texts):
@@ -250,59 +250,59 @@ def test_nn_models():
 
 
 def test_depth():
-    show_test_def("All depth previews", "You should see depth, depth_raw, disparity and ", "disparity_color output streams")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color"])
-    success = wait_for_result()
-    if not success:
-        raise RuntimeError("All depth previews test failed!")
-
-    show_test_def("Color map", "You should see depth and disparity_color outputs", "with different color map (HOT - mostly red)")
-    subprocess.check_call([*demo_call, "-s", "depth", "disparity_color", "-cm", "HOT"])
-    success = wait_for_result()
-    if not success:
-        raise RuntimeError("Color map test failed!")
-
-    show_test_def("Bilateral filter", "You should see depth and depth_raw outputs", "with Bilateral filter enabled (sigma 250)")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sig", "250"])
-    success = wait_for_result()
-    if not success:
-        raise RuntimeError("Bilateral filter test failed!")
-
-    show_test_def("Min/Max depth", "You should see depth and depth_raw outputs", "set with min/max depth range to 1/3 meters")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-mind", "1000", "-maxd", "3000"])
-    success = wait_for_result()
-    if not success:
-        raise RuntimeError("Min/Max depth test failed!")
-
-    show_test_def("Subpixel", "You should see depth and depth_raw output streams", "with subpixel filtering enabled")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sub", "-dnn"])
-    success = wait_for_result()
-    if not success:
-        raise RuntimeError("Subpixel test failed!")
-
-    show_test_def("Extended disparity", "You should see disparity_color, disparity, depth_raw and", "depth output streams with extended disparity enabled")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-ext", "-dnn"])
-    success = wait_for_result()
-    if not success:
-        raise RuntimeError("Extended disparity test failed!")
-
-    show_test_def("Left/Right Check", "You should see depth, depth_raw, disparity and", "disparity_color output streams with left/right check enabled")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-lrc", "-dnn"])
-    success = wait_for_result()
-    if not success:
-        raise RuntimeError("Left/Right Check test failed!")
-
-    show_test_def("Median Filter 3x3", "You should see disparity_color, disparity, depth_raw and", "depth output streams with median filter 3x3 enabled")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-med", "3", "-dnn"])
-    success = wait_for_result()
-    if not success:
-        raise RuntimeError("Median Filter 3x3 test failed!")
-
-    show_test_def("Small confidence threshold", "You should see disparity_color, disparity, depth_raw and", "depth output streams with lower (220) confidence threshold")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-dct", "220", "-dnn"])
-    success = wait_for_result()
-    if not success:
-        raise RuntimeError("Small confidence threshold test failed!")
+    # show_test_def("All depth previews", "You should see depth, depth_raw, disparity and ", "disparity_color output streams")
+    # subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color"])
+    # success = wait_for_result()
+    # if not success:
+    #     raise RuntimeError("All depth previews test failed!")
+    #
+    # show_test_def("Color map", "You should see depth and disparity_color outputs", "with different color map (HOT - mostly red)")
+    # subprocess.check_call([*demo_call, "-s", "depth", "disparity_color", "-cm", "HOT"])
+    # success = wait_for_result()
+    # if not success:
+    #     raise RuntimeError("Color map test failed!")
+    #
+    # show_test_def("Bilateral filter", "You should see depth and depth_raw outputs", "with Bilateral filter enabled (sigma 250)")
+    # subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sig", "250"])
+    # success = wait_for_result()
+    # if not success:
+    #     raise RuntimeError("Bilateral filter test failed!")
+    #
+    # show_test_def("Min/Max depth", "You should see depth and depth_raw outputs", "set with min/max depth range to 1/3 meters")
+    # subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-mind", "1000", "-maxd", "3000"])
+    # success = wait_for_result()
+    # if not success:
+    #     raise RuntimeError("Min/Max depth test failed!")
+    #
+    # show_test_def("Subpixel", "You should see depth and depth_raw output streams", "with subpixel filtering enabled")
+    # subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sub", "-dnn"])
+    # success = wait_for_result()
+    # if not success:
+    #     raise RuntimeError("Subpixel test failed!")
+    #
+    # show_test_def("Extended disparity", "You should see disparity_color, disparity, depth_raw and", "depth output streams with extended disparity enabled")
+    # subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-ext", "-dnn"])
+    # success = wait_for_result()
+    # if not success:
+    #     raise RuntimeError("Extended disparity test failed!")
+    #
+    # show_test_def("Left/Right Check", "You should see depth, depth_raw, disparity and", "disparity_color output streams with left/right check enabled")
+    # subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-lrc", "-dnn"])
+    # success = wait_for_result()
+    # if not success:
+    #     raise RuntimeError("Left/Right Check test failed!")
+    #
+    # show_test_def("Median Filter 3x3", "You should see disparity_color, disparity, depth_raw and", "depth output streams with median filter 3x3 enabled")
+    # subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-med", "3", "-dnn"])
+    # success = wait_for_result()
+    # if not success:
+    #     raise RuntimeError("Median Filter 3x3 test failed!")
+    #
+    # show_test_def("Small confidence threshold", "You should see disparity_color, disparity, depth_raw and", "depth output streams with lower (220) confidence threshold")
+    # subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-dct", "220", "-dnn"])
+    # success = wait_for_result()
+    # if not success:
+    #     raise RuntimeError("Small confidence threshold test failed!")
 
     success_frame = get_frame()
     success_frame[:, :, :] = (0, 255, 0)
