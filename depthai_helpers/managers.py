@@ -153,7 +153,7 @@ class PreviewDecoder:
     @staticmethod
     def disparity(packet, manager=None):
         if manager is not None and manager.lowBandwidth:
-            raw_frame = cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED)
+            raw_frame = cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             raw_frame = packet.getFrame()
         return (raw_frame*(manager.dispMultiplier if manager is not None else 255/96)).astype(np.uint8)
@@ -184,9 +184,10 @@ class MouseClickTracker:
     def select_point(self, name):
         def cb(event, x, y, flags, param):
             if event == cv2.EVENT_LBUTTONUP:
-                self.values = {}
                 if self.points.get(name) == (x, y):
                     del self.points[name]
+                    if name in self.values:
+                        del self.values[name]
                 else:
                     self.points[name] = (x, y)
         return cb
@@ -194,17 +195,14 @@ class MouseClickTracker:
     def extract_value(self, name, frame: np.ndarray):
         point = self.points.get(name, None)
         if point is not None:
-            try:
-                if name in (Previews.depth_raw.name, Previews.depth.name):
-                    self.values[name] = "{}mm".format(frame[point[1]][point[0]])
-                elif name in (Previews.disparity_color.name, Previews.disparity.name):
-                    self.values[name] = "{}px".format(frame[point[1]][point[0]])
-                elif frame.shape[2] == 3:
-                    self.values[name] = "R:{},G:{},B:{}".format(*frame[point[1]][point[0]][::-1])
-                else:
-                    self.values[name] = str(frame[point[1]][point[0]])
-            except:
-                pass
+            if name in (Previews.depth_raw.name, Previews.depth.name):
+                self.values[name] = "{}mm".format(frame[point[1]][point[0]])
+            elif name in (Previews.disparity_color.name, Previews.disparity.name):
+                self.values[name] = "{}px".format(frame[point[1]][point[0]])
+            elif frame.shape[2] == 3:
+                self.values[name] = "R:{},G:{},B:{}".format(*frame[point[1]][point[0]][::-1])
+            else:
+                self.values[name] = str(frame[point[1]][point[0]])
 
 
 class PreviewManager:
@@ -240,12 +238,7 @@ class PreviewManager:
             cv2.namedWindow(name)
             callback(name)
             if self.mouse_tracker is not None:
-                if name == Previews.disparity_color.name:
-                    cv2.setMouseCallback(name, self.mouse_tracker.select_point(Previews.disparity.name))
-                elif name == Previews.depth.name:
-                    cv2.setMouseCallback(name, self.mouse_tracker.select_point(Previews.depth_raw.name))
-                else:
-                    cv2.setMouseCallback(name, self.mouse_tracker.select_point(name))
+                cv2.setMouseCallback(name, self.mouse_tracker.select_point(name))
             if name not in (Previews.disparity_color.name, Previews.depth.name):  # generated on host
                 self.output_queues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
 
@@ -269,8 +262,14 @@ class PreviewManager:
                     callback(frame, queue.getName())
                     self.raw_frames[queue.getName()] = frame
                 if self.mouse_tracker is not None:
-                    if queue.getName() in (Previews.disparity.name, Previews.depth_raw.name):
-                        self.mouse_tracker.extract_value(queue.getName(), packet.getFrame())
+                    if queue.getName() == Previews.disparity.name:
+                        raw_frame = packet.getFrame() if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+                        self.mouse_tracker.extract_value(Previews.disparity.name, raw_frame)
+                        self.mouse_tracker.extract_value(Previews.disparity_color.name, raw_frame)
+                    if queue.getName() == Previews.depth_raw.name:
+                        raw_frame = packet.getFrame()  # if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED) TODO uncomment once depth encoding is possible
+                        self.mouse_tracker.extract_value(Previews.depth_raw.name, raw_frame)
+                        self.mouse_tracker.extract_value(Previews.depth.name, raw_frame)
                     else:
                         self.mouse_tracker.extract_value(queue.getName(), frame)
 
@@ -291,15 +290,8 @@ class PreviewManager:
     def show_frames(self, callback=lambda *a, **k: None):
         for name, frame in self.frames.items():
             if self.mouse_tracker is not None:
-                if name == Previews.disparity_color.name:
-                    point = self.mouse_tracker.points.get(Previews.disparity.name)
-                    value = self.mouse_tracker.values.get(Previews.disparity.name)
-                elif name == Previews.depth.name:
-                    point = self.mouse_tracker.points.get(Previews.depth_raw.name)
-                    value = self.mouse_tracker.values.get(Previews.depth_raw.name)
-                else:
-                    point = self.mouse_tracker.points.get(name)
-                    value = self.mouse_tracker.values.get(name)
+                point = self.mouse_tracker.points.get(name)
+                value = self.mouse_tracker.values.get(name)
                 if point is not None:
                     cv2.circle(frame, point, 3, (255, 255, 255), -1)
                     cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4, cv2.LINE_AA)
