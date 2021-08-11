@@ -63,7 +63,8 @@ def show_test_def(*texts):
     frame = get_frame()
     for i, text in enumerate(texts):
         show(frame, (25, 100 + i * 60), text)
-    show(frame, (180, 550), "Press [Y] if the run is correct or [N] otherwise")
+    show(frame, (10, 540), "Press [Q] on any preview window to terminate the demo run")
+    show(frame, (10, 580), "Then, press [Y] if the run is correct or [N] otherwise")
     cv2.imshow("info", frame)
     cv2.waitKey(2)
 
@@ -75,6 +76,8 @@ def wait_for_result():
             return True
         elif key == ord("n"):
             return False
+        if key == 27 or key == ord("q"):  # 27 - ESC
+            raise SystemExit(0)
         else:
             continue
 
