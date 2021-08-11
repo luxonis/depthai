@@ -9,7 +9,8 @@ pip_call = [sys.executable, "-m", "pip"]
 try:
     subprocess.check_call([*pip_call, "--version"])
 except subprocess.CalledProcessError as ex:
-    raise RuntimeError("Issues with \"pip\" package detected! Follow the official instructions to install - https://pip.pypa.io/en/stable/installation/")
+    err_str = "Issues with \"pip\" package detected! Follow the official instructions to install - https://pip.pypa.io/en/stable/installation/"
+    raise RuntimeError(err_str)
 pip_install = pip_call + ["install"]
 
 is_pi = platform.machine().startswith("arm") or platform.machine().startswith("aarch")
