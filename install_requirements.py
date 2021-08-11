@@ -20,7 +20,7 @@ if not pip_installed:
 
 is_pi = platform.machine().startswith("arm") or platform.machine().startswith("aarch")
 if sys.version_info[0] != 3:
-    raise RuntimeError("Demo script requires Python 3 to run (detected : Python %d)" % sys.version_info[0])
+    raise RuntimeError("Demo script requires Python 3 to run (detected : Python {})".format(sys.version_info[0]))
 if is_pi and sys.version_info[1] in (7, 9):
     print("[WARNING] There are no prebuilt wheels for Python 3.{} for OpenCV, building process on this device may be long and unstable".format(sys.version_info[1]))
 
@@ -35,4 +35,4 @@ subprocess.check_call(pip_install + ["-r", "requirements.txt"])
 try:
     subprocess.check_call(pip_install + ["-r", "requirements-optional.txt"], stderr=subprocess.DEVNULL)
 except subprocess.CalledProcessError as ex:
-    print(f"Optional dependencies were not installed. This is not an error.")
+    print("Optional dependencies were not installed. This is not an error.")
