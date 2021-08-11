@@ -10,7 +10,7 @@ pip_installed = True
 pip_install = pip_call + ["install"]
 
 try:
-    subprocess.check_call([*pip_call, "--version"])
+    subprocess.check_call(pip_call + ["--version"])
 except subprocess.CalledProcessError as ex:
     pip_installed = False
 
