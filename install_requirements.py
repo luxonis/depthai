@@ -6,6 +6,10 @@ import sys
 # https://stackoverflow.com/a/58026969/5494277
 in_venv = getattr(sys, "real_prefix", getattr(sys, "base_prefix", sys.prefix)) != sys.prefix
 pip_call = [sys.executable, "-m", "pip"]
+try:
+    subprocess.check_call([*pip_call, "--version"])
+except subprocess.CalledProcessError as ex:
+    raise RuntimeError("Issues with \"pip\" package detected! Follow the official instructions to install - https://pip.pypa.io/en/stable/installation/")
 pip_install = pip_call + ["install"]
 
 is_pi = platform.machine().startswith("arm") or platform.machine().startswith("aarch")
