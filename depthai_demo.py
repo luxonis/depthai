@@ -171,6 +171,8 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                                                     minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth,
                                                     sbbScaleFactor=conf.args.sbb_scale_factor)
         pm.create_nn(nn=nn_pipeline, sync=conf.args.sync)
+    if conf.args.camera_tuning:
+        pm.p.setCameraTuningBlobPath(str(conf.args.camera_tuning))
 
     # Start pipeline
     device.startPipeline(pm.p)
