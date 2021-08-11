@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import cv2
+import depthai as dai
 import numpy as np
 
 
@@ -28,7 +29,34 @@ def show_info_frame():
     cv2.imshow("info", info_frame)
 
 
-demo_call = [sys.executable, str((Path(__file__).parent.parent / "depthai_demo.py").absolute())]
+def getDeviceInfo():
+    device_infos = dai.Device.getAllAvailableDevices()
+    if len(device_infos) == 0:
+        raise RuntimeError("No DepthAI device found!")
+    elif len(device_infos) == 1:
+        return device_infos[0]
+    else:
+        info_frame = get_frame()
+
+        show(info_frame, (25, 100), "Choose DepthAI Device:")
+        i = -1
+        for i, device_info in enumerate(device_infos):
+            text = f"[{i}] {device_info.getMxId()} {device_info.state.name} {device_info.desc.protocol}"
+            cv2.putText(info_frame, text, (25, 160 + i * 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        cv2.putText(info_frame, "[ESC] Exit", (25, 220 + i * 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
+        cv2.imshow("info", info_frame)
+
+        key = cv2.waitKey()
+        if key == 27 or key == ord("q"):  # 27 - ESC
+            raise SystemExit(0)
+        else:
+            try:
+                return device_infos[int(chr(key))]
+            except:
+                raise ValueError("Incorrect value supplied: {}".format(key))
+
+dev = getDeviceInfo()
+demo_call = [sys.executable, str((Path(__file__).resolve().parent.parent / "depthai_demo.py").absolute()), "-dev", dev.getMxId()]
 
 
 def show_test_def(*texts):
