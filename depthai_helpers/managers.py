@@ -612,18 +612,18 @@ class PipelineManager:
             self.nn_manager.openvino_version = self.p.getOpenVINOVersion()
 
     def create_default_queues(self, device):
-        for xout in filter(lambda node: isinstance(node, dai.XLinkOut), vars(self.nodes).values()):
+        for xout in filter(lambda node: isinstance(node, dai.node.XLinkOut), vars(self.nodes).values()):
             device.getOutputQueue(xout.getStreamName(), maxSize=1, blocking=False)
-        for xin in filter(lambda node: isinstance(node, dai.XLinkIn), vars(self.nodes).values()):
+        for xin in filter(lambda node: isinstance(node, dai.node.XLinkIn), vars(self.nodes).values()):
             device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
 
     def mjpeg_link(self, node, xout, node_output):
         print("Creating MJPEG link for {} node and {} xlink stream...".format(node.getName(), xout.getStreamName()))
         videnc = self.p.createVideoEncoder()
-        if isinstance(node, dai.ColorCamera) or isinstance(node, dai.MonoCamera):
+        if isinstance(node, dai.node.ColorCamera) or isinstance(node, dai.node.MonoCamera):
             videnc.setDefaultProfilePreset(node.getResolutionWidth(), node.getResolutionHeight(), node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             node_output.link(videnc.input)
-        elif isinstance(node, dai.StereoDepth):
+        elif isinstance(node, dai.node.StereoDepth):
             camera_node = getattr(self.nodes, 'mono_left', getattr(self.nodes, 'mono_right', None))
             if camera_node is None:
                 raise RuntimeError("Unable to find mono camera node to determine frame size!")
