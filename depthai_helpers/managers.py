@@ -495,7 +495,7 @@ class NNetManager:
         if self.output_format == "detection":
             def draw_detection(frame, name, detection):
                 bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
-                if name == Previews.color.name:
+                if self.source == Previews.color.name and not self.full_fov:
                     bbox[::2] += self.cropOffsetX(frame)
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), self.bbox_color[detection.label], 2)
                 cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 110), bbox[1]), self.bbox_color[detection.label], cv2.FILLED)
