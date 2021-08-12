@@ -119,7 +119,7 @@ if conf.useNN:
         model_name=conf.getModelName(),
         model_dir=conf.getModelDir(),
         source=conf.getModelSource(),
-        full_fov=conf.args.full_fov_nn or not conf.useCamera,
+        full_fov=not conf.args.disable_full_fov_nn or not conf.useCamera,
         flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
     )
     nn_manager.count_label = conf.getCountLabel(nn_manager)
@@ -142,7 +142,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
         if conf.rightCameraEnabled:
             pm.create_right_cam(mono_res, conf.args.mono_fps, xout=Previews.right.name in conf.args.show)
         if conf.rgbCameraEnabled:
-            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, conf.args.full_fov_nn, xout=Previews.color.name in conf.args.show)
+            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show)
 
         if conf.useDepth:
             pm.create_depth(

@@ -84,8 +84,8 @@ def parse_args():
                         help="Enable stereo 'Extended Disparity' feature.")
     parser.add_argument('-sub', '--subpixel', action="store_true",
                         help="Enable stereo 'Subpixel' feature.")
-    parser.add_argument("-ff", "--full_fov_nn", default=False, action="store_true",
-                        help="Full RGB FOV for NN, not keeping the aspect ratio")
+    parser.add_argument("-dff", "--disable_full_fov_nn", default=False, action="store_true",
+                        help="Disable full RGB FOV for NN, keeping the nn aspect ratio")
     parser.add_argument('-scale', '--scale', type=_coma_separated(default=0.5, cast=float), nargs="+",
                         help="Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5 \n"
                              "Format: preview_name or preview_name,scale_factor \n"
