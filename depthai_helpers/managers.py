@@ -121,14 +121,14 @@ class PreviewDecoder:
         if manager is not None and manager.lowBandwidth:
             return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
         else:
-            return packet.getCvFrame()
+            return cv2.flip(packet.getCvFrame(), 1)
 
     @staticmethod
     def rectified_right(packet, manager=None):
         if manager is not None and manager.lowBandwidth:
             return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
         else:
-            return packet.getCvFrame()
+            return cv2.flip(packet.getCvFrame(), 1)
 
     @staticmethod
     def depth_raw(packet, manager=None):
