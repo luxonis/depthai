@@ -256,6 +256,10 @@ class ConfigManager:
     def getDeviceInfo(self):
         device_infos = dai.Device.getAllAvailableDevices()
         if len(device_infos) == 0:
+            print("WARNING: no unbooted devices found, searching for already booted (debugger)")
+            found, dev_info = dai.Device.getAnyAvailableDevice()
+            if found: device_infos.append(dev_info)
+        if len(device_infos) == 0:
             raise RuntimeError("No DepthAI device found!")
         else:
             print("Available devices:")
