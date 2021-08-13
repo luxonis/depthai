@@ -4,8 +4,8 @@ opencv-python==4.4.0.46; platform_machine == "armv6l" or platform_machine == "ar
 opencv-contrib-python==4.4.0.46; platform_machine == "armv6l" or platform_machine == "armv7l"
 requests==2.24.0
 argcomplete==1.12.1
-blobconverter==0.0.10
- --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
- depthai==2.5.0.0.dev+562f377c7dedac09abac6b144ef840fed040b518
-# depthai==2.8.0.0
+blobconverter==1.0.0
+# --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+# depthai==2.5.0.0.dev+568cf1c566056eac5a039ebb9a1fa74436c495b5
+depthai==2.9.0.0
 pytube==10.8.5

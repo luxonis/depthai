@@ -29,14 +29,13 @@ conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
 if not conf.useCamera and str(conf.args.video).startswith('https'):
     conf.downloadYTVideo()
-conf.adjustPreviewToOptions()
 
 callbacks = load_module(conf.args.callback)
 rgb_res = conf.getRgbResolution()
 mono_res = conf.getMonoResolution()
 
 
-disp_multiplier = 255 / conf.maxDisparity
+dispMultiplier = 255 / conf.maxDisparity
 
 
 if conf.args.report_file:
@@ -132,18 +131,21 @@ if conf.useNN:
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
     conf.adjustParamsToDevice(device)
+    conf.adjustPreviewToOptions()
+    if conf.lowBandwidth:
+        pm.enableLowBandwidth()
     cap = cv2.VideoCapture(conf.args.video) if not conf.useCamera else None
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
     if conf.useCamera or conf.args.sync:
-        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), disp_multiplier=disp_multiplier, mouseTracker=True)
+        pv = PreviewManager(fps, display=conf.args.show, colorMap=conf.getColorMap(), dispMultiplier=dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth, scale=conf.args.scale)
 
         if conf.leftCameraEnabled:
-            pm.create_left_cam(mono_res, conf.args.mono_fps)
+            pm.create_left_cam(mono_res, conf.args.mono_fps, xout=Previews.left.name in conf.args.show)
         if conf.rightCameraEnabled:
-            pm.create_right_cam(mono_res, conf.args.mono_fps)
+            pm.create_right_cam(mono_res, conf.args.mono_fps, xout=Previews.right.name in conf.args.show)
         if conf.rgbCameraEnabled:
-            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, conf.args.full_fov_nn, conf.useHQ)
+            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, conf.args.full_fov_nn, xout=Previews.color.name in conf.args.show)
 
         if conf.useDepth:
             pm.create_depth(
@@ -160,17 +162,20 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 useRectifiedRight=Previews.rectified_right.name in conf.args.show,
             )
 
-        enc_manager = EncodingManager(pm, dict(conf.args.encode), conf.args.encode_output) if len(conf.args.encode) > 0 else None
+        enc_manager = EncodingManager(pm, conf.args.encode, conf.args.encode_output) if len(conf.args.encode) > 0 else None
 
     if len(conf.args.report) > 0:
         pm.create_system_logger()
 
     if conf.useNN:
-        nn_pipeline = nn_manager.create_nn_pipeline(pm.p, pm.nodes, shaves=conf.args.shaves, use_depth=conf.useDepth,
+        nn_pipeline = nn_manager.create_nn_pipeline(pm.p, pm.nodes, shaves=conf.shaves, use_depth=conf.useDepth,
                                                     use_sbb=conf.args.spatial_bounding_box and conf.useDepth,
                                                     minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth,
                                                     sbbScaleFactor=conf.args.sbb_scale_factor)
-        pm.create_nn(nn=nn_pipeline, sync=conf.args.sync)
+
+        pm.create_nn(nn=nn_pipeline, sync=conf.args.sync, xout_nn_input=Previews.nn_input.name in conf.args.show,
+                     xout_sbb=conf.args.spatial_bounding_box and conf.useDepth)
+
     if conf.args.camera_tuning:
         pm.p.setCameraTuningBlobPath(str(conf.args.camera_tuning))
 
@@ -251,10 +256,6 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                     frame_nn.setData(to_planar(scaled_frame))
                     nn_in.send(frame_nn)
                     seq_num += 1
-
-                    # if high quality, send original frames
-                    if not conf.useHQ:
-                        host_frame = scaled_frame
                 fps.tick('host')
 
             if nn_out is not None:
@@ -269,9 +270,9 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
             if conf.useCamera:
                 if conf.useNN:
                     nn_manager.draw(pv, nn_data)
-                fps.draw_fps(pv)
 
                 def show_frames_callback(frame, name):
+                    fps.draw_fps(frame, name)
                     if name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
                         h, w = frame.shape[:2]
                         text = "Median filter: {} [M]".format(pm.depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
@@ -280,16 +281,15 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                             "fontScale": 0.4,
                             "thickness": 1
                         }
-                        text_w = cv2.getTextSize(text, **text_config)[0][0]
-                        cv2.rectangle(frame, (0, h - 30), (text_w + 20, h), (255, 255, 255), cv2.FILLED)
-                        cv2.putText(frame, text, (10, h - 10), color=fps.fps_color, **text_config)
+                        cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_bg_color, 4, fps.fps_line_type)
+                        cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_color, 1, fps.fps_line_type)
                         return_frame = callbacks.on_show_frame(frame, name)
                         return return_frame if return_frame is not None else frame
-                pv.show_frames(scale=conf.args.scale, callback=show_frames_callback)
+                pv.show_frames(callback=show_frames_callback)
             else:
                 if conf.useNN:
                     nn_manager.draw(host_frame, nn_data)
-                fps.draw_fps(host_frame)
+                fps.draw_fps(host_frame, "host")
                 cv2.imshow("host", host_frame)
 
             if log_out:

@@ -58,15 +58,12 @@ def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-cam', '--camera', choices=[Previews.left.name, Previews.right.name, Previews.color.name], default=Previews.color.name, help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
-    parser.add_argument('-hq', '--high_quality', action="store_true", default=False,
-                        help="Low quality visualization - uses resized frames")
     parser.add_argument('-dd', '--disable_depth', action="store_true", help="Disable depth information")
     parser.add_argument('-dnn', '--disable_neural_network', action="store_true", help="Disable neural network inference")
     parser.add_argument('-cnnp', '--cnn_path', type=Path, help="Path to cnn model directory to be run")
     parser.add_argument("-cnn", "--cnn_model", default="mobilenet-ssd", type=str,
                         help="Cnn model to run on DepthAI")
-    parser.add_argument('-sh', '--shaves', default=13, type=int,
-                        help="Name of the nn to be run from default depthai repository")
+    parser.add_argument('-sh', '--shaves', type=int, help="Number of MyriadX SHAVEs to use for neural network blob compilation")
     parser.add_argument('-cnn_size', '--cnn_input_size', default=None, type=str,
                         help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
     parser.add_argument("-rgbr", "--rgb_resolution", default=3040, type=int, choices=[3040],  # 1080, 2160,
@@ -89,8 +86,11 @@ def parse_args():
                         help="Enable stereo 'Subpixel' feature.")
     parser.add_argument("-ff", "--full_fov_nn", default=False, action="store_true",
                         help="Full RGB FOV for NN, not keeping the aspect ratio")
-    parser.add_argument("-scale", "--scale", default=1.0, type=float,
-                        help="Scale factor for the output window. Default: %(default)s")
+    parser.add_argument('-scale', '--scale', type=_coma_separated(default=0.5, cast=float), nargs="+", default=[("color", 0.37)],
+                        help="Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5 \n"
+                             "Format: preview_name or preview_name,scale_factor \n"
+                             "Example: -scale color \n"
+                             "Example: -scale color,0.7 right,2 left,2")
     parser.add_argument("-cm", "--color_map", default="JET", choices=color_maps, help="Change color map used to apply colors to depth/disparity frames. Default: %(default)s")
     parser.add_argument("-maxd", "--max_depth", default=10000, type=int,
                         help="Maximum depth distance for spatial coordinates in mm. Default: %(default)s")
@@ -115,6 +115,7 @@ def parse_args():
                         help="Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).")
     parser.add_argument("-dev", "--device_id", type=str,
                         help="DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.")
+    parser.add_argument('-lowb', '--low_bandwidth', action="store_true", help="Enable low bandwidth mode that uses encoding for data transfer to limit it's size and increase throughput")
     parser.add_argument('-usbs', '--usb_speed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
     parser.add_argument('-enc', '--encode', type=_coma_separated(default=30.0, cast=float), nargs="+", default=[],
                         help="Define which cameras to encode (record) \n"

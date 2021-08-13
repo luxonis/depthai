@@ -4,7 +4,6 @@ import subprocess
 import sys
 import urllib.request
 from pathlib import Path
-
 import cv2
 import depthai as dai
 
@@ -29,6 +28,8 @@ class ConfigManager:
 
     def __init__(self, args):
         self.args = args
+        self.args.encode = dict(self.args.encode)
+        self.args.scale = dict(self.args.scale)
 
     @property
     def debug(self):
@@ -41,10 +42,6 @@ class ConfigManager:
     @property
     def useNN(self):
         return not self.args.disable_neural_network
-
-    @property
-    def useHQ(self):
-        return self.args.high_quality
 
     @property
     def useDepth(self):
@@ -205,10 +202,14 @@ class ConfigManager:
             self.args.show.append("left")
         if self.args.camera == "right" and "right" not in self.args.show:
             self.args.show.append("right")
-        if self.useDepth and "depth" not in self.args.show:
-            self.args.show.append("depth")
+        if self.useDepth:
+            if self.lowBandwidth and "disparity_color" not in self.args.show:
+                self.args.show.append("disparity_color")
+            elif not self.lowBandwidth and "depth" not in self.args.show:
+                self.args.show.append("depth")
 
     def adjustParamsToDevice(self, device):
+        device_info = device.getDeviceInfo()
         cams = device.getConnectedCameras()
         depth_enabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
 
@@ -232,6 +233,14 @@ class ConfigManager:
                 print("No previews available, adding color...")
                 updated_show_arg.append("color")
             self.args.show = updated_show_arg
+
+        if device_info.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
+            print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(device_info.desc.protocol))
+            self.args.low_bandwidth = True
+        elif device.getUsbSpeed() not in [dai.UsbSpeed.SUPER, dai.UsbSpeed.SUPER_PLUS]:
+            print("Enabling low-bandwidth mode due to low USB speed... (speed: {})".format(device.getUsbSpeed()))
+            self.args.low_bandwidth = True
+
 
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':
@@ -305,5 +314,17 @@ class ConfigManager:
     @property
     def previewSize(self):
         return self.inputSize or (576, 324)
+
+    @property
+    def lowBandwidth(self):
+        return self.args.low_bandwidth
+
+    @property
+    def shaves(self):
+        if self.args.shaves is not None:
+            return self.args.shaves
+        if self.args.rgb_resolution > 1080:
+            return 5
+        return 6
 
 
