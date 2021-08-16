@@ -33,6 +33,8 @@ class ConfigManager:
             self.args.scale = {"color": 0.37 if not self.args.sync else 1}
         else:
             self.args.scale = dict(self.args.scale)
+        if not self.useCamera and not self.args.sync:
+            print("[WARNING] When using video file as an input, it's highly recommended to run the demo with \"--sync\" flag")
 
     @property
     def debug(self):
@@ -331,6 +333,8 @@ class ConfigManager:
     def shaves(self):
         if self.args.shaves is not None:
             return self.args.shaves
+        if not self.useCamera and not self.args.sync:
+            return 8
         if self.args.rgb_resolution > 1080:
             return 5
         return 6

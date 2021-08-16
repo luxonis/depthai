@@ -270,11 +270,6 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                     if name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
                         h, w = frame.shape[:2]
                         text = "Median filter: {} [M]".format(pm.depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
-                        text_config = {
-                            "fontFace": cv2.FONT_HERSHEY_TRIPLEX,
-                            "fontScale": 0.4,
-                            "thickness": 1
-                        }
                         cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_bg_color, 4, fps.fps_line_type)
                         cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_color, 1, fps.fps_line_type)
                         return_frame = callbacks.on_show_frame(frame, name)
