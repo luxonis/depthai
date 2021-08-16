@@ -819,7 +819,7 @@ class PipelineManager:
                     self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
                 nn.passthrough.link(self.nodes.xout_rect_right.input)
 
-            if use_depth:
+            if self.nn_manager.nn_family in ("YOLO", "mobilenet") and use_depth:
                 if not hasattr(self.nodes, "xout_depth"):
                     self.nodes.xout_rgb = self.p.createXLinkOut()
                     self.nodes.xout_rgb.setStreamName(Previews.depth.name)
