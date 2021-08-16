@@ -119,7 +119,7 @@ if conf.useNN:
         model_name=conf.getModelName(),
         model_dir=conf.getModelDir(),
         source=conf.getModelSource(),
-        full_fov=not conf.args.disable_full_fov_nn or not conf.useCamera,
+        full_fov=not conf.args.disable_full_fov_nn or conf.getModelSource() != "color",
         flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
     )
     nn_manager.count_label = conf.getCountLabel(nn_manager)

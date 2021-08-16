@@ -199,17 +199,22 @@ class ConfigManager:
         if len(self.args.show) != 0:
             return
 
-        if self.args.camera == "color" and "color" not in self.args.show:
-            self.args.show.append("color")
-        if self.args.camera == "left" and "left" not in self.args.show:
-            self.args.show.append("left")
-        if self.args.camera == "right" and "right" not in self.args.show:
-            self.args.show.append("right")
+        if self.args.camera == "color" and Previews.color.name not in self.args.show:
+            self.args.show.append(Previews.color.name)
         if self.useDepth:
-            if self.lowBandwidth and "disparity_color" not in self.args.show:
-                self.args.show.append("disparity_color")
-            elif not self.lowBandwidth and "depth" not in self.args.show:
-                self.args.show.append("depth")
+            if self.lowBandwidth and Previews.disparity_color.name not in self.args.show:
+                self.args.show.append(Previews.disparity_color.name)
+            elif not self.lowBandwidth and Previews.depth.name not in self.args.show:
+                self.args.show.append(Previews.depth.name)
+            if self.args.camera == "left" and Previews.rectified_left.name not in self.args.show:
+                self.args.show.append(Previews.rectified_left.name)
+            if self.args.camera == "right" and Previews.rectified_right.name not in self.args.show:
+                self.args.show.append(Previews.rectified_right.name)
+        else:
+            if self.args.camera == "left" and Previews.left.name not in self.args.show:
+                self.args.show.append(Previews.left.name)
+            if self.args.camera == "right" and Previews.right.name not in self.args.show:
+                self.args.show.append(Previews.right.name)
 
     def adjustParamsToDevice(self, device):
         device_info = device.getDeviceInfo()
