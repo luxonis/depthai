@@ -261,7 +261,8 @@ class PreviewManager:
                 self.fps.tick(queue.getName())
                 frame = getattr(Previews, queue.getName()).value(packet, self)
                 if frame is None:
-                    raise RuntimeError("Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
+                    print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
+                    continue
                 if self.scale is not None and queue.getName() in self.scale:
                     h, w = frame.shape[0:2]
                     frame = cv2.resize(frame, (int(w * self.scale[queue.getName()]), int(h * self.scale[queue.getName()])), interpolation=cv2.INTER_AREA)
@@ -325,6 +326,7 @@ class NNetManager:
     openvino_version = None
     output_format = "raw"
     blob_path = None
+    source = None
     count_label = None
     text_bg_color = (0, 0, 0)
     text_color = (255, 255, 255)
@@ -332,16 +334,13 @@ class NNetManager:
     text_type = cv2.FONT_HERSHEY_SIMPLEX
     bbox_color = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
 
-    def __init__(self, input_size, source, model_dir=None, model_name=None, full_fov=False, flip_detection=False):
-        if source not in self.source_choices:
-            raise RuntimeError(f"Source {source} is invalid, available {self.source_choices}")
+    def __init__(self, input_size, model_dir=None, model_name=None, full_fov=False, flip_detection=False):
 
         self.input_size = input_size
         self.full_fov = full_fov
         self.flip_detection = flip_detection
         self.model_name = model_name
         self.model_dir = model_dir
-        self.source = source
         self.output_name = f"{self.model_name}_out"
         self.input_name = f"{self.model_name}_in"
         self.blob_manager = BlobManager(model_dir=self.model_dir, model_name=self.model_name)
@@ -386,7 +385,10 @@ class NNetManager:
         else:
             return 0
 
-    def create_nn_pipeline(self, p, nodes, shaves=6, use_depth=False, use_sbb=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3):
+    def create_nn_pipeline(self, p, nodes, source, shaves=6, use_depth=False, use_sbb=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3):
+        if source not in self.source_choices:
+            raise RuntimeError(f"Source {source} is invalid, available {self.source_choices}")
+        self.source = source
         self.sbb = use_sbb
         if self.nn_family == "mobilenet":
             nn = p.createMobileNetSpatialDetectionNetwork() if use_depth else p.createMobileNetDetectionNetwork()
