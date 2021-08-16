@@ -121,8 +121,6 @@ if conf.useNN:
         input_size=conf.inputSize,
         model_name=conf.getModelName(),
         model_dir=conf.getModelDir(),
-        full_fov=not conf.args.disable_full_fov_nn or conf.getModelSource() != "color",
-        flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check
     )
     nn_manager.count_label = conf.getCountLabel(nn_manager)
     pm.set_nn_manager(nn_manager)
@@ -137,14 +135,22 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
     if conf.useCamera or conf.args.sync:
-        pv = PreviewManager(fps, display=conf.args.show, nn_source=conf.getModelSource(), colorMap=conf.getColorMap(), dispMultiplier=conf.dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth, scale=conf.args.scale)
+        pv = PreviewManager(fps, display=conf.args.show, nn_source=conf.getModelSource(), colorMap=conf.getColorMap(),
+                            dispMultiplier=conf.dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth,
+                            scale=conf.args.scale, sync=conf.args.sync)
 
         if conf.leftCameraEnabled:
-            pm.create_left_cam(mono_res, conf.args.mono_fps, xout=Previews.left.name in conf.args.show)
+            pm.create_left_cam(mono_res, conf.args.mono_fps,
+                               xout=Previews.left.name in conf.args.show and (conf.getModelSource() != "left" or not conf.args.sync)
+                               )
         if conf.rightCameraEnabled:
-            pm.create_right_cam(mono_res, conf.args.mono_fps, xout=Previews.right.name in conf.args.show)
+            pm.create_right_cam(mono_res, conf.args.mono_fps,
+                                xout=Previews.right.name in conf.args.show and (conf.getModelSource() != "right" or not conf.args.sync)
+                                )
         if conf.rgbCameraEnabled:
-            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show)
+            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps,
+                                not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show  and (conf.getModelSource() != "color" or not conf.args.sync)
+                                )
 
         if conf.useDepth:
             pm.create_depth(
@@ -155,10 +161,10 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 conf.args.lrc_threshold,
                 conf.args.extended_disparity,
                 conf.args.subpixel,
-                useDepth=Previews.depth.name in conf.args.show or Previews.depth_raw.name in conf.args.show,
+                useDepth=Previews.depth.name in conf.args.show or Previews.depth_raw.name in conf.args.show ,
                 useDisparity=Previews.disparity.name in conf.args.show or Previews.disparity_color.name in conf.args.show,
-                useRectifiedLeft=Previews.rectified_left.name in conf.args.show,
-                useRectifiedRight=Previews.rectified_right.name in conf.args.show,
+                useRectifiedLeft=Previews.rectified_left.name in conf.args.show and (conf.getModelSource() != "rectified_left" or not conf.args.sync),
+                useRectifiedRight=Previews.rectified_right.name in conf.args.show and (conf.getModelSource() != "rectified_right" or not conf.args.sync),
             )
 
         enc_manager = EncodingManager(pm, conf.args.encode, conf.args.encode_output) if len(conf.args.encode) > 0 else None
@@ -167,12 +173,14 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
         pm.create_system_logger()
 
     if conf.useNN:
-        nn_pipeline = nn_manager.create_nn_pipeline(pm.p, pm.nodes, conf.getModelSource(), shaves=conf.shaves,
-                                                    use_sbb=conf.args.spatial_bounding_box and conf.useDepth,
-                                                    minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth,
-                                                    sbbScaleFactor=conf.args.sbb_scale_factor, use_depth=conf.useDepth)
+        nn_pipeline = nn_manager.create_nn_pipeline(pm.p, pm.nodes,
+            source=conf.getModelSource(), shaves=conf.shaves, use_sbb=conf.args.spatial_bounding_box and conf.useDepth,
+            minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth, sbbScaleFactor=conf.args.sbb_scale_factor,
+            use_depth=conf.useDepth, flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check,
+            full_fov=not conf.args.disable_full_fov_nn or conf.getModelSource() != "color",
+        )
 
-        pm.create_nn(nn=nn_pipeline, sync=conf.args.sync, xout_nn_input=Previews.nn_input.name in conf.args.show,
+        pm.create_nn(nn=nn_pipeline, sync=conf.args.sync, use_depth=conf.useDepth, xout_nn_input=Previews.nn_input.name in conf.args.show,
                      xout_sbb=conf.args.spatial_bounding_box and conf.useDepth)
 
     # Start pipeline

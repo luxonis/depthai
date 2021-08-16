@@ -97,35 +97,35 @@ class PreviewDecoder:
 
     @staticmethod
     def color(packet, manager=None):
-        if manager is not None and manager.lowBandwidth:
+        if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
             return cv2.imdecode(packet.getData(), cv2.IMREAD_COLOR)
         else:
             return packet.getCvFrame()
 
     @staticmethod
     def left(packet, manager=None):
-        if manager is not None and manager.lowBandwidth:
+        if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
             return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
 
     @staticmethod
     def right(packet, manager=None):
-        if manager is not None and manager.lowBandwidth:
+        if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
             return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
 
     @staticmethod
     def rectified_left(packet, manager=None):
-        if manager is not None and manager.lowBandwidth:
+        if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
             return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
         else:
             return cv2.flip(packet.getCvFrame(), 1)
 
     @staticmethod
     def rectified_right(packet, manager=None):
-        if manager is not None and manager.lowBandwidth:
+        if manager is not None and manager.lowBandwidth:  # TODO remove sync check once passthrough is supported for MJPEG encoding
             return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
         else:
             return cv2.flip(packet.getCvFrame(), 1)
@@ -212,7 +212,7 @@ class MouseClickTracker:
 
 
 class PreviewManager:
-    def __init__(self, fps, display, nn_source, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None):
+    def __init__(self, fps, display, nn_source, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False):
         self.display = display
         self.frames = {}
         self.raw_frames = {}
@@ -223,6 +223,7 @@ class PreviewManager:
         self.dispMultiplier = dispMultiplier
         self.mouse_tracker = MouseClickTracker() if mouseTracker else None
         self.scale = scale
+        self.sync = sync
 
     def create_queues(self, device, callback=lambda *a, **k: None):
         if dai.CameraBoardSocket.LEFT in device.getConnectedCameras():
@@ -316,6 +317,8 @@ class PreviewManager:
 
 class NNetManager:
     source_choices = ("color", "left", "right", "rectified_left", "rectified_right", "host")
+    flip_detection = False
+    full_fov = False
     config = None
     nn_family = None
     handler = None
@@ -334,11 +337,9 @@ class NNetManager:
     text_type = cv2.FONT_HERSHEY_SIMPLEX
     bbox_color = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
 
-    def __init__(self, input_size, model_dir=None, model_name=None, full_fov=False, flip_detection=False):
+    def __init__(self, input_size, model_dir=None, model_name=None):
 
         self.input_size = input_size
-        self.full_fov = full_fov
-        self.flip_detection = flip_detection
         self.model_name = model_name
         self.model_dir = model_dir
         self.output_name = f"{self.model_name}_out"
@@ -385,10 +386,12 @@ class NNetManager:
         else:
             return 0
 
-    def create_nn_pipeline(self, p, nodes, source, shaves=6, use_depth=False, use_sbb=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3):
+    def create_nn_pipeline(self, p, nodes, source, flip_detection=False, shaves=6, use_depth=False, use_sbb=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, full_fov=False):
         if source not in self.source_choices:
             raise RuntimeError(f"Source {source} is invalid, available {self.source_choices}")
         self.source = source
+        self.flip_detection = flip_detection
+        self.full_fov = full_fov
         self.sbb = use_sbb
         if self.nn_family == "mobilenet":
             nn = p.createMobileNetSpatialDetectionNetwork() if use_depth else p.createMobileNetDetectionNetwork()
@@ -776,15 +779,12 @@ class PipelineManager:
             else:
                 self.nodes.mono_right.out.link(self.nodes.xout_right.input)
 
-    def create_nn(self, nn, sync, xout_nn_input=False, xout_sbb=False):
+    def create_nn(self, nn, sync, use_depth=False, xout_nn_input=False, xout_sbb=False):
+        # TODO adjust this function once passthrough frame type (8) is supported by VideoEncoder (for self.mjpeg_link)
         if xout_nn_input or (sync and self.nn_manager.source == "host"):
             self.nodes.xout_nn_input = self.p.createXLinkOut()
             self.nodes.xout_nn_input.setStreamName(Previews.nn_input.name)
-            # if self.lowBandwidth: TODO change once passthrough frame type (8) is supported by VideoEncoder
-            if False:
-                self.mjpeg_link(nn, self.nodes.xout_nn_input, nn.passthrough)
-            else:
-                nn.passthrough.link(self.nodes.xout_nn_input.input)
+            nn.passthrough.link(self.nodes.xout_nn_input.input)
 
         if xout_sbb and self.nn_manager.nn_family in ("YOLO", "mobilenet"):
             self.nodes.xout_sbb = self.p.createXLinkOut()
@@ -792,43 +792,36 @@ class PipelineManager:
             nn.boundingBoxMapping.link(self.nodes.xout_sbb.input)
 
         if sync:
-            if self.nn_manager.source == "color" and hasattr(self.nodes, "xout_rgb"):
-                try:
-                    self.nodes.cam_rgb.video.unlink(self.nodes.xout_rgb.input)
-                    self.nodes.cam_rgb.preview.unlink(self.nodes.xout_rgb.input)
-                except RuntimeError:
-                    pass # unlink throws RuntimeError if unlinking when not linked
+            if self.nn_manager.source == "color":
+                if not hasattr(self.nodes, "xout_rgb"):
+                    self.nodes.xout_rgb = self.p.createXLinkOut()
+                    self.nodes.xout_rgb.setStreamName(Previews.color.name)
                 nn.passthrough.link(self.nodes.xout_rgb.input)
-            elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
-                try:
-                    self.nodes.mono_left.out.unlink(self.nodes.xout_left.input)
-                except RuntimeError:
-                    pass # unlink throws RuntimeError if unlinking when not linked
+            elif self.nn_manager.source == "left":
+                if not hasattr(self.nodes, "xout_left"):
+                    self.nodes.xout_left = self.p.createXLinkOut()
+                    self.nodes.xout_left.setStreamName(Previews.left.name)
                 nn.passthrough.link(self.nodes.xout_left.input)
-            elif self.nn_manager.source == "right" and hasattr(self.nodes, "right"):
-                try:
-                    self.nodes.mono_right.out.unlink(self.nodes.xout_right.input)
-                except RuntimeError:
-                    pass # unlink throws RuntimeError if unlinking when not linked
+            elif self.nn_manager.source == "right":
+                if not hasattr(self.nodes, "xout_right"):
+                    self.nodes.xout_right = self.p.createXLinkOut()
+                    self.nodes.xout_right.setStreamName(Previews.right.name)
                 nn.passthrough.link(self.nodes.xout_right.input)
-            elif self.nn_manager.source == "rectified_left" and hasattr(self.nodes, "rectified_left"):
-                try:
-                    self.nodes.stereo.rectifiedLeft.unlink(self.nodes.xout_rect_left.input)
-                except RuntimeError:
-                    pass # unlink throws RuntimeError if unlinking when not linked
+            elif self.nn_manager.source == "rectified_left":
+                if not hasattr(self.nodes, "xout_rect_left"):
+                    self.nodes.xout_rect_left = self.p.createXLinkOut()
+                    self.nodes.xout_rect_left.setStreamName(Previews.rectified_left.name)
                 nn.passthrough.link(self.nodes.xout_rect_left.input)
-            elif self.nn_manager.source == "rectified_right" and hasattr(self.nodes, "rectified_right"):
-                try:
-                    self.nodes.stereo.rectifiedRight.unlink(self.nodes.xout_rect_right.input)
-                except RuntimeError:
-                    pass # unlink throws RuntimeError if unlinking when not linked
+            elif self.nn_manager.source == "rectified_right":
+                if not hasattr(self.nodes, "xout_rect_right"):
+                    self.nodes.xout_rect_right = self.p.createXLinkOut()
+                    self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
                 nn.passthrough.link(self.nodes.xout_rect_right.input)
 
-            if hasattr(self.nodes, 'xout_depth'):
-                try:
-                    self.nodes.stereo.depth.unlink(self.nodes.xout_depth.input)
-                except RuntimeError:
-                    pass # unlink throws RuntimeError if unlinking when not linked
+            if use_depth:
+                if not hasattr(self.nodes, "xout_depth"):
+                    self.nodes.xout_rgb = self.p.createXLinkOut()
+                    self.nodes.xout_rgb.setStreamName(Previews.depth.name)
                 nn.passthroughDepth.link(self.nodes.xout_depth.input)
 
     def create_system_logger(self):
