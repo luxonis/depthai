@@ -185,7 +185,12 @@ class ConfigManager:
         path = None
         for _ in range(10):
             try:
-                path = YouTube(self.args.video, on_progress_callback=progress_func).streams.first().download(output_path=DEPTHAI_VIDEOS)
+                path = YouTube(self.args.video, on_progress_callback=progress_func)\
+                    .streams\
+                    .order_by('resolution')\
+                    .desc()\
+                    .first()\
+                    .download(output_path=DEPTHAI_VIDEOS)
             except urllib.error.HTTPError:
                 # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
                 # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
