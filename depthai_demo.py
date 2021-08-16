@@ -236,12 +236,12 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                             # Display SBB on the disparity map
                             cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager.bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
             else:
-                read_correctly, host_frame = cap.read()
+                read_correctly, raw_host_frame = cap.read()
                 if not read_correctly:
                     break
 
                 if nn_in is not None:
-                    scaled_frame = cv2.resize(host_frame, nn_manager.input_size)
+                    scaled_frame = cv2.resize(raw_host_frame, nn_manager.input_size)
                     frame_nn = dai.ImgFrame()
                     frame_nn.setSequenceNum(seq_num)
                     frame_nn.setType(dai.ImgFrame.Type.BGR888p)
@@ -250,6 +250,10 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                     frame_nn.setData(to_planar(scaled_frame))
                     nn_in.send(frame_nn)
                     seq_num += 1
+
+                if not conf.args.sync:
+                    host_frame = raw_host_frame
+
                 fps.tick('host')
 
             if nn_out is not None:
@@ -275,7 +279,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                         return_frame = callbacks.on_show_frame(frame, name)
                         return return_frame if return_frame is not None else frame
                 pv.show_frames(callback=show_frames_callback)
-            else:
+            elif host_frame is not None:
                 if conf.useNN:
                     nn_manager.draw(host_frame, nn_data)
                 fps.draw_fps(host_frame, "host")
