@@ -29,7 +29,12 @@ class ConfigManager:
     def __init__(self, args):
         self.args = args
         self.args.encode = dict(self.args.encode)
-        self.args.scale = dict(self.args.scale)
+        if self.args.scale is None:
+            self.args.scale = {"color": 0.37 if not self.args.sync else 1}
+        else:
+            self.args.scale = dict(self.args.scale)
+        if not self.useCamera and not self.args.sync:
+            print("[WARNING] When using video file as an input, it's highly recommended to run the demo with \"--sync\" flag")
 
     @property
     def debug(self):
@@ -180,7 +185,12 @@ class ConfigManager:
         path = None
         for _ in range(10):
             try:
-                path = YouTube(self.args.video, on_progress_callback=progress_func).streams.first().download(output_path=DEPTHAI_VIDEOS)
+                path = YouTube(self.args.video, on_progress_callback=progress_func)\
+                    .streams\
+                    .order_by('resolution')\
+                    .desc()\
+                    .first()\
+                    .download(output_path=DEPTHAI_VIDEOS)
             except urllib.error.HTTPError:
                 # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
                 # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
@@ -196,17 +206,22 @@ class ConfigManager:
         if len(self.args.show) != 0:
             return
 
-        if self.args.camera == "color" and "color" not in self.args.show:
-            self.args.show.append("color")
-        if self.args.camera == "left" and "left" not in self.args.show:
-            self.args.show.append("left")
-        if self.args.camera == "right" and "right" not in self.args.show:
-            self.args.show.append("right")
+        if self.args.camera == "color" and Previews.color.name not in self.args.show:
+            self.args.show.append(Previews.color.name)
         if self.useDepth:
-            if self.lowBandwidth and "disparity_color" not in self.args.show:
-                self.args.show.append("disparity_color")
-            elif not self.lowBandwidth and "depth" not in self.args.show:
-                self.args.show.append("depth")
+            if self.lowBandwidth and Previews.disparity_color.name not in self.args.show:
+                self.args.show.append(Previews.disparity_color.name)
+            elif not self.lowBandwidth and Previews.depth.name not in self.args.show:
+                self.args.show.append(Previews.depth.name)
+            if self.args.camera == "left" and Previews.rectified_left.name not in self.args.show:
+                self.args.show.append(Previews.rectified_left.name)
+            if self.args.camera == "right" and Previews.rectified_right.name not in self.args.show:
+                self.args.show.append(Previews.rectified_right.name)
+        else:
+            if self.args.camera == "left" and Previews.left.name not in self.args.show:
+                self.args.show.append(Previews.left.name)
+            if self.args.camera == "right" and Previews.right.name not in self.args.show:
+                self.args.show.append(Previews.right.name)
 
     def adjustParamsToDevice(self, device):
         device_info = device.getDeviceInfo()
@@ -323,8 +338,15 @@ class ConfigManager:
     def shaves(self):
         if self.args.shaves is not None:
             return self.args.shaves
+        if not self.useCamera and not self.args.sync:
+            return 8
         if self.args.rgb_resolution > 1080:
             return 5
         return 6
+
+    @property
+    def dispMultiplier(self):
+        val = 255 / self.maxDisparity
+        return val
 
 

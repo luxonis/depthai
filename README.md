@@ -72,7 +72,7 @@ optional arguments:
   -ext, --extended_disparity
                         Enable stereo 'Extended Disparity' feature.
   -sub, --subpixel      Enable stereo 'Subpixel' feature.
-  -ff, --full_fov_nn    Full RGB FOV for NN, not keeping the aspect ratio
+  -dff, --disable_full_fov_nn    Disable full RGB FOV for NN, keeping the nn aspect ratio
   -scale SCALE, --scale SCALE
                         Scale factor for the output window. Default: 1.0
   -cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}, --color_map {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}
