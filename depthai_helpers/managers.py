@@ -432,6 +432,7 @@ class NNetManager:
             nodes.manip.initialConfig.setResize(*self.input_size)
             # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
             nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            nodes.manip.setKeepAspectRatio(not self.full_fov)
             # NN inputs
             nodes.manip.out.link(nn.input)
 
