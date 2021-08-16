@@ -203,7 +203,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
         if enc_manager is not None:
             enc_manager.create_default_queues(device)
     elif conf.args.sync:
-        host_out = device.getOutputQueue(Previews.host.name, maxSize=1, blocking=False)
+        host_out = device.getOutputQueue(Previews.nn_input.name, maxSize=1, blocking=False)
 
     seq_num = 0
     host_frame = None
@@ -257,7 +257,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 if in_nn is not None:
                     callbacks.on_nn(in_nn)
                     if not conf.useCamera and conf.args.sync:
-                        host_frame = Previews.host.value(host_out.get())
+                        host_frame = Previews.nn_input.value(host_out.get())
                     nn_data = nn_manager.decode(in_nn)
                     fps.tick('nn')
 

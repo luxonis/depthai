@@ -493,7 +493,7 @@ class NNetManager:
 
     def draw(self, source, decoded_data):
         if self.output_format == "detection":
-            def draw_detection(frame, name, detection):
+            def draw_detection(frame, detection):
                 bbox = frame_norm(self.normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
                 if self.source == Previews.color.name and not self.full_fov:
                     bbox[::2] += self.cropOffsetX(frame)
@@ -523,7 +523,7 @@ class NNetManager:
             for detection in decoded_data:
                 if isinstance(source, PreviewManager):
                     for name, frame in source.frames.items():
-                        draw_detection(frame, name, detection)
+                        draw_detection(frame, detection)
                 else:
                     draw_detection(source, detection)
 
@@ -775,7 +775,7 @@ class PipelineManager:
                 self.nodes.mono_right.out.link(self.nodes.xout_right.input)
 
     def create_nn(self, nn, sync, xout_nn_input=False, xout_sbb=False):
-        if xout_nn_input:
+        if xout_nn_input or (sync and self.nn_manager.source == "host"):
             self.nodes.xout_nn_input = self.p.createXLinkOut()
             self.nodes.xout_nn_input.setStreamName(Previews.nn_input.name)
             # if self.lowBandwidth: TODO change once passthrough frame type (8) is supported by VideoEncoder
@@ -797,12 +797,6 @@ class PipelineManager:
                 except RuntimeError:
                     pass # unlink throws RuntimeError if unlinking when not linked
                 nn.passthrough.link(self.nodes.xout_rgb.input)
-            elif self.nn_manager.source == "host" and hasattr(self.nodes, "xout_host"):
-                try:
-                    getattr(self.nodes, self.nn_manager.input_name).out.unlink(self.nodes.xout_host.input)
-                except RuntimeError:
-                    pass # unlink throws RuntimeError if unlinking when not linked
-                nn.passthrough.link(self.nodes.xout_host.input)
             elif self.nn_manager.source == "left" and hasattr(self.nodes, "left"):
                 try:
                     self.nodes.mono_left.out.unlink(self.nodes.xout_left.input)
