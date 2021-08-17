@@ -177,7 +177,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
             source=conf.getModelSource(), shaves=conf.shaves, use_sbb=conf.args.spatial_bounding_box and conf.useDepth,
             minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth, sbbScaleFactor=conf.args.sbb_scale_factor,
             use_depth=conf.useDepth, flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check,
-            full_fov=not conf.args.disable_full_fov_nn or conf.getModelSource() != "color",
+            full_fov=not conf.args.disable_full_fov_nn,
         )
 
         pm.create_nn(nn=nn_pipeline, sync=conf.args.sync, use_depth=conf.useDepth, xout_nn_input=Previews.nn_input.name in conf.args.show,
