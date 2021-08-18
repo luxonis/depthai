@@ -374,9 +374,7 @@ class Main:
                     lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
                 lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
 
-                if debug:
-                    print(lrgb_time)
-                    print(lr_time)
+                
 
                 if capturing and lrgb_time < 30000 and lr_time < 30000:
                     print("Capturing  ------------------------ {}".format(packet[0]))
@@ -392,6 +390,14 @@ class Main:
                         captured_right = self.parse_frame(frame, packet[0])
                         tried_right = True
                         captured_right_frame = frame.copy()
+                else:
+                    if debug:
+                        if lrgb_time > 10000:
+                            print("Timestamp difference --->L-RGB")
+                            print(lrgb_time)
+                        if lr_time > 30000:
+                            print("Timestamp difference --->L-R")
+                            print(lr_time)
 
 
                 has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
