@@ -223,6 +223,7 @@ class Main:
 
     def parse_frame(self, frame, stream_name):
         if not self.is_markers_found(frame):
+            print("Less markers found")
             return False
 
         filename = calibUtils.image_filename(
@@ -348,6 +349,7 @@ class Main:
                     print("setting capture true------------------------")
                 capturing = True
 
+
             frame_list = []
             # left_frame = recent_left.getCvFrame()
             # rgb_frame = recent_color.getCvFrame()
@@ -365,8 +367,8 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
 
-                if debug:
-                    print("Timestamp difference ---> l & rgb")
+                # if debug:
+                #     print("Timestamp difference ---> l & rgb")
                 lrgb_time = 0
                 if not self.args.disableRgb:
                     lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
@@ -377,7 +379,7 @@ class Main:
                     print(lr_time)
 
                 if capturing and lrgb_time < 30000 and lr_time < 30000:
-                    print("Capturing  ------------------------")
+                    print("Capturing  ------------------------ {}".format(packet[0]))
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
                         tried_left = True
@@ -439,7 +441,7 @@ class Main:
                     captured_left = False
                     captured_right = False
                     captured_color = False
-                elif tried_left and tried_color:
+                elif tried_left and tried_right:
                     self.show_failed_capture_frame()
                     capturing = False
                     tried_left = False
