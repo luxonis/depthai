@@ -290,7 +290,6 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 pv.show_frames(callback=show_frames_callback)
             elif host_frame is not None:
                 debug_host_frame = host_frame.copy()
-                cv2.imshow("TEST", debug_host_frame)
                 if conf.useNN:
                     nn_manager.draw(debug_host_frame, nn_data)
                 fps.draw_fps(debug_host_frame, "host")
