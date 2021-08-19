@@ -263,7 +263,6 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
 
                 if not conf.args.sync:
                     host_frame = raw_host_frame
-
                 fps.tick('host')
 
             if nn_out is not None:
@@ -290,10 +289,12 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                         return return_frame if return_frame is not None else frame
                 pv.show_frames(callback=show_frames_callback)
             elif host_frame is not None:
+                debug_host_frame = host_frame.copy()
+                cv2.imshow("TEST", debug_host_frame)
                 if conf.useNN:
-                    nn_manager.draw(host_frame, nn_data)
-                fps.draw_fps(host_frame, "host")
-                cv2.imshow("host", host_frame)
+                    nn_manager.draw(debug_host_frame, nn_data)
+                fps.draw_fps(debug_host_frame, "host")
+                cv2.imshow("host", debug_host_frame)
 
             if log_out:
                 logs = log_out.tryGetAll()
