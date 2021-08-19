@@ -574,7 +574,7 @@ class FPSHandler:
 
     def tick(self, name):
         if name not in self.ticks:
-            self.ticks[name] = collections.deque(maxlen=10)
+            self.ticks[name] = collections.deque(maxlen=100)
         self.ticks[name].append(time.monotonic())
 
     def tick_fps(self, name):
