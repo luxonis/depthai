@@ -580,7 +580,7 @@ class FPSHandler:
     def tick_fps(self, name):
         if name in self.ticks and len(self.ticks[name]) > 1:
             time_diff = self.ticks[name][-1] - self.ticks[name][0]
-            return len(self.ticks[name]) / time_diff if time_diff != 0 else 0
+            return (len(self.ticks[name]) - 1) / time_diff if time_diff != 0 else 0
         else:
             return 0
 
