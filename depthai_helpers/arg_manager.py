@@ -7,7 +7,7 @@ try:
     import argcomplete
 except ImportError:
     raise ImportError('\033[1;5;31m argcomplete module not found, run: python3 install_requirements.py \033[0m')
-from depthai_helpers.managers import Previews
+from depthai_sdk.previews import Previews
 
 
 def get_immediate_subdirectories(a_dir):

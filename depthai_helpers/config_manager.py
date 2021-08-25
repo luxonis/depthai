@@ -8,7 +8,7 @@ import cv2
 import depthai as dai
 
 from depthai_helpers.cli_utils import cli_print, PrintColors
-from depthai_helpers.managers import Previews
+from depthai_sdk.previews import Previews
 
 
 def show_progress(curr, max):
