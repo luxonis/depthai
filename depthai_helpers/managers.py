@@ -833,6 +833,9 @@ class PipelineManager:
     def enableLowBandwidth(self):
         self.lowBandwidth = True
 
+    def set_xlink_chunk_size(self, chunk_size):
+        self.p.setXLinkChunkSize(chunk_size)
+
 
 
 class EncodingManager:
