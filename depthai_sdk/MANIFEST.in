@@ -1,0 +1,2 @@
+include src/managers/*.py
+include requirements.txt

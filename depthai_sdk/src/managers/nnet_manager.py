@@ -6,7 +6,7 @@ import numpy as np
 
 from .preview_manager import PreviewManager
 from ..previews import Previews
-from ..utils import load_module, to_tensor_result, frame_norm
+from ..utils import load_module, to_tensor_result, frame_norm, to_planar
 
 
 class NNetManager:
@@ -29,6 +29,8 @@ class NNetManager:
     line_type = cv2.LINE_AA
     text_type = cv2.FONT_HERSHEY_SIMPLEX
     bbox_color = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
+    input_queue = None
+    output_queue = None
 
     def __init__(self, input_size, blob_manager):
 
@@ -227,3 +229,24 @@ class NNetManager:
             else:
                 frames = [("host", source)]
             self.handler.draw(self, decoded_data, frames)
+
+    def createQueues(self, device):
+        if self.source == "host":
+            self.input_queue = device.getInputQueue("nn_in", maxSize=1, blocking=False)
+        self.output_queue = device.getOutputQueue("nn_out", maxSize=1, blocking=False)
+
+    def sendInputFrame(self, frame, seq_num=None):
+        if self.input_queue is None:
+            raise RuntimeError("Unable to send image, no input queue is present! Call `createQueues(device)` first!")
+
+        scaled_frame = cv2.resize(frame, self.input_size)
+        frame_nn = dai.ImgFrame()
+        if seq_num is not None:
+            frame_nn.setSequenceNum(seq_num)
+        frame_nn.setType(dai.ImgFrame.Type.BGR888p)
+        frame_nn.setWidth(self.input_size[0])
+        frame_nn.setHeight(self.input_size[1])
+        frame_nn.setData(to_planar(scaled_frame))
+        self.input_queue.send(frame_nn)
+
+        return scaled_frame

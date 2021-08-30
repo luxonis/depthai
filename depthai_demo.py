@@ -7,12 +7,10 @@ import depthai as dai
 import platform
 
 from depthai_helpers.arg_manager import parse_args
-from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO
+from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.version_check import check_depthai_version
-from depthai_sdk.fps import FPSHandler
-from depthai_sdk.previews import Previews
+from depthai_sdk import FPSHandler, load_module, getDeviceInfo, downloadYTVideo, Previews
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
-from depthai_sdk.utils import to_planar, load_module
 
 DISP_CONF_MIN = int(os.getenv("DISP_CONF_MIN", 0))
 DISP_CONF_MAX = int(os.getenv("DISP_CONF_MAX", 255))
@@ -30,7 +28,8 @@ conf = ConfigManager(parse_args())
 conf.linuxCheckApplyUsbRules()
 if not conf.useCamera:
     if str(conf.args.video).startswith('https'):
-        conf.downloadYTVideo()
+        conf.args.video = downloadYTVideo(conf.args.video, DEPTHAI_VIDEOS)
+        print("Youtube video downloaded.")
     if not Path(conf.args.video).exists():
         raise ValueError("Path {} does not exists!".format(conf.args.video))
 
@@ -111,7 +110,7 @@ class Trackbars:
         Trackbars.instances[name] = {**Trackbars.instances.get(name, {}), window: default_val}
         cv2.setTrackbarPos(name, window, default_val)
 
-device_info = conf.getDeviceInfo()
+device_info = getDeviceInfo(conf.args.device_id)
 openvino_version = None
 if conf.args.openvino_version:
     openvino_version = getattr(dai.OpenVINO.Version, 'VERSION_' + conf.args.openvino_version)
@@ -200,8 +199,8 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     # Start pipeline
     device.startPipeline(pm.p)
     pm.create_default_queues(device)
-    nn_in = device.getInputQueue("nn_in", maxSize=1, blocking=False) if not conf.useCamera and conf.useNN else None
-    nn_out = device.getOutputQueue("nn_out", maxSize=1, blocking=False) if conf.useNN else None
+    if conf.useNN:
+        nn_manager.createQueues(device)
 
     sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if conf.useNN and nn_manager.sbb else None
     log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None
@@ -264,24 +263,16 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 if not read_correctly:
                     break
 
-                if nn_in is not None:
-                    scaled_frame = cv2.resize(raw_host_frame, nn_manager.input_size)
-                    frame_nn = dai.ImgFrame()
-                    frame_nn.setSequenceNum(seq_num)
-                    frame_nn.setType(dai.ImgFrame.Type.BGR888p)
-                    frame_nn.setWidth(nn_manager.input_size[0])
-                    frame_nn.setHeight(nn_manager.input_size[1])
-                    frame_nn.setData(to_planar(scaled_frame))
-                    nn_in.send(frame_nn)
-                    seq_num += 1
+                nn_manager.sendInputFrame(raw_host_frame, seq_num)
+                seq_num += 1
 
                 if not conf.args.sync:
                     host_frame = raw_host_frame
 
                 fps.tick('host')
 
-            if nn_out is not None:
-                in_nn = nn_out.tryGet()
+            if conf.useNN:
+                in_nn = nn_manager.output_queue.tryGet()
                 if in_nn is not None:
                     callbacks.on_nn(in_nn)
                     if not conf.useCamera and conf.args.sync:

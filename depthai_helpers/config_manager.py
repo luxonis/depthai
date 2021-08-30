@@ -1,7 +1,6 @@
 import os
 import platform
 import subprocess
-import sys
 import urllib.request
 from pathlib import Path
 import cv2
@@ -9,12 +8,6 @@ import depthai as dai
 
 from depthai_helpers.cli_utils import cli_print, PrintColors
 from depthai_sdk.previews import Previews
-
-
-def show_progress(curr, max):
-    done = int(50 * curr / max)
-    sys.stdout.write("\r[{}{}] ".format('=' * done, ' ' * (50-done)) )
-    sys.stdout.flush()
 
 
 DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
@@ -174,34 +167,6 @@ class ConfigManager:
 
         return cmd_file, debug_mode
 
-    def downloadYTVideo(self):
-        def progress_func(stream, chunk, bytes_remaining):
-            show_progress(stream.filesize - bytes_remaining, stream.filesize)
-
-        try:
-            from pytube import YouTube
-        except ImportError as ex:
-            raise RuntimeError("Unable to use YouTube video due to the following import error: {}".format(ex))
-        path = None
-        for _ in range(10):
-            try:
-                path = YouTube(self.args.video, on_progress_callback=progress_func)\
-                    .streams\
-                    .order_by('resolution')\
-                    .desc()\
-                    .first()\
-                    .download(output_path=DEPTHAI_VIDEOS)
-            except urllib.error.HTTPError:
-                # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
-                # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
-                pass
-            else:
-                break
-        if path is None:
-            raise RuntimeError("Unable to download YouTube video. Please try again")
-        print("Youtube video downloaded.")
-        self.args.video = path
-
     def adjustPreviewToOptions(self):
         if len(self.args.show) != 0:
             return
@@ -267,31 +232,6 @@ class ConfigManager:
                 "sudo udevadm control --reload-rules && sudo udevadm trigger \n"
                 "Disconnect/connect usb cable on host! \n", PrintColors.RED)
                 os._exit(1)
-
-    def getDeviceInfo(self):
-        device_infos = dai.Device.getAllAvailableDevices()
-        if len(device_infos) == 0:
-            raise RuntimeError("No DepthAI device found!")
-        else:
-            print("Available devices:")
-            for i, device_info in enumerate(device_infos):
-                print(f"[{i}] {device_info.getMxId()} [{device_info.state.name}]")
-
-            if self.args.device_id == "list":
-                raise SystemExit(0)
-            elif self.args.device_id is not None:
-                matching_device = next(filter(lambda info: info.getMxId() == self.args.device_id, device_infos), None)
-                if matching_device is None:
-                    raise RuntimeError(f"No DepthAI device found with id matching {self.args.device_id} !")
-                return matching_device
-            elif len(device_infos) == 1:
-                return device_infos[0]
-            else:
-                val = input("Which DepthAI Device you want to use: ")
-                try:
-                    return device_infos[int(val)]
-                except:
-                    raise ValueError("Incorrect value supplied: {}".format(val))
 
     def getCountLabel(self, nnet_manager):
         if self.args.count_label is None:

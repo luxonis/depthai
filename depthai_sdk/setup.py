@@ -2,11 +2,14 @@ import io
 
 from setuptools import setup
 
+with open('requirements.txt') as f:
+    required = f.readlines()
+
 setup(
     name='depthai-sdk',
-    version='0.0.11',
+    version='0.0.23',
     description='This package contains convenience classes and functions that help in most common tasks while using DepthAI API',
-    long_description=io.open("depthai_sdk/README.md", encoding="utf-8").read(),
+    long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
     url='https://github.com/luxonis/depthai/sdk',
     keywords="depthai sdk utils managers previews helpers",
@@ -14,12 +17,8 @@ setup(
     author_email='support@luxonis.com',
     license='MIT',
     packages=['depthai_sdk'],
-    package_data={'depthai_sdk': ['managers/*.py']},
-    install_requires=[
-        "requests",
-        "PyYAML",
-        "boto3"
-    ],
+    package_dir={"depthai_sdk": "src"},
+    install_requires=required,
     include_package_data=True,
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
