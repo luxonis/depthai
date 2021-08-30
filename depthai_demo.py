@@ -7,11 +7,11 @@ import depthai as dai
 import platform
 
 from depthai_helpers.arg_manager import parse_args
-from depthai_helpers.config_manager import ConfigManager
+from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO
 from depthai_helpers.version_check import check_depthai_version
 from depthai_sdk.fps import FPSHandler
 from depthai_sdk.previews import Previews
-from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager
+from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 from depthai_sdk.utils import to_planar, load_module
 
 DISP_CONF_MIN = int(os.getenv("DISP_CONF_MIN", 0))
@@ -118,13 +118,26 @@ if conf.args.openvino_version:
 pm = PipelineManager(openvino_version)
 
 if conf.useNN:
+    blob_manager = BlobManager(
+        zoo_dir=DEPTHAI_ZOO,
+        zoo_name=conf.getModelName(),
+        config_path=conf.getModelDir(),
+    )
     nn_manager = NNetManager(
         input_size=conf.inputSize,
-        model_name=conf.getModelName(),
-        model_dir=conf.getModelDir(),
+        blob_manager=blob_manager
     )
+
+    if conf.getModelDir() is not None:
+        config_path = conf.getModelDir() / Path(conf.getModelName()).with_suffix(f".json")
+        nn_manager.read_config(config_path)
+
     nn_manager.count_label = conf.getCountLabel(nn_manager)
     pm.set_nn_manager(nn_manager)
+    blob_manager.getBlob(
+        shaves=conf.shaves,
+        openvino_version=nn_manager.openvino_version,
+    )
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
@@ -136,9 +149,9 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
     if conf.useCamera or conf.args.sync:
-        pv = PreviewManager(fps, display=conf.args.show, nn_source=conf.getModelSource(), colorMap=conf.getColorMap(),
+        pv = PreviewManager(display=conf.args.show, nn_source=conf.getModelSource(), colorMap=conf.getColorMap(),
                             dispMultiplier=conf.dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth,
-                            scale=conf.args.scale, sync=conf.args.sync)
+                            scale=conf.args.scale, sync=conf.args.sync, fps_handler=fps)
 
         if conf.leftCameraEnabled:
             pm.create_left_cam(mono_res, conf.args.mono_fps,
@@ -181,14 +194,14 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
             full_fov=not conf.args.disable_full_fov_nn or conf.getModelSource() != "color",
         )
 
-        pm.create_nn(nn=nn_pipeline, sync=conf.args.sync, use_depth=conf.useDepth, xout_nn_input=Previews.nn_input.name in conf.args.show,
+        pm.add_nn(nn=nn_pipeline, sync=conf.args.sync, use_depth=conf.useDepth, xout_nn_input=Previews.nn_input.name in conf.args.show,
                      xout_sbb=conf.args.spatial_bounding_box and conf.useDepth)
 
     # Start pipeline
     device.startPipeline(pm.p)
     pm.create_default_queues(device)
-    nn_in = device.getInputQueue(nn_manager.input_name, maxSize=1, blocking=False) if not conf.useCamera and conf.useNN else None
-    nn_out = device.getOutputQueue(nn_manager.output_name, maxSize=1, blocking=False) if conf.useNN else None
+    nn_in = device.getInputQueue("nn_in", maxSize=1, blocking=False) if not conf.useCamera and conf.useNN else None
+    nn_out = device.getOutputQueue("nn_out", maxSize=1, blocking=False) if conf.useNN else None
 
     sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if conf.useNN and nn_manager.sbb else None
     log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None

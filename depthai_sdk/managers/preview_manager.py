@@ -6,11 +6,11 @@ from ..previews import Previews, MouseClickTracker
 
 
 class PreviewManager:
-    def __init__(self, fps, display, nn_source, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False):
+    def __init__(self, display=[], nn_source=None, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False, fps_handler=None):
         self.display = display
         self.frames = {}
         self.raw_frames = {}
-        self.fps = fps
+        self.fps_handler = fps_handler
         self.nn_source = nn_source
         self.colorMap = colorMap
         self.lowBandwidth = lowBandwidth
@@ -49,11 +49,12 @@ class PreviewManager:
         if Previews.depth.name in self.display and Previews.depth_raw.name not in self.display:
             self.output_queues.append(device.getOutputQueue(name=Previews.depth_raw.name, maxSize=1, blocking=False))
 
-    def prepare_frames(self, callback):
+    def prepare_frames(self, callback=lambda *a, **k: None):
         for queue in self.output_queues:
             packet = queue.tryGet()
             if packet is not None:
-                self.fps.tick(queue.getName())
+                if self.fps_handler is not None:
+                    self.fps_handler.tick(queue.getName())
                 frame = getattr(Previews, queue.getName()).value(packet, self)
                 if frame is None:
                     print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
@@ -77,11 +78,13 @@ class PreviewManager:
                         self.mouse_tracker.extract_value(queue.getName(), frame)
 
                 if queue.getName() == Previews.disparity.name and Previews.disparity_color.name in self.display:
-                    self.fps.tick(Previews.disparity_color.name)
+                    if self.fps_handler is not None:
+                        self.fps_handler.tick(Previews.disparity_color.name)
                     self.raw_frames[Previews.disparity_color.name] = Previews.disparity_color.value(frame, self)
 
                 if queue.getName() == Previews.depth_raw.name and Previews.depth.name in self.display:
-                    self.fps.tick(Previews.depth.name)
+                    if self.fps_handler is not None:
+                        self.fps_handler.tick(Previews.depth.name)
                     self.raw_frames[Previews.depth.name] = Previews.depth.value(frame, self)
 
             for name in self.raw_frames:

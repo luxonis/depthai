@@ -4,7 +4,6 @@ import depthai as dai
 import cv2
 import numpy as np
 
-from .blob_manager import BlobManager
 from .preview_manager import PreviewManager
 from ..previews import Previews
 from ..utils import load_module, to_tensor_result, frame_norm
@@ -23,7 +22,6 @@ class NNetManager:
     metadata = None
     openvino_version = None
     output_format = "raw"
-    blob_path = None
     source = None
     count_label = None
     text_bg_color = (0, 0, 0)
@@ -32,40 +30,34 @@ class NNetManager:
     text_type = cv2.FONT_HERSHEY_SIMPLEX
     bbox_color = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
 
-    def __init__(self, input_size, model_dir=None, model_name=None):
+    def __init__(self, input_size, blob_manager):
 
         self.input_size = input_size
-        self.model_name = model_name
-        self.model_dir = model_dir
-        self.output_name = f"{self.model_name}_out"
-        self.input_name = f"{self.model_name}_in"
-        self.blob_manager = BlobManager(model_dir=self.model_dir, model_name=self.model_name)
-        # Disaply depth roi bounding boxes
+        self.blob_manager = blob_manager
 
-        if model_dir is not None:
-            config_path = self.model_dir / Path(self.model_name).with_suffix(f".json")
-            if config_path.exists():
-                with config_path.open() as f:
-                    self.config = json.load(f)
-                    if "openvino_version" in self.config:
-                        self.openvino_version =getattr(dai.OpenVINO.Version, 'VERSION_' + self.config.get("openvino_version"))
-                    nn_config = self.config.get("nn_config", {})
-                    self.labels = self.config.get("mappings", {}).get("labels", None)
-                    self.nn_family = nn_config.get("NN_family", None)
-                    self.output_format = nn_config.get("output_format", "raw")
-                    self.metadata = nn_config.get("NN_specific_metadata", {})
-                    if "input_size" in nn_config:
-                        self.input_size = tuple(map(int, nn_config.get("input_size").split('x')))
+    def read_config(self, path):
+        config_path = Path(path)
+        if not config_path.exists():
+            raise ValueError("Path {} does not exist!".format(path))
 
-                    self.confidence = self.metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
-                    if 'handler' in self.config:
-                        self.handler = load_module(config_path.parent / self.config["handler"])
+        with config_path.open() as f:
+            self.config = json.load(f)
+            if "openvino_version" in self.config:
+                self.openvino_version =getattr(dai.OpenVINO.Version, 'VERSION_' + self.config.get("openvino_version"))
+            nn_config = self.config.get("nn_config", {})
+            self.labels = self.config.get("mappings", {}).get("labels", None)
+            self.nn_family = nn_config.get("NN_family", None)
+            self.output_format = nn_config.get("output_format", "raw")
+            self.metadata = nn_config.get("NN_specific_metadata", {})
+            if "input_size" in nn_config:
+                self.input_size = tuple(map(int, nn_config.get("input_size").split('x')))
 
-                        if not callable(getattr(self.handler, "draw", None)) or not callable(getattr(self.handler, "decode", None)):
-                            raise RuntimeError("Custom model handler does not contain 'draw' or 'decode' methods!")
+            self.confidence = self.metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
+            if 'handler' in self.config:
+                self.handler = load_module(config_path.parent / self.config["handler"])
 
-        if self.input_size is None:
-            raise RuntimeError("Unable to determine the nn input size. Please use --cnn_input_size flag to specify it in WxH format: -nn-size <width>x<height>")
+                if not callable(getattr(self.handler, "draw", None)) or not callable(getattr(self.handler, "decode", None)):
+                    raise RuntimeError("Custom model handler does not contain 'draw' or 'decode' methods!")
 
     def normFrame(self, frame):
         if not self.full_fov:
@@ -84,51 +76,50 @@ class NNetManager:
     def create_nn_pipeline(self, p, nodes, source, flip_detection=False, shaves=6, use_depth=False, use_sbb=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, full_fov=False):
         if source not in self.source_choices:
             raise RuntimeError(f"Source {source} is invalid, available {self.source_choices}")
+        if self.input_size is None:
+            raise RuntimeError("Unable to determine the nn input size. Please use --cnn_input_size flag to specify it in WxH format: -nn-size <width>x<height>")
+
         self.source = source
         self.flip_detection = flip_detection
         self.full_fov = full_fov
         self.sbb = use_sbb
         if self.nn_family == "mobilenet":
-            nn = p.createMobileNetSpatialDetectionNetwork() if use_depth else p.createMobileNetDetectionNetwork()
-            nn.setConfidenceThreshold(self.confidence)
+            nodes.nn = p.createMobileNetSpatialDetectionNetwork() if use_depth else p.createMobileNetDetectionNetwork()
+            nodes.nn.setConfidenceThreshold(self.confidence)
         elif self.nn_family == "YOLO":
-            nn = p.createYoloSpatialDetectionNetwork() if use_depth else p.createYoloDetectionNetwork()
-            nn.setConfidenceThreshold(self.confidence)
-            nn.setNumClasses(self.metadata["classes"])
-            nn.setCoordinateSize(self.metadata["coordinates"])
-            nn.setAnchors(self.metadata["anchors"])
-            nn.setAnchorMasks(self.metadata["anchor_masks"])
-            nn.setIouThreshold(self.metadata["iou_threshold"])
+            nodes.nn = p.createYoloSpatialDetectionNetwork() if use_depth else p.createYoloDetectionNetwork()
+            nodes.nn.setConfidenceThreshold(self.confidence)
+            nodes.nn.setNumClasses(self.metadata["classes"])
+            nodes.nn.setCoordinateSize(self.metadata["coordinates"])
+            nodes.nn.setAnchors(self.metadata["anchors"])
+            nodes.nn.setAnchorMasks(self.metadata["anchor_masks"])
+            nodes.nn.setIouThreshold(self.metadata["iou_threshold"])
         else:
             # TODO use createSpatialLocationCalculator
-            nn = p.createNeuralNetwork()
+            nodes.nn = p.createNeuralNetwork()
 
-        self.blob_path = self.blob_manager.compile(shaves, self.openvino_version)
-        nn.setBlobPath(str(self.blob_path))
-        nn.setNumInferenceThreads(2)
-        nn.input.setBlocking(False)
-        nn.input.setQueueSize(2)
+        nodes.nn.setBlobPath(str(self.blob_manager.blob_path))
+        nodes.nn.setNumInferenceThreads(2)
+        nodes.nn.input.setBlocking(False)
+        nodes.nn.input.setQueueSize(2)
 
-        xout = p.createXLinkOut()
-        xout.setStreamName(self.output_name)
-        nn.out.link(xout.input)
-        setattr(nodes, self.model_name, nn)
-        setattr(nodes, self.output_name, xout)
+        nodes.xout_nn = p.createXLinkOut()
+        nodes.xout_nn.setStreamName("nn_out")
+        nodes.nn.out.link(nodes.xout_nn.input)
 
         if self.source == "color":
-            nodes.cam_rgb.preview.link(nn.input)
+            nodes.cam_rgb.preview.link(nodes.nn.input)
         elif self.source == "host":
-            xin = p.createXLinkIn()
-            xin.setStreamName(self.input_name)
-            xin.out.link(nn.input)
-            setattr(nodes, self.input_name, xin)
+            nodes.xin_nn = p.createXLinkIn()
+            nodes.xin_nn.setStreamName("nn_in")
+            nodes.xin_nn.out.link(nodes.nn.input)
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
             nodes.manip = p.createImageManip()
             nodes.manip.initialConfig.setResize(*self.input_size)
             # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
             nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             # NN inputs
-            nodes.manip.out.link(nn.input)
+            nodes.manip.out.link(nodes.nn.input)
 
             if self.source == "left":
                 nodes.mono_left.out.link(nodes.manip.inputImage)
@@ -140,12 +131,12 @@ class NNetManager:
                 nodes.stereo.rectifiedRight.link(nodes.manip.inputImage)
 
         if self.nn_family in ("YOLO", "mobilenet") and use_depth:
-            nodes.stereo.depth.link(nn.inputDepth)
-            nn.setDepthLowerThreshold(minDepth)
-            nn.setDepthUpperThreshold(maxDepth)
-            nn.setBoundingBoxScaleFactor(sbbScaleFactor)
+            nodes.stereo.depth.link(nodes.nn.inputDepth)
+            nodes.nn.setDepthLowerThreshold(minDepth)
+            nodes.nn.setDepthUpperThreshold(maxDepth)
+            nodes.nn.setBoundingBoxScaleFactor(sbbScaleFactor)
 
-        return nn
+        return nodes.nn
 
     def get_label_text(self, label):
         if self.config is None or self.labels is None:

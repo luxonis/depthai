@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='depthai-sdk',
-    version='0.0.1',
+    version='0.0.11',
     description='This package contains convenience classes and functions that help in most common tasks while using DepthAI API',
     long_description=io.open("depthai_sdk/README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
@@ -13,7 +13,8 @@ setup(
     author='Luxonis',
     author_email='support@luxonis.com',
     license='MIT',
-    packages=['sdk'],
+    packages=['depthai_sdk'],
+    package_data={'depthai_sdk': ['managers/*.py']},
     install_requires=[
         "requests",
         "PyYAML",

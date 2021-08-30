@@ -57,10 +57,11 @@ class PipelineManager:
             raise NotImplementedError("Unable to create mjpeg link for encountered node type: {}".format(type(node)))
         videnc.bitstream.link(xout.input)
 
-    def create_color_cam(self, preview_size, res, fps, full_fov, xout=False):
+    def create_color_cam(self, preview_size=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, full_fov=True, xout=False):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
-        self.nodes.cam_rgb.setPreviewSize(*preview_size)
+        if preview_size is not None:
+            self.nodes.cam_rgb.setPreviewSize(*preview_size)
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(res)
         self.nodes.cam_rgb.setFps(fps)
@@ -73,7 +74,7 @@ class PipelineManager:
             else:
                 self.nodes.cam_rgb.video.link(self.nodes.xout_rgb.input)
 
-    def create_depth(self, dct, median, sigma, lr, lrc_threshold, extended, subpixel, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
+    def create_depth(self, dct=245, median=dai.MedianFilter.KERNEL_7x7, sigma=0, lr=False, lrc_threshold=4, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
         self.nodes.stereo = self.p.createStereoDepth()
 
         self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
@@ -148,7 +149,7 @@ class PipelineManager:
         device.getInputQueue("stereo_config").send(self.depthConfig)
 
 
-    def create_left_cam(self, res, fps, xout=False):
+    def create_left_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, xout=False):
         self.nodes.mono_left = self.p.createMonoCamera()
         self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
         self.nodes.mono_left.setResolution(res)
@@ -162,7 +163,7 @@ class PipelineManager:
             else:
                 self.nodes.mono_left.out.link(self.nodes.xout_left.input)
 
-    def create_right_cam(self, res, fps, xout=False):
+    def create_right_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, xout=False):
         self.nodes.mono_right = self.p.createMonoCamera()
         self.nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         self.nodes.mono_right.setResolution(res)
@@ -176,7 +177,7 @@ class PipelineManager:
             else:
                 self.nodes.mono_right.out.link(self.nodes.xout_right.input)
 
-    def create_nn(self, nn, sync, use_depth=False, xout_nn_input=False, xout_sbb=False):
+    def add_nn(self, nn, sync=False, use_depth=False, xout_nn_input=False, xout_sbb=False):
         # TODO adjust this function once passthrough frame type (8) is supported by VideoEncoder (for self.mjpeg_link)
         if xout_nn_input or (sync and self.nn_manager.source == "host"):
             self.nodes.xout_nn_input = self.p.createXLinkOut()
