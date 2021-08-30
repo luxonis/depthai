@@ -218,8 +218,8 @@ class PipelineManager:
 
             if self.nn_manager.nn_family in ("YOLO", "mobilenet") and use_depth:
                 if not hasattr(self.nodes, "xout_depth"):
-                    self.nodes.xout_rgb = self.p.createXLinkOut()
-                    self.nodes.xout_rgb.setStreamName(Previews.depth.name)
+                    self.nodes.xout_depth = self.p.createXLinkOut()
+                    self.nodes.xout_depth.setStreamName(Previews.depth.name)
                 nn.passthroughDepth.link(self.nodes.xout_depth.input)
 
     def create_system_logger(self):

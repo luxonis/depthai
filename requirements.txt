@@ -1,3 +1,4 @@
--r depthai_sdk/requirements.txt
 requests==2.24.0
 argcomplete==1.12.1
+--extra-index-url https://test.pypi.org/simple/
+depthai-sdk

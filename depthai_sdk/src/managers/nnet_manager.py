@@ -122,6 +122,7 @@ class NNetManager:
             nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             # NN inputs
             nodes.manip.out.link(nodes.nn.input)
+            nodes.manip.setKeepAspectRatio(not self.full_fov)
 
             if self.source == "left":
                 nodes.mono_left.out.link(nodes.manip.inputImage)

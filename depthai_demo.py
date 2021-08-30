@@ -190,7 +190,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
             source=conf.getModelSource(), shaves=conf.shaves, use_sbb=conf.args.spatial_bounding_box and conf.useDepth,
             minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth, sbbScaleFactor=conf.args.sbb_scale_factor,
             use_depth=conf.useDepth, flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check,
-            full_fov=not conf.args.disable_full_fov_nn or conf.getModelSource() != "color",
+            full_fov=not conf.args.disable_full_fov_nn,
         )
 
         pm.add_nn(nn=nn_pipeline, sync=conf.args.sync, use_depth=conf.useDepth, xout_nn_input=Previews.nn_input.name in conf.args.show,
@@ -268,7 +268,6 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
 
                 if not conf.args.sync:
                     host_frame = raw_host_frame
-
                 fps.tick('host')
 
             if conf.useNN:
@@ -295,10 +294,11 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                         return return_frame if return_frame is not None else frame
                 pv.show_frames(callback=show_frames_callback)
             elif host_frame is not None:
+                debug_host_frame = host_frame.copy()
                 if conf.useNN:
-                    nn_manager.draw(host_frame, nn_data)
-                fps.draw_fps(host_frame, "host")
-                cv2.imshow("host", host_frame)
+                    nn_manager.draw(debug_host_frame, nn_data)
+                fps.draw_fps(debug_host_frame, "host")
+                cv2.imshow("host", debug_host_frame)
 
             if log_out:
                 logs = log_out.tryGetAll()
