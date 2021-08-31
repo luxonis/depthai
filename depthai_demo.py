@@ -130,6 +130,8 @@ if conf.useNN:
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
+    if device_info.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
+        print("USB Connection speed: {}".format(device.getUsbSpeed()))
     conf.adjustParamsToDevice(device)
     conf.adjustPreviewToOptions()
     if conf.lowBandwidth:
