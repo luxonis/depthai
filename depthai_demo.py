@@ -116,6 +116,9 @@ if conf.args.openvino_version:
     openvino_version = getattr(dai.OpenVINO.Version, 'VERSION_' + conf.args.openvino_version)
 pm = PipelineManager(openvino_version)
 
+if conf.args.xlink_chunk_size is not None:
+    pm.set_xlink_chunk_size(conf.args.xlink_chunk_size)
+
 if conf.useNN:
     nn_manager = NNetManager(
         input_size=conf.inputSize,

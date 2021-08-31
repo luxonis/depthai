@@ -123,4 +123,5 @@ def parse_args():
                              "Example: -enc left color \n"
                              "Example: -enc color right,10 left,10")
     parser.add_argument('-encout', '--encode_output', type=Path, default=project_root, help="Path to directory where to store encoded files. Default: %(default)s")
+    parser.add_argument('-xls', '--xlink_chunk_size', type=int, default = None, help="Specify XLink chunk size")
     return parser.parse_args()
