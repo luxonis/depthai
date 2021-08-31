@@ -17,7 +17,7 @@ setup(
     author_email='support@luxonis.com',
     license='MIT',
     packages=['depthai_sdk'],
-    package_dir={"depthai_sdk": "src"},
+    package_dir={"": "src"},  # https://stackoverflow.com/a/67238346/5494277
     install_requires=required,
     include_package_data=True,
     project_urls={
