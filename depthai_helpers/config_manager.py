@@ -54,7 +54,7 @@ class ConfigManager:
 
     @property
     def maxDisparity(self):
-        max_disparity = 96
+        max_disparity = 95
         if (self.args.extended_disparity):
             max_disparity *= 2
         if (self.args.subpixel):

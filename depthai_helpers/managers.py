@@ -161,7 +161,7 @@ class PreviewDecoder:
             raw_frame = cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             raw_frame = packet.getFrame()
-        return (raw_frame*(manager.dispMultiplier if manager is not None else 255/96)).astype(np.uint8)
+        return (raw_frame*(manager.dispMultiplier if manager is not None else 255/95)).astype(np.uint8)
 
     @staticmethod
     def disparity_color(disparity, manager=None):
@@ -213,7 +213,7 @@ class MouseClickTracker:
 
 
 class PreviewManager:
-    def __init__(self, fps, display, nn_source, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False):
+    def __init__(self, fps, display, nn_source, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/95, mouseTracker=False, lowBandwidth=False, scale=None, sync=False):
         self.display = display
         self.frames = {}
         self.raw_frames = {}
