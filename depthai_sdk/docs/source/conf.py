@@ -35,6 +35,7 @@ extensions = [
     "sphinx.ext.autosectionlabel",  # https://github.com/sphinx-doc/sphinx/issues/7697 wait for this and implement
     "sphinx_rtd_theme",
     'sphinx.ext.autodoc',
+    'sphinx.ext.napoleon'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -70,4 +71,10 @@ html_js_files = [
     'https://docs.luxonis.com/en/latest/_static/js/navbar.js',
 ]
 
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'depthai': ('https://docs.luxonis.com/projects/api/en/latest/', None)
+}
+autodoc_class_signature = "separated"
+autodoc_member_order = "bysource"
+autodoc_typehints = "description"

@@ -6,6 +6,8 @@ import cv2
 import depthai as dai
 import platform
 
+import numpy as np
+
 from depthai_helpers.arg_manager import parse_args
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.version_check import check_depthai_version
@@ -131,15 +133,11 @@ if conf.useNN:
         config_path = conf.getModelDir() / Path(conf.getModelName()).with_suffix(f".json")
         nn_manager.read_config(config_path)
 
-    nn_manager.count_label = conf.getCountLabel(nn_manager)
+    nn_manager.countLabel(conf.getCountLabel(nn_manager))
     pm.set_nn_manager(nn_manager)
-    blob_manager.getBlob(
-        shaves=conf.shaves,
-        openvino_version=nn_manager.openvino_version,
-    )
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
+with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
     conf.adjustParamsToDevice(device)
     conf.adjustPreviewToOptions()
     if conf.lowBandwidth:
@@ -180,29 +178,35 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                 useRectifiedRight=Previews.rectified_right.name in conf.args.show and (conf.getModelSource() != "rectified_right" or not conf.args.sync),
             )
 
-        enc_manager = EncodingManager(pm, conf.args.encode, conf.args.encode_output) if len(conf.args.encode) > 0 else None
+        enc_manager = None
+        if len(conf.args.encode) > 1:
+            enc_manager = EncodingManager(conf.args.encode, conf.args.encode_output)
+            enc_manager.create_encoders(pm)
 
     if len(conf.args.report) > 0:
         pm.create_system_logger()
 
     if conf.useNN:
-        nn_pipeline = nn_manager.create_nn_pipeline(pm.p, pm.nodes,
-            source=conf.getModelSource(), shaves=conf.shaves, use_sbb=conf.args.spatial_bounding_box and conf.useDepth,
-            minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth, sbbScaleFactor=conf.args.sbb_scale_factor,
-            use_depth=conf.useDepth, flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check,
-            full_fov=not conf.args.disable_full_fov_nn,
+        nn_pipeline = nn_manager.create_nn_pipeline(
+            pipeline=pm.pipeline, nodes=pm.nodes, source=conf.getModelSource(),
+            blob_path=blob_manager.getBlob(shaves=conf.shaves, openvino_version=nn_manager.openvino_version),
+            use_depth=conf.useDepth, minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth,
+            sbbScaleFactor=conf.args.sbb_scale_factor, full_fov=not conf.args.disable_full_fov_nn,
+            flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check,
         )
 
-        pm.add_nn(nn=nn_pipeline, sync=conf.args.sync, use_depth=conf.useDepth, xout_nn_input=Previews.nn_input.name in conf.args.show,
-                     xout_sbb=conf.args.spatial_bounding_box and conf.useDepth)
+        pm.add_nn(
+            nn=nn_pipeline, sync=conf.args.sync, xout_nn_input=Previews.nn_input.name in conf.args.show,
+            use_depth=conf.useDepth, xout_sbb=conf.args.spatial_bounding_box and conf.useDepth
+        )
 
     # Start pipeline
-    device.startPipeline(pm.p)
+    device.startPipeline(pm.pipeline)
     pm.create_default_queues(device)
     if conf.useNN:
         nn_manager.createQueues(device)
 
-    sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if conf.useNN and nn_manager.sbb else None
+    sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if conf.useNN and conf.args.spatial_bounding_box else None
     log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None
 
     median_filters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
@@ -232,6 +236,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
     host_frame = None
     nn_data = []
     sbb_rois = []
+    ć = np.random.random(size=(256, 3))
     callbacks.on_setup(**locals())
 
     try:
@@ -257,7 +262,7 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                             top_left = roi.topLeft()
                             bottom_right = roi.bottomRight()
                             # Display SBB on the disparity map
-                            cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager.bbox_color[0], cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+                            cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), np.random.random(size=(256, 3)), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
             else:
                 read_correctly, raw_host_frame = cap.read()
                 if not read_correctly:
