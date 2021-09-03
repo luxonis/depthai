@@ -124,10 +124,7 @@ if conf.useNN:
         zoo_name=conf.getModelName(),
         config_path=conf.getModelDir(),
     )
-    nn_manager = NNetManager(
-        input_size=conf.inputSize,
-        blob_manager=blob_manager
-    )
+    nn_manager = NNetManager(input_size=conf.inputSize)
 
     if conf.getModelDir() is not None:
         config_path = conf.getModelDir() / Path(conf.getModelName()).with_suffix(f".json")
@@ -212,7 +209,7 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
     median_filters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
     for med_filter in median_filters:
         # move the cycle to the current median filter
-        if med_filter == pm.depthConfig.getMedianFilter():
+        if med_filter == pm._depthConfig.getMedianFilter():
             break
 
     if conf.useCamera:
@@ -240,7 +237,7 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
     host_frame = None
     nn_data = []
     sbb_rois = []
-    ć = np.random.random(size=(256, 3))
+    sbb_color = np.random.random(size=(256, 3))
     callbacks.on_setup(**locals())
 
     try:
@@ -266,7 +263,7 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
                             top_left = roi.topLeft()
                             bottom_right = roi.bottomRight()
                             # Display SBB on the disparity map
-                            cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), np.random.random(size=(256, 3)), cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+                            cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), sbb_color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
             else:
                 read_correctly, raw_host_frame = cap.read()
                 if not read_correctly:
@@ -296,7 +293,7 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
                     fps.draw_fps(frame, name)
                     if name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
                         h, w = frame.shape[:2]
-                        text = "Median filter: {} [M]".format(pm.depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
+                        text = "Median filter: {} [M]".format(pm._depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
                         cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 0, 4)
                         cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 255, 1)
                         return_frame = callbacks.on_show_frame(frame, name)

@@ -13,19 +13,12 @@ To know more about the DepthAI itself, visit `our documentation <https://docs.lu
 Installation
 ------------
 
-To install this package, run the following command in your terminal window
+.. include::  install.rst
 
-.. code-block:: bash
+Usage
+-----
 
-   pip install depthai-sdk
-
-.. warning::
-
-   If you're using Raspberry Pi, providing a Pi Wheels extra package url can significantly speed up the instalation process by providing prebuilt binaries for OpenCV
-
-   .. code-block:: bash
-
-      pip install --extra-index-url https://www.piwheels.org/simple/ depthai-sdk
+Please visit :ref:`Getting started with DepthAI SDK` for basic usage examples
 
 
 API
@@ -33,9 +26,12 @@ API
 
 See :ref:`DepthAI SDK API`
 
+.. include::  footer-short.rst
+
 .. toctree::
-   :maxdepth: 0
+   :maxdepth: 1
    :hidden:
    :caption: Content:
 
+   getting_started.rst
    api.rst

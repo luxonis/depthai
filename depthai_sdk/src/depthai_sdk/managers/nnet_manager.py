@@ -15,12 +15,16 @@ class NNetManager:
     decoding neural network output automatically or by using external handler file.
     """
 
-    def __init__(self, input_size):
+    def __init__(self, input_size, nn_family=None):
         """
         Args:
             input_size (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
+            nn_family (str): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
         """
         self.input_size = input_size
+        self._nn_family = nn_family
+        if nn_family in ("YOLO", "mobilenet"):
+            self._output_format = "detection"
 
     #: list: List of available neural network inputs
     source_choices = ("color", "left", "right", "rectified_left", "rectified_right", "host")
@@ -42,10 +46,10 @@ class NNetManager:
     _line_type = cv2.LINE_AA
     _text_type = cv2.FONT_HERSHEY_SIMPLEX
     _output_format = "raw"
-    _confidence = None
+    _confidence = 0.7
     _metadata = None
     _flip_detection = False
-    _full_fov = False
+    _full_fov = True
     _config = None
     _nn_family = None
     _handler = None
@@ -102,14 +106,14 @@ class NNetManager:
         else:
             return 0
 
-    def create_nn_pipeline(self, pipeline, nodes, source, blob_path, flip_detection=False, use_depth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, full_fov=False):
+    def create_nn_pipeline(self, pipeline, nodes, source, blob_path, flip_detection=False, use_depth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, full_fov=True):
         """
         Creates nodes and connections in provided pipeline that will allow to run NN model and consume it's results.
 
         Args:
             pipeline (depthai.Pipeline): Pipeline instance
             nodes (types.SimpleNamespace): Object cointaining all of the nodes added to the pipeline. Available in :attr:`depthai_sdk.managers.PipelineManager.nodes`
-            source (pathlib.Path): Neural network input source, one of :attr:`source_choices`
+            source (str): Neural network input source, one of :attr:`source_choices`
             blob_path (pathlib.Path): Path to MyriadX blob. Might be useful to use together with
                 :func:`depthai_sdk.managers.BlobManager.getBlob()` for dynamic blob compilation
             use_depth (bool): If set to True, produced detections will have spatial coordinates included
@@ -118,7 +122,7 @@ class NNetManager:
             sbbScaleFactor (float): Scale of the bounding box that will be used to calculate spatial coordinates for
                 detection. If set to 0.3, it will scale down center-wise the bounding box to 0.3 of it's original size
                 and use it to calculate spatial location of the object
-            full_fov (pathlib.Path): If set to False, manager will include crop offset when scaling the detections.
+            full_fov (bool): If set to False, manager will include crop offset when scaling the detections.
                 Usually should be set to True (if you don't perform aspect ratio crop or when `keepAspectRatio` flag
                 on camera/manip node is set to False
             flip_detection (bool): Whether the bounding box coordinates should be flipped horizontally. Useful when
@@ -139,10 +143,10 @@ class NNetManager:
         self._flip_detection = flip_detection
         self._full_fov = full_fov
         if self._nn_family == "mobilenet":
-            nodes.nn = pipeline.createMobileNetSpatialDetectionNetwork() if use_depth else p.createMobileNetDetectionNetwork()
+            nodes.nn = pipeline.createMobileNetSpatialDetectionNetwork() if use_depth else pipeline.createMobileNetDetectionNetwork()
             nodes.nn.setConfidenceThreshold(self._confidence)
         elif self._nn_family == "YOLO":
-            nodes.nn = pipeline.createYoloSpatialDetectionNetwork() if use_depth else p.createYoloDetectionNetwork()
+            nodes.nn = pipeline.createYoloSpatialDetectionNetwork() if use_depth else pipeline.createYoloDetectionNetwork()
             nodes.nn.setConfidenceThreshold(self._confidence)
             nodes.nn.setNumClasses(self._metadata["classes"])
             nodes.nn.setCoordinateSize(self._metadata["coordinates"])
@@ -165,17 +169,17 @@ class NNetManager:
         if self.source == "color":
             nodes.cam_rgb.preview.link(nodes.nn.input)
         elif self.source == "host":
-            nodes.xin_nn = p.createXLinkIn()
+            nodes.xin_nn = pipeline.createXLinkIn()
             nodes.xin_nn.setStreamName("nn_in")
             nodes.xin_nn.out.link(nodes.nn.input)
         elif self.source in ("left", "right", "rectified_left", "rectified_right"):
-            nodes.manip = p.createImageManip()
+            nodes.manip = pipeline.createImageManip()
             nodes.manip.initialConfig.setResize(*self.input_size)
             # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
             nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             # NN inputs
             nodes.manip.out.link(nodes.nn.input)
-            nodes.manip.setKeepAspectRatio(not self.full_fov)
+            nodes.manip.setKeepAspectRatio(not self._full_fov)
 
             if self.source == "left":
                 nodes.mono_left.out.link(nodes.manip.inputImage)
@@ -202,14 +206,13 @@ class NNetManager:
             label (int): Integer representing detection label, usually returned from NN node
 
         Returns:
-            str: Label text assigned to specific label id
-            int: If label text could not be found, it will return back the label id
+            str: Label text assigned to specific label id or label id
 
         Raises:
             RuntimeError: If source is not a valid choice or when input size has not been set.
         """
         if self._config is None or self._labels is None:
-            return label
+            return str(label)
         elif int(label) < len(self._labels):
             return self._labels[int(label)]
         else:
@@ -283,7 +286,7 @@ class NNetManager:
         if self._output_format == "detection":
             def draw_detection(frame, detection):
                 bbox = frame_norm(self._normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
-                if self._source == Previews.color.name and not self._full_fov:
+                if self.source == Previews.color.name and not self._full_fov:
                     bbox[::2] += self._cropOffsetX(frame)
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), self._bbox_colors[detection.label], 2)
                 cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 110), bbox[1]), self._bbox_colors[detection.label], cv2.FILLED)
