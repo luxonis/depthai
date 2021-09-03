@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
 
-from depthai_helpers.managers import Previews
-from depthai_helpers.utils import to_tensor_result
+from depthai_sdk import to_tensor_result, Previews
 
 keypointsMapping = ['Nose', 'Neck', 'R-Sho', 'R-Elb', 'R-Wr', 'L-Sho', 'L-Elb', 'L-Wr', 'R-Hip', 'R-Knee', 'R-Ank',
                     'L-Hip', 'L-Knee', 'L-Ank', 'R-Eye', 'L-Eye', 'R-Ear', 'L-Ear']

@@ -110,13 +110,19 @@ class NNetManager:
             pipeline (depthai.Pipeline): Pipeline instance
             nodes (types.SimpleNamespace): Object cointaining all of the nodes added to the pipeline. Available in :attr:`depthai_sdk.managers.PipelineManager.nodes`
             source (pathlib.Path): Neural network input source, one of :attr:`source_choices`
-            blob_path (pathlib.Path): Path to MyriadX blob. Might be useful to use together with :func:`depthai_sdk.managers.BlobManager.getBlob()` for dynamic blob compilation
+            blob_path (pathlib.Path): Path to MyriadX blob. Might be useful to use together with
+                :func:`depthai_sdk.managers.BlobManager.getBlob()` for dynamic blob compilation
             use_depth (bool): If set to True, produced detections will have spatial coordinates included
             minDepth (int): Minimum depth distance in centimeters
             maxDepth (int): Maximum depth distance in centimeters
-            sbbScaleFactor (float): Scale of the bounding box that will be used to calculate spatial coordinates for detection. If set to 0.3, it will scale down center-wise the bounding box to 0.3 of it's original size and use it to calculate spatial location of the object
-            full_fov (pathlib.Path): If set to False, manager will include crop offset when scaling the detections. Usually should be set to True (if you don't perform aspect ratio crop or when `keepAspectRatio` flag on camera/manip node is set to False
-            flip_detection (bool): Whether the bounding box coordinates should be flipped horizontally. Useful when using rectified images as input.
+            sbbScaleFactor (float): Scale of the bounding box that will be used to calculate spatial coordinates for
+                detection. If set to 0.3, it will scale down center-wise the bounding box to 0.3 of it's original size
+                and use it to calculate spatial location of the object
+            full_fov (pathlib.Path): If set to False, manager will include crop offset when scaling the detections.
+                Usually should be set to True (if you don't perform aspect ratio crop or when `keepAspectRatio` flag
+                on camera/manip node is set to False
+            flip_detection (bool): Whether the bounding box coordinates should be flipped horizontally. Useful when
+                using rectified images as input.
 
         Returns:
             depthai.node.NeuralNetwork: Configured NN node that was added to the pipeline
@@ -244,7 +250,7 @@ class NNetManager:
         else:
             raise RuntimeError("Unknown output format: {}".format(self._output_format))
 
-    def draw_count(self, source, decoded_data):
+    def _draw_count(self, source, decoded_data):
         def draw_cnt(frame, cnt):
             cv2.putText(frame, f"{self._count_label}: {cnt}", (5, 46), self._text_type, 0.5, self._text_bg_color, 4, self._line_type)
             cv2.putText(frame, f"{self._count_label}: {cnt}", (5, 46), self._text_type, 0.5, self._text_color, 1, self._line_type)
@@ -258,6 +264,22 @@ class NNetManager:
             draw_cnt(source, len(cnt_list))
 
     def draw(self, source, decoded_data):
+        """
+        Draws NN results onto the frames. It's responsible to correctly map the results onto each frame requested,
+        including applying crop offset or preparing a correct normalization frame, then draws them with all information
+        provided (confidence, label, spatial location, label count).
+
+        Also, it's able to call custom nn handler method :code:`draw` to hand over drawing the results
+
+        Args:
+            source (depthai_sdk.managers.PreviewManager | numpy.ndarray): Draw target.
+                If supplied with a regular frame, it will draw the count on that frame
+
+                If supplied with :class:`depthai_sdk.managers.PreviewManager` instance, it will print the count label
+                on all of the frames that it stores
+
+            decoded_data: Detections from neural network node, usually returned from :func:`decode` method
+        """
         if self._output_format == "detection":
             def draw_detection(frame, detection):
                 bbox = frame_norm(self._normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
@@ -294,7 +316,7 @@ class NNetManager:
                     draw_detection(source, detection)
 
             if self._count_label is not None:
-                self.draw_count(source, decoded_data)
+                self._draw_count(source, decoded_data)
 
         elif self._output_format == "raw" and self._handler is not None:
             if isinstance(source, PreviewManager):
@@ -304,11 +326,33 @@ class NNetManager:
             self._handler.draw(self, decoded_data, frames)
 
     def createQueues(self, device):
+        """
+        Creates output queue for NeuralNetwork node and, if using :code:`host` as a :attr:`source`, it will also create
+        input queue.
+
+        Args:
+            device (depthai.Device): Running device instance
+        """
         if self.source == "host":
             self.input_queue = device.getInputQueue("nn_in", maxSize=1, blocking=False)
         self.output_queue = device.getOutputQueue("nn_out", maxSize=1, blocking=False)
 
     def sendInputFrame(self, frame, seq_num=None):
+        """
+        Sends a frame into :attr:`input_queue` object. Handles scaling down the frame, creating a proper :obj:`depthai.ImgFrame`
+        and sending it to the queue. Be sure to use :code:`host` as a :attr:`source` and call :func:`createQueues` prior
+        input queue.
+
+        Args:
+            frame (numpy.ndarray): Frame to be sent to the device
+            seq_num (int, optional): Sequence number set on ImgFrame. Useful in syncronization scenarios
+
+        Returns:
+            numpy.ndarray: scaled frame that was sent to the NN (same width/height as NN input)
+
+        Raises:
+            RuntimeError: if :attr:`input_queue` is :code:`None` (unable to send the image)
+        """
         if self.input_queue is None:
             raise RuntimeError("Unable to send image, no input queue is present! Call `createQueues(device)` first!")
 
@@ -325,4 +369,12 @@ class NNetManager:
         return scaled_frame
 
     def countLabel(self, label):
+        """
+        Enables object count for specific label. Label count will be printed once :func:`draw` method is called
+
+        Args:
+            label (str | int): Label to be counted. If model is using mappings in model config file, supply here a :obj:`str` label
+                to be tracked. If no mapping is present, specify the label as :obj:`int` (NN-default)
+        """
+
         self._count_label = label

@@ -1,8 +1,7 @@
 import cv2
 import numpy as np
 
-from depthai_helpers.managers import Previews
-from depthai_helpers.utils import to_tensor_result
+from depthai_sdk import to_tensor_result, Previews
 
 
 def decode(nn_manager, packet):

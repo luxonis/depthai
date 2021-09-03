@@ -226,6 +226,10 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
                 if conf.args.stereo_lr_check:
                     Trackbars.create_trackbar('LR-check threshold', queue_name, LRCT_MIN, LRCT_MAX, conf.args.lrc_threshold,
                              lambda value: pm.update_depth_config(device, lrc_threshold=value))
+
+        cameras = device.getConnectedCameras()
+        if dai.CameraBoardSocket.LEFT in cameras and dai.CameraBoardSocket.RIGHT in cameras:
+            pv.collect_calib_data(device)
         pv.create_queues(device, create_queue_callback)
         if enc_manager is not None:
             enc_manager.create_default_queues(device)
@@ -293,8 +297,8 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
                     if name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
                         h, w = frame.shape[:2]
                         text = "Median filter: {} [M]".format(pm.depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
-                        cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_bg_color, 4, fps.fps_line_type)
-                        cv2.putText(frame, text, (10, h - 10), fps.fps_type, 0.5, fps.fps_color, 1, fps.fps_line_type)
+                        cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 0, 4)
+                        cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 255, 1)
                         return_frame = callbacks.on_show_frame(frame, name)
                         return return_frame if return_frame is not None else frame
                 pv.show_frames(callback=show_frames_callback)
