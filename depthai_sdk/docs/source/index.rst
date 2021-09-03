@@ -8,8 +8,6 @@ DepthAI SDK documentation
 
 DepthAI SDK is a Python package, containing convenience classes and functions that help in most common tasks while using DepthAI API.
 
-To know more about the DepthAI itself, visit `our documentation <https://docs.luxonis.com>`__ or `our webpage <https://luxonis.com>`__
-
 Installation
 ------------
 
