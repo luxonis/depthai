@@ -18,6 +18,8 @@ python3 install_requirements.py
 
 `python3 depthai_demo.py -vid <path_to_video_or_yt_link>` - CNN inference on video example
 
+`python3 depthai_demo.py -cam_model oak1` - Applies appropriate defaults, ie flips the Camera image Horizontal so that it is correct way up
+
 `python3 depthai_demo.py -cnn person-detection-retail-0013` - Run `person-detection-retail-0013` model from `resources/nn` directory
 
 `python3 depthai_demo.py -cnn tiny-yolo-v3 -sh 8` - Run `tiny-yolo-v3` model from `resources/nn` directory and compile for 8 shaves
@@ -27,7 +29,8 @@ python3 install_requirements.py
 ```
 $ depthai_demo.py --help
 
-usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-hq] [-dd] [-dnn] [-cnnp CNN_PATH] [-cnn CNN_MODEL] [-sh SHAVES]
+usage: depthai_demo.py [-h] [-cam {left,right,color}] [-cam_model {oakd, oak1}] [-vid VIDEO] 
+                       [-hq] [-dd] [-dnn] [-cnnp CNN_PATH] [-cnn CNN_MODEL] [-sh SHAVES]
                        [-cnn_size CNN_INPUT_SIZE] [-rgbr {1080,2160,3040}] [-rgbf RGB_FPS] [-dct DISPARITY_CONFIDENCE_THRESHOLD] [-lrct LRC_THRESHOLD]
                        [-sig SIGMA] [-med {0,3,5,7}] [-lrc] [-ext] [-sub] [-ff] [-scale SCALE]
                        [-cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}]
@@ -41,6 +44,9 @@ optional arguments:
   -h, --help            show this help message and exit
   -cam {left,right,color}, --camera {left,right,color}
                         Use one of DepthAI cameras for inference (conflicts with -vid)
+  -cam_model {oakd, oak1}, --camera_model {oakd, oak1}
+                        Define what camera is being accessed to enable correct default configurations, ie Oak1 flip horizontal
+
   -vid VIDEO, --video VIDEO
                         Path to video file (or YouTube link) to be used for inference (conflicts with -cam)
   -hq, --high_quality   Low quality visualization - uses resized frames

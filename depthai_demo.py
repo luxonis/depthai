@@ -154,7 +154,8 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                                 )
         if conf.rgbCameraEnabled:
             pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps,
-                                not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show  and (conf.getModelSource() != "color" or not conf.args.sync)
+                                not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show  and (conf.getModelSource() != "color" or not conf.args.sync),
+                                oak1=(conf.args.camera_model=="oak1")
                                 )
 
         if conf.useDepth:

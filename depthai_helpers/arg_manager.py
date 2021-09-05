@@ -57,6 +57,7 @@ project_root = Path(__file__).parent.parent
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-cam', '--camera', choices=[Previews.left.name, Previews.right.name, Previews.color.name], default=Previews.color.name, help="Use one of DepthAI cameras for inference (conflicts with -vid)")
+    parser.add_argument('-cam_model', '--camera_model', choices=["oakd","oak1"], default="oakd", help="Defines appropriate defaults for DepthAI cameras models oakd or oak1")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
     parser.add_argument('-dd', '--disable_depth', action="store_true", help="Disable depth information")
     parser.add_argument('-dnn', '--disable_neural_network', action="store_true", help="Disable neural network inference")

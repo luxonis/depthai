@@ -659,9 +659,11 @@ class PipelineManager:
             raise NotImplementedError("Unable to create mjpeg link for encountered node type: {}".format(type(node)))
         videnc.bitstream.link(xout.input)
 
-    def create_color_cam(self, preview_size, res, fps, full_fov, xout=False):
+    def create_color_cam(self, preview_size, res, fps, full_fov, xout=False,oak1=False):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
+        if oak1:
+            self.nodes.cam_rgb.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
         self.nodes.cam_rgb.setPreviewSize(*preview_size)
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(res)
