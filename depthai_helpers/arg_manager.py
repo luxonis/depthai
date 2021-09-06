@@ -54,7 +54,7 @@ orientation_choices = list(filter(lambda var: var[0].isupper(), vars(dai.CameraI
 
 def orientation_cast(arg):
     if not hasattr(dai.CameraImageOrientation, arg):
-        raise argparse.ArgumentTypeError("Invalid camera orientation specified: '{}'. Avalilable: {}".format(arg, orientation_choices))
+        raise argparse.ArgumentTypeError("Invalid camera orientation specified: '{}'. Available: {}".format(arg, orientation_choices))
 
     return getattr(dai.CameraImageOrientation, arg)
 
@@ -137,6 +137,6 @@ def parse_args():
     parser.add_argument('-camo', '--camera_orientation', type=_coma_separated(default="AUTO", cast=orientation_cast), nargs="+", default=[],
                         help=("Define cameras orientation (available: {}) \n"
                              "Format: camera_name,camera_orientation \n"
-                             "Example: -rot color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(orientation_choices))
+                             "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(orientation_choices))
                         )
     return parser.parse_args()

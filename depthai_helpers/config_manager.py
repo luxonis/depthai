@@ -36,6 +36,8 @@ class ConfigManager:
             self.args.scale = dict(self.args.scale)
         if not self.useCamera and not self.args.sync:
             print("[WARNING] When using video file as an input, it's highly recommended to run the demo with \"--sync\" flag")
+        if (Previews.left.name in self.args.camera_orientation or Previews.right.name in self.args.camera_orientation) and self.useDepth:
+            print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
 
     @property
     def debug(self):
