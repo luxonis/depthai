@@ -135,7 +135,8 @@ def parse_args():
     parser.add_argument('-encout', '--encode_output', type=Path, default=project_root, help="Path to directory where to store encoded files. Default: %(default)s")
     parser.add_argument('-xls', '--xlink_chunk_size', type=int, default = None, help="Specify XLink chunk size")
     parser.add_argument('-camo', '--camera_orientation', type=_coma_separated(default="AUTO", cast=orientation_cast), nargs="+", default=[],
-                        help="Define cameras orientation (see depthai.CameraImageOrientation for available choices) \n"
+                        help=("Define cameras orientation (available: {}) \n"
                              "Format: camera_name,camera_orientation \n"
-                             "Example: -rot color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG")
+                             "Example: -rot color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(orientation_choices))
+                        )
     return parser.parse_args()
