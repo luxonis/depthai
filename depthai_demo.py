@@ -145,16 +145,16 @@ with dai.Device(pm.p.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_s
                             scale=conf.args.scale, sync=conf.args.sync)
 
         if conf.leftCameraEnabled:
-            pm.create_left_cam(mono_res, conf.args.mono_fps,
+            pm.create_left_cam(mono_res, conf.args.mono_fps, orientation=conf.args.camera_orientation.get(Previews.left.name),
                                xout=Previews.left.name in conf.args.show and (conf.getModelSource() != "left" or not conf.args.sync)
                                )
         if conf.rightCameraEnabled:
-            pm.create_right_cam(mono_res, conf.args.mono_fps,
+            pm.create_right_cam(mono_res, conf.args.mono_fps, orientation=conf.args.camera_orientation.get(Previews.right.name),
                                 xout=Previews.right.name in conf.args.show and (conf.getModelSource() != "right" or not conf.args.sync)
                                 )
         if conf.rgbCameraEnabled:
-            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps,
-                                not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show  and (conf.getModelSource() != "color" or not conf.args.sync)
+            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, orientation=conf.args.camera_orientation.get(Previews.color.name),
+                                full_fov=not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show  and (conf.getModelSource() != "color" or not conf.args.sync)
                                 )
 
         if conf.useDepth:

@@ -131,6 +131,12 @@ def test_cameras():
     if not success:
         raise RuntimeError("Preview scaling test failed!")
 
+    show_test_def("Camera orientation", "You should see the both rgb and mono camera previews rotated 180 degrees")
+    subprocess.check_call([*demo_call, "-camo", "left,ROTATE_180_DEG", "right,ROTATE_180_DEG", "color,ROTATE_180_DEG"])
+    success = wait_for_result()
+    if not success:
+        raise RuntimeError("Camera orientation test failed!")
+
     success_frame = get_frame()
     success_frame[:, :, :] = (0, 255, 0)
     cv2.putText(success_frame, "Camera tests passed!", (120, 300), cv2.FONT_HERSHEY_TRIPLEX, 2.0, (0, 0, 0), 10)
@@ -390,7 +396,7 @@ def test_other():
     subprocess.check_call([*demo_call, "-cnn", "vehicle-detection-adas-0002", "-vid", "https://www.youtube.com/watch?v=Y1jTEyb3wiI", "--sync"])
     success = wait_for_result()
     if not success:
-        raise RuntimeError("Reporting test failed!")
+        raise RuntimeError("YouTube video test failed!")
 
     success_frame = get_frame()
     success_frame[:, :, :] = (0, 255, 0)

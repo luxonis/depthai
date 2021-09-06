@@ -29,6 +29,7 @@ class ConfigManager:
     def __init__(self, args):
         self.args = args
         self.args.encode = dict(self.args.encode)
+        self.args.camera_orientation = dict(self.args.camera_orientation)
         if self.args.scale is None:
             self.args.scale = {"color": 0.37 if not self.args.sync else 1}
         else:

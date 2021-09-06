@@ -36,17 +36,27 @@ def _coma_separated(default, cast=str):
                 "{0} format is invalid. See --help".format(option)
             )
         elif len(option_list) == 1:
-            return option_list[0], default
+            return option_list[0], cast(default)
         else:
             try:
-                float(option_list[1])
+                cast(option_list[1])
             except ValueError:
                 raise argparse.ArgumentTypeError(
-                    "In option: {0} {1} is not a number!".format(option, option_list[1])
+                    "In option: {0} {1} is not in a correct format!".format(option, option_list[1])
                 )
             return option_list[0], cast(option_list[1])
 
     return _fun
+
+
+orientation_choices = list(filter(lambda var: var[0].isupper(), vars(dai.CameraImageOrientation)))
+
+
+def orientation_cast(arg):
+    if not hasattr(dai.CameraImageOrientation, arg):
+        raise argparse.ArgumentTypeError("Invalid camera orientation specified: '{}'. Avalilable: {}".format(arg, orientation_choices))
+
+    return getattr(dai.CameraImageOrientation, arg)
 
 
 openvino_versions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
@@ -124,4 +134,8 @@ def parse_args():
                              "Example: -enc color right,10 left,10")
     parser.add_argument('-encout', '--encode_output', type=Path, default=project_root, help="Path to directory where to store encoded files. Default: %(default)s")
     parser.add_argument('-xls', '--xlink_chunk_size', type=int, default = None, help="Specify XLink chunk size")
+    parser.add_argument('-camo', '--camera_orientation', type=_coma_separated(default="AUTO", cast=orientation_cast), nargs="+", default=[],
+                        help="Define cameras orientation (see depthai.CameraImageOrientation for available choices) \n"
+                             "Format: camera_name,camera_orientation \n"
+                             "Example: -rot color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG")
     return parser.parse_args()
