@@ -119,7 +119,7 @@ optional arguments:
   -xls XLINK_CHUNK_SIZE, --xlink_chunk_size XLINK_CHUNK_SIZE
                         Specify XLink chunk size
   -camo CAMERA_ORIENTATION [CAMERA_ORIENTATION ...], --camera_orientation CAMERA_ORIENTATION [CAMERA_ORIENTATION ...]
-                        Define cameras orientation (see depthai.CameraImageOrientation for available choices) 
+                        Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG) 
                         Format: camera_name,camera_orientation 
                         Example: -rot color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG
 ```
