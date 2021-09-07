@@ -99,7 +99,7 @@ optional arguments:
   -monof MONO_FPS, --mono_fps MONO_FPS
                         Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: 30.0
   -cb CALLBACK, --callback CALLBACK
-                        Path to callbacks file to be used. Default: <project_root>m/callbacks.py
+                        Path to callbacks file to be used. Default: <project_root>/callbacks.py
   --openvino_version {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}
                         Specify which OpenVINO version to use in the pipeline
   --count COUNT_LABEL   Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).
