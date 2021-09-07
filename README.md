@@ -27,15 +27,14 @@ python3 install_requirements.py
 ```
 $ depthai_demo.py --help
 
-usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-hq] [-dd] [-dnn] [-cnnp CNN_PATH] [-cnn CNN_MODEL] [-sh SHAVES]
-                       [-cnn_size CNN_INPUT_SIZE] [-rgbr {1080,2160,3040}] [-rgbf RGB_FPS] [-dct DISPARITY_CONFIDENCE_THRESHOLD] [-lrct LRC_THRESHOLD]
-                       [-sig SIGMA] [-med {0,3,5,7}] [-lrc] [-ext] [-sub] [-ff] [-scale SCALE]
+usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] [-cnnp CNN_PATH] [-cnn CNN_MODEL] [-sh SHAVES] [-cnn_size CNN_INPUT_SIZE] [-rgbr {1080,2160,3040}] [-rgbf RGB_FPS]
+                       [-dct DISPARITY_CONFIDENCE_THRESHOLD] [-lrct LRC_THRESHOLD] [-sig SIGMA] [-med {0,3,5,7}] [-lrc] [-ext] [-sub] [-dff] [-scale SCALE [SCALE ...]]
                        [-cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}]
                        [-maxd MAX_DEPTH] [-mind MIN_DEPTH] [-sbb] [-sbb_sf SBB_SCALE_FACTOR]
                        [-s {nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} [{nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} ...]]
-                       [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--report_file REPORT_FILE] [-sync] [-monor {400,720,800}] [-monof MONO_FPS]
-                       [-cb CALLBACK] [--openvino_version {2020_1,2020_2,2020_3,2020_4,2021_1,2021_2,2021_3}] [--count COUNT_LABEL] [-dev DEVICE_ID]
-                       [-usbs {usb2,usb3}] [-enc ENCODE [ENCODE ...]] [-encout ENCODE_OUTPUT]
+                       [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--report_file REPORT_FILE] [-sync] [-monor {400,720,800}] [-monof MONO_FPS] [-cb CALLBACK]
+                       [--openvino_version {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--count COUNT_LABEL] [-dev DEVICE_ID] [-lowb] [-usbs {usb2,usb3}] [-enc ENCODE [ENCODE ...]]
+                       [-encout ENCODE_OUTPUT] [-xls XLINK_CHUNK_SIZE] [-camo CAMERA_ORIENTATION [CAMERA_ORIENTATION ...]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -43,7 +42,6 @@ optional arguments:
                         Use one of DepthAI cameras for inference (conflicts with -vid)
   -vid VIDEO, --video VIDEO
                         Path to video file (or YouTube link) to be used for inference (conflicts with -cam)
-  -hq, --high_quality   Low quality visualization - uses resized frames
   -dd, --disable_depth  Disable depth information
   -dnn, --disable_neural_network
                         Disable neural network inference
@@ -52,7 +50,7 @@ optional arguments:
   -cnn CNN_MODEL, --cnn_model CNN_MODEL
                         Cnn model to run on DepthAI
   -sh SHAVES, --shaves SHAVES
-                        Name of the nn to be run from default depthai repository
+                        Number of MyriadX SHAVEs to use for neural network blob compilation
   -cnn_size CNN_INPUT_SIZE, --cnn_input_size CNN_INPUT_SIZE
                         Neural network input dimensions, in "WxH" format, e.g. "544x320"
   -rgbr {1080,2160,3040}, --rgb_resolution {1080,2160,3040}
@@ -72,9 +70,13 @@ optional arguments:
   -ext, --extended_disparity
                         Enable stereo 'Extended Disparity' feature.
   -sub, --subpixel      Enable stereo 'Subpixel' feature.
-  -dff, --disable_full_fov_nn    Disable full RGB FOV for NN, keeping the nn aspect ratio
-  -scale SCALE, --scale SCALE
-                        Scale factor for the output window. Default: 1.0
+  -dff, --disable_full_fov_nn
+                        Disable full RGB FOV for NN, keeping the nn aspect ratio
+  -scale SCALE [SCALE ...], --scale SCALE [SCALE ...]
+                        Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5 
+                        Format: preview_name or preview_name,scale_factor 
+                        Example: -scale color 
+                        Example: -scale color,0.7 right,2 left,2
   -cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}, --color_map {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}
                         Change color map used to apply colors to depth/disparity frames. Default: JET
   -maxd MAX_DEPTH, --max_depth MAX_DEPTH
@@ -98,20 +100,28 @@ optional arguments:
                         Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: 30.0
   -cb CALLBACK, --callback CALLBACK
                         Path to callbacks file to be used. Default: <project_root>/callbacks.py
-  --openvino_version {2020_1,2020_2,2020_3,2020_4,2021_1,2021_2,2021_3}
+  --openvino_version {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}
                         Specify which OpenVINO version to use in the pipeline
   --count COUNT_LABEL   Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).
   -dev DEVICE_ID, --device_id DEVICE_ID
                         DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.
+  -lowb, --low_bandwidth
+                        Enable low bandwidth mode that uses encoding for data transfer to limit it's size and increase throughput
   -usbs {usb2,usb3}, --usb_speed {usb2,usb3}
                         Force USB communication speed. Default: usb3
   -enc ENCODE [ENCODE ...], --encode ENCODE [ENCODE ...]
-                        Define which cameras to encode (record)
-                        Format: camera_name or camera_name,enc_fps
-                        Example: -enc left color
+                        Define which cameras to encode (record) 
+                        Format: camera_name or camera_name,enc_fps 
+                        Example: -enc left color 
                         Example: -enc color right,10 left,10
   -encout ENCODE_OUTPUT, --encode_output ENCODE_OUTPUT
                         Path to directory where to store encoded files. Default: <project_root>
+  -xls XLINK_CHUNK_SIZE, --xlink_chunk_size XLINK_CHUNK_SIZE
+                        Specify XLink chunk size
+  -camo CAMERA_ORIENTATION [CAMERA_ORIENTATION ...], --camera_orientation CAMERA_ORIENTATION [CAMERA_ORIENTATION ...]
+                        Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG) 
+                        Format: camera_name,camera_orientation 
+                        Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG
 ```
 
 

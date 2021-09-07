@@ -29,12 +29,15 @@ class ConfigManager:
     def __init__(self, args):
         self.args = args
         self.args.encode = dict(self.args.encode)
+        self.args.camera_orientation = dict(self.args.camera_orientation)
         if self.args.scale is None:
             self.args.scale = {"color": 0.37 if not self.args.sync else 1}
         else:
             self.args.scale = dict(self.args.scale)
         if not self.useCamera and not self.args.sync:
             print("[WARNING] When using video file as an input, it's highly recommended to run the demo with \"--sync\" flag")
+        if (Previews.left.name in self.args.camera_orientation or Previews.right.name in self.args.camera_orientation) and self.useDepth:
+            print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
 
     @property
     def debug(self):

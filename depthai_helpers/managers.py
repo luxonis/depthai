@@ -659,13 +659,15 @@ class PipelineManager:
             raise NotImplementedError("Unable to create mjpeg link for encountered node type: {}".format(type(node)))
         videnc.bitstream.link(xout.input)
 
-    def create_color_cam(self, preview_size, res, fps, full_fov, xout=False):
+    def create_color_cam(self, preview_size, res, fps, full_fov, orientation: dai.CameraImageOrientation=None, xout=False):
         # Define a source - color camera
         self.nodes.cam_rgb = self.p.createColorCamera()
         self.nodes.cam_rgb.setPreviewSize(*preview_size)
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(res)
         self.nodes.cam_rgb.setFps(fps)
+        if orientation is not None:
+            self.nodes.cam_rgb.setImageOrientation(orientation)
         self.nodes.cam_rgb.setPreviewKeepAspectRatio(not full_fov)
         self.nodes.xout_rgb = self.p.createXLinkOut()
         self.nodes.xout_rgb.setStreamName(Previews.color.name)
@@ -750,11 +752,13 @@ class PipelineManager:
         device.getInputQueue("stereo_config").send(self.depthConfig)
 
 
-    def create_left_cam(self, res, fps, xout=False):
+    def create_left_cam(self, res, fps, orientation: dai.CameraImageOrientation=None, xout=False):
         self.nodes.mono_left = self.p.createMonoCamera()
         self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
         self.nodes.mono_left.setResolution(res)
         self.nodes.mono_left.setFps(fps)
+        if orientation is not None:
+            self.nodes.mono_left.setImageOrientation(orientation)
 
         self.nodes.xout_left = self.p.createXLinkOut()
         self.nodes.xout_left.setStreamName(Previews.left.name)
@@ -764,11 +768,13 @@ class PipelineManager:
             else:
                 self.nodes.mono_left.out.link(self.nodes.xout_left.input)
 
-    def create_right_cam(self, res, fps, xout=False):
+    def create_right_cam(self, res, fps, orientation: dai.CameraImageOrientation=None, xout=False):
         self.nodes.mono_right = self.p.createMonoCamera()
         self.nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         self.nodes.mono_right.setResolution(res)
         self.nodes.mono_right.setFps(fps)
+        if orientation is not None:
+            self.nodes.mono_right.setImageOrientation(orientation)
 
         self.nodes.xout_right = self.p.createXLinkOut()
         self.nodes.xout_right.setStreamName(Previews.right.name)
