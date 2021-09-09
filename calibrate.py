@@ -23,7 +23,7 @@ import depthai as dai
 import depthai_helpers.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-debug = False
+debug = True
 red = (255, 0, 0)
 green = (0, 255, 0)
 
@@ -195,10 +195,10 @@ class Main:
             cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
                 
         cam_left.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+            dai.MonoCameraProperties.SensorResolution.THE_480_P)
 
         cam_right.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+            dai.MonoCameraProperties.SensorResolution.THE_480_P)
 
         xout_left.setStreamName("left")
         cam_left.out.link(xout_left.input)
@@ -223,6 +223,7 @@ class Main:
 
     def parse_frame(self, frame, stream_name):
         if not self.is_markers_found(frame):
+            print("Less markers found")
             return False
 
         filename = calibUtils.image_filename(
@@ -348,6 +349,7 @@ class Main:
                     print("setting capture true------------------------")
                 capturing = True
 
+
             frame_list = []
             # left_frame = recent_left.getCvFrame()
             # rgb_frame = recent_color.getCvFrame()
@@ -365,19 +367,17 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
 
-                if debug:
-                    print("Timestamp difference ---> l & rgb")
+                # if debug:
+                #     print("Timestamp difference ---> l & rgb")
                 lrgb_time = 0
                 if not self.args.disableRgb:
                     lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
                 lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
 
-                if debug:
-                    print(lrgb_time)
-                    print(lr_time)
+                
 
                 if capturing and lrgb_time < 30000 and lr_time < 30000:
-                    print("Capturing  ------------------------")
+                    print("Capturing  ------------------------ {}".format(packet[0]))
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
                         tried_left = True
@@ -390,6 +390,14 @@ class Main:
                         captured_right = self.parse_frame(frame, packet[0])
                         tried_right = True
                         captured_right_frame = frame.copy()
+                else:
+                    if debug:
+                        if lrgb_time > 10000:
+                            print("Timestamp difference --->L-RGB")
+                            print(lrgb_time)
+                        if lr_time > 30000:
+                            print("Timestamp difference --->L-R")
+                            print(lr_time)
 
 
                 has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
@@ -439,7 +447,7 @@ class Main:
                     captured_left = False
                     captured_right = False
                     captured_color = False
-                elif tried_left and tried_color:
+                elif tried_left and tried_right:
                     self.show_failed_capture_frame()
                     capturing = False
                     tried_left = False
@@ -508,8 +516,8 @@ class Main:
             calibration_handler = dai.CalibrationHandler()
             calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
-            calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
-            calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
+            calibration_handler.setCameraIntrinsics(left, calibData[2], 640, 480)
+            calibration_handler.setCameraIntrinsics(right, calibData[3], 640, 480)
             measuredTranslation = [
                 -self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
             calibration_handler.setCameraExtrinsics(
