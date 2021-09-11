@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+
+from depthai_helpers.managers import Previews
 from depthai_helpers.utils import to_tensor_result
 
 keypointsMapping = ['Nose', 'Neck', 'R-Sho', 'R-Elb', 'R-Wr', 'L-Sho', 'L-Elb', 'L-Wr', 'R-Hip', 'R-Knee', 'R-Ank',
@@ -158,11 +160,20 @@ def decode(nn_manager, packet):
 
 def draw(nn_manager, keypoints_limbs, frames):
     for name, frame in frames:
-        scale_factor = frame.shape[0] / nn_manager.input_size[1]
-        offset_w = int(frame.shape[1] - nn_manager.input_size[0] * scale_factor) // 2
+        if name == "color" and nn_manager.source == "color" and not nn_manager.full_fov:
+            scale_factor = frame.shape[0] / nn_manager.input_size[1]
+            offset_w = int(frame.shape[1] - nn_manager.input_size[0] * scale_factor) // 2
 
-        def scale(point):
-            return int(point[0] * scale_factor) + offset_w, int(point[1] * scale_factor)
+            def scale(point):
+                return int(point[0] * scale_factor) + offset_w, int(point[1] * scale_factor)
+        elif name in (Previews.color.name, Previews.nn_input.name, "host"):
+            scale_h = frame.shape[0] / nn_manager.input_size[1]
+            scale_w = frame.shape[1] / nn_manager.input_size[0]
+
+            def scale(point):
+                return int(point[0] * scale_w), int(point[1] * scale_h)
+        else:
+            continue
 
         if len(keypoints_limbs) == 3:
             detected_keypoints = keypoints_limbs[0]

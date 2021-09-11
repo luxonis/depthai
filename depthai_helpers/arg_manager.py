@@ -36,17 +36,27 @@ def _coma_separated(default, cast=str):
                 "{0} format is invalid. See --help".format(option)
             )
         elif len(option_list) == 1:
-            return option_list[0], default
+            return option_list[0], cast(default)
         else:
             try:
-                float(option_list[1])
+                cast(option_list[1])
             except ValueError:
                 raise argparse.ArgumentTypeError(
-                    "In option: {0} {1} is not a number!".format(option, option_list[1])
+                    "In option: {0} {1} is not in a correct format!".format(option, option_list[1])
                 )
             return option_list[0], cast(option_list[1])
 
     return _fun
+
+
+orientation_choices = list(filter(lambda var: var[0].isupper(), vars(dai.CameraImageOrientation)))
+
+
+def orientation_cast(arg):
+    if not hasattr(dai.CameraImageOrientation, arg):
+        raise argparse.ArgumentTypeError("Invalid camera orientation specified: '{}'. Available: {}".format(arg, orientation_choices))
+
+    return getattr(dai.CameraImageOrientation, arg)
 
 
 openvino_versions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
@@ -84,9 +94,9 @@ def parse_args():
                         help="Enable stereo 'Extended Disparity' feature.")
     parser.add_argument('-sub', '--subpixel', action="store_true",
                         help="Enable stereo 'Subpixel' feature.")
-    parser.add_argument("-ff", "--full_fov_nn", default=False, action="store_true",
-                        help="Full RGB FOV for NN, not keeping the aspect ratio")
-    parser.add_argument('-scale', '--scale', type=_coma_separated(default=0.5, cast=float), nargs="+", default=[("color", 0.37)],
+    parser.add_argument("-dff", "--disable_full_fov_nn", default=False, action="store_true",
+                        help="Disable full RGB FOV for NN, keeping the nn aspect ratio")
+    parser.add_argument('-scale', '--scale', type=_coma_separated(default=0.5, cast=float), nargs="+",
                         help="Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5 \n"
                              "Format: preview_name or preview_name,scale_factor \n"
                              "Example: -scale color \n"
@@ -124,4 +134,10 @@ def parse_args():
                              "Example: -enc color right,10 left,10")
     parser.add_argument('-encout', '--encode_output', type=Path, default=project_root, help="Path to directory where to store encoded files. Default: %(default)s")
     parser.add_argument('-tun', '--camera_tuning', type=Path, help="Path to custom camera tuning database")
+    parser.add_argument('-xls', '--xlink_chunk_size', type=int, default = None, help="Specify XLink chunk size")
+    parser.add_argument('-camo', '--camera_orientation', type=_coma_separated(default="AUTO", cast=orientation_cast), nargs="+", default=[],
+                        help=("Define cameras orientation (available: {}) \n"
+                             "Format: camera_name,camera_orientation \n"
+                             "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(orientation_choices))
+                        )
     return parser.parse_args()
