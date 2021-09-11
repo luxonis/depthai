@@ -33,8 +33,8 @@ usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] 
                        [-maxd MAX_DEPTH] [-mind MIN_DEPTH] [-sbb] [-sbb_sf SBB_SCALE_FACTOR]
                        [-s {nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} [{nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} ...]]
                        [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--report_file REPORT_FILE] [-sync] [-monor {400,720,800}] [-monof MONO_FPS] [-cb CALLBACK]
-                       [--openvino_version {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--count COUNT_LABEL] [-dev DEVICE_ID] [-lowb] [-usbs {usb2,usb3}] [-enc ENCODE [ENCODE ...]]
-                       [-encout ENCODE_OUTPUT] [-xls XLINK_CHUNK_SIZE] [-camo CAMERA_ORIENTATION [CAMERA_ORIENTATION ...]]
+                       [--openvino_version {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--count COUNT_LABEL] [-dev DEVICE_ID] [-bandw {auto,low,high}]
+                       [-usbs {usb2,usb3}] [-enc ENCODE [ENCODE ...]] [-encout ENCODE_OUTPUT] [-xls XLINK_CHUNK_SIZE] [-camo CAMERA_ORIENTATION [CAMERA_ORIENTATION ...]]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -105,8 +105,8 @@ optional arguments:
   --count COUNT_LABEL   Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).
   -dev DEVICE_ID, --device_id DEVICE_ID
                         DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.
-  -lowb, --low_bandwidth
-                        Enable low bandwidth mode that uses encoding for data transfer to limit it's size and increase throughput
+  -bandw {auto,low,high}, --bandwidth {auto,low,high}
+                        Force bandwidth mode. Default: auto. Choices: auto, low, high
   -usbs {usb2,usb3}, --usb_speed {usb2,usb3}
                         Force USB communication speed. Default: usb3
   -enc ENCODE [ENCODE ...], --encode ENCODE [ENCODE ...]
