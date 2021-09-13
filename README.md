@@ -106,7 +106,10 @@ optional arguments:
   -dev DEVICE_ID, --device_id DEVICE_ID
                         DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.
   -bandw {auto,low,high}, --bandwidth {auto,low,high}
-                        Force bandwidth mode. Default: auto. Choices: auto, low, high
+                        Force bandwidth mode. 
+                        If set to "high", the output streams will stay uncompressed
+                        If set to "low", the output streams will be MJPEG-encoded
+                        If set to "auto" (default), the optimal bandwidth will be selected based on your connection type and speed
   -usbs {usb2,usb3}, --usb_speed {usb2,usb3}
                         Force USB communication speed. Default: usb3
   -enc ENCODE [ENCODE ...], --encode ENCODE [ENCODE ...]
