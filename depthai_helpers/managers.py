@@ -629,38 +629,54 @@ class PipelineManager:
         for xin in filter(lambda node: isinstance(node, dai.node.XLinkIn), vars(self.nodes).values()):
             device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
 
-    def mjpeg_link(self, node, xout, raw_node_output):
+    def __calc_encodeable_size(self, source_size):
+        w, h = source_size
+        if w % 16 > 0:
+            new_w = w - (w % 16)
+            h = int((new_w / w) * h)
+            w = int(new_w)
+        if h % 2 > 0:
+            h -= 1
+        return w, h
+
+    def mjpeg_link(self, node, xout, node_output):
         print("Creating MJPEG link for {} node and {} xlink stream...".format(node.getName(), xout.getStreamName()))
         videnc = self.p.createVideoEncoder()
-        if isinstance(node, dai.node.ColorCamera) or isinstance(node, dai.node.MonoCamera):
-            res_w, res_h, fps = (node.getResolutionWidth(), node.getResolutionHeight(), node.getFps())
+        if isinstance(node, dai.node.ColorCamera):
+            if node.video == node_output:
+                size = self.__calc_encodeable_size(node.getVideoSize())
+                node.setVideoSize(size)
+                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            elif node.preview == node_output:
+                size = self.__calc_encodeable_size(node.getPreviewSize())
+                node.setPreviewSize(size)
+                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            elif node.still == node_output:
+                size = self.__calc_encodeable_size(node.getStillSize())
+                node.setStillSize(size)
+                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            else:
+                raise NotImplementedError("I made a mistake")
+            node_output.link(videnc.input)
+        elif isinstance(node, dai.node.MonoCamera):
+            videnc.setDefaultProfilePreset(node.getResolutionWidth(), node.getResolutionHeight(), node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            node_output.link(videnc.input)
         elif isinstance(node, dai.node.StereoDepth):
             camera_node = getattr(self.nodes, 'mono_left', getattr(self.nodes, 'mono_right', None))
             if camera_node is None:
                 raise RuntimeError("Unable to find mono camera node to determine frame size!")
-            res_w, res_h, fps = (camera_node.getResolutionWidth(), camera_node.getResolutionHeight(), camera_node.getFps())
+            videnc.setDefaultProfilePreset(camera_node.getResolutionWidth(), camera_node.getResolutionHeight(), camera_node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            node_output.link(videnc.input)
         elif isinstance(node, dai.NeuralNetwork):
-            res_w, res_h, fps = self.nn_manager.input_size[0], self.nn_manager.input_size[1], 30
+            w, h = self.__calc_encodeable_size(self.nn_manager.input_size)
+            manip = self.p.createImageManip()
+            manip.initialConfig.setResize(w, h)
+
+            videnc.setDefaultProfilePreset(w, h, 30, dai.VideoEncoderProperties.Profile.MJPEG)
+            node_output.link(manip.inputImage)
+            manip.out.link(videnc.input)
         else:
             raise NotImplementedError("Unable to create mjpeg link for encountered node type: {}".format(type(node)))
-
-        if res_w % 16 != 0 or res_h % 2 != 0:
-            if res_w % 16 > 0:
-                new_w = res_w - (res_w % 16)
-                res_h = int((new_w / res_w) * res_h)
-                res_w = int(new_w)
-            if res_h % 2 > 0:
-                res_h -= 1
-
-            manip = self.p.createImageManip()
-            manip.initialConfig.setResize(res_w, res_h)
-            raw_node_output.link(manip.inputImage)
-            node_output = manip.out
-        else:
-            node_output = raw_node_output
-
-        videnc.setDefaultProfilePreset(res_w, res_h, fps, dai.VideoEncoderProperties.Profile.MJPEG)
-        node_output.link(videnc.input)
         videnc.bitstream.link(xout.input)
 
     def create_color_cam(self, preview_size, res, fps, full_fov, orientation: dai.CameraImageOrientation=None, xout=False):
