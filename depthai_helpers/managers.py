@@ -655,8 +655,7 @@ class PipelineManager:
                 size = self.__calc_encodeable_size(node.getStillSize())
                 node.setStillSize(size)
                 videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
-            else:
-                raise NotImplementedError("I made a mistake")
+
             node_output.link(videnc.input)
         elif isinstance(node, dai.node.MonoCamera):
             videnc.setDefaultProfilePreset(node.getResolutionWidth(), node.getResolutionHeight(), node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
