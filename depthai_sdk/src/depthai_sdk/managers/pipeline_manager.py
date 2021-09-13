@@ -132,14 +132,14 @@ class PipelineManager:
                 self.nodes.cam_rgb.video.link(self.nodes.xout_rgb.input)
 
 
-    def create_left_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, orientation: dai.CameraImageOrientation=None, fps=30, xout=False):
+    def create_left_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.LEFT`
 
         Args:
             res (depthai.MonoCameraProperties.SensorResolution): Camera resolution to be used
-            orientation (depthai.CameraImageOrientation): Custom camera orientation to be set on the device
             fps (int): Camera FPS set on the device. Can limit / increase the amount of frames produced by the camera
+            orientation (depthai.CameraImageOrientation): Custom camera orientation to be set on the device
             xout (bool): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
         """
         self.nodes.mono_left = self.pipeline.createMonoCamera()
@@ -157,14 +157,14 @@ class PipelineManager:
             else:
                 self.nodes.mono_left.out.link(self.nodes.xout_left.input)
 
-    def create_right_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, orientation: dai.CameraImageOrientation=None, fps=30, xout=False):
+    def create_right_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.RIGHT`
 
         Args:
             res (depthai.MonoCameraProperties.SensorResolution): Camera resolution to be used
-            orientation (depthai.CameraImageOrientation): Custom camera orientation to be set on the device
             fps (int): Camera FPS set on the device. Can limit / increase the amount of frames produced by the camera
+            orientation (depthai.CameraImageOrientation): Custom camera orientation to be set on the device
             xout (bool): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
         """
         self.nodes.mono_right = self.pipeline.createMonoCamera()
