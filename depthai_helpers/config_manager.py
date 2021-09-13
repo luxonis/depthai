@@ -252,12 +252,15 @@ class ConfigManager:
                 updated_show_arg.append("color")
             self.args.show = updated_show_arg
 
-        if device_info.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
-            print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(device_info.desc.protocol))
-            self.args.low_bandwidth = True
-        elif device.getUsbSpeed() not in [dai.UsbSpeed.SUPER, dai.UsbSpeed.SUPER_PLUS]:
-            print("Enabling low-bandwidth mode due to low USB speed... (speed: {})".format(device.getUsbSpeed()))
-            self.args.low_bandwidth = True
+        if self.args.bandwidth == "auto":
+            if device_info.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
+                print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(device_info.desc.protocol))
+                self.args.bandwidth = "low"
+            elif device.getUsbSpeed() not in [dai.UsbSpeed.SUPER, dai.UsbSpeed.SUPER_PLUS]:
+                print("Enabling low-bandwidth mode due to low USB speed... (speed: {})".format(device.getUsbSpeed()))
+                self.args.bandwidth = "low"
+            else:
+                self.args.bandwidth = "high"
 
 
     def linuxCheckApplyUsbRules(self):
@@ -335,7 +338,7 @@ class ConfigManager:
 
     @property
     def lowBandwidth(self):
-        return self.args.low_bandwidth
+        return self.args.bandwidth == "low"
 
     @property
     def shaves(self):

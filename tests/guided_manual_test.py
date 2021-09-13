@@ -375,7 +375,7 @@ def test_other():
         raise RuntimeError("Encode all test failed!")
 
     show_test_def("Low bandwidth", "Demo script will run in low-bandwidth mode", "creating MJPEG links")
-    subprocess.check_call([*demo_call, "-lowb"])
+    subprocess.check_call([*demo_call, "--bandwidth", "low"])
     success = wait_for_result()
     if not success:
         raise RuntimeError("Low bandwidth test failed!")

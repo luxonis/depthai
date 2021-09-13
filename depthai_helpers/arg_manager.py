@@ -125,7 +125,10 @@ def parse_args():
                         help="Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).")
     parser.add_argument("-dev", "--device_id", type=str,
                         help="DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.")
-    parser.add_argument('-lowb', '--low_bandwidth', action="store_true", help="Enable low bandwidth mode that uses encoding for data transfer to limit it's size and increase throughput")
+    parser.add_argument('-bandw', '--bandwidth', type=str, default="auto", choices=["auto", "low", "high"], help="Force bandwidth mode. \n"
+                                                                                                                 "If set to \"high\", the output streams will stay uncompressed\n"
+                                                                                                                 "If set to \"low\", the output streams will be MJPEG-encoded\n"
+                                                                                                                 "If set to \"auto\" (default), the optimal bandwidth will be selected based on your connection type and speed")
     parser.add_argument('-usbs', '--usb_speed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
     parser.add_argument('-enc', '--encode', type=_coma_separated(default=30.0, cast=float), nargs="+", default=[],
                         help="Define which cameras to encode (record) \n"
