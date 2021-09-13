@@ -118,6 +118,9 @@ if conf.args.openvino_version:
     openvino_version = getattr(dai.OpenVINO.Version, 'VERSION_' + conf.args.openvino_version)
 pm = PipelineManager(openvino_version)
 
+if conf.args.xlink_chunk_size is not None:
+    pm.set_xlink_chunk_size(conf.args.xlink_chunk_size)
+
 if conf.useNN:
     blob_manager = BlobManager(
         zoo_dir=DEPTHAI_ZOO,
@@ -135,6 +138,8 @@ if conf.useNN:
 
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
+    if device_info.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
+        print("USB Connection speed: {}".format(device.getUsbSpeed()))
     conf.adjustParamsToDevice(device)
     conf.adjustPreviewToOptions()
     if conf.lowBandwidth:
@@ -148,16 +153,16 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
                             scale=conf.args.scale, sync=conf.args.sync, fps_handler=fps)
 
         if conf.leftCameraEnabled:
-            pm.create_left_cam(mono_res, conf.args.mono_fps,
+            pm.create_left_cam(mono_res, conf.args.mono_fps, orientation=conf.args.camera_orientation.get(Previews.left.name),
                                xout=Previews.left.name in conf.args.show and (conf.getModelSource() != "left" or not conf.args.sync)
                                )
         if conf.rightCameraEnabled:
-            pm.create_right_cam(mono_res, conf.args.mono_fps,
+            pm.create_right_cam(mono_res, conf.args.mono_fps, orientation=conf.args.camera_orientation.get(Previews.right.name),
                                 xout=Previews.right.name in conf.args.show and (conf.getModelSource() != "right" or not conf.args.sync)
                                 )
         if conf.rgbCameraEnabled:
-            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps,
-                                not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show  and (conf.getModelSource() != "color" or not conf.args.sync)
+            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, orientation=conf.args.camera_orientation.get(Previews.color.name),
+                                full_fov=not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show  and (conf.getModelSource() != "color" or not conf.args.sync)
                                 )
 
         if conf.useDepth:

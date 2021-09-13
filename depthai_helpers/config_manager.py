@@ -22,12 +22,15 @@ class ConfigManager:
     def __init__(self, args):
         self.args = args
         self.args.encode = dict(self.args.encode)
+        self.args.camera_orientation = dict(self.args.camera_orientation)
         if self.args.scale is None:
             self.args.scale = {"color": 0.37 if not self.args.sync else 1}
         else:
             self.args.scale = dict(self.args.scale)
         if not self.useCamera and not self.args.sync:
             print("[WARNING] When using video file as an input, it's highly recommended to run the demo with \"--sync\" flag")
+        if (Previews.left.name in self.args.camera_orientation or Previews.right.name in self.args.camera_orientation) and self.useDepth:
+            print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
 
     @property
     def debug(self):
@@ -47,7 +50,7 @@ class ConfigManager:
 
     @property
     def maxDisparity(self):
-        max_disparity = 96
+        max_disparity = 95
         if (self.args.extended_disparity):
             max_disparity *= 2
         if (self.args.subpixel):
@@ -214,12 +217,15 @@ class ConfigManager:
                 updated_show_arg.append("color")
             self.args.show = updated_show_arg
 
-        if device_info.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
-            print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(device_info.desc.protocol))
-            self.args.low_bandwidth = True
-        elif device.getUsbSpeed() not in [dai.UsbSpeed.SUPER, dai.UsbSpeed.SUPER_PLUS]:
-            print("Enabling low-bandwidth mode due to low USB speed... (speed: {})".format(device.getUsbSpeed()))
-            self.args.low_bandwidth = True
+        if self.args.bandwidth == "auto":
+            if device_info.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
+                print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(device_info.desc.protocol))
+                self.args.bandwidth = "low"
+            elif device.getUsbSpeed() not in [dai.UsbSpeed.SUPER, dai.UsbSpeed.SUPER_PLUS]:
+                print("Enabling low-bandwidth mode due to low USB speed... (speed: {})".format(device.getUsbSpeed()))
+                self.args.bandwidth = "low"
+            else:
+                self.args.bandwidth = "high"
 
 
     def linuxCheckApplyUsbRules(self):
@@ -272,7 +278,7 @@ class ConfigManager:
 
     @property
     def lowBandwidth(self):
-        return self.args.low_bandwidth
+        return self.args.bandwidth == "low"
 
     @property
     def shaves(self):

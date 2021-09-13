@@ -36,17 +36,27 @@ def _coma_separated(default, cast=str):
                 "{0} format is invalid. See --help".format(option)
             )
         elif len(option_list) == 1:
-            return option_list[0], default
+            return option_list[0], cast(default)
         else:
             try:
-                float(option_list[1])
+                cast(option_list[1])
             except ValueError:
                 raise argparse.ArgumentTypeError(
-                    "In option: {0} {1} is not a number!".format(option, option_list[1])
+                    "In option: {0} {1} is not in a correct format!".format(option, option_list[1])
                 )
             return option_list[0], cast(option_list[1])
 
     return _fun
+
+
+orientation_choices = list(filter(lambda var: var[0].isupper(), vars(dai.CameraImageOrientation)))
+
+
+def orientation_cast(arg):
+    if not hasattr(dai.CameraImageOrientation, arg):
+        raise argparse.ArgumentTypeError("Invalid camera orientation specified: '{}'. Available: {}".format(arg, orientation_choices))
+
+    return getattr(dai.CameraImageOrientation, arg)
 
 
 openvino_versions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
@@ -115,7 +125,10 @@ def parse_args():
                         help="Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).")
     parser.add_argument("-dev", "--device_id", type=str,
                         help="DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.")
-    parser.add_argument('-lowb', '--low_bandwidth', action="store_true", help="Enable low bandwidth mode that uses encoding for data transfer to limit it's size and increase throughput")
+    parser.add_argument('-bandw', '--bandwidth', type=str, default="auto", choices=["auto", "low", "high"], help="Force bandwidth mode. \n"
+                                                                                                                 "If set to \"high\", the output streams will stay uncompressed\n"
+                                                                                                                 "If set to \"low\", the output streams will be MJPEG-encoded\n"
+                                                                                                                 "If set to \"auto\" (default), the optimal bandwidth will be selected based on your connection type and speed")
     parser.add_argument('-usbs', '--usb_speed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
     parser.add_argument('-enc', '--encode', type=_coma_separated(default=30.0, cast=float), nargs="+", default=[],
                         help="Define which cameras to encode (record) \n"
@@ -123,4 +136,10 @@ def parse_args():
                              "Example: -enc left color \n"
                              "Example: -enc color right,10 left,10")
     parser.add_argument('-encout', '--encode_output', type=Path, default=project_root, help="Path to directory where to store encoded files. Default: %(default)s")
+    parser.add_argument('-xls', '--xlink_chunk_size', type=int, default = None, help="Specify XLink chunk size")
+    parser.add_argument('-camo', '--camera_orientation', type=_coma_separated(default="AUTO", cast=orientation_cast), nargs="+", default=[],
+                        help=("Define cameras orientation (available: {}) \n"
+                             "Format: camera_name,camera_orientation \n"
+                             "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(orientation_choices))
+                        )
     return parser.parse_args()

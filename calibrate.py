@@ -102,6 +102,8 @@ def parse_args():
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
+    parser.add_argument("-fps", "--fps", default=30, type=int,
+                        required=False, help="Set capture FPS for all cameras. Default: %(default)s")
     
     options = parser.parse_args()
 
@@ -196,9 +198,11 @@ class Main:
                 
         cam_left.setResolution(
             dai.MonoCameraProperties.SensorResolution.THE_800_P)
+        cam_left.setFps(self.args.fps)
 
         cam_right.setResolution(
             dai.MonoCameraProperties.SensorResolution.THE_800_P)
+        cam_right.setFps(self.args.fps)
 
         xout_left.setStreamName("left")
         cam_left.out.link(xout_left.input)
@@ -214,6 +218,7 @@ class Main:
             rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
             rgb_cam.setIspScale(1, 3)
             rgb_cam.initialControl.setManualFocus(self.focus_value)
+            rgb_cam.setFps(self.args.fps)
 
             xout_rgb_isp = pipeline.createXLinkOut()
             xout_rgb_isp.setStreamName("rgb")

@@ -52,10 +52,35 @@ class PipelineManager:
         for xin in filter(lambda node: isinstance(node, dai.node.XLinkIn), vars(self.nodes).values()):
             device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
 
-    def _mjpeg_link(self, node, xout, node_output):
+    def __calc_encodeable_size(self, source_size):
+        w, h = source_size
+        if w % 16 > 0:
+            new_w = w - (w % 16)
+            h = int((new_w / w) * h)
+            w = int(new_w)
+        if h % 2 > 0:
+            h -= 1
+        return w, h
+
+    def mjpeg_link(self, node, xout, node_output):
         print("Creating MJPEG link for {} node and {} xlink stream...".format(node.getName(), xout.getStreamName()))
         videnc = self.pipeline.createVideoEncoder()
-        if isinstance(node, dai.node.ColorCamera) or isinstance(node, dai.node.MonoCamera):
+        if isinstance(node, dai.node.ColorCamera):
+            if node.video == node_output:
+                size = self.__calc_encodeable_size(node.getVideoSize())
+                node.setVideoSize(size)
+                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            elif node.preview == node_output:
+                size = self.__calc_encodeable_size(node.getPreviewSize())
+                node.setPreviewSize(size)
+                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            elif node.still == node_output:
+                size = self.__calc_encodeable_size(node.getStillSize())
+                node.setStillSize(size)
+                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+
+            node_output.link(videnc.input)
+        elif isinstance(node, dai.node.MonoCamera):
             videnc.setDefaultProfilePreset(node.getResolutionWidth(), node.getResolutionHeight(), node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             node_output.link(videnc.input)
         elif isinstance(node, dai.node.StereoDepth):
@@ -65,13 +90,7 @@ class PipelineManager:
             videnc.setDefaultProfilePreset(camera_node.getResolutionWidth(), camera_node.getResolutionHeight(), camera_node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             node_output.link(videnc.input)
         elif isinstance(node, dai.NeuralNetwork):
-            w, h = self.nn_manager.input_size
-            if w % 16 > 0:
-                new_w = w - (w % 16)
-                h = int((new_w / w) * h)
-                w = int(new_w)
-            if h % 2 > 0:
-                h -= 1
+            w, h = self.__calc_encodeable_size(self.nn_manager.input_size)
             manip = self.pipeline.createImageManip()
             manip.initialConfig.setResize(w, h)
 
@@ -82,7 +101,7 @@ class PipelineManager:
             raise NotImplementedError("Unable to create mjpeg link for encountered node type: {}".format(type(node)))
         videnc.bitstream.link(xout.input)
 
-    def create_color_cam(self, preview_size=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, full_fov=True, xout=False):
+    def create_color_cam(self, preview_size, res, fps, full_fov, orientation: dai.CameraImageOrientation=None, xout=False):
         """
         Creates :obj:`depthai.node.ColorCamera` node based on specified attributes
 
@@ -92,6 +111,7 @@ class PipelineManager:
             fps (int): Camera FPS set on the device. Can limit / increase the amount of frames produced by the camera
             full_fov (bool): If set to :code:`True`, full frame will be scaled down to nn size. If to :code:`False`,
                 it will first center crop the frame to meet the NN aspect ratio and then scale down the image.
+            orientation (depthai.CameraImageOrientation): Custom camera orientation to be set on the device
             xout (bool): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
         """
         self.nodes.cam_rgb = self.pipeline.createColorCamera()
@@ -100,6 +120,8 @@ class PipelineManager:
         self.nodes.cam_rgb.setInterleaved(False)
         self.nodes.cam_rgb.setResolution(res)
         self.nodes.cam_rgb.setFps(fps)
+        if orientation is not None:
+            self.nodes.cam_rgb.setImageOrientation(orientation)
         self.nodes.cam_rgb.setPreviewKeepAspectRatio(not full_fov)
         self.nodes.xout_rgb = self.pipeline.createXLinkOut()
         self.nodes.xout_rgb.setStreamName(Previews.color.name)
@@ -110,17 +132,20 @@ class PipelineManager:
                 self.nodes.cam_rgb.video.link(self.nodes.xout_rgb.input)
 
 
-    def create_left_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, xout=False):
+    def create_left_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, orientation: dai.CameraImageOrientation=None, fps=30, xout=False):
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.LEFT`
 
         Args:
             res (depthai.MonoCameraProperties.SensorResolution): Camera resolution to be used
+            orientation (depthai.CameraImageOrientation): Custom camera orientation to be set on the device
             fps (int): Camera FPS set on the device. Can limit / increase the amount of frames produced by the camera
             xout (bool): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
         """
         self.nodes.mono_left = self.pipeline.createMonoCamera()
         self.nodes.mono_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        if orientation is not None:
+            self.nodes.mono_left.setImageOrientation(orientation)
         self.nodes.mono_left.setResolution(res)
         self.nodes.mono_left.setFps(fps)
 
@@ -132,17 +157,20 @@ class PipelineManager:
             else:
                 self.nodes.mono_left.out.link(self.nodes.xout_left.input)
 
-    def create_right_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, xout=False):
+    def create_right_cam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, orientation: dai.CameraImageOrientation=None, fps=30, xout=False):
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.RIGHT`
 
         Args:
             res (depthai.MonoCameraProperties.SensorResolution): Camera resolution to be used
+            orientation (depthai.CameraImageOrientation): Custom camera orientation to be set on the device
             fps (int): Camera FPS set on the device. Can limit / increase the amount of frames produced by the camera
             xout (bool): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
         """
         self.nodes.mono_right = self.pipeline.createMonoCamera()
         self.nodes.mono_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+        if orientation is not None:
+            self.nodes.mono_right.setImageOrientation(orientation)
         self.nodes.mono_right.setResolution(res)
         self.nodes.mono_right.setFps(fps)
 
@@ -383,3 +411,6 @@ class PipelineManager:
         Enables low-bandwidth mode.
         """
         self.lowBandwidth = True
+
+    def set_xlink_chunk_size(self, chunk_size):
+        self.pipeline.setXLinkChunkSize(chunk_size)

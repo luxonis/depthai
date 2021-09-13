@@ -76,7 +76,7 @@ def wait_for_result():
             return True
         elif key == ord("n"):
             return False
-        if key == 27 or key == ord("q"):  # 27 - ESC
+        if key == 27:  # 27 - ESC
             raise SystemExit(0)
         else:
             continue
@@ -131,6 +131,12 @@ def test_cameras():
     if not success:
         raise RuntimeError("Preview scaling test failed!")
 
+    show_test_def("Camera orientation", "You should see the both rgb and mono camera previews rotated 180 degrees")
+    subprocess.check_call([*demo_call, "-camo", "left,ROTATE_180_DEG", "right,ROTATE_180_DEG", "color,ROTATE_180_DEG"])
+    success = wait_for_result()
+    if not success:
+        raise RuntimeError("Camera orientation test failed!")
+
     success_frame = get_frame()
     success_frame[:, :, :] = (0, 255, 0)
     cv2.putText(success_frame, "Camera tests passed!", (120, 300), cv2.FONT_HERSHEY_TRIPLEX, 2.0, (0, 0, 0), 10)
@@ -166,12 +172,12 @@ def test_nn_integration():
     if not success:
         raise RuntimeError("Left source cam (without depth) test failed!")
 
-    show_test_def("Full FOV", "You should see color and nn_input (passthough) outputs",
-                  "nn_input should be the same as color but scaled to", "nn input size (without cropping)")
-    subprocess.check_call([*demo_call, "-s", "nn_input", "color", "-ff"])
+    show_test_def("No Full FOV", "You should see color and nn_input (passthough) outputs",
+                  "nn_input should contain cropped and scaled", "color output to nn size")
+    subprocess.check_call([*demo_call, "-s", "nn_input", "color", "-dff"])
     success = wait_for_result()
     if not success:
-        raise RuntimeError("Full FOV test failed!")
+        raise RuntimeError("No Full FOV test failed!")
 
     show_test_def("Spatial bounding boxes", "You should see depth_raw and depth outputs", "with spatial bounding boxes visible")
     subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sbb"])
@@ -369,7 +375,7 @@ def test_other():
         raise RuntimeError("Encode all test failed!")
 
     show_test_def("Low bandwidth", "Demo script will run in low-bandwidth mode", "creating MJPEG links")
-    subprocess.check_call([*demo_call, "-lowb"])
+    subprocess.check_call([*demo_call, "--bandwidth", "low"])
     success = wait_for_result()
     if not success:
         raise RuntimeError("Low bandwidth test failed!")
@@ -390,7 +396,7 @@ def test_other():
     subprocess.check_call([*demo_call, "-cnn", "vehicle-detection-adas-0002", "-vid", "https://www.youtube.com/watch?v=Y1jTEyb3wiI", "--sync"])
     success = wait_for_result()
     if not success:
-        raise RuntimeError("Reporting test failed!")
+        raise RuntimeError("YouTube video test failed!")
 
     success_frame = get_frame()
     success_frame[:, :, :] = (0, 255, 0)
