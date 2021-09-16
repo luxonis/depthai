@@ -152,7 +152,9 @@ class PreviewManager:
                     cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4, cv2.LINE_AA)
                     cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
             if callable(callback):
-                frame = callback(frame, name)
+                new_frame = callback(frame, name)
+                if new_frame is not None:
+                    frame = new_frame
             cv2.imshow(name, frame)
 
     def has(self, name):
