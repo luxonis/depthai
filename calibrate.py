@@ -120,7 +120,7 @@ def parse_args():
 
 
 class Main:
-    output_scale_factor = 0.5
+    output_scale_factor = 1
     polygons = None
     width = None
     height = None
