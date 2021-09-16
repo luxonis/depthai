@@ -305,7 +305,7 @@ class PipelineManager:
             self.nodes.xout_nn_input.setStreamName(Previews.nn_input.name)
             nn.passthrough.link(self.nodes.xout_nn_input.input)
 
-        if xout_sbb and self.nn_manager.nn_family in ("YOLO", "mobilenet"):
+        if xout_sbb and self.nn_manager._nn_family in ("YOLO", "mobilenet"):
             self.nodes.xout_sbb = self.pipeline.createXLinkOut()
             self.nodes.xout_sbb.setStreamName("sbb")
             nn.boundingBoxMapping.link(self.nodes.xout_sbb.input)
@@ -337,7 +337,7 @@ class PipelineManager:
                     self.nodes.xout_rect_right.setStreamName(Previews.rectified_right.name)
                 nn.passthrough.link(self.nodes.xout_rect_right.input)
 
-            if self.nn_manager.nn_family in ("YOLO", "mobilenet") and use_depth:
+            if self.nn_manager._nn_family in ("YOLO", "mobilenet") and use_depth:
                 if not hasattr(self.nodes, "xout_depth"):
                     self.nodes.xout_depth = self.pipeline.createXLinkOut()
                     self.nodes.xout_depth.setStreamName(Previews.depth.name)

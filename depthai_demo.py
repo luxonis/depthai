@@ -242,7 +242,6 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
     host_frame = None
     nn_data = []
     sbb_rois = []
-    sbb_color = np.random.random(size=(256, 3))
     callbacks.on_setup(**locals())
 
     try:
@@ -268,7 +267,7 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
                             top_left = roi.topLeft()
                             bottom_right = roi.bottomRight()
                             # Display SBB on the disparity map
-                            cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), sbb_color, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+                            cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager._bbox_colors[0], 2)
             else:
                 read_correctly, raw_host_frame = cap.read()
                 if not read_correctly:
