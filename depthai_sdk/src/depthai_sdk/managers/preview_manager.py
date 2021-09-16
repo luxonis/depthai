@@ -16,15 +16,15 @@ class PreviewManager:
     def __init__(self, display=[], nn_source=None, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False, fps_handler=None):
         """
         Args:
-            display (list): List of :obj:`depthai_sdk.Previews` objects representing the streams to display
-            mouseTracker (bool): If set to :code:`True`, will enable mouse tracker on the preview windows that will display selected pixel value
-            fps_handler (depthai_sdk.fps.FPSHandler): if provided, will use fps handler to modify stream FPS and display it
-            sync (bool): If set to :code:`True`, will assume that neural network source camera will not contain raw frame but scaled frame used by NN
-            nn_source (str): Specifies NN source camera
-            colorMap: Color map applied on the depth frames
-            lowBandwidth (bool): If set to :code:`True`, will decode the received frames assuming they were encoded with MJPEG encoding
-            scale (dict): Allows to scale down frames before preview. Useful when previewing e.g. 4K frames
-            dispMultiplier (float): Value used for depth <-> disparity calculations
+            display (list, Optional): List of :obj:`depthai_sdk.Previews` objects representing the streams to display
+            mouseTracker (bool, Optional): If set to :code:`True`, will enable mouse tracker on the preview windows that will display selected pixel value
+            fps_handler (depthai_sdk.fps.FPSHandler, Optional): if provided, will use fps handler to modify stream FPS and display it
+            sync (bool, Optional): If set to :code:`True`, will assume that neural network source camera will not contain raw frame but scaled frame used by NN
+            nn_source (str, Optional): Specifies NN source camera
+            colorMap (cv2 color map, Optional): Color map applied on the depth frames
+            lowBandwidth (bool, Optional): If set to :code:`True`, will decode the received frames assuming they were encoded with MJPEG encoding
+            scale (dict, Optional): Allows to scale down frames before preview. Useful when previewing e.g. 4K frames
+            dispMultiplier (float, Optional): Value used for depth <-> disparity calculations
         """
         self.sync = sync
         self.nn_source = nn_source
@@ -67,7 +67,7 @@ class PreviewManager:
 
         Args:
             device (depthai.Device): Running device instance
-            callback (func): Function that will be executed with preview name once preview window was created
+            callback (func, Optional): Function that will be executed with preview name once preview window was created
         """
         self.output_queues = []
         for name in self._display:
@@ -90,7 +90,7 @@ class PreviewManager:
         To convert the frames from packets, this manager uses methods defined in :obj:`depthai_sdk.previews.PreviewDecoder`.
 
         Args:
-            callback (func): Function that will be executed once packet with frame has arrived
+            callback (func, Optional): Function that will be executed once packet with frame has arrived
         """
         for queue in self.output_queues:
             packet = queue.tryGet()
@@ -141,7 +141,7 @@ class PreviewManager:
         Displays stored frame onto preview windows.
 
         Args:
-            callback (func): Function that will be executed right before :code:`cv2.imshow`
+            callback (func, Optional): Function that will be executed right before :code:`cv2.imshow`
         """
         for name, frame in self.frames.items():
             if self._mouse_tracker is not None:

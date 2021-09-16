@@ -22,10 +22,10 @@ class BlobManager:
     def __init__(self, blob_path:Path=None, config_path:Path=None, zoo_name:str=None, zoo_dir:Path=None):
         """
         Args:
-            blob_path (pathlib.Path): Path to the compiled MyriadX blob file
-            config_path (pathlib.Path): Path to model config file that is used to download the model
-            zoo_name (str): Model name to be taken from model zoo
-            zoo_dir (pathlib.Path): Path to model config file that is used to download the model
+            blob_path (pathlib.Path, Optional): Path to the compiled MyriadX blob file
+            config_path (pathlib.Path, Optional): Path to model config file that is used to download the model
+            zoo_name (str, Optional): Model name to be taken from model zoo
+            zoo_dir (pathlib.Path, Optional): Path to model config file that is used to download the model
         """
         if blob_path is not None:
             self._blob_path = blob_path

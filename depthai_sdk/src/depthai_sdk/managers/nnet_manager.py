@@ -19,7 +19,7 @@ class NNetManager:
         """
         Args:
             input_size (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
-            nn_family (str): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
+            nn_family (str, Optional): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
         """
         self.input_size = input_size
         self._nn_family = nn_family
@@ -106,26 +106,26 @@ class NNetManager:
         else:
             return 0
 
-    def create_nn_pipeline(self, pipeline, nodes, source, blob_path, flip_detection=False, use_depth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, full_fov=True):
+    def create_nn_pipeline(self, pipeline, nodes, blob_path, source="color", flip_detection=False, use_depth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, full_fov=True):
         """
         Creates nodes and connections in provided pipeline that will allow to run NN model and consume it's results.
 
         Args:
             pipeline (depthai.Pipeline): Pipeline instance
             nodes (types.SimpleNamespace): Object cointaining all of the nodes added to the pipeline. Available in :attr:`depthai_sdk.managers.PipelineManager.nodes`
-            source (str): Neural network input source, one of :attr:`source_choices`
             blob_path (pathlib.Path): Path to MyriadX blob. Might be useful to use together with
                 :func:`depthai_sdk.managers.BlobManager.getBlob()` for dynamic blob compilation
-            use_depth (bool): If set to True, produced detections will have spatial coordinates included
-            minDepth (int): Minimum depth distance in centimeters
-            maxDepth (int): Maximum depth distance in centimeters
-            sbbScaleFactor (float): Scale of the bounding box that will be used to calculate spatial coordinates for
+            source (str, Optional): Neural network input source, one of :attr:`source_choices`
+            use_depth (bool, Optional): If set to True, produced detections will have spatial coordinates included
+            minDepth (int, Optional): Minimum depth distance in centimeters
+            maxDepth (int, Optional): Maximum depth distance in centimeters
+            sbbScaleFactor (float, Optional): Scale of the bounding box that will be used to calculate spatial coordinates for
                 detection. If set to 0.3, it will scale down center-wise the bounding box to 0.3 of it's original size
                 and use it to calculate spatial location of the object
-            full_fov (bool): If set to False, manager will include crop offset when scaling the detections.
+            full_fov (bool, Optional): If set to False, manager will include crop offset when scaling the detections.
                 Usually should be set to True (if you don't perform aspect ratio crop or when `keepAspectRatio` flag
                 on camera/manip node is set to False
-            flip_detection (bool): Whether the bounding box coordinates should be flipped horizontally. Useful when
+            flip_detection (bool, Optional): Whether the bounding box coordinates should be flipped horizontally. Useful when
                 using rectified images as input.
 
         Returns:
@@ -348,7 +348,7 @@ class NNetManager:
 
         Args:
             frame (numpy.ndarray): Frame to be sent to the device
-            seq_num (int, optional): Sequence number set on ImgFrame. Useful in syncronization scenarios
+            seq_num (int, Optional): Sequence number set on ImgFrame. Useful in syncronization scenarios
 
         Returns:
             numpy.ndarray: scaled frame that was sent to the NN (same width/height as NN input)
