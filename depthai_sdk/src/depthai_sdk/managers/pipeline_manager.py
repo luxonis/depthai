@@ -62,7 +62,7 @@ class PipelineManager:
             h -= 1
         return w, h
 
-    def mjpeg_link(self, node, xout, node_output):
+    def _mjpeg_link(self, node, xout, node_output):
         print("Creating MJPEG link for {} node and {} xlink stream...".format(node.getName(), xout.getStreamName()))
         videnc = self.pipeline.createVideoEncoder()
         if isinstance(node, dai.node.ColorCamera):
