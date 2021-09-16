@@ -958,9 +958,13 @@ class StereoCalibration(object):
         curr_path = Path(__file__).parent.resolve()
         print("Mesh path")
         print(curr_path)
-
-        map_x_l, map_y_l = cv2.initUndistortRectifyMap(self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
-        map_x_r, map_y_r = cv2.initUndistortRectifyMap(self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
+        print(type(self.img_shape))
+        cropped_m1 = self.M1 * 0.5
+        cropped_m2 = self.M2 * 0.5
+        shape = (int(self.img_shape[0]/2), int(self.img_shape[1]/2)) 
+        print(shape)
+        map_x_l, map_y_l = cv2.initUndistortRectifyMap(cropped_m1, self.d1, self.R1, cropped_m2, shape, cv2.CV_32FC1)
+        map_x_r, map_y_r = cv2.initUndistortRectifyMap(cropped_m2, self.d2, self.R2, cropped_m2, shape, cv2.CV_32FC1)
 
         map_x_l_fp32 = map_x_l.astype(np.float32)
         map_y_l_fp32 = map_y_l.astype(np.float32)
