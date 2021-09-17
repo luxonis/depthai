@@ -84,12 +84,13 @@ class PreviewManager:
         if Previews.depth.name in self._display and Previews.depth_raw.name not in self._display:
             self.output_queues.append(device.getOutputQueue(name=Previews.depth_raw.name, maxSize=1, blocking=False))
 
-    def prepare_frames(self, callback=None):
+    def prepare_frames(self, blocking=False, callback=None):
         """
         This function consumes output queues' packets and parses them to obtain ready to use frames.
         To convert the frames from packets, this manager uses methods defined in :obj:`depthai_sdk.previews.PreviewDecoder`.
 
         Args:
+            blocking (bool, Optional): If set to :code:`True`, will wait for a packet in each queue to be available
             callback (func, Optional): Function that will be executed once packet with frame has arrived
         """
         for queue in self.output_queues:
