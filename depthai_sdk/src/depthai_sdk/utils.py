@@ -218,3 +218,29 @@ def downloadYTVideo(video, output_dir=None):
     if path is None:
         raise RuntimeError("Unable to download YouTube video. Please try again")
     return path
+
+
+def resize_with_crop(frame, size):
+    """
+    Crop the frame to desired aspect ratio and then scales it down to desired size
+    Args:
+        frame (numpy.ndarray): Source frame that will be cropped
+        output_dir (tuple): Desired frame size (width, heigth)
+    """
+    shape = frame.shape
+    h = shape[0]
+    w = shape[1]
+    current_ratio = w / h
+    new_ratio = size[0] / size[1]
+
+    # Crop width/heigth to match the aspect ratio needed by the NN
+    if new_ratio < current_ratio:  # Crop width
+        # Use full height, crop width
+        new_w = (new_ratio/current_ratio) * w
+        crop = int((w - new_w) / 2)
+        return cv2.resize(frame[:, crop:w-crop], size)
+    else:  # Crop height
+        # Use full width, crop height
+        new_h = (current_ratio/new_ratio) * h
+        crop = int((h - new_h) / 2)
+        return cv2.resize(frame[crop:h-crop, :], size)
