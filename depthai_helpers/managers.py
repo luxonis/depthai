@@ -629,10 +629,35 @@ class PipelineManager:
         for xin in filter(lambda node: isinstance(node, dai.node.XLinkIn), vars(self.nodes).values()):
             device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
 
+    def __calc_encodeable_size(self, source_size):
+        w, h = source_size
+        if w % 16 > 0:
+            new_w = w - (w % 16)
+            h = int((new_w / w) * h)
+            w = int(new_w)
+        if h % 2 > 0:
+            h -= 1
+        return w, h
+
     def mjpeg_link(self, node, xout, node_output):
         print("Creating MJPEG link for {} node and {} xlink stream...".format(node.getName(), xout.getStreamName()))
         videnc = self.p.createVideoEncoder()
-        if isinstance(node, dai.node.ColorCamera) or isinstance(node, dai.node.MonoCamera):
+        if isinstance(node, dai.node.ColorCamera):
+            if node.video == node_output:
+                size = self.__calc_encodeable_size(node.getVideoSize())
+                node.setVideoSize(size)
+                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            elif node.preview == node_output:
+                size = self.__calc_encodeable_size(node.getPreviewSize())
+                node.setPreviewSize(size)
+                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            elif node.still == node_output:
+                size = self.__calc_encodeable_size(node.getStillSize())
+                node.setStillSize(size)
+                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+
+            node_output.link(videnc.input)
+        elif isinstance(node, dai.node.MonoCamera):
             videnc.setDefaultProfilePreset(node.getResolutionWidth(), node.getResolutionHeight(), node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             node_output.link(videnc.input)
         elif isinstance(node, dai.node.StereoDepth):
@@ -642,13 +667,7 @@ class PipelineManager:
             videnc.setDefaultProfilePreset(camera_node.getResolutionWidth(), camera_node.getResolutionHeight(), camera_node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             node_output.link(videnc.input)
         elif isinstance(node, dai.NeuralNetwork):
-            w, h = self.nn_manager.input_size
-            if w % 16 > 0:
-                new_w = w - (w % 16)
-                h = int((new_w / w) * h)
-                w = int(new_w)
-            if h % 2 > 0:
-                h -= 1
+            w, h = self.__calc_encodeable_size(self.nn_manager.input_size)
             manip = self.p.createImageManip()
             manip.initialConfig.setResize(w, h)
 

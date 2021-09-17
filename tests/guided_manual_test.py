@@ -76,7 +76,7 @@ def wait_for_result():
             return True
         elif key == ord("n"):
             return False
-        if key == 27 or key == ord("q"):  # 27 - ESC
+        if key == 27:  # 27 - ESC
             raise SystemExit(0)
         else:
             continue
@@ -172,12 +172,12 @@ def test_nn_integration():
     if not success:
         raise RuntimeError("Left source cam (without depth) test failed!")
 
-    show_test_def("Full FOV", "You should see color and nn_input (passthough) outputs",
-                  "nn_input should be the same as color but scaled to", "nn input size (without cropping)")
-    subprocess.check_call([*demo_call, "-s", "nn_input", "color", "-ff"])
+    show_test_def("No Full FOV", "You should see color and nn_input (passthough) outputs",
+                  "nn_input should contain cropped and scaled", "color output to nn size")
+    subprocess.check_call([*demo_call, "-s", "nn_input", "color", "-dff"])
     success = wait_for_result()
     if not success:
-        raise RuntimeError("Full FOV test failed!")
+        raise RuntimeError("No Full FOV test failed!")
 
     show_test_def("Spatial bounding boxes", "You should see depth_raw and depth outputs", "with spatial bounding boxes visible")
     subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sbb"])
