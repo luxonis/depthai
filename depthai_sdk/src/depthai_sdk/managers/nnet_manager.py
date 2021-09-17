@@ -213,7 +213,7 @@ class NNetManager:
         Raises:
             RuntimeError: If source is not a valid choice or when input size has not been set.
         """
-        if self._config is None or self._labels is None:
+        if self._labels is None:
             return str(label)
         elif int(label) < len(self._labels):
             return self._labels[int(label)]
