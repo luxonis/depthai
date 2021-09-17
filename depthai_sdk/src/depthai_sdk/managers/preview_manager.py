@@ -94,7 +94,10 @@ class PreviewManager:
             callback (func, Optional): Function that will be executed once packet with frame has arrived
         """
         for queue in self.output_queues:
-            packet = queue.tryGet()
+            if blocking:
+                packet = queue.get()
+            else:
+                packet = queue.tryGet()
             if packet is not None:
                 if self._fps_handler is not None:
                     self._fps_handler.tick(queue.getName())
