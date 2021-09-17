@@ -958,24 +958,27 @@ class StereoCalibration(object):
         curr_path = Path(__file__).parent.resolve()
         print("Mesh path")
         print(curr_path)
-        print((self.img_shape))
-        cropped_m1 = self.M1 * 0.5
-        cropped_m2 = self.M2 * 0.5
-        print(cropped_m1)
+        m_scale = [[0.5,   0, 0],
+                               [0, 0.5, 0],
+                               [0,   0, 1]]
+        cropped_m1 = np.matmul(m_scale, self.M1)
+        cropped_m2 = np.matmul(m_scale, self.M2)
         shape = (int(self.img_shape[0]/2), int(self.img_shape[1]/2)) 
-        print(shape)
-        map_x_l, map_y_l = cv2.initUndistortRectifyMap(cropped_m1, self.d1, self.R1, cropped_m1, shape, cv2.CV_32FC1)
+
+        map_x_l, map_y_l = cv2.initUndistortRectifyMap(cropped_m1, self.d1, self.R1, cropped_m2, shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(cropped_m2, self.d2, self.R2, cropped_m2, shape, cv2.CV_32FC1)
-        images_right = glob.glob('/home/sachin/Desktop/luxonis/depthai/dataset' + '/right/*.png')
+        """ images_right = glob.glob('/home/sachin/Desktop/luxonis/depthai/dataset' + '/right/*.png')
         images_right.sort()
     
-        """ for image_right in images_right:
+        for image_right in images_right:
             # read images
             img_right = cv2.imread(image_right, 0)
-            img_r = cv2.remap(img_right, map_x_r, map_y_r, cv2.INTER_LINEAR)
-            resized = cv2.resize(img_r, (640, 400), interpolation = cv2.INTER_AREA)
+            resized = cv2.resize(img_right, (640, 400), interpolation = cv2.INTER_AREA)
+            img_r = cv2.remap(resized, map_x_r, map_y_r, cv2.INTER_LINEAR)
+
             print(resized.shape)
-            cv2.imshow('Mes image ', resized)
+            cv2.imshow('resized ', resized)
+            cv2.imshow('Mes image ', img_r)
 
             print(";Resizeed")
             k = cv2.waitKey(0)
@@ -1024,14 +1027,14 @@ class StereoCalibration(object):
                             row_left.append(map_x_l[y, x])
                             row_right.append(map_y_r[y, x])
                             row_right.append(map_x_r[y, x])
-                print(count)
+                # print(count)
                 if (map_x_l.shape[1] % meshCellSize) % 2 != 0:
                             row_left.append(0)
                             row_left.append(0)
                             row_right.append(0)
                             row_right.append(0)
-                print("Size")
-                print(len(row_left))
+                # print("Size")
+                # print(len(row_left))
                 mesh_left.append(row_left)
                 mesh_right.append(row_right)    
         
