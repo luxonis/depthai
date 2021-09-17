@@ -15,16 +15,18 @@ class NNetManager:
     decoding neural network output automatically or by using external handler file.
     """
 
-    def __init__(self, input_size, nn_family=None):
+    def __init__(self, input_size, nn_family=None, labels=[]):
         """
         Args:
             input_size (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
             nn_family (str, Optional): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
+            labels (list, Optional): Allows to display class label instead of ID when drawing nn detections.
         """
         self.input_size = input_size
         self._nn_family = nn_family
         if nn_family in ("YOLO", "mobilenet"):
             self._output_format = "detection"
+        self._labels = labels
 
     #: list: List of available neural network inputs
     source_choices = ("color", "left", "right", "rectified_left", "rectified_right", "host")
