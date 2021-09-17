@@ -6,6 +6,6 @@ requests==2.24.0
 argcomplete==1.12.1
 blobconverter==1.0.0
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.10.0.0.dev+076c968eb8b0439a53aecb508511fbf932d8eddd
+depthai==2.10.0.0.dev+7d757deedacc4b6055675a04b4a2cf4d4303fad0
 # depthai==2.10.0.0
 pytube==11.0.0
