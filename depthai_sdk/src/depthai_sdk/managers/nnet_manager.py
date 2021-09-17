@@ -15,18 +15,20 @@ class NNetManager:
     decoding neural network output automatically or by using external handler file.
     """
 
-    def __init__(self, input_size, nn_family=None, labels=[]):
+    def __init__(self, input_size, nn_family=None, labels=[], confidence=0.5):
         """
         Args:
             input_size (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
             nn_family (str, Optional): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
             labels (list, Optional): Allows to display class label instead of ID when drawing nn detections.
+            confidence (float, Optional): Specify detection nn's confidence threshold
         """
         self.input_size = input_size
         self._nn_family = nn_family
         if nn_family in ("YOLO", "mobilenet"):
             self._output_format = "detection"
         self._labels = labels
+        self._confidence = confidence
 
     #: list: List of available neural network inputs
     source_choices = ("color", "left", "right", "rectified_left", "rectified_right", "host")
@@ -48,14 +50,12 @@ class NNetManager:
     _line_type = cv2.LINE_AA
     _text_type = cv2.FONT_HERSHEY_SIMPLEX
     _output_format = "raw"
-    _confidence = 0.7
     _metadata = None
     _flip_detection = False
     _full_fov = True
     _config = None
     _nn_family = None
     _handler = None
-    _labels = None
 
     def read_config(self, path):
         """
