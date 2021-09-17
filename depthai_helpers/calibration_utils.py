@@ -958,14 +958,29 @@ class StereoCalibration(object):
         curr_path = Path(__file__).parent.resolve()
         print("Mesh path")
         print(curr_path)
-        print(type(self.img_shape))
+        print((self.img_shape))
         cropped_m1 = self.M1 * 0.5
         cropped_m2 = self.M2 * 0.5
+        print(cropped_m1)
         shape = (int(self.img_shape[0]/2), int(self.img_shape[1]/2)) 
         print(shape)
-        map_x_l, map_y_l = cv2.initUndistortRectifyMap(cropped_m1, self.d1, self.R1, cropped_m2, shape, cv2.CV_32FC1)
+        map_x_l, map_y_l = cv2.initUndistortRectifyMap(cropped_m1, self.d1, self.R1, cropped_m1, shape, cv2.CV_32FC1)
         map_x_r, map_y_r = cv2.initUndistortRectifyMap(cropped_m2, self.d2, self.R2, cropped_m2, shape, cv2.CV_32FC1)
+        images_right = glob.glob('/home/sachin/Desktop/luxonis/depthai/dataset' + '/right/*.png')
+        images_right.sort()
+    
+        """ for image_right in images_right:
+            # read images
+            img_right = cv2.imread(image_right, 0)
+            img_r = cv2.remap(img_right, map_x_r, map_y_r, cv2.INTER_LINEAR)
+            resized = cv2.resize(img_r, (640, 400), interpolation = cv2.INTER_AREA)
+            print(resized.shape)
+            cv2.imshow('Mes image ', resized)
 
+            print(";Resizeed")
+            k = cv2.waitKey(0)
+            if k == 27:  # Esc key to stop
+                break """
         map_x_l_fp32 = map_x_l.astype(np.float32)
         map_y_l_fp32 = map_y_l.astype(np.float32)
         map_x_r_fp32 = map_x_r.astype(np.float32)
@@ -985,8 +1000,10 @@ class StereoCalibration(object):
             if y % meshCellSize == 0:
                 row_left = []
                 row_right = []
+                count = 0
                 for x in range(map_x_l.shape[1] + 1):
                     if x % meshCellSize == 0:
+                        count+=1
                         if y == map_x_l.shape[0] and x == map_x_l.shape[1]:
                             row_left.append(map_y_l[y - 1, x - 1])
                             row_left.append(map_x_l[y - 1, x - 1])
@@ -1007,17 +1024,20 @@ class StereoCalibration(object):
                             row_left.append(map_x_l[y, x])
                             row_right.append(map_y_r[y, x])
                             row_right.append(map_x_r[y, x])
+                print(count)
                 if (map_x_l.shape[1] % meshCellSize) % 2 != 0:
                             row_left.append(0)
                             row_left.append(0)
                             row_right.append(0)
                             row_right.append(0)
-
+                print("Size")
+                print(len(row_left))
                 mesh_left.append(row_left)
                 mesh_right.append(row_right)    
         
         mesh_left = np.array(mesh_left)
         mesh_right = np.array(mesh_right)
+        print(mesh_right.shape)
         left_mesh_fpath = str(curr_path) + '/../resources/left_mesh.calib'
         right_mesh_fpath = str(curr_path) + '/../resources/right_mesh.calib'
         mesh_left.tofile(left_mesh_fpath)
