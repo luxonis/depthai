@@ -30,6 +30,7 @@ if is_pi and sys.version_info[1] in (7, 9):
 if not in_venv:
     pip_install.append("--user")
 
+subprocess.check_call(pip_call + ["uninstall", "-y", "opencv-python", "opencv-contrib-python"]) # remove old versions of OpenCV
 subprocess.check_call(pip_install + ["pip", "-U"])
 # temporary workaroud for issue between main and develop
 subprocess.check_call(pip_call + ["uninstall", "depthai", "--yes"])
