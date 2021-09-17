@@ -220,7 +220,7 @@ def downloadYTVideo(video, output_dir=None):
     return path
 
 
-def resize_with_crop(frame, size):
+def crop_to_aspect_ratio(frame, size):
     """
     Crop the frame to desired aspect ratio and then scales it down to desired size
     Args:
@@ -238,9 +238,9 @@ def resize_with_crop(frame, size):
         # Use full height, crop width
         new_w = (new_ratio/current_ratio) * w
         crop = int((w - new_w) / 2)
-        return cv2.resize(frame[:, crop:w-crop], size)
+        return frame[:, crop:w-crop]
     else:  # Crop height
         # Use full width, crop height
         new_h = (current_ratio/new_ratio) * h
         crop = int((h - new_h) / 2)
-        return cv2.resize(frame[crop:h-crop, :], size)
+        return frame[crop:h-crop, :]
