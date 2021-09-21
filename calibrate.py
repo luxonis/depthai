@@ -213,16 +213,15 @@ class Main:
         if not self.args.disableRgb:
             rgb_cam = pipeline.createColorCamera()
             rgb_cam.setResolution(
-                dai.ColorCameraProperties.SensorResolution.THE_4_K)
+                dai.ColorCameraProperties.SensorResolution.THE_1080_P)
             rgb_cam.setInterleaved(False)
             rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-            rgb_cam.setIspScale(1, 3)
+            rgb_cam.setIspScale(2, 3)
             rgb_cam.initialControl.setManualFocus(self.focus_value)
             rgb_cam.setFps(self.args.fps)
-
             xout_rgb_isp = pipeline.createXLinkOut()
             xout_rgb_isp.setStreamName("rgb")
-            rgb_cam.isp.link(xout_rgb_isp.input)        
+            rgb_cam.isp.link(xout_rgb_isp.input)
 
         return pipeline
 
@@ -354,14 +353,16 @@ class Main:
                     print("setting capture true------------------------")
                 capturing = True
 
-
             frame_list = []
             # left_frame = recent_left.getCvFrame()
             # rgb_frame = recent_color.getCvFrame()
-
+            print('List size')
+            print(len(recent_frames))  
             for packet in recent_frames:
                 frame = packet[1].getCvFrame()
-                # print(packet[0])
+                print('Name: {}, size: {}'.format(packet[0], frame.shape))
+                
+                # print(;packet[0])
                 # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 if packet[0] == 'rgb':
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -374,12 +375,10 @@ class Main:
 
                 # if debug:
                 #     print("Timestamp difference ---> l & rgb")
-                lrgb_time = 0
+                lrgb_time = 0 
                 if not self.args.disableRgb:
                     lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
                 lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
-
-                
 
                 if capturing and lrgb_time < 30000 and lr_time < 30000:
                     print("Capturing  ------------------------ {}".format(packet[0]))
@@ -404,6 +403,15 @@ class Main:
                             print("Timestamp difference --->L-R")
                             print(lr_time)
 
+                print('tried status')
+                print(tried_color)
+                print(tried_left)
+                print(tried_right)
+                print('tried status')
+
+                print(captured_color)
+                print(captured_left)
+                print(captured_right)
 
                 has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
                     (packet[0] == "rgb" and captured_color)
@@ -428,13 +436,20 @@ class Main:
                         True, (0, 255, 0) if captured_left else (0, 0, 255), 4
                     )
 
-                small_frame = cv2.resize(
-                    frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
                 # cv2.imshow(packet.stream_name, small_frame)
+                if packet[0] == "rgb":
+                    small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+                    print("Packaet name : {}, shape : {}".format(packet[0], small_frame.shape))
+                else:
+                    small_frame = cv2.resize(
+                        frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)         
+                    print("Packaet name : {}, shape : {}".format(packet[0], small_frame.shape))
+
                 frame_list.append(small_frame)
 
                 if self.args.disableRgb:
                     captured_color = True
+                    tried_color = True
                 if captured_left and captured_right and captured_color:
                     print(f"Images captured --> {self.images_captured}")
                     if not self.images_captured:
@@ -452,7 +467,9 @@ class Main:
                     captured_left = False
                     captured_right = False
                     captured_color = False
-                elif tried_left and tried_right:
+                elif tried_left and tried_right and tried_color: 
+                    #TODO(Sachin): add condition for RGB too and when break happens and if RGB 
+                    # is not received it will throw an error. add an exception to it
                     self.show_failed_capture_frame()
                     capturing = False
                     tried_left = False
@@ -474,7 +491,9 @@ class Main:
             
             combine_img = None
             if not self.args.disableRgb:
-                frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
+                print('Frame list size:  ')
+                print(len(frame_list))
+                frame_list[2] = np.pad(frame_list[2], ((120, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
