@@ -2,7 +2,7 @@ To install this package, run the following command in your terminal window
 
 .. code-block:: bash
 
-   pip install depthai-sdk
+   python3 -m pip install depthai-sdk
 
 .. warning::
 
@@ -10,4 +10,4 @@ To install this package, run the following command in your terminal window
 
    .. code-block:: bash
 
-      pip install --extra-index-url https://www.piwheels.org/simple/ depthai-sdk
+      python3 -m pip install --extra-index-url https://www.piwheels.org/simple/ depthai-sdk

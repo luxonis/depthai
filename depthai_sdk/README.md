@@ -9,7 +9,7 @@ To know more about the DepthAI itself, visit [our documentation](https://docs.lu
 To install this package, run the following command in your terminal window
 
 ```
-$ pip install depthai-sdk
+$ python3 -m pip install depthai-sdk
 ```
 
 > :warning: **If you're using Raspberry Pi**, providing a Pi Wheels extra package url can significantly speed up the instalation process by providing prebuilt binaries for OpenCV
