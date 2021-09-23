@@ -65,7 +65,7 @@ about the classes, please visit :ref:`DepthAI SDK API`
 Preview color camera
 ********************
 
-.. literalinclude:: ./examples/rgb_encoding.py
+.. literalinclude:: ./examples/rgb_preview.py
    :language: python
    :linenos:
 
