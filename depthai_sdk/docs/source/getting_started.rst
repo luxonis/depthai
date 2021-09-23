@@ -48,6 +48,8 @@ The original "user" of this SDK was the `demo script <https://github.com/luxonis
 Below, you can find a list of other projects that also use the SDK and are available to use as a reference
 
 * `<https://github.com/luxonis/depthai-experiments/tree/sdk/gen2-human-pose>`__
+* `<https://github.com/luxonis/depthai-experiments/tree/sdk/gen2-road-segmentation>`__
+* `<https://github.com/luxonis/depthai-experiments/tree/sdk/gen2-people-counter>`__
 
 Installation
 ------------
@@ -63,130 +65,31 @@ about the classes, please visit :ref:`DepthAI SDK API`
 Preview color camera
 ********************
 
-.. code-block:: python
-
-    from depthai_sdk import Previews
-    from depthai_sdk.managers import PipelineManager, PreviewManager
-    import depthai as dai
-    import cv2
-
-    pm = PipelineManager()
-    pm.create_color_cam(xout=True)
-
-    with dai.Device(pm.pipeline) as device:
-        pv = PreviewManager(display=[Previews.color.name])
-        pv.create_queues(device)
-
-        while True:
-            pv.prepare_frames()
-            pv.show_frames()
-
-            if cv2.waitKey(1) == ord('q'):
-                break
+.. literalinclude:: ./examples/rgb_encoding.py
+   :language: python
+   :linenos:
 
 Preview color and mono cameras
 ******************************
 
-.. code-block:: python
+.. literalinclude:: ./examples/rgb_mono_preview.py
+   :language: python
+   :linenos:
 
-    from depthai_sdk import Previews
-    from depthai_sdk.managers import PipelineManager, PreviewManager
-    import depthai as dai
-    import cv2
-
-    pm = PipelineManager()
-    pm.create_color_cam(xout=True)
-    pm.create_left_cam(xout=True)
-    pm.create_right_cam(xout=True)
-
-    with dai.Device(pm.pipeline) as device:
-        pv = PreviewManager(display=[Previews.color.name, Previews.left.name, Previews.right.name])
-        pv.create_queues(device)
-
-        while True:
-            pv.prepare_frames()
-            pv.show_frames()
-
-            if cv2.waitKey(1) == ord('q'):
-                break
 
 Run MobilenetSSD on color camera
 ********************************
 
-.. code-block:: python
-
-    from depthai_sdk import Previews
-    from depthai_sdk.managers import PipelineManager, PreviewManager, NNetManager, BlobManager
-    import depthai as dai
-    import cv2
-
-    pm = PipelineManager()
-    pm.create_color_cam(preview_size=(300, 300), xout=True)
-
-    bm = BlobManager(zoo_name="mobilenet-ssd")
-    nm = NNetManager(input_size=(300, 300), nn_family="mobilenet")
-    nn_pipeline = nm.create_nn_pipeline(pipeline=pm.pipeline, nodes=pm.nodes, source=Previews.color.name,
-        blob_path=bm.getBlob(shaves=6, openvino_version=pm.pipeline.getOpenVINOVersion())
-    )
-    pm.add_nn(nn_pipeline)
-
-    with dai.Device(pm.pipeline) as device:
-        pv = PreviewManager(display=[Previews.color.name])
-        pv.create_queues(device)
-        nm.createQueues(device)
-        nn_data = []
-
-        while True:
-            pv.prepare_frames()
-            in_nn = nm.output_queue.tryGet()
-
-            if in_nn is not None:
-                nn_data = nm.decode(in_nn)
-
-            nm.draw(pv, nn_data)
-            pv.show_frames()
-
-            if cv2.waitKey(1) == ord('q'):
-                break
+.. literalinclude:: ./examples/rgb_mobilenet.py
+   :language: python
+   :linenos:
 
 Run face-detection-retail-0004 on left camera
 *********************************************
 
-.. code-block:: python
-
-    from depthai_sdk import Previews
-    from depthai_sdk.managers import PipelineManager, PreviewManager, NNetManager, BlobManager
-    import depthai as dai
-    import cv2
-
-    pm = PipelineManager()
-    pm.create_left_cam(xout=True)
-
-    bm = BlobManager(zoo_name="face-detection-retail-0004")
-    nm = NNetManager(input_size=(300, 300), nn_family="mobilenet")
-    nn_pipeline = nm.create_nn_pipeline(pipeline=pm.pipeline, nodes=pm.nodes, source=Previews.left.name,
-        blob_path=bm.getBlob(shaves=6, openvino_version=pm.pipeline.getOpenVINOVersion())
-    )
-    pm.add_nn(nn_pipeline)
-
-    with dai.Device(pm.pipeline) as device:
-        pv = PreviewManager(display=[Previews.left.name])
-        pv.create_queues(device)
-        nm.createQueues(device)
-        nn_data = []
-
-        while True:
-            pv.prepare_frames()
-            in_nn = nm.output_queue.tryGet()
-
-            if in_nn is not None:
-                nn_data = nm.decode(in_nn)
-
-            nm.draw(pv, nn_data)
-            pv.show_frames()
-
-            if cv2.waitKey(1) == ord('q'):
-                break
+.. literalinclude:: ./examples/face_detection_left.py
+   :language: python
+   :linenos:
 
 
 .. include::  footer-short.rst
