@@ -37,5 +37,5 @@ PrintColors = SimpleNamespace(
 )
 
 
-def cli_print(msg, print_color):
+def cliPrint(msg, print_color):
     print("{0}{1}{2}".format(print_color, msg, PrintColors.ENDC))

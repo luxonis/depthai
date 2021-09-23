@@ -8,7 +8,7 @@ import numpy as np
 
 class PreviewDecoder:
     @staticmethod
-    def nn_input(packet, manager=None):
+    def nnInput(packet, manager=None):
         """
         Produces NN passthough frame from raw data packet
 
@@ -24,7 +24,7 @@ class PreviewDecoder:
             frame = cv2.imdecode(packet.getData(), cv2.IMREAD_COLOR)
         else:
             frame = packet.getCvFrame()
-        if hasattr(manager, "nn_source") and manager.nn_source in (Previews.rectified_left.name, Previews.rectified_right.name):
+        if hasattr(manager, "nnSource") and manager.nnSource in (Previews.rectifiedLeft.name, Previews.rectifiedRight.name):
             frame = cv2.flip(frame, 1)
         return frame
 
@@ -80,7 +80,7 @@ class PreviewDecoder:
             return packet.getCvFrame()
 
     @staticmethod
-    def rectified_left(packet, manager=None):
+    def rectifiedLeft(packet, manager=None):
         """
         Produces rectified left frame (:obj:`depthai.node.StereoDepth.rectifiedLeft`) from raw data packet
 
@@ -97,7 +97,7 @@ class PreviewDecoder:
             return cv2.flip(packet.getCvFrame(), 1)
 
     @staticmethod
-    def rectified_right(packet, manager=None):
+    def rectifiedRight(packet, manager=None):
         """
         Produces rectified right frame (:obj:`depthai.node.StereoDepth.rectifiedRight`) from raw data packet
 
@@ -114,7 +114,7 @@ class PreviewDecoder:
             return cv2.flip(packet.getCvFrame(), 1)
 
     @staticmethod
-    def depth_raw(packet, manager=None):
+    def depthRaw(packet, manager=None):
         """
         Produces raw depth frame (:obj:`depthai.node.StereoDepth.depth`) from raw data packet
 
@@ -132,12 +132,12 @@ class PreviewDecoder:
             return packet.getFrame()
 
     @staticmethod
-    def depth(depth_raw, manager=None):
+    def depth(depthRaw, manager=None):
         """
         Produces depth frame from raw depth frame (converts to disparity and applies color map)
 
         Args:
-            depth_raw (numpy.ndarray): OpenCV frame containing raw depth frame
+            depthRaw (numpy.ndarray): OpenCV frame containing raw depth frame
             manager (depthai_sdk.managers.PreviewManager, optional): PreviewManager instance
 
         Returns:
@@ -147,15 +147,15 @@ class PreviewDecoder:
         if dispScaleFactor is None:
             baseline = getattr(manager, 'baseline', 75)  # mm
             fov = getattr(manager, 'fov', 71.86)
-            focal = getattr(manager, 'focal', depth_raw.shape[1] / (2. * math.tan(math.radians(fov / 2))))
+            focal = getattr(manager, 'focal', depthRaw.shape[1] / (2. * math.tan(math.radians(fov / 2))))
             dispScaleFactor = baseline * focal
             if manager is not None:
                 setattr(manager, "dispScaleFactor", dispScaleFactor)
 
         with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
-            disp_frame = dispScaleFactor / depth_raw
-        disp_frame = (disp_frame * manager.dispMultiplier).astype(np.uint8)
-        return PreviewDecoder.disparity_color(disp_frame, manager)
+            dispFrame = dispScaleFactor / depthRaw
+        dispFrame = (dispFrame * manager.dispMultiplier).astype(np.uint8)
+        return PreviewDecoder.disparityColor(dispFrame, manager)
 
     @staticmethod
     def disparity(packet, manager=None):
@@ -170,13 +170,13 @@ class PreviewDecoder:
             numpy.ndarray: Ready to use OpenCV frame
         """
         if manager is not None and manager.lowBandwidth:
-            raw_frame = cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+            rawFrame = cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
-            raw_frame = packet.getFrame()
-        return (raw_frame*(manager.dispMultiplier if manager is not None else 255/96)).astype(np.uint8)
+            rawFrame = packet.getFrame()
+        return (rawFrame*(manager.dispMultiplier if manager is not None else 255/96)).astype(np.uint8)
 
     @staticmethod
-    def disparity_color(disparity, manager=None):
+    def disparityColor(disparity, manager=None):
         """
         Applies color map to disparity frame
 
@@ -198,16 +198,16 @@ class Previews(enum.Enum):
 
     Can be also used as e.g. :code:`Previews.color.value(packet)` to transform queue output packet to color camera frame
     """
-    nn_input = partial(PreviewDecoder.nn_input)
+    nnInput = partial(PreviewDecoder.nnInput)
     color = partial(PreviewDecoder.color)
     left = partial(PreviewDecoder.left)
     right = partial(PreviewDecoder.right)
-    rectified_left = partial(PreviewDecoder.rectified_left)
-    rectified_right = partial(PreviewDecoder.rectified_right)
-    depth_raw = partial(PreviewDecoder.depth_raw)
+    rectifiedLeft = partial(PreviewDecoder.rectifiedLeft)
+    rectifiedRight = partial(PreviewDecoder.rectifiedRight)
+    depthRaw = partial(PreviewDecoder.depthRaw)
     depth = partial(PreviewDecoder.depth)
     disparity = partial(PreviewDecoder.disparity)
-    disparity_color = partial(PreviewDecoder.disparity_color)
+    disparityColor = partial(PreviewDecoder.disparityColor)
 
 
 class MouseClickTracker:
@@ -223,7 +223,7 @@ class MouseClickTracker:
     #: dict: Stores values assigned to specific point per frame
     values = {}
 
-    def select_point(self, name):
+    def selectPoint(self, name):
         """
         Returns callback function for :code:`cv2.setMouseCallback` that will update the selected point on mouse click
         event from frame.
@@ -252,7 +252,7 @@ class MouseClickTracker:
                     self.points[name] = (x, y)
         return cb
 
-    def extract_value(self, name, frame: np.ndarray):
+    def extractValue(self, name, frame: np.ndarray):
         """
         Extracts value from frame for a specific point
 
@@ -261,9 +261,9 @@ class MouseClickTracker:
         """
         point = self.points.get(name, None)
         if point is not None:
-            if name in (Previews.depth_raw.name, Previews.depth.name):
+            if name in (Previews.depthRaw.name, Previews.depth.name):
                 self.values[name] = "{}mm".format(frame[point[1]][point[0]])
-            elif name in (Previews.disparity_color.name, Previews.disparity.name):
+            elif name in (Previews.disparityColor.name, Previews.disparity.name):
                 self.values[name] = "{}px".format(frame[point[1]][point[0]])
             elif len(frame.shape) == 3:
                 self.values[name] = "R:{},G:{},B:{}".format(*frame[point[1]][point[0]][::-1])

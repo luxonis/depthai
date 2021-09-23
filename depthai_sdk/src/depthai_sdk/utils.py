@@ -8,14 +8,14 @@ import numpy as np
 import depthai as dai
 
 
-def cos_dist(a, b):
+def cosDist(a, b):
     """
     Calculates cosine distance - https://en.wikipedia.org/wiki/Cosine_similarity
     """
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 
-def frame_norm(frame, bbox):
+def frameNorm(frame, bbox):
     """
     Mapps bounding box coordinates (0..1) to pixel values on frame
 
@@ -26,12 +26,12 @@ def frame_norm(frame, bbox):
     Returns:
         list: Bounding box points mapped to pixel values on frame
     """
-    norm_vals = np.full(len(bbox), frame.shape[0])
-    norm_vals[::2] = frame.shape[1]
-    return (np.clip(np.array(bbox), 0, 1) * norm_vals).astype(int)
+    normVals = np.full(len(bbox), frame.shape[0])
+    normVals[::2] = frame.shape[1]
+    return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
 
-def to_planar(arr: np.ndarray, shape: tuple = None) -> np.ndarray:
+def toPlanar(arr: np.ndarray, shape: tuple = None) -> np.ndarray:
     """
     Converts interleaved frame into planar
 
@@ -47,7 +47,7 @@ def to_planar(arr: np.ndarray, shape: tuple = None) -> np.ndarray:
     return cv2.resize(arr, shape).transpose(2, 0, 1)
 
 
-def to_tensor_result(packet):
+def toTensorResult(packet):
     """
     Converts NN packet to dict, with each key being output tensor name and each value being correctly reshaped and converted results array
 
@@ -101,7 +101,7 @@ def merge(source:dict, destination:dict):
     return destination
 
 
-def load_module(path: Path):
+def loadModule(path: Path):
     """
     Loads module from specified path. Used internally e.g. to load a custom handler file from path
 
@@ -117,47 +117,47 @@ def load_module(path: Path):
     return module
 
 
-def getDeviceInfo(device_id=None):
+def getDeviceInfo(deviceId=None):
     """
-    Find a correct :obj:`depthai.DeviceInfo` object, either matching provided :code:`device_id` or selected by the user (if multiple devices available)
+    Find a correct :obj:`depthai.DeviceInfo` object, either matching provided :code:`deviceId` or selected by the user (if multiple devices available)
     Useful for almost every app where there is a possibility of multiple devices being connected simultaneously
 
     Args:
-        device_id (str, optional): Specifies device MX ID, for which the device info will be collected
+        deviceId (str, optional): Specifies device MX ID, for which the device info will be collected
 
     Returns:
         depthai.DeviceInfo: Object representing selected device info
 
     Raises:
-        RuntimeError: if no DepthAI device was found or, if :code:`device_id` was specified, no device with matching MX ID was found
+        RuntimeError: if no DepthAI device was found or, if :code:`deviceId` was specified, no device with matching MX ID was found
         ValueError: if value supplied by the user when choosing the DepthAI device was incorrect
     """
-    device_infos = dai.Device.getAllAvailableDevices()
-    if len(device_infos) == 0:
+    deviceInfos = dai.Device.getAllAvailableDevices()
+    if len(deviceInfos) == 0:
         raise RuntimeError("No DepthAI device found!")
     else:
         print("Available devices:")
-        for i, device_info in enumerate(device_infos):
-            print(f"[{i}] {device_info.getMxId()} [{device_info.state.name}]")
+        for i, deviceInfo in enumerate(deviceInfos):
+            print(f"[{i}] {deviceInfo.getMxId()} [{deviceInfo.state.name}]")
 
-        if device_id == "list":
+        if deviceId == "list":
             raise SystemExit(0)
-        elif device_id is not None:
-            matching_device = next(filter(lambda info: info.getMxId() == device_id, device_infos), None)
-            if matching_device is None:
-                raise RuntimeError(f"No DepthAI device found with id matching {device_id} !")
-            return matching_device
-        elif len(device_infos) == 1:
-            return device_infos[0]
+        elif deviceId is not None:
+            matchingDevice = next(filter(lambda info: info.getMxId() == deviceId, deviceInfos), None)
+            if matchingDevice is None:
+                raise RuntimeError(f"No DepthAI device found with id matching {deviceId} !")
+            return matchingDevice
+        elif len(deviceInfos) == 1:
+            return deviceInfos[0]
         else:
             val = input("Which DepthAI Device you want to use: ")
             try:
-                return device_infos[int(val)]
+                return deviceInfos[int(val)]
             except:
                 raise ValueError("Incorrect value supplied: {}".format(val))
 
 
-def show_progress(curr, max):
+def showProgress(curr, max):
     """
     Print progressbar to stdout. Each call to this method will write exactly to the same line, so usually it's used as
 
@@ -165,7 +165,7 @@ def show_progress(curr, max):
 
         print("Staring processing")
         while processing:
-            show_progress(curr_progress, max_progress)
+            showProgress(currProgress, maxProgress)
         print(" done") # prints in the same line as progress bar and adds a new line
         print("Processing finished!")
 
@@ -179,13 +179,13 @@ def show_progress(curr, max):
 
 
 
-def downloadYTVideo(video, output_dir=None):
+def downloadYTVideo(video, outputDir=None):
     """
     Downloads a video from YouTube and returns the path to video. Will choose the best resolutuion if possible.
 
     Args:
         video (str): URL to YouTube video
-        output_dir (pathlib.Path, optional): Path to directory where youtube video should be downloaded.
+        outputDir (pathlib.Path, optional): Path to directory where youtube video should be downloaded.
 
     Returns:
          pathlib.Path: Path to downloaded video file
@@ -193,8 +193,8 @@ def downloadYTVideo(video, output_dir=None):
     Raises:
         RuntimeError: thrown when video download was unsuccessful
     """
-    def progress_func(stream, chunk, bytes_remaining):
-        show_progress(stream.filesize - bytes_remaining, stream.filesize)
+    def progressFunc(stream, chunk, bytesRemaining):
+        showProgress(stream.filesize - bytesRemaining, stream.filesize)
 
     try:
         from pytube import YouTube
@@ -203,12 +203,12 @@ def downloadYTVideo(video, output_dir=None):
     path = None
     for _ in range(10):
         try:
-            path = YouTube(video, on_progress_callback=progress_func)\
+            path = YouTube(video, on_progress_callback=progressFunc)\
                 .streams\
                 .order_by('resolution')\
                 .desc()\
                 .first()\
-                .download(output_path=output_dir)
+                .download(output_path=outputDir)
         except urllib.error.HTTPError:
             # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
             # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
@@ -220,27 +220,27 @@ def downloadYTVideo(video, output_dir=None):
     return path
 
 
-def crop_to_aspect_ratio(frame, size):
+def cropToAspectRatio(frame, size):
     """
     Crop the frame to desired aspect ratio and then scales it down to desired size
     Args:
         frame (numpy.ndarray): Source frame that will be cropped
-        output_dir (tuple): Desired frame size (width, heigth)
+        size (tuple): Desired frame size (width, heigth)
     """
     shape = frame.shape
     h = shape[0]
     w = shape[1]
-    current_ratio = w / h
-    new_ratio = size[0] / size[1]
+    currentRatio = w / h
+    newRatio = size[0] / size[1]
 
     # Crop width/heigth to match the aspect ratio needed by the NN
-    if new_ratio < current_ratio:  # Crop width
+    if newRatio < currentRatio:  # Crop width
         # Use full height, crop width
-        new_w = (new_ratio/current_ratio) * w
-        crop = int((w - new_w) / 2)
+        newW = (newRatio/currentRatio) * w
+        crop = int((w - newW) / 2)
         return frame[:, crop:w-crop]
     else:  # Crop height
         # Use full width, crop height
-        new_h = (current_ratio/new_ratio) * h
-        crop = int((h - new_h) / 2)
+        newH = (currentRatio/newRatio) * h
+        crop = int((h - newH) / 2)
         return frame[crop:h-crop, :]

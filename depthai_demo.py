@@ -8,10 +8,10 @@ import platform
 
 import numpy as np
 
-from depthai_helpers.arg_manager import parse_args
+from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
-from depthai_helpers.version_check import check_depthai_version
-from depthai_sdk import FPSHandler, load_module, getDeviceInfo, downloadYTVideo, Previews
+from depthai_helpers.version_check import checkDepthaiVersion
+from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
 DISP_CONF_MIN = int(os.getenv("DISP_CONF_MIN", 0))
@@ -24,9 +24,9 @@ LRCT_MAX = int(os.getenv("LRCT_MAX", 10))
 print('Using depthai module from: ', dai.__file__)
 print('Depthai version installed: ', dai.__version__)
 if platform.machine() not in ['armv6l', 'aarch64']:
-    check_depthai_version()
+    checkDepthaiVersion()
 
-conf = ConfigManager(parse_args())
+conf = ConfigManager(parseArgs())
 conf.linuxCheckApplyUsbRules()
 if not conf.useCamera:
     if str(conf.args.video).startswith('https'):
@@ -35,19 +35,20 @@ if not conf.useCamera:
     if not Path(conf.args.video).exists():
         raise ValueError("Path {} does not exists!".format(conf.args.video))
 
-callbacks = load_module(conf.args.callback)
-rgb_res = conf.getRgbResolution()
-mono_res = conf.getMonoResolution()
+callbacks = loadModule(conf.args.callback)
+rgbRes = conf.getRgbResolution()
+monoRes = conf.getMonoResolution()
 
 
-if conf.args.report_file:
-    report_file_p = Path(conf.args.report_file).with_suffix('.csv')
-    report_file_p.parent.mkdir(parents=True, exist_ok=True)
-    report_file = open(conf.args.report_file, 'a')
+if conf.args.reportFile:
+    reportFileP = Path(conf.args.reportFile).with_suffix('.csv')
+    reportFileP.parent.mkdir(parents=True, exist_ok=True)
+    reportFile = open(conf.args.reportFile, 'a')
 
-def print_sys_info(info):
+
+def printSysInfo(info):
     m = 1024 * 1024 # MiB
-    if not conf.args.report_file:
+    if not conf.args.reportFile:
         if "memory" in conf.args.report:
             print(f"Drr used / total - {info.ddrMemoryUsage.used / m:.2f} / {info.ddrMemoryUsage.total / m:.2f} MiB")
             print(f"Cmx used / total - {info.cmxMemoryUsage.used / m:.2f} / {info.cmxMemoryUsage.total / m:.2f} MiB")
@@ -64,81 +65,80 @@ def print_sys_info(info):
         if "memory" in conf.args.report:
             data = {
                 **data,
-                "ddr_used": info.ddrMemoryUsage.used,
-                "ddr_total": info.ddrMemoryUsage.total,
-                "cmx_used": info.cmxMemoryUsage.used,
-                "cmx_total": info.cmxMemoryUsage.total,
-                "leon_css_used": info.leonCssMemoryUsage.used,
-                "leon_css_total": info.leonCssMemoryUsage.total,
-                "leon_mss_used": info.leonMssMemoryUsage.used,
-                "leon_mss_total": info.leonMssMemoryUsage.total,
+                "ddrUsed": info.ddrMemoryUsage.used,
+                "ddrTotal": info.ddrMemoryUsage.total,
+                "cmxUsed": info.cmxMemoryUsage.used,
+                "cmxTotal": info.cmxMemoryUsage.total,
+                "leonCssUsed": info.leonCssMemoryUsage.used,
+                "leonCssTotal": info.leonCssMemoryUsage.total,
+                "leonMssUsed": info.leonMssMemoryUsage.used,
+                "leonMssTotal": info.leonMssMemoryUsage.total,
             }
         if "temp" in conf.args.report:
             data = {
                 **data,
-                "temp_avg": info.chipTemperature.average,
-                "temp_css": info.chipTemperature.css,
-                "temp_mss": info.chipTemperature.mss,
-                "temp_upa0": info.chipTemperature.upa,
-                "temp_upa1": info.chipTemperature.dss,
+                "tempAvg": info.chipTemperature.average,
+                "tempCss": info.chipTemperature.css,
+                "tempMss": info.chipTemperature.mss,
+                "tempUpa0": info.chipTemperature.upa,
+                "tempUpa1": info.chipTemperature.dss,
             }
         if "cpu" in conf.args.report:
             data = {
                 **data,
-                "cpu_css_avg": info.leonCssCpuUsage.average,
-                "cpu_mss_avg": info.leonMssCpuUsage.average,
+                "cpuCssAvg": info.leonCssCpuUsage.average,
+                "cpuMssAvg": info.leonMssCpuUsage.average,
             }
 
-        if report_file.tell() == 0:
-            print(','.join(data.keys()), file=report_file)
-        callbacks.on_report(data)
-        print(','.join(map(str, data.values())), file=report_file)
+        if reportFile.tell() == 0:
+            print(','.join(data.keys()), file=reportFile)
+        callbacks.onReport(data)
+        print(','.join(map(str, data.values())), file=reportFile)
 
 
 class Trackbars:
     instances = {}
 
     @staticmethod
-    def create_trackbar(name, window, min_val, max_val, default_val, callback):
+    def createTrackbar(name, window, minVal, maxVal, defaultVal, callback):
         def fn(value):
             if Trackbars.instances[name][window] != value:
                 callback(value)
-            for other_window, previous_value in Trackbars.instances[name].items():
-                if other_window != window and previous_value != value:
-                    Trackbars.instances[name][other_window] = value
-                    cv2.setTrackbarPos(name, other_window, value)
+            for otherWindow, previousValue in Trackbars.instances[name].items():
+                if otherWindow != window and previousValue != value:
+                    Trackbars.instances[name][otherWindow] = value
+                    cv2.setTrackbarPos(name, otherWindow, value)
 
-        cv2.createTrackbar(name, window, min_val, max_val, fn)
-        Trackbars.instances[name] = {**Trackbars.instances.get(name, {}), window: default_val}
-        cv2.setTrackbarPos(name, window, default_val)
+        cv2.createTrackbar(name, window, minVal, maxVal, fn)
+        Trackbars.instances[name] = {**Trackbars.instances.get(name, {}), window: defaultVal}
+        cv2.setTrackbarPos(name, window, defaultVal)
 
-device_info = getDeviceInfo(conf.args.device_id)
-openvino_version = None
-if conf.args.openvino_version:
-    openvino_version = getattr(dai.OpenVINO.Version, 'VERSION_' + conf.args.openvino_version)
-pm = PipelineManager(openvino_version)
+deviceInfo = getDeviceInfo(conf.args.deviceId)
+openvinoVersion = None
+if conf.args.openvinoVersion:
+    openvinoVersion = getattr(dai.OpenVINO.Version, 'VERSION_' + conf.args.openvinoVersion)
+pm = PipelineManager(openvinoVersion)
 
-if conf.args.xlink_chunk_size is not None:
-    pm.set_xlink_chunk_size(conf.args.xlink_chunk_size)
+if conf.args.xlinkChunkSize is not None:
+    pm.setXlinkChunkSize(conf.args.xlinkChunkSize)
 
 if conf.useNN:
-    blob_manager = BlobManager(
-        zoo_dir=DEPTHAI_ZOO,
-        zoo_name=conf.getModelName(),
-        config_path=conf.getModelDir(),
+    blobManager = BlobManager(
+        zooDir=DEPTHAI_ZOO,
+        zooName=conf.getModelName(),
     )
-    nn_manager = NNetManager(input_size=conf.inputSize)
+    nnManager = NNetManager(inputSize=conf.inputSize)
 
     if conf.getModelDir() is not None:
-        config_path = conf.getModelDir() / Path(conf.getModelName()).with_suffix(f".json")
-        nn_manager.read_config(config_path)
+        configPath = conf.getModelDir() / Path(conf.getModelName()).with_suffix(f".json")
+        nnManager.readConfig(configPath)
 
-    nn_manager.countLabel(conf.getCountLabel(nn_manager))
-    pm.set_nn_manager(nn_manager)
+    nnManager.countLabel(conf.getCountLabel(nnManager))
+    pm.setNnManager(nnManager)
 
 # Pipeline is defined, now we can connect to the device
-with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.args.usb_speed == "usb2") as device:
-    if device_info.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
+with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args.usbSpeed == "usb2") as device:
+    if deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
         print("USB Connection speed: {}".format(device.getUsbSpeed()))
     conf.adjustParamsToDevice(device)
     conf.adjustPreviewToOptions()
@@ -148,185 +148,185 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), device_info, usb2Mode=conf.arg
     fps = FPSHandler() if conf.useCamera else FPSHandler(cap)
 
     if conf.useCamera or conf.args.sync:
-        pv = PreviewManager(display=conf.args.show, nn_source=conf.getModelSource(), colorMap=conf.getColorMap(),
+        pv = PreviewManager(display=conf.args.show, nnSource=conf.getModelSource(), colorMap=conf.getColorMap(),
                             dispMultiplier=conf.dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth,
-                            scale=conf.args.scale, sync=conf.args.sync, fps_handler=fps)
+                            scale=conf.args.scale, sync=conf.args.sync, fpsHandler=fps)
 
         if conf.leftCameraEnabled:
-            pm.create_left_cam(mono_res, conf.args.mono_fps, orientation=conf.args.camera_orientation.get(Previews.left.name),
-                               xout=Previews.left.name in conf.args.show and (conf.getModelSource() != "left" or not conf.args.sync)
-                               )
+            pm.createLeftCam(monoRes, conf.args.monoFps, orientation=conf.args.cameraOrientation.get(Previews.left.name),
+                             xout=Previews.left.name in conf.args.show and (conf.getModelSource() != "left" or not conf.args.sync)
+                             )
         if conf.rightCameraEnabled:
-            pm.create_right_cam(mono_res, conf.args.mono_fps, orientation=conf.args.camera_orientation.get(Previews.right.name),
+            pm.createRightCam(monoRes, conf.args.monoFps, orientation=conf.args.cameraOrientation.get(Previews.right.name),
                                 xout=Previews.right.name in conf.args.show and (conf.getModelSource() != "right" or not conf.args.sync)
                                 )
         if conf.rgbCameraEnabled:
-            pm.create_color_cam(nn_manager.input_size if conf.useNN else conf.previewSize, rgb_res, conf.args.rgb_fps, orientation=conf.args.camera_orientation.get(Previews.color.name),
-                                full_fov=not conf.args.disable_full_fov_nn, xout=Previews.color.name in conf.args.show  and (conf.getModelSource() != "color" or not conf.args.sync)
-                                )
+            pm.createColorCam(nnManager.inputSize if conf.useNN else conf.previewSize, rgbRes, conf.args.rgbFps, orientation=conf.args.cameraOrientation.get(Previews.color.name),
+                              fullFov=not conf.args.disableFullFovNn, xout=Previews.color.name in conf.args.show and (conf.getModelSource() != "color" or not conf.args.sync)
+                              )
 
         if conf.useDepth:
-            pm.create_depth(
-                conf.args.disparity_confidence_threshold,
+            pm.createDepth(
+                conf.args.disparityConfidenceThreshold,
                 conf.getMedianFilter(),
                 conf.args.sigma,
-                conf.args.stereo_lr_check,
-                conf.args.lrc_threshold,
-                conf.args.extended_disparity,
+                conf.args.stereoLrCheck,
+                conf.args.lrcThreshold,
+                conf.args.extendedDisparity,
                 conf.args.subpixel,
-                useDepth=Previews.depth.name in conf.args.show or Previews.depth_raw.name in conf.args.show ,
-                useDisparity=Previews.disparity.name in conf.args.show or Previews.disparity_color.name in conf.args.show,
-                useRectifiedLeft=Previews.rectified_left.name in conf.args.show and (conf.getModelSource() != "rectified_left" or not conf.args.sync),
-                useRectifiedRight=Previews.rectified_right.name in conf.args.show and (conf.getModelSource() != "rectified_right" or not conf.args.sync),
+                useDepth=Previews.depth.name in conf.args.show or Previews.depthRaw.name in conf.args.show ,
+                useDisparity=Previews.disparity.name in conf.args.show or Previews.disparityColor.name in conf.args.show,
+                useRectifiedLeft=Previews.rectifiedLeft.name in conf.args.show and (conf.getModelSource() != "rectifiedLeft" or not conf.args.sync),
+                useRectifiedRight=Previews.rectifiedRight.name in conf.args.show and (conf.getModelSource() != "rectifiedRight" or not conf.args.sync),
             )
 
-        enc_manager = None
+        encManager = None
         if len(conf.args.encode) > 1:
-            enc_manager = EncodingManager(conf.args.encode, conf.args.encode_output)
-            enc_manager.create_encoders(pm)
+            encManager = EncodingManager(conf.args.encode, conf.args.encodeOutput)
+            encManager.createEncoders(pm)
 
     if len(conf.args.report) > 0:
-        pm.create_system_logger()
+        pm.createSystemLogger()
 
     if conf.useNN:
-        nn_pipeline = nn_manager.create_nn_pipeline(
+        nn = nnManager.createNN(
             pipeline=pm.pipeline, nodes=pm.nodes, source=conf.getModelSource(),
-            blob_path=blob_manager.getBlob(shaves=conf.shaves, openvino_version=nn_manager.openvino_version),
-            use_depth=conf.useDepth, minDepth=conf.args.min_depth, maxDepth=conf.args.max_depth,
-            sbbScaleFactor=conf.args.sbb_scale_factor, full_fov=not conf.args.disable_full_fov_nn,
-            flip_detection=conf.getModelSource() in ("rectified_left", "rectified_right") and not conf.args.stereo_lr_check,
+            blobPath=blobManager.getBlob(shaves=conf.shaves, openvinoVersion=nnManager.openvinoVersion),
+            useDepth=conf.useDepth, minDepth=conf.args.minDepth, maxDepth=conf.args.maxDepth,
+            sbbScaleFactor=conf.args.sbbScaleFactor, fullFov=not conf.args.disableFullFovNn,
+            flipDetection=conf.getModelSource() in ("rectifiedLeft", "rectifiedRight") and not conf.args.stereoLrCheck,
         )
 
-        pm.add_nn(
-            nn=nn_pipeline, sync=conf.args.sync, xout_nn_input=Previews.nn_input.name in conf.args.show,
-            use_depth=conf.useDepth, xout_sbb=conf.args.spatial_bounding_box and conf.useDepth
+        pm.addNn(
+            nn=nn, sync=conf.args.sync, xoutNnInput=Previews.nnInput.name in conf.args.show,
+            useDepth=conf.useDepth, xoutSbb=conf.args.spatialBoundingBox and conf.useDepth
         )
 
     # Start pipeline
     device.startPipeline(pm.pipeline)
-    pm.create_default_queues(device)
+    pm.createDefaultQueues(device)
     if conf.useNN:
-        nn_manager.createQueues(device)
+        nnManager.createQueues(device)
 
-    sbb_out = device.getOutputQueue("sbb", maxSize=1, blocking=False) if conf.useNN and conf.args.spatial_bounding_box else None
-    log_out = device.getOutputQueue("system_logger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None
+    sbbOut = device.getOutputQueue("sbb", maxSize=1, blocking=False) if conf.useNN and conf.args.spatialBoundingBox else None
+    logOut = device.getOutputQueue("systemLogger", maxSize=30, blocking=False) if len(conf.args.report) > 0 else None
 
-    median_filters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
-    for med_filter in median_filters:
+    medianFilters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
+    for medFilter in medianFilters:
         # move the cycle to the current median filter
-        if med_filter == pm._depthConfig.getMedianFilter():
+        if medFilter == pm._depthConfig.getMedianFilter():
             break
 
     if conf.useCamera:
-        def create_queue_callback(queue_name):
-            if queue_name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
-                Trackbars.create_trackbar('Disparity confidence', queue_name, DISP_CONF_MIN, DISP_CONF_MAX, conf.args.disparity_confidence_threshold,
-                         lambda value: pm.update_depth_config(device, dct=value))
-                if queue_name in [Previews.depth_raw.name, Previews.depth.name]:
-                    Trackbars.create_trackbar('Bilateral sigma', queue_name, SIGMA_MIN, SIGMA_MAX, conf.args.sigma,
-                             lambda value: pm.update_depth_config(device, sigma=value))
-                if conf.args.stereo_lr_check:
-                    Trackbars.create_trackbar('LR-check threshold', queue_name, LRCT_MIN, LRCT_MAX, conf.args.lrc_threshold,
-                             lambda value: pm.update_depth_config(device, lrc_threshold=value))
+        def createQueueCallback(queueName):
+            if queueName in [Previews.disparityColor.name, Previews.disparity.name, Previews.depth.name, Previews.depthRaw.name]:
+                Trackbars.createTrackbar('Disparity confidence', queueName, DISP_CONF_MIN, DISP_CONF_MAX, conf.args.disparityConfidenceThreshold,
+                         lambda value: pm.updateDepthConfig(device, dct=value))
+                if queueName in [Previews.depthRaw.name, Previews.depth.name]:
+                    Trackbars.createTrackbar('Bilateral sigma', queueName, SIGMA_MIN, SIGMA_MAX, conf.args.sigma,
+                             lambda value: pm.updateDepthConfig(device, sigma=value))
+                if conf.args.stereoLrCheck:
+                    Trackbars.createTrackbar('LR-check threshold', queueName, LRCT_MIN, LRCT_MAX, conf.args.lrcThreshold,
+                             lambda value: pm.updateDepthConfig(device, lrcThreshold=value))
 
         cameras = device.getConnectedCameras()
         if dai.CameraBoardSocket.LEFT in cameras and dai.CameraBoardSocket.RIGHT in cameras:
-            pv.collect_calib_data(device)
-        pv.create_queues(device, create_queue_callback)
-        if enc_manager is not None:
-            enc_manager.create_default_queues(device)
+            pv.collectCalibData(device)
+        pv.createQueues(device, createQueueCallback)
+        if encManager is not None:
+            encManager.createDefaultQueues(device)
     elif conf.args.sync:
-        host_out = device.getOutputQueue(Previews.nn_input.name, maxSize=1, blocking=False)
+        hostOut = device.getOutputQueue(Previews.nnInput.name, maxSize=1, blocking=False)
 
-    seq_num = 0
-    host_frame = None
-    nn_data = []
-    sbb_rois = []
-    callbacks.on_setup(**locals())
+    seqNum = 0
+    hostFrame = None
+    nnData = []
+    sbbRois = []
+    callbacks.onSetup(**locals())
 
     try:
         while True:
-            fps.next_iter()
-            callbacks.on_iter(**locals())
+            fps.nextIter()
+            callbacks.onIter(**locals())
             if conf.useCamera:
-                pv.prepare_frames(callback=callbacks.on_new_frame)
-                if enc_manager is not None:
-                    enc_manager.parse_queues()
+                pv.prepareFrames(callback=callbacks.onNewFrame)
+                if encManager is not None:
+                    encManager.parseQueues()
 
-                if sbb_out is not None:
-                    sbb = sbb_out.tryGet()
+                if sbbOut is not None:
+                    sbb = sbbOut.tryGet()
                     if sbb is not None:
-                        sbb_rois = sbb.getConfigData()
-                    depth_frames = [pv.get(Previews.depth_raw.name), pv.get(Previews.depth.name)]
-                    for depth_frame in depth_frames:
-                        if depth_frame is None:
+                        sbbRois = sbb.getConfigData()
+                    depthFrames = [pv.get(Previews.depthRaw.name), pv.get(Previews.depth.name)]
+                    for depthFrame in depthFrames:
+                        if depthFrame is None:
                             continue
 
-                        for roi_data in sbb_rois:
-                            roi = roi_data.roi.denormalize(depth_frame.shape[1], depth_frame.shape[0])
-                            top_left = roi.topLeft()
-                            bottom_right = roi.bottomRight()
+                        for roiData in sbbRois:
+                            roi = roiData.roi.denormalize(depthFrame.shape[1], depthFrame.shape[0])
+                            topLeft = roi.topLeft()
+                            bottomRight = roi.bottomRight()
                             # Display SBB on the disparity map
-                            cv2.rectangle(depth_frame, (int(top_left.x), int(top_left.y)), (int(bottom_right.x), int(bottom_right.y)), nn_manager._bbox_colors[0], 2)
+                            cv2.rectangle(depthFrame, (int(topLeft.x), int(topLeft.y)), (int(bottomRight.x), int(bottomRight.y)), nnManager._bboxColors[0], 2)
             else:
-                read_correctly, raw_host_frame = cap.read()
-                if not read_correctly:
+                readCorrectly, rawHostFrame = cap.read()
+                if not readCorrectly:
                     break
 
-                nn_manager.sendInputFrame(raw_host_frame, seq_num)
-                seq_num += 1
+                nnManager.sendInputFrame(rawHostFrame, seqNum)
+                seqNum += 1
 
                 if not conf.args.sync:
-                    host_frame = raw_host_frame
+                    hostFrame = rawHostFrame
                 fps.tick('host')
 
             if conf.useNN:
-                in_nn = nn_manager.output_queue.tryGet()
-                if in_nn is not None:
-                    callbacks.on_nn(in_nn)
+                inNn = nnManager.outputQueue.tryGet()
+                if inNn is not None:
+                    callbacks.onNn(inNn)
                     if not conf.useCamera and conf.args.sync:
-                        host_frame = Previews.nn_input.value(host_out.get())
-                    nn_data = nn_manager.decode(in_nn)
+                        hostFrame = Previews.nnInput.value(hostOut.get())
+                    nnData = nnManager.decode(inNn)
                     fps.tick('nn')
 
             if conf.useCamera:
                 if conf.useNN:
-                    nn_manager.draw(pv, nn_data)
+                    nnManager.draw(pv, nnData)
 
-                def show_frames_callback(frame, name):
-                    fps.draw_fps(frame, name)
-                    if name in [Previews.disparity_color.name, Previews.disparity.name, Previews.depth.name, Previews.depth_raw.name]:
+                def showFramesCallback(frame, name):
+                    fps.drawFps(frame, name)
+                    if name in [Previews.disparityColor.name, Previews.disparity.name, Previews.depth.name, Previews.depthRaw.name]:
                         h, w = frame.shape[:2]
                         text = "Median filter: {} [M]".format(pm._depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
                         cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 0, 4)
                         cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 255, 1)
-                        return_frame = callbacks.on_show_frame(frame, name)
-                        return return_frame if return_frame is not None else frame
-                pv.show_frames(callback=show_frames_callback)
-            elif host_frame is not None:
-                debug_host_frame = host_frame.copy()
+                        returnFrame = callbacks.onShowFrame(frame, name)
+                        return returnFrame if returnFrame is not None else frame
+                pv.showFrames(callback=showFramesCallback)
+            elif hostFrame is not None:
+                debugHostFrame = hostFrame.copy()
                 if conf.useNN:
-                    nn_manager.draw(debug_host_frame, nn_data)
-                fps.draw_fps(debug_host_frame, "host")
-                cv2.imshow("host", debug_host_frame)
+                    nnManager.draw(debugHostFrame, nnData)
+                fps.drawFps(debugHostFrame, "host")
+                cv2.imshow("host", debugHostFrame)
 
-            if log_out:
-                logs = log_out.tryGetAll()
+            if logOut:
+                logs = logOut.tryGetAll()
                 for log in logs:
-                    print_sys_info(log)
+                    printSysInfo(log)
 
             key = cv2.waitKey(1)
             if key == ord('q'):
                 break
             elif key == ord('m'):
-                next_filter = next(median_filters)
-                pm.update_depth_config(device, median=next_filter)
+                nextFilter = next(medianFilters)
+                pm.updateDepthConfig(device, median=nextFilter)
     finally:
-        if conf.useCamera and enc_manager is not None:
-            enc_manager.close()
+        if conf.useCamera and encManager is not None:
+            encManager.close()
 
-if conf.args.report_file:
-    report_file.close()
+if conf.args.reportFile:
+    reportFile.close()
 
-fps.print_status()
-callbacks.on_teardown(**locals())
+fps.printStatus()
+callbacks.onTeardown(**locals())

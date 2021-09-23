@@ -69,7 +69,7 @@ def show_test_def(*texts):
 
 
 def test_cameras():
-    show_test_def("Default run", "You should see both color and depth output", "For PoE, instead of depth, you should see disparity_color")
+    show_test_def("Default run", "You should see both color and depth output", "For PoE, instead of depth, you should see disparityColor")
     subprocess.check_call([*demo_call])
     
     show_test_def("All cameras", "You should see left, right and color camera outputs")
@@ -108,26 +108,26 @@ def test_nn_integration():
     show_test_def("Default run", "You should see mobilenet-ssd network running", "NN overlays should be visible on both outputs")
     subprocess.check_call([*demo_call])
     
-    show_test_def("NN input preview", "You should see color and nn_input (passthough) outputs", "nn_input frame should match nn input size")
-    subprocess.check_call([*demo_call, "-s", "nn_input", "color"])
+    show_test_def("NN input preview", "You should see color and nnInput (passthough) outputs", "nnInput frame should match nn input size")
+    subprocess.check_call([*demo_call, "-s", "nnInput", "color"])
     
-    show_test_def("Left source cam (with depth)", "You should see left and nn_input (passthough) outputs",
+    show_test_def("Left source cam (with depth)", "You should see left and nnInput (passthough) outputs",
                   "Since we're using depth, NN inference should be", "performed on rectified_left output")
-    subprocess.check_call([*demo_call, "-s", "nn_input", "left", "-cam", "left"])
+    subprocess.check_call([*demo_call, "-s", "nnInput", "left", "-cam", "left"])
     
-    show_test_def("Left source cam (without depth)", "You should see left and nn_input (passthough) outputs",
+    show_test_def("Left source cam (without depth)", "You should see left and nnInput (passthough) outputs",
                   "Since we're NOT using depth, NN inference should be", "performed on left camera output")
-    subprocess.check_call([*demo_call, "-s", "nn_input", "left", "-cam", "left", "-dd"])
+    subprocess.check_call([*demo_call, "-s", "nnInput", "left", "-cam", "left", "-dd"])
     
-    show_test_def("No Full FOV", "You should see color and nn_input (passthough) outputs",
-                  "nn_input should contain cropped and scaled", "color output to nn size")
-    subprocess.check_call([*demo_call, "-s", "nn_input", "color", "-dff"])
+    show_test_def("No Full FOV", "You should see color and nnInput (passthough) outputs",
+                  "nnInput should contain cropped and scaled", "color output to nn size")
+    subprocess.check_call([*demo_call, "-s", "nnInput", "color", "-dff"])
     
-    show_test_def("Spatial bounding boxes", "You should see depth_raw and depth outputs", "with spatial bounding boxes visible")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sbb"])
+    show_test_def("Spatial bounding boxes", "You should see depthRaw and depth outputs", "with spatial bounding boxes visible")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "-sbb"])
     
-    show_test_def("Spatial bounding boxes scaled", "You should see depth_raw and depth outputs", "with spatial bounding boxes visible", "This time, the spatial bounding box should be", "3x smaller than in the previous run")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sbb", "-sbb_sf", "0.1"])
+    show_test_def("Spatial bounding boxes scaled", "You should see depthRaw and depth outputs", "with spatial bounding boxes visible", "This time, the spatial bounding box should be", "3x smaller than in the previous run")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "-sbb", "-sbbsf", "0.1"])
     
     show_test_def("Counting labels", "You should see color output with detected face count")
     subprocess.check_call([*demo_call, "-s", "color", "-cnn", "face-detection-retail-0004", "--count", "face"])
@@ -146,6 +146,9 @@ def test_nn_models():
     
     show_test_def("deeplabv3p_person", "You should see deeplabv3p_person network running")
     subprocess.check_call([*demo_call, "-s", "color", "-cnn", "deeplabv3p_person"])
+    
+    show_test_def("road-segmentation-adas-0001", "You should see road-segmentation-adas-0001 network running")
+    subprocess.check_call([*demo_call, "-s", "color", "-cnn", "road-segmentation-adas-0001"])
     
     show_test_def("face-detection-adas-0001", "You should see face-detection-adas-0001 network running")
     subprocess.check_call([*demo_call, "-s", "color", "-cnn", "face-detection-adas-0001"])
@@ -186,32 +189,32 @@ def test_nn_models():
 
 
 def test_depth():
-    show_test_def("All depth previews", "You should see depth, depth_raw, disparity and ", "disparity_color output streams")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color"])
+    show_test_def("All depth previews", "You should see depth, depthRaw, disparity and ", "disparityColor output streams")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "disparity", "disparityColor"])
     
-    show_test_def("Color map", "You should see depth and disparity_color outputs", "with different color map (HOT - mostly red)")
-    subprocess.check_call([*demo_call, "-s", "depth", "disparity_color", "-cm", "HOT"])
+    show_test_def("Color map", "You should see depth and disparityColor outputs", "with different color map (HOT - mostly red)")
+    subprocess.check_call([*demo_call, "-s", "depth", "disparityColor", "-cm", "HOT"])
     
-    show_test_def("Bilateral filter", "You should see depth and depth_raw outputs", "with Bilateral filter enabled (sigma 250)")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sig", "250"])
+    show_test_def("Bilateral filter", "You should see depth and depthRaw outputs", "with Bilateral filter enabled (sigma 250)")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "-sig", "250"])
     
-    show_test_def("Min/Max depth", "You should see depth and depth_raw outputs", "set with min/max depth range to 1/3 meters")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-mind", "1000", "-maxd", "3000"])
+    show_test_def("Min/Max depth", "You should see depth and depthRaw outputs", "set with min/max depth range to 1/3 meters")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "-mind", "1000", "-maxd", "3000"])
     
-    show_test_def("Subpixel", "You should see depth and depth_raw output streams", "with subpixel filtering enabled")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "-sub", "-dnn"])
+    show_test_def("Subpixel", "You should see depth and depthRaw output streams", "with subpixel filtering enabled")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "-sub", "-dnn"])
     
-    show_test_def("Extended disparity", "You should see disparity_color, disparity, depth_raw and", "depth output streams with extended disparity enabled")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-ext", "-dnn"])
+    show_test_def("Extended disparity", "You should see disparityColor, disparity, depthRaw and", "depth output streams with extended disparity enabled")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "disparity", "disparityColor", "-ext", "-dnn"])
     
-    show_test_def("Left/Right Check", "You should see depth, depth_raw, disparity and", "disparity_color output streams with left/right check enabled")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-lrc", "-dnn"])
+    show_test_def("Left/Right Check", "You should see depth, depthRaw, disparity and", "disparityColor output streams with left/right check enabled")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "disparity", "disparityColor", "-lrc", "-dnn"])
     
-    show_test_def("Median Filter 3x3", "You should see disparity_color, disparity, depth_raw and", "depth output streams with median filter 3x3 enabled")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-med", "3", "-dnn"])
+    show_test_def("Median Filter 3x3", "You should see disparityColor, disparity, depthRaw and", "depth output streams with median filter 3x3 enabled")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "disparity", "disparityColor", "-med", "3", "-dnn"])
     
-    show_test_def("Small confidence threshold", "You should see disparity_color, disparity, depth_raw and", "depth output streams with lower (220) confidence threshold")
-    subprocess.check_call([*demo_call, "-s", "depth", "depth_raw", "disparity", "disparity_color", "-dct", "220", "-dnn"])
+    show_test_def("Small confidence threshold", "You should see disparityColor, disparity, depthRaw and", "depth output streams with lower (220) confidence threshold")
+    subprocess.check_call([*demo_call, "-s", "depth", "depthRaw", "disparity", "disparityColor", "-dct", "220", "-dnn"])
     
     success_frame = get_frame()
     success_frame[:, :, :] = (0, 255, 0)
@@ -238,7 +241,7 @@ def test_other():
     subprocess.check_call([*demo_call, "--bandwidth", "low"])
     
     show_test_def("Sync", "Frames should be synced with NN output")
-    subprocess.check_call([*demo_call, "-sync", "-s", "left", "right", "color", "nn_input", "depth"])
+    subprocess.check_call([*demo_call, "-sync", "-s", "left", "right", "color", "nnInput", "depth"])
     
     show_test_def("Reporting", "Report containing temperature, CPU and", "memory usage should be printed on console")
     subprocess.check_call([*demo_call, "--report", "temp", "cpu", "memory", "-s", "color"])

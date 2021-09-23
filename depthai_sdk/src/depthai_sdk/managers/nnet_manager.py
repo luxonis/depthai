@@ -6,7 +6,7 @@ import numpy as np
 
 from .preview_manager import PreviewManager
 from ..previews import Previews
-from ..utils import load_module, to_tensor_result, frame_norm, to_planar
+from ..utils import loadModule, toTensorResult, frameNorm, toPlanar
 
 
 class NNetManager:
@@ -15,49 +15,50 @@ class NNetManager:
     decoding neural network output automatically or by using external handler file.
     """
 
-    def __init__(self, input_size, nn_family=None, labels=[], confidence=0.5):
+    def __init__(self, inputSize, nnFamily=None, labels=[], confidence=0.5):
         """
         Args:
-            input_size (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
-            nn_family (str, Optional): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
+            inputSize (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
+            nnFamily (str, Optional): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
             labels (list, Optional): Allows to display class label instead of ID when drawing nn detections.
             confidence (float, Optional): Specify detection nn's confidence threshold
         """
-        self.input_size = input_size
-        self._nn_family = nn_family
-        if nn_family in ("YOLO", "mobilenet"):
-            self._output_format = "detection"
+        self.inputSize = inputSize
+        self._nnFamily = nnFamily
+        if nnFamily in ("YOLO", "mobilenet"):
+            self._outputFormat = "detection"
         self._labels = labels
         self._confidence = confidence
 
     #: list: List of available neural network inputs
-    source_choices = ("color", "left", "right", "rectified_left", "rectified_right", "host")
+    sourceChoices = ("color", "left", "right", "rectifiedLeft", "rectifiedRight", "host")
     #: str: Selected neural network input
     source = None
     #: tuple: NN input size (width, height)
-    input_size = None
-    #: depthai.OpenVINO.Version: OpenVINO version, available only if parsed from config file (see :func:`read_config`)
-    openvino_version = None
+    inputSize = None
+    #: depthai.OpenVINO.Version: OpenVINO version, available only if parsed from config file (see :func:`readConfig`)
+    openvinoVersion = None
     #: depthai.DataInputQueue: DepthAI input queue object that allows to send images from host to device (used only with :code:`host` source)
-    input_queue = None
+    inputQueue = None
     #: depthai.DataOutputQueue: DepthAI output queue object that allows to receive NN results from the device.
-    output_queue = None
+    outputQueue = None
 
-    _bbox_colors = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
-    _count_label = None
-    _text_bg_color = (0, 0, 0)
-    _text_color = (255, 255, 255)
-    _line_type = cv2.LINE_AA
-    _text_type = cv2.FONT_HERSHEY_SIMPLEX
-    _output_format = "raw"
+
+    _bboxColors = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
+    _countLabel = None
+    _textBgColor = (0, 0, 0)
+    _textColor = (255, 255, 255)
+    _lineType = cv2.LINE_AA
+    _textType = cv2.FONT_HERSHEY_SIMPLEX
+    _outputFormat = "raw"
     _metadata = None
-    _flip_detection = False
-    _full_fov = True
+    _flipDetection = False
+    _fullFov = True
     _config = None
-    _nn_family = None
+    _nnFamily = None
     _handler = None
 
-    def read_config(self, path):
+    def readConfig(self, path):
         """
         Parses the model config file and adjusts NNetManager values accordingly. It's advised to create a config file
         for every new network, as it allows to use dedicated NN nodes (for `MobilenetSSD <https://github.com/luxonis/depthai/blob/main/resources/nn/mobilenet-ssd/mobilenet-ssd.json>`__ and `YOLO <https://github.com/luxonis/depthai/blob/main/resources/nn/tiny-yolo-v3/tiny-yolo-v3.json>`__)
@@ -70,64 +71,64 @@ class NNetManager:
             ValueError: If path to config file does not exist
             RuntimeError: If custom handler does not contain :code:`draw` or :code:`show` methods
         """
-        config_path = Path(path)
-        if not config_path.exists():
+        configPath = Path(path)
+        if not configPath.exists():
             raise ValueError("Path {} does not exist!".format(path))
 
-        with config_path.open() as f:
+        with configPath.open() as f:
             self._config = json.load(f)
             if "openvino_version" in self._config:
-                self.openvino_version =getattr(dai.OpenVINO.Version, 'VERSION_' + self._config.get("openvino_version"))
-            nn_config = self._config.get("nn_config", {})
+                self.openvinoVersion =getattr(dai.OpenVINO.Version, 'VERSION_' + self._config.get("openvino_version"))
+            nnConfig = self._config.get("nn_config", {})
             self._labels = self._config.get("mappings", {}).get("labels", None)
-            self._nn_family = nn_config.get("NN_family", None)
-            self._output_format = nn_config.get("output_format", "raw")
-            self._metadata = nn_config.get("NN_specific_metadata", {})
-            if "input_size" in nn_config:
-                self.input_size = tuple(map(int, nn_config.get("input_size").split('x')))
+            self._nnFamily = nnConfig.get("NN_family", None)
+            self._outputFormat = nnConfig.get("output_format", "raw")
+            self._metadata = nnConfig.get("NN_specific_metadata", {})
+            if "input_size" in nnConfig:
+                self.inputSize = tuple(map(int, nnConfig.get("input_size").split('x')))
 
-            self._confidence = self._metadata.get("confidence_threshold", nn_config.get("confidence_threshold", None))
+            self._confidence = self._metadata.get("confidence_threshold", nnConfig.get("confidence_threshold", None))
             if 'handler' in self._config:
-                self._handler = load_module(config_path.parent / self._config["handler"])
+                self._handler = loadModule(configPath.parent / self._config["handler"])
 
                 if not callable(getattr(self._handler, "draw", None)) or not callable(getattr(self._handler, "decode", None)):
                     raise RuntimeError("Custom model handler does not contain 'draw' or 'decode' methods!")
 
 
     def _normFrame(self, frame):
-        if not self._full_fov:
-            scale_f = frame.shape[0] / self.input_size[1]
-            return np.zeros((int(self.input_size[1] * scale_f), int(self.input_size[0] * scale_f)))
+        if not self._fullFov:
+            scaleF = frame.shape[0] / self.inputSize[1]
+            return np.zeros((int(self.inputSize[1] * scaleF), int(self.inputSize[0] * scaleF)))
         else:
             return frame
 
     def _cropOffsetX(self, frame):
-        if not self._full_fov:
-            cropped_w = (frame.shape[0] / self.input_size[1]) * self.input_size[0]
-            return int((frame.shape[1] - cropped_w) // 2)
+        if not self._fullFov:
+            croppedW = (frame.shape[0] / self.inputSize[1]) * self.inputSize[0]
+            return int((frame.shape[1] - croppedW) // 2)
         else:
             return 0
 
-    def create_nn_pipeline(self, pipeline, nodes, blob_path, source="color", flip_detection=False, use_depth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, full_fov=True):
+    def createNN(self, pipeline, nodes, blobPath, source="color", flipDetection=False, useDepth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, fullFov=True):
         """
         Creates nodes and connections in provided pipeline that will allow to run NN model and consume it's results.
 
         Args:
             pipeline (depthai.Pipeline): Pipeline instance
             nodes (types.SimpleNamespace): Object cointaining all of the nodes added to the pipeline. Available in :attr:`depthai_sdk.managers.PipelineManager.nodes`
-            blob_path (pathlib.Path): Path to MyriadX blob. Might be useful to use together with
+            blobPath (pathlib.Path): Path to MyriadX blob. Might be useful to use together with
                 :func:`depthai_sdk.managers.BlobManager.getBlob()` for dynamic blob compilation
-            source (str, Optional): Neural network input source, one of :attr:`source_choices`
-            use_depth (bool, Optional): If set to True, produced detections will have spatial coordinates included
+            source (str, Optional): Neural network input source, one of :attr:`sourceChoices`
+            useDepth (bool, Optional): If set to True, produced detections will have spatial coordinates included
             minDepth (int, Optional): Minimum depth distance in centimeters
             maxDepth (int, Optional): Maximum depth distance in centimeters
             sbbScaleFactor (float, Optional): Scale of the bounding box that will be used to calculate spatial coordinates for
                 detection. If set to 0.3, it will scale down center-wise the bounding box to 0.3 of it's original size
                 and use it to calculate spatial location of the object
-            full_fov (bool, Optional): If set to False, manager will include crop offset when scaling the detections.
+            fullFov (bool, Optional): If set to False, manager will include crop offset when scaling the detections.
                 Usually should be set to True (if you don't perform aspect ratio crop or when `keepAspectRatio` flag
                 on camera/manip node is set to False
-            flip_detection (bool, Optional): Whether the bounding box coordinates should be flipped horizontally. Useful when
+            flipDetection (bool, Optional): Whether the bounding box coordinates should be flipped horizontally. Useful when
                 using rectified images as input.
 
         Returns:
@@ -136,19 +137,19 @@ class NNetManager:
         Raises:
             RuntimeError: If source is not a valid choice or when input size has not been set.
         """
-        if source not in self.source_choices:
-            raise RuntimeError(f"Source {source} is invalid, available {self.source_choices}")
-        if self.input_size is None:
-            raise RuntimeError("Unable to determine the nn input size. Please use --cnn_input_size flag to specify it in WxH format: -nn-size <width>x<height>")
+        if source not in self.sourceChoices:
+            raise RuntimeError(f"Source {source} is invalid, available {self.sourceChoices}")
+        if self.inputSize is None:
+            raise RuntimeError("Unable to determine the nn input size. Please use --cnnInputSize flag to specify it in WxH format: -nnSize <width>x<height>")
 
         self.source = source
-        self._flip_detection = flip_detection
-        self._full_fov = full_fov
-        if self._nn_family == "mobilenet":
-            nodes.nn = pipeline.createMobileNetSpatialDetectionNetwork() if use_depth else pipeline.createMobileNetDetectionNetwork()
+        self._flipDetection = flipDetection
+        self._fullFov = fullFov
+        if self._nnFamily == "mobilenet":
+            nodes.nn = pipeline.createMobileNetSpatialDetectionNetwork() if useDepth else pipeline.createMobileNetDetectionNetwork()
             nodes.nn.setConfidenceThreshold(self._confidence)
-        elif self._nn_family == "YOLO":
-            nodes.nn = pipeline.createYoloSpatialDetectionNetwork() if use_depth else pipeline.createYoloDetectionNetwork()
+        elif self._nnFamily == "YOLO":
+            nodes.nn = pipeline.createYoloSpatialDetectionNetwork() if useDepth else pipeline.createYoloDetectionNetwork()
             nodes.nn.setConfidenceThreshold(self._confidence)
             nodes.nn.setNumClasses(self._metadata["classes"])
             nodes.nn.setCoordinateSize(self._metadata["coordinates"])
@@ -159,40 +160,40 @@ class NNetManager:
             # TODO use createSpatialLocationCalculator
             nodes.nn = pipeline.createNeuralNetwork()
 
-        nodes.nn.setBlobPath(str(blob_path))
+        nodes.nn.setBlobPath(str(blobPath))
         nodes.nn.setNumInferenceThreads(2)
         nodes.nn.input.setBlocking(False)
         nodes.nn.input.setQueueSize(2)
 
-        nodes.xout_nn = pipeline.createXLinkOut()
-        nodes.xout_nn.setStreamName("nn_out")
-        nodes.nn.out.link(nodes.xout_nn.input)
+        nodes.xoutNn = pipeline.createXLinkOut()
+        nodes.xoutNn.setStreamName("nnOut")
+        nodes.nn.out.link(nodes.xoutNn.input)
 
         if self.source == "color":
-            nodes.cam_rgb.preview.link(nodes.nn.input)
+            nodes.camRgb.preview.link(nodes.nn.input)
         elif self.source == "host":
-            nodes.xin_nn = pipeline.createXLinkIn()
-            nodes.xin_nn.setStreamName("nn_in")
-            nodes.xin_nn.out.link(nodes.nn.input)
-        elif self.source in ("left", "right", "rectified_left", "rectified_right"):
-            nodes.manip = pipeline.createImageManip()
-            nodes.manip.initialConfig.setResize(*self.input_size)
+            nodes.xinNn = pipeline.createXLinkIn()
+            nodes.xinNn.setStreamName("nnIn")
+            nodes.xinNn.out.link(nodes.nn.input)
+        elif self.source in ("left", "right", "rectifiedLeft", "rectifiedRight"):
+            nodes.manipNn = pipeline.createImageManip()
+            nodes.manipNn.initialConfig.setResize(*self.inputSize)
             # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
-            nodes.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            nodes.manipNn.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             # NN inputs
-            nodes.manip.out.link(nodes.nn.input)
-            nodes.manip.setKeepAspectRatio(not self._full_fov)
+            nodes.manipNn.out.link(nodes.nn.input)
+            nodes.manipNn.setKeepAspectRatio(not self._fullFov)
 
             if self.source == "left":
-                nodes.mono_left.out.link(nodes.manip.inputImage)
+                nodes.monoLeft.out.link(nodes.manipNn.inputImage)
             elif self.source == "right":
-                nodes.mono_right.out.link(nodes.manip.inputImage)
-            elif self.source == "rectified_left":
-                nodes.stereo.rectifiedLeft.link(nodes.manip.inputImage)
-            elif self.source == "rectified_right":
-                nodes.stereo.rectifiedRight.link(nodes.manip.inputImage)
+                nodes.monoRight.out.link(nodes.manipNn.inputImage)
+            elif self.source == "rectifiedLeft":
+                nodes.stereo.rectifiedLeft.link(nodes.manipNn.inputImage)
+            elif self.source == "rectifiedRight":
+                nodes.stereo.rectifiedRight.link(nodes.manipNn.inputImage)
 
-        if self._nn_family in ("YOLO", "mobilenet") and use_depth:
+        if self._nnFamily in ("YOLO", "mobilenet") and useDepth:
             nodes.stereo.depth.link(nodes.nn.inputDepth)
             nodes.nn.setDepthLowerThreshold(minDepth)
             nodes.nn.setDepthUpperThreshold(maxDepth)
@@ -200,7 +201,7 @@ class NNetManager:
 
         return nodes.nn
 
-    def get_label_text(self, label):
+    def getLabelText(self, label):
         """
         Retrieves text assigned to specific label
 
@@ -218,57 +219,55 @@ class NNetManager:
         elif int(label) < len(self._labels):
             return self._labels[int(label)]
         else:
-            print(f"Label of ouf bounds (label_index: {label}, available_labels: {len(self._labels)}")
+            print(f"Label of ouf bounds (label index: {label}, available labels: {len(self._labels)}")
             return str(label)
 
-    def decode(self, in_nn):
+    def decode(self, inNn):
         """
         Decodes NN output. Performs generic handling for supported detection networks or calls custom handler methods
 
         Args:
-            in_nn (depthai.NNData): Integer representing detection label, usually returned from NN node
+            inNn (depthai.NNData): Integer representing detection label, usually returned from NN node
 
         Returns:
             Decoded NN data
 
         Raises:
-            RuntimeError: if output_format specified in model config file is not recognized
+            RuntimeError: if outputFormat specified in model config file is not recognized
         """
-        if self._output_format == "detection":
-            detections = in_nn.detections
-            if self._flip_detection:
+        if self._outputFormat == "detection":
+            detections = inNn.detections
+            if self._flipDetection:
                 for detection in detections:
                     # Since rectified frames are horizontally flipped by default
-                    swap = detection.xmin
-                    detection.xmin = 1 - detection.xmax
-                    detection.xmax = 1 - swap
+                    detection.xmin, detection.xmax = 1 - detection.xmax, 1 - detection.xmin
             return detections
-        elif self._output_format == "raw":
+        elif self._outputFormat == "raw":
             if self._handler is not None:
-                return self._handler.decode(self, in_nn)
+                return self._handler.decode(self, inNn)
             else:
                 try:
-                    data = to_tensor_result(in_nn)
+                    data = toTensorResult(inNn)
                     print("Received NN packet: ", ", ".join([f"{key}: {value.shape}" for key, value in data.items()]))
                 except Exception as ex:
                     print("Received NN packet: <Preview unabailable: {}>".format(ex))
         else:
-            raise RuntimeError("Unknown output format: {}".format(self._output_format))
+            raise RuntimeError("Unknown output format: {}".format(self._outputFormat))
 
-    def _draw_count(self, source, decoded_data):
-        def draw_cnt(frame, cnt):
-            cv2.putText(frame, f"{self._count_label}: {cnt}", (5, 46), self._text_type, 0.5, self._text_bg_color, 4, self._line_type)
-            cv2.putText(frame, f"{self._count_label}: {cnt}", (5, 46), self._text_type, 0.5, self._text_color, 1, self._line_type)
+    def _drawCount(self, source, decodedData):
+        def drawCnt(frame, cnt):
+            cv2.putText(frame, f"{self._countLabel}: {cnt}", (5, 46), self._textType, 0.5, self._textBgColor, 4, self._lineType)
+            cv2.putText(frame, f"{self._countLabel}: {cnt}", (5, 46), self._textType, 0.5, self._textColor, 1, self._lineType)
 
         # Count the number of detected objects
-        cnt_list = list(filter(lambda x: self.get_label_text(x.label) == self._count_label, decoded_data))
+        cntList = list(filter(lambda x: self.getLabelText(x.label) == self._countLabel, decodedData))
         if isinstance(source, PreviewManager):
             for frame in source.frames.values():
-                draw_cnt(frame, len(cnt_list))
+                drawCnt(frame, len(cntList))
         else:
-            draw_cnt(source, len(cnt_list))
+            drawCnt(source, len(cntList))
 
-    def draw(self, source, decoded_data):
+    def draw(self, source, decodedData):
         """
         Draws NN results onto the frames. It's responsible to correctly map the results onto each frame requested,
         including applying crop offset or preparing a correct normalization frame, then draws them with all information
@@ -283,52 +282,52 @@ class NNetManager:
                 If supplied with :class:`depthai_sdk.managers.PreviewManager` instance, it will print the count label
                 on all of the frames that it stores
 
-            decoded_data: Detections from neural network node, usually returned from :func:`decode` method
+            decodedData: Detections from neural network node, usually returned from :func:`decode` method
         """
-        if self._output_format == "detection":
-            def draw_detection(frame, detection):
-                bbox = frame_norm(self._normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
-                if self.source == Previews.color.name and not self._full_fov:
+        if self._outputFormat == "detection":
+            def drawDetection(frame, detection):
+                bbox = frameNorm(self._normFrame(frame), [detection.xmin, detection.ymin, detection.xmax, detection.ymax])
+                if self.source == Previews.color.name and not self._fullFov:
                     bbox[::2] += self._cropOffsetX(frame)
-                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), self._bbox_colors[detection.label], 2)
-                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 110), bbox[1]), self._bbox_colors[detection.label], cv2.FILLED)
-                cv2.putText(frame, self.get_label_text(detection.label), (bbox[0] + 5, bbox[1] - 10),
-                            self._text_type, 0.5, (0, 0, 0), 1, self._line_type)
+                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), self._bboxColors[detection.label], 2)
+                cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 110), bbox[1]), self._bboxColors[detection.label], cv2.FILLED)
+                cv2.putText(frame, self.getLabelText(detection.label), (bbox[0] + 5, bbox[1] - 10),
+                            self._textType, 0.5, (0, 0, 0), 1, self._lineType)
                 cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 62, bbox[1] - 10),
-                            self._text_type, 0.5, (0, 0, 0), 1, self._line_type)
+                            self._textType, 0.5, (0, 0, 0), 1, self._lineType)
 
                 if hasattr(detection, 'spatialCoordinates'):  # Display spatial coordinates as well
-                    x_meters = detection.spatialCoordinates.x / 1000
-                    y_meters = detection.spatialCoordinates.y / 1000
-                    z_meters = detection.spatialCoordinates.z / 1000
-                    cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
-                                self._text_type, 0.5, self._text_bg_color, 4, self._line_type)
-                    cv2.putText(frame, "X: {:.2f} m".format(x_meters), (bbox[0] + 10, bbox[1] + 60),
-                                self._text_type, 0.5, self._text_color, 1, self._line_type)
-                    cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
-                                self._text_type, 0.5, self._text_bg_color, 4, self._line_type)
-                    cv2.putText(frame, "Y: {:.2f} m".format(y_meters), (bbox[0] + 10, bbox[1] + 75),
-                                self._text_type, 0.5, self._text_color, 1, self._line_type)
-                    cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 90),
-                                self._text_type, 0.5, self._text_bg_color, 4, self._line_type)
-                    cv2.putText(frame, "Z: {:.2f} m".format(z_meters), (bbox[0] + 10, bbox[1] + 90),
-                                self._text_type, 0.5, self._text_color, 1, self._line_type)
-            for detection in decoded_data:
+                    xMeters = detection.spatialCoordinates.x / 1000
+                    yMeters = detection.spatialCoordinates.y / 1000
+                    zMeters = detection.spatialCoordinates.z / 1000
+                    cv2.putText(frame, "X: {:.2f} m".format(xMeters), (bbox[0] + 10, bbox[1] + 60),
+                                self._textType, 0.5, self._textBgColor, 4, self._lineType)
+                    cv2.putText(frame, "X: {:.2f} m".format(xMeters), (bbox[0] + 10, bbox[1] + 60),
+                                self._textType, 0.5, self._textColor, 1, self._lineType)
+                    cv2.putText(frame, "Y: {:.2f} m".format(yMeters), (bbox[0] + 10, bbox[1] + 75),
+                                self._textType, 0.5, self._textBgColor, 4, self._lineType)
+                    cv2.putText(frame, "Y: {:.2f} m".format(yMeters), (bbox[0] + 10, bbox[1] + 75),
+                                self._textType, 0.5, self._textColor, 1, self._lineType)
+                    cv2.putText(frame, "Z: {:.2f} m".format(zMeters), (bbox[0] + 10, bbox[1] + 90),
+                                self._textType, 0.5, self._textBgColor, 4, self._lineType)
+                    cv2.putText(frame, "Z: {:.2f} m".format(zMeters), (bbox[0] + 10, bbox[1] + 90),
+                                self._textType, 0.5, self._textColor, 1, self._lineType)
+            for detection in decodedData:
                 if isinstance(source, PreviewManager):
                     for name, frame in source.frames.items():
-                        draw_detection(frame, detection)
+                        drawDetection(frame, detection)
                 else:
-                    draw_detection(source, detection)
+                    drawDetection(source, detection)
 
-            if self._count_label is not None:
-                self._draw_count(source, decoded_data)
+            if self._countLabel is not None:
+                self._drawCount(source, decodedData)
 
-        elif self._output_format == "raw" and self._handler is not None:
+        elif self._outputFormat == "raw" and self._handler is not None:
             if isinstance(source, PreviewManager):
                 frames = list(source.frames.items())
             else:
                 frames = [("host", source)]
-            self._handler.draw(self, decoded_data, frames)
+            self._handler.draw(self, decodedData, frames)
 
     def createQueues(self, device):
         """
@@ -339,39 +338,39 @@ class NNetManager:
             device (depthai.Device): Running device instance
         """
         if self.source == "host":
-            self.input_queue = device.getInputQueue("nn_in", maxSize=1, blocking=False)
-        self.output_queue = device.getOutputQueue("nn_out", maxSize=1, blocking=False)
+            self.inputQueue = device.getInputQueue("nnIn", maxSize=1, blocking=False)
+        self.outputQueue = device.getOutputQueue("nnOut", maxSize=1, blocking=False)
 
-    def sendInputFrame(self, frame, seq_num=None):
+    def sendInputFrame(self, frame, seqNum=None):
         """
-        Sends a frame into :attr:`input_queue` object. Handles scaling down the frame, creating a proper :obj:`depthai.ImgFrame`
+        Sends a frame into :attr:`inputQueue` object. Handles scaling down the frame, creating a proper :obj:`depthai.ImgFrame`
         and sending it to the queue. Be sure to use :code:`host` as a :attr:`source` and call :func:`createQueues` prior
         input queue.
 
         Args:
             frame (numpy.ndarray): Frame to be sent to the device
-            seq_num (int, Optional): Sequence number set on ImgFrame. Useful in syncronization scenarios
+            seqNum (int, Optional): Sequence number set on ImgFrame. Useful in syncronization scenarios
 
         Returns:
             numpy.ndarray: scaled frame that was sent to the NN (same width/height as NN input)
 
         Raises:
-            RuntimeError: if :attr:`input_queue` is :code:`None` (unable to send the image)
+            RuntimeError: if :attr:`inputQueue` is :code:`None` (unable to send the image)
         """
-        if self.input_queue is None:
+        if self.inputQueue is None:
             raise RuntimeError("Unable to send image, no input queue is present! Call `createQueues(device)` first!")
 
-        scaled_frame = cv2.resize(frame, self.input_size)
-        frame_nn = dai.ImgFrame()
-        if seq_num is not None:
-            frame_nn.setSequenceNum(seq_num)
-        frame_nn.setType(dai.ImgFrame.Type.BGR888p)
-        frame_nn.setWidth(self.input_size[0])
-        frame_nn.setHeight(self.input_size[1])
-        frame_nn.setData(to_planar(scaled_frame))
-        self.input_queue.send(frame_nn)
+        scaledFrame = cv2.resize(frame, self.inputSize)
+        frameNn = dai.ImgFrame()
+        if seqNum is not None:
+            frameNn.setSequenceNum(seqNum)
+        frameNn.setType(dai.ImgFrame.Type.BGR888p)
+        frameNn.setWidth(self.inputSize[0])
+        frameNn.setHeight(self.inputSize[1])
+        frameNn.setData(toPlanar(scaledFrame))
+        self.inputQueue.send(frameNn)
 
-        return scaled_frame
+        return scaledFrame
 
     def countLabel(self, label):
         """
@@ -382,4 +381,4 @@ class NNetManager:
                 to be tracked. If no mapping is present, specify the label as :obj:`int` (NN-default)
         """
 
-        self._count_label = label
+        self._countLabel = label
