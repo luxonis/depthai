@@ -1,25 +1,15 @@
 #!/usr/bin/env python3
+import argparse
+import json
+import shutil
 import traceback
+from argparse import ArgumentParser
+from pathlib import Path
 
 import cv2
-import sys
-import copy
-import platform
-import signal
-import subprocess
-import json
-import datetime
-import csv
-import time
-import numpy as np
-import os
-from pathlib import Path
-import shutil
-from datetime import datetime
-from argparse import ArgumentParser
-import argparse
-
 import depthai as dai
+import numpy as np
+
 import depthai_helpers.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
