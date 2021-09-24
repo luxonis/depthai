@@ -12,31 +12,7 @@ but over time it evolved to become a package containing many convenience methods
 
 Package is mainly made of **managers**, which handle different aspects of development:
 
-.. list-table::
-  :widths: 50 50
-
-  * - :class:`depthai_sdk.managers.PipelineManager`
-    - Helps in setting up processing pipeline
-  * - :class:`depthai_sdk.managers.NNetManager`
-    - Helps in setting up neural networks
-  * - :class:`depthai_sdk.managers.PreviewManager`
-    - Helps in displaying preview from OAK cameras
-  * - :class:`depthai_sdk.managers.EncodingManager`
-    - Helps in creating videos from OAK cameras
-  * - :class:`depthai_sdk.managers.BlobManager`
-    - Helps in downloading neural networks as MyriadX blobs
-
-Together with managers, you can use:
-
-.. list-table::
-  :widths: 50 50
-
-  * - :class:`depthai_sdk.fps`
-    - For FPS calculations
-  * - :class:`depthai_sdk.previews`
-    - For frame handling
-  * - :class:`depthai_sdk.utils`
-    - For various most-common tasks
+.. include::  modules-list.rst
 
 In some places, code is also adjusted for modifications - e.g. you can set up a custom handler file for neural network
 or pass a callback argument to a function to perform additional modifications
