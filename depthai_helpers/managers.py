@@ -639,7 +639,7 @@ class PipelineManager:
             camera_node = getattr(self.nodes, 'mono_left', getattr(self.nodes, 'mono_right', None))
             if camera_node is None:
                 raise RuntimeError("Unable to find mono camera node to determine frame size!")
-            videnc.setDefaultProfilePreset(camera_node.getResolutionWidth(), camera_node.getResolutionHeight(), camera_node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            videnc.setDefaultProfilePreset(640, 480, camera_node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             node_output.link(videnc.input)
         elif isinstance(node, dai.NeuralNetwork):
             w, h = self.nn_manager.input_size
