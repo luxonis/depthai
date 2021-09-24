@@ -70,6 +70,7 @@ if is_passed:
     image = create_blank(512, 512, rgb_color=green)
     cv2.putText(image,'FLASH TEST',(10,250), font, 2,(0,0,0),2)
     cv2.putText(image,'PASSED',(10,300), font, 2,(0,0,0),2)
+    cv2.putText(image,'GPIO test skipped!',(10,380), font, 1.5,(0,0,0),2)
 
 else:
     image = create_blank(512, 512, rgb_color=red)
