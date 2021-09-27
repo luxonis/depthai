@@ -564,16 +564,16 @@ class StereoCalibration(object):
         images_rgb.sort()
 
         allCorners_rgb_scaled, allIds_rgb_scaled, _, _, imsize_rgb_scaled, _ = self.analyze_charuco(
-            images_rgb, scale_req=True, req_resolution=(720, 1280))
+            images_rgb, scale_req=True, req_resolution=(800, 1280))
         self.img_shape_rgb_scaled = imsize_rgb_scaled[::-1]
 
         ret_rgb_scaled, self.M3_scaled, self.d3_scaled, rvecs, tvecs = self.calibrate_camera_charuco(
             allCorners_rgb_scaled, allIds_rgb_scaled, imsize_rgb_scaled[::-1])
 
         allCorners_r_rgb, allIds_r_rgb, _, _, _, _ = self.analyze_charuco(
-            images_right, scale_req=True, req_resolution=(720, 1280))
+            images_right, scale_req=True, req_resolution=(800, 1280))
 
-        print("RGB callleded RMS at 720")
+        print("RGB callleded RMS at 800")
         print(ret_rgb_scaled)
         print(imsize_rgb_scaled)
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -634,6 +634,8 @@ class StereoCalibration(object):
         print(scale)
         scale_mat = np.array([[scale, 0, 0], [0, scale, 0], [0, 0, 1]])
         self.M3 = np.matmul(scale_mat, self.M3_scaled)
+        self.M3 = self.M3_scaled
+
         self.d3 = self.d3_scaled
         print(self.M3_scaled)
         print(self.M3)
@@ -781,7 +783,7 @@ class StereoCalibration(object):
         # criteria for marker detection/corner detections
         criteria = (cv2.TERM_CRITERIA_EPS +
                     cv2.TERM_CRITERIA_MAX_ITER, 100, 0.00001)
-        scale_width = 1280/self.img_shape_rgb_scaled[0]
+        scale_width = 1
         print('scaled using {0}'.format(self.img_shape_rgb_scaled[0]))
 
         # if not use_homo:
@@ -815,7 +817,7 @@ class StereoCalibration(object):
             del_height = (img_rgb.shape[0] - 720) // 2
             # print("del height ??")
             # print(del_height)
-            img_rgb = img_rgb[del_height: del_height + 720, :]
+            # img_rgb = img_rgb[del_height: del_height + 720, :]
             # print("resized_shape")
             # print(img_rgb.shape)
             # self.parse_frame(img_rgb, "rectified_rgb_before",

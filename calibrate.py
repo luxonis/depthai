@@ -203,11 +203,11 @@ class Main:
         if not self.args.disableRgb:
             rgb_cam = pipeline.createColorCamera()
             rgb_cam.setResolution(
-                dai.ColorCameraProperties.SensorResolution.THE_4_K)
+                dai.ColorCameraProperties.SensorResolution.THE_800_P)
             rgb_cam.setInterleaved(False)
             rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-            rgb_cam.setIspScale(1, 3)
-            rgb_cam.initialControl.setManualFocus(self.focus_value)
+            # rgb_cam.setIspScale(1, 3)
+            # rgb_cam.initialControl.setManualFocus(self.focus_value)
             rgb_cam.setFps(self.args.fps)
 
             xout_rgb_isp = pipeline.createXLinkOut()
@@ -522,7 +522,7 @@ class Main:
                 right, calibData[1])
 
             if not self.args.disableRgb:
-                calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.RGB, calibData[4], 1920, 1080)
+                calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.RGB, calibData[4], 1280, 800)
                 calibration_handler.setDistortionCoefficients(dai.CameraBoardSocket.RGB, calibData[11])
                 calibration_handler.setFov(dai.CameraBoardSocket.RGB, self.board_config['board_config']['rgb_fov_deg'])
                 calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, self.focus_value)
