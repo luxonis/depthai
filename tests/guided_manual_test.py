@@ -179,6 +179,9 @@ def test_nn_models():
     
     show_test_def("yolo-v3", "You should see yolo-v3 network running")
     subprocess.check_call([*demo_call, "-s", "color", "-cnn", "yolo-v3", "--shave", "7"])
+
+    show_test_def("custom_model", "You should see custom network running", "Model should detect faces")
+    subprocess.check_call([*demo_call, "-s", "color", "-cnn", "custom_model"])
     
     success_frame = get_frame()
     success_frame[:, :, :] = (0, 255, 0)
