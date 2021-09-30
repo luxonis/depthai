@@ -31,5 +31,5 @@ See :ref:`DepthAI SDK API`
    :hidden:
    :caption: Content:
 
-   getting_started.rst
+   getting-started.rst
    api.rst

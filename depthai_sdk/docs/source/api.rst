@@ -1,6 +1,8 @@
 DepthAI SDK API
 ===============
 
+.. include::  modules-list.rst
+
 Managers
 --------
 
