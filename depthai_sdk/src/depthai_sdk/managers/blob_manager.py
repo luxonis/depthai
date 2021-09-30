@@ -39,8 +39,12 @@ class BlobManager:
             self._zooName = zooName
             if self._zooDir is not None:
                 model_yml_path = self._zooDir / self._zooName / "model.yml"
+                blob_paths = list((self._zooDir / self._zooName).glob("*.blob"))
                 if model_yml_path.exists():
                     self._configPath = model_yml_path
+                elif len(blob_paths) > 0:
+                    self._blobPath = blob_paths[0]
+                    self._useBlob = True
                 else:
                     self._useZoo = True
             else:

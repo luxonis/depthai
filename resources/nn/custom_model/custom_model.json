@@ -6,6 +6,7 @@
         "confidence_threshold" : 0.5,
         "input_size": "300x300"
     },
+    "openvino_version": "2020_3",
     "mappings":
     {
         "labels":
