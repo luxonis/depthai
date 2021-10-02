@@ -7,9 +7,8 @@ import depthai as dai
 import platform
 
 import numpy as np
-import PySimpleGUI as sg
-import threading
 
+from depthai_helpers import ir_handler
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.version_check import checkDepthaiVersion
@@ -138,49 +137,9 @@ if conf.useNN:
     nnManager.countLabel(conf.getCountLabel(nnManager))
     pm.setNnManager(nnManager)
 
-def ir_handler(dev):
-    # Initial setup
-    #dev.irWriteReg(0x01, 0x89)
-    #dev.irWriteReg(0x01, 0x89)
-    
-    layout = [
-        [   sg.Text('Reg:'), sg.InputText('0x', size=(5,1), key='InRegW'), 
-            sg.Text('Value:'), sg.InputText('0x', size=(5,1), key='InValW'), 
-            sg.Button('Write')],
-        [   sg.Text('Reg:'), sg.InputText('0x', size=(5,1), key='InRegR'),
-            sg.Button('Read'), sg.Text('->', key='TextValR')],
-    ]
-
-    window = sg.Window('IR Control', layout)
-
-    while True:
-        event, values = window.read()
-        print('EVENT :', event)
-        print('VALUES:', values)
-        if event in (sg.WIN_CLOSED, 'Cancel'):
-            break
-        if event == 'Write':
-            reg = int(values['InRegW'], 0)
-            val = int(values['InValW'], 0)
-            print('Write', reg, '->', val)
-            dev.irWriteReg(reg, val)
-        if event == 'Read':
-            reg = int(values['InRegR'], 0)
-            val = hex(dev.irReadReg(reg))
-            window['TextValR'].update(val)
-            print('Read', reg, '->', val)
-        print()
-
-    window.close()
-    exit()
-
-def start_ir_handler(dev):
-    t = threading.Thread(target=ir_handler, args=(dev,))
-    t.start()
-
 # Pipeline is defined, now we can connect to the device
 with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args.usbSpeed == "usb2") as device:
-    start_ir_handler(device)
+    ir_handler.start_ir_handler(device)
     if deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
         print("USB Connection speed: {}".format(device.getUsbSpeed()))
     conf.adjustParamsToDevice(device)
