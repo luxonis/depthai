@@ -82,8 +82,8 @@ Source: "build\WPy64-3950\*"; DestDir: "{app}\WPy64-3950"; Flags: ignoreversion 
 ; Source: "build\venv\*"; DestDir: "{app}\venv"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 ; Install Windows specific scripts
-Source: "create_shortcut.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "prerequisite.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "src\create_shortcut.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "src\prerequisite.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Install launcher sources
 Source: "..\{#MyAppIconName}"; DestDir: "{app}"; Flags: ignoreversion
