@@ -154,14 +154,18 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args
                             dispMultiplier=conf.dispMultiplier, mouseTracker=True, lowBandwidth=conf.lowBandwidth,
                             scale=conf.args.scale, sync=conf.args.sync, fpsHandler=fps)
 
+        pm.nodes.monoControl = pm.pipeline.createXLinkIn()
+        pm.nodes.monoControl.setStreamName("monoControl")
         if conf.leftCameraEnabled:
             pm.createLeftCam(monoRes, conf.args.monoFps, orientation=conf.args.cameraOrientation.get(Previews.left.name),
                              xout=Previews.left.name in conf.args.show and (conf.getModelSource() != "left" or not conf.args.sync)
                              )
+            pm.nodes.monoControl.out.link(pm.nodes.monoLeft.inputControl)
         if conf.rightCameraEnabled:
             pm.createRightCam(monoRes, conf.args.monoFps, orientation=conf.args.cameraOrientation.get(Previews.right.name),
                                 xout=Previews.right.name in conf.args.show and (conf.getModelSource() != "right" or not conf.args.sync)
                                 )
+            pm.nodes.monoControl.out.link(pm.nodes.monoRight.inputControl)
         if conf.rgbCameraEnabled:
             pm.createColorCam(nnManager.inputSize if conf.useNN else conf.previewSize, rgbRes, conf.args.rgbFps, orientation=conf.args.cameraOrientation.get(Previews.color.name),
                               fullFov=not conf.args.disableFullFovNn, xout=Previews.color.name in conf.args.show and (conf.getModelSource() != "color" or not conf.args.sync)
@@ -246,6 +250,21 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args
     sbbRois = []
     callbacks.onSetup(**locals())
 
+    # Manual exposure/focus set step
+    EXP_STEP = 500  # us
+    ISO_STEP = 50
+
+    expTime = 10000
+    expMin = 1
+    expMax = 33000
+
+    sensIso = 800
+    sensMin = 100
+    sensMax = 1600
+    
+    def clamp(num, v0, v1):
+        return max(v0, min(num, v1))
+
     try:
         while True:
             fps.nextIter()
@@ -323,6 +342,17 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args
             elif key == ord('m'):
                 nextFilter = next(medianFilters)
                 pm.updateDepthConfig(device, median=nextFilter)
+            elif key in [ord('i'), ord('o'), ord('k'), ord('l')]:
+                if key == ord('i'): expTime -= EXP_STEP
+                if key == ord('o'): expTime += EXP_STEP
+                if key == ord('k'): sensIso -= ISO_STEP
+                if key == ord('l'): sensIso += ISO_STEP
+                expTime = clamp(expTime, expMin, expMax)
+                sensIso = clamp(sensIso, sensMin, sensMax)
+                print("Setting manual exposure, time: ", expTime, "iso: ", sensIso)
+                ctrl = dai.CameraControl()
+                ctrl.setManualExposure(expTime, sensIso)
+                device.getInputQueue("monoControl").send(ctrl)
     finally:
         if conf.useCamera and encManager is not None:
             encManager.close()
