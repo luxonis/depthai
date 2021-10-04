@@ -5,7 +5,8 @@
 #define MyAppExeName "DepthAI.lnk"
 #define MyAppIconName "logo_only_EBl_icon.ico"
 
-; Helper to install all files including hidden
+; Helper to install all files including hidden files
+; Skips folder called "launcher"
 #pragma parseroption -p-
 
 ; If the file is found by calling FindFirst without faHidden, it's not hidden
@@ -22,7 +23,7 @@
         ? \
             Local[0] = FindGetFileName(FindHandle), \
             Local[1] = Source + "\\" + Local[0], \
-            (Local[0] != "." && Local[0] != ".." \
+            (Local[0] != "." && Local[0] != ".." && Local[0] != "launcher" \
                 ? (DirExists(Local[1]) \
                       ? ProcessFolder(Local[1], DestDir + "\\" + Local[0]) \
                       : FileEntry(Local[1], DestDir)) \
@@ -55,8 +56,8 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=commandline
 OutputBaseFilename=DepthAI_setup
-SetupIconFile=logo_only_EBl_icon.ico
-UninstallDisplayIcon=logo_only_EBl_icon.ico
+SetupIconFile=../{#MyAppIconName}
+UninstallDisplayIcon=../{#MyAppIconName}
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -73,8 +74,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; Source: "build\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Install 'depthai' repo (/w hidden files)
-; Source: "build\depthai\*"; DestDir: "{app}\depthai"; Flags: ignoreversion recursesubdirs createallsubdirs
-#emit ProcessFolder("build\depthai", "{app}\depthai")
+; Source: "..\..\*"; DestDir: "{app}\depthai"; Flags: ignoreversion recursesubdirs createallsubdirs
+#emit ProcessFolder("..\..", "{app}\depthai")
 
 ; Install embedded Python
 Source: "build\WPy64-3950\*"; DestDir: "{app}\WPy64-3950"; Flags: ignoreversion recursesubdirs createallsubdirs

@@ -20,10 +20,10 @@ try {
     #wget $EMBEDDED_PYTHON -O "$BUILD_DIR\winpython39.exe"
     # Extract the contents
     Start-Process "$BUILD_DIR\winpython39.exe" -NoNewWindow -Wait -ArgumentList "-o`"$BUILD_DIR`" -y" 
-    # Download depthai (shallow)
-    #git clone https://github.com/luxonis/depthai.git
-    git clone --depth 1 --recurse-submodules --shallow-submodules --branch main https://github.com/luxonis/depthai.git "$BUILD_DIR\depthai"
-
+    
+    # # Download depthai
+    # git clone https://github.com/luxonis/depthai.git
+    #git clone --depth 1 --recurse-submodules --shallow-submodules --branch main https://github.com/luxonis/depthai.git "$BUILD_DIR\depthai"
     # # Install prerequisite dependencies upfront
     # & "$PSScriptRoot\prerequisite.ps1"
     # # Install DepthAI dependencies upfront
