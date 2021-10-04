@@ -17,9 +17,14 @@ jobs:
     runs-on: windows-latest
 
     steps:
+
+    # Clones repository without persisting credentials or using a token
+    # As this local git repository is packed with installer
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
+        persist-credentials: ''
+        token: ''
 
     # Inno Setup already installed in Windows2019 Image
     # - name: Install Inno Setup
