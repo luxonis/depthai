@@ -1,0 +1,37 @@
+name: DepthAI Launcher CI/CD
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      # TMP, remove
+      - launcher_installer
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  
+  windows-installer:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+
+    - name: Install Inno Setup
+      run: .\launcher\windows\inno_setup.ps1
+    
+    - name: Add Inno Setup to PATH
+      run: echo "C:\Program Files (x86)\Inno Setup 6" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+    - name: Build Windows Installer
+      run: .\launcher\windows\build.ps1
+
+    - name: Installer artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: installers
+        path: launcher/windows/build/Output/
