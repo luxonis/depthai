@@ -208,7 +208,7 @@ class StereoCalibration(object):
             # gray = cv2.flip(gray, 0) # TODO(Sachin) : remove this later
             # width = scale[1]
             expected_height = gray.shape[0]*(req_resolution[1]/gray.shape[1])
-            # print('expected height -------------------> ' + str(expected_height))
+            print('expected height -------------------> ' + str(expected_height))
             # print('required height -------------------> ' +
             #       str(req_resolution))
 
@@ -573,7 +573,7 @@ class StereoCalibration(object):
         allCorners_r_rgb, allIds_r_rgb, _, _, _, _ = self.analyze_charuco(
             images_right, scale_req=True, req_resolution=(800, 1280))
 
-        print("RGB callleded RMS at 800")
+        print("RGB called RMS at 800")
         print(ret_rgb_scaled)
         print(imsize_rgb_scaled)
         print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -631,9 +631,9 @@ class StereoCalibration(object):
         print('vs. intrinisics computed after scaling the image --->')
         # self.M3, self.d3
         scale = 1920/1280
-        print(scale)
-        scale_mat = np.array([[scale, 0, 0], [0, scale, 0], [0, 0, 1]])
-        self.M3 = np.matmul(scale_mat, self.M3_scaled)
+        # print(scale)
+        # scale_mat = np.array([[scale, 0, 0], [0, scale, 0], [0, 0, 1]])
+        # self.M3 = np.matmul(scale_mat, self.M3_scaled)
         self.M3 = self.M3_scaled
 
         self.d3 = self.d3_scaled
@@ -641,9 +641,9 @@ class StereoCalibration(object):
         print(self.M3)
 
         self.M2_rgb = np.copy(self.M2)
-        self.M2_rgb[1, 2] -= 40
-        self.d2_rgb = np.copy(self.d1)
-        
+        # self.M2_rgb[1, 2] -= 40
+        self.d2_rgb = np.copy(self.d2)
+        print(self.img_shape_rgb_scaled)
         ret, _, _, _, _, self.R_rgb, self.T_rgb, E, F = cv2.stereoCalibrate(
             self.objpoints_rgb_r, self.imgpoints_rgb, self.imgpoints_rgb_right,
             self.M3_scaled, self.d3_scaled, self.M2_rgb, self.d2_rgb, self.img_shape_rgb_scaled,
@@ -803,7 +803,7 @@ class StereoCalibration(object):
             # read images
             img_rgb = cv2.imread(image_rgb, 0)
             img_r = cv2.imread(image_right, 0)
-            img_r = img_r[40: 760, :]
+            # img_r = img_r[40: 760, :]
 
             dest_res = (int(img_rgb.shape[1] * scale_width),
                         int(img_rgb.shape[0] * scale_width))
