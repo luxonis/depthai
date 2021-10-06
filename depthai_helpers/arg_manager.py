@@ -136,7 +136,7 @@ def parseArgs():
                              "Format: camera_name,camera_orientation \n"
                              "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(orientationChoices))
                         )
-    parser.add_argument("--cameraControls", action="store_true", help="Show camera configuration options in GUI and controll them using keyboard")
+    parser.add_argument("--cameraControlls", action="store_true", help="Show camera configuration options in GUI and control them using keyboard")
     parser.add_argument("--cameraExposure", type=int, help="Specify camera saturation")
     parser.add_argument("--cameraSensitivity", type=int, help="Specify camera sensitivity")
     parser.add_argument("--cameraSaturation", type=checkRange(-10, 10), help="Specify image saturation")

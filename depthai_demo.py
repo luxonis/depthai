@@ -320,7 +320,7 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args
                         text = "Median filter: {} [M]".format(pm._depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
                         cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 0, 4)
                         cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 255, 1)
-                    elif conf.args.cameraControls and name in [Previews.color.name, Previews.left.name, Previews.right.name]:
+                    elif conf.args.cameraControlls and name in [Previews.color.name, Previews.left.name, Previews.right.name]:
                         text = "Exposure: {}   T [+] [-] G".format(cameraConfig["exposure"] if cameraConfig["exposure"] is not None else "auto")
                         label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
                         cv2.putText(frame, text, (w - label_width, h - 110), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
@@ -367,7 +367,7 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args
                 nextFilter = next(medianFilters)
                 pm.updateDepthConfig(device, median=nextFilter)
 
-            if conf.args.cameraControls:
+            if conf.args.cameraControlls:
                 update = True
 
                 if key == ord('t'):

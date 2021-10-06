@@ -35,7 +35,7 @@ usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] 
                        [-s {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...]]
                        [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--reportFile REPORTFILE] [-sync] [-monor {400,720,800}] [-monof MONOFPS] [-cb CALLBACK]
                        [--openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--count COUNTLABEL] [-dev DEVICEID] [-bandw {auto,low,high}] [-usbs {usb2,usb3}]
-                       [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT] [-xls XLINKCHUNKSIZE] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControls] 
+                       [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT] [-xls XLINKCHUNKSIZE] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControlls] 
                        [--cameraExposure CAMERAEXPOSURE] [--cameraSensitivity CAMERASENSITIVITY] [--cameraSaturation CAMERASATURATION] [--cameraContrast CAMERACONTRAST]
                        [--cameraBrightness CAMERABRIGHTNESS] [--cameraSharpness CAMERASHARPNESS]
 
@@ -129,7 +129,7 @@ optional arguments:
                         Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG) 
                         Format: camera_name,camera_orientation 
                         Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG
-  --cameraControls      Show camera configuration options in GUI and controll them using keyboard
+  --cameraControlls      Show camera configuration options in GUI and controll them using keyboard
   --cameraExposure CAMERAEXPOSURE
                         Specify camera saturation
   --cameraSensitivity CAMERASENSITIVITY
