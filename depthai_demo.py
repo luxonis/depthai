@@ -232,6 +232,26 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args
         cameras = device.getConnectedCameras()
         if dai.CameraBoardSocket.LEFT in cameras and dai.CameraBoardSocket.RIGHT in cameras:
             pv.collectCalibData(device)
+
+        cameraConfig = {
+            "exposure": conf.args.cameraExposure,
+            "sensitivity": conf.args.cameraSensitivity,
+            "saturation": conf.args.cameraSaturation,
+            "contrast": conf.args.cameraContrast,
+            "brightness": conf.args.cameraBrightness,
+            "sharpness": conf.args.cameraSharpness
+        }
+        def updateCameraConfigs():
+            if conf.leftCameraEnabled:
+                pm.updateLeftCamConfig(device, **cameraConfig)
+            if conf.rightCameraEnabled:
+                pm.updateRightCamConfig(device, **cameraConfig)
+            if conf.rgbCameraEnabled:
+                pm.updateColorCamConfig(device, **cameraConfig)
+
+        if any(cameraConfig.values()):
+            updateCameraConfigs()
+
         pv.createQueues(device, createQueueCallback)
         if encManager is not None:
             encManager.createDefaultQueues(device)
@@ -295,13 +315,38 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args
 
                 def showFramesCallback(frame, name):
                     fps.drawFps(frame, name)
+                    h, w = frame.shape[:2]
                     if name in [Previews.disparityColor.name, Previews.disparity.name, Previews.depth.name, Previews.depthRaw.name]:
-                        h, w = frame.shape[:2]
                         text = "Median filter: {} [M]".format(pm._depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
                         cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 0, 4)
                         cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 255, 1)
-                        returnFrame = callbacks.onShowFrame(frame, name)
-                        return returnFrame if returnFrame is not None else frame
+                    elif conf.args.cameraControlls and name in [Previews.color.name, Previews.left.name, Previews.right.name]:
+                        text = "Exposure: {}   T [+] [-] G".format(cameraConfig["exposure"] if cameraConfig["exposure"] is not None else "auto")
+                        label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
+                        cv2.putText(frame, text, (w - label_width, h - 110), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
+                        cv2.putText(frame, text, (w - label_width, h - 110), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
+                        text = "Sensitivity: {}   Y [+] [-] H".format(cameraConfig["sensitivity"] if cameraConfig["sensitivity"] is not None else "auto")
+                        label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
+                        cv2.putText(frame, text, (w - label_width, h - 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
+                        cv2.putText(frame, text, (w - label_width, h - 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
+                        text = "Saturation: {}   U [+] [-] J".format(cameraConfig["saturation"] if cameraConfig["saturation"] is not None else "auto")
+                        label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
+                        cv2.putText(frame, text, (w - label_width, h - 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
+                        cv2.putText(frame, text, (w - label_width, h - 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
+                        text = "Contrast: {}   I [+] [-] K".format(cameraConfig["contrast"] if cameraConfig["contrast"] is not None else "auto")
+                        label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
+                        cv2.putText(frame, text, (w - label_width, h - 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
+                        cv2.putText(frame, text, (w - label_width, h - 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
+                        text = "Brightness: {}   O [+] [-] L".format(cameraConfig["brightness"] if cameraConfig["brightness"] is not None else "auto")
+                        label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
+                        cv2.putText(frame, text, (w - label_width, h - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
+                        cv2.putText(frame, text, (w - label_width, h - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
+                        text = "Sharpness: {}   P [+] [-] ;".format(cameraConfig["sharpness"] if cameraConfig["sharpness"] is not None else "auto")
+                        label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
+                        cv2.putText(frame, text, (w - label_width, h - 10), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
+                        cv2.putText(frame, text, (w - label_width, h - 10), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
+                    returnFrame = callbacks.onShowFrame(frame, name)
+                    return returnFrame if returnFrame is not None else frame
                 pv.showFrames(callback=showFramesCallback)
             elif hostFrame is not None:
                 debugHostFrame = hostFrame.copy()
@@ -321,6 +366,48 @@ with dai.Device(pm.pipeline.getOpenVINOVersion(), deviceInfo, usb2Mode=conf.args
             elif key == ord('m'):
                 nextFilter = next(medianFilters)
                 pm.updateDepthConfig(device, median=nextFilter)
+
+            if conf.args.cameraControlls:
+                update = True
+
+                if key == ord('t'):
+                    cameraConfig["exposure"] = 10000 if cameraConfig["exposure"] is None else 500 if cameraConfig["exposure"] == 1 else min(cameraConfig["exposure"] + 500, 33000)
+                    if cameraConfig["sensitivity"] is None:
+                        cameraConfig["sensitivity"] = 800
+                elif key == ord('g'):
+                    cameraConfig["exposure"] = 10000 if cameraConfig["exposure"] is None else max(cameraConfig["exposure"] - 500, 1)
+                    if cameraConfig["sensitivity"] is None:
+                        cameraConfig["sensitivity"] = 800
+                elif key == ord('y'):
+                    cameraConfig["sensitivity"] = 800 if cameraConfig["sensitivity"] is None else min(cameraConfig["sensitivity"] + 50, 1600)
+                    if cameraConfig["exposure"] is None:
+                        cameraConfig["exposure"] = 10000
+                elif key == ord('h'):
+                    cameraConfig["sensitivity"] = 800 if cameraConfig["sensitivity"] is None else max(cameraConfig["sensitivity"] - 50, 100)
+                    if cameraConfig["exposure"] is None:
+                        cameraConfig["exposure"] = 10000
+                elif key == ord('u'):
+                    cameraConfig["saturation"] = 0 if cameraConfig["saturation"] is None else min(cameraConfig["saturation"] + 1, 10)
+                elif key == ord('j'):
+                    cameraConfig["saturation"] = 0 if cameraConfig["saturation"] is None else max(cameraConfig["saturation"] - 1, -10)
+                elif key == ord('i'):
+                    cameraConfig["contrast"] = 0 if cameraConfig["contrast"] is None else min(cameraConfig["contrast"] + 1, 10)
+                elif key == ord('k'):
+                    cameraConfig["contrast"] = 0 if cameraConfig["contrast"] is None else max(cameraConfig["contrast"] - 1, -10)
+                elif key == ord('o'):
+                    cameraConfig["brightness"] = 0 if cameraConfig["brightness"] is None else min(cameraConfig["brightness"] + 1, 10)
+                elif key == ord('l'):
+                    cameraConfig["brightness"] = 0 if cameraConfig["brightness"] is None else max(cameraConfig["brightness"] - 1, -10)
+                elif key == ord('p'):
+                    cameraConfig["sharpness"] = 0 if cameraConfig["sharpness"] is None else min(cameraConfig["sharpness"] + 1, 4)
+                elif key == ord(';'):
+                    cameraConfig["sharpness"] = 0 if cameraConfig["sharpness"] is None else max(cameraConfig["sharpness"] - 1, 0)
+                else:
+                    update = False
+
+                if update:
+                    updateCameraConfigs()
+
     finally:
         if conf.useCamera and encManager is not None:
             encManager.close()

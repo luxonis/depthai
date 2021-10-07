@@ -26,6 +26,9 @@ class PipelineManager:
     nodes = SimpleNamespace()
 
     _depthConfig = dai.StereoDepthConfig()
+    _rgbConfig = dai.CameraControl()
+    _leftConfig = dai.CameraControl()
+    _rightConfig = dai.CameraControl()
 
     def setNnManager(self, nnManager):
         """
@@ -130,6 +133,9 @@ class PipelineManager:
                 self._mjpegLink(self.nodes.camRgb, self.nodes.xoutRgb, self.nodes.camRgb.video)
             else:
                 self.nodes.camRgb.video.link(self.nodes.xoutRgb.input)
+        self.nodes.xinRgbControl = self.pipeline.createXLinkIn()
+        self.nodes.xinRgbControl.setStreamName(Previews.color.name + "_control")
+        self.nodes.xinRgbControl.out.link(self.nodes.camRgb.inputControl)
 
 
     def createLeftCam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
@@ -156,6 +162,9 @@ class PipelineManager:
                 self._mjpegLink(self.nodes.monoLeft, self.nodes.xoutLeft, self.nodes.monoLeft.out)
             else:
                 self.nodes.monoLeft.out.link(self.nodes.xoutLeft.input)
+        self.nodes.xinLeftControl = self.pipeline.createXLinkIn()
+        self.nodes.xinLeftControl.setStreamName(Previews.left.name + "_control")
+        self.nodes.xinLeftControl.out.link(self.nodes.monoLeft.inputControl)
 
     def createRightCam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
         """
@@ -181,6 +190,9 @@ class PipelineManager:
                 self._mjpegLink(self.nodes.monoRight, self.nodes.xoutRight, self.nodes.monoRight.out)
             else:
                 self.nodes.monoRight.out.link(self.nodes.xoutRight.input)
+        self.nodes.xinRightControl = self.pipeline.createXLinkIn()
+        self.nodes.xinRightControl.setStreamName(Previews.right.name + "_control")
+        self.nodes.xinRightControl.out.link(self.nodes.monoRight.inputControl)
 
     def createDepth(self, dct=245, median=dai.MedianFilter.KERNEL_7x7, sigma=0, lr=False, lrcThreshold=4, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
         """
@@ -263,6 +275,67 @@ class PipelineManager:
                 self._mjpegLink(self.nodes.stereo, self.nodes.xoutRectRight, self.nodes.stereo.rectifiedRight)
             else:
                 self.nodes.stereo.rectifiedRight.link(self.nodes.xoutRectRight.input)
+
+    def _updateCamConfig(self, configRef: dai.CameraControl, cameraName, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+        if any([exposure, sensitivity]):
+            if not all([exposure, sensitivity]):
+                raise RuntimeError("Both \"exposure\" and \"sensitivity\" arguments must be provided")
+            configRef.setManualExposure(exposure, sensitivity)
+        if saturation is not None:
+            configRef.setSaturation(saturation)
+        if sharpness is not None:
+            configRef.setSharpness(sharpness)
+        if contrast is not None:
+            configRef.setContrast(contrast)
+        if brightness is not None:
+            configRef.setBrightness(brightness)
+            
+        device.getInputQueue(cameraName + "_control").send(configRef)
+
+    def updateColorCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+        """
+        Updates :obj:`depthai.node.ColorCamera` node config
+
+        Args:
+            device (depthai.Device): Running device instance
+            exposure (int, Optional): Exposure time in microseconds. Has to be set together with :obj:`sensitivity` (Usual range: 1..33000)
+            sensitivity (int, Optional): Sensivity as ISO value. Has to be set together with :obj:`exposure` (Usual range: 100..1600)
+            saturation (int, Optional): Image saturation (Allowed range: -10..10)
+            contrast (int, Optional): Image contrast (Allowed range: -10..10)
+            brightness (int, Optional): Image brightness (Allowed range: -10..10)
+            sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
+        """
+        self._updateCamConfig(self._rgbConfig, Previews.color.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+
+    def updateLeftCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+        """
+        Updates left :obj:`depthai.node.MonoCamera` node config
+
+        Args:
+            device (depthai.Device): Running device instance
+            exposure (int, Optional): Exposure time in microseconds. Has to be set together with :obj:`sensitivity` (Usual range: 1..33000)
+            sensitivity (int, Optional): Sensivity as ISO value. Has to be set together with :obj:`exposure` (Usual range: 100..1600)
+            saturation (int, Optional): Image saturation (Allowed range: -10..10)
+            contrast (int, Optional): Image contrast (Allowed range: -10..10)
+            brightness (int, Optional): Image brightness (Allowed range: -10..10)
+            sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
+        """
+        self._updateCamConfig(self._leftConfig, Previews.left.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+
+    def updateRightCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+        """
+        Updates right :obj:`depthai.node.MonoCamera` node config
+
+        Args:
+            device (depthai.Device): Running device instance
+            exposure (int, Optional): Exposure time in microseconds. Has to be set together with :obj:`sensitivity` (Usual range: 1..33000)
+            sensitivity (int, Optional): Sensivity as ISO value. Has to be set together with :obj:`exposure` (Usual range: 100..1600)
+            saturation (int, Optional): Image saturation (Allowed range: -10..10)
+            contrast (int, Optional): Image contrast (Allowed range: -10..10)
+            brightness (int, Optional): Image brightness (Allowed range: -10..10)
+            sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
+        """
+        self._updateCamConfig(self._rightConfig, Previews.right.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
 
     def updateDepthConfig(self, device, dct=None, sigma=None, median=None, lrcThreshold=None):
         """

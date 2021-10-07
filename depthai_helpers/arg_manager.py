@@ -130,10 +130,18 @@ def parseArgs():
                              "Example: -enc left color \n"
                              "Example: -enc color right,10 left,10")
     parser.add_argument('-encout', '--encodeOutput', type=Path, default=projectRoot, help="Path to directory where to store encoded files. Default: %(default)s")
-    parser.add_argument('-xls', '--xlinkChunkSize', type=int, default = None, help="Specify XLink chunk size")
+    parser.add_argument('-xls', '--xlinkChunkSize', type=int, help="Specify XLink chunk size")
     parser.add_argument('-camo', '--cameraOrientation', type=_comaSeparated(default="AUTO", cast=orientationCast), nargs="+", default=[],
                         help=("Define cameras orientation (available: {}) \n"
                              "Format: camera_name,camera_orientation \n"
                              "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(orientationChoices))
                         )
+    parser.add_argument("--cameraControlls", action="store_true", help="Show camera configuration options in GUI and control them using keyboard")
+    parser.add_argument("--cameraExposure", type=int, help="Specify camera saturation")
+    parser.add_argument("--cameraSensitivity", type=int, help="Specify camera sensitivity")
+    parser.add_argument("--cameraSaturation", type=checkRange(-10, 10), help="Specify image saturation")
+    parser.add_argument("--cameraContrast", type=checkRange(-10, 10), help="Specify image contrast")
+    parser.add_argument("--cameraBrightness", type=checkRange(-10, 10), help="Specify image brightness")
+    parser.add_argument("--cameraSharpness", type=checkRange(0, 4), help="Specify image sharpness")
+
     return parser.parse_args()
