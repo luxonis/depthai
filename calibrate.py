@@ -143,10 +143,10 @@ class Main:
         pipeline = self.create_pipeline()
         self.device = dai.Device(pipeline)
 
-        self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
-        self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
+        self.left_camera_queue = self.device.getOutputQueue("left", 2, False)
+        self.right_camera_queue = self.device.getOutputQueue("right", 2, False)
         if not self.args.disableRgb:
-            self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
+            self.rgb_camera_queue = self.device.getOutputQueue("rgb", 2, False)
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
