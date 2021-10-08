@@ -1,3 +1,4 @@
 semver
 dulwich
 # tkinter - required to be installed along Python. TODO, alternative
+pyqt5

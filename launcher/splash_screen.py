@@ -14,10 +14,24 @@ def create(image_file):
 
     # The image must be stored to Tk or it will be garbage collected.
     splash_root.image = tk.PhotoImage(file=image_file)
-    label = tk.Label(splash_root, image=splash_root.image, bg='white')
-    splash_root.wm_attributes("-topmost", True)
-    splash_root.wm_attributes("-disabled", True)
-    splash_root.wm_attributes("-transparentcolor", "white")
+
+    if sys.platform == "linux" or sys.platform == "linux2":
+        label = tk.Label(splash_root, image=splash_root.image)
+        # # linux
+        # splash_root.wait_visibility(splash_root)
+        # splash_root.wm_attributes("-alpha", 0.9)
+    elif sys.platform == "darwin":
+        # OS X
+        pass
+    elif sys.platform == "win32":
+        label = tk.Label(splash_root, image=splash_root.image, bg='white')
+        splash_root.wm_attributes("-topmost", True)
+        splash_root.wm_attributes("-disabled", True)
+        splash_root.wm_attributes("-transparentcolor", "white")
+
+    # Windows
+
+
     label.pack()
 
     imgw = splash_root.image.width()
@@ -50,8 +64,8 @@ if __name__ == "__main__":
 
     # Create a timeout task (if timeout > 0)
     if timeout > 0:
-        threading.Thread(target=quit, args=[splash]).start()
-   
+        threading.Thread(target=quit, args=[splash, timeout]).start()
+
     # Add event '<<quit>>' to call quit on root splash screen
     splash.bind(QUIT_EVENT, (lambda splash: lambda args: splash.quit())(splash))
 
