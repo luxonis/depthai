@@ -1,73 +1,84 @@
-# TODO(themarpe) - crossplatform and with capability of resizing splash image based on display size
+import sys, threading
+from PyQt5 import QtCore, QtGui, QtWidgets
+import time
 
-# Windows specific way of creating a splash screen
-import tkinter as tk
-import sys, threading, time
+class SplashScreen(QtWidgets.QSplashScreen):
+    sigEnableHeartbeat = QtCore.pyqtSignal(bool)
+    def __init__(self, filename=None):
+        splashSize = QtCore.QSize(400, 400)
+        geometry = QtWidgets.QApplication.instance().primaryScreen().geometry()
+        if geometry != None:
+            splashSize = QtCore.QSize(int(geometry.width() / 4), int(geometry.height() / 4))
+        splashImage = QtGui.QPixmap(filename).scaled(splashSize, QtCore.Qt.KeepAspectRatio)
+        #self.splash = QtWidgets.QSplashScreen(splashImage, QtCore.Qt.WindowStaysOnTopHint)
+        QtWidgets.QSplashScreen.__init__(self, splashImage, QtCore.Qt.WindowStaysOnTopHint)
 
-# Event name to indicate a 'quit' request
-QUIT_EVENT = '<<quit>>'
+        # Disable closing on mouse press
+        self.mousePressEvent = lambda e : None
 
-def create(image_file):
-    splash_root = tk.Tk()
-    splash_root.title("Splash")
-    splash_root.overrideredirect(True)
+        # Signals
+        #self.sigEnableHeartbeat.connect(self.internalEnableHeartbeat)
 
-    # The image must be stored to Tk or it will be garbage collected.
-    splash_root.image = tk.PhotoImage(file=image_file)
+        #self.updateSplashMessage('')
+        self.show()
+        self.running = True
+        self.heartbeatAnimation = False
+        self.animationThread = threading.Thread(target=self.animation)
+        self.animationThread.start()
 
-    if sys.platform == "linux" or sys.platform == "linux2":
-        label = tk.Label(splash_root, image=splash_root.image)
-        # # linux
-        # splash_root.wait_visibility(splash_root)
-        # splash_root.wm_attributes("-alpha", 0.9)
-    elif sys.platform == "darwin":
-        # OS X
-        pass
-    elif sys.platform == "win32":
-        label = tk.Label(splash_root, image=splash_root.image, bg='white')
-        splash_root.wm_attributes("-topmost", True)
-        splash_root.wm_attributes("-disabled", True)
-        splash_root.wm_attributes("-transparentcolor", "white")
+    def __del__(self):
+        self.running = False
+    #    self.animationThread.join()
 
-    # Windows
+    def animation(self):
+        heartbeatCycle = 1.0
+        heartbeatCycleDelta = -0.02
+        while self.running is True:
+            if self.heartbeatAnimation:
+                heartbeatCycle = heartbeatCycle + heartbeatCycleDelta
+                if heartbeatCycle <= 0.7 or heartbeatCycle >= 1.0:
+                    heartbeatCycleDelta = -heartbeatCycleDelta
+                self.setOpacity(heartbeatCycle)
 
+            # Process events and sleep
+            #self.processEvents()
+            time.sleep(0.1) # 10 FPS
 
-    label.pack()
+    # @QtCore.pyqtSlot(bool)
+    # def internalEnableHeartbeat(self, enable):
+    #     #self.setOpacity(1.0)
+    #     self.heartbeatAnimation = enable
 
-    imgw = splash_root.image.width()
-    imgh = splash_root.image.height()
-    screenw = splash_root.winfo_screenwidth()
-    screenh = splash_root.winfo_screenheight()
-    tlx = int((screenw - imgw) / 2)
-    tly = int((screenh - imgh) / 2)
-    splash_root.geometry(f'{imgw}x{imgh}+{tlx}+{tly}')
+    def enableHeartbeat(self, enable):
+        self.setOpacity(1.0)
+        self.heartbeatAnimation = enable
+        #self.sigEnableHeartbeat.emit(enable)
 
-    #print(f'w: {imgw}, h: {imgh}, screen w: {screenw}, screen h: {screenh}')
-    return splash_root
+    @QtCore.pyqtSlot(float)
+    def setOpacity(self, opacity):
+        self.setWindowOpacity(opacity)
+        self.repaint()
 
-def quit(splash, timeout):
-    time.sleep(timeout)
-    splash.event_generate(QUIT_EVENT, when="tail")
+    @QtCore.pyqtSlot(str)
+    def updateSplashMessage(self, msg=''):
+        self.showMessage("%s" % msg.title(), QtCore.Qt.AlignBottom)
 
-# execute only if run as a script
+    @QtCore.pyqtSlot()
+    def show(self):
+        super().show()
+
+    @QtCore.pyqtSlot()
+    def hide(self):
+        self.enableHeartbeat(False)
+        super().hide()
+
+    @QtCore.pyqtSlot()
+    def close(self):
+        super().close()
+        self.running = False
+
 if __name__ == "__main__":
+    qApp = QtWidgets.QApplication(['DepthAI Launcher'])
     splashImage = 'splash2.png'
-
-    timeout = 3
-    if len(sys.argv) > 1:
-        splashImage = sys.argv[1]
-    if len(sys.argv) > 2:
-        timeout = int(sys.argv[2])
-
-    # Create splash screen
-    splash = create(splashImage)
-
-    # Create a timeout task (if timeout > 0)
-    if timeout > 0:
-        threading.Thread(target=quit, args=[splash, timeout]).start()
-
-    # Add event '<<quit>>' to call quit on root splash screen
-    splash.bind(QUIT_EVENT, (lambda splash: lambda args: splash.quit())(splash))
-
-    # Run main loop
-    splash.mainloop()
+    splashScreen = SplashScreen(splashImage)
+    sys.exit(qApp.exec_())

@@ -79,6 +79,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 ; Install embedded Python
 Source: "build\WPy64-3950\*"; DestDir: "{app}\WPy64-3950"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Install Portable Git
+Source: "build\PortableGit\*"; DestDir: "{app}\PortableGit"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Installs venv as well (TBD)
 ; Source: "build\venv\*"; DestDir: "{app}\venv"; Flags: ignoreversion recursesubdirs createallsubdirs
 
@@ -107,7 +109,6 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
-  Success: Boolean;
 begin
   Log('Creating main shortcut');
   ExtractTemporaryFile('create_shortcut.ps1');
