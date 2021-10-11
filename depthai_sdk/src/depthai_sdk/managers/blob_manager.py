@@ -4,8 +4,6 @@ import blobconverter
 from difflib import get_close_matches
 import depthai as dai
 
-blobconverter.set_defaults(url="http://69.164.214.171:8080")
-
 
 class BlobManager:
     """
