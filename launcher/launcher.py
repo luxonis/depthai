@@ -67,7 +67,7 @@ class Worker(QtCore.QThread):
     signalUpdateQuestion = QtCore.pyqtSignal(str, str)
     sigInfo = QtCore.pyqtSignal(str, str)
     sigCritical = QtCore.pyqtSignal(str, str)
-    sigWarning = QtCore.pyqtSignal(str, str)    
+    sigWarning = QtCore.pyqtSignal(str, str)
     # Should update if a new version is available?
     shouldUpdate = True
 
@@ -235,11 +235,9 @@ class Worker(QtCore.QThread):
                 title = 'No Git Available'
                 message = 'Git cannot be found in the path. Make sure Git is installed and added to the path, then try again'
                 print(f'Message Box ({title}): {message}')
-                # TODO(themarpe) - could be made optional, if the following raise and message 
+                # TODO(themarpe) - could be made optional, if the following raise and message
                 self.sigCritical.emit(title, message)
                 raise Exception('No Git Found')
-
-            exit(0)
 
             try:
                 # Set to quit splash screen a little after subprocess is ran
