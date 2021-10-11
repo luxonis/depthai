@@ -3,12 +3,30 @@
 # Launcher for depthai_demo.py which provides updating capabilities
 
 # Standard imports
-import os, sys, subprocess, time, threading
+import os, sys, subprocess, time, threading, argparse
+# Import splash screen
+import pyqt5_splash_screen
+# Import version parser
+from packaging import version
+# PyQt5
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 # Constants
 SCRIPT_DIRECTORY=os.path.abspath(os.path.dirname(__file__))
 DEPTHAI_DEMO_SCRIPT='depthai_demo.py'
 DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT='install_requirements.py'
+DEFAULT_GIT_PATH='git'
+DEPTHAI_REPOSITORY_NAME = 'depthai'
+DEPTHAI_REMOTE_REPOSITORY_URL = 'https://github.com/luxonis/depthai.git'
+
+# Parse arguments
+parser = argparse.ArgumentParser()
+parser.add_argument('-r', '--repo', help='Path to DepthAI Git repository', default=f'{SCRIPT_DIRECTORY}/{DEPTHAI_REPOSITORY_NAME}')
+parser.add_argument('-g', '--git', help='Path to Git executable. Default \'git\'', default=DEFAULT_GIT_PATH)
+args = parser.parse_args()
+
+pathToDepthaiRepository = args.repo
+gitExecutable = args.git
 
 # Create a logger
 class Logger(object):
@@ -28,137 +46,216 @@ logger = Logger()
 sys.stdout = logger
 sys.stderr = logger
 
-# PyQt5
-from PyQt5 import QtCore, QtGui, QtWidgets
-
 qApp = QtWidgets.QApplication(['DepthAI Launcher'])
+# Set style
+#print(PyQt5.QtWidgets.QStyleFactory.keys())
+#qApp.setStyle('Fusion')
 
-# Import splash screen
-import pyqt5_splash_screen
 
 splashScreen = pyqt5_splash_screen.SplashScreen('splash2.png')
 
+def closeSplash():
+    splashScreen.hide()
 
-def workingThread():
-
-    def closeSplash():
-        splashScreen.hide()
-
-    # # Create splash screen with splash2.png image
-    # splashProcess = subprocess.Popen([sys.executable, f'{SCRIPT_DIRECTORY}/splash_screen.py', 'splash2.png', '0'], stdin=subprocess.PIPE, text=True)
-    # splashClosed = False
-    # def closeSplash():
-    #     global splashClosed
-    #     if not splashClosed:
-    #         splashClosed = True
-    #         splashProcess.terminate()
-    #         #splashProcess.communicate(input='a', timeout=1.0)
-
-    # Defaults
-    depthaiRepositoryName = 'depthai'
-    pathToDepthaiRemoteRepository = 'https://github.com/luxonis/depthai.git'
-    pathToDepthaiRepository = f'{SCRIPT_DIRECTORY}/{depthaiRepositoryName}'
+class Worker(QtCore.QThread):
+    signalUpdateQuestion = QtCore.pyqtSignal(str, str)
+    sigInfo = QtCore.pyqtSignal(str, str)
+    # Should update if a new version is available?
     shouldUpdate = True
 
-    # If path to repository is specified, use that instead
-    # TODO(themarpe) - Expand possible arguments
-    if len(sys.argv) > 1:
-        pathToDepthaiRepository = sys.argv[1]
-
-    # Check if repository exists
-    from dulwich.repo import Repo
-    from dulwich import porcelain
-    import dulwich
-
-    depthaiRepo = None
-    try:
-        depthaiRepo = Repo(pathToDepthaiRepository)
-    except dulwich.errors.NotGitRepository as ex:
-        launcher.updateSplashMessage('DepthAI repository')
-        launcher.enableHeartbeat(True)
-
-        # Repository doesn't exists, clone first
-        depthaiRepo = porcelain.clone(pathToDepthaiRemoteRepository, depthaiRepositoryName)
-
-    # # Check if an update is available
-    # # TODO(themarpe)
-    # from dulwich.repo import Repo
-    # import dulwich.porcelain
-    #
-    # r = Repo(pathToDepthaiRepository)
-    # # Fetch tags first
-    # dulwich.porcelain.fetch(r)
-    # # Get current tag
-    # currentTag = dulwich.porcelain.describe(r)
-    #
-    # tags = r.refs.as_dict("refs/tags".encode())
-    #
-    # print(f'Current tag: {dulwich.porcelain.describe(r)}')
-    #
-    # ver = semver.VersionInfo.parse(currentTag)
-    # print(ver)
-    # print(tags)
-    newVersionAvailable = True
-
-    # If a new version is available, ask to update
-    if newVersionAvailable == True:
-        # Try asking user whether to update
-        # import semver
-        # Update by default
-        print("Message Box in Console")
-        ret = QtWidgets.QMessageBox.question(None, "Update Available", "Version 2.3.1 is available.\nCurrent version is 2.2.0.\nUpdate?", QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.Yes)
-        print(f'Should update? {shouldUpdate}')
+    @QtCore.pyqtSlot(str,str)
+    def updateQuestion(self, title, message):
+        ret = QtWidgets.QMessageBox.question(splashScreen, title, message, QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No, QtWidgets.QMessageBox.Yes)
         if ret == QtWidgets.QMessageBox.Yes:
-            shouldUpdate = True
+            self.shouldUpdate = True
+            return True
+        else:
+            self.shouldUpdate = False
+            return False
 
-        if shouldUpdate == True:
+    @QtCore.pyqtSlot(str,str)
+    def showInformation(self, title, message):
+        QtWidgets.QMessageBox.information(splashScreen, title, message)
+
+    def __init__(self, parent = None):
+        QtCore.QThread.__init__(self, parent)
+        self.signalUpdateQuestion[str, str].connect(self.updateQuestion, QtCore.Qt.BlockingQueuedConnection)
+        self.sigInfo[str, str].connect(self.showInformation, QtCore.Qt.BlockingQueuedConnection)
+    def __del__(self):
+        self.exiting = True
+        try:
+            self.wait()
+        except:
             pass
-            #TODO (themarpe) - update by fetch & checkout of depthai repo
 
-    # Set to quit splash screen a little after subprocess is ran
-    skipSplashQuitFirstTime = False
-    def removeSplash():
-        time.sleep(2.5)
-        if not skipSplashQuitFirstTime:
+    def run(self):
+
+        try:
+
+            # New version available?
+            newVersionAvailable = False
+            # Current version name
+            currentVersion = 'Unknown'
+            newVersion = 'Unknown'
+            newVersionTag = 'vUnknown'
+
+            # Check if repository exists
+            try:
+
+                subprocess.run([gitExecutable, 'status'], cwd=pathToDepthaiRepository)
+
+                if os.path.isdir(pathToDepthaiRepository) and subprocess.run([gitExecutable, 'status'], cwd=pathToDepthaiRepository).returncode == 0:
+                    pass
+                else:
+                    # DepthAI repo not available, clone first
+                    splashScreen.updateSplashMessage('Loading DepthAI Repository ...')
+                    splashScreen.enableHeartbeat(True)
+                    # Repository doesn't exists, clone first
+                    subprocess.check_call([gitExecutable, 'clone', DEPTHAI_REMOTE_REPOSITORY_URL, DEPTHAI_REPOSITORY_NAME], cwd=SCRIPT_DIRECTORY)
+
+                # Fetch changes
+                subprocess.check_call([gitExecutable, 'fetch'], cwd=pathToDepthaiRepository)
+
+                # Get all available versions
+                availableDepthAIVersions = []
+                proc = subprocess.Popen([gitExecutable, 'tag', '-l'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE)
+                while True:
+                    line = proc.stdout.readline()
+                    if not line:
+                        break
+                    # Check that the tag refers to DepthAI demo and not SDK
+                    tag = line.rstrip().decode()
+                    # Check that tag is actually a version
+                    if type(version.parse(tag)) is version.Version:
+                        availableDepthAIVersions.append(tag)
+                print(f'Available DepthAI versions: {availableDepthAIVersions}')
+
+                # If any available versions
+                if len(availableDepthAIVersions) > 0:
+                    # Get latest version
+                    newVersionTag = availableDepthAIVersions[0]
+                    newVersion = str(version.parse(newVersionTag))
+                    for ver in availableDepthAIVersions:
+                        if version.parse(ver) > version.parse(newVersionTag):
+                            newVersionTag = ver
+                            newVersion = str(version.parse(ver))
+
+                    # Check current tag
+                    ret = subprocess.run([gitExecutable, 'describe', '--tags'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE, check=True)
+                    tag = ret.stdout.decode()
+                    # See if its DepthAI version (if not, then suggest to update)
+                    if len(tag.split('-sdk')) == 1:
+                        splitTag = tag.split('-')[0]
+                        splitTag = splitTag.split('v')
+                        currentTag = splitTag[len(splitTag) - 1]
+                        currentVersion = 'Unknown'
+                        if type(version.parse(currentTag)) is version.Version:
+                            print(f'Current tag: {currentTag}, ver: {str(version.parse(currentTag))}')
+                            currentVersion = str(version.parse(currentTag))
+
+                            # Check if latest version is newer than current
+                            if version.parse(newVersionTag) > version.parse(currentTag):
+                                newVersionAvailable = True
+                            else:
+                                newVersionAvailable = False
+
+                        else:
+                            newVersionAvailable = True
+                    else:
+                        newVersionAvailable = True
+
+                    # If a new version is available, ask to update
+                    if newVersionAvailable == True:
+                        # Ask user whether to update
+                        # Update by default
+                        title = 'Update Available'
+                        message = f'Version {newVersion} is available.\nCurrent version is {currentVersion}\nUpdate?'
+                        print(f'Message Box ({title}): {message}')
+                        self.signalUpdateQuestion.emit(title, message)
+
+                        print(f'Should update? {self.shouldUpdate}')
+
+                        if self.shouldUpdate == True:
+                            # DepthAI repo not available, clone first
+                            splashScreen.updateSplashMessage('Updating DepthAI Repository ...')
+                            splashScreen.enableHeartbeat(True)
+                            subprocess.run([gitExecutable, 'checkout', newVersionTag], cwd=pathToDepthaiRepository, check=True)
+
+                            # present message of installing dependencies
+                            splashScreen.updateSplashMessage('Loading DepthAI Dependencies ...')
+                            splashScreen.enableHeartbeat(True)
+
+                            # Install requirements for depthai_demo.py
+                            subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository)
+
+            except subprocess.CalledProcessError as ex:
+                # TODO(themarpe) - issue information box that Git isn't available
+                title = 'Git Error'
+                message = f'Git produced the following error: {ex}'
+                print(f'Message Box ({title}): {message}')
+                self.sigInfo.emit(title, message)
+                raise Exception('Git Error')
+            except FileNotFoundError as ex:
+                # TODO(themarpe) - issue information box that Git isn't available
+                title = 'No Git Available'
+                message = 'Git cannot be found in the path. Make sure Git is installed and added to the path, then try again'
+                print(f'Message Box ({title}): {message}')
+                self.sigInfo.emit(title, message)
+                raise Exception('No Git Found')
+
+            try:
+                # Set to quit splash screen a little after subprocess is ran
+                skipSplashQuitFirstTime = False
+                def removeSplash():
+                    time.sleep(2.5)
+                    if not skipSplashQuitFirstTime:
+                        closeSplash()
+                quitThread = threading.Thread(target=removeSplash)
+                quitThread.start()
+
+                # All ready, run the depthai_demo.py as a separate process
+                ret = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+
+                # Print out stderr first
+                sys.stderr.write(ret.stderr.decode())
+
+                # Retry if failed by an ModuleNotFoundError, by installing the requirements
+                if ret.returncode != 0 and ('ModuleNotFoundError' in str(ret.stderr) or 'Version mismatch' in str(ret.stderr)):
+                    skipSplashQuitFirstTime = True
+                    print(f'ModuleNotFoundError raised. Retrying by installing requirements first and restarting demo.')
+
+                    # present message of installing dependencies
+                    splashScreen.updateSplashMessage('Loading DepthAI Dependencies ...')
+                    splashScreen.enableHeartbeat(True)
+
+                    # Install requirements for depthai_demo.py
+                    subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository)
+
+                    # Remove message and animation
+                    splashScreen.updateSplashMessage('')
+                    splashScreen.enableHeartbeat(False)
+
+                    quitThread.join()
+                    skipSplashQuitFirstTime = False
+                    quitThread = threading.Thread(target=removeSplash)
+                    quitThread.start()
+
+                    # All ready, run the depthai_demo.py as a separate process
+                    subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository)
+            except:
+                pass
+            finally:
+                quitThread.join()
+
+        except Exception as ex:
+            # Catch all for any kind of an error
+            print(f'Unknown error occured ({ex}), exiting...')
+        finally:
+            # At the end quit anyway
             closeSplash()
-    quitThread = threading.Thread(target=removeSplash)
-    quitThread.start()
+            splashScreen.close()
+            qApp.exit()
 
-    # All ready, run the depthai_demo.py as a separate process
-    ret = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
-
-    # Print out stderr first
-    sys.stderr.write(ret.stderr.decode())
-
-    # Retry if failed by an ModuleNotFoundError, by installing the requirements
-    if ret.returncode != 0 and 'ModuleNotFoundError' in str(ret.stderr):
-        skipSplashQuitFirstTime = True
-        print(f'ModuleNotFoundError raised. Retrying by installing requirements first and restarting demo.')
-
-        # present message of installing dependencies
-        splashScreen.updateSplashMessage('Loading DepthAI Dependencies ...')
-        splashScreen.enableHeartbeat(True)
-
-        # Install requirements for depthai_demo.py
-        subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository)
-
-        # Remove message and animation
-        splashScreen.updateSplashMessage('')
-        splashScreen.enableHeartbeat(False)
-
-        quitThread.join()
-        skipSplashQuitFirstTime = False
-        quitThread = threading.Thread(target=removeSplash)
-        quitThread.start()
-
-        # All ready, run the depthai_demo.py as a separate process
-        subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository)
-
-    # At the end quit anyway
-    closeSplash()
-    quitThread.join()
-    splashScreen.close()
-    qApp.exit()
-
-threading.Thread(target=workingThread).start()
+qApp.worker = Worker()
+qApp.worker.start()
 sys.exit(qApp.exec_())
