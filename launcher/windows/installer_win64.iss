@@ -105,20 +105,69 @@ Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\p
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: shellexec postinstall skipifsilent
 
 ; Creates DepthAI shortcut in installation directory, before installing it as a Desktop Icon
+; And uninstall previously installed launcher
 [Code]
-function PrepareToInstall(var NeedsRestart: Boolean): String;
+
+function GetUninstallString(): String;
 var
-  ResultCode: Integer;
+  sUnInstPath: String;
+  sUnInstallString: String;
 begin
-  Log('Creating main shortcut');
-  ExtractTemporaryFile('create_shortcut.ps1');
-  ForceDirectories(ExpandConstant('{app}'));
-  FileCopy(ExpandConstant('{tmp}\create_shortcut.ps1'), ExpandConstant('{app}\create_shortcut.ps1'), False);
-  Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -File {app}\create_shortcut.ps1'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  
-  NeedsRestart := False;
-  Result := '';   
+  sUnInstPath := ExpandConstant('Software\Microsoft\Windows\CurrentVersion\Uninstall\{#emit SetupSetting("AppId")}_is1');
+  sUnInstallString := '';
+  if not RegQueryStringValue(HKLM, sUnInstPath, 'UninstallString', sUnInstallString) then
+    RegQueryStringValue(HKCU, sUnInstPath, 'UninstallString', sUnInstallString);
+  Result := sUnInstallString;
 end;
+
+function IsUpgrade(): Boolean;
+begin
+  Result := (GetUninstallString() <> '');
+end;
+
+function UnInstallOldVersion(): Integer;
+var
+  sUnInstallString: String;
+  iResultCode: Integer;
+begin
+; { Return Values: }
+; { 1 - uninstall string is empty }
+; { 2 - error executing the UnInstallString }
+; { 3 - successfully executed the UnInstallString }
+
+  { default return value }
+  Result := 0;
+
+  ; { get the uninstall string of the old app }
+  sUnInstallString := GetUninstallString();
+  if sUnInstallString <> '' then begin
+    sUnInstallString := RemoveQuotes(sUnInstallString);
+    if Exec(sUnInstallString, '/SILENT /NORESTART /SUPPRESSMSGBOXES','', SW_HIDE, ewWaitUntilTerminated, iResultCode) then
+      Result := 3
+    else
+      Result := 2;
+  end else
+    Result := 1;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+    ResultCode: Integer;
+begin
+  if (CurStep=ssInstall) then
+  begin
+    if (IsUpgrade()) then
+    begin
+      UnInstallOldVersion();
+      Log('Creating main shortcut');
+      ExtractTemporaryFile('create_shortcut.ps1');
+      ForceDirectories(ExpandConstant('{app}'));
+      FileCopy(ExpandConstant('{tmp}\create_shortcut.ps1'), ExpandConstant('{app}\create_shortcut.ps1'), False);
+      Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -File {app}\create_shortcut.ps1'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    end;
+  end;
+end;
+
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
