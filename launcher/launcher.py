@@ -24,7 +24,7 @@ LOG_FILE_PATH=Path(SCRIPT_DIRECTORY/'log.dat')
 # Parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument('-r', '--repo', help='Path to DepthAI Git repository', default=SCRIPT_DIRECTORY/'..')
-parser.add_argument('-g', '--git', help='Path to Git executable. Default \'git\'', default=DEFAULT_GIT_PATH)
+parser.add_argument('-g', '--git', help='Path to Git executable. Default: %(default)s', default=DEFAULT_GIT_PATH)
 parser.add_argument('--disable-git', help='Disable git requirement and updating capability', default=False, action='store_true')
 args = parser.parse_args()
 
@@ -154,72 +154,72 @@ class Worker(QtCore.QThread):
                     print(f'Available DepthAI versions: {availableDepthAIVersions}')
 
                     # If any available versions
-                    if len(availableDepthAIVersions) > 0:
-                        # Get latest version
-                        newVersionTag = availableDepthAIVersions[0]
-                        newVersion = str(version.parse(newVersionTag))
-                        for ver in availableDepthAIVersions:
-                            if version.parse(ver) > version.parse(newVersionTag):
-                                newVersionTag = ver
-                                newVersion = str(version.parse(ver))
+                    if len(availableDepthAIVersions) == 0:
+                        raise RuntimeError('No available depthai versions found')
 
-                        # Check current tag
-                        ret = subprocess.run([gitExecutable, 'describe', '--tags'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE, check=True)
-                        tag = ret.stdout.decode()
-                        # See if its DepthAI version (if not, then suggest to update)
-                        if len(tag.split('-sdk')) == 1:
-                            splitTag = tag.split('-')[0]
-                            splitTag = splitTag.split('v')
-                            currentTag = splitTag[len(splitTag) - 1]
-                            currentVersion = 'Unknown'
-                            if type(version.parse(currentTag)) is version.Version:
-                                print(f'Current tag: {currentTag}, ver: {str(version.parse(currentTag))}')
-                                currentVersion = str(version.parse(currentTag))
+                    # Assuming versions are available
+                    # Get latest version
+                    newVersionTag = availableDepthAIVersions[0]
+                    newVersion = str(version.parse(newVersionTag))
+                    for ver in availableDepthAIVersions:
+                        if version.parse(ver) > version.parse(newVersionTag):
+                            newVersionTag = ver
+                            newVersion = str(version.parse(ver))
 
-                                # Check if latest version is newer than current
-                                if version.parse(newVersionTag) > version.parse(currentTag):
-                                    newVersionAvailable = True
-                                else:
-                                    newVersionAvailable = False
+                    # Check current tag
+                    ret = subprocess.run([gitExecutable, 'describe', '--tags'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE, check=True)
+                    tag = ret.stdout.decode()
+                    # See if its DepthAI version tag (if not, then suggest to update)
+                    if len(tag.split('-')) == 1:
+                        currentVersion = 'Unknown'
+                        if type(version.parse(tag)) is version.Version:
+                            print(f'Current tag: {tag}, ver: {str(version.parse(tag))}')
+                            currentVersion = str(version.parse(tag))
 
-                            else:
+                            # Check if latest version is newer than current
+                            if version.parse(newVersionTag) > version.parse(tag):
                                 newVersionAvailable = True
+                            else:
+                                newVersionAvailable = False
+
                         else:
                             newVersionAvailable = True
+                    else:
+                        newVersionAvailable = True
 
-                        # If a new version is available, ask to update
-                        if newVersionAvailable == True:
-                            # Ask user whether to update
-                            # Update by default
-                            title = 'Update Available'
-                            message = f'Version {newVersion} is available.\nCurrent version is {currentVersion}\nUpdate?'
-                            print(f'Message Box ({title}): {message}')
-                            self.signalUpdateQuestion.emit(title, message)
+                    # If a new version is available, ask to update
+                    if newVersionAvailable == True:
+                        # Ask user whether to update
+                        # Update by default
+                        title = 'Update Available'
+                        message = f'Version {newVersion} is available.\nCurrent version is {currentVersion}\nUpdate?'
+                        print(f'Message Box ({title}): {message}')
+                        self.signalUpdateQuestion.emit(title, message)
 
-                            print(f'Should update? {self.shouldUpdate}')
+                        print(f'Should update? {self.shouldUpdate}')
 
-                            if self.shouldUpdate == True:
-                                # DepthAI repo not available, clone first
-                                splashScreen.updateSplashMessage('Updating DepthAI Repository ...')
+                        if self.shouldUpdate == True:
+                            # DepthAI repo not available, clone first
+                            splashScreen.updateSplashMessage('Updating DepthAI Repository ...')
+                            splashScreen.enableHeartbeat(True)
+                            lastCall = subprocess.run([gitExecutable, 'checkout', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                            if lastCall.returncode != 0:
+                                # Stop animation
+                                splashScreen.updateSplashMessage('')
+                                splashScreen.enableHeartbeat(False)
+                                # Couldn't update. Issue a warning
+                                errMessage = lastCall.stderr.decode()
+                                title = 'Update Aborted'
+                                message = f'DepthAI Repository has uncommited changes. Update was aborted.\n{errMessage}'
+                                print(f'Message Box ({title}): {message}')
+                                self.sigWarning.emit(title, message)
+                            else:
+                                # present message of installing dependencies
+                                splashScreen.updateSplashMessage('Installing DepthAI Requirements ...')
                                 splashScreen.enableHeartbeat(True)
-                                lastCall = subprocess.run([gitExecutable, 'checkout', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
-                                if lastCall.returncode != 0:
-                                    # Stop animation
-                                    splashScreen.updateSplashMessage('')
-                                    splashScreen.enableHeartbeat(False)
-                                    # Couldn't update. Issue a warning
-                                    errMessage = lastCall.stderr.decode()
-                                    title = 'Update Aborted'
-                                    message = f'DepthAI Repository has uncommited changes. Update was aborted.\n{errMessage}'
-                                    print(f'Message Box ({title}): {message}')
-                                    self.sigWarning.emit(title, message)
-                                else:
-                                    # present message of installing dependencies
-                                    splashScreen.updateSplashMessage('Installing DepthAI Requirements ...')
-                                    splashScreen.enableHeartbeat(True)
 
-                                    # Install requirements for depthai_demo.py
-                                    subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository)
+                                # Install requirements for depthai_demo.py
+                                subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository)
 
             except subprocess.CalledProcessError as ex:
                 errMessage = lastCall.stderr.decode()
@@ -238,6 +238,15 @@ class Worker(QtCore.QThread):
                 # TODO(themarpe) - could be made optional, if the following raise and message
                 self.sigCritical.emit(title, message)
                 raise Exception('No Git Found')
+            except RuntimeError as ex:
+                # Stop animation
+                splashScreen.updateSplashMessage('')
+                splashScreen.enableHeartbeat(False)
+                title = 'No DepthAI Versions Found'
+                message = "Couldn't find any available DepthAI versions. Continuing with existing version. Please report to developers."
+                print(f'Message Box ({title}): {message}')
+                # TODO(themarpe) - could be made optional, if the following raise and message
+                self.sigWarning.emit(title, message)
 
             try:
                 # Set to quit splash screen a little after subprocess is ran
