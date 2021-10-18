@@ -12,7 +12,7 @@ Next, extract the package and cd into it. Now, run the following commands:
 ```
 # to prepare qt everywhere repository
 $ ./configure -prefix $PWD/qtbase
-# to compile the qt, may take a while (on my MacBook Air it tool 4hrs)
+# to compile the qt, may take a while (on my MacBook Air it took 4hrs)
 $ cmake --build .
 ```
 
