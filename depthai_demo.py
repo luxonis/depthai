@@ -14,6 +14,10 @@ from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
+from gui.main import DemoQtGui
+
+DemoQtGui()
+
 DISP_CONF_MIN = int(os.getenv("DISP_CONF_MIN", 0))
 DISP_CONF_MAX = int(os.getenv("DISP_CONF_MAX", 255))
 SIGMA_MIN = int(os.getenv("SIGMA_MIN", 0))
