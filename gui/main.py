@@ -28,10 +28,8 @@ class DemoQtGui:
     def __init__(self, device):
         self.app = QGuiApplication()
         self.engine = QQmlApplicationEngine()
-        self.qml_file = Path(__file__).parent / "view.qml"
-        with self.qml_file.open('rb') as f:
-            additional = b"import dai.gui 1.0\n"
-            self.engine.loadData(additional + f.read())
+        self.qml_file = Path(__file__).parent / "views" / "root.qml"
+        self.engine.load(self.qml_file)
         if not self.engine.rootObjects():
             sys.exit(-1)
         sys.exit(self.app.exec())
