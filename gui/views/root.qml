@@ -63,8 +63,17 @@ ApplicationWindow {
     Material.accent: Material.Red
     visible: true
 
-    Bridge {
-        id: bridge
+    DepthBridge {
+        id: depthBridge
+    }
+    ColorCamBridge {
+        id: colorCamBridge
+    }
+    LeftCamBridge {
+        id: leftCamBridge
+    }
+    RightCamBridge {
+        id: rightCamBridge
     }
 
     Rectangle {

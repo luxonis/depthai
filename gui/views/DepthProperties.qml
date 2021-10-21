@@ -25,9 +25,13 @@ ListView {
     ComboBox {
         id: comboBox
         x: 0
-        y: 110
+        y: 102
         width: 195
-        height: 25
+        height: 33
+        model: medianChoices
+        onActivated: function(index) {
+            depthBridge.setMedianFilter(model[index])
+        }
     }
 
     Slider {
@@ -42,7 +46,7 @@ ListView {
         to: 255
         value: 240
         onValueChanged: {
-            bridge.setDisparityConfidenceThreshold(value)
+            depthBridge.setDisparityConfidenceThreshold(value)
         }
     }
 
@@ -69,7 +73,10 @@ ListView {
         font.preferShaping: false
         font.kerning: false
         font.family: "Courier"
-        autoExclusive: true
+        autoExclusive: false
+        onToggled: {
+            depthBridge.toggleLeftRightCheck(switch1.checked)
+        }
     }
 
     Switch {
@@ -77,13 +84,13 @@ ListView {
         x: 0
         y: 233
         text: qsTr("Extended Disparity")
-        autoExclusive: true
+        autoExclusive: false
         font.kerning: false
         font.family: "Courier"
         font.preferShaping: false
         transformOrigin: Item.Center
         onToggled: {
-            bridge.toggleSubpixel(switch2.checked)
+            depthBridge.toggleExtendedDisparity(switch2.checked)
         }
     }
 
@@ -92,11 +99,14 @@ ListView {
         x: 0
         y: 141
         text: qsTr("Subpixel")
-        autoExclusive: true
+        autoExclusive: false
         font.kerning: false
         transformOrigin: Item.Center
         font.preferShaping: false
         font.family: "Courier"
+        onToggled: {
+            depthBridge.toggleSubpixel(switch3.checked)
+        }
     }
 
     Text {
@@ -124,6 +134,9 @@ ListView {
         snapMode: RangeSlider.NoSnap
         value: 240
         to: 255
+        onValueChanged: {
+            depthBridge.setBilateralSigma(value)
+        }
     }
 
     Text {
@@ -213,6 +226,12 @@ ListView {
         focusPolicy: Qt.StrongFocus
         second.value: 10000
         first.value: 0
+        first.onMoved: {
+            depthBridge.setDepthRange(first.value, second.value)
+        }
+        second.onMoved: {
+            depthBridge.setDepthRange(first.value, second.value)
+        }
     }
 
     Text {
@@ -255,3 +274,8 @@ ListView {
 
     }
 }
+/*##^##
+Designer {
+    D{i:0;autoSize:true;height:480;width:640}
+}
+##^##*/
