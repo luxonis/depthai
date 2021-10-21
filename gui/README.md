@@ -19,7 +19,7 @@ $ cmake --build .
 Now, download the [QT Creator](https://www.qt.io/product/development-tools). After downloading and installing this tool:
 - go to Preferences > Kits > Qt Versions
 - Click "Add"
-- point to the qt everywnere directory and `qtbase/bin/qmake`
+- point to the qt everywhere directory and `qtbase/bin/qmake`
 - Go to Kits
 - Edit both of the kits by clicking on them, scrolling down to Qt Version and selecting the qt-everywhere version we just added
 - Restart QT Creator
