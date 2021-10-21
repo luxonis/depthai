@@ -1,6 +1,7 @@
 import collections
 import time
 import cv2
+import warnings
 
 
 class FPSHandler:
@@ -15,10 +16,11 @@ class FPSHandler:
     _fpsType = cv2.FONT_HERSHEY_SIMPLEX
     _fpsLineType = cv2.LINE_AA
 
-    def __init__(self, cap=None):
+    def __init__(self, cap=None, maxTicks = 100):
         """
         Args:
             cap (cv2.VideoCapture): handler to the video file object
+            maxTicks (int): maximum queue length in tickFps computation
         """
         self._timestamp = None
         self._start = None
@@ -27,6 +29,12 @@ class FPSHandler:
 
         self._iterCnt = 0
         self._ticks = {}
+
+        if maxTicks < 2:
+            warnings.warn(f"FPSHandler maxTicks value must be 2 or higher. "
+                          f"It will automatically be set to 2 instead of {maxTicks}")
+            maxTicks = 2
+        self._maxTicks = maxTicks
 
     def nextIter(self):
         """
@@ -52,7 +60,7 @@ class FPSHandler:
             name (str): Specifies timestamp name
         """
         if name not in self._ticks:
-            self._ticks[name] = collections.deque(maxlen=100)
+            self._ticks[name] = collections.deque(maxlen=self._maxTicks)
         self._ticks[name].append(time.monotonic())
 
     def tickFps(self, name):
