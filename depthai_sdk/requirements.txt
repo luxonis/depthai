@@ -1,4 +1,4 @@
-numpy
+numpy>1.20
 opencv-python>4
 opencv-contrib-python>4
 blobconverter>=1.2.2
