@@ -19,8 +19,8 @@ class FPSHandler:
     def __init__(self, cap=None, maxTicks = 100):
         """
         Args:
-            cap (cv2.VideoCapture): handler to the video file object
-            maxTicks (int): maximum queue length in tickFps computation
+            cap (cv2.VideoCapture, Optional): handler to the video file object
+            maxTicks (int, Optional): maximum ticks amount for FPS calculation
         """
         self._timestamp = None
         self._start = None
@@ -31,9 +31,8 @@ class FPSHandler:
         self._ticks = {}
 
         if maxTicks < 2:
-            warnings.warn(f"FPSHandler maxTicks value must be 2 or higher. "
-                          f"It will automatically be set to 2 instead of {maxTicks}")
-            maxTicks = 2
+            raise ValueError(f"Proviced maxTicks value must be 2 or higher (supplied: {maxTicks})")
+
         self._maxTicks = maxTicks
 
     def nextIter(self):
