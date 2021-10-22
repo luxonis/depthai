@@ -14,10 +14,32 @@ QML_IMPORT_NAME = "dai.gui"
 QML_IMPORT_MAJOR_VERSION = 1
 
 
+class DemoQtGui:
+    instance = None
+
+    def __init__(self):
+        self.app = QGuiApplication()
+        self.engine = QQmlApplicationEngine()
+        self.setInstance()
+
+    def setInstance(self):
+        DemoQtGui.instance = self
+
+    def setData(self, name, value):
+        self.engine.rootContext().setContextProperty(name, value)
+
+    def startGui(self):
+        self.engine.load(Path(__file__).parent / "views" / "root.qml")
+        if not self.engine.rootObjects():
+            raise RuntimeError("Unable to start GUI - no root objects!")
+        sys.exit(self.app.exec())
+
+    def guiOnDepthConfigUpdate(self, median=None):
+        pass
+
+
 @QmlElement
 class DepthBridge(QObject):
-    onUpdate = Signal()
-
     @Slot(bool)
     def toggleSubpixel(self, state):
         print("Sub: {}".format(state))
@@ -48,7 +70,9 @@ class DepthBridge(QObject):
 
     @Slot(str)
     def setMedianFilter(self, state):
-        print("Med: {}".format(state))
+        value = getattr(dai.MedianFilter, state)
+        DemoQtGui.instance.guiOnDepthConfigUpdate(median=value)
+        print("Med: {}".format(value))
 
 
 class BaseCamBridge(QObject):
@@ -79,47 +103,17 @@ class BaseCamBridge(QObject):
 
 @QmlElement
 class ColorCamBridge(BaseCamBridge):
-    onUpdate = Signal()
+    pass
 
 
 @QmlElement
 class LeftCamBridge(BaseCamBridge):
-    onUpdate = Signal()
+    pass
 
 
 @QmlElement
 class RightCamBridge(BaseCamBridge):
-    onUpdate = Signal()
-
-
-class StoppableThread(threading.Thread):
-    """Thread class with a stop() method. The thread itself has to check
-    regularly for the stopped() condition."""
-
-    def __init__(self,  *args, **kwargs):
-        super(StoppableThread, self).__init__(*args, **kwargs)
-        self._stop_event = threading.Event()
-
-    def stop(self):
-        self._stop_event.set()
-
-    def stopped(self):
-        return self._stop_event.is_set()
-
-
-class DemoQtGui:
-    def __init__(self):
-        self.app = QGuiApplication()
-        self.engine = QQmlApplicationEngine()
-
-    def setData(self, name, value):
-        self.engine.rootContext().setContextProperty(name, value)
-
-    def startGui(self):
-        self.engine.load(Path(__file__).parent / "views" / "root.qml")
-        if not self.engine.rootObjects():
-            raise RuntimeError("Unable to start GUI - no root objects!")
-        sys.exit(self.app.exec())
+    pass
 
 
 if __name__ == "__main__":

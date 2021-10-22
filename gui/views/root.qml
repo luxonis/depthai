@@ -57,7 +57,7 @@ import QtQuick.Controls.Material 2.1
 import dai.gui 1.0
 
 ApplicationWindow {
-    width: 640
+    width: 1200
     height: 640
     Material.theme: Material.Dark
     Material.accent: Material.Red
@@ -81,17 +81,29 @@ ApplicationWindow {
         x: 0
         y: 0
         width: parent.width
-        height: 640
+        height: parent.height
         color: "#000000"
         enabled: true
 
-        DepthProperties {}
+        CameraPreview {
+          x: 0
+          y: 0
+          width: 610
+          height: parent.height
+        }
+
+        DepthProperties {
+          x: 610
+          y: 0
+          width: 590
+          height: 340
+        }
 
         CameraProperties {
-            x: 25
-            y: 348
+            x: 610
+            y: 340
             width: 590
-            height: 284
+            height: 300
         }
     }
 }

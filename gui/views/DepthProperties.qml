@@ -6,9 +6,6 @@ import QtQuick.Controls.Material 2.1
 
 ListView {
     id: view
-    anchors.fill: root
-    anchors.margins: 25
-    anchors.bottomMargin: 320
     delegate: Text {
         anchors.leftMargin: 50
         font.pointSize: 15
