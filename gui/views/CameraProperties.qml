@@ -81,7 +81,7 @@ ListView {
             placeholderText: "ISO"
             font.family: "Courier"
             onEditingFinished: {
-                colorCamBridge.setIso(text)
+                colorCamBridge.setIsoExposure(text, textField1.text)
             }
         }
 
@@ -111,7 +111,7 @@ ListView {
             placeholderText: qsTr("Exposure")
             validator: IntValidator {}
             onEditingFinished: {
-                colorCamBridge.setExposure(text)
+                colorCamBridge.setIsoExposure(textField.text, text)
             }
         }
 
@@ -273,7 +273,7 @@ ListView {
             placeholderText: "ISO"
             font.family: "Courier"
             onEditingFinished: {
-                rightCamBridge.setIso(text)
+                rightCamBridge.setIsoExposure(text, textField3.text)
             }
         }
 
@@ -290,7 +290,7 @@ ListView {
             placeholderText: qsTr("Exposure")
             validator: IntValidator {}
             onEditingFinished: {
-                rightCamBridge.setExposure(text)
+                rightCamBridge.setIsoExposure(textField2.text, text)
             }
         }
 
@@ -451,7 +451,7 @@ ListView {
             font.family: "Courier"
             validator: IntValidator {}
             onEditingFinished: {
-                leftCamBridge.setIso(text)
+                leftCamBridge.setIsoExposure(text, textField5.text)
             }
         }
 
@@ -467,7 +467,7 @@ ListView {
             placeholderText: qsTr("Exposure")
             validator: IntValidator {}
             onEditingFinished: {
-                leftCamBridge.setExposure(text)
+                leftCamBridge.setIsoExposure(textField4.text, text)
             }
         }
 

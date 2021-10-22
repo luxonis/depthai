@@ -33,8 +33,8 @@ ListView {
 
     Slider {
         id: slider
-        x: 359
-        y: 102
+        x: 360
+        y: 89
         width: 200
         height: 25
         snapMode: RangeSlider.NoSnap
@@ -66,6 +66,7 @@ ListView {
         x: 0
         y: 187
         text: qsTr("Left Right Check")
+        enabled: false
         transformOrigin: Item.Center
         font.preferShaping: false
         font.kerning: false
@@ -81,6 +82,7 @@ ListView {
         x: 0
         y: 233
         text: qsTr("Extended Disparity")
+        enabled: false
         autoExclusive: false
         font.kerning: false
         font.family: "Courier"
@@ -96,6 +98,7 @@ ListView {
         x: 0
         y: 141
         text: qsTr("Subpixel")
+        enabled: false
         autoExclusive: false
         font.kerning: false
         transformOrigin: Item.Center
@@ -123,13 +126,13 @@ ListView {
 
     Slider {
         id: slider1
-        x: 360
-        y: 172
+        x: 362
+        y: 133
         width: 200
         height: 25
         stepSize: 1
         snapMode: RangeSlider.NoSnap
-        value: 240
+        value: 0
         to: 255
         onValueChanged: {
             depthBridge.setBilateralSigma(value)
@@ -138,8 +141,8 @@ ListView {
 
     Text {
         id: text4
-        x: 339
-        y: 102
+        x: 340
+        y: 89
         width: 14
         height: 25
         color: "#ffffff"
@@ -150,7 +153,7 @@ ListView {
     Text {
         id: text5
         x: 566
-        y: 102
+        y: 89
         width: 17
         height: 25
         color: "#ffffff"
@@ -160,8 +163,8 @@ ListView {
 
     Text {
         id: text6
-        x: 359
-        y: 141
+        x: 360
+        y: 115
         width: 200
         height: 25
         color: "#ffffff"
@@ -175,8 +178,8 @@ ListView {
 
     Text {
         id: text7
-        x: 338
-        y: 172
+        x: 337
+        y: 133
         width: 17
         height: 25
         color: "#ffffff"
@@ -187,7 +190,7 @@ ListView {
     Text {
         id: text8
         x: 566
-        y: 175
+        y: 136
         width: 17
         height: 20
         color: "#ffffff"
@@ -198,8 +201,8 @@ ListView {
 
     Text {
         id: text9
-        x: 359
-        y: 209
+        x: 362
+        y: 158
         width: 200
         height: 25
         color: "#ffffff"
@@ -213,10 +216,11 @@ ListView {
 
     RangeSlider {
         id: rangeSlider
-        x: 362
-        y: 233
+        x: 364
+        y: 181
         width: 198
         height: 27
+        enabled: false
         snapMode: RangeSlider.NoSnap
         stepSize: 1
         to: 10000
@@ -248,7 +252,7 @@ ListView {
     Text {
         id: text32
         x: 566
-        y: 237
+        y: 185
         width: 17
         height: 20
         color: "#ffffff"
@@ -259,12 +263,66 @@ ListView {
 
     Text {
         id: text33
-        x: 338
-        y: 237
+        x: 337
+        y: 185
         width: 17
         height: 20
         color: "#ffffff"
         text: qsTr("0m")
+        font.pixelSize: 12
+        rotation: 0
+    }
+
+    Text {
+        id: text10
+        x: 360
+        y: 214
+        width: 200
+        height: 25
+        color: "#ffffff"
+        text: qsTr("LRC Threshold")
+        font.pixelSize: 18
+        horizontalAlignment: Text.AlignHCenter
+        font.styleName: "Regular"
+        font.weight: Font.Medium
+        font.family: "Courier"
+    }
+
+    Slider {
+        id: lrcSlider
+        x: 361
+        y: 233
+        width: 198
+        height: 27
+        stepSize: 1
+        to: 10
+        value: 10
+        from: 0
+        onValueChanged: {
+            depthBridge.setLrcThreshold(value)
+        }
+    }
+
+    Text {
+        id: text34
+        x: 566
+        y: 233
+        width: 17
+        height: 20
+        color: "#ffffff"
+        text: qsTr("10")
+        font.pixelSize: 12
+        rotation: 0
+    }
+
+    Text {
+        id: text35
+        x: 337
+        y: 233
+        width: 17
+        height: 20
+        color: "#ffffff"
+        text: qsTr("0")
         font.pixelSize: 12
         rotation: 0
     }

@@ -2,26 +2,19 @@
 import os
 import queue
 import threading
-import time
 from contextlib import ExitStack
 from itertools import cycle
 from pathlib import Path
-from queue import Queue
 
 import cv2
 import depthai as dai
 import platform
-
-import numpy as np
-from PySide6.QtGui import QImage
 
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
-
-from gui.main import DemoQtGui
 
 print('Using depthai module from: ', dai.__file__)
 print('Depthai version installed: ', dai.__version__)
@@ -458,70 +451,70 @@ class Demo:
             self.onReport(data)
             print(','.join(map(str, data.values())), file=self._reportFile)
 
-
-def create_blank(width, height, rgb_color=(0, 0, 0)):
-    """Create new image(numpy array) filled with certain color in RGB"""
-    # Create black blank image
-    image = np.zeros((height, width, 3), np.uint8)
-
-    # Since OpenCV uses BGR, convert the color first
-    color = tuple(reversed(rgb_color))
-    # Fill image with color
-    image[:] = color
-
-    return image
-
-
-class App(DemoQtGui):
-    def __init__(self):
-        super().__init__()
-        self._demoInstance = Demo(confManager, displayFrames=False, onNewFrame=self.demoOnNewFrame, onShowFrame=self.demoOnShowFrame, onNn=self.demoOnNn, onReport=self.demoOnReport, onSetup=self.demoOnSetup, onTeardown=self.demoOnTeardown, onIter=self.demoOnIter, shouldRun=self.demoShouldRun)
-
-    def demoOnNewFrame(self, frame, source):
-        pass
-
-    def demoOnShowFrame(self, frame, source):
-        if source == self.selectedPreview:
-            try:
-                if self.writer is not None:
-                    scaledFrame = cv2.resize(frame, (560, 560))
-                    img = QImage(scaledFrame.data, 560, 560, 3 * 560, QImage.Format_BGR888)
-                    self.writer.updatePreviewSignal.emit(img)
-            except queue.Full:
-                pass
-
-    def demoOnNn(self, nn_packet):
-        pass
-
-    def demoOnReport(self, report):
-        pass
-
-    def demoOnSetup(self, instance):
-        medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
-        self.writer.setDataSignal.emit(["medianChoices", medianChoices])
-        self.writer.setDataSignal.emit(["previewChoices", confManager.args.show])
-        self.selectedPreview = confManager.args.show[0]
-
-    def demoOnTeardown(self, instance):
-        pass
-
-    def demoOnIter(self, instance):
-        pass
-
-    def demoShouldRun(self, instance):
-        return True
-
-    def start(self):
-        self._t = threading.Thread(target=self._demoInstance.run_all)
-        self._t.start()
-        self.startGui()
-
-    def guiOnDepthConfigUpdate(self, median=None):
-        self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median)
-
-    def guiOnPreviewChangeSelected(self, selected):
-        self.selectedPreview = selected
-
-
 if __name__ == "__main__":
+    from gui.main import DemoQtGui
+    from PySide6.QtGui import QImage
+
+    class App(DemoQtGui):
+        def __init__(self):
+            super().__init__()
+            self._demoInstance = Demo(confManager, displayFrames=False, onNewFrame=self.demoOnNewFrame, onShowFrame=self.demoOnShowFrame, onNn=self.demoOnNn, onReport=self.demoOnReport, onSetup=self.demoOnSetup, onTeardown=self.demoOnTeardown, onIter=self.demoOnIter, shouldRun=self.demoShouldRun)
+
+        def demoOnNewFrame(self, frame, source):
+            pass
+
+        def demoOnShowFrame(self, frame, source):
+            if source == self.selectedPreview:
+                try:
+                    if self.writer is not None:
+                        scaledFrame = cv2.resize(frame, (560, 560))
+                        if len(frame.shape) == 3:
+                            img = QImage(scaledFrame.data, 560, 560, frame.shape[2] * 560, QImage.Format_BGR888)
+                        else:
+                            img = QImage(scaledFrame.data, 560, 560, 560, QImage.Format_Grayscale8)
+                        self.writer.updatePreviewSignal.emit(img)
+                except queue.Full:
+                    pass
+
+        def demoOnNn(self, nn_packet):
+            pass
+
+        def demoOnReport(self, report):
+            pass
+
+        def demoOnSetup(self, instance):
+            medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
+            self.writer.setDataSignal.emit(["medianChoices", medianChoices])
+            self.writer.setDataSignal.emit(["previewChoices", confManager.args.show])
+            self.selectedPreview = confManager.args.show[0]
+
+        def demoOnTeardown(self, instance):
+            pass
+
+        def demoOnIter(self, instance):
+            pass
+
+        def demoShouldRun(self, instance):
+            return True
+
+        def start(self):
+            self._t = threading.Thread(target=self._demoInstance.run_all)
+            self._t.start()
+            self.startGui()
+
+        def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
+            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
+
+        def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+            if name == "color":
+                fun = self._demoInstance._pm.updateColorCamConfig
+            elif name == "left":
+                fun = self._demoInstance._pm.updateLeftCamConfig
+            else:
+                fun = self._demoInstance._pm.updateRightCamConfig
+            fun(self._demoInstance._device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+
+        def guiOnPreviewChangeSelected(self, selected):
+            self.selectedPreview = selected
+
     App().start()

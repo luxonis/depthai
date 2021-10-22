@@ -73,7 +73,7 @@ class DemoQtGui:
         self.writer.setDataSignal.connect(self.setData)
         sys.exit(self.app.exec())
 
-    def guiOnDepthConfigUpdate(self, median=None):
+    def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
         pass
 
 @QmlElement
@@ -98,15 +98,15 @@ class DepthBridge(QObject):
 
     @Slot(int)
     def setDisparityConfidenceThreshold(self, value):
-        print("Dct: {}".format(value))
+        DemoQtGui.instance.guiOnDepthConfigUpdate(dct=value)
+
+    @Slot(int)
+    def setLrcThreshold(self, value):
+        DemoQtGui.instance.guiOnDepthConfigUpdate(lrcThreshold=value)
 
     @Slot(int)
     def setBilateralSigma(self, value):
-        print("Bls: {}".format(value))
-
-    @Slot(int)
-    def setBilateralSigma(self, value):
-        print("Sig: {}".format(value))
+        DemoQtGui.instance.guiOnDepthConfigUpdate(sigma=value)
 
     @Slot(int, int)
     def setDepthRange(self, valFrom, valTo):
@@ -116,48 +116,46 @@ class DepthBridge(QObject):
     def setMedianFilter(self, state):
         value = getattr(dai.MedianFilter, state)
         DemoQtGui.instance.guiOnDepthConfigUpdate(median=value)
-        print("Med: {}".format(value))
 
 
 class BaseCamBridge(QObject):
-    @Slot(int)
-    def setIso(self, value):
-        print("ISO: {}".format(value))
+    name = "base"
 
-    @Slot(int)
-    def setExposure(self, value):
-        print("Exposure: {}".format(value))
+    @Slot(int, int)
+    def setIsoExposure(self, iso, exposure):
+        if iso > 0 and exposure > 0:
+            DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, sensitivity=iso, exposure=exposure)
 
     @Slot(int)
     def setContrast(self, value):
-        print("Contrast: {}".format(value))
+        DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, contrast=value)
 
     @Slot(int)
     def setBrightness(self, value):
-        print("Brightness: {}".format(value))
+        DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, brightness=value)
 
     @Slot(int)
     def setSaturation(self, value):
-        print("Saturation: {}".format(value))
+        DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, saturation=value)
 
     @Slot(int)
     def setSharpness(self, value):
-        print("Sharpness: {}".format(value))
+        DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, sharpness=value)
 
 
 @QmlElement
 class ColorCamBridge(BaseCamBridge):
-    pass
+    name = "color"
 
 
 @QmlElement
 class LeftCamBridge(BaseCamBridge):
-    pass
+    name = "left"
 
 
 @QmlElement
 class RightCamBridge(BaseCamBridge):
-    pass
+    name = "right"
 
 
 if __name__ == "__main__":
