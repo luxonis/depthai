@@ -1,10 +1,6 @@
 # This Python file uses the following encoding: utf-8
 import sys
-import threading
 from pathlib import Path
-import time
-
-import numpy as np
 from PySide6.QtCore import QObject, Slot, Signal
 from PySide6.QtGui import QGuiApplication, QImage
 from PySide6.QtQml import QQmlApplicationEngine, QmlElement
