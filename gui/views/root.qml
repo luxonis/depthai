@@ -57,7 +57,7 @@ import QtQuick.Controls.Material 2.1
 import dai.gui 1.0
 
 ApplicationWindow {
-    width: 1200
+    width: 1270
     height: 640
     Material.theme: Material.Dark
     Material.accent: Material.Red
@@ -75,6 +75,9 @@ ApplicationWindow {
     RightCamBridge {
         id: rightCamBridge
     }
+    PreviewBridge {
+        id: previewBridge
+    }
 
     Rectangle {
         id: root
@@ -88,19 +91,19 @@ ApplicationWindow {
         CameraPreview {
           x: 0
           y: 0
-          width: 610
+          width: 640
           height: parent.height
         }
 
         DepthProperties {
-          x: 610
+          x: 640
           y: 0
           width: 590
           height: 340
         }
 
         CameraProperties {
-            x: 610
+            x: 640
             y: 340
             width: 590
             height: 300

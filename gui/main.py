@@ -3,19 +3,49 @@ import sys
 import threading
 from pathlib import Path
 import time
+
+import numpy as np
 from PySide6.QtCore import QObject, Slot, Signal
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtGui import QGuiApplication, QImage
 from PySide6.QtQml import QQmlApplicationEngine, QmlElement
 import depthai as dai
 
 # To be used on the @QmlElement decorator
 # (QML_IMPORT_MINOR_VERSION is optional)
+from PySide6.QtQuick import QQuickPaintedItem
+
 QML_IMPORT_NAME = "dai.gui"
 QML_IMPORT_MAJOR_VERSION = 1
+
+class Singleton(type(QQuickPaintedItem)):
+    _instances = {}
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
+
+
+@QmlElement
+class ImageWriter(QQuickPaintedItem, metaclass=Singleton):
+    updatePreviewSignal = Signal(QImage)
+    setDataSignal = Signal(list)
+    frame = QImage()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setRenderTarget(QQuickPaintedItem.FramebufferObject)
+
+    def paint(self, painter):
+        painter.drawImage(0, 0, self.frame)
+
+    def update_frame(self, image):
+        self.frame = image
+        self.update()
 
 
 class DemoQtGui:
     instance = None
+    writer = None
 
     def __init__(self):
         self.app = QGuiApplication()
@@ -25,18 +55,32 @@ class DemoQtGui:
     def setInstance(self):
         DemoQtGui.instance = self
 
-    def setData(self, name, value):
+    @Slot(list)
+    def setData(self, data):
+        name, value = data
         self.engine.rootContext().setContextProperty(name, value)
+
+    @Slot(QImage)
+    def updatePreview(self, data):
+        self.writer.update_frame(data)
 
     def startGui(self):
         self.engine.load(Path(__file__).parent / "views" / "root.qml")
         if not self.engine.rootObjects():
             raise RuntimeError("Unable to start GUI - no root objects!")
+        self.writer = ImageWriter()
+        self.writer.updatePreviewSignal.connect(self.updatePreview)
+        self.writer.setDataSignal.connect(self.setData)
         sys.exit(self.app.exec())
 
     def guiOnDepthConfigUpdate(self, median=None):
         pass
 
+@QmlElement
+class PreviewBridge(QObject):
+    @Slot(str)
+    def changeSelected(self, state):
+        DemoQtGui.instance.guiOnPreviewChangeSelected(state)
 
 @QmlElement
 class DepthBridge(QObject):
