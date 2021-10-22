@@ -458,6 +458,7 @@ if __name__ == "__main__":
     class App(DemoQtGui):
         def __init__(self):
             super().__init__()
+            self.running = False
             self._demoInstance = Demo(confManager, displayFrames=False, onNewFrame=self.demoOnNewFrame, onShowFrame=self.demoOnShowFrame, onNn=self.demoOnNn, onReport=self.demoOnReport, onSetup=self.demoOnSetup, onTeardown=self.demoOnTeardown, onIter=self.demoOnIter, shouldRun=self.demoShouldRun)
 
         def demoOnNewFrame(self, frame, source):
@@ -495,12 +496,20 @@ if __name__ == "__main__":
             pass
 
         def demoShouldRun(self, instance):
-            return True
+            return self.running
 
         def start(self):
+            self.running = True
             self._t = threading.Thread(target=self._demoInstance.run_all)
             self._t.start()
-            self.startGui()
+            exit_code = self.startGui()
+            self.running = False
+            try:
+                self._t.join(2)  # try exiting gracefully
+            except:
+                self._demoInstance._stack.close()
+                self._t.join()
+            raise SystemExit(exit_code)
 
         def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
             self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)

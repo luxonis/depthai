@@ -67,7 +67,7 @@ class DemoQtGui:
         self.writer = ImageWriter()
         self.writer.updatePreviewSignal.connect(self.updatePreview)
         self.writer.setDataSignal.connect(self.setData)
-        sys.exit(self.app.exec())
+        return self.app.exec()
 
     def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
         pass
