@@ -348,7 +348,7 @@ class Demo:
                     self._updateCameraConfigs()
 
     def _createQueueCallback(self, queueName):
-        if queueName in [Previews.disparityColor.name, Previews.disparity.name, Previews.depth.name, Previews.depthRaw.name]:
+        if self._displayFrames and queueName in [Previews.disparityColor.name, Previews.disparity.name, Previews.depth.name, Previews.depthRaw.name]:
             Trackbars.createTrackbar('Disparity confidence', queueName, self.DISP_CONF_MIN, self.DISP_CONF_MAX, self._conf.args.disparityConfidenceThreshold,
                      lambda value: self._pm.updateDepthConfig(self._device, dct=value))
             if queueName in [Previews.depthRaw.name, Previews.depth.name]:
