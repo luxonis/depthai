@@ -76,7 +76,7 @@ class PreviewManager:
                 cv2.namedWindow(name)
             if callable(callback):
                 callback(name)
-            if self._mouseTracker is not None:
+            if self._createWindows and self._mouseTracker is not None:
                 cv2.setMouseCallback(name, self._mouseTracker.selectPoint(name))
             if name not in (Previews.disparityColor.name, Previews.depth.name):  # generated on host
                 self.outputQueues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
