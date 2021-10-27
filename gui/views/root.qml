@@ -63,6 +63,10 @@ ApplicationWindow {
     Material.accent: Material.Red
     visible: true
 
+    AppBridge {
+        id: appBridge
+    }
+
     DepthBridge {
         id: depthBridge
     }
@@ -95,18 +99,41 @@ ApplicationWindow {
           height: parent.height
         }
 
-        DepthProperties {
-          x: 640
-          y: 0
-          width: 590
-          height: 340
+        TabBar {
+            id: bar
+            x: 640
+            y: 0
+            height: 50
+            width: 590
+
+            TabButton {
+                text: "Depth"
+            }
+            TabButton {
+               text: "Camera"
+            }
         }
 
-        CameraProperties {
-            x: 640
-            y: 340
-            width: 590
-            height: 300
+        StackLayout {
+          x: 640
+          y: 70
+          width: 630
+          currentIndex: bar.currentIndex
+          Item {
+                DepthProperties {}
+          }
+          Item {
+               CameraProperties {}
+          }
+        }
+
+        Button {
+            x: 667
+            y: 540
+            height: 60
+            width: 563
+            text: "Apply and Restart"
+            onClicked: appBridge.applyAndRestart()
         }
     }
 }

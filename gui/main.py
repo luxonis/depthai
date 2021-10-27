@@ -72,11 +72,20 @@ class DemoQtGui:
     def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
         pass
 
+
+@QmlElement
+class AppBridge(QObject):
+    @Slot()
+    def applyAndRestart(self):
+        print("RESTART")
+
+
 @QmlElement
 class PreviewBridge(QObject):
     @Slot(str)
     def changeSelected(self, state):
         DemoQtGui.instance.guiOnPreviewChangeSelected(state)
+
 
 @QmlElement
 class DepthBridge(QObject):

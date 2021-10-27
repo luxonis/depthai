@@ -13,7 +13,7 @@ import platform
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.version_check import checkRequirementsVersion
-from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews
+from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, resizeLetterbox
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
 print('Using depthai module from: ', dai.__file__)
@@ -459,6 +459,7 @@ if __name__ == "__main__":
         def __init__(self):
             super().__init__()
             self.running = False
+            self.restartRequired = False
             self._demoInstance = Demo(confManager, displayFrames=False, onNewFrame=self.demoOnNewFrame, onShowFrame=self.demoOnShowFrame, onNn=self.demoOnNn, onReport=self.demoOnReport, onSetup=self.demoOnSetup, onTeardown=self.demoOnTeardown, onIter=self.demoOnIter, shouldRun=self.demoShouldRun)
 
         def demoOnNewFrame(self, frame, source):
@@ -468,7 +469,7 @@ if __name__ == "__main__":
             if source == self.selectedPreview:
                 try:
                     if self.writer is not None:
-                        scaledFrame = cv2.resize(frame, (560, 560))
+                        scaledFrame = resizeLetterbox(frame, (560, 560))
                         if len(frame.shape) == 3:
                             img = QImage(scaledFrame.data, 560, 560, frame.shape[2] * 560, QImage.Format_BGR888)
                         else:
@@ -498,6 +499,10 @@ if __name__ == "__main__":
         def demoShouldRun(self, instance):
             return self.running
 
+        def updateArg(self, arg_name, arg_value):
+            setattr(confManager.args, arg_name, arg_value)
+            self.restartRequired = True
+
         def start(self):
             self.running = True
             self._t = threading.Thread(target=self._demoInstance.run_all)
@@ -511,6 +516,7 @@ if __name__ == "__main__":
                 self._t.join()
             raise SystemExit(exit_code)
 
+
         def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
             self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
 
@@ -522,6 +528,22 @@ if __name__ == "__main__":
             else:
                 fun = self._demoInstance._pm.updateRightCamConfig
             fun(self._demoInstance._device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+
+        def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, lrc=None, extended=None):
+            if depthFrom is not None:
+                self.updateArg("minDepth", subpixel)
+            if depthTo is not None:
+                self.updateArg("maxDepth", depthTo)
+            if subpixel is not None:
+                self.updateArg("subpixel", subpixel)
+            if extended is not None:
+                self.updateArg("extendedDisparity", subpixel)
+            if lrc is not None:
+                self.updateArg("stereoLrCheck", subpixel)
+
+
+        def guiOnCameraSetupUpdate(self, name):
+            pass
 
         def guiOnPreviewChangeSelected(self, selected):
             self.selectedPreview = selected
