@@ -91,7 +91,7 @@ class CliArgs:
                             type=str, required=False, choices=["auto","local","cloud"],
                             help="Compile model lcoally or in cloud?")
 
-        parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 2160, 3040],
+        parser.add_argument("-rgbr", "--rgb_resolution", default=1080, type=int, choices=[1080, 1560, 2160, 3040, 3120],
                             help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
 
         parser.add_argument("-rgbf", "--rgb_fps", default=30.0, type=float,
@@ -100,7 +100,7 @@ class CliArgs:
         parser.add_argument("-cs", "--color_scale", default=1.0, type=float,
                             help="Scale factor for 'color' stream preview window. Default: %(default)s")
 
-        parser.add_argument("-monor", "--mono_resolution", default=720, type=int,  choices=[400, 720, 800],
+        parser.add_argument("-monor", "--mono_resolution", default=720, type=int,  choices=[400, 480, 720, 800],
                             help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400 - binning. Default: %(default)s")
 
         parser.add_argument("-monof", "--mono_fps", default=30.0, type=float,
