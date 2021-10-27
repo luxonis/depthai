@@ -2,6 +2,7 @@
 import os
 import queue
 import threading
+import time
 from contextlib import ExitStack
 from itertools import cycle
 from pathlib import Path
@@ -64,7 +65,7 @@ class Demo:
         self.setup()
         self.run()
 
-    def __init__(self, conf: ConfigManager, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda inst: True):
+    def __init__(self, conf: ConfigManager, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True):
         self._stack = ExitStack()
         self._conf = conf
         self._rgbRes = conf.getRgbResolution()
@@ -83,6 +84,25 @@ class Demo:
         self.onTeardown = onTeardown
         self.onIter = onIter
         self.shouldRun = shouldRun
+    
+    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, shouldRun=None):
+        if onNewFrame is not None:
+            self.onNewFrame = onNewFrame
+        if onShowFrame is not None:
+            self.onShowFrame = onShowFrame
+        if onNn is not None:
+            self.onNn = onNn
+        if onReport is not None:
+            self.onReport = onReport
+        if onSetup is not None:
+            self.onSetup = onSetup
+        if onTeardown is not None:
+            self.onTeardown = onTeardown
+        if onIter is not None:
+            self.onIter = onIter
+        if shouldRun is not None:
+            self.shouldRun = shouldRun
+
 
     def setup(self):
         if self._conf.args.reportFile:
@@ -180,7 +200,9 @@ class Demo:
             )
 
     def run(self):
+        print("STARTING_PIPELINE")
         self._device.startPipeline(self._pm.pipeline)
+        print("STARTED_PIPELINE")
         self._pm.createDefaultQueues(self._device)
         if self._conf.useNN:
             self._nnManager.createQueues(self._device)
@@ -224,7 +246,7 @@ class Demo:
         self.onSetup(self)
 
         try:
-            while self.shouldRun(self):
+            while self.shouldRun():
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
@@ -451,71 +473,96 @@ class Demo:
             self.onReport(data)
             print(','.join(map(str, data.values())), file=self._reportFile)
 
+
+
 if __name__ == "__main__":
     from gui.main import DemoQtGui
     from PySide6.QtGui import QImage
+
+    from PySide6.QtCore import QRunnable, Slot, QThreadPool, QObject, Signal
+
+
+    class WorkerSignals(QObject):
+        updatePreviewSignal = Signal(QImage)
+        setDataSignal = Signal(list)
+
+    class Worker(QRunnable):
+        def __init__(self, instance, selectedPreview=None):
+            super(Worker, self).__init__()
+            self.running = False
+            self.selectedPreview = selectedPreview
+            self.instance = instance
+            self.signals = WorkerSignals()
+
+        @Slot()
+        def run(self):
+            self.running = True
+            self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup)
+            self.instance.run_all()
+
+        def shouldRun(self):
+            return self.running
+
+        def onShowFrame(self, frame, source):
+            if source == self.selectedPreview:
+                scaledFrame = resizeLetterbox(frame, (560, 560))
+                if len(frame.shape) == 3:
+                    img = QImage(scaledFrame.data, 560, 560, frame.shape[2] * 560, QImage.Format_BGR888)
+                else:
+                    img = QImage(scaledFrame.data, 560, 560, 560, QImage.Format_Grayscale8)
+                self.signals.updatePreviewSignal.emit(img)
+
+        def onSetup(self, instance):
+            medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
+            self.signals.setDataSignal.emit(["medianChoices", medianChoices])
+            self.signals.setDataSignal.emit(["previewChoices", confManager.args.show])
+            self.selectedPreview = confManager.args.show[0]
+            self.signals.setDataSignal.emit(["restartRequired", False])
+
 
     class App(DemoQtGui):
         def __init__(self):
             super().__init__()
             self.running = False
-            self.restartRequired = False
-            self._demoInstance = Demo(confManager, displayFrames=False, onNewFrame=self.demoOnNewFrame, onShowFrame=self.demoOnShowFrame, onNn=self.demoOnNn, onReport=self.demoOnReport, onSetup=self.demoOnSetup, onTeardown=self.demoOnTeardown, onIter=self.demoOnIter, shouldRun=self.demoShouldRun)
-
-        def demoOnNewFrame(self, frame, source):
-            pass
-
-        def demoOnShowFrame(self, frame, source):
-            if source == self.selectedPreview:
-                try:
-                    if self.writer is not None:
-                        scaledFrame = resizeLetterbox(frame, (560, 560))
-                        if len(frame.shape) == 3:
-                            img = QImage(scaledFrame.data, 560, 560, frame.shape[2] * 560, QImage.Format_BGR888)
-                        else:
-                            img = QImage(scaledFrame.data, 560, 560, 560, QImage.Format_Grayscale8)
-                        self.writer.updatePreviewSignal.emit(img)
-                except queue.Full:
-                    pass
-
-        def demoOnNn(self, nn_packet):
-            pass
-
-        def demoOnReport(self, report):
-            pass
-
-        def demoOnSetup(self, instance):
-            medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
-            self.writer.setDataSignal.emit(["medianChoices", medianChoices])
-            self.writer.setDataSignal.emit(["previewChoices", confManager.args.show])
-            self.selectedPreview = confManager.args.show[0]
-
-        def demoOnTeardown(self, instance):
-            pass
-
-        def demoOnIter(self, instance):
-            pass
-
-        def demoShouldRun(self, instance):
-            return self.running
+            self.dataInitialized = False
+            self.appInitialized = False
+            self.threadpool = QThreadPool()
+            self._demoInstance = Demo(confManager, displayFrames=False)
 
         def updateArg(self, arg_name, arg_value):
             setattr(confManager.args, arg_name, arg_value)
-            self.restartRequired = True
+            self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
         def start(self):
             self.running = True
-            self._t = threading.Thread(target=self._demoInstance.run_all)
-            self._t.start()
-            exit_code = self.startGui()
-            self.running = False
-            try:
-                self._t.join(2)  # try exiting gracefully
-            except:
-                self._demoInstance._stack.close()
-                self._t.join()
-            raise SystemExit(exit_code)
+            self.worker = Worker(self._demoInstance)
+            self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
+            self.worker.signals.setDataSignal.connect(self.setData)
+            self.threadpool.start(self.worker)
+            if not self.appInitialized:
+                self.appInitialized = True
+                exit_code = self.startGui()
+                raise SystemExit(exit_code)
 
+        def stop(self):
+            self.worker.running = False
+            self.threadpool.waitForDone(100)
+            previous_device = self._demoInstance._deviceInfo
+            self._demoInstance._stack.close()
+            del self._demoInstance._device
+            del self._demoInstance
+            start = time.time()
+            while time.time() - start < 10:
+                if previous_device.getMxId() in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
+                    self._demoInstance = Demo(confManager, displayFrames=False)
+                    break
+            else:
+                raise RuntimeError("Device not available again after 10 seconds!")
+
+
+        def restartDemo(self):
+            self.stop()
+            self.start()
 
         def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
             self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
@@ -546,6 +593,6 @@ if __name__ == "__main__":
             pass
 
         def guiOnPreviewChangeSelected(self, selected):
-            self.selectedPreview = selected
+            self.worker.selectedPreview = selected
 
     App().start()

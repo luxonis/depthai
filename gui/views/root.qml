@@ -130,6 +130,7 @@ ApplicationWindow {
         Button {
             x: 667
             y: 540
+            enabled: restartRequired
             height: 60
             width: 563
             text: "Apply and Restart"

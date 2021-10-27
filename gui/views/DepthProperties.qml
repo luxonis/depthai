@@ -66,7 +66,6 @@ ListView {
         x: 0
         y: 187
         text: qsTr("Left Right Check")
-        enabled: false
         transformOrigin: Item.Center
         font.preferShaping: false
         font.kerning: false
@@ -82,7 +81,6 @@ ListView {
         x: 0
         y: 233
         text: qsTr("Extended Disparity")
-        enabled: false
         autoExclusive: false
         font.kerning: false
         font.family: "Courier"
@@ -98,7 +96,6 @@ ListView {
         x: 0
         y: 141
         text: qsTr("Subpixel")
-        enabled: false
         autoExclusive: false
         font.kerning: false
         transformOrigin: Item.Center
@@ -220,7 +217,6 @@ ListView {
         y: 181
         width: 198
         height: 27
-        enabled: false
         snapMode: RangeSlider.NoSnap
         stepSize: 1
         to: 10000

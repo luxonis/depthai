@@ -23,12 +23,10 @@ class Singleton(type(QQuickPaintedItem)):
 
 @QmlElement
 class ImageWriter(QQuickPaintedItem, metaclass=Singleton):
-    updatePreviewSignal = Signal(QImage)
-    setDataSignal = Signal(list)
     frame = QImage()
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self):
+        super().__init__()
         self.setRenderTarget(QQuickPaintedItem.FramebufferObject)
 
     def paint(self, painter):
@@ -65,19 +63,14 @@ class DemoQtGui:
         if not self.engine.rootObjects():
             raise RuntimeError("Unable to start GUI - no root objects!")
         self.writer = ImageWriter()
-        self.writer.updatePreviewSignal.connect(self.updatePreview)
-        self.writer.setDataSignal.connect(self.setData)
         return self.app.exec()
-
-    def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
-        pass
 
 
 @QmlElement
 class AppBridge(QObject):
     @Slot()
     def applyAndRestart(self):
-        print("RESTART")
+        DemoQtGui.instance.restartDemo()
 
 
 @QmlElement
@@ -91,15 +84,15 @@ class PreviewBridge(QObject):
 class DepthBridge(QObject):
     @Slot(bool)
     def toggleSubpixel(self, state):
-        print("Sub: {}".format(state))
+        DemoQtGui.instance.guiOnDepthSetupUpdate(subpixel=state)
 
     @Slot(bool)
     def toggleExtendedDisparity(self, state):
-        print("Ext: {}".format(state))
+        DemoQtGui.instance.guiOnDepthSetupUpdate(extended=state)
 
     @Slot(bool)
     def toggleLeftRightCheck(self, state):
-        print("Lrc: {}".format(state))
+        DemoQtGui.instance.guiOnDepthSetupUpdate(lrc=state)
 
     @Slot(int)
     def setDisparityConfidenceThreshold(self, value):
@@ -115,7 +108,7 @@ class DepthBridge(QObject):
 
     @Slot(int, int)
     def setDepthRange(self, valFrom, valTo):
-        print("Rng: {} - {}".format(valFrom, valTo))
+        DemoQtGui.instance.guiOnDepthSetupUpdate(depthFrom=valFrom, depthTo=valTo)
 
     @Slot(str)
     def setMedianFilter(self, state):
