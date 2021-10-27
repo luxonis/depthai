@@ -293,7 +293,9 @@ class DepthAI:
         if 'OAK_1' not in test_type:
             auto_checkbox_names = ["USB3", "Left camera connected", "Right camera connected", 
                                    "RGB camera connected", "JPEG Encoding Stream", 
-                                   "previewout-rgb Stream", "left Stream", "right Stream", "IMU"]
+                                   "previewout-rgb Stream", "left Stream", "right Stream"]
+            if not 'Lite' in test_type:
+                auto_checkbox_names.append('IMU')
             op_checkbox_names = ["JPEG Encoding", "Previewout-rgb stream", "Left Stream", "Right Stream"]
         else:
             auto_checkbox_names = ["USB3", "RGB camera connected", "JPEG Encoding Stream", "previewout-rgb Stream"]
@@ -355,7 +357,9 @@ class DepthAI:
         if 'OAK_1' not in test_type:
             header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'left_camera', 
                     'right_camera', 'rgb_camera', 'JPEG Encoding Stream', 'previewout-rgb Stream', 'left Stream', 'right Stream', 
-                    'op JPEG Encoding', 'op Previewout-rgb stream', 'op Left Stream', 'op Right Stream', 'IMU']
+                    'op JPEG Encoding', 'op Previewout-rgb stream', 'op Left Stream', 'op Right Stream']
+            if not 'Lite' in test_type:
+                header.append('IMU')
         else:
             header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'rgb_camera', 'JPEG Encoding Stream', 
                       'previewout-rgb Stream', 'op JPEG Encoding', 'op Previewout-rgb stream']
@@ -508,7 +512,7 @@ class DepthAI:
                 print("Is left conencted ?")
                 print(self.device.is_left_connected())
 
-                if 'OAK_D' in test_type:
+                if 'OAK_D' in test_type and not 'Lite' in test_type:
                     auto_checkbox_dict['IMU'].setUnattended()
 
                 for i in range(len(op_checkbox_names)):
@@ -769,8 +773,7 @@ class DepthAI:
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['y']),
                     #           '{:7.4f}'.format(dict_['imu']['accelRaw']['z']))
                     # print(dict_['imu'])
-                    if 'OAK_D' in test_type:
-
+                    if 'OAK_D' in test_type and not 'Lite' in test_type:
                         if 'imu' in dict_ and 'accel' in dict_['imu']:
                             # print(dict_['imu'])
                             is_IMU_found = True
@@ -793,7 +796,7 @@ class DepthAI:
                     pygame_render_text(screen, flash_status, (550, 540), color=c ,font_size=25)
                     pygame_render_text(screen, dict_['flash']['info'], (550, 570) ,font_size=25)
         
-                    if 'OAK_D' in test_type:
+                    if 'OAK_D' in test_type and not 'Lite' in test_type:
 
                         imu_status = dict_['imu']['status']
                         c = None
