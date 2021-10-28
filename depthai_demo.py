@@ -544,6 +544,10 @@ if __name__ == "__main__":
             monoChoices = list(filter(lambda name: name[0].isupper(), vars(dai.MonoCameraProperties.SensorResolution).keys()))
             self.signals.setDataSignal.emit(["monoResolutionChoices", monoChoices])
             self.signals.setDataSignal.emit(["previewChoices", confManager.args.show])
+            self.signals.setDataSignal.emit(["modelSourceChoices", [Previews.color.name, Previews.left.name, Previews.right.name]])
+            versionChoices = list(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()))
+            self.signals.setDataSignal.emit(["ovVersions", versionChoices])
+            self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
             self.selectedPreview = confManager.args.show[0]
             self.signals.setDataSignal.emit(["modelChoices", sorted(confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 

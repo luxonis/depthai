@@ -126,7 +126,7 @@ ListView {
                     aiBridge.setShaves(value)
                 }
                 to: 16
-                from: 0
+                from: 1
             }
 
             Text {
@@ -171,7 +171,7 @@ ListView {
                 id: switch4
                 x: 90
                 y: 173
-                width: 185
+                width: 300
                 height: 48
                 text: qsTr("Sync NN and Preview")
                 font.family: "Courier"
@@ -226,7 +226,7 @@ ListView {
                 id: comboBox2
                 x: 220
                 y: 288
-                width: 141
+                width: 170
                 height: 33
                 model: ovVersions
                 onActivated: function(index) {
@@ -265,7 +265,7 @@ ListView {
                 id: switch3
                 x: 90
                 y: 375
-                width: 185
+                width: 250
                 height: 48
                 text: qsTr("Spatial Bounding Boxes")
                 font.family: "Courier"
@@ -280,7 +280,7 @@ ListView {
 
             Text {
                 id: text40
-                x: 266
+                x: 320
                 y: 383
                 width: 106
                 height: 33
@@ -295,7 +295,7 @@ ListView {
 
             Text {
                 id: text38
-                x: 378
+                x: 418
                 y: 389
                 width: 18
                 height: 20
@@ -309,7 +309,7 @@ ListView {
 
             Text {
                 id: text39
-                x: 507
+                x: 547
                 y: 389
                 width: 18
                 height: 20
@@ -323,7 +323,7 @@ ListView {
 
             Slider {
                 id: lrcSlider1
-                x: 403
+                x: 443
                 y: 383
                 width: 96
                 height: 33
