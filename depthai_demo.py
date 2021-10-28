@@ -497,6 +497,7 @@ if __name__ == "__main__":
         @Slot()
         def run(self):
             self.running = True
+            self.signals.setDataSignal.emit(["restartRequired", False])
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup)
             self.instance.run_all()
 
@@ -515,9 +516,13 @@ if __name__ == "__main__":
         def onSetup(self, instance):
             medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
             self.signals.setDataSignal.emit(["medianChoices", medianChoices])
+            colorChoices = list(filter(lambda name: name[0].isupper(), vars(dai.ColorCameraProperties.SensorResolution).keys()))
+            self.signals.setDataSignal.emit(["colorResolutionChoices", colorChoices])
+            monoChoices = list(filter(lambda name: name[0].isupper(), vars(dai.MonoCameraProperties.SensorResolution).keys()))
+            self.signals.setDataSignal.emit(["monoResolutionChoices", monoChoices])
             self.signals.setDataSignal.emit(["previewChoices", confManager.args.show])
             self.selectedPreview = confManager.args.show[0]
-            self.signals.setDataSignal.emit(["restartRequired", False])
+            self.signals.setDataSignal.emit(["availableModels", confManager.getAvailableZooModels()])
 
 
     class App(DemoQtGui):
@@ -542,6 +547,7 @@ if __name__ == "__main__":
             if not self.appInitialized:
                 self.appInitialized = True
                 exit_code = self.startGui()
+                self.stop()
                 raise SystemExit(exit_code)
 
         def stop(self):
@@ -578,19 +584,48 @@ if __name__ == "__main__":
 
         def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, lrc=None, extended=None):
             if depthFrom is not None:
-                self.updateArg("minDepth", subpixel)
+                self.updateArg("minDepth", depthFrom)
             if depthTo is not None:
                 self.updateArg("maxDepth", depthTo)
             if subpixel is not None:
                 self.updateArg("subpixel", subpixel)
             if extended is not None:
-                self.updateArg("extendedDisparity", subpixel)
+                self.updateArg("extendedDisparity", extended)
             if lrc is not None:
-                self.updateArg("stereoLrCheck", subpixel)
+                self.updateArg("stereoLrCheck", lrc)
 
+        def guiOnCameraSetupUpdate(self, name, fps=None, resolution=None):
+            if fps is not None:
+                if name == "color":
+                    self.updateArg("rgbFps", fps)
+                else:
+                    self.updateArg("monoFps", fps)
+            if resolution is not None:
+                if name == "color":
+                    self.updateArg("rgbResolution", resolution)
+                else:
+                    self.updateArg("monoResolution", resolution)
 
-        def guiOnCameraSetupUpdate(self, name):
-            pass
+        def guiOnAiSetupUpdate(self, cnn=None, shave=None, source=None, fullFov=None, sync=None, sbb=None, sbbFactor=None, ov=None, countLabel=None):
+            if cnn is not None:
+                self.updateArg("cnnModel", cnn)
+            if shave is not None:
+                self.updateArg("shaves", shave)
+            if source is not None:
+                self.updateArg("camera", source)
+            if fullFov is not None:
+                self.updateArg("disableFullFovNn", not fullFov)
+            if sync is not None:
+                self.updateArg("sync", sync)
+            if sbb is not None:
+                self.updateArg("spatialBoundingBox", sbb)
+            if sbbFactor is not None:
+                self.updateArg("sbbScaleFactor", sbbFactor)
+            if ov is not None:
+                self.updateArg("openvinoVersion", ov)
+            if countLabel is not None:
+                self.updateArg("countLabel", countLabel)
+
 
         def guiOnPreviewChangeSelected(self, selected):
             self.worker.selectedPreview = selected

@@ -84,6 +84,15 @@ class ConfigManager:
         if self.args.cnnModel is not None and (DEPTHAI_ZOO / self.args.cnnModel).exists():
             return DEPTHAI_ZOO / self.args.cnnModel
 
+    def getAvailableZooModels(self):
+        def verify(path: Path):
+            return path.parent.name == path.stem
+
+        def convert(path: Path):
+            return path.stem
+
+        return list(map(convert, filter(verify, DEPTHAI_ZOO.rglob("**/*.json"))))
+
     def getColorMap(self):
         return getattr(cv2, "COLORMAP_{}".format(self.args.colorMap))
 
@@ -179,7 +188,6 @@ class ConfigManager:
                 self.args.bandwidth = "low"
             else:
                 self.args.bandwidth = "high"
-
 
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':

@@ -5,7 +5,7 @@ import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
 
 ListView {
-    id: view
+    id: depthProperties
     delegate: Text {
         anchors.leftMargin: 50
         font.pointSize: 15

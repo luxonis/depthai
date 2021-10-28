@@ -74,6 +74,46 @@ class AppBridge(QObject):
 
 
 @QmlElement
+class AIBridge(QObject):
+    @Slot(str)
+    def setCnnModel(self, name):
+        DemoQtGui.instance.guiOnAiSetupUpdate(cnn=name)
+
+    @Slot(int)
+    def setShaves(self, value):
+        DemoQtGui.instance.guiOnAiSetupUpdate(shave=value)
+
+    @Slot(str)
+    def setModelSource(self, value):
+        DemoQtGui.instance.guiOnAiSetupUpdate(source=value)
+
+    @Slot(bool)
+    def setFullFov(self, value):
+        DemoQtGui.instance.guiOnAiSetupUpdate(fullFov=value)
+
+    @Slot(bool)
+    def setSyncNN(self, value):
+        DemoQtGui.instance.guiOnAiSetupUpdate(sync=value)
+
+    @Slot(bool)
+    def setSbb(self, value):
+        DemoQtGui.instance.guiOnAiSetupUpdate(sbb=value)
+
+    @Slot(float)
+    def setSbbFactor(self, value):
+        DemoQtGui.instance.guiOnAiSetupUpdate(sbbFactor=value)
+
+    @Slot(str)
+    def setOvVersion(self, state):
+        value = getattr(dai.OpenVINO, state)
+        DemoQtGui.instance.guiOnAiSetupUpdate(ov=value)
+
+    @Slot(str)
+    def setCountLabel(self, state):
+        DemoQtGui.instance.guiOnAiSetupUpdate(countLabel=state)
+
+
+@QmlElement
 class PreviewBridge(QObject):
     @Slot(str)
     def changeSelected(self, state):
@@ -139,6 +179,18 @@ class BaseCamBridge(QObject):
     @Slot(int)
     def setSharpness(self, value):
         DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, sharpness=value)
+
+    @Slot(int)
+    def setFps(self, value):
+        DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, fps=value)
+
+    @Slot(str)
+    def setResolution(self, state):
+        if self.name == "color":
+            value = getattr(dai.ColorCameraProperties.SensorResolution, state)
+        else:
+            value = getattr(dai.MonoCameraProperties.SensorResolution, state)
+        DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=value)
 
 
 @QmlElement

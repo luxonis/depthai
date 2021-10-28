@@ -82,6 +82,9 @@ ApplicationWindow {
     PreviewBridge {
         id: previewBridge
     }
+    AIBridge {
+        id: aiBridge
+    }
 
     Rectangle {
         id: root
@@ -107,6 +110,10 @@ ApplicationWindow {
             width: 590
 
             TabButton {
+                text: "AI"
+            }
+
+            TabButton {
                 text: "Depth"
             }
             TabButton {
@@ -119,6 +126,9 @@ ApplicationWindow {
           y: 70
           width: 630
           currentIndex: bar.currentIndex
+          Item {
+                AIProperties {}
+          }
           Item {
                 DepthProperties {}
           }
