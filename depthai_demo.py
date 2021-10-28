@@ -66,7 +66,6 @@ class Demo:
         self.run()
 
     def __init__(self, conf: ConfigManager, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True):
-        self._stack = ExitStack()
         self._conf = conf
         self._rgbRes = conf.getRgbResolution()
         self._monoRes = conf.getMonoResolution()
@@ -105,6 +104,7 @@ class Demo:
 
 
     def setup(self):
+        self._stack = ExitStack()
         if self._conf.args.reportFile:
             reportFileP = Path(self._conf.args.reportFile).with_suffix('.csv')
             reportFileP.parent.mkdir(parents=True, exist_ok=True)
@@ -253,10 +253,13 @@ class Demo:
         except StopIteration:
             pass
         finally:
-            if self._conf.useCamera and self._encManager is not None:
-                self._encManager.close()
-            self._stack.close()
+            self.stop()
 
+    def stop(self):
+        if self._conf.useCamera and self._encManager is not None:
+            self._encManager.close()
+        self._device.close()
+        self._stack.close()
         self._fps.printStatus()
         self.onTeardown(self)
 
@@ -485,6 +488,7 @@ if __name__ == "__main__":
     class WorkerSignals(QObject):
         updatePreviewSignal = Signal(QImage)
         setDataSignal = Signal(list)
+        exitSignal = Signal(bool)
 
     class Worker(QRunnable):
         def __init__(self, instance, selectedPreview=None):
@@ -497,9 +501,25 @@ if __name__ == "__main__":
         @Slot()
         def run(self):
             self.running = True
+            self.signals.exitSignal.connect(self.terminate)
             self.signals.setDataSignal.emit(["restartRequired", False])
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup)
             self.instance.run_all()
+
+        def terminate(self, should_exit):
+            if should_exit:
+                current_mxid = self.instance._device.getMxId()
+                self.running = False
+                self.signals.setDataSignal.emit(["restartRequired", False])
+                self.instance.stop()
+
+                start = time.time()
+                while time.time() - start < 10:
+                    if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
+                        break
+                else:
+                    raise RuntimeError("Device not available again after 10 seconds!")
+
 
         def shouldRun(self):
             return self.running
@@ -554,16 +574,7 @@ if __name__ == "__main__":
             self.worker.running = False
             self.threadpool.waitForDone(100)
             previous_device = self._demoInstance._deviceInfo
-            self._demoInstance._stack.close()
-            del self._demoInstance._device
-            del self._demoInstance
-            start = time.time()
-            while time.time() - start < 10:
-                if previous_device.getMxId() in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
-                    self._demoInstance = Demo(confManager, displayFrames=False)
-                    break
-            else:
-                raise RuntimeError("Device not available again after 10 seconds!")
+            self.worker.signals.exitSignal.emit(True)
 
 
         def restartDemo(self):
