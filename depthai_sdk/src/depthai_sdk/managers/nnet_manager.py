@@ -341,6 +341,14 @@ class NNetManager:
             self.inputQueue = device.getInputQueue("nnIn", maxSize=1, blocking=False)
         self.outputQueue = device.getOutputQueue("nnOut", maxSize=1, blocking=False)
 
+    def closeQueues(self):
+        """
+        Closes output queues created by :func:`createQueues`
+        """
+        if self.source == "host":
+            self.inputQueue.close()
+        self.outputQueue.close()
+
     def sendInputFrame(self, frame, seqNum=None):
         """
         Sends a frame into :attr:`inputQueue` object. Handles scaling down the frame, creating a proper :obj:`depthai.ImgFrame`

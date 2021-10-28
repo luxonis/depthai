@@ -86,6 +86,15 @@ class PreviewManager:
         if Previews.depth.name in self._display and Previews.depthRaw.name not in self._display:
             self.outputQueues.append(device.getOutputQueue(name=Previews.depthRaw.name, maxSize=1, blocking=False))
 
+    def closeQueues(self):
+        """
+        Closes output queues for requested preview streams
+        """
+
+        for queue in self.outputQueues:
+            queue.close()
+
+
     def prepareFrames(self, blocking=False, callback=None):
         """
         This function consumes output queues' packets and parses them to obtain ready to use frames.

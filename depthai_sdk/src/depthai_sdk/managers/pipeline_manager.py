@@ -30,6 +30,11 @@ class PipelineManager:
     _leftConfig = dai.CameraControl()
     _rightConfig = dai.CameraControl()
 
+    _depthConfigInputQueue = None
+    _rgbConfigInputQueue = None
+    _leftConfigInputQueue = None
+    _rightConfigInputQueue = None
+
     def setNnManager(self, nnManager):
         """
         Assigns NN manager. It also syncs the pipeline versions between those two objects
@@ -45,15 +50,29 @@ class PipelineManager:
 
     def createDefaultQueues(self, device):
         """
-        Creates queues for all requested XLinkOut's and XLinkIn's.
+        Creates default queues for config updates
 
         Args:
             device (depthai.Device): Running device instance
         """
-        for xout in filter(lambda node: isinstance(node, dai.node.XLinkOut), vars(self.nodes).values()):
-            device.getOutputQueue(xout.getStreamName(), maxSize=1, blocking=False)
-        for xin in filter(lambda node: isinstance(node, dai.node.XLinkIn), vars(self.nodes).values()):
-            device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
+
+        self._depthConfigInputQueue = device.getInputQueue("left_control")
+        self._rgbConfigInputQueue = device.getInputQueue("color_control")
+        self._leftConfigInputQueue = device.getInputQueue("right_control")
+        self._rightConfigInputQueue = device.getInputQueue("stereoConfig")
+
+    def closeDefaultQueues(self):
+        """
+        Creates default queues for config updates
+
+        Args:
+            device (depthai.Device): Running device instance
+        """
+
+        self._depthConfigInputQueue.close()
+        self._rgbConfigInputQueue.close()
+        self._leftConfigInputQueue.close()
+        self._rightConfigInputQueue.close()
 
     def __calcEncodeableSize(self, sourceSize):
         w, h = sourceSize
@@ -289,8 +308,6 @@ class PipelineManager:
             configRef.setContrast(contrast)
         if brightness is not None:
             configRef.setBrightness(brightness)
-            
-        device.getInputQueue(cameraName + "_control").send(configRef)
 
     def updateColorCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         """
@@ -306,6 +323,7 @@ class PipelineManager:
             sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
         """
         self._updateCamConfig(self._rgbConfig, Previews.color.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+        self._rgbConfigInputQueue.send(self._rgbConfig)
 
     def updateLeftCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         """
@@ -321,6 +339,7 @@ class PipelineManager:
             sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
         """
         self._updateCamConfig(self._leftConfig, Previews.left.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+        self._leftConfigInputQueue.send(self._leftConfig)
 
     def updateRightCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         """
@@ -336,6 +355,7 @@ class PipelineManager:
             sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
         """
         self._updateCamConfig(self._rightConfig, Previews.right.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+        self._rightConfigInputQueue.send(self._rightConfig)
 
     def updateDepthConfig(self, device, dct=None, sigma=None, median=None, lrcThreshold=None):
         """
@@ -358,7 +378,7 @@ class PipelineManager:
         if lrcThreshold is not None:
             self._depthConfig.setLeftRightCheckThreshold(lrcThreshold)
 
-        device.getInputQueue("stereoConfig").send(self._depthConfig)
+        self._depthConfigInputQueue.send(self._depthConfig)
 
     def addNn(self, nn, sync=False, useDepth=False, xoutNnInput=False, xoutSbb=False):
         """

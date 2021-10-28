@@ -4,6 +4,7 @@ import queue
 import threading
 import time
 from contextlib import ExitStack
+from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
 
@@ -103,6 +104,7 @@ class Demo:
 
 
     def setup(self):
+        print("Setting up demo...")
         self._stack = ExitStack()
         self._deviceInfo = getDeviceInfo(self._conf.args.deviceId)
         if self._conf.args.reportFile:
@@ -256,10 +258,20 @@ class Demo:
             self.stop()
 
     def stop(self):
-        if self._conf.useCamera and self._encManager is not None:
-            self._encManager.close()
+        print("Stopping demo...")
         self._device.close()
         self._stack.close()
+        self._pm.closeDefaultQueues()
+        if self._conf.useCamera:
+            self._pv.closeQueues()
+            if self._encManager is not None:
+                self._encManager.close()
+        if self._conf.useNN:
+            self._nnManager.closeQueues()
+        if self._sbbOut is not None:
+            self._sbbOut.close()
+        if self._logOut is not None:
+            self._logOut.close()
         self._fps.printStatus()
         self.onTeardown(self)
 
@@ -533,7 +545,7 @@ if __name__ == "__main__":
             self.signals.setDataSignal.emit(["monoResolutionChoices", monoChoices])
             self.signals.setDataSignal.emit(["previewChoices", confManager.args.show])
             self.selectedPreview = confManager.args.show[0]
-            self.signals.setDataSignal.emit(["availableModels", confManager.getAvailableZooModels()])
+            self.signals.setDataSignal.emit(["modelChoices", sorted(confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 
     class App(DemoQtGui):

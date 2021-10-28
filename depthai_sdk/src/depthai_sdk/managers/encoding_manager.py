@@ -76,6 +76,9 @@ class EncodingManager:
             for name, file in self._encodingFiles.items():
                 print(cmd.format(self._encodingNodes[name].getFrameRate(), file.name, str(Path(file.name).with_suffix('.mp4'))))
 
+        for queue in self._encodingQueues.values():
+            queue.close()
+
         for name, file in self._encodingFiles.items():
             file.close()
         try:
