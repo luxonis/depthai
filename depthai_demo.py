@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import os
+import sys
 import time
+import traceback
 from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
@@ -486,6 +488,7 @@ if __name__ == "__main__":
     from PySide6.QtGui import QImage
 
     from PySide6.QtCore import QRunnable, Slot, QThreadPool, QObject, Signal
+    from PySide6.QtWidgets import QMessageBox
 
 
     class WorkerSignals(QObject):
@@ -519,7 +522,7 @@ if __name__ == "__main__":
             self.signals.setDataSignal.emit(["restartRequired", False])
 
         def onError(self, ex: Exception):
-            pass
+            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__)))
 
         def shouldRun(self):
             return self.running
@@ -561,6 +564,16 @@ if __name__ == "__main__":
         def updateArg(self, arg_name, arg_value):
             setattr(confManager.args, arg_name, arg_value)
             self.worker.signals.setDataSignal.emit(["restartRequired", True])
+
+        @Slot(str)
+        def showError(self, error):
+            print(error, file=sys.stderr)
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Information)
+            msgBox.setText(error)
+            msgBox.setWindowTitle("Error occured")
+            msgBox.setStandardButtons(QMessageBox.Ok)
+            msgBox.exec()
 
         def start(self):
             self.running = True

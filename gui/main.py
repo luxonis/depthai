@@ -9,7 +9,7 @@ import depthai as dai
 # To be used on the @QmlElement decorator
 # (QML_IMPORT_MINOR_VERSION is optional)
 from PySide6.QtQuick import QQuickPaintedItem
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox, QApplication
 
 QML_IMPORT_NAME = "dai.gui"
 QML_IMPORT_MAJOR_VERSION = 1
@@ -44,7 +44,7 @@ class DemoQtGui:
     window = None
 
     def __init__(self):
-        self.app = QGuiApplication()
+        self.app = QApplication()
         self.engine = QQmlApplicationEngine()
         self.setInstance()
         self.engine.load(Path(__file__).parent / "views" / "root.qml")
@@ -59,15 +59,6 @@ class DemoQtGui:
     def setData(self, data):
         name, value = data
         self.window.setProperty(name, value)
-
-    @Slot(str)
-    def showError(self, error):
-        msgBox = QMessageBox()
-        msgBox.setIcon(QMessageBox.Information)
-        msgBox.setText(error)
-        msgBox.setWindowTitle("Error occured")
-        msgBox.setStandardButtons(QMessageBox.Ok)
-        msgBox.show()
 
     @Slot(QImage)
     def updatePreview(self, data):
