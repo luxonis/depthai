@@ -105,8 +105,7 @@ class AIBridge(QObject):
 
     @Slot(str)
     def setOvVersion(self, state):
-        value = getattr(dai.OpenVINO, state)
-        DemoQtGui.instance.guiOnAiSetupUpdate(ov=value)
+        DemoQtGui.instance.guiOnAiSetupUpdate(ov=state.replace("VERSION_", ""))
 
     @Slot(str)
     def setCountLabel(self, state):
@@ -186,11 +185,18 @@ class BaseCamBridge(QObject):
 
     @Slot(str)
     def setResolution(self, state):
-        if self.name == "color":
-            value = getattr(dai.ColorCameraProperties.SensorResolution, state)
-        else:
-            value = getattr(dai.MonoCameraProperties.SensorResolution, state)
-        DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=value)
+        if state == "THE_1080_P":
+            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=1080)
+        elif state == "THE_4_K":
+            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=2160)
+        elif state == "THE_12_MP":
+            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=3040)
+        elif state == "THE_720_P":
+            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=720)
+        elif state == "THE_800_P":
+            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=800)
+        elif state == "THE_400_P":
+            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=400)
 
 
 @QmlElement
