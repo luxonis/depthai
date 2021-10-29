@@ -569,9 +569,9 @@ if __name__ == "__main__":
         def showError(self, error):
             print(error, file=sys.stderr)
             msgBox = QMessageBox()
-            msgBox.setIcon(QMessageBox.Information)
+            msgBox.setIcon(QMessageBox.Critical)
             msgBox.setText(error)
-            msgBox.setWindowTitle("Error occured")
+            msgBox.setWindowTitle("An error occured")
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
 
