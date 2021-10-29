@@ -345,9 +345,10 @@ class NNetManager:
         """
         Closes output queues created by :func:`createQueues`
         """
-        if self.source == "host":
+        if self.source == "host" and self.inputQueue is not None:
             self.inputQueue.close()
-        self.outputQueue.close()
+        if self.outputQueue is not None:
+            self.outputQueue.close()
 
     def sendInputFrame(self, frame, seqNum=None):
         """

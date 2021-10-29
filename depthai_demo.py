@@ -522,7 +522,7 @@ if __name__ == "__main__":
             self.signals.setDataSignal.emit(["restartRequired", False])
 
         def onError(self, ex: Exception):
-            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__)))
+            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [str(ex)]))
 
         def shouldRun(self):
             return self.running

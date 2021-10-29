@@ -69,10 +69,14 @@ class PipelineManager:
             device (depthai.Device): Running device instance
         """
 
-        self._depthConfigInputQueue.close()
-        self._rgbConfigInputQueue.close()
-        self._leftConfigInputQueue.close()
-        self._rightConfigInputQueue.close()
+        if self._depthConfigInputQueue is not None:
+            self._depthConfigInputQueue.close()
+        if self._rgbConfigInputQueue is not None:
+            self._rgbConfigInputQueue.close()
+        if self._leftConfigInputQueue is not None:
+            self._leftConfigInputQueue.close()
+        if self._rightConfigInputQueue is not None:
+            self._rightConfigInputQueue.close()
 
     def __calcEncodeableSize(self, sourceSize):
         w, h = sourceSize
