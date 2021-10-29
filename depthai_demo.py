@@ -202,9 +202,7 @@ class Demo:
             )
 
     def run(self):
-        print("STARTING_PIPELINE")
         self._device.startPipeline(self._pm.pipeline)
-        print("STARTED_PIPELINE")
         self._pm.createDefaultQueues(self._device)
         if self._conf.useNN:
             self._nnManager.createQueues(self._device)
@@ -548,7 +546,6 @@ if __name__ == "__main__":
             versionChoices = list(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()))
             self.signals.setDataSignal.emit(["ovVersions", versionChoices])
             self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
-            self.selectedPreview = confManager.args.show[0]
             self.signals.setDataSignal.emit(["modelChoices", sorted(confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 
@@ -556,6 +553,7 @@ if __name__ == "__main__":
         def __init__(self):
             super().__init__()
             self.running = False
+            self.selectedPreview = "color"
             self.dataInitialized = False
             self.appInitialized = False
             self.threadpool = QThreadPool()
@@ -567,7 +565,7 @@ if __name__ == "__main__":
 
         def start(self):
             self.running = True
-            self.worker = Worker(self._demoInstance)
+            self.worker = Worker(self._demoInstance, selectedPreview=self.selectedPreview)
             self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
             self.worker.signals.setDataSignal.connect(self.setData)
             self.threadpool.start(self.worker)
@@ -594,6 +592,7 @@ if __name__ == "__main__":
             self.start()
 
         def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
+            print("median", median)
             self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
 
         def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
@@ -652,5 +651,6 @@ if __name__ == "__main__":
 
         def guiOnPreviewChangeSelected(self, selected):
             self.worker.selectedPreview = selected
+            self.selectedPreview = selected
 
     App().start()

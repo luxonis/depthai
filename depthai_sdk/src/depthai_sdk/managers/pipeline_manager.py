@@ -12,6 +12,10 @@ class PipelineManager:
 
     def __init__(self, openvinoVersion=None):
         self.openvinoVersion=openvinoVersion
+        #: depthai.Pipeline: Ready to use requested pipeline. Can be passed to :obj:`depthai.Device` to start execution
+        self.pipeline = dai.Pipeline()
+        #: types.SimpleNamespace: Contains all nodes added to the :attr:`pipeline` object, can be used to conveniently access nodes by their name
+        self.nodes = SimpleNamespace()
 
         if openvinoVersion is not None:
             self.pipeline.setOpenVINOVersion(openvinoVersion)
@@ -20,10 +24,6 @@ class PipelineManager:
     openvinoVersion = None
     #: bool: If set to :code:`True`, manager will MJPEG-encode the packets sent from device to host to lower the bandwidth usage. **Can break** if more than 3 encoded outputs requested
     lowBandwidth = False
-    #: depthai.Pipeline: Ready to use requested pipeline. Can be passed to :obj:`depthai.Device` to start execution
-    pipeline = dai.Pipeline()
-    #: types.SimpleNamespace: Contains all nodes added to the :attr:`pipeline` object, can be used to conveniently access nodes by their name
-    nodes = SimpleNamespace()
 
     _depthConfig = dai.StereoDepthConfig()
     _rgbConfig = dai.CameraControl()
@@ -56,10 +56,10 @@ class PipelineManager:
             device (depthai.Device): Running device instance
         """
 
-        self._depthConfigInputQueue = device.getInputQueue("left_control")
+        self._depthConfigInputQueue = device.getInputQueue("stereoConfig")
         self._rgbConfigInputQueue = device.getInputQueue("color_control")
-        self._leftConfigInputQueue = device.getInputQueue("right_control")
-        self._rightConfigInputQueue = device.getInputQueue("stereoConfig")
+        self._leftConfigInputQueue = device.getInputQueue("left_control")
+        self._rightConfigInputQueue = device.getInputQueue("right_control")
 
     def closeDefaultQueues(self):
         """
@@ -377,7 +377,7 @@ class PipelineManager:
             self._depthConfig.setMedianFilter(median)
         if lrcThreshold is not None:
             self._depthConfig.setLeftRightCheckThreshold(lrcThreshold)
-
+        print("SENDING")
         self._depthConfigInputQueue.send(self._depthConfig)
 
     def addNn(self, nn, sync=False, useDepth=False, xoutNnInput=False, xoutSbb=False):
