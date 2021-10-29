@@ -9,6 +9,7 @@ import depthai as dai
 # To be used on the @QmlElement decorator
 # (QML_IMPORT_MINOR_VERSION is optional)
 from PySide6.QtQuick import QQuickPaintedItem
+from PySide6.QtWidgets import QMessageBox
 
 QML_IMPORT_NAME = "dai.gui"
 QML_IMPORT_MAJOR_VERSION = 1
@@ -40,11 +41,16 @@ class ImageWriter(QQuickPaintedItem, metaclass=Singleton):
 class DemoQtGui:
     instance = None
     writer = None
+    window = None
 
     def __init__(self):
         self.app = QGuiApplication()
         self.engine = QQmlApplicationEngine()
         self.setInstance()
+        self.engine.load(Path(__file__).parent / "views" / "root.qml")
+        self.window = self.engine.rootObjects()[0]
+        if not self.engine.rootObjects():
+            raise RuntimeError("Unable to start GUI - no root objects!")
 
     def setInstance(self):
         DemoQtGui.instance = self
@@ -52,16 +58,22 @@ class DemoQtGui:
     @Slot(list)
     def setData(self, data):
         name, value = data
-        self.engine.rootContext().setContextProperty(name, value)
+        self.window.setProperty(name, value)
+
+    @Slot(str)
+    def showError(self, error):
+        msgBox = QMessageBox()
+        msgBox.setIcon(QMessageBox.Information)
+        msgBox.setText(error)
+        msgBox.setWindowTitle("Error occured")
+        msgBox.setStandardButtons(QMessageBox.Ok)
+        msgBox.show()
 
     @Slot(QImage)
     def updatePreview(self, data):
         self.writer.update_frame(data)
 
     def startGui(self):
-        self.engine.load(Path(__file__).parent / "views" / "root.qml")
-        if not self.engine.rootObjects():
-            raise RuntimeError("Unable to start GUI - no root objects!")
         self.writer = ImageWriter()
         return self.app.exec()
 
@@ -101,7 +113,8 @@ class AIBridge(QObject):
 
     @Slot(float)
     def setSbbFactor(self, value):
-        DemoQtGui.instance.guiOnAiSetupUpdate(sbbFactor=value)
+        if DemoQtGui.writer is not None:
+            DemoQtGui.instance.guiOnAiSetupUpdate(sbbFactor=value)
 
     @Slot(str)
     def setOvVersion(self, state):

@@ -53,6 +53,7 @@ import QtQuick.Layouts 1.11
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
+import Qt.labs.platform 1.1
 
 import dai.gui 1.0
 
@@ -62,6 +63,16 @@ ApplicationWindow {
     Material.theme: Material.Dark
     Material.accent: Material.Red
     visible: true
+
+    property var previewChoices
+    property var modelChoices
+    property var modelSourceChoices
+    property var ovVersions
+    property var countLabels
+    property var medianChoices
+    property var colorResolutionChoices
+    property var monoResolutionChoices
+    property var restartRequired
 
     AppBridge {
         id: appBridge
@@ -140,7 +151,7 @@ ApplicationWindow {
         Button {
             x: 667
             y: 540
-            enabled: restartRequired
+            enabled: restartRequired || false
             height: 60
             width: 563
             text: "Apply and Restart"

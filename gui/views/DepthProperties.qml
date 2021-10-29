@@ -32,7 +32,7 @@ ListView {
     }
 
     Slider {
-        id: slider
+        id: dctSlider
         x: 360
         y: 89
         width: 200
@@ -122,7 +122,7 @@ ListView {
     }
 
     Slider {
-        id: slider1
+        id: sigmaSlider
         x: 362
         y: 133
         width: 200
@@ -137,24 +137,13 @@ ListView {
     }
 
     Text {
-        id: text4
-        x: 340
-        y: 89
-        width: 14
-        height: 25
-        color: "#ffffff"
-        text: qsTr("0")
-        font.pixelSize: 12
-    }
-
-    Text {
         id: text5
         x: 566
-        y: 89
+        y: 95
         width: 17
         height: 25
         color: "#ffffff"
-        text: qsTr("255")
+        text: dctSlider.value
         font.pixelSize: 12
     }
 
@@ -174,24 +163,13 @@ ListView {
     }
 
     Text {
-        id: text7
-        x: 337
-        y: 133
-        width: 17
-        height: 25
-        color: "#ffffff"
-        text: qsTr("0")
-        font.pixelSize: 12
-    }
-
-    Text {
         id: text8
         x: 566
         y: 136
         width: 17
         height: 20
         color: "#ffffff"
-        text: qsTr("255")
+        text: sigmaSlider.value
         font.pixelSize: 12
         rotation: 0
     }
@@ -212,13 +190,13 @@ ListView {
     }
 
     RangeSlider {
-        id: rangeSlider
+        id: depthRangeSlider
         x: 364
         y: 181
         width: 198
         height: 27
         snapMode: RangeSlider.NoSnap
-        stepSize: 1
+        stepSize: 100
         to: 10000
         focusPolicy: Qt.StrongFocus
         second.value: 10000
@@ -252,7 +230,7 @@ ListView {
         width: 17
         height: 20
         color: "#ffffff"
-        text: qsTr("10m")
+        text: (depthRangeSlider.second.value / 1000).toFixed(1) + "m"
         font.pixelSize: 12
         rotation: 0
     }
@@ -264,7 +242,7 @@ ListView {
         width: 17
         height: 20
         color: "#ffffff"
-        text: qsTr("0m")
+        text: (depthRangeSlider.first.value / 1000).toFixed(1) + "m"
         font.pixelSize: 12
         rotation: 0
     }
@@ -306,7 +284,7 @@ ListView {
         width: 17
         height: 20
         color: "#ffffff"
-        text: qsTr("10")
+        text: lrcSlider.value
         font.pixelSize: 12
         rotation: 0
     }
@@ -318,7 +296,6 @@ ListView {
         width: 17
         height: 20
         color: "#ffffff"
-        text: qsTr("0")
         font.pixelSize: 12
         rotation: 0
     }

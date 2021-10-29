@@ -100,25 +100,11 @@ ListView {
                 font.weight: Font.Bold
             }
 
-            Text {
-                id: text35
-                x: 196
-                y: 101
-                width: 18
-                height: 20
-                color: "#ffffff"
-                text: qsTr("0")
-                font.pixelSize: 12
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                rotation: 0
-            }
-
             Slider {
                 id: lrcSlider
                 x: 221
                 y: 95
-                width: 281
+                width: 261
                 height: 33
                 value: 6
                 stepSize: 1
@@ -131,12 +117,12 @@ ListView {
 
             Text {
                 id: text37
-                x: 508
+                x: 482
                 y: 101
                 width: 18
                 height: 20
                 color: "#ffffff"
-                text: qsTr("16")
+                text: lrcSlider.value
                 font.pixelSize: 12
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
@@ -293,47 +279,33 @@ ListView {
                 font.weight: Font.Bold
             }
 
-            Text {
-                id: text38
-                x: 418
-                y: 389
-                width: 18
-                height: 20
-                color: "#ffffff"
-                text: qsTr("0")
-                font.pixelSize: 12
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                rotation: 0
-            }
-
-            Text {
-                id: text39
-                x: 547
-                y: 389
-                width: 18
-                height: 20
-                color: "#ffffff"
-                text: qsTr("1")
-                font.pixelSize: 12
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                rotation: 0
-            }
-
             Slider {
-                id: lrcSlider1
-                x: 443
+                id: sbbFactorSlider
+                x: 423
                 y: 383
                 width: 96
                 height: 33
                 value: 6
-                stepSize: 1
+                stepSize: 0.1
                 onValueChanged: {
                     aiBridge.setSbbFactor(value)
                 }
-                to: 16
-                from: 0
+                to: 1
+                from: 0.1
+            }
+
+            Text {
+                id: text39
+                x: 527
+                y: 389
+                width: 18
+                height: 20
+                color: "#ffffff"
+                text: sbbFactorSlider.value.toFixed(1)
+                font.pixelSize: 12
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                rotation: 0
             }
         }
 

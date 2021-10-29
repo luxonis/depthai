@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 import os
-import queue
-import threading
 import time
-from contextlib import ExitStack
 from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
@@ -102,15 +99,13 @@ class Demo:
         if shouldRun is not None:
             self.shouldRun = shouldRun
 
-
     def setup(self):
         print("Setting up demo...")
-        self._stack = ExitStack()
         self._deviceInfo = getDeviceInfo(self._conf.args.deviceId)
         if self._conf.args.reportFile:
             reportFileP = Path(self._conf.args.reportFile).with_suffix('.csv')
             reportFileP.parent.mkdir(parents=True, exist_ok=True)
-            self._reportFile = self._stack.enter_context(reportFileP.open('a'))
+            self._reportFile = reportFileP.open('a')
         self._pm = PipelineManager(self._openvinoVersion)
 
         if self._conf.args.xlinkChunkSize is not None:
@@ -130,9 +125,7 @@ class Demo:
             self._nnManager.countLabel(self._conf.getCountLabel(self._nnManager))
             self._pm.setNnManager(self._nnManager)
 
-        self._device = self._stack.enter_context(
-            dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
-        )
+        self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
         if self._deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
             print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
         self._conf.adjustParamsToDevice(self._device)
@@ -258,7 +251,7 @@ class Demo:
     def stop(self):
         print("Stopping demo...")
         self._device.close()
-        self._stack.close()
+        del self._device
         self._pm.closeDefaultQueues()
         if self._conf.useCamera:
             self._pv.closeQueues()
@@ -499,6 +492,7 @@ if __name__ == "__main__":
         updatePreviewSignal = Signal(QImage)
         setDataSignal = Signal(list)
         exitSignal = Signal()
+        errorSignal = Signal(str)
 
     class Worker(QRunnable):
         def __init__(self, instance, selectedPreview=None):
@@ -514,13 +508,18 @@ if __name__ == "__main__":
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup)
-            self.instance.run_all()
+            try:
+                self.instance.run_all()
+            except Exception as ex:
+                self.onError(ex)
 
         @Slot()
         def terminate(self):
             self.running = False
             self.signals.setDataSignal.emit(["restartRequired", False])
 
+        def onError(self, ex: Exception):
+            pass
 
         def shouldRun(self):
             return self.running
@@ -568,6 +567,7 @@ if __name__ == "__main__":
             self.worker = Worker(self._demoInstance, selectedPreview=self.selectedPreview)
             self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
             self.worker.signals.setDataSignal.connect(self.setData)
+            self.worker.signals.errorSignal.connect(self.showError)
             self.threadpool.start(self.worker)
             if not self.appInitialized:
                 self.appInitialized = True
@@ -576,15 +576,18 @@ if __name__ == "__main__":
                 raise SystemExit(exit_code)
 
         def stop(self):
-            current_mxid = self._demoInstance._device.getMxId()
+            current_mxid = None
+            if hasattr(self._demoInstance, "_device"):
+                current_mxid = self._demoInstance._device.getMxId()
             self.worker.signals.exitSignal.emit()
             self.threadpool.waitForDone(100)
-            start = time.time()
-            while time.time() - start < 10:
-                if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
-                    break
-            else:
-                raise RuntimeError("Device not available again after 10 seconds!")
+            if current_mxid is not None:
+                start = time.time()
+                while time.time() - start < 10:
+                    if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
+                        break
+                else:
+                    raise RuntimeError("Device not available again after 10 seconds!")
 
 
         def restartDemo(self):
