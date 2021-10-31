@@ -8,6 +8,7 @@ from pathlib import Path
 
 import cv2
 import depthai as dai
+print('DepthAI version:', dai.__version__)
 import numpy as np
 
 import depthai_helpers.calibration_utils as calibUtils
@@ -173,8 +174,8 @@ class Main:
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
-        cam_left = pipeline.createMonoCamera()
-        cam_right = pipeline.createMonoCamera()
+        cam_left = pipeline.createColorCamera()
+        cam_right = pipeline.createColorCamera()
 
         xout_left = pipeline.createXLinkOut()
         xout_right = pipeline.createXLinkOut()
@@ -186,19 +187,24 @@ class Main:
             cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
             cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
                 
-        cam_left.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+        #res = dai.ColorCameraProperties.SensorResolution.THE_800_P  # For OV9782 on L/R
+        res = dai.ColorCameraProperties.SensorResolution.THE_1080_P # For AR0234/etc
+
+        cam_left.setResolution(res)
+        if res == dai.ColorCameraProperties.SensorResolution.THE_1080_P:
+            cam_left.setIspScale(2, 3)
         cam_left.setFps(self.args.fps)
 
-        cam_right.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+        cam_right.setResolution(res)
+        if res == dai.ColorCameraProperties.SensorResolution.THE_1080_P:
+            cam_right.setIspScale(2, 3)
         cam_right.setFps(self.args.fps)
 
         xout_left.setStreamName("left")
-        cam_left.out.link(xout_left.input)
+        cam_left.isp.link(xout_left.input)
 
         xout_right.setStreamName("right")
-        cam_right.out.link(xout_right.input)
+        cam_right.isp.link(xout_right.input)
 
         if not self.args.disableRgb:
             rgb_cam = pipeline.createColorCamera()
@@ -355,7 +361,7 @@ class Main:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 # print(frame.shape)
                 if self.polygons is None:
-                    self.height, self.width = frame.shape
+                    self.height, self.width, tmp_channels = frame.shape
                     print(self.height, self.width)
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
