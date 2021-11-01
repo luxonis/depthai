@@ -157,6 +157,7 @@ class PipelineManager:
             else:
                 self.nodes.camRgb.video.link(self.nodes.xoutRgb.input)
         self.nodes.xinRgbControl = self.pipeline.createXLinkIn()
+        self.nodes.xinRgbControl.setMaxDataSize(1)
         self.nodes.xinRgbControl.setStreamName(Previews.color.name + "_control")
         self.nodes.xinRgbControl.out.link(self.nodes.camRgb.inputControl)
 
@@ -186,6 +187,7 @@ class PipelineManager:
             else:
                 self.nodes.monoLeft.out.link(self.nodes.xoutLeft.input)
         self.nodes.xinLeftControl = self.pipeline.createXLinkIn()
+        self.nodes.xinLeftControl.setMaxDataSize(1)
         self.nodes.xinLeftControl.setStreamName(Previews.left.name + "_control")
         self.nodes.xinLeftControl.out.link(self.nodes.monoLeft.inputControl)
 
@@ -214,6 +216,7 @@ class PipelineManager:
             else:
                 self.nodes.monoRight.out.link(self.nodes.xoutRight.input)
         self.nodes.xinRightControl = self.pipeline.createXLinkIn()
+        self.nodes.xinRightControl.setMaxDataSize(1)
         self.nodes.xinRightControl.setStreamName(Previews.right.name + "_control")
         self.nodes.xinRightControl.out.link(self.nodes.monoRight.inputControl)
 
@@ -264,6 +267,7 @@ class PipelineManager:
         self.nodes.monoRight.out.link(self.nodes.stereo.right)
 
         self.nodes.xinStereoConfig = self.pipeline.createXLinkIn()
+        self.nodes.xinStereoConfig.setMaxDataSize(1)
         self.nodes.xinStereoConfig.setStreamName("stereoConfig")
         self.nodes.xinStereoConfig.out.link(self.nodes.stereo.inputConfig)
 

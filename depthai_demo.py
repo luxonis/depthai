@@ -555,7 +555,7 @@ if __name__ == "__main__":
         def __init__(self):
             super().__init__()
             self.running = False
-            self.selectedPreview = "color"
+            self.selectedPreview = confManager.args.show[0]
             self.dataInitialized = False
             self.appInitialized = False
             self.threadpool = QThreadPool()
