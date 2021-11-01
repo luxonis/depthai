@@ -140,7 +140,8 @@ class Demo:
         if self._conf.useCamera or self._conf.args.sync:
             self._pv = PreviewManager(display=self._conf.args.show, nnSource=self._conf.getModelSource(), colorMap=self._conf.getColorMap(),
                                 dispMultiplier=self._conf.dispMultiplier, mouseTracker=True, lowBandwidth=self._conf.lowBandwidth,
-                                scale=self._conf.args.scale, sync=self._conf.args.sync, fpsHandler=self._fps, createWindows=self._displayFrames)
+                                scale=self._conf.args.scale, sync=self._conf.args.sync, fpsHandler=self._fps, createWindows=self._displayFrames,
+                                depthConfig=self._pm._depthConfig)
 
             if self._conf.leftCameraEnabled:
                 self._pm.createLeftCam(self._monoRes, self._conf.args.monoFps,
@@ -555,7 +556,7 @@ if __name__ == "__main__":
         def __init__(self):
             super().__init__()
             self.running = False
-            self.selectedPreview = confManager.args.show[0]
+            self.selectedPreview = confManager.args.show[0] if len(confManager.args.show) > 0 else "color"
             self.dataInitialized = False
             self.appInitialized = False
             self.threadpool = QThreadPool()

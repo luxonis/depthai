@@ -13,7 +13,7 @@ class PreviewManager:
     #: dict: Contains name -> frame mapping that can be used to modify specific frames directly
     frames = {}
 
-    def __init__(self, display=[], nnSource=None, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False, fpsHandler=None, createWindows=True):
+    def __init__(self, display=[], nnSource=None, colorMap=cv2.COLORMAP_JET, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False, fpsHandler=None, createWindows=True):
         """
         Args:
             display (list, Optional): List of :obj:`depthai_sdk.Previews` objects representing the streams to display
@@ -24,7 +24,8 @@ class PreviewManager:
             colorMap (cv2 color map, Optional): Color map applied on the depth frames
             lowBandwidth (bool, Optional): If set to :code:`True`, will decode the received frames assuming they were encoded with MJPEG encoding
             scale (dict, Optional): Allows to scale down frames before preview. Useful when previewing e.g. 4K frames
-            dispMultiplier (float, Optional): Value used for depth <-> disparity calculations
+            dispMultiplier (float, Optional): Multiplier used for depth <-> disparity calculations (calculated on baseline and focal)
+            depthConfig (depthai.StereoDepthConfig, optional): Configuration used for depth <-> disparity calculations
             createWindows (bool, Optional): If True, will create preview windows using OpenCV (enabled by default)
         """
         self.sync = sync
@@ -33,6 +34,7 @@ class PreviewManager:
         self.lowBandwidth = lowBandwidth
         self.scale = scale
         self.dispMultiplier = dispMultiplier
+        self._depthConfig = depthConfig
         self._fpsHandler = fpsHandler
         self._mouseTracker = MouseClickTracker() if mouseTracker else None
         self._display = display
