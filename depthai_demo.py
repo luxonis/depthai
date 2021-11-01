@@ -607,9 +607,8 @@ if __name__ == "__main__":
             self.stop()
             self.start()
 
-        def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None):
-            print("median", median)
-            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
+        def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrc=None, lrcThreshold=None):
+            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrc=lrc, lrcThreshold=lrcThreshold)
 
         def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
             if name == "color":
@@ -620,7 +619,7 @@ if __name__ == "__main__":
                 fun = self._demoInstance._pm.updateRightCamConfig
             fun(self._demoInstance._device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
 
-        def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, lrc=None, extended=None):
+        def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None):
             if depthFrom is not None:
                 self.updateArg("minDepth", depthFrom)
             if depthTo is not None:
@@ -629,8 +628,6 @@ if __name__ == "__main__":
                 self.updateArg("subpixel", subpixel)
             if extended is not None:
                 self.updateArg("extendedDisparity", extended)
-            if lrc is not None:
-                self.updateArg("stereoLrCheck", lrc)
 
         def guiOnCameraSetupUpdate(self, name, fps=None, resolution=None):
             if fps is not None:

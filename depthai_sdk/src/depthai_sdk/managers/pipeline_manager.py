@@ -249,6 +249,7 @@ class PipelineManager:
         self.nodes.stereo.initialConfig.setLeftRightCheckThreshold(lrcThreshold)
         self._depthConfig.setLeftRightCheckThreshold(lrcThreshold)
 
+        self.nodes.stereo.setRuntimeModeSwitch(True)
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
@@ -361,7 +362,7 @@ class PipelineManager:
         self._updateCamConfig(self._rightConfig, Previews.right.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
         self._rightConfigInputQueue.send(self._rightConfig)
 
-    def updateDepthConfig(self, device, dct=None, sigma=None, median=None, lrcThreshold=None):
+    def updateDepthConfig(self, device, dct=None, sigma=None, median=None, lrc=None, lrcThreshold=None):
         """
         Updates :obj:`depthai.node.StereoDepth` node config
 
@@ -371,6 +372,7 @@ class PipelineManager:
                 are present in the depth map.
             median (depthai.MedianFilter, Optional): Median filter to be applied on the depth, use with :obj:`depthai.MedianFilter.MEDIANOFF` to disable median filtering
             sigma (int, Optional): Sigma value for bilateral filter (0..65535). If set to :code:`0`, the filter will be disabled.
+            lrc (bool, Optional): Enables or disables Left-Right Check mode
             lrcThreshold (int, Optional): Sets the Left-Right Check threshold value (0..10)
         """
         if dct is not None:
@@ -381,7 +383,8 @@ class PipelineManager:
             self._depthConfig.setMedianFilter(median)
         if lrcThreshold is not None:
             self._depthConfig.setLeftRightCheckThreshold(lrcThreshold)
-        print("SENDING")
+        if lrc is not None:
+            self._depthConfig.setLeftRightCheck(lrc)
         self._depthConfigInputQueue.send(self._depthConfig)
 
     def addNn(self, nn, sync=False, useDepth=False, xoutNnInput=False, xoutSbb=False):

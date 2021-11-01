@@ -135,7 +135,7 @@ class DepthBridge(QObject):
 
     @Slot(bool)
     def toggleLeftRightCheck(self, state):
-        DemoQtGui.instance.guiOnDepthSetupUpdate(lrc=state)
+        DemoQtGui.instance.guiOnDepthConfigUpdate(lrc=state)
 
     @Slot(int)
     def setDisparityConfidenceThreshold(self, value):
