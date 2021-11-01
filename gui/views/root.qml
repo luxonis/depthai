@@ -85,11 +85,8 @@ ApplicationWindow {
     ColorCamBridge {
         id: colorCamBridge
     }
-    LeftCamBridge {
-        id: leftCamBridge
-    }
-    RightCamBridge {
-        id: rightCamBridge
+    MonoCamBridge {
+        id: monoCamBridge
     }
     PreviewBridge {
         id: previewBridge

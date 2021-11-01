@@ -167,63 +167,90 @@ class DepthBridge(QObject):
         DemoQtGui.instance.guiOnDepthConfigUpdate(median=value)
 
 
-class BaseCamBridge(QObject):
-    name = "base"
+@QmlElement
+class ColorCamBridge(QObject):
+    name = "color"
 
     @Slot(int, int)
     def setIsoExposure(self, iso, exposure):
         if iso > 0 and exposure > 0:
-            DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, sensitivity=iso, exposure=exposure)
+            DemoQtGui.instance.guiOnCameraConfigUpdate("color", sensitivity=iso, exposure=exposure)
 
     @Slot(int)
     def setContrast(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, contrast=value)
+        DemoQtGui.instance.guiOnCameraConfigUpdate("color", contrast=value)
 
     @Slot(int)
     def setBrightness(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, brightness=value)
+        DemoQtGui.instance.guiOnCameraConfigUpdate("color", brightness=value)
 
     @Slot(int)
     def setSaturation(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, saturation=value)
+        DemoQtGui.instance.guiOnCameraConfigUpdate("color", saturation=value)
 
     @Slot(int)
     def setSharpness(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate(self.name, sharpness=value)
+        DemoQtGui.instance.guiOnCameraConfigUpdate("color", sharpness=value)
 
     @Slot(int)
     def setFps(self, value):
-        DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, fps=value)
+        DemoQtGui.instance.guiOnCameraSetupUpdate("color", fps=value)
 
     @Slot(str)
     def setResolution(self, state):
         if state == "THE_1080_P":
-            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=1080)
+            DemoQtGui.instance.guiOnCameraSetupUpdate("color", resolution=1080)
         elif state == "THE_4_K":
-            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=2160)
+            DemoQtGui.instance.guiOnCameraSetupUpdate("color", resolution=2160)
         elif state == "THE_12_MP":
-            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=3040)
-        elif state == "THE_720_P":
-            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=720)
+            DemoQtGui.instance.guiOnCameraSetupUpdate("color", resolution=3040)
+
+
+@QmlElement
+class MonoCamBridge(QObject):
+
+    @Slot(int, int)
+    def setIsoExposure(self, iso, exposure):
+        if iso > 0 and exposure > 0:
+            DemoQtGui.instance.guiOnCameraConfigUpdate("left", sensitivity=iso, exposure=exposure)
+            DemoQtGui.instance.guiOnCameraConfigUpdate("right", sensitivity=iso, exposure=exposure)
+
+    @Slot(int)
+    def setContrast(self, value):
+        DemoQtGui.instance.guiOnCameraConfigUpdate("left", contrast=value)
+        DemoQtGui.instance.guiOnCameraConfigUpdate("right", contrast=value)
+
+    @Slot(int)
+    def setBrightness(self, value):
+        DemoQtGui.instance.guiOnCameraConfigUpdate("left", brightness=value)
+        DemoQtGui.instance.guiOnCameraConfigUpdate("right", brightness=value)
+
+    @Slot(int)
+    def setSaturation(self, value):
+        DemoQtGui.instance.guiOnCameraConfigUpdate("left", saturation=value)
+        DemoQtGui.instance.guiOnCameraConfigUpdate("right", saturation=value)
+
+    @Slot(int)
+    def setSharpness(self, value):
+        DemoQtGui.instance.guiOnCameraConfigUpdate("left", sharpness=value)
+        DemoQtGui.instance.guiOnCameraConfigUpdate("right", sharpness=value)
+
+    @Slot(int)
+    def setFps(self, value):
+        DemoQtGui.instance.guiOnCameraSetupUpdate("left", fps=value)
+        DemoQtGui.instance.guiOnCameraSetupUpdate("right", fps=value)
+
+    @Slot(str)
+    def setResolution(self, state):
+        if state == "THE_720_P":
+            DemoQtGui.instance.guiOnCameraSetupUpdate("left", resolution=720)
+            DemoQtGui.instance.guiOnCameraSetupUpdate("right", resolution=720)
         elif state == "THE_800_P":
-            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=800)
+            DemoQtGui.instance.guiOnCameraSetupUpdate("left", resolution=800)
+            DemoQtGui.instance.guiOnCameraSetupUpdate("right", resolution=800)
         elif state == "THE_400_P":
-            DemoQtGui.instance.guiOnCameraSetupUpdate(self.name, resolution=400)
-
-
-@QmlElement
-class ColorCamBridge(BaseCamBridge):
-    name = "color"
-
-
-@QmlElement
-class LeftCamBridge(BaseCamBridge):
-    name = "left"
-
-
-@QmlElement
-class RightCamBridge(BaseCamBridge):
-    name = "right"
+            DemoQtGui.instance.guiOnCameraSetupUpdate("left", resolution=400)
+            DemoQtGui.instance.guiOnCameraSetupUpdate("right", resolution=400)
 
 
 if __name__ == "__main__":

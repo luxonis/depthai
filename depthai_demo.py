@@ -406,12 +406,13 @@ class Demo:
                     else:
                         parsedConfig[cameraName] = newConfig
 
-        if self._conf.leftCameraEnabled and Previews.left.name in parsedConfig:
-            self._pm.updateLeftCamConfig(self._device, **parsedConfig[Previews.left.name])
-        if self._conf.rightCameraEnabled and Previews.right.name in parsedConfig:
-            self._pm.updateRightCamConfig(self._device, **parsedConfig[Previews.right.name])
-        if self._conf.rgbCameraEnabled and Previews.color.name in parsedConfig:
-            self._pm.updateColorCamConfig(self._device, **parsedConfig[Previews.color.name])
+        if hasattr(self, "_device"):
+            if self._conf.leftCameraEnabled and Previews.left.name in parsedConfig:
+                self._pm.updateLeftCamConfig(self._device, **parsedConfig[Previews.left.name])
+            if self._conf.rightCameraEnabled and Previews.right.name in parsedConfig:
+                self._pm.updateRightCamConfig(self._device, **parsedConfig[Previews.right.name])
+            if self._conf.rgbCameraEnabled and Previews.color.name in parsedConfig:
+                self._pm.updateColorCamConfig(self._device, **parsedConfig[Previews.color.name])
 
     def _showFramesCallback(self, frame, name):
         self._fps.drawFps(frame, name)
@@ -550,6 +551,7 @@ if __name__ == "__main__":
 
         def onError(self, ex: Exception):
             self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [str(ex)]))
+            self.signals.setDataSignal.emit(["restartRequired", True])
 
         def shouldRun(self):
             return self.running
@@ -658,32 +660,32 @@ if __name__ == "__main__":
                 self.updateArg("lrcThreshold", lrcThreshold, False)
 
         def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
-            if name == "color":
-                fun = self._demoInstance._pm.updateColorCamConfig
-            elif name == "left":
-                fun = self._demoInstance._pm.updateLeftCamConfig
-            else:
-                fun = self._demoInstance._pm.updateRightCamConfig
-            fun(self._demoInstance._device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
-
             if exposure is not None:
                 newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraExposure or []))) + [(name, exposure)]
+                self._demoInstance._cameraConfig["exposure"] = newValue
                 self.updateArg("cameraExposure", newValue, False)
             if sensitivity is not None:
                 newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraSensitivity or []))) + [(name, sensitivity)]
+                self._demoInstance._cameraConfig["sensitivity"] = newValue
                 self.updateArg("cameraSensitivity", newValue, False)
             if saturation is not None:
                 newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraSaturation or []))) + [(name, saturation)]
+                self._demoInstance._cameraConfig["saturation"] = newValue
                 self.updateArg("cameraSaturation", newValue, False)
             if contrast is not None:
                 newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraContrast or []))) + [(name, contrast)]
+                self._demoInstance._cameraConfig["contrast"] = newValue
                 self.updateArg("cameraContrast", newValue, False)
             if brightness is not None:
                 newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraBrightness or []))) + [(name, brightness)]
+                self._demoInstance._cameraConfig["brightness"] = newValue
                 self.updateArg("cameraBrightness", newValue, False)
             if sharpness is not None:
                 newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraSharpness or []))) + [(name, sharpness)]
+                self._demoInstance._cameraConfig["sharpness"] = newValue
                 self.updateArg("cameraSharpness", newValue, False)
+
+            self._demoInstance._updateCameraConfigs()
 
         def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None):
             if depthFrom is not None:

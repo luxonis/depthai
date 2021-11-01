@@ -106,7 +106,7 @@ ListView {
 
             Rectangle {
                 id: colorCamRectAdvanced
-                x: 0
+                x: 30
                 y: 180
 
                 states: State {
@@ -306,7 +306,7 @@ ListView {
                 height: 33
                 model: monoResolutionChoices
                 onActivated: function(index) {
-                    leftCamBridge.setResolution(model[index])
+                    monoCamBridge.setResolution(model[index])
                 }
             }
 
@@ -335,7 +335,7 @@ ListView {
                 placeholderText: "FPS"
                 font.family: "Courier"
                 onEditingFinished: {
-                    leftCamBridge.setFps(text)
+                    monoCamBridge.setFps(text)
                 }
                 validator: IntValidator {}
             }
@@ -356,16 +356,16 @@ ListView {
         }
 
         Rectangle {
-            id: leftCamRect
+            id: monoCamRect
 
             Text {
                 id: text13
-                x: 203
+                x: 330
                 y: 44
                 width: 181
                 height: 30
                 color: "#ffffff"
-                text: qsTr("Left")
+                text: qsTr("Left + Right")
                 font.pixelSize: 26
                 horizontalAlignment: Text.AlignHCenter
                 font.styleName: "Regular"
@@ -373,13 +373,13 @@ ListView {
             }
 
             Rectangle {
-                id: leftCamRectAdvanced
-                x: 0
+                id: monoCamRectAdvanced
+                x: 110
                 y: 180
 
                 states: State {
                     name: "hidden"; when: !advancedSwitch.checked
-                    PropertyChanges { target: leftCamRectAdvanced; opacity: 0 }
+                    PropertyChanges { target: monoCamRectAdvanced; opacity: 0 }
                 }
 
                 Text {
@@ -409,7 +409,7 @@ ListView {
                     font.family: "Courier"
                     validator: IntValidator {}
                     onEditingFinished: {
-                        leftCamBridge.setIsoExposure(text, textField5.text)
+                        monoCamBridge.setIsoExposure(text, textField5.text)
                     }
                 }
 
@@ -425,7 +425,7 @@ ListView {
                     placeholderText: qsTr("Exposure")
                     validator: IntValidator {}
                     onEditingFinished: {
-                        leftCamBridge.setIsoExposure(textField4.text, text)
+                        monoCamBridge.setIsoExposure(textField4.text, text)
                     }
                 }
 
@@ -454,7 +454,7 @@ ListView {
                     from: -10
                     value: 0
                     onValueChanged: {
-                        leftCamBridge.setSaturation(value)
+                        monoCamBridge.setSaturation(value)
                     }
                 }
 
@@ -483,7 +483,7 @@ ListView {
                     from: -10
                     value: 0
                     onValueChanged: {
-                        leftCamBridge.setContrast(value)
+                        monoCamBridge.setContrast(value)
                     }
                 }
 
@@ -512,7 +512,7 @@ ListView {
                     from: -10
                     value: 0
                     onValueChanged: {
-                        leftCamBridge.setBrightness(value)
+                        monoCamBridge.setBrightness(value)
                     }
                 }
 
@@ -541,220 +541,13 @@ ListView {
                     from: 0
                     value: 0
                     onValueChanged: {
-                        leftCamBridge.setSharpness(value)
+                        monoCamBridge.setSharpness(value)
                     }
                 }
 
                 Text {
                     id: text31
                     x: 197
-                    y: 235
-                    width: 90
-                    height: 25
-                    color: "#ffffff"
-                    text: qsTr("Sharpness")
-                    font.pixelSize: 12
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.family: "Courier"
-                }
-            }
-        }
-
-        Rectangle {
-            id: rightCamRect
-
-            Text {
-                id: text12
-                x: 385
-                y: 44
-                width: 197
-                height: 30
-                color: "#ffffff"
-                text: qsTr("Right")
-                font.pixelSize: 26
-                horizontalAlignment: Text.AlignHCenter
-                font.styleName: "Regular"
-                font.family: "Courier"
-            }
-
-            Rectangle {
-                id: rightCamRectAdvanced
-                x: 0
-                y: 180
-
-                states: State {
-                    name: "hidden"; when: !advancedSwitch.checked
-                    PropertyChanges { target: rightCamRectAdvanced; opacity: 0 }
-                }
-
-                Text {
-                    id: text20
-                    x: 393
-                    y: 80
-                    width: 90
-                    height: 25
-                    color: "#ffffff"
-                    text: qsTr("ISO")
-                    font.pixelSize: 12
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.family: "Courier"
-                }
-
-                TextField {
-                    id: textField2
-                    x: 484
-                    y: 80
-                    width: 106
-                    height: 25
-                    color: "#ddffffff"
-                    text: ""
-                    bottomPadding: 5
-                    validator: IntValidator {}
-                    placeholderText: "ISO"
-                    font.family: "Courier"
-                    onEditingFinished: {
-                        rightCamBridge.setIsoExposure(text, textField3.text)
-                    }
-                }
-
-                TextField {
-                    id: textField3
-                    x: 484
-                    y: 111
-                    width: 106
-                    height: 25
-                    color: "#ddffffff"
-                    text: ""
-                    bottomPadding: 5
-                    font.family: "Courier"
-                    placeholderText: qsTr("Exposure")
-                    validator: IntValidator {}
-                    onEditingFinished: {
-                        rightCamBridge.setIsoExposure(textField2.text, text)
-                    }
-                }
-
-                Text {
-                    id: text21
-                    x: 393
-                    y: 111
-                    width: 90
-                    height: 25
-                    color: "#ffffff"
-                    text: qsTr("Exposure")
-                    font.pixelSize: 12
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.family: "Courier"
-                }
-
-                Slider {
-                    id: slider6
-                    x: 484
-                    y: 142
-                    width: 106
-                    height: 25
-                    stepSize: 1
-                    to: 10
-                    from: -10
-                    value: 0
-                    onValueChanged: {
-                        rightCamBridge.setSaturation(value)
-                    }
-                }
-
-                Text {
-                    id: text22
-                    x: 393
-                    y: 142
-                    width: 90
-                    height: 25
-                    color: "#ffffff"
-                    text: qsTr("Saturation")
-                    font.pixelSize: 12
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.family: "Courier"
-                }
-
-                Slider {
-                    id: slider7
-                    x: 484
-                    y: 173
-                    width: 106
-                    height: 25
-                    stepSize: 1
-                    to: 10
-                    from: -10
-                    value: 0
-                    onValueChanged: {
-                        rightCamBridge.setContrast(value)
-                    }
-                }
-
-                Text {
-                    id: text23
-                    x: 393
-                    y: 173
-                    width: 90
-                    height: 25
-                    color: "#ffffff"
-                    text: qsTr("Contrast")
-                    font.pixelSize: 12
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.family: "Courier"
-                }
-
-                Slider {
-                    id: slider8
-                    x: 484
-                    y: 204
-                    width: 106
-                    height: 25
-                    stepSize: 1
-                    to: 10
-                    from: -10
-                    value: 0
-                    onValueChanged: {
-                        rightCamBridge.setBrightness(value)
-                    }
-                }
-
-                Text {
-                    id: text24
-                    x: 393
-                    y: 204
-                    width: 90
-                    height: 25
-                    color: "#ffffff"
-                    text: qsTr("Brightness")
-                    font.pixelSize: 12
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    font.family: "Courier"
-                }
-
-                Slider {
-                    id: slider9
-                    x: 484
-                    y: 235
-                    width: 106
-                    height: 25
-                    stepSize: 1
-                    to: 4
-                    from: 0
-                    value: 0
-                    onValueChanged: {
-                        rightCamBridge.setSharpness(value)
-                    }
-                }
-
-                Text {
-                    id: text25
-                    x: 393
                     y: 235
                     width: 90
                     height: 25
