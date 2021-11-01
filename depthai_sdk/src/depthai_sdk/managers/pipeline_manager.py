@@ -244,13 +244,11 @@ class PipelineManager:
         self.nodes.stereo = self.pipeline.createStereoDepth()
 
         self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
-        self._depthConfig.setConfidenceThreshold(dct)
         self.nodes.stereo.initialConfig.setMedianFilter(median)
-        self._depthConfig.setMedianFilter(median)
         self.nodes.stereo.initialConfig.setBilateralFilterSigma(sigma)
-        self._depthConfig.setBilateralFilterSigma(sigma)
         self.nodes.stereo.initialConfig.setLeftRightCheckThreshold(lrcThreshold)
-        self._depthConfig.setLeftRightCheckThreshold(lrcThreshold)
+
+        self._depthConfig = self.nodes.stereo.initialConfig.get()
 
         self.nodes.stereo.setRuntimeModeSwitch(True)
         self.nodes.stereo.setLeftRightCheck(lr)
@@ -380,15 +378,15 @@ class PipelineManager:
             lrcThreshold (int, Optional): Sets the Left-Right Check threshold value (0..10)
         """
         if dct is not None:
-            self._depthConfig.setConfidenceThreshold(dct)
+            self._depthConfig.costMatching.confidenceThreshold = dct
         if sigma is not None:
-            self._depthConfig.setBilateralFilterSigma(sigma)
+            self._depthConfig.postProcessing.bilateralSigmaValue = sigma
         if median is not None:
-            self._depthConfig.setMedianFilter(median)
+            self._depthConfig.postProcessing.median = median
         if lrcThreshold is not None:
-            self._depthConfig.setLeftRightCheckThreshold(lrcThreshold)
+            self._depthConfig.algorithmControl.leftRightCheckThreshold = lrcThreshold
         if lrc is not None:
-            self._depthConfig.setLeftRightCheck(lrc)
+            self._depthConfig.algorithmControl.enableLeftRightCheck = lrc
         self._depthConfigInputQueue.send(self._depthConfig)
 
     def addNn(self, nn, sync=False, useDepth=False, xoutNnInput=False, xoutSbb=False):

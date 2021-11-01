@@ -209,7 +209,7 @@ class Demo:
         self._medianFilters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
         for medFilter in self._medianFilters:
             # move the cycle to the current median filter
-            if medFilter == self._pm._depthConfig.getMedianFilter():
+            if medFilter == self._pm._depthConfig.postProcessing.median:
                 break
 
         if self._conf.useCamera:
@@ -390,18 +390,34 @@ class Demo:
                          lambda value: self._pm.updateDepthConfig(self._device, lrcThreshold=value))
 
     def _updateCameraConfigs(self):
-        if self._conf.leftCameraEnabled:
-            self._pm.updateLeftCamConfig(self._device, **self._cameraConfig)
-        if self._conf.rightCameraEnabled:
-            self._pm.updateRightCamConfig(self._device, **self._cameraConfig)
-        if self._conf.rgbCameraEnabled:
-            self._pm.updateColorCamConfig(self._device, **self._cameraConfig)
+        parsedConfig = {}
+        print(self._cameraConfig)
+        for configOption, values in self._cameraConfig.items():
+            if values is not None:
+                for cameraName, value in values:
+                    newConfig = {
+                        **parsedConfig.get(cameraName, {}),
+                        configOption: value
+                    }
+                    if cameraName == "all":
+                        parsedConfig[Previews.left.name] = newConfig
+                        parsedConfig[Previews.right.name] = newConfig
+                        parsedConfig[Previews.color.name] = newConfig
+                    else:
+                        parsedConfig[cameraName] = newConfig
+
+        if self._conf.leftCameraEnabled and Previews.left.name in parsedConfig:
+            self._pm.updateLeftCamConfig(self._device, **parsedConfig[Previews.left.name])
+        if self._conf.rightCameraEnabled and Previews.right.name in parsedConfig:
+            self._pm.updateRightCamConfig(self._device, **parsedConfig[Previews.right.name])
+        if self._conf.rgbCameraEnabled and Previews.color.name in parsedConfig:
+            self._pm.updateColorCamConfig(self._device, **parsedConfig[Previews.color.name])
 
     def _showFramesCallback(self, frame, name):
         self._fps.drawFps(frame, name)
         h, w = frame.shape[:2]
         if name in [Previews.disparityColor.name, Previews.disparity.name, Previews.depth.name, Previews.depthRaw.name]:
-            text = "Median filter: {} [M]".format(self._pm._depthConfig.getMedianFilter().name.lstrip("KERNEL_").lstrip("MEDIAN_"))
+            text = "Median filter: {} [M]".format(self._pm._depthConfig.postProcessing.median.name.lstrip("KERNEL_").lstrip("MEDIAN_"))
             cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 0, 4)
             cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 255, 1)
         elif self._conf.args.cameraControlls and name in [Previews.color.name, Previews.left.name, Previews.right.name]:
@@ -574,9 +590,10 @@ if __name__ == "__main__":
             self.threadpool = QThreadPool()
             self._demoInstance = Demo(confManager, displayFrames=False)
 
-        def updateArg(self, arg_name, arg_value):
+        def updateArg(self, arg_name, arg_value, shouldUpdate=True):
             setattr(confManager.args, arg_name, arg_value)
-            self.worker.signals.setDataSignal.emit(["restartRequired", True])
+            if shouldUpdate:
+                self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
         @Slot(str)
         def showError(self, error):
@@ -622,6 +639,23 @@ if __name__ == "__main__":
 
         def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrc=None, lrcThreshold=None):
             self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrc=lrc, lrcThreshold=lrcThreshold)
+            if median is not None:
+                if median == dai.MedianFilter.MEDIAN_OFF:
+                    self.updateArg("stereoMedianSize", 0, False)
+                elif median == dai.MedianFilter.KERNEL_3x3:
+                    self.updateArg("stereoMedianSize", 3, False)
+                elif median == dai.MedianFilter.KERNEL_5x5:
+                    self.updateArg("stereoMedianSize", 5, False)
+                elif median == dai.MedianFilter.KERNEL_7x7:
+                    self.updateArg("stereoMedianSize", 7, False)
+            if dct is not None:
+                self.updateArg("disparityConfidenceThreshold", dct, False)
+            if sigma is not None:
+                self.updateArg("sigma", sigma, False)
+            if lrc is not None:
+                self.updateArg("stereoLrCheck", lrc, False)
+            if lrcThreshold is not None:
+                self.updateArg("lrcThreshold", lrcThreshold, False)
 
         def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
             if name == "color":
@@ -631,6 +665,25 @@ if __name__ == "__main__":
             else:
                 fun = self._demoInstance._pm.updateRightCamConfig
             fun(self._demoInstance._device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+
+            if exposure is not None:
+                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraExposure or []))) + [(name, exposure)]
+                self.updateArg("cameraExposure", newValue, False)
+            if sensitivity is not None:
+                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraSensitivity or []))) + [(name, sensitivity)]
+                self.updateArg("cameraSensitivity", newValue, False)
+            if saturation is not None:
+                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraSaturation or []))) + [(name, saturation)]
+                self.updateArg("cameraSaturation", newValue, False)
+            if contrast is not None:
+                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraContrast or []))) + [(name, contrast)]
+                self.updateArg("cameraContrast", newValue, False)
+            if brightness is not None:
+                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraBrightness or []))) + [(name, brightness)]
+                self.updateArg("cameraBrightness", newValue, False)
+            if sharpness is not None:
+                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraSharpness or []))) + [(name, sharpness)]
+                self.updateArg("cameraSharpness", newValue, False)
 
         def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None):
             if depthFrom is not None:
@@ -686,5 +739,7 @@ if __name__ == "__main__":
             if hasattr(self._demoInstance, "_deviceInfo"):
                 devices.append(self._demoInstance._deviceInfo.getMxId())
             self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
+            if len(devices) > 0:
+                self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
     App().start()

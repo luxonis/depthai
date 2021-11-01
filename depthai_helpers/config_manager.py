@@ -113,8 +113,6 @@ class ConfigManager:
             return dai.MonoCameraProperties.SensorResolution.THE_400_P
 
     def getMedianFilter(self):
-        if self.args.subpixel:
-            return dai.MedianFilter.MEDIAN_OFF
         if self.args.stereoMedianSize == 3:
             return dai.MedianFilter.KERNEL_3x3
         elif self.args.stereoMedianSize == 5:
