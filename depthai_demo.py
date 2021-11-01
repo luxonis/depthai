@@ -512,6 +512,16 @@ if __name__ == "__main__":
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup)
+            if confManager.args.deviceId is None:
+                devices = dai.Device.getAllAvailableDevices()
+                if len(devices) > 0:
+                    defaultDevice = next(map(
+                        lambda info: info.getMxId(),
+                        filter(lambda info: info.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC, devices)
+                    ), None)
+                    if defaultDevice is None:
+                        defaultDevice = devices[0].getMxId()
+                    confManager.args.deviceId = defaultDevice
             try:
                 self.instance.run_all()
             except Exception as ex:
@@ -548,6 +558,8 @@ if __name__ == "__main__":
             self.signals.setDataSignal.emit(["modelSourceChoices", [Previews.color.name, Previews.left.name, Previews.right.name]])
             versionChoices = list(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()))
             self.signals.setDataSignal.emit(["ovVersions", versionChoices])
+            devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+            self.signals.setDataSignal.emit(["deviceChoices", devices])
             self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
             self.signals.setDataSignal.emit(["modelChoices", sorted(confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
@@ -662,9 +674,17 @@ if __name__ == "__main__":
             if countLabel is not None:
                 self.updateArg("countLabel", countLabel)
 
-
         def guiOnPreviewChangeSelected(self, selected):
             self.worker.selectedPreview = selected
             self.selectedPreview = selected
+
+        def guiOnSelectDevice(self, selected):
+            self.updateArg("deviceId", selected)
+
+        def guiOnReloadDevices(self):
+            devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+            if hasattr(self._demoInstance, "_deviceInfo"):
+                devices.append(self._demoInstance._deviceInfo.getMxId())
+            self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
 
     App().start()

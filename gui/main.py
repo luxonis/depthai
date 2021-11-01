@@ -75,6 +75,14 @@ class AppBridge(QObject):
     def applyAndRestart(self):
         DemoQtGui.instance.restartDemo()
 
+    @Slot()
+    def reloadDevices(self):
+        DemoQtGui.instance.guiOnReloadDevices()
+
+    @Slot(str)
+    def selectDevice(self, value):
+        DemoQtGui.instance.guiOnSelectDevice(value)
+
 
 @QmlElement
 class AIBridge(QObject):

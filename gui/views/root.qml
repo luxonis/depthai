@@ -73,6 +73,7 @@ ApplicationWindow {
     property var colorResolutionChoices
     property var monoResolutionChoices
     property var restartRequired
+    property var deviceChoices
 
     AppBridge {
         id: appBridge

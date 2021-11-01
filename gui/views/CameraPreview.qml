@@ -17,14 +17,35 @@ ListView {
 
         ComboBox {
             id: comboBoxImage
-            x: 210
+            x: 100
             y: 5
-            width: 200
+            width: 150
             height: 30
             model: previewChoices
             onActivated: function(index) {
                 previewBridge.changeSelected(model[index])
             }
+        }
+
+        ComboBox {
+            id: comboBoxDevices
+            x: 260
+            y: 5
+            width: 200
+            height: 30
+            model: deviceChoices
+            onActivated: function(index) {
+                appBridge.selectDevice(model[index])
+            }
+        }
+
+        Button {
+            x: 470
+            y: 5
+            height: 30
+            width: 100
+            text: "Reload"
+            onClicked: appBridge.reloadDevices()
         }
 
         ImageWriter {
