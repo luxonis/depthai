@@ -83,6 +83,38 @@ class AppBridge(QObject):
     def selectDevice(self, value):
         DemoQtGui.instance.guiOnSelectDevice(value)
 
+    @Slot(bool, bool, bool)
+    def selectReportingOptions(self, temp, cpu, memory):
+        DemoQtGui.instance.guiOnSelectReportingOptions(temp, cpu, memory)
+
+    @Slot(str)
+    def selectReportingPath(self, value):
+        DemoQtGui.instance.guiOnSelectReportingPath(value)
+
+    @Slot(str)
+    def selectEncodingPath(self, value):
+        DemoQtGui.instance.guiOnSelectEncodingPath(value)
+
+    @Slot(bool, int)
+    def toggleColorEncoding(self, enabled, fps):
+        DemoQtGui.instance.guiOnToggleColorEncoding(enabled, fps)
+
+    @Slot(bool, int)
+    def toggleLeftEncoding(self, enabled, fps):
+        DemoQtGui.instance.guiOnToggleLeftEncoding(enabled, fps)
+
+    @Slot(bool, int)
+    def toggleRightEncoding(self, enabled, fps):
+        DemoQtGui.instance.guiOnToggleRightEncoding(enabled, fps)
+
+    @Slot(bool)
+    def toggleDepth(self, enabled):
+        DemoQtGui.instance.guiOnToggleDepth(enabled)
+
+    @Slot(bool)
+    def toggleNN(self, enabled):
+        DemoQtGui.instance.guiOnToggleNN(enabled)
+
 
 @QmlElement
 class AIBridge(QObject):

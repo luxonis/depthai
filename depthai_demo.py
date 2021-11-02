@@ -113,6 +113,7 @@ class Demo:
         if self._conf.args.xlinkChunkSize is not None:
             self._pm.setXlinkChunkSize(self._conf.args.xlinkChunkSize)
 
+        self._nnManager = None
         if self._conf.useNN:
             self._blobManager = BlobManager(
                 zooDir=DEPTHAI_ZOO,
@@ -175,7 +176,7 @@ class Demo:
                 )
 
             self._encManager = None
-            if len(self._conf.args.encode) > 1:
+            if len(self._conf.args.encode) > 0:
                 self._encManager = EncodingManager(self._conf.args.encode, self._conf.args.encodeOutput)
                 self._encManager.createEncoders(self._pm)
 
@@ -206,11 +207,14 @@ class Demo:
         self._sbbOut = self._device.getOutputQueue("sbb", maxSize=1, blocking=False) if self._conf.useNN and self._conf.args.spatialBoundingBox else None
         self._logOut = self._device.getOutputQueue("systemLogger", maxSize=30, blocking=False) if len(self._conf.args.report) > 0 else None
 
-        self._medianFilters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
-        for medFilter in self._medianFilters:
-            # move the cycle to the current median filter
-            if medFilter == self._pm._depthConfig.postProcessing.median:
-                break
+        if self._conf.useDepth:
+            self._medianFilters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
+            for medFilter in self._medianFilters:
+                # move the cycle to the current median filter
+                if medFilter == self._pm._depthConfig.postProcessing.median:
+                    break
+        else:
+            self._medianFilters = []
 
         if self._conf.useCamera:
             cameras = self._device.getConnectedCameras()
@@ -260,7 +264,7 @@ class Demo:
             self._pv.closeQueues()
             if self._encManager is not None:
                 self._encManager.close()
-        if self._conf.useNN:
+        if self._nnManager is not None:
             self._nnManager.closeQueues()
         if self._sbbOut is not None:
             self._sbbOut.close()
@@ -303,7 +307,7 @@ class Demo:
                 self._hostFrame = rawHostFrame
             self._fps.tick('host')
 
-        if self._conf.useNN:
+        if self._nnManager is not None:
             inNn = self._nnManager.outputQueue.tryGet()
             if inNn is not None:
                 self.onNn(inNn)
@@ -313,12 +317,12 @@ class Demo:
                 self._fps.tick('nn')
 
         if self._conf.useCamera:
-            if self._conf.useNN:
+            if self._nnManager is not None:
                 self._nnManager.draw(self._pv, self._nnData)
-                self._pv.showFrames(callback=self._showFramesCallback)
+            self._pv.showFrames(callback=self._showFramesCallback)
         elif self._hostFrame is not None:
             debugHostFrame = self._hostFrame.copy()
-            if self._conf.useNN:
+            if self._nnManager is not None:
                 self._nnManager.draw(debugHostFrame, self._nnData)
             self._fps.drawFps(debugHostFrame, "host")
             if self._displayFrames:
@@ -416,36 +420,6 @@ class Demo:
 
     def _showFramesCallback(self, frame, name):
         self._fps.drawFps(frame, name)
-        h, w = frame.shape[:2]
-        if name in [Previews.disparityColor.name, Previews.disparity.name, Previews.depth.name, Previews.depthRaw.name]:
-            text = "Median filter: {} [M]".format(self._pm._depthConfig.postProcessing.median.name.lstrip("KERNEL_").lstrip("MEDIAN_"))
-            cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 0, 4)
-            cv2.putText(frame, text, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, 255, 1)
-        elif self._conf.args.cameraControlls and name in [Previews.color.name, Previews.left.name, Previews.right.name]:
-            text = "Exposure: {}   T [+] [-] G".format(self._cameraConfig["exposure"] if self._cameraConfig["exposure"] is not None else "auto")
-            label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
-            cv2.putText(frame, text, (w - label_width, h - 110), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
-            cv2.putText(frame, text, (w - label_width, h - 110), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
-            text = "Sensitivity: {}   Y [+] [-] H".format(self._cameraConfig["sensitivity"] if self._cameraConfig["sensitivity"] is not None else "auto")
-            label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
-            cv2.putText(frame, text, (w - label_width, h - 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
-            cv2.putText(frame, text, (w - label_width, h - 90), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
-            text = "Saturation: {}   U [+] [-] J".format(self._cameraConfig["saturation"] if self._cameraConfig["saturation"] is not None else "auto")
-            label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
-            cv2.putText(frame, text, (w - label_width, h - 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
-            cv2.putText(frame, text, (w - label_width, h - 70), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
-            text = "Contrast: {}   I [+] [-] K".format(self._cameraConfig["contrast"] if self._cameraConfig["contrast"] is not None else "auto")
-            label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
-            cv2.putText(frame, text, (w - label_width, h - 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
-            cv2.putText(frame, text, (w - label_width, h - 50), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
-            text = "Brightness: {}   O [+] [-] L".format(self._cameraConfig["brightness"] if self._cameraConfig["brightness"] is not None else "auto")
-            label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
-            cv2.putText(frame, text, (w - label_width, h - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
-            cv2.putText(frame, text, (w - label_width, h - 30), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
-            text = "Sharpness: {}   P [+] [-] ;".format(self._cameraConfig["sharpness"] if self._cameraConfig["sharpness"] is not None else "auto")
-            label_width = cv2.getTextSize(text, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
-            cv2.putText(frame, text, (w - label_width, h - 10), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4)
-            cv2.putText(frame, text, (w - label_width, h - 10), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1)
         returnFrame = self.onShowFrame(frame, name)
         return returnFrame if returnFrame is not None else frame
 
@@ -578,7 +552,10 @@ if __name__ == "__main__":
             self.signals.setDataSignal.emit(["ovVersions", versionChoices])
             devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
             self.signals.setDataSignal.emit(["deviceChoices", devices])
-            self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
+            if instance._nnManager is not None:
+                self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
+            else:
+                self.signals.setDataSignal.emit(["countLabels", []])
             self.signals.setDataSignal.emit(["modelChoices", sorted(confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 
@@ -743,5 +720,57 @@ if __name__ == "__main__":
             self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
             if len(devices) > 0:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
+
+        def guiOnToggleColorEncoding(self, enabled, fps):
+            oldConfig = confManager.args.encode or {}
+            print(enabled, fps)
+            if enabled:
+                oldConfig["color"] = fps
+            elif "color" in confManager.args.encode:
+                del oldConfig["color"]
+            self.updateArg("encode", oldConfig)
+
+        def guiOnToggleLeftEncoding(self, enabled, fps):
+            oldConfig = confManager.args.encode or {}
+            if enabled:
+                oldConfig["left"] = fps
+            elif "color" in confManager.args.encode:
+                del oldConfig["left"]
+            self.updateArg("encode", oldConfig)
+
+        def guiOnToggleRightEncoding(self, enabled, fps):
+            oldConfig = confManager.args.encode or {}
+            if enabled:
+                oldConfig["right"] = fps
+            elif "color" in confManager.args.encode:
+                del oldConfig["right"]
+            self.updateArg("encode", oldConfig)
+
+        def guiOnSelectReportingOptions(self, temp, cpu, memory):
+            options = []
+            if temp:
+                options.append("temp")
+            if cpu:
+                options.append("cpu")
+            if memory:
+                options.append("memory")
+            self.updateArg("report", options)
+
+        def guiOnSelectReportingPath(self, value):
+            self.updateArg("reportFile", value)
+
+        def guiOnSelectEncodingPath(self, value):
+            self.updateArg("encodeOutput", value)
+
+        def guiOnToggleDepth(self, value):
+            self.updateArg("disableDepth", not value)
+            filtered = list(filter(lambda name: name not in (Previews.depth.name, Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name, Previews.rectifiedRight.name, Previews.rectifiedLeft.name), confManager.args.show))
+            if value:
+                self.updateArg("show", filtered + [Previews.depth.name])
+            else:
+                self.updateArg("show", filtered)
+
+        def guiOnToggleNN(self, value):
+            self.updateArg("disableNeuralNetwork", not value)
 
     App().start()

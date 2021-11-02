@@ -18,7 +18,7 @@ ListView {
             id: textAI
             x: 79
             y: 8
-            width: 433
+            width: 322
             height: 30
             color: "#ffffff"
             text: qsTr("AI Properties")
@@ -309,10 +309,28 @@ ListView {
             }
         }
 
+        Switch {
+            id: switch5
+            x: 359
+            y: 0
+            width: 167
+            height: 38
+            text: qsTr("Enabled")
+            checked: true
+            autoExclusive: false
+            font.family: "Courier"
+            font.kerning: false
+            transformOrigin: Item.Center
+            font.preferShaping: false
+            onToggled: {
+                appBridge.toggleNN(switch5.checked)
+            }
+        }
+
     }
 }
 /*##^##
 Designer {
-    D{i:0;autoSize:true;height:480;width:640}
+    D{i:0;autoSize:true;height:480;width:640}D{i:26}
 }
 ##^##*/

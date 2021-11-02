@@ -128,6 +128,9 @@ ApplicationWindow {
             TabButton {
                text: "Camera"
             }
+            TabButton {
+               text: "Misc"
+            }
         }
 
         StackLayout {
@@ -143,6 +146,9 @@ ApplicationWindow {
           }
           Item {
                CameraProperties {}
+          }
+          Item {
+               MiscProperties {}
           }
         }
 

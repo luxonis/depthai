@@ -56,10 +56,14 @@ class PipelineManager:
             device (depthai.Device): Running device instance
         """
 
-        self._depthConfigInputQueue = device.getInputQueue("stereoConfig")
-        self._rgbConfigInputQueue = device.getInputQueue("color_control")
-        self._leftConfigInputQueue = device.getInputQueue("left_control")
-        self._rightConfigInputQueue = device.getInputQueue("right_control")
+        if hasattr(self.nodes, "stereo"):
+            self._depthConfigInputQueue = device.getInputQueue("stereoConfig")
+        if hasattr(self.nodes, "camRgb"):
+            self._rgbConfigInputQueue = device.getInputQueue("color_control")
+        if hasattr(self.nodes, "monoLeft"):
+            self._leftConfigInputQueue = device.getInputQueue("left_control")
+        if hasattr(self.nodes, "monoRight"):
+            self._rightConfigInputQueue = device.getInputQueue("right_control")
 
     def closeDefaultQueues(self):
         """
