@@ -426,7 +426,7 @@ class Demo:
 
     def _printSysInfo(self, info):
         m = 1024 * 1024 # MiB
-        if not self._conf.args.reportFile:
+        if not hasattr(self, "_reportFile"):
             if "memory" in self._conf.args.report:
                 print(f"Drr used / total - {info.ddrMemoryUsage.used / m:.2f} / {info.ddrMemoryUsage.total / m:.2f} MiB")
                 print(f"Cmx used / total - {info.cmxMemoryUsage.used / m:.2f} / {info.cmxMemoryUsage.total / m:.2f} MiB")
@@ -472,7 +472,6 @@ class Demo:
                 print(','.join(data.keys()), file=self._reportFile)
             self.onReport(data)
             print(','.join(map(str, data.values())), file=self._reportFile)
-
 
 
 if __name__ == "__main__":
