@@ -148,7 +148,7 @@ class AIBridge(QObject):
 
     @Slot(float)
     def setSbbFactor(self, value):
-        if DemoQtGui.writer is not None:
+        if DemoQtGui.instance.writer is not None:
             DemoQtGui.instance.guiOnAiSetupUpdate(sbbFactor=value)
 
     @Slot(str)

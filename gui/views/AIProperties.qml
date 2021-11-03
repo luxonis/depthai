@@ -288,11 +288,11 @@ ListView {
                 height: 33
                 value: 0.3
                 stepSize: 0.1
+                to: 1
+                from: 0.1
                 onValueChanged: {
                     aiBridge.setSbbFactor(value)
                 }
-                to: 1
-                from: 0.1
             }
 
             Text {

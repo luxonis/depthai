@@ -708,7 +708,7 @@ if __name__ == "__main__":
                 self.updateArg("sbbScaleFactor", sbbFactor)
             if ov is not None:
                 self.updateArg("openvinoVersion", ov)
-            if countLabel is not None:
+            if countLabel is not None or cnn is not None:
                 self.updateArg("countLabel", countLabel)
 
         def guiOnPreviewChangeSelected(self, selected):
