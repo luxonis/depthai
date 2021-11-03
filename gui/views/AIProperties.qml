@@ -285,7 +285,7 @@ ListView {
                 y: 383
                 width: 96
                 height: 33
-                value: 6
+                value: 0.3
                 stepSize: 0.1
                 onValueChanged: {
                     aiBridge.setSbbFactor(value)
