@@ -70,8 +70,6 @@ class Demo:
         self._rgbRes = conf.getRgbResolution()
         self._monoRes = conf.getMonoResolution()
         self._openvinoVersion = None
-        if conf.args.openvinoVersion:
-            self._openvinoVersion = getattr(dai.OpenVINO.Version, 'VERSION_' + conf.args.openvinoVersion)
         self._displayFrames = displayFrames
 
         self.onNewFrame = onNewFrame
@@ -103,6 +101,8 @@ class Demo:
 
     def setup(self):
         print("Setting up demo...")
+        if self._conf.args.openvinoVersion:
+            self._openvinoVersion = getattr(dai.OpenVINO.Version, 'VERSION_' + self._conf.args.openvinoVersion)
         self._deviceInfo = getDeviceInfo(self._conf.args.deviceId)
         if self._conf.args.reportFile:
             reportFileP = Path(self._conf.args.reportFile).with_suffix('.csv')
