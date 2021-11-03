@@ -547,7 +547,7 @@ if __name__ == "__main__":
             self.signals.setDataSignal.emit(["monoResolutionChoices", monoChoices])
             self.signals.setDataSignal.emit(["previewChoices", confManager.args.show])
             self.signals.setDataSignal.emit(["modelSourceChoices", [Previews.color.name, Previews.left.name, Previews.right.name]])
-            versionChoices = list(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()))
+            versionChoices = sorted(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()), reverse=True)
             self.signals.setDataSignal.emit(["ovVersions", versionChoices])
             devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
             self.signals.setDataSignal.emit(["deviceChoices", devices])
