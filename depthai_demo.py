@@ -395,7 +395,6 @@ class Demo:
 
     def _updateCameraConfigs(self):
         parsedConfig = {}
-        print(self._cameraConfig)
         for configOption, values in self._cameraConfig.items():
             if values is not None:
                 for cameraName, value in values:
@@ -728,7 +727,6 @@ if __name__ == "__main__":
 
         def guiOnToggleColorEncoding(self, enabled, fps):
             oldConfig = confManager.args.encode or {}
-            print(enabled, fps)
             if enabled:
                 oldConfig["color"] = fps
             elif "color" in confManager.args.encode:
