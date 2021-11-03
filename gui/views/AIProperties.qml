@@ -150,6 +150,7 @@ ListView {
                 y: 137
                 width: 37
                 height: 23
+                checked: true
                 onClicked: aiBridge.setFullFov(checkBoxFullFov.checked)
             }
 
