@@ -40,7 +40,7 @@ if not in_venv:
 
 subprocess.check_call(pip_install + ["pip", "-U"])
 
-# temporary workaroud for issue between main and develop
+subprocess.check_call(pip_call + ["uninstall", "opencv-python", "opencv-contrib-python", "--yes"])
 subprocess.check_call(pip_call + ["uninstall", "depthai", "--yes"])
 subprocess.check_call(pip_package_install + ["-r", "requirements.txt"])
 
