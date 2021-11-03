@@ -56,16 +56,17 @@ if thisPlatform == "aarch64":
     opencvInstalledProperly = False
     try:
         subprocess.check_call([sys.executable, "-c", "import numpy, cv2;"])
-        opencvInstalledProperly = False
-    except subprocess.CalledProcessError as ex:
         opencvInstalledProperly = True
+    except subprocess.CalledProcessError as ex:
+        opencvInstalledProperly = False
 
-    from os import environ
-    OPENBLAS_CORE_TYPE = environ.get('OPENBLAS_CORE_TYPE')
-    if not opencvInstalledProperly or OPENBLAS_CORE_TYPE != 'ARMV8':
-        WARNING='\033[1;5;31m'
-        RED='\033[91m'
-        LINE_CL='\033[0m'
-        SUGGESTION='echo "export OPENBLAS_CORETYPE=AMRV8" >> ~/.bashrc && source ~/.bashrc'
-        print(f'{WARNING}WARNING:{LINE_CL} Need to set OPENBLAS_CORE_TYPE environment variable, otherwise opencv will fail with illegal instruction.')
-        print(f'Run: {RED}{SUGGESTION}{LINE_CL}')
+    if not opencvInstalledProperly:
+        from os import environ
+        OPENBLAS_CORE_TYPE = environ.get('OPENBLAS_CORE_TYPE')
+        if OPENBLAS_CORE_TYPE != 'ARMV8':
+            WARNING='\033[1;5;31m'
+            RED='\033[91m'
+            LINE_CL='\033[0m'
+            SUGGESTION='echo "export OPENBLAS_CORETYPE=ARMV8" >> ~/.bashrc && source ~/.bashrc'
+            print(f'{WARNING}WARNING:{LINE_CL} Need to set OPENBLAS_CORE_TYPE environment variable, otherwise opencv will fail with illegal instruction.')
+            print(f'Run: {RED}{SUGGESTION}{LINE_CL}')
