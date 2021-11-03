@@ -153,23 +153,6 @@ ListView {
                 checked: true
                 onClicked: aiBridge.setFullFov(checkBoxFullFov.checked)
             }
-
-            Switch {
-                id: switch4
-                x: 90
-                y: 173
-                width: 300
-                height: 48
-                text: qsTr("Sync NN and Preview")
-                font.family: "Courier"
-                autoExclusive: false
-                transformOrigin: Item.Center
-                font.preferShaping: false
-                font.kerning: false
-                onToggled: {
-                    aiBridge.setSyncNN(switch4.checked)
-                }
-            }
         }
 
         CheckBox {

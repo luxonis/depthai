@@ -139,10 +139,6 @@ class AIBridge(QObject):
         DemoQtGui.instance.guiOnAiSetupUpdate(fullFov=value)
 
     @Slot(bool)
-    def setSyncNN(self, value):
-        DemoQtGui.instance.guiOnAiSetupUpdate(sync=value)
-
-    @Slot(bool)
     def setSbb(self, value):
         DemoQtGui.instance.guiOnAiSetupUpdate(sbb=value)
 

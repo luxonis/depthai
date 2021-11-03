@@ -685,7 +685,7 @@ if __name__ == "__main__":
                 else:
                     self.updateArg("monoResolution", resolution)
 
-        def guiOnAiSetupUpdate(self, cnn=None, shave=None, source=None, fullFov=None, sync=None, sbb=None, sbbFactor=None, ov=None, countLabel=None):
+        def guiOnAiSetupUpdate(self, cnn=None, shave=None, source=None, fullFov=None, sbb=None, sbbFactor=None, ov=None, countLabel=None):
             if cnn is not None:
                 self.updateArg("cnnModel", cnn)
             if shave is not None:
@@ -694,13 +694,6 @@ if __name__ == "__main__":
                 self.updateArg("camera", source)
             if fullFov is not None:
                 self.updateArg("disableFullFovNn", not fullFov)
-            if sync is not None:
-                self.updateArg("sync", sync)
-                if sync:
-                    self.updateArg("scale", {})
-                else:
-                    self.updateArg("scale", {"color": 0.37})
-
             if sbb is not None:
                 self.updateArg("spatialBoundingBox", sbb)
             if sbbFactor is not None:
