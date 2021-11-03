@@ -212,7 +212,7 @@ class Main:
                 dai.ColorCameraProperties.SensorResolution.THE_800_P)
             rgb_cam.setInterleaved(False)
             rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-            # rgb_cam.setIspScale(1, 3)
+            rgb_cam.setIspScale(2, 3)
             # rgb_cam.initialControl.setManualFocus(self.focus_value)
             rgb_cam.setFps(self.args.fps)
 
@@ -357,8 +357,8 @@ class Main:
                 frame = packet[1].getCvFrame()
                 # print(packet[0])
                 # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                if packet[0] == 'rgb':
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                #if packet[0] == 'rgb':
+                #    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 # print(frame.shape)
                 if self.polygons is None:
                     self.height, self.width, tmp_channels = frame.shape
@@ -466,7 +466,7 @@ class Main:
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
-            cv2.imshow("left + rgb + right", combine_img)
+            cv2.imshow("left + right + rgb", combine_img)
             frame_list.clear()
 
     def calibrate(self):
