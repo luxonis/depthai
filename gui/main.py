@@ -115,6 +115,10 @@ class AppBridge(QObject):
     def toggleNN(self, enabled):
         DemoQtGui.instance.guiOnToggleNN(enabled)
 
+    @Slot(bool)
+    def toggleDisparity(self, enabled):
+        DemoQtGui.instance.guiOnToggleDisparity(enabled)
+
 
 @QmlElement
 class AIBridge(QObject):

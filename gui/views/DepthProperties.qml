@@ -78,7 +78,7 @@ ListView {
 
         Switch {
             id: switch5
-            x: 381
+            x: 328
             y: 0
             width: 167
             height: 38
@@ -230,8 +230,8 @@ ListView {
 
         Text {
             id: text1
-            x: 79
-            y: 0
+            x: 44
+            y: 4
             width: 285
             height: 30
             color: "#ffffff"
@@ -319,11 +319,28 @@ ListView {
             rotation: 0
         }
 
+        Switch {
+            id: switch6
+            x: 443
+            y: 0
+            width: 169
+            height: 38
+            text: qsTr("Use Disparity")
+            autoExclusive: false
+            font.family: "Courier"
+            font.kerning: false
+            transformOrigin: Item.Center
+            font.preferShaping: false
+            onToggled: {
+                appBridge.toggleDisparity(switch6.checked)
+            }
+        }
+
 
     }
 }
 /*##^##
 Designer {
-    D{i:0;autoSize:true;height:480;width:640}D{i:7}
+    D{i:0;autoSize:true;height:480;width:640}D{i:7}D{i:24}
 }
 ##^##*/

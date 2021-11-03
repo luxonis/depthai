@@ -134,22 +134,22 @@ class ConfigManager:
         if len(self.args.show) != 0:
             return
 
-        if  Previews.color.name not in self.args.show:
-            self.args.show.append(Previews.color.name)
+        self.args.show.append(Previews.color.name)
+        if self.useNN:
+            self.args.show.append(Previews.nnInput.name)
+
         if self.useDepth:
-            if self.lowBandwidth and Previews.disparityColor.name not in self.args.show:
+            if self.lowBandwidth:
+                self.args.show.append(Previews.disparity.name)
                 self.args.show.append(Previews.disparityColor.name)
-            elif not self.lowBandwidth and Previews.depth.name not in self.args.show:
+            else:
                 self.args.show.append(Previews.depth.name)
-            if Previews.rectifiedLeft.name not in self.args.show:
-                self.args.show.append(Previews.rectifiedLeft.name)
-            if Previews.rectifiedRight.name not in self.args.show:
-                self.args.show.append(Previews.rectifiedRight.name)
+                self.args.show.append(Previews.depthRaw.name)
+            self.args.show.append(Previews.rectifiedLeft.name)
+            self.args.show.append(Previews.rectifiedRight.name)
         else:
-            if Previews.left.name not in self.args.show:
-                self.args.show.append(Previews.left.name)
-            if Previews.right.name not in self.args.show:
-                self.args.show.append(Previews.right.name)
+            self.args.show.append(Previews.left.name)
+            self.args.show.append(Previews.right.name)
 
     def adjustParamsToDevice(self, device):
         deviceInfo = device.getDeviceInfo()

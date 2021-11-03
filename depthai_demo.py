@@ -563,6 +563,7 @@ if __name__ == "__main__":
             super().__init__()
             self.running = False
             self.selectedPreview = confManager.args.show[0] if len(confManager.args.show) > 0 else "color"
+            self.useDisparity = False
             self.dataInitialized = False
             self.appInitialized = False
             self.threadpool = QThreadPool()
@@ -763,13 +764,48 @@ if __name__ == "__main__":
 
         def guiOnToggleDepth(self, value):
             self.updateArg("disableDepth", not value)
-            filtered = list(filter(lambda name: name not in (Previews.depth.name, Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name, Previews.rectifiedRight.name, Previews.rectifiedLeft.name), confManager.args.show))
+            selectedPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name] + ([Previews.disparity.name, Previews.disparityColor.name] if self.useDisparity else [Previews.depth.name, Previews.depthRaw.name])
+            depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name, Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
+            filtered = list(filter(lambda name: name not in depthPreviews, confManager.args.show))
             if value:
-                self.updateArg("show", filtered + [Previews.depth.name])
+                updated = filtered + selectedPreviews
+                if self.selectedPreview not in updated:
+                    self.selectedPreview = updated[0]
+                self.updateArg("show", updated)
             else:
-                self.updateArg("show", filtered)
+                updated = filtered + [Previews.left.name, Previews.right.name]
+                if self.selectedPreview not in updated:
+                    self.selectedPreview = updated[0]
+                self.updateArg("show", updated)
 
         def guiOnToggleNN(self, value):
             self.updateArg("disableNeuralNetwork", not value)
+            filtered = list(filter(lambda name: name != Previews.nnInput.name, confManager.args.show))
+            if value:
+                updated = filtered + [Previews.nnInput.name]
+                if self.selectedPreview not in updated:
+                    self.selectedPreview = updated[0]
+                self.updateArg("show", filtered + [Previews.nnInput.name])
+            else:
+                if self.selectedPreview not in filtered:
+                    self.selectedPreview = filtered[0]
+                self.updateArg("show", filtered)
+
+        def guiOnToggleDisparity(self, value):
+            self.useDisparity = value
+            depthPreviews = [Previews.depth.name, Previews.depthRaw.name]
+            disparityPreviews = [Previews.disparity.name, Previews.disparityColor.name]
+            if value:
+                filtered = list(filter(lambda name: name not in depthPreviews, confManager.args.show))
+                updated = filtered + disparityPreviews
+                if self.selectedPreview not in updated:
+                    self.selectedPreview = updated[0]
+                self.updateArg("show", updated)
+            else:
+                filtered = list(filter(lambda name: name not in disparityPreviews, confManager.args.show))
+                updated = filtered + depthPreviews
+                if self.selectedPreview not in updated:
+                    self.selectedPreview = updated[0]
+                self.updateArg("show", updated)
 
     App().start()
