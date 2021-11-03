@@ -260,7 +260,7 @@ ListView {
                 font.preferShaping: false
                 font.kerning: false
                 onToggled: {
-                    aiBridge.setSyncNN(switch1.checked)
+                    aiBridge.setSbb(switch3.checked)
                 }
             }
 
