@@ -697,6 +697,11 @@ if __name__ == "__main__":
                 self.updateArg("disableFullFovNn", not fullFov)
             if sync is not None:
                 self.updateArg("sync", sync)
+                if sync:
+                    self.updateArg("scale", {})
+                else:
+                    self.updateArg("scale", {"color": 0.37})
+
             if sbb is not None:
                 self.updateArg("spatialBoundingBox", sbb)
             if sbbFactor is not None:
