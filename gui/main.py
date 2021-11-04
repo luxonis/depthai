@@ -283,10 +283,3 @@ class MonoCamBridge(QObject):
         elif state == "THE_400_P":
             DemoQtGui.instance.guiOnCameraSetupUpdate("left", resolution=400)
             DemoQtGui.instance.guiOnCameraSetupUpdate("right", resolution=400)
-
-
-if __name__ == "__main__":
-    medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
-    gui = DemoQtGui()
-    gui.setData("medianChoices", medianChoices)
-    gui.startGui()
