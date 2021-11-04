@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 import cv2
 import depthai as dai
+import numpy as np
 
 from depthai_helpers.cli_utils import cliPrint, PrintColors
 from depthai_sdk.previews import Previews
@@ -94,7 +95,9 @@ class ConfigManager:
         return list(map(convert, filter(verify, DEPTHAI_ZOO.rglob("**/*.json"))))
 
     def getColorMap(self):
-        return getattr(cv2, "COLORMAP_{}".format(self.args.colorMap))
+        cvColorMap = cv2.applyColorMap(np.arange(256, dtype=np.uint8), getattr(cv2, "COLORMAP_{}".format(self.args.colorMap)))
+        cvColorMap[0] = [0, 0, 0]
+        return cvColorMap
 
     def getRgbResolution(self):
         if self.args.rgbResolution == 2160:
