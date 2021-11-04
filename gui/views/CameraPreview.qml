@@ -50,10 +50,11 @@ ListView {
 
         ImageWriter {
             id: imageWriter
+            objectName: "writer"
             x: 40
             y: 40
-            width: 560
-            height: 560
+            width: parent.width - 80
+            height: parent.height - 80
         }
     }
 }

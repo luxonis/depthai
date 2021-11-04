@@ -107,13 +107,13 @@ ApplicationWindow {
         CameraPreview {
           x: 0
           y: 0
-          width: 640
+          width: parent.width - 630
           height: parent.height
         }
 
         TabBar {
             id: bar
-            x: 640
+            x: parent.width - 630
             y: 0
             height: 50
             width: 590
@@ -134,7 +134,7 @@ ApplicationWindow {
         }
 
         StackLayout {
-          x: 640
+          x: parent.width - 630
           y: 70
           width: 630
           currentIndex: bar.currentIndex
@@ -153,7 +153,7 @@ ApplicationWindow {
         }
 
         Button {
-            x: 667
+            x: parent.width - 600
             y: 540
             enabled: restartRequired || false
             height: 60

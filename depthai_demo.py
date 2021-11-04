@@ -488,11 +488,12 @@ if __name__ == "__main__":
         errorSignal = Signal(str)
 
     class Worker(QRunnable):
-        def __init__(self, instance, selectedPreview=None):
+        def __init__(self, instance, parent, selectedPreview=None):
             super(Worker, self).__init__()
             self.running = False
             self.selectedPreview = selectedPreview
             self.instance = instance
+            self.parent = parent
             self.signals = WorkerSignals()
             self.signals.exitSignal.connect(self.terminate)
 
@@ -529,12 +530,14 @@ if __name__ == "__main__":
             return self.running
 
         def onShowFrame(self, frame, source):
+            writerObject = self.parent.window.findChild(QObject, "writer")
+            w, h = int(writerObject.width()), int(writerObject.height())
             if source == self.selectedPreview:
-                scaledFrame = resizeLetterbox(frame, (560, 560))
+                scaledFrame = resizeLetterbox(frame, (w, h))
                 if len(frame.shape) == 3:
-                    img = QImage(scaledFrame.data, 560, 560, frame.shape[2] * 560, QImage.Format_BGR888)
+                    img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, QImage.Format_BGR888)
                 else:
-                    img = QImage(scaledFrame.data, 560, 560, 560, QImage.Format_Grayscale8)
+                    img = QImage(scaledFrame.data, w, h, w, QImage.Format_Grayscale8)
                 self.signals.updatePreviewSignal.emit(img)
 
         def onSetup(self, instance):
@@ -585,7 +588,7 @@ if __name__ == "__main__":
 
         def start(self):
             self.running = True
-            self.worker = Worker(self._demoInstance, selectedPreview=self.selectedPreview)
+            self.worker = Worker(self._demoInstance, parent=self, selectedPreview=self.selectedPreview)
             self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
             self.worker.signals.setDataSignal.connect(self.setData)
             self.worker.signals.errorSignal.connect(self.showError)
