@@ -1,0 +1,12 @@
+{
+    "board_config":
+    {
+        "name": "DM2097",
+        "revision": "R0M0E0",
+        "swap_left_and_right_cameras": false,
+        "left_fov_deg": 71.86,
+        "rgb_fov_deg": 68.7938,
+        "left_to_right_distance_cm": 9.0,
+        "left_to_rgb_distance_cm": 7.7
+    }
+}
