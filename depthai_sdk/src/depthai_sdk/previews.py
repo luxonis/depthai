@@ -92,9 +92,9 @@ class PreviewDecoder:
             numpy.ndarray: Ready to use OpenCV frame
         """
         if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
-            return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
+            return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
-            return cv2.flip(packet.getCvFrame(), 1)
+            return packet.getCvFrame()
 
     @staticmethod
     def rectifiedRight(packet, manager=None):
@@ -109,9 +109,9 @@ class PreviewDecoder:
             numpy.ndarray: Ready to use OpenCV frame
         """
         if manager is not None and manager.lowBandwidth:  # TODO remove sync check once passthrough is supported for MJPEG encoding
-            return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
+            return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
-            return cv2.flip(packet.getCvFrame(), 1)
+            return packet.getCvFrame()
 
     @staticmethod
     def depthRaw(packet, manager=None):

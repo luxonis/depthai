@@ -50,7 +50,7 @@ ListView {
                 ComboBox {
                     id: comboBox
                     x: 85
-                    y: 105
+                    y: 115
                     width: 140
                     height: 33
                     model: colorResolutionChoices
@@ -62,7 +62,7 @@ ListView {
                 Text {
                     id: text32
                     x: -6
-                    y: 74
+                    y: 84
                     width: 90
                     height: 25
                     color: "#ffffff"
@@ -76,7 +76,7 @@ ListView {
                 TextField {
                     id: textField6
                     x: 85
-                    y: 74
+                    y: 84
                     width: 106
                     height: 25
                     text: "30"
@@ -92,7 +92,7 @@ ListView {
                 Text {
                     id: text33
                     x: -6
-                    y: 109
+                    y: 119
                     width: 90
                     height: 25
                     color: "#ffffff"
@@ -301,7 +301,7 @@ ListView {
             ComboBox {
                 id: comboBox1
                 x: 85
-                y: 105
+                y: 115
                 width: 152
                 height: 33
                 model: monoResolutionChoices
@@ -313,7 +313,7 @@ ListView {
             Text {
                 id: text34
                 x: -6
-                y: 74
+                y: 84
                 width: 90
                 height: 25
                 color: "#ffffff"
@@ -327,7 +327,7 @@ ListView {
             TextField {
                 id: textField7
                 x: 85
-                y: 74
+                y: 84
                 width: 106
                 height: 25
                 text: "30"
@@ -343,7 +343,7 @@ ListView {
             Text {
                 id: text35
                 x: -6
-                y: 109
+                y: 119
                 width: 90
                 height: 25
                 color: "#ffffff"
