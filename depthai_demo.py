@@ -602,11 +602,14 @@ if __name__ == "__main__":
 
         def stop(self):
             current_mxid = None
+            protocol = None
             if hasattr(self._demoInstance, "_device"):
                 current_mxid = self._demoInstance._device.getMxId()
+                protocol = self._demoInstance._deviceInfo.desc.protocol
             self.worker.signals.exitSignal.emit()
             self.threadpool.waitForDone(100)
-            if current_mxid is not None:
+
+            if current_mxid is not None and protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
                 start = time.time()
                 while time.time() - start < 10:
                     if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
