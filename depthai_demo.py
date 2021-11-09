@@ -61,14 +61,11 @@ class Demo:
     LRCT_MIN = int(os.getenv("LRCT_MIN", 0))
     LRCT_MAX = int(os.getenv("LRCT_MAX", 10))
 
-    def run_all(self):
-        self.setup()
+    def run_all(self, conf):
+        self.setup(conf)
         self.run()
 
-    def __init__(self, conf: ConfigManager, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True):
-        self._conf = conf
-        self._rgbRes = conf.getRgbResolution()
-        self._monoRes = conf.getMonoResolution()
+    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
 
@@ -99,8 +96,11 @@ class Demo:
         if shouldRun is not None:
             self.shouldRun = shouldRun
 
-    def setup(self):
+    def setup(self, conf: ConfigManager):
         print("Setting up demo...")
+        self._conf = conf
+        self._rgbRes = conf.getRgbResolution()
+        self._monoRes = conf.getMonoResolution()
         if self._conf.args.openvinoVersion:
             self._openvinoVersion = getattr(dai.OpenVINO.Version, 'VERSION_' + self._conf.args.openvinoVersion)
         self._deviceInfo = getDeviceInfo(self._conf.args.deviceId)
@@ -108,7 +108,7 @@ class Demo:
             reportFileP = Path(self._conf.args.reportFile).with_suffix('.csv')
             reportFileP.parent.mkdir(parents=True, exist_ok=True)
             self._reportFile = reportFileP.open('a')
-        self._pm = PipelineManager(self._openvinoVersion)
+        self._pm = PipelineManager(openvinoVersion=self._openvinoVersion)
 
         if self._conf.args.xlinkChunkSize is not None:
             self._pm.setXlinkChunkSize(self._conf.args.xlinkChunkSize)
@@ -134,7 +134,7 @@ class Demo:
         self._conf.adjustParamsToDevice(self._device)
         self._conf.adjustPreviewToOptions()
         if self._conf.lowBandwidth:
-            self._pm.enableLowBandwidth()
+            self._pm.enableLowBandwidth(poeQuality=self._conf.args.poeQuality)
         self._cap = cv2.VideoCapture(self._conf.args.video) if not self._conf.useCamera else None
         self._fps = FPSHandler() if self._conf.useCamera else FPSHandler(self._cap)
 
@@ -502,6 +502,7 @@ if __name__ == "__main__":
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup)
+            confManager.args.bandwidth = "auto"
             if confManager.args.deviceId is None:
                 devices = dai.Device.getAllAvailableDevices()
                 if len(devices) > 0:
@@ -513,7 +514,7 @@ if __name__ == "__main__":
                         defaultDevice = devices[0].getMxId()
                     confManager.args.deviceId = defaultDevice
             try:
-                self.instance.run_all()
+                self.instance.run_all(confManager)
             except Exception as ex:
                 self.onError(ex)
 
@@ -569,7 +570,7 @@ if __name__ == "__main__":
             self.dataInitialized = False
             self.appInitialized = False
             self.threadpool = QThreadPool()
-            self._demoInstance = Demo(confManager, displayFrames=False)
+            self._demoInstance = Demo(displayFrames=False)
 
         def updateArg(self, arg_name, arg_value, shouldUpdate=True):
             setattr(confManager.args, arg_name, arg_value)
@@ -716,7 +717,7 @@ if __name__ == "__main__":
         def guiOnReloadDevices(self):
             devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
             if hasattr(self._demoInstance, "_deviceInfo"):
-                devices.append(self._demoInstance._deviceInfo.getMxId())
+                devices.insert(0, self._demoInstance._deviceInfo.getMxId())
             self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
             if len(devices) > 0:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])

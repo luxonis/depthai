@@ -10,8 +10,10 @@ class PipelineManager:
     and connection logic onto a set of convenience functions.
     """
 
-    def __init__(self, openvinoVersion=None):
+    def __init__(self, openvinoVersion=None, poeQuality=100):
         self.openvinoVersion=openvinoVersion
+        self.poeQuality = poeQuality
+
         #: depthai.Pipeline: Ready to use requested pipeline. Can be passed to :obj:`depthai.Device` to start execution
         self.pipeline = dai.Pipeline()
         #: types.SimpleNamespace: Contains all nodes added to the :attr:`pipeline` object, can be used to conveniently access nodes by their name
@@ -22,6 +24,8 @@ class PipelineManager:
 
     #: depthai.OpenVINO.Version: OpenVINO version which will be used in pipeline
     openvinoVersion = None
+    #: int, Optional: PoE encoding quality, can decrease frame quality but decrease latency
+    poeQuality = None
     #: bool: If set to :code:`True`, manager will MJPEG-encode the packets sent from device to host to lower the bandwidth usage. **Can break** if more than 3 encoded outputs requested
     lowBandwidth = False
 
@@ -129,6 +133,7 @@ class PipelineManager:
             manip.out.link(videnc.input)
         else:
             raise NotImplementedError("Unable to create mjpeg link for encountered node type: {}".format(type(node)))
+        videnc.setQuality(self.poeQuality)
         videnc.bitstream.link(xout.input)
 
     def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, xout=False):
@@ -462,13 +467,14 @@ class PipelineManager:
         self.nodes.xoutSystemLogger.setStreamName("systemLogger")
         self.nodes.systemLogger.out.link(self.nodes.xoutSystemLogger.input)
 
-    def createEncoder(self, cameraName, encFps=30):
+    def createEncoder(self, cameraName, encFps=30, encQuality=100):
         """
         Creates H.264 / H.265 video encoder (:obj:`depthai.node.VideoEncoder` instance)
 
         Args:
             cameraName (str): Camera name to create the encoder for
             encFps (int, Optional): Specify encoding FPS
+            encQuality (int, Optional): Specify encoding quality (1-100)
 
         Raises:
             ValueError: if cameraName is not a supported camera name
@@ -504,6 +510,7 @@ class PipelineManager:
 
         enc = self.pipeline.createVideoEncoder()
         enc.setDefaultProfilePreset(*encResolution, encFps, encProfile)
+        enc.setQuality(encQuality)
         encIn.link(enc.input)
         setattr(self.nodes, nodeName, enc)
 
@@ -512,11 +519,15 @@ class PipelineManager:
         encXout.setStreamName(xoutName)
         setattr(self.nodes, xoutName, encXout)
 
-    def enableLowBandwidth(self):
+    def enableLowBandwidth(self, poeQuality):
         """
-        Enables low-bandwidth mode.
+        Enables low-bandwidth mode
+
+        Args:
+            poeQuality (int, Optional): PoE encoding quality, can decrease frame quality but decrease latency
         """
         self.lowBandwidth = True
+        self.poeQuality = poeQuality
 
     def setXlinkChunkSize(self, chunkSize):
         self.pipeline.setXLinkChunkSize(chunkSize)
