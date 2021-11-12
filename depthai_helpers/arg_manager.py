@@ -131,7 +131,7 @@ def parseArgs():
                              "Example: -enc color right,10 left,10")
     parser.add_argument('-encout', '--encodeOutput', type=Path, default=projectRoot, help="Path to directory where to store encoded files. Default: %(default)s")
     parser.add_argument('-xls', '--xlinkChunkSize', type=int, help="Specify XLink chunk size")
-    parser.add_argument('-poeq', '--poeQuality', type=checkRange(1, 100), help="Specify PoE encoding video quality (1-100)")
+    parser.add_argument('-poeq', '--poeQuality', type=checkRange(1, 100), default=100, help="Specify PoE encoding video quality (1-100)")
     parser.add_argument('-camo', '--cameraOrientation', type=_comaSeparated(default="AUTO", cast=orientationCast), nargs="+", default=[],
                         help=("Define cameras orientation (available: {}) \n"
                              "Format: camera_name,camera_orientation \n"

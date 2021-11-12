@@ -184,9 +184,8 @@ class ConfigManager:
             if deviceInfo.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
                 print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(deviceInfo.desc.protocol))
                 self.args.bandwidth = "low"
-                if self.args.poeQuality is None:
-                    print("Setting PoE video quality to 50 to reduce latency...")
-                    self.args.poeQuality = 50
+                print("Setting PoE video quality to 50 to reduce latency...")
+                self.args.poeQuality = 50
             elif device.getUsbSpeed() not in [dai.UsbSpeed.SUPER, dai.UsbSpeed.SUPER_PLUS]:
                 print("Enabling low-bandwidth mode due to low USB speed... (speed: {})".format(device.getUsbSpeed()))
                 self.args.bandwidth = "low"
