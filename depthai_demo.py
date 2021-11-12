@@ -19,10 +19,11 @@ from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, E
 
 print('Using depthai module from: ', dai.__file__)
 print('Depthai version installed: ', dai.__version__)
-if platform.machine() not in ['armv6l', 'aarch64']:
+args = parseArgs()
+if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
     checkRequirementsVersion()
 
-confManager = ConfigManager(parseArgs())
+confManager = ConfigManager(args)
 confManager.linuxCheckApplyUsbRules()
 if not confManager.useCamera:
     if str(confManager.args.video).startswith('https'):

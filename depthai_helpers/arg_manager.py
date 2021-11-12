@@ -144,5 +144,5 @@ def parseArgs():
     parser.add_argument("--cameraContrast", type=_comaSeparated("all", int), nargs="+", help="Specify image contrast")
     parser.add_argument("--cameraBrightness", type=_comaSeparated("all", int), nargs="+", help="Specify image brightness")
     parser.add_argument("--cameraSharpness", type=_comaSeparated("all", int), nargs="+", help="Specify image sharpness")
-
+    parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
     return parser.parse_args()
