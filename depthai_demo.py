@@ -588,10 +588,10 @@ if __name__ == "__main__":
             if not self.appInitialized:
                 self.appInitialized = True
                 exit_code = self.startGui()
-                self.stop()
+                self.stop(wait=False)
                 sys.exit(exit_code)
 
-        def stop(self):
+        def stop(self, wait=True):
             current_mxid = None
             protocol = None
             if hasattr(self._demoInstance, "_device"):
@@ -600,14 +600,13 @@ if __name__ == "__main__":
             self.worker.signals.exitSignal.emit()
             self.threadpool.waitForDone(100)
 
-            if current_mxid is not None and protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
+            if wait and current_mxid is not None and protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
                 start = time.time()
                 while time.time() - start < 10:
                     if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
                         break
                 else:
                     raise RuntimeError("Device not available again after 10 seconds!")
-
 
         def restartDemo(self):
             self.stop()
