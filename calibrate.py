@@ -417,8 +417,9 @@ class Main:
 
                 if self.args.disableRgb:
                     captured_color = True
+                    tried_color = True
                 if captured_left and captured_right and captured_color:
-                    print(f"Images captured --> {self.images_captured}")
+                    print("Images captured --> {}".format(self.images_captured))
                     if not self.images_captured:
                         if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
                             self.show_failed_orientation()
@@ -434,7 +435,9 @@ class Main:
                     captured_left = False
                     captured_right = False
                     captured_color = False
-                elif tried_left and tried_color:
+                elif tried_left and tried_right and tried_color:
+                     #TODO(Sachin): add condition for RGB too and when break happens and if RGB 
+                    # is not received it will throw an error. add an exception to it
                     self.show_failed_capture_frame()
                     capturing = False
                     tried_left = False
