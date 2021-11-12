@@ -542,16 +542,7 @@ if __name__ == "__main__":
                 self.signals.updatePreviewSignal.emit(img)
 
         def onSetup(self, instance):
-            medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
-            self.signals.setDataSignal.emit(["medianChoices", medianChoices])
-            colorChoices = list(filter(lambda name: name[0].isupper(), vars(dai.ColorCameraProperties.SensorResolution).keys()))
-            self.signals.setDataSignal.emit(["colorResolutionChoices", colorChoices])
-            monoChoices = list(filter(lambda name: name[0].isupper(), vars(dai.MonoCameraProperties.SensorResolution).keys()))
-            self.signals.setDataSignal.emit(["monoResolutionChoices", monoChoices])
             self.signals.setDataSignal.emit(["previewChoices", confManager.args.show])
-            self.signals.setDataSignal.emit(["modelSourceChoices", [Previews.color.name, Previews.left.name, Previews.right.name]])
-            versionChoices = sorted(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()), reverse=True)
-            self.signals.setDataSignal.emit(["ovVersions", versionChoices])
             devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
             self.signals.setDataSignal.emit(["deviceChoices", devices])
             if instance._nnManager is not None:

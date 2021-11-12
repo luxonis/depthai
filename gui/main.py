@@ -10,6 +10,7 @@ import depthai as dai
 # (QML_IMPORT_MINOR_VERSION is optional)
 from PySide6.QtQuick import QQuickPaintedItem
 from PySide6.QtWidgets import QMessageBox, QApplication
+from depthai_sdk import Previews
 
 QML_IMPORT_NAME = "dai.gui"
 QML_IMPORT_MAJOR_VERSION = 1
@@ -66,6 +67,15 @@ class DemoQtGui:
 
     def startGui(self):
         self.writer = ImageWriter()
+        medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
+        self.setData(["medianChoices", medianChoices])
+        colorChoices = list(filter(lambda name: name[0].isupper(), vars(dai.ColorCameraProperties.SensorResolution).keys()))
+        self.setData(["colorResolutionChoices", colorChoices])
+        monoChoices = list(filter(lambda name: name[0].isupper(), vars(dai.MonoCameraProperties.SensorResolution).keys()))
+        self.setData(["monoResolutionChoices", monoChoices])
+        self.setData(["modelSourceChoices", [Previews.color.name, Previews.left.name, Previews.right.name]])
+        versionChoices = sorted(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()), reverse=True)
+        self.setData(["ovVersions", versionChoices])
         return self.app.exec()
 
 
