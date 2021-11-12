@@ -589,7 +589,7 @@ if __name__ == "__main__":
                 self.appInitialized = True
                 exit_code = self.startGui()
                 self.stop()
-                raise SystemExit(exit_code)
+                sys.exit(exit_code)
 
         def stop(self):
             current_mxid = None
