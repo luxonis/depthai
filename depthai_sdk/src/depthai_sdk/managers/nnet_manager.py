@@ -173,7 +173,7 @@ class NNetManager:
             nodes.camRgb.preview.link(nodes.nn.input)
         elif self.source == "host":
             nodes.xinNn = pipeline.createXLinkIn()
-            self.nodes.xinRgbControl.setMaxDataSize(self.inputSize[0] * self.inputSize[1] * 3)
+            nodes.xinNn.setMaxDataSize(self.inputSize[0] * self.inputSize[1] * 3)
             nodes.xinNn.setStreamName("nnIn")
             nodes.xinNn.out.link(nodes.nn.input)
         elif self.source in ("left", "right", "rectifiedLeft", "rectifiedRight"):
