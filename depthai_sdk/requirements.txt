@@ -1,0 +1,6 @@
+numpy>1.19
+opencv-python>4
+opencv-contrib-python>4
+blobconverter>=1.2.6
+pytube>=11.0.1
+depthai>2

@@ -27,14 +27,18 @@ python3 install_requirements.py
 ```
 $ depthai_demo.py --help
 
-usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] [-cnnp CNN_PATH] [-cnn CNN_MODEL] [-sh SHAVES] [-cnn_size CNN_INPUT_SIZE] [-rgbr {1080,2160,3040}] [-rgbf RGB_FPS]
-                       [-dct DISPARITY_CONFIDENCE_THRESHOLD] [-lrct LRC_THRESHOLD] [-sig SIGMA] [-med {0,3,5,7}] [-lrc] [-ext] [-sub] [-dff] [-scale SCALE [SCALE ...]]
+usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] [-cnnp CNNPATH] [-cnn CNNMODEL] [-sh SHAVES] [-cnnsize CNNINPUTSIZE]
+                       [-rgbr {1080,2160,3040}] [-rgbf RGBFPS] [-dct DISPARITYCONFIDENCETHRESHOLD] [-lrct LRCTHRESHOLD] [-sig SIGMA] [-med {0,3,5,7}] [-lrc] [-ext] [-sub]
+                       [-dff] [-scale SCALE [SCALE ...]]
                        [-cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}]
-                       [-maxd MAX_DEPTH] [-mind MIN_DEPTH] [-sbb] [-sbb_sf SBB_SCALE_FACTOR]
-                       [-s {nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} [{nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} ...]]
-                       [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--report_file REPORT_FILE] [-sync] [-monor {400,720,800}] [-monof MONO_FPS] [-cb CALLBACK]
-                       [--openvino_version {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--count COUNT_LABEL] [-dev DEVICE_ID] [-bandw {auto,low,high}]
-                       [-usbs {usb2,usb3}] [-enc ENCODE [ENCODE ...]] [-encout ENCODE_OUTPUT] [-xls XLINK_CHUNK_SIZE] [-camo CAMERA_ORIENTATION [CAMERA_ORIENTATION ...]]
+                       [-maxd MAXDEPTH] [-mind MINDEPTH] [-sbb] [-sbbsf SBBSCALEFACTOR]
+                       [-s {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...]]
+                       [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--reportFile REPORTFILE] [-sync] [-monor {400,720,800}] [-monof MONOFPS] [-cb CALLBACK]
+                       [--openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--count COUNTLABEL] [-dev DEVICEID] [-bandw {auto,low,high}] [-usbs {usb2,usb3}]
+                       [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT] [-xls XLINKCHUNKSIZE] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControlls] 
+                       [--cameraExposure CAMERAEXPOSURE] [--cameraSensitivity CAMERASENSITIVITY] [--cameraSaturation CAMERASATURATION] [--cameraContrast CAMERACONTRAST]
+                       [--cameraBrightness CAMERABRIGHTNESS] [--cameraSharpness CAMERASHARPNESS]
+
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -42,86 +46,102 @@ optional arguments:
                         Use one of DepthAI cameras for inference (conflicts with -vid)
   -vid VIDEO, --video VIDEO
                         Path to video file (or YouTube link) to be used for inference (conflicts with -cam)
-  -dd, --disable_depth  Disable depth information
-  -dnn, --disable_neural_network
+  -dd, --disableDepth   Disable depth information
+  -dnn, --disableNeuralNetwork
                         Disable neural network inference
-  -cnnp CNN_PATH, --cnn_path CNN_PATH
+  -cnnp CNNPATH, --cnnPath CNNPATH
                         Path to cnn model directory to be run
-  -cnn CNN_MODEL, --cnn_model CNN_MODEL
+  -cnn CNNMODEL, --cnnModel CNNMODEL
                         Cnn model to run on DepthAI
   -sh SHAVES, --shaves SHAVES
                         Number of MyriadX SHAVEs to use for neural network blob compilation
-  -cnn_size CNN_INPUT_SIZE, --cnn_input_size CNN_INPUT_SIZE
+  -cnnsize CNNINPUTSIZE, --cnnInputSize CNNINPUTSIZE
                         Neural network input dimensions, in "WxH" format, e.g. "544x320"
-  -rgbr {1080,2160,3040}, --rgb_resolution {1080,2160,3040}
+  -rgbr {1080,2160,3040}, --rgbResolution {1080,2160,3040}
                         RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: 1080
-  -rgbf RGB_FPS, --rgb_fps RGB_FPS
+  -rgbf RGBFPS, --rgbFps RGBFPS
                         RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: 30.0
-  -dct DISPARITY_CONFIDENCE_THRESHOLD, --disparity_confidence_threshold DISPARITY_CONFIDENCE_THRESHOLD
+  -dct DISPARITYCONFIDENCETHRESHOLD, --disparityConfidenceThreshold DISPARITYCONFIDENCETHRESHOLD
                         Disparity confidence threshold, used for depth measurement. Default: 245
-  -lrct LRC_THRESHOLD, --lrc_threshold LRC_THRESHOLD
+  -lrct LRCTHRESHOLD, --lrcThreshold LRCTHRESHOLD
                         Left right check threshold, used for depth measurement. Default: 4
   -sig SIGMA, --sigma SIGMA
                         Sigma value for Bilateral Filter applied on depth. Default: 0
-  -med {0,3,5,7}, --stereo_median_size {0,3,5,7}
+  -med {0,3,5,7}, --stereoMedianSize {0,3,5,7}
                         Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: 7
-  -lrc, --stereo_lr_check
+  -lrc, --stereoLrCheck
                         Enable stereo 'Left-Right check' feature.
-  -ext, --extended_disparity
+  -ext, --extendedDisparity
                         Enable stereo 'Extended Disparity' feature.
   -sub, --subpixel      Enable stereo 'Subpixel' feature.
-  -dff, --disable_full_fov_nn
+  -dff, --disableFullFovNn
                         Disable full RGB FOV for NN, keeping the nn aspect ratio
   -scale SCALE [SCALE ...], --scale SCALE [SCALE ...]
                         Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5 
                         Format: preview_name or preview_name,scale_factor 
                         Example: -scale color 
                         Example: -scale color,0.7 right,2 left,2
-  -cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}, --color_map {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}
+  -cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}, --colorMap {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}
                         Change color map used to apply colors to depth/disparity frames. Default: JET
-  -maxd MAX_DEPTH, --max_depth MAX_DEPTH
+  -maxd MAXDEPTH, --maxDepth MAXDEPTH
                         Maximum depth distance for spatial coordinates in mm. Default: 10000
-  -mind MIN_DEPTH, --min_depth MIN_DEPTH
+  -mind MINDEPTH, --minDepth MINDEPTH
                         Minimum depth distance for spatial coordinates in mm. Default: 100
-  -sbb, --spatial_bounding_box
+  -sbb, --spatialBoundingBox
                         Display spatial bounding box (ROI) when displaying spatial information. The Z coordinate get's calculated from the ROI (average)
-  -sbb_sf SBB_SCALE_FACTOR, --sbb_scale_factor SBB_SCALE_FACTOR
+  -sbbsf SBBSCALEFACTOR, --sbbScaleFactor SBBSCALEFACTOR
                         Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: 0.3
-  -s {nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} [{nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} ...], --show {nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} [{nn_input,color,left,right,depth,depth_raw,disparity,disparity_color,rectified_left,rectified_right} ...]
+  -s {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...], --show {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...]
                         Choose which previews to show. Default: []
   --report {temp,cpu,memory} [{temp,cpu,memory} ...]
                         Display device utilization data
-  --report_file REPORT_FILE
+  --reportFile REPORTFILE
                         Save report data to specified target file in CSV format
   -sync, --sync         Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute
-  -monor {400,720,800}, --mono_resolution {400,720,800}
+  -monor {400,720,800}, --monoResolution {400,720,800}
                         Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: 400
-  -monof MONO_FPS, --mono_fps MONO_FPS
+  -monof MONOFPS, --monoFps MONOFPS
                         Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: 30.0
   -cb CALLBACK, --callback CALLBACK
                         Path to callbacks file to be used. Default: <project_root>/callbacks.py
-  --openvino_version {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}
+  --openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}
                         Specify which OpenVINO version to use in the pipeline
-  --count COUNT_LABEL   Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).
-  -dev DEVICE_ID, --device_id DEVICE_ID
+  --count COUNTLABEL    Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).
+  -dev DEVICEID, --deviceId DEVICEID
                         DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.
   -bandw {auto,low,high}, --bandwidth {auto,low,high}
-                        Force bandwidth mode. Default: auto. Choices: auto, low, high
-  -usbs {usb2,usb3}, --usb_speed {usb2,usb3}
+                        Force bandwidth mode. 
+                        If set to "high", the output streams will stay uncompressed
+                        If set to "low", the output streams will be MJPEG-encoded
+                        If set to "auto" (default), the optimal bandwidth will be selected based on your connection type and speed
+  -usbs {usb2,usb3}, --usbSpeed {usb2,usb3}
                         Force USB communication speed. Default: usb3
   -enc ENCODE [ENCODE ...], --encode ENCODE [ENCODE ...]
                         Define which cameras to encode (record) 
-                        Format: camera_name or camera_name,enc_fps 
+                        Format: cameraName or cameraName,encFps 
                         Example: -enc left color 
                         Example: -enc color right,10 left,10
-  -encout ENCODE_OUTPUT, --encode_output ENCODE_OUTPUT
+  -encout ENCODEOUTPUT, --encodeOutput ENCODEOUTPUT
                         Path to directory where to store encoded files. Default: <project_root>
-  -xls XLINK_CHUNK_SIZE, --xlink_chunk_size XLINK_CHUNK_SIZE
+  -xls XLINKCHUNKSIZE, --xlinkChunkSize XLINKCHUNKSIZE
                         Specify XLink chunk size
-  -camo CAMERA_ORIENTATION [CAMERA_ORIENTATION ...], --camera_orientation CAMERA_ORIENTATION [CAMERA_ORIENTATION ...]
+  -camo CAMERAORIENTATION [CAMERAORIENTATION ...], --cameraOrientation CAMERAORIENTATION [CAMERAORIENTATION ...]
                         Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG) 
                         Format: camera_name,camera_orientation 
                         Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG
+  --cameraControlls      Show camera configuration options in GUI and controll them using keyboard
+  --cameraExposure CAMERAEXPOSURE
+                        Specify camera saturation
+  --cameraSensitivity CAMERASENSITIVITY
+                        Specify camera sensitivity
+  --cameraSaturation CAMERASATURATION
+                        Specify image saturation
+  --cameraContrast CAMERACONTRAST
+                        Specify image contrast
+  --cameraBrightness CAMERABRIGHTNESS
+                        Specify image brightness
+  --cameraSharpness CAMERASHARPNESS
+                        Specify image sharpness
 ```
 
 

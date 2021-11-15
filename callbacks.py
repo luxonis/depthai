@@ -1,26 +1,26 @@
-def on_new_frame(frame, source):
+def onNewFrame(frame, source):
     pass
 
 
-def on_show_frame(frame, source):
+def onShowFrame(frame, source):
     pass
 
 
-def on_nn(nn_packet):
+def onNn(nn_packet):
     pass
 
 
-def on_report(report):
+def onReport(report):
     pass
 
 
-def on_setup(**kwargs):
+def onSetup(**kwargs):
     pass
 
 
-def on_teardown(**kwargs):
+def onTeardown(**kwargs):
     pass
 
 
-def on_iter(**kwargs):
+def onIter(**kwargs):
     pass
