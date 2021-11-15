@@ -150,6 +150,7 @@ begin
     Result := 1;
 end;
 
+{* Handles uninstallation if previous DepthAI version is installed and shortcut creation *}
 procedure CurStepChanged(CurStep: TSetupStep);
 var
     ResultCode: Integer;
@@ -159,12 +160,14 @@ begin
     if (IsUpgrade()) then
     begin
       UnInstallOldVersion();
-      Log('Creating main shortcut');
-      ExtractTemporaryFile('create_shortcut.ps1');
-      ForceDirectories(ExpandConstant('{app}'));
-      FileCopy(ExpandConstant('{tmp}\create_shortcut.ps1'), ExpandConstant('{app}\create_shortcut.ps1'), False);
-      Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -File {app}\create_shortcut.ps1'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
     end;
+  
+    Log('Creating main shortcut');
+    ExtractTemporaryFile('create_shortcut.ps1');
+    ForceDirectories(ExpandConstant('{app}'));
+    FileCopy(ExpandConstant('{tmp}\create_shortcut.ps1'), ExpandConstant('{app}\create_shortcut.ps1'), False);
+    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -File {app}\create_shortcut.ps1'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    
   end;
 end;
 

@@ -92,9 +92,9 @@ class PreviewDecoder:
             numpy.ndarray: Ready to use OpenCV frame
         """
         if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
-            return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
+            return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
-            return cv2.flip(packet.getCvFrame(), 1)
+            return packet.getCvFrame()
 
     @staticmethod
     def rectifiedRight(packet, manager=None):
@@ -109,9 +109,9 @@ class PreviewDecoder:
             numpy.ndarray: Ready to use OpenCV frame
         """
         if manager is not None and manager.lowBandwidth:  # TODO remove sync check once passthrough is supported for MJPEG encoding
-            return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
+            return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
-            return cv2.flip(packet.getCvFrame(), 1)
+            return packet.getCvFrame()
 
     @staticmethod
     def depthRaw(packet, manager=None):
@@ -143,6 +143,13 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
+        if getattr(manager, "_depthConfig", None) is None:
+            raise RuntimeError("Depth config has to be provided before decoding depth data")
+
+        maxDisp = manager._depthConfig.getMaxDisparity()
+        subpixelLevels = pow(2, manager._depthConfig.get().algorithmControl.subpixelFractionalBits)
+        subpixel = manager._depthConfig.get().algorithmControl.enableSubpixel
+        dispIntegerLevels = maxDisp if not subpixel else maxDisp / subpixelLevels
         dispScaleFactor = getattr(manager, "dispScaleFactor", None)
         if dispScaleFactor is None:
             baseline = getattr(manager, 'baseline', 75)  # mm
@@ -151,10 +158,11 @@ class PreviewDecoder:
             dispScaleFactor = baseline * focal
             if manager is not None:
                 setattr(manager, "dispScaleFactor", dispScaleFactor)
-
-        with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
+        with np.errstate(divide='ignore'):
             dispFrame = dispScaleFactor / depthRaw
-        dispFrame = (dispFrame * manager.dispMultiplier).astype(np.uint8)
+
+        dispFrame = (dispFrame * 255. / dispIntegerLevels).astype(np.uint8)
+
         return PreviewDecoder.disparityColor(dispFrame, manager)
 
     @staticmethod

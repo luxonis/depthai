@@ -173,6 +173,7 @@ class NNetManager:
             nodes.camRgb.preview.link(nodes.nn.input)
         elif self.source == "host":
             nodes.xinNn = pipeline.createXLinkIn()
+            self.nodes.xinRgbControl.setMaxDataSize(self.inputSize[0] * self.inputSize[1] * 3)
             nodes.xinNn.setStreamName("nnIn")
             nodes.xinNn.out.link(nodes.nn.input)
         elif self.source in ("left", "right", "rectifiedLeft", "rectifiedRight"):
@@ -340,6 +341,15 @@ class NNetManager:
         if self.source == "host":
             self.inputQueue = device.getInputQueue("nnIn", maxSize=1, blocking=False)
         self.outputQueue = device.getOutputQueue("nnOut", maxSize=1, blocking=False)
+
+    def closeQueues(self):
+        """
+        Closes output queues created by :func:`createQueues`
+        """
+        if self.source == "host" and self.inputQueue is not None:
+            self.inputQueue.close()
+        if self.outputQueue is not None:
+            self.outputQueue.close()
 
     def sendInputFrame(self, frame, seqNum=None):
         """

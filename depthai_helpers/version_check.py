@@ -45,7 +45,7 @@ def getVersion(module_name):
 def checkRequirementsVersion():
     daiVersionRequired = getVersionFromRequirements('depthai', Path(__file__).parent / Path('../requirements.txt'))
     if daiVersionRequired is not None:
-        if depthai.__version__.endswith('+dev'):
+        if "dev" in depthai.__version__:
             print('Depthai development version found, skipping check.')
         elif daiVersionRequired != getVersion('depthai'):
             raise SystemExit(f"\033[1;5;31mVersion mismatch\033[0m\033[91m between installed depthai lib and the required one by the script.\033[0m \n\

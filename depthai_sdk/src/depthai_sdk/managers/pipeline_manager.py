@@ -10,25 +10,34 @@ class PipelineManager:
     and connection logic onto a set of convenience functions.
     """
 
-    def __init__(self, openvinoVersion=None):
+    def __init__(self, openvinoVersion=None, poeQuality=100):
         self.openvinoVersion=openvinoVersion
+        self.poeQuality = poeQuality
+
+        #: depthai.Pipeline: Ready to use requested pipeline. Can be passed to :obj:`depthai.Device` to start execution
+        self.pipeline = dai.Pipeline()
+        #: types.SimpleNamespace: Contains all nodes added to the :attr:`pipeline` object, can be used to conveniently access nodes by their name
+        self.nodes = SimpleNamespace()
 
         if openvinoVersion is not None:
             self.pipeline.setOpenVINOVersion(openvinoVersion)
 
     #: depthai.OpenVINO.Version: OpenVINO version which will be used in pipeline
     openvinoVersion = None
+    #: int, Optional: PoE encoding quality, can decrease frame quality but decrease latency
+    poeQuality = None
     #: bool: If set to :code:`True`, manager will MJPEG-encode the packets sent from device to host to lower the bandwidth usage. **Can break** if more than 3 encoded outputs requested
     lowBandwidth = False
-    #: depthai.Pipeline: Ready to use requested pipeline. Can be passed to :obj:`depthai.Device` to start execution
-    pipeline = dai.Pipeline()
-    #: types.SimpleNamespace: Contains all nodes added to the :attr:`pipeline` object, can be used to conveniently access nodes by their name
-    nodes = SimpleNamespace()
 
     _depthConfig = dai.StereoDepthConfig()
     _rgbConfig = dai.CameraControl()
     _leftConfig = dai.CameraControl()
     _rightConfig = dai.CameraControl()
+
+    _depthConfigInputQueue = None
+    _rgbConfigInputQueue = None
+    _leftConfigInputQueue = None
+    _rightConfigInputQueue = None
 
     def setNnManager(self, nnManager):
         """
@@ -45,15 +54,37 @@ class PipelineManager:
 
     def createDefaultQueues(self, device):
         """
-        Creates queues for all requested XLinkOut's and XLinkIn's.
+        Creates default queues for config updates
 
         Args:
             device (depthai.Device): Running device instance
         """
-        for xout in filter(lambda node: isinstance(node, dai.node.XLinkOut), vars(self.nodes).values()):
-            device.getOutputQueue(xout.getStreamName(), maxSize=1, blocking=False)
-        for xin in filter(lambda node: isinstance(node, dai.node.XLinkIn), vars(self.nodes).values()):
-            device.getInputQueue(xin.getStreamName(), maxSize=1, blocking=False)
+
+        if hasattr(self.nodes, "stereo"):
+            self._depthConfigInputQueue = device.getInputQueue("stereoConfig")
+        if hasattr(self.nodes, "camRgb"):
+            self._rgbConfigInputQueue = device.getInputQueue("color_control")
+        if hasattr(self.nodes, "monoLeft"):
+            self._leftConfigInputQueue = device.getInputQueue("left_control")
+        if hasattr(self.nodes, "monoRight"):
+            self._rightConfigInputQueue = device.getInputQueue("right_control")
+
+    def closeDefaultQueues(self):
+        """
+        Creates default queues for config updates
+
+        Args:
+            device (depthai.Device): Running device instance
+        """
+
+        if self._depthConfigInputQueue is not None:
+            self._depthConfigInputQueue.close()
+        if self._rgbConfigInputQueue is not None:
+            self._rgbConfigInputQueue.close()
+        if self._leftConfigInputQueue is not None:
+            self._leftConfigInputQueue.close()
+        if self._rightConfigInputQueue is not None:
+            self._rightConfigInputQueue.close()
 
     def __calcEncodeableSize(self, sourceSize):
         w, h = sourceSize
@@ -102,6 +133,7 @@ class PipelineManager:
             manip.out.link(videnc.input)
         else:
             raise NotImplementedError("Unable to create mjpeg link for encountered node type: {}".format(type(node)))
+        videnc.setQuality(self.poeQuality)
         videnc.bitstream.link(xout.input)
 
     def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, xout=False):
@@ -134,6 +166,7 @@ class PipelineManager:
             else:
                 self.nodes.camRgb.video.link(self.nodes.xoutRgb.input)
         self.nodes.xinRgbControl = self.pipeline.createXLinkIn()
+        self.nodes.xinRgbControl.setMaxDataSize(1024)
         self.nodes.xinRgbControl.setStreamName(Previews.color.name + "_control")
         self.nodes.xinRgbControl.out.link(self.nodes.camRgb.inputControl)
 
@@ -163,6 +196,7 @@ class PipelineManager:
             else:
                 self.nodes.monoLeft.out.link(self.nodes.xoutLeft.input)
         self.nodes.xinLeftControl = self.pipeline.createXLinkIn()
+        self.nodes.xinLeftControl.setMaxDataSize(1024)
         self.nodes.xinLeftControl.setStreamName(Previews.left.name + "_control")
         self.nodes.xinLeftControl.out.link(self.nodes.monoLeft.inputControl)
 
@@ -191,6 +225,7 @@ class PipelineManager:
             else:
                 self.nodes.monoRight.out.link(self.nodes.xoutRight.input)
         self.nodes.xinRightControl = self.pipeline.createXLinkIn()
+        self.nodes.xinRightControl.setMaxDataSize(1024)
         self.nodes.xinRightControl.setStreamName(Previews.right.name + "_control")
         self.nodes.xinRightControl.out.link(self.nodes.monoRight.inputControl)
 
@@ -218,14 +253,13 @@ class PipelineManager:
         self.nodes.stereo = self.pipeline.createStereoDepth()
 
         self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
-        self._depthConfig.setConfidenceThreshold(dct)
         self.nodes.stereo.initialConfig.setMedianFilter(median)
-        self._depthConfig.setMedianFilter(median)
         self.nodes.stereo.initialConfig.setBilateralFilterSigma(sigma)
-        self._depthConfig.setBilateralFilterSigma(sigma)
         self.nodes.stereo.initialConfig.setLeftRightCheckThreshold(lrcThreshold)
-        self._depthConfig.setLeftRightCheckThreshold(lrcThreshold)
 
+        self._depthConfig = self.nodes.stereo.initialConfig.get()
+
+        self.nodes.stereo.setRuntimeModeSwitch(True)
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
@@ -240,6 +274,7 @@ class PipelineManager:
         self.nodes.monoRight.out.link(self.nodes.stereo.right)
 
         self.nodes.xinStereoConfig = self.pipeline.createXLinkIn()
+        self.nodes.xinStereoConfig.setMaxDataSize(1024)
         self.nodes.xinStereoConfig.setStreamName("stereoConfig")
         self.nodes.xinStereoConfig.out.link(self.nodes.stereo.inputConfig)
 
@@ -289,8 +324,6 @@ class PipelineManager:
             configRef.setContrast(contrast)
         if brightness is not None:
             configRef.setBrightness(brightness)
-            
-        device.getInputQueue(cameraName + "_control").send(configRef)
 
     def updateColorCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         """
@@ -306,6 +339,7 @@ class PipelineManager:
             sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
         """
         self._updateCamConfig(self._rgbConfig, Previews.color.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+        self._rgbConfigInputQueue.send(self._rgbConfig)
 
     def updateLeftCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         """
@@ -321,6 +355,7 @@ class PipelineManager:
             sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
         """
         self._updateCamConfig(self._leftConfig, Previews.left.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+        self._leftConfigInputQueue.send(self._leftConfig)
 
     def updateRightCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         """
@@ -336,8 +371,9 @@ class PipelineManager:
             sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
         """
         self._updateCamConfig(self._rightConfig, Previews.right.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+        self._rightConfigInputQueue.send(self._rightConfig)
 
-    def updateDepthConfig(self, device, dct=None, sigma=None, median=None, lrcThreshold=None):
+    def updateDepthConfig(self, device, dct=None, sigma=None, median=None, lrc=None, lrcThreshold=None):
         """
         Updates :obj:`depthai.node.StereoDepth` node config
 
@@ -347,18 +383,20 @@ class PipelineManager:
                 are present in the depth map.
             median (depthai.MedianFilter, Optional): Median filter to be applied on the depth, use with :obj:`depthai.MedianFilter.MEDIANOFF` to disable median filtering
             sigma (int, Optional): Sigma value for bilateral filter (0..65535). If set to :code:`0`, the filter will be disabled.
+            lrc (bool, Optional): Enables or disables Left-Right Check mode
             lrcThreshold (int, Optional): Sets the Left-Right Check threshold value (0..10)
         """
         if dct is not None:
-            self._depthConfig.setConfidenceThreshold(dct)
+            self._depthConfig.costMatching.confidenceThreshold = dct
         if sigma is not None:
-            self._depthConfig.setBilateralFilterSigma(sigma)
+            self._depthConfig.postProcessing.bilateralSigmaValue = sigma
         if median is not None:
-            self._depthConfig.setMedianFilter(median)
+            self._depthConfig.postProcessing.median = median
         if lrcThreshold is not None:
-            self._depthConfig.setLeftRightCheckThreshold(lrcThreshold)
-
-        device.getInputQueue("stereoConfig").send(self._depthConfig)
+            self._depthConfig.algorithmControl.leftRightCheckThreshold = lrcThreshold
+        if lrc is not None:
+            self._depthConfig.algorithmControl.enableLeftRightCheck = lrc
+        self._depthConfigInputQueue.send(self._depthConfig)
 
     def addNn(self, nn, sync=False, useDepth=False, xoutNnInput=False, xoutSbb=False):
         """
@@ -429,13 +467,14 @@ class PipelineManager:
         self.nodes.xoutSystemLogger.setStreamName("systemLogger")
         self.nodes.systemLogger.out.link(self.nodes.xoutSystemLogger.input)
 
-    def createEncoder(self, cameraName, encFps=30):
+    def createEncoder(self, cameraName, encFps=30, encQuality=100):
         """
         Creates H.264 / H.265 video encoder (:obj:`depthai.node.VideoEncoder` instance)
 
         Args:
             cameraName (str): Camera name to create the encoder for
             encFps (int, Optional): Specify encoding FPS
+            encQuality (int, Optional): Specify encoding quality (1-100)
 
         Raises:
             ValueError: if cameraName is not a supported camera name
@@ -471,6 +510,7 @@ class PipelineManager:
 
         enc = self.pipeline.createVideoEncoder()
         enc.setDefaultProfilePreset(*encResolution, encFps, encProfile)
+        enc.setQuality(encQuality)
         encIn.link(enc.input)
         setattr(self.nodes, nodeName, enc)
 
@@ -479,11 +519,15 @@ class PipelineManager:
         encXout.setStreamName(xoutName)
         setattr(self.nodes, xoutName, encXout)
 
-    def enableLowBandwidth(self):
+    def enableLowBandwidth(self, poeQuality):
         """
-        Enables low-bandwidth mode.
+        Enables low-bandwidth mode
+
+        Args:
+            poeQuality (int, Optional): PoE encoding quality, can decrease frame quality but decrease latency
         """
         self.lowBandwidth = True
+        self.poeQuality = poeQuality
 
     def setXlinkChunkSize(self, chunkSize):
         self.pipeline.setXLinkChunkSize(chunkSize)

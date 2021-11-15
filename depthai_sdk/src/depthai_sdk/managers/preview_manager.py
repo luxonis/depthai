@@ -13,7 +13,7 @@ class PreviewManager:
     #: dict: Contains name -> frame mapping that can be used to modify specific frames directly
     frames = {}
 
-    def __init__(self, display=[], nnSource=None, colorMap=cv2.COLORMAP_JET, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False, fpsHandler=None):
+    def __init__(self, display=[], nnSource=None, colorMap=cv2.COLORMAP_JET, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False, fpsHandler=None, createWindows=True):
         """
         Args:
             display (list, Optional): List of :obj:`depthai_sdk.Previews` objects representing the streams to display
@@ -24,7 +24,9 @@ class PreviewManager:
             colorMap (cv2 color map, Optional): Color map applied on the depth frames
             lowBandwidth (bool, Optional): If set to :code:`True`, will decode the received frames assuming they were encoded with MJPEG encoding
             scale (dict, Optional): Allows to scale down frames before preview. Useful when previewing e.g. 4K frames
-            dispMultiplier (float, Optional): Value used for depth <-> disparity calculations
+            dispMultiplier (float, Optional): Multiplier used for depth <-> disparity calculations (calculated on baseline and focal)
+            depthConfig (depthai.StereoDepthConfig, optional): Configuration used for depth <-> disparity calculations
+            createWindows (bool, Optional): If True, will create preview windows using OpenCV (enabled by default)
         """
         self.sync = sync
         self.nnSource = nnSource
@@ -32,9 +34,11 @@ class PreviewManager:
         self.lowBandwidth = lowBandwidth
         self.scale = scale
         self.dispMultiplier = dispMultiplier
+        self._depthConfig = depthConfig
         self._fpsHandler = fpsHandler
         self._mouseTracker = MouseClickTracker() if mouseTracker else None
         self._display = display
+        self._createWindows = createWindows
         self._rawFrames = {}
 
     def collectCalibData(self, device):
@@ -70,10 +74,11 @@ class PreviewManager:
         """
         self.outputQueues = []
         for name in self._display:
-            cv2.namedWindow(name)
+            if self._createWindows:
+                cv2.namedWindow(name)
             if callable(callback):
                 callback(name)
-            if self._mouseTracker is not None:
+            if self._createWindows and self._mouseTracker is not None:
                 cv2.setMouseCallback(name, self._mouseTracker.selectPoint(name))
             if name not in (Previews.disparityColor.name, Previews.depth.name):  # generated on host
                 self.outputQueues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
@@ -82,6 +87,15 @@ class PreviewManager:
             self.outputQueues.append(device.getOutputQueue(name=Previews.disparity.name, maxSize=1, blocking=False))
         if Previews.depth.name in self._display and Previews.depthRaw.name not in self._display:
             self.outputQueues.append(device.getOutputQueue(name=Previews.depthRaw.name, maxSize=1, blocking=False))
+
+    def closeQueues(self):
+        """
+        Closes output queues for requested preview streams
+        """
+
+        for queue in self.outputQueues:
+            queue.close()
+
 
     def prepareFrames(self, blocking=False, callback=None):
         """
@@ -158,7 +172,8 @@ class PreviewManager:
                 newFrame = callback(frame, name)
                 if newFrame is not None:
                     frame = newFrame
-            cv2.imshow(name, frame)
+            if self._createWindows:
+                cv2.imshow(name, frame)
 
     def has(self, name):
         """
