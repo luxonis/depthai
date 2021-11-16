@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import os
 import sys
 import time
@@ -22,15 +23,6 @@ print('Depthai version installed: ', dai.__version__)
 args = parseArgs()
 if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
     checkRequirementsVersion()
-
-confManager = ConfigManager(args)
-confManager.linuxCheckApplyUsbRules()
-if not confManager.useCamera:
-    if str(confManager.args.video).startswith('https'):
-        confManager.args.video = downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS)
-        print("Youtube video downloaded.")
-    if not Path(confManager.args.video).exists():
-        raise ValueError("Path {} does not exists!".format(confManager.args.video))
 
 
 class Trackbars:
@@ -483,28 +475,31 @@ if __name__ == "__main__":
 
 
     class WorkerSignals(QObject):
+        updateConfSignal = Signal(list)
         updatePreviewSignal = Signal(QImage)
         setDataSignal = Signal(list)
         exitSignal = Signal()
         errorSignal = Signal(str)
 
     class Worker(QRunnable):
-        def __init__(self, instance, parent, selectedPreview=None):
+        def __init__(self, instance, parent, conf, selectedPreview=None):
             super(Worker, self).__init__()
             self.running = False
             self.selectedPreview = selectedPreview
             self.instance = instance
             self.parent = parent
+            self.conf = conf
             self.signals = WorkerSignals()
             self.signals.exitSignal.connect(self.terminate)
+            self.signals.updateConfSignal.connect(self.updateConf)
 
         @Slot()
         def run(self):
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup)
-            confManager.args.bandwidth = "auto"
-            if confManager.args.deviceId is None:
+            self.conf.args.bandwidth = "auto"
+            if self.conf.args.deviceId is None:
                 devices = dai.Device.getAllAvailableDevices()
                 if len(devices) > 0:
                     defaultDevice = next(map(
@@ -513,9 +508,25 @@ if __name__ == "__main__":
                     ), None)
                     if defaultDevice is None:
                         defaultDevice = devices[0].getMxId()
-                    confManager.args.deviceId = defaultDevice
+                    self.conf.args.deviceId = defaultDevice
+            if Previews.color.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.color.name)
+            if Previews.nnInput.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.nnInput.name)
+            if Previews.depth.name not in self.conf.args.show and Previews.disparityColor.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.depth.name)
+            if Previews.depthRaw.name not in self.conf.args.show and Previews.disparity.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.depthRaw.name)
+            if Previews.left.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.left.name)
+            if Previews.rectifiedLeft.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.rectifiedLeft.name)
+            if Previews.right.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.right.name)
+            if Previews.rectifiedRight.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.rectifiedRight.name)
             try:
-                self.instance.run_all(confManager)
+                self.instance.run_all(self.conf)
             except Exception as ex:
                 self.onError(ex)
 
@@ -523,6 +534,10 @@ if __name__ == "__main__":
         def terminate(self):
             self.running = False
             self.signals.setDataSignal.emit(["restartRequired", False])
+
+        @Slot(list)
+        def updateConf(self, argsList):
+            self.conf.args = argparse.Namespace(**dict(argsList))
 
         def onError(self, ex: Exception):
             self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [str(ex)]))
@@ -543,22 +558,32 @@ if __name__ == "__main__":
                 self.signals.updatePreviewSignal.emit(img)
 
         def onSetup(self, instance):
-            self.signals.setDataSignal.emit(["previewChoices", confManager.args.show])
+            self.selectedPreview = self.conf.args.show[0]
+            self.signals.updateConfSignal.emit(list(vars(self.conf.args).items()))
+            self.signals.setDataSignal.emit(["previewChoices", self.conf.args.show])
             devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
             self.signals.setDataSignal.emit(["deviceChoices", devices])
             if instance._nnManager is not None:
                 self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
             else:
                 self.signals.setDataSignal.emit(["countLabels", []])
-            self.signals.setDataSignal.emit(["depthEnabled", confManager.useDepth])
-            self.signals.setDataSignal.emit(["modelChoices", sorted(confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
+            self.signals.setDataSignal.emit(["depthEnabled", self.conf.useDepth])
+            self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 
     class App(DemoQtGui):
         def __init__(self):
             super().__init__()
+            self.confManager = ConfigManager(args)
+            self.confManager.linuxCheckApplyUsbRules()
+            if not self.confManager.useCamera:
+                if str(self.confManager.args.video).startswith('https'):
+                    self.confManager.args.video = downloadYTVideo(self.confManager.args.video, DEPTHAI_VIDEOS)
+                    print("Youtube video downloaded.")
+                if not Path(self.confManager.args.video).exists():
+                    raise ValueError("Path {} does not exists!".format(self.confManager.args.video))
             self.running = False
-            self.selectedPreview = confManager.args.show[0] if len(confManager.args.show) > 0 else "color"
+            self.selectedPreview = self.confManager.args.show[0] if len(self.confManager.args.show) > 0 else "color"
             self.useDisparity = False
             self.dataInitialized = False
             self.appInitialized = False
@@ -566,7 +591,7 @@ if __name__ == "__main__":
             self._demoInstance = Demo(displayFrames=False)
 
         def updateArg(self, arg_name, arg_value, shouldUpdate=True):
-            setattr(confManager.args, arg_name, arg_value)
+            setattr(self.confManager.args, arg_name, arg_value)
             if shouldUpdate:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
@@ -582,7 +607,7 @@ if __name__ == "__main__":
 
         def start(self):
             self.running = True
-            self.worker = Worker(self._demoInstance, parent=self, selectedPreview=self.selectedPreview)
+            self.worker = Worker(self._demoInstance, parent=self, conf=self.confManager, selectedPreview=self.selectedPreview)
             self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
             self.worker.signals.setDataSignal.connect(self.setData)
             self.worker.signals.errorSignal.connect(self.showError)
@@ -636,27 +661,27 @@ if __name__ == "__main__":
 
         def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
             if exposure is not None:
-                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraExposure or []))) + [(name, exposure)]
+                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraExposure or []))) + [(name, exposure)]
                 self._demoInstance._cameraConfig["exposure"] = newValue
                 self.updateArg("cameraExposure", newValue, False)
             if sensitivity is not None:
-                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraSensitivity or []))) + [(name, sensitivity)]
+                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraSensitivity or []))) + [(name, sensitivity)]
                 self._demoInstance._cameraConfig["sensitivity"] = newValue
                 self.updateArg("cameraSensitivity", newValue, False)
             if saturation is not None:
-                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraSaturation or []))) + [(name, saturation)]
+                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraSaturation or []))) + [(name, saturation)]
                 self._demoInstance._cameraConfig["saturation"] = newValue
                 self.updateArg("cameraSaturation", newValue, False)
             if contrast is not None:
-                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraContrast or []))) + [(name, contrast)]
+                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraContrast or []))) + [(name, contrast)]
                 self._demoInstance._cameraConfig["contrast"] = newValue
                 self.updateArg("cameraContrast", newValue, False)
             if brightness is not None:
-                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraBrightness or []))) + [(name, brightness)]
+                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraBrightness or []))) + [(name, brightness)]
                 self._demoInstance._cameraConfig["brightness"] = newValue
                 self.updateArg("cameraBrightness", newValue, False)
             if sharpness is not None:
-                newValue = list(filter(lambda item: item[0] == name, (confManager.args.cameraSharpness or []))) + [(name, sharpness)]
+                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraSharpness or []))) + [(name, sharpness)]
                 self._demoInstance._cameraConfig["sharpness"] = newValue
                 self.updateArg("cameraSharpness", newValue, False)
 
@@ -718,26 +743,26 @@ if __name__ == "__main__":
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
         def guiOnToggleColorEncoding(self, enabled, fps):
-            oldConfig = confManager.args.encode or {}
+            oldConfig = self.confManager.args.encode or {}
             if enabled:
                 oldConfig["color"] = fps
-            elif "color" in confManager.args.encode:
+            elif "color" in self.confManager.args.encode:
                 del oldConfig["color"]
             self.updateArg("encode", oldConfig)
 
         def guiOnToggleLeftEncoding(self, enabled, fps):
-            oldConfig = confManager.args.encode or {}
+            oldConfig = self.confManager.args.encode or {}
             if enabled:
                 oldConfig["left"] = fps
-            elif "color" in confManager.args.encode:
+            elif "color" in self.confManager.args.encode:
                 del oldConfig["left"]
             self.updateArg("encode", oldConfig)
 
         def guiOnToggleRightEncoding(self, enabled, fps):
-            oldConfig = confManager.args.encode or {}
+            oldConfig = self.confManager.args.encode or {}
             if enabled:
                 oldConfig["right"] = fps
-            elif "color" in confManager.args.encode:
+            elif "color" in self.confManager.args.encode:
                 del oldConfig["right"]
             self.updateArg("encode", oldConfig)
 
@@ -761,7 +786,7 @@ if __name__ == "__main__":
             self.updateArg("disableDepth", not value)
             selectedPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name] + ([Previews.disparity.name, Previews.disparityColor.name] if self.useDisparity else [Previews.depth.name, Previews.depthRaw.name])
             depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name, Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
-            filtered = list(filter(lambda name: name not in depthPreviews, confManager.args.show))
+            filtered = list(filter(lambda name: name not in depthPreviews, self.confManager.args.show))
             if value:
                 updated = filtered + selectedPreviews
                 if self.selectedPreview not in updated:
@@ -775,7 +800,7 @@ if __name__ == "__main__":
 
         def guiOnToggleNN(self, value):
             self.updateArg("disableNeuralNetwork", not value)
-            filtered = list(filter(lambda name: name != Previews.nnInput.name, confManager.args.show))
+            filtered = list(filter(lambda name: name != Previews.nnInput.name, self.confManager.args.show))
             if value:
                 updated = filtered + [Previews.nnInput.name]
                 if self.selectedPreview not in updated:
@@ -791,13 +816,13 @@ if __name__ == "__main__":
             depthPreviews = [Previews.depth.name, Previews.depthRaw.name]
             disparityPreviews = [Previews.disparity.name, Previews.disparityColor.name]
             if value:
-                filtered = list(filter(lambda name: name not in depthPreviews, confManager.args.show))
+                filtered = list(filter(lambda name: name not in depthPreviews, self.confManager.args.show))
                 updated = filtered + disparityPreviews
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
             else:
-                filtered = list(filter(lambda name: name not in disparityPreviews, confManager.args.show))
+                filtered = list(filter(lambda name: name not in disparityPreviews, self.confManager.args.show))
                 updated = filtered + depthPreviews
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
