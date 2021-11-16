@@ -550,6 +550,7 @@ if __name__ == "__main__":
                 self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
             else:
                 self.signals.setDataSignal.emit(["countLabels", []])
+            self.signals.setDataSignal.emit(["depthEnabled", confManager.useDepth])
             self.signals.setDataSignal.emit(["modelChoices", sorted(confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 

@@ -176,8 +176,9 @@ class ConfigManager:
                 else:
                     print("Disabling {} preview...".format(name))
             if len(updatedShowArg) == 0:
-                print("No previews available, adding color...")
+                print("No previews available, adding color and nnInput...")
                 updatedShowArg.append("color")
+                updatedShowArg.append("nnInput")
             self.args.show = updatedShowArg
 
         if self.args.bandwidth == "auto":

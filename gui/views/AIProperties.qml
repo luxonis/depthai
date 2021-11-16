@@ -232,6 +232,7 @@ ListView {
             }
 
             Switch {
+                enabled: depthEnabled
                 id: switch3
                 x: 90
                 y: 375
@@ -264,6 +265,7 @@ ListView {
             }
 
             Slider {
+                enabled: depthEnabled
                 id: sbbFactorSlider
                 x: 423
                 y: 383

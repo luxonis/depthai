@@ -74,6 +74,7 @@ ApplicationWindow {
     property var monoResolutionChoices
     property var restartRequired
     property var deviceChoices
+    property var depthEnabled: true
 
     AppBridge {
         id: appBridge
@@ -123,6 +124,7 @@ ApplicationWindow {
             }
 
             TabButton {
+                enabled: depthEnabled
                 text: "Depth"
             }
             TabButton {
