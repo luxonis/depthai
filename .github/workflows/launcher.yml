@@ -36,6 +36,14 @@ jobs:
     - name: Build Windows Installer
       run: .\launcher\windows\build.ps1
 
+    # Sign Launcher
+    - name: Sign Windows Launcher
+      run: |
+        New-Item -ItemType directory -Path certificate
+        Set-Content -Path certificate\certificate.txt -Value '${{ secrets.WINDOWS_CERTIFICATE }}'
+        certutil -decode certificate\certificate.txt certificate\certificate.pfx
+        & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe' sign /td sha256 /fd sha256 /f certificate\certificate.pfx /p '${{ secrets.WINDOWS_CERTIFICATE_PASS }}' /t http://timestamp.comodoca.com/authenticode launcher/windows/build/Output/DepthAI_setup.exe
+      
     - name: Upload Installer artifact
       uses: actions/upload-artifact@v2
       with:
