@@ -159,16 +159,18 @@ class ConfigManager:
         cams = device.getConnectedCameras()
         depthEnabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
 
-        if not depthEnabled:
+        if depthEnabled:
+            self.args.disableDepth = False
+        else:
             if not self.args.disableDepth:
                 print("Disabling depth...")
-            self.args.disableDepth = True
+                self.args.disableDepth = True
             if self.args.spatialBoundingBox:
                 print("Disabling spatial bounding boxes...")
-            self.args.spatialBoundingBox = False
+                self.args.spatialBoundingBox = False
             if self.args.camera != 'color':
                 print("Switching source to RGB camera...")
-            self.args.camera = 'color'
+                self.args.camera = 'color'
             updatedShowArg = []
             for name in self.args.show:
                 if name in ("nnInput", "color"):
@@ -176,8 +178,10 @@ class ConfigManager:
                 else:
                     print("Disabling {} preview...".format(name))
             if len(updatedShowArg) == 0:
-                print("No previews available, adding color...")
+                print("No previews available, adding color and nnInput...")
                 updatedShowArg.append("color")
+                if self.useNN:
+                    updatedShowArg.append("nnInput")
             self.args.show = updatedShowArg
 
         if self.args.bandwidth == "auto":
