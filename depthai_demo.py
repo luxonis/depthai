@@ -475,6 +475,8 @@ class Demo:
 
 
 if __name__ == "__main__":
+    if platform.system() == 'Windows':
+        os.environ["QT_QUICK_BACKEND"] = "software"
     from gui.main import DemoQtGui
     from PySide6.QtGui import QImage
 
