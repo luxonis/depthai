@@ -232,5 +232,19 @@ if 0: # Change to 1 to enable stub GUI test (no device connection)
     ir_handler(IrStub())
 
 def start_ir_handler(dev):
-    t = threading.Thread(target=ir_handler, args=(dev,))
+    class IrLogWrapper:
+        def __init__(self, dev):
+            self.dev = dev
+            self.idx = 1
+        def irWriteReg(self, reg, value):
+            print(f'===== Op{self.idx:3}: dev.irWriteReg({hex(reg)}, {hex(value)})')
+            self.dev.irWriteReg(reg, value)
+            self.idx += 1
+        def irReadReg(self, reg):
+            value = self.dev.irReadReg(reg)
+            print(f'===== Op{self.idx:3}: dev.irReadReg({hex(reg)}) -> {hex(value)}')
+            self.idx += 1
+            return value
+
+    t = threading.Thread(target=ir_handler, args=(IrLogWrapper(dev),))
     t.start()
