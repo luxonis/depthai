@@ -3,7 +3,7 @@
 This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
 <a href="https://www.youtube.com/watch?v=sCZpsFQBffk">
-   <img src="https://blobconverter.s3.us-west-2.amazonaws.com/final_6196554adf178800b87a30fd_167716.gif" alt="depthai_demo"/>
+   <img src="https://blobconverter.s3.us-west-2.amazonaws.com/final_6196554adf178800b87a30fd_167716.gif" alt="depthai_demo"  width="200" height="400"/>
 </a>
 
 
