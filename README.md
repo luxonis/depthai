@@ -2,10 +2,8 @@
 
 This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
-<a href="https://www.youtube.com/watch?v=sCZpsFQBffk">
-   <img src="https://blobconverter.s3.us-west-2.amazonaws.com/final_6196554adf178800b87a30fd_167716.gif" alt="depthai_demo"  width="200" height="400"/>
-</a>
-
+_Click on the GIF below to see a full example run_
+[![depthai demo](https://user-images.githubusercontent.com/5244214/142426845-82f5f8fd-ad1a-4873-97a5-2b3fcdb0ca2e.gif)](https://www.youtube.com/watch?v=sCZpsFQBffk)
 
 
 __Documentation is available at [https://docs.luxonis.com/](https://docs.luxonis.com/).__
