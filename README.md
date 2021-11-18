@@ -2,6 +2,9 @@
 
 This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
+[![depthai demo](https://user-images.githubusercontent.com/5244214/142426845-82f5f8fd-ad1a-4873-97a5-2b3fcdb0ca2e.gif)](https://www.youtube.com/watch?v=sCZpsFQBffk)
+
+
 __Documentation is available at [https://docs.luxonis.com/](https://docs.luxonis.com/).__
 
 ## Python modules (Dependencies)
