@@ -91,7 +91,8 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
+        # if manager is not None and manager.lowBandwidth:  # disabled to limit the memory usage
+        if False:
             return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
@@ -108,7 +109,8 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth:  # TODO remove sync check once passthrough is supported for MJPEG encoding
+        # if manager is not None and manager.lowBandwidth:  # disabled to limit the memory usage
+        if False:
             return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
