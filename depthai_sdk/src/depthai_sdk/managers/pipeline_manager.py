@@ -298,7 +298,8 @@ class PipelineManager:
         if useRectifiedLeft:
             self.nodes.xoutRectLeft = self.pipeline.createXLinkOut()
             self.nodes.xoutRectLeft.setStreamName(Previews.rectifiedLeft.name)
-            if self.lowBandwidth:
+            # if self.lowBandwidth:  # disabled to limit the memory usage
+            if False:
                 self._mjpegLink(self.nodes.stereo, self.nodes.xoutRectLeft, self.nodes.stereo.rectifiedLeft)
             else:
                 self.nodes.stereo.rectifiedLeft.link(self.nodes.xoutRectLeft.input)
@@ -306,7 +307,8 @@ class PipelineManager:
         if useRectifiedRight:
             self.nodes.xoutRectRight = self.pipeline.createXLinkOut()
             self.nodes.xoutRectRight.setStreamName(Previews.rectifiedRight.name)
-            if self.lowBandwidth:
+            # if self.lowBandwidth:  # disabled to limit the memory usage
+            if False:
                 self._mjpegLink(self.nodes.stereo, self.nodes.xoutRectRight, self.nodes.stereo.rectifiedRight)
             else:
                 self.nodes.stereo.rectifiedRight.link(self.nodes.xoutRectRight.input)
