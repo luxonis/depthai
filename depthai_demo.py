@@ -489,6 +489,13 @@ if __name__ == "__main__":
             self.instance = instance
             self.parent = parent
             self.conf = conf
+            self.callback_module = loadModule(conf.args.callback)
+            self.file_callbacks = {
+                callbackName: getattr(self.callback_module, callbackName)
+                for callbackName in ["shouldRun", "onNewFrame", "onShowFrame", "onNn", "onReport", "onSetup", "onTeardown", "onIter"]
+                if callable(getattr(self.callback_module, callbackName, None))
+            }
+            self.instance.setCallbacks(**self.file_callbacks)
             self.signals = WorkerSignals()
             self.signals.exitSignal.connect(self.terminate)
             self.signals.updateConfSignal.connect(self.updateConf)
@@ -544,9 +551,13 @@ if __name__ == "__main__":
             self.signals.setDataSignal.emit(["restartRequired", True])
 
         def shouldRun(self):
+            if "shouldRun" in self.file_callbacks:
+                return self.running and self.file_callbacks["shouldRun"]()
             return self.running
 
         def onShowFrame(self, frame, source):
+            if "onShowFrame" in self.file_callbacks:
+                self.file_callbacks["onShowFrame"](frame, source)
             writerObject = self.parent.window.findChild(QObject, "writer")
             w, h = int(writerObject.width()), int(writerObject.height())
             if source == self.selectedPreview:
@@ -558,6 +569,8 @@ if __name__ == "__main__":
                 self.signals.updatePreviewSignal.emit(img)
 
         def onSetup(self, instance):
+            if "onSetup" in self.file_callbacks:
+                self.file_callbacks["onSetup"](instance)
             self.selectedPreview = self.conf.args.show[0]
             self.signals.updateConfSignal.emit(list(vars(self.conf.args).items()))
             self.signals.setDataSignal.emit(["previewChoices", self.conf.args.show])
