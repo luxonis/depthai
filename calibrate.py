@@ -13,7 +13,7 @@ import numpy as np
 import depthai_helpers.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-debug = True
+debug = False
 red = (255, 0, 0)
 green = (0, 255, 0)
 
@@ -110,7 +110,7 @@ def parse_args():
 
 
 class Main:
-    output_scale_factor = 1
+    output_scale_factor = 0.5
     polygons = None
     width = None
     height = None
@@ -140,9 +140,18 @@ class Main:
         if debug:
             print("Using Arguments=", self.args)
 
+        if self.args.board.upper() == 'OAK-D-LITE':
+            raise Exception(
+            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         pipeline = self.create_pipeline()
         self.device = dai.Device(pipeline)
+        """ cameraProperties = self.device.getConnectedCameraProperties()
+        for properties in cameraProperties:
+            if properties.sensorName == 'OV7251':
+                raise Exception(
+            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!") 
 
+        self.device.startPipeline(pipeline)"""
         self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
         self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
         if not self.args.disableRgb:
@@ -162,7 +171,7 @@ class Main:
 
         for i, left_id in enumerate(id_l):
             idx = np.where(id_r == left_id)
-            print(idx)
+            # print(idx)
             if idx[0].size == 0:
                 continue
             for left_corner, right_corner in zip(marker_corners_l[i], marker_corners_r[idx[0][0]]):
@@ -187,11 +196,11 @@ class Main:
             cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
                 
         cam_left.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_480_P)
+            dai.MonoCameraProperties.SensorResolution.THE_800_P)
         cam_left.setFps(self.args.fps)
 
         cam_right.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_480_P)
+            dai.MonoCameraProperties.SensorResolution.THE_800_P)
         cam_right.setFps(self.args.fps)
 
         xout_left.setStreamName("left")
@@ -203,21 +212,21 @@ class Main:
         if not self.args.disableRgb:
             rgb_cam = pipeline.createColorCamera()
             rgb_cam.setResolution(
-                dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+                dai.ColorCameraProperties.SensorResolution.THE_4_K)
             rgb_cam.setInterleaved(False)
             rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-            rgb_cam.setIspScale(2, 3)
+            rgb_cam.setIspScale(1, 3)
             rgb_cam.initialControl.setManualFocus(self.focus_value)
             rgb_cam.setFps(self.args.fps)
+
             xout_rgb_isp = pipeline.createXLinkOut()
             xout_rgb_isp.setStreamName("rgb")
-            rgb_cam.isp.link(xout_rgb_isp.input)
+            rgb_cam.isp.link(xout_rgb_isp.input)        
 
         return pipeline
 
     def parse_frame(self, frame, stream_name):
         if not self.is_markers_found(frame):
-            print("Less markers found")
             return False
 
         filename = calibUtils.image_filename(
@@ -346,13 +355,10 @@ class Main:
             frame_list = []
             # left_frame = recent_left.getCvFrame()
             # rgb_frame = recent_color.getCvFrame()
-            print('List size')
-            print(len(recent_frames))  
+
             for packet in recent_frames:
                 frame = packet[1].getCvFrame()
-                print('Name: {}, size: {}'.format(packet[0], frame.shape))
-                
-                # print(;packet[0])
+                # print(packet[0])
                 # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 if packet[0] == 'rgb':
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -363,15 +369,19 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
 
-                # if debug:
-                #     print("Timestamp difference ---> l & rgb")
-                lrgb_time = 0 
+                if debug:
+                    print("Timestamp difference ---> l & rgb")
+                lrgb_time = 0
                 if not self.args.disableRgb:
                     lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
                 lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
 
+                if debug:
+                    print(lrgb_time)
+                    print(lr_time)
+
                 if capturing and lrgb_time < 30000 and lr_time < 30000:
-                    print("Capturing  ------------------------ {}".format(packet[0]))
+                    print("Capturing  ------------------------")
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
                         tried_left = True
@@ -384,24 +394,7 @@ class Main:
                         captured_right = self.parse_frame(frame, packet[0])
                         tried_right = True
                         captured_right_frame = frame.copy()
-                else:
-                    if debug:
-                        if lrgb_time > 10000:
-                            print("Timestamp difference --->L-RGB")
-                            print(lrgb_time)
-                        if lr_time > 30000:
-                            print("Timestamp difference --->L-R")
-                            print(lr_time)
 
-                print('tried status')
-                print(tried_color)
-                print(tried_left)
-                print(tried_right)
-                print('tried status')
-
-                print(captured_color)
-                print(captured_left)
-                print(captured_right)
 
                 has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
                     (packet[0] == "rgb" and captured_color)
@@ -426,22 +419,16 @@ class Main:
                         True, (0, 255, 0) if captured_left else (0, 0, 255), 4
                     )
 
+                small_frame = cv2.resize(
+                    frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
                 # cv2.imshow(packet.stream_name, small_frame)
-                if packet[0] == "rgb":
-                    small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-                    print("Packaet name : {}, shape : {}".format(packet[0], small_frame.shape))
-                else:
-                    small_frame = cv2.resize(
-                        frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)         
-                    print("Packaet name : {}, shape : {}".format(packet[0], small_frame.shape))
-
                 frame_list.append(small_frame)
 
                 if self.args.disableRgb:
                     captured_color = True
                     tried_color = True
                 if captured_left and captured_right and captured_color:
-                    print(f"Images captured --> {self.images_captured}")
+                    print("Images captured --> {}".format(self.images_captured))
                     if not self.images_captured:
                         if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
                             self.show_failed_orientation()
@@ -457,8 +444,8 @@ class Main:
                     captured_left = False
                     captured_right = False
                     captured_color = False
-                elif tried_left and tried_right and tried_color: 
-                    #TODO(Sachin): add condition for RGB too and when break happens and if RGB 
+                elif tried_left and tried_right and tried_color:
+                     #TODO(Sachin): add condition for RGB too and when break happens and if RGB 
                     # is not received it will throw an error. add an exception to it
                     self.show_failed_capture_frame()
                     capturing = False
@@ -481,9 +468,7 @@ class Main:
             
             combine_img = None
             if not self.args.disableRgb:
-                print('Frame list size:  ')
-                print(len(frame_list))
-                frame_list[2] = np.pad(frame_list[2], ((120, 0), (0,0)), 'constant', constant_values=0)
+                frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
@@ -530,8 +515,8 @@ class Main:
             calibration_handler = dai.CalibrationHandler()
             calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
-            calibration_handler.setCameraIntrinsics(left, calibData[2], 640, 480)
-            calibration_handler.setCameraIntrinsics(right, calibData[3], 640, 480)
+            calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
+            calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
             measuredTranslation = [
                 -self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
             calibration_handler.setCameraExtrinsics(
