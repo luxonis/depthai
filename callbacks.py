@@ -14,13 +14,13 @@ def onReport(report):
     pass
 
 
-def onSetup(**kwargs):
+def onSetup(*args, **kwargs):
     pass
 
 
-def onTeardown(**kwargs):
+def onTeardown(*args, **kwargs):
     pass
 
 
-def onIter(**kwargs):
+def onIter(*args, **kwargs):
     pass
