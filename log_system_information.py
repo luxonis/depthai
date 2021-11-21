@@ -5,7 +5,7 @@ from pip._internal.operations.freeze import freeze
 import platform
 
 
-def make_sys_report():
+def make_sys_report(anonymous=False):
     def get_usb():
         try:
             import usb.core
@@ -37,7 +37,7 @@ def make_sys_report():
         "system": platform.system(),
         "version": platform.version(),
         "win32_ver": ' '.join(platform.win32_ver()).strip(),
-        "uname": ' '.join(platform.uname()).strip(),
+        "uname": ' '.join(platform.uname()).strip() if not anonymous else "hidden",
         "packages": list(freeze(local_only=True)),
         "usb": list(get_usb()),
     }

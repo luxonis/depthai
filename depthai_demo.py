@@ -636,7 +636,7 @@ if __name__ == "__main__":
             except:
                 msgBox = QMessageBox()
                 msgBox.setIcon(QMessageBox.Information)
-                msgBox.setText("Can we collect your device and runtime statistics? \nThese will help us improve the tools you and other users use, including this demo")
+                msgBox.setText("Can we collect anonymous device and runtime statistics? \nThese will help us improve the tools you and other users use, including this demo")
                 msgBox.setWindowTitle("Statistics consent")
                 msgBox.setStandardButtons(QMessageBox.No | QMessageBox.Yes)
                 msgBox.setDefaultButton(QMessageBox.Yes)
