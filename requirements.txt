@@ -1,4 +1,4 @@
-requests==2.24.0
+requests==2.11.1
 argcomplete==1.12.1
 opencv-python==4.5.4.58 ; platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l" and python_version == "3.10"
 opencv-python==4.5.1.48 ; platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l" and python_version != "3.10"
@@ -9,4 +9,5 @@ opencv-contrib-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machi
 -e ./depthai_sdk
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 depthai==2.11.1.0.dev+dfd52ac01c3b7514e85cb894b9d5381e999859df
-PySide6==6.2.0
+pyside6==6.2.0
+pyrebase==3.0.27

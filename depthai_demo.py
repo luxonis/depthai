@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import os
 import sys
 import time
@@ -14,6 +15,7 @@ import platform
 
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
+from depthai_helpers.metrics import MetricManager
 from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, resizeLetterbox
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
@@ -58,9 +60,13 @@ class Demo:
         self.setup(conf)
         self.run()
 
-    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True):
+    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True, collectMetrics=False):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
+        if collectMetrics:
+            self.enableMetrics()
+        else:
+            self.metrics = None
 
         self.onNewFrame = onNewFrame
         self.onShowFrame = onShowFrame
@@ -88,6 +94,9 @@ class Demo:
             self.onIter = onIter
         if shouldRun is not None:
             self.shouldRun = shouldRun
+
+    def enableMetrics(self):
+        self.metrics = MetricManager()
 
     def setup(self, conf: ConfigManager):
         print("Setting up demo...")
@@ -122,6 +131,8 @@ class Demo:
             self._pm.setNnManager(self._nnManager)
 
         self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        if self.metrics is not None:
+            self.metrics.reportDevice(self._device)
         if self._deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
             print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
         self._conf.adjustParamsToDevice(self._device)
@@ -618,7 +629,28 @@ if __name__ == "__main__":
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
 
+        def setupDataCollection(self):
+            try:
+                with Path(".consent").open() as f:
+                    accepted = json.load(f)["statistics"]
+            except:
+                msgBox = QMessageBox()
+                msgBox.setIcon(QMessageBox.Information)
+                msgBox.setText("Can we collect your device and runtime statistics? \nThese will help us improve the tools you and other users use, including this demo")
+                msgBox.setWindowTitle("Statistics consent")
+                msgBox.setStandardButtons(QMessageBox.No | QMessageBox.Yes)
+                msgBox.setDefaultButton(QMessageBox.Yes)
+                accepted = msgBox.exec() == QMessageBox.Yes
+                try:
+                    with Path('.consent').open('w') as f:
+                        json.dump({"statistics": accepted}, f)
+                except:
+                    pass
+            if accepted:
+                self._demoInstance.enableMetrics()
+
         def start(self):
+            self.setupDataCollection()
             self.running = True
             self.worker = Worker(self._demoInstance, parent=self, conf=self.confManager, selectedPreview=self.selectedPreview)
             self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
