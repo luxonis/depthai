@@ -62,6 +62,7 @@ ListView {
         }
 
         TextField {
+            enabled: depthEnabled
             id: encLeftFps
             x: 110
             y: 77
@@ -76,6 +77,7 @@ ListView {
         }
 
         Switch {
+            enabled: depthEnabled
             id: encLeftSwitch
             x: 8
             y: 77
@@ -89,6 +91,7 @@ ListView {
         }
 
         TextField {
+            enabled: depthEnabled
             id: encRightFps
             x: 110
             y: 110
@@ -103,6 +106,7 @@ ListView {
         }
 
         Switch {
+            enabled: depthEnabled
             id: encRightSwitch
             x: 8
             y: 110

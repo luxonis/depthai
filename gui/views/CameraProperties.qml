@@ -299,6 +299,7 @@ ListView {
             y: 0
 
             ComboBox {
+                enabled: depthEnabled
                 id: comboBox1
                 x: 85
                 y: 115
@@ -325,6 +326,7 @@ ListView {
             }
 
             TextField {
+                enabled: depthEnabled
                 id: textField7
                 x: 85
                 y: 84
@@ -397,6 +399,7 @@ ListView {
                 }
 
                 TextField {
+                    enabled: depthEnabled
                     id: textField4
                     x: 288
                     y: 80
@@ -414,6 +417,7 @@ ListView {
                 }
 
                 TextField {
+                    enabled: depthEnabled
                     id: textField5
                     x: 288
                     y: 111
@@ -444,6 +448,7 @@ ListView {
                 }
 
                 Slider {
+                    enabled: depthEnabled
                     id: slider10
                     x: 288
                     y: 142
@@ -473,6 +478,7 @@ ListView {
                 }
 
                 Slider {
+                    enabled: depthEnabled
                     id: slider11
                     x: 288
                     y: 173
@@ -502,6 +508,7 @@ ListView {
                 }
 
                 Slider {
+                    enabled: depthEnabled
                     id: slider12
                     x: 288
                     y: 204
@@ -531,6 +538,7 @@ ListView {
                 }
 
                 Slider {
+                    enabled: depthEnabled
                     id: slider13
                     x: 288
                     y: 235
