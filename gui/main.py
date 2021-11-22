@@ -1,19 +1,17 @@
 # This Python file uses the following encoding: utf-8
 import sys
 from pathlib import Path
-from PySide6.QtCore import QObject, Slot, Signal
-from PySide6.QtGui import QGuiApplication, QImage
-from PySide6.QtQml import QQmlApplicationEngine, QmlElement
+
+from PyQt5.QtQml import QQmlApplicationEngine, qmlRegisterType, qmlRegisterSingletonType, QQmlEngine
+from PyQt5.QtQuick import QQuickPaintedItem
+from PyQt5.QtGui import QImage
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 import depthai as dai
 
 # To be used on the @QmlElement decorator
 # (QML_IMPORT_MINOR_VERSION is optional)
-from PySide6.QtQuick import QQuickPaintedItem
-from PySide6.QtWidgets import QMessageBox, QApplication
+from PyQt5.QtWidgets import QApplication
 from depthai_sdk import Previews
-
-QML_IMPORT_NAME = "dai.gui"
-QML_IMPORT_MAJOR_VERSION = 1
 
 class Singleton(type(QQuickPaintedItem)):
     _instances = {}
@@ -23,13 +21,17 @@ class Singleton(type(QQuickPaintedItem)):
         return cls._instances[cls]
 
 
-@QmlElement
-class ImageWriter(QQuickPaintedItem, metaclass=Singleton):
+instance = None
+
+
+# @QmlElement
+class ImageWriter(QQuickPaintedItem):
     frame = QImage()
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent):
+        super().__init__(parent)
         self.setRenderTarget(QQuickPaintedItem.FramebufferObject)
+        self.setProperty("parent", parent)
 
     def paint(self, painter):
         painter.drawImage(0, 0, self.frame)
@@ -39,34 +41,259 @@ class ImageWriter(QQuickPaintedItem, metaclass=Singleton):
         self.update()
 
 
+# @QmlElement
+class AppBridge(QObject):
+    @pyqtSlot()
+    def applyAndRestart(self):
+        instance.restartDemo()
+
+    @pyqtSlot()
+    def reloadDevices(self):
+        instance.guiOnReloadDevices()
+
+    @pyqtSlot(bool)
+    def toggleStatisticsConsent(self, value):
+        instance.guiOnStaticticsConsent(value)
+
+    @pyqtSlot(str)
+    def selectDevice(self, value):
+        instance.guiOnSelectDevice(value)
+
+    @pyqtSlot(bool, bool, bool)
+    def selectReportingOptions(self, temp, cpu, memory):
+        instance.guiOnSelectReportingOptions(temp, cpu, memory)
+
+    @pyqtSlot(str)
+    def selectReportingPath(self, value):
+        instance.guiOnSelectReportingPath(value)
+
+    @pyqtSlot(str)
+    def selectEncodingPath(self, value):
+        instance.guiOnSelectEncodingPath(value)
+
+    @pyqtSlot(bool, int)
+    def toggleColorEncoding(self, enabled, fps):
+        instance.guiOnToggleColorEncoding(enabled, fps)
+
+    @pyqtSlot(bool, int)
+    def toggleLeftEncoding(self, enabled, fps):
+        instance.guiOnToggleLeftEncoding(enabled, fps)
+
+    @pyqtSlot(bool, int)
+    def toggleRightEncoding(self, enabled, fps):
+        instance.guiOnToggleRightEncoding(enabled, fps)
+
+    @pyqtSlot(bool)
+    def toggleDepth(self, enabled):
+        instance.guiOnToggleDepth(enabled)
+
+    @pyqtSlot(bool)
+    def toggleNN(self, enabled):
+        instance.guiOnToggleNN(enabled)
+
+    @pyqtSlot(bool)
+    def toggleDisparity(self, enabled):
+        instance.guiOnToggleDisparity(enabled)
+
+
+# @QmlElement
+class AIBridge(QObject):
+    @pyqtSlot(str)
+    def setCnnModel(self, name):
+        instance.guiOnAiSetupUpdate(cnn=name)
+
+    @pyqtSlot(int)
+    def setShaves(self, value):
+        instance.guiOnAiSetupUpdate(shave=value)
+
+    @pyqtSlot(str)
+    def setModelSource(self, value):
+        instance.guiOnAiSetupUpdate(source=value)
+
+    @pyqtSlot(bool)
+    def setFullFov(self, value):
+        instance.guiOnAiSetupUpdate(fullFov=value)
+
+    @pyqtSlot(bool)
+    def setSbb(self, value):
+        instance.guiOnAiSetupUpdate(sbb=value)
+
+    @pyqtSlot(float)
+    def setSbbFactor(self, value):
+        if instance.writer is not None:
+            instance.guiOnAiSetupUpdate(sbbFactor=value)
+
+    @pyqtSlot(str)
+    def setOvVersion(self, state):
+        instance.guiOnAiSetupUpdate(ov=state.replace("VERSION_", ""))
+
+    @pyqtSlot(str)
+    def setCountLabel(self, state):
+        instance.guiOnAiSetupUpdate(countLabel=state)
+
+
+# @QmlElement
+class PreviewBridge(QObject):
+    @pyqtSlot(str)
+    def changeSelected(self, state):
+        instance.guiOnPreviewChangeSelected(state)
+
+
+# @QmlElement
+class DepthBridge(QObject):
+    @pyqtSlot(bool)
+    def toggleSubpixel(self, state):
+        instance.guiOnDepthSetupUpdate(subpixel=state)
+
+    @pyqtSlot(bool)
+    def toggleExtendedDisparity(self, state):
+        instance.guiOnDepthSetupUpdate(extended=state)
+
+    @pyqtSlot(bool)
+    def toggleLeftRightCheck(self, state):
+        instance.guiOnDepthConfigUpdate(lrc=state)
+
+    @pyqtSlot(int)
+    def setDisparityConfidenceThreshold(self, value):
+        instance.guiOnDepthConfigUpdate(dct=value)
+
+    @pyqtSlot(int)
+    def setLrcThreshold(self, value):
+        instance.guiOnDepthConfigUpdate(lrcThreshold=value)
+
+    @pyqtSlot(int)
+    def setBilateralSigma(self, value):
+        instance.guiOnDepthConfigUpdate(sigma=value)
+
+    @pyqtSlot(int, int)
+    def setDepthRange(self, valFrom, valTo):
+        instance.guiOnDepthSetupUpdate(depthFrom=valFrom, depthTo=valTo)
+
+    @pyqtSlot(str)
+    def setMedianFilter(self, state):
+        value = getattr(dai.MedianFilter, state)
+        instance.guiOnDepthConfigUpdate(median=value)
+
+
+# @QmlElement
+class ColorCamBridge(QObject):
+    name = "color"
+
+    @pyqtSlot(int, int)
+    def setIsoExposure(self, iso, exposure):
+        if iso > 0 and exposure > 0:
+            instance.guiOnCameraConfigUpdate("color", sensitivity=iso, exposure=exposure)
+
+    @pyqtSlot(int)
+    def setContrast(self, value):
+        instance.guiOnCameraConfigUpdate("color", contrast=value)
+
+    @pyqtSlot(int)
+    def setBrightness(self, value):
+        instance.guiOnCameraConfigUpdate("color", brightness=value)
+
+    @pyqtSlot(int)
+    def setSaturation(self, value):
+        instance.guiOnCameraConfigUpdate("color", saturation=value)
+
+    @pyqtSlot(int)
+    def setSharpness(self, value):
+        instance.guiOnCameraConfigUpdate("color", sharpness=value)
+
+    @pyqtSlot(int)
+    def setFps(self, value):
+        instance.guiOnCameraSetupUpdate("color", fps=value)
+
+    @pyqtSlot(str)
+    def setResolution(self, state):
+        if state == "THE_1080_P":
+            instance.guiOnCameraSetupUpdate("color", resolution=1080)
+        elif state == "THE_4_K":
+            instance.guiOnCameraSetupUpdate("color", resolution=2160)
+        elif state == "THE_12_MP":
+            instance.guiOnCameraSetupUpdate("color", resolution=3040)
+
+
+# @QmlElement
+class MonoCamBridge(QObject):
+
+    @pyqtSlot(int, int)
+    def setIsoExposure(self, iso, exposure):
+        if iso > 0 and exposure > 0:
+            instance.guiOnCameraConfigUpdate("left", sensitivity=iso, exposure=exposure)
+            instance.guiOnCameraConfigUpdate("right", sensitivity=iso, exposure=exposure)
+
+    @pyqtSlot(int)
+    def setContrast(self, value):
+        instance.guiOnCameraConfigUpdate("left", contrast=value)
+        instance.guiOnCameraConfigUpdate("right", contrast=value)
+
+    @pyqtSlot(int)
+    def setBrightness(self, value):
+        instance.guiOnCameraConfigUpdate("left", brightness=value)
+        instance.guiOnCameraConfigUpdate("right", brightness=value)
+
+    @pyqtSlot(int)
+    def setSaturation(self, value):
+        instance.guiOnCameraConfigUpdate("left", saturation=value)
+        instance.guiOnCameraConfigUpdate("right", saturation=value)
+
+    @pyqtSlot(int)
+    def setSharpness(self, value):
+        instance.guiOnCameraConfigUpdate("left", sharpness=value)
+        instance.guiOnCameraConfigUpdate("right", sharpness=value)
+
+    @pyqtSlot(int)
+    def setFps(self, value):
+        instance.guiOnCameraSetupUpdate("left", fps=value)
+        instance.guiOnCameraSetupUpdate("right", fps=value)
+
+    @pyqtSlot(str)
+    def setResolution(self, state):
+        if state == "THE_720_P":
+            instance.guiOnCameraSetupUpdate("left", resolution=720)
+            instance.guiOnCameraSetupUpdate("right", resolution=720)
+        elif state == "THE_800_P":
+            instance.guiOnCameraSetupUpdate("left", resolution=800)
+            instance.guiOnCameraSetupUpdate("right", resolution=800)
+        elif state == "THE_400_P":
+            instance.guiOnCameraSetupUpdate("left", resolution=400)
+            instance.guiOnCameraSetupUpdate("right", resolution=400)
+
+
 class DemoQtGui:
     instance = None
     writer = None
     window = None
 
     def __init__(self):
-        self.app = QApplication()
+        global instance
+        self.app = QApplication([sys.argv[0]])
         self.engine = QQmlApplicationEngine()
-        self.setInstance()
-        self.engine.load(Path(__file__).parent / "views" / "root.qml")
+        self.engine.quit.connect(self.app.quit)
+        instance = self
+        qmlRegisterType(ImageWriter, 'dai.gui', 1, 0, 'ImageWriter')
+        qmlRegisterType(AppBridge, 'dai.gui', 1, 0, 'AppBridge')
+        qmlRegisterType(AIBridge, 'dai.gui', 1, 0, 'AIBridge')
+        qmlRegisterType(PreviewBridge, 'dai.gui', 1, 0, 'PreviewBridge')
+        qmlRegisterType(DepthBridge, 'dai.gui', 1, 0, 'DepthBridge')
+        qmlRegisterType(ColorCamBridge, 'dai.gui', 1, 0, 'ColorCamBridge')
+        qmlRegisterType(MonoCamBridge, 'dai.gui', 1, 0, 'MonoCamBridge')
+        self.engine.addImportPath(str(Path(__file__).parent / "views"))
+        self.engine.load(str(Path(__file__).parent / "views" / "root.qml"))
         self.window = self.engine.rootObjects()[0]
         if not self.engine.rootObjects():
             raise RuntimeError("Unable to start GUI - no root objects!")
 
-    def setInstance(self):
-        DemoQtGui.instance = self
-
-    @Slot(list)
     def setData(self, data):
         name, value = data
         self.window.setProperty(name, value)
 
-    @Slot(QImage)
     def updatePreview(self, data):
         self.writer.update_frame(data)
 
     def startGui(self):
-        self.writer = ImageWriter()
+        self.writer = self.window.findChild(QObject, "writer")
         medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
         self.setData(["medianChoices", medianChoices])
         colorChoices = list(filter(lambda name: name[0].isupper(), vars(dai.ColorCameraProperties.SensorResolution).keys()))
@@ -77,219 +304,3 @@ class DemoQtGui:
         versionChoices = sorted(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()), reverse=True)
         self.setData(["ovVersions", versionChoices])
         return self.app.exec()
-
-
-@QmlElement
-class AppBridge(QObject):
-    @Slot()
-    def applyAndRestart(self):
-        DemoQtGui.instance.restartDemo()
-
-    @Slot()
-    def reloadDevices(self):
-        DemoQtGui.instance.guiOnReloadDevices()
-
-    @Slot(str)
-    def selectDevice(self, value):
-        DemoQtGui.instance.guiOnSelectDevice(value)
-
-    @Slot(bool, bool, bool)
-    def selectReportingOptions(self, temp, cpu, memory):
-        DemoQtGui.instance.guiOnSelectReportingOptions(temp, cpu, memory)
-
-    @Slot(str)
-    def selectReportingPath(self, value):
-        DemoQtGui.instance.guiOnSelectReportingPath(value)
-
-    @Slot(str)
-    def selectEncodingPath(self, value):
-        DemoQtGui.instance.guiOnSelectEncodingPath(value)
-
-    @Slot(bool, int)
-    def toggleColorEncoding(self, enabled, fps):
-        DemoQtGui.instance.guiOnToggleColorEncoding(enabled, fps)
-
-    @Slot(bool, int)
-    def toggleLeftEncoding(self, enabled, fps):
-        DemoQtGui.instance.guiOnToggleLeftEncoding(enabled, fps)
-
-    @Slot(bool, int)
-    def toggleRightEncoding(self, enabled, fps):
-        DemoQtGui.instance.guiOnToggleRightEncoding(enabled, fps)
-
-    @Slot(bool)
-    def toggleDepth(self, enabled):
-        DemoQtGui.instance.guiOnToggleDepth(enabled)
-
-    @Slot(bool)
-    def toggleNN(self, enabled):
-        DemoQtGui.instance.guiOnToggleNN(enabled)
-
-    @Slot(bool)
-    def toggleDisparity(self, enabled):
-        DemoQtGui.instance.guiOnToggleDisparity(enabled)
-
-
-@QmlElement
-class AIBridge(QObject):
-    @Slot(str)
-    def setCnnModel(self, name):
-        DemoQtGui.instance.guiOnAiSetupUpdate(cnn=name)
-
-    @Slot(int)
-    def setShaves(self, value):
-        DemoQtGui.instance.guiOnAiSetupUpdate(shave=value)
-
-    @Slot(str)
-    def setModelSource(self, value):
-        DemoQtGui.instance.guiOnAiSetupUpdate(source=value)
-
-    @Slot(bool)
-    def setFullFov(self, value):
-        DemoQtGui.instance.guiOnAiSetupUpdate(fullFov=value)
-
-    @Slot(bool)
-    def setSbb(self, value):
-        DemoQtGui.instance.guiOnAiSetupUpdate(sbb=value)
-
-    @Slot(float)
-    def setSbbFactor(self, value):
-        if DemoQtGui.instance.writer is not None:
-            DemoQtGui.instance.guiOnAiSetupUpdate(sbbFactor=value)
-
-    @Slot(str)
-    def setOvVersion(self, state):
-        DemoQtGui.instance.guiOnAiSetupUpdate(ov=state.replace("VERSION_", ""))
-
-    @Slot(str)
-    def setCountLabel(self, state):
-        DemoQtGui.instance.guiOnAiSetupUpdate(countLabel=state)
-
-
-@QmlElement
-class PreviewBridge(QObject):
-    @Slot(str)
-    def changeSelected(self, state):
-        DemoQtGui.instance.guiOnPreviewChangeSelected(state)
-
-
-@QmlElement
-class DepthBridge(QObject):
-    @Slot(bool)
-    def toggleSubpixel(self, state):
-        DemoQtGui.instance.guiOnDepthSetupUpdate(subpixel=state)
-
-    @Slot(bool)
-    def toggleExtendedDisparity(self, state):
-        DemoQtGui.instance.guiOnDepthSetupUpdate(extended=state)
-
-    @Slot(bool)
-    def toggleLeftRightCheck(self, state):
-        DemoQtGui.instance.guiOnDepthConfigUpdate(lrc=state)
-
-    @Slot(int)
-    def setDisparityConfidenceThreshold(self, value):
-        DemoQtGui.instance.guiOnDepthConfigUpdate(dct=value)
-
-    @Slot(int)
-    def setLrcThreshold(self, value):
-        DemoQtGui.instance.guiOnDepthConfigUpdate(lrcThreshold=value)
-
-    @Slot(int)
-    def setBilateralSigma(self, value):
-        DemoQtGui.instance.guiOnDepthConfigUpdate(sigma=value)
-
-    @Slot(int, int)
-    def setDepthRange(self, valFrom, valTo):
-        DemoQtGui.instance.guiOnDepthSetupUpdate(depthFrom=valFrom, depthTo=valTo)
-
-    @Slot(str)
-    def setMedianFilter(self, state):
-        value = getattr(dai.MedianFilter, state)
-        DemoQtGui.instance.guiOnDepthConfigUpdate(median=value)
-
-
-@QmlElement
-class ColorCamBridge(QObject):
-    name = "color"
-
-    @Slot(int, int)
-    def setIsoExposure(self, iso, exposure):
-        if iso > 0 and exposure > 0:
-            DemoQtGui.instance.guiOnCameraConfigUpdate("color", sensitivity=iso, exposure=exposure)
-
-    @Slot(int)
-    def setContrast(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate("color", contrast=value)
-
-    @Slot(int)
-    def setBrightness(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate("color", brightness=value)
-
-    @Slot(int)
-    def setSaturation(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate("color", saturation=value)
-
-    @Slot(int)
-    def setSharpness(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate("color", sharpness=value)
-
-    @Slot(int)
-    def setFps(self, value):
-        DemoQtGui.instance.guiOnCameraSetupUpdate("color", fps=value)
-
-    @Slot(str)
-    def setResolution(self, state):
-        if state == "THE_1080_P":
-            DemoQtGui.instance.guiOnCameraSetupUpdate("color", resolution=1080)
-        elif state == "THE_4_K":
-            DemoQtGui.instance.guiOnCameraSetupUpdate("color", resolution=2160)
-        elif state == "THE_12_MP":
-            DemoQtGui.instance.guiOnCameraSetupUpdate("color", resolution=3040)
-
-
-@QmlElement
-class MonoCamBridge(QObject):
-
-    @Slot(int, int)
-    def setIsoExposure(self, iso, exposure):
-        if iso > 0 and exposure > 0:
-            DemoQtGui.instance.guiOnCameraConfigUpdate("left", sensitivity=iso, exposure=exposure)
-            DemoQtGui.instance.guiOnCameraConfigUpdate("right", sensitivity=iso, exposure=exposure)
-
-    @Slot(int)
-    def setContrast(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate("left", contrast=value)
-        DemoQtGui.instance.guiOnCameraConfigUpdate("right", contrast=value)
-
-    @Slot(int)
-    def setBrightness(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate("left", brightness=value)
-        DemoQtGui.instance.guiOnCameraConfigUpdate("right", brightness=value)
-
-    @Slot(int)
-    def setSaturation(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate("left", saturation=value)
-        DemoQtGui.instance.guiOnCameraConfigUpdate("right", saturation=value)
-
-    @Slot(int)
-    def setSharpness(self, value):
-        DemoQtGui.instance.guiOnCameraConfigUpdate("left", sharpness=value)
-        DemoQtGui.instance.guiOnCameraConfigUpdate("right", sharpness=value)
-
-    @Slot(int)
-    def setFps(self, value):
-        DemoQtGui.instance.guiOnCameraSetupUpdate("left", fps=value)
-        DemoQtGui.instance.guiOnCameraSetupUpdate("right", fps=value)
-
-    @Slot(str)
-    def setResolution(self, state):
-        if state == "THE_720_P":
-            DemoQtGui.instance.guiOnCameraSetupUpdate("left", resolution=720)
-            DemoQtGui.instance.guiOnCameraSetupUpdate("right", resolution=720)
-        elif state == "THE_800_P":
-            DemoQtGui.instance.guiOnCameraSetupUpdate("left", resolution=800)
-            DemoQtGui.instance.guiOnCameraSetupUpdate("right", resolution=800)
-        elif state == "THE_400_P":
-            DemoQtGui.instance.guiOnCameraSetupUpdate("left", resolution=400)
-            DemoQtGui.instance.guiOnCameraSetupUpdate("right", resolution=400)

@@ -467,19 +467,18 @@ class Demo:
 
 
 if __name__ == "__main__":
-    from gui.main import DemoQtGui
-    from PySide6.QtGui import QImage
-
-    from PySide6.QtCore import QRunnable, Slot, QThreadPool, QObject, Signal
-    from PySide6.QtWidgets import QMessageBox
+    from gui.main import DemoQtGui, ImageWriter
+    from PyQt5.QtWidgets import QMessageBox
+    from PyQt5.QtGui import QImage
+    from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 
 
     class WorkerSignals(QObject):
-        updateConfSignal = Signal(list)
-        updatePreviewSignal = Signal(QImage)
-        setDataSignal = Signal(list)
-        exitSignal = Signal()
-        errorSignal = Signal(str)
+        updateConfSignal = pyqtSignal(list)
+        updatePreviewSignal = pyqtSignal(QImage)
+        setDataSignal = pyqtSignal(list)
+        exitSignal = pyqtSignal()
+        errorSignal = pyqtSignal(str)
 
     class Worker(QRunnable):
         def __init__(self, instance, parent, conf, selectedPreview=None):
@@ -500,7 +499,7 @@ if __name__ == "__main__":
             self.signals.exitSignal.connect(self.terminate)
             self.signals.updateConfSignal.connect(self.updateConf)
 
-        @Slot()
+        
         def run(self):
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
@@ -537,12 +536,11 @@ if __name__ == "__main__":
             except Exception as ex:
                 self.onError(ex)
 
-        @Slot()
         def terminate(self):
             self.running = False
             self.signals.setDataSignal.emit(["restartRequired", False])
 
-        @Slot(list)
+        
         def updateConf(self, argsList):
             self.conf.args = argparse.Namespace(**dict(argsList))
 
@@ -608,7 +606,7 @@ if __name__ == "__main__":
             if shouldUpdate:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
-        @Slot(str)
+        
         def showError(self, error):
             print(error, file=sys.stderr)
             msgBox = QMessageBox()
