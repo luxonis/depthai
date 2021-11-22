@@ -8,5 +8,5 @@ opencv-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machine == "a
 opencv-contrib-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machine == "armv7l"
 -e ./depthai_sdk
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.11.1.0.dev+dfd52ac01c3b7514e85cb894b9d5381e999859df
+depthai==2.12.1.0.dev+1cbc036926b56ee605c6f31d22334117523ee1d7
 PySide6==6.2.0
