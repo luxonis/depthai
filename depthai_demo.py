@@ -63,10 +63,7 @@ class Demo:
     def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True, collectMetrics=False):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
-        if collectMetrics:
-            self.enableMetrics()
-        else:
-            self.metrics = None
+        self.toggleMetrics(collectMetrics)
 
         self.onNewFrame = onNewFrame
         self.onShowFrame = onShowFrame
@@ -95,8 +92,11 @@ class Demo:
         if shouldRun is not None:
             self.shouldRun = shouldRun
 
-    def enableMetrics(self):
-        self.metrics = MetricManager()
+    def toggleMetrics(self, enabled):
+        if enabled:
+            self.metrics = MetricManager()
+        else:
+            self.metrics = None
 
     def setup(self, conf: ConfigManager):
         print("Setting up demo...")
@@ -592,6 +592,7 @@ if __name__ == "__main__":
             else:
                 self.signals.setDataSignal.emit(["countLabels", []])
             self.signals.setDataSignal.emit(["depthEnabled", self.conf.useDepth])
+            self.signals.setDataSignal.emit(["statisticsAccepted", self.instance.metrics is not None])
             self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 
@@ -634,20 +635,9 @@ if __name__ == "__main__":
                 with Path(".consent").open() as f:
                     accepted = json.load(f)["statistics"]
             except:
-                msgBox = QMessageBox()
-                msgBox.setIcon(QMessageBox.Information)
-                msgBox.setText("Can we collect anonymous device and runtime statistics? \nThese will help us improve the tools you and other users use, including this demo")
-                msgBox.setWindowTitle("Statistics consent")
-                msgBox.setStandardButtons(QMessageBox.No | QMessageBox.Yes)
-                msgBox.setDefaultButton(QMessageBox.Yes)
-                accepted = msgBox.exec() == QMessageBox.Yes
-                try:
-                    with Path('.consent').open('w') as f:
-                        json.dump({"statistics": accepted}, f)
-                except:
-                    pass
-            if accepted:
-                self._demoInstance.enableMetrics()
+                accepted = True
+
+            self._demoInstance.toggleMetrics(accepted)
 
         def start(self):
             self.setupDataCollection()
@@ -786,6 +776,14 @@ if __name__ == "__main__":
             self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
             if len(devices) > 0:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
+
+        def guiOnStaticticsConsent(self, value):
+            try:
+                with Path('.consent').open('w') as f:
+                    json.dump({"statistics": value}, f)
+            except:
+                pass
+            self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
         def guiOnToggleColorEncoding(self, enabled, fps):
             oldConfig = self.confManager.args.encode or {}

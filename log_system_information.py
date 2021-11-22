@@ -5,12 +5,13 @@ from pip._internal.operations.freeze import freeze
 import platform
 
 
-def make_sys_report(anonymous=False):
+def make_sys_report(anonymous=False, skipUsb=False):
     def get_usb():
         try:
             import usb.core
         except ImportError:
-            return "NoLib"
+            yield "NoLib"
+            return
         speeds = ["Unknown", "Low", "Full", "High", "Super", "SuperPlus"]
         format_hex = lambda val: f"{val:#0{6}x}"
         try:
@@ -24,7 +25,7 @@ def make_sys_report(anonymous=False):
         except usb.core.NoBackendError:
             yield "No USB backend found"
 
-    return {
+    result = {
         "architecture": ' '.join(platform.architecture()).strip(),
         "machine": platform.machine(),
         "platform": platform.platform(),
@@ -37,10 +38,14 @@ def make_sys_report(anonymous=False):
         "system": platform.system(),
         "version": platform.version(),
         "win32_ver": ' '.join(platform.win32_ver()).strip(),
-        "uname": ' '.join(platform.uname()).strip() if not anonymous else "hidden",
         "packages": list(freeze(local_only=True)),
-        "usb": list(get_usb()),
     }
+
+    if not skipUsb:
+        result["usb"] = list(get_usb())
+    if not anonymous:
+        result["uname"] = ' '.join(platform.uname()).strip(),
+    return result
 
 
 if __name__ == "__main__":

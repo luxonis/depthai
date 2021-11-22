@@ -89,6 +89,10 @@ class AppBridge(QObject):
     def reloadDevices(self):
         DemoQtGui.instance.guiOnReloadDevices()
 
+    @Slot(bool)
+    def toggleStatisticsConsent(self, value):
+        DemoQtGui.instance.guiOnStaticticsConsent(value)
+
     @Slot(str)
     def selectDevice(self, value):
         DemoQtGui.instance.guiOnSelectDevice(value)

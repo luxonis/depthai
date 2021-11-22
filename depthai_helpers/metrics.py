@@ -33,7 +33,7 @@ class MetricManager:
             usb = device.getUsbSpeed().name
         except:
             usb = "None"
-        sys_report = make_sys_report(anonymous=True)
+        sys_report = make_sys_report(anonymous=True, skipUsb=True)
         data = {
             "mxid": mxid,
             "timestamp": datetime.utcnow().isoformat(),
