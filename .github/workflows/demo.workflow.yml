@@ -51,6 +51,7 @@ jobs:
         path: launcher/windows/build/Output/
         retention-days: 5
 
+
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
