@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - installer_windows_signing
     tags:
       - 'v*'
   pull_request:
