@@ -197,29 +197,45 @@ class Worker(QtCore.QThread):
                         self.signalUpdateQuestion.emit(title, message)
 
                         print(f'Should update? {self.shouldUpdate}')
-
+                        didUpdate = False
                         if self.shouldUpdate == True:
                             # DepthAI repo not available, clone first
                             splashScreen.updateSplashMessage('Updating DepthAI Repository ...')
                             splashScreen.enableHeartbeat(True)
                             lastCall = subprocess.run([gitExecutable, 'checkout', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
                             if lastCall.returncode != 0:
-                                # Stop animation
-                                splashScreen.updateSplashMessage('')
-                                splashScreen.enableHeartbeat(False)
-                                # Couldn't update. Issue a warning
+                                # Uncommited changes - redo with a prompt to force
                                 errMessage = lastCall.stderr.decode()
-                                title = 'Update Aborted'
-                                message = f'DepthAI Repository has uncommited changes. Update was aborted.\n{errMessage}'
+                                title = 'Force Update'
+                                message = f'DepthAI Repository has uncommited changes. Do you want to override the changes?\n{errMessage}'
                                 print(f'Message Box ({title}): {message}')
-                                self.sigWarning.emit(title, message)
-                            else:
-                                # present message of installing dependencies
-                                splashScreen.updateSplashMessage('Installing DepthAI Requirements ...')
-                                splashScreen.enableHeartbeat(True)
+                                self.signalUpdateQuestion.emit(title, message)
 
-                                # Install requirements for depthai_demo.py
-                                subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository)
+                                if self.shouldUpdate == True:
+                                    lastCall = subprocess.run([gitExecutable, 'checkout', '-f', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                                    if lastCall.returncode != 0:
+                                        # Stop animation
+                                        splashScreen.updateSplashMessage('')
+                                        splashScreen.enableHeartbeat(False)
+                                        # Couldn't update. Issue a warning
+                                        errMessage = lastCall.stderr.decode()
+                                        title = 'Update Aborted'
+                                        message = f'DepthAI Repository could not be updated.\n{errMessage}'
+                                        print(f'Message Box ({title}): {message}')
+                                        self.sigWarning.emit(title, message)
+                                    else:
+                                        didUpdate = True
+                            else:
+                                didUpdate = True
+
+                        if didUpdate:
+                            # present message of installing dependencies
+                            splashScreen.updateSplashMessage('Installing DepthAI Requirements ...')
+                            splashScreen.enableHeartbeat(True)
+
+                            # Install requirements for depthai_demo.py
+                            subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository)
+
 
             except subprocess.CalledProcessError as ex:
                 errMessage = lastCall.stderr.decode()
