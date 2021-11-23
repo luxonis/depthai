@@ -54,6 +54,7 @@ jobs:
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: windows-latest
+    steps:
 
     - name: Download Windows installer
       uses: actions/download-artifact@v2
