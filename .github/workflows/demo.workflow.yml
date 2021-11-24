@@ -38,9 +38,6 @@ jobs:
     runs-on: windows-latest
     needs: windows-installer
     steps:
-    - uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
     - name: Download Windows installer
       uses: actions/download-artifact@v2
       with:
