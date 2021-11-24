@@ -38,6 +38,10 @@ jobs:
     runs-on: windows-latest
     needs: windows-installer
     steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: 'recursive'
+        persist-credentials: ''
     - name: Download Windows installer
       uses: actions/download-artifact@v2
       with:
@@ -51,18 +55,13 @@ jobs:
         Set-Content -Path certificate\certificate.txt -Value '${{ secrets.WINDOWS_CERTIFICATE }}'
         certutil -decode certificate\certificate.txt certificate\certificate.pfx
         & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe' sign /td sha256 /fd sha256 /f certificate\certificate.pfx /p '${{ secrets.WINDOWS_CERTIFICATE_PASS }}' /tr http://timestamp.digicert.com installers/DepthAI_setup.exe
-
-    - uses: actions/checkout@v2
-      with:
-        submodules: 'recursive'
-        persist-credentials: ''
     - name: Get current tag
       id: tag
       uses: battila7/get-version-action@v2
    # Fetches previous tag
     - name: Get previous tag
       id: previoustag
-      run: echo ("PREVIOUS_TAG=" + ${git tag --sort=-creatordate | grep -v sdk | sed -n 2p}) >> $env:GITHUB_ENV
+      run: echo "PREVIOUS_TAG=${git tag --sort=-creatordate | grep -v sdk | sed -n 2p}" >> $env:GITHUB_ENV
 
    # Create GitHub release
     - uses: actions/create-release@master
@@ -80,7 +79,7 @@ jobs:
 
           ## Misc
 
-          **Full Changelog**: https://github.com/luxonis/depthai/compare/${{ env.PREVIOUS_TAG }}...${{ steps.tag.outputs.version }}
+          **Full Changelog**: https://github.com/luxonis/depthai/compare/$env:PREVIOUS_TAG...${{ steps.tag.outputs.version }}
 
         draft: true
 
