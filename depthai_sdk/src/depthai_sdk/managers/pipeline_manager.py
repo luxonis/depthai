@@ -103,32 +103,32 @@ class PipelineManager:
             if node.video == nodeOutput:
                 size = self.__calcEncodeableSize(node.getVideoSize())
                 node.setVideoSize(size)
-                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             elif node.preview == nodeOutput:
                 size = self.__calcEncodeableSize(node.getPreviewSize())
                 node.setPreviewSize(size)
-                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             elif node.still == nodeOutput:
                 size = self.__calcEncodeableSize(node.getStillSize())
                 node.setStillSize(size)
-                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
 
             nodeOutput.link(videnc.input)
         elif isinstance(node, dai.node.MonoCamera):
-            videnc.setDefaultProfilePreset(node.getResolutionWidth(), node.getResolutionHeight(), node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             nodeOutput.link(videnc.input)
         elif isinstance(node, dai.node.StereoDepth):
             cameraNode = getattr(self.nodes, 'monoLeft', getattr(self.nodes, 'monoRight', None))
             if cameraNode is None:
                 raise RuntimeError("Unable to find mono camera node to determine frame size!")
-            videnc.setDefaultProfilePreset(cameraNode.getResolutionWidth(), cameraNode.getResolutionHeight(), cameraNode.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            videnc.setDefaultProfilePreset(cameraNode.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             nodeOutput.link(videnc.input)
         elif isinstance(node, dai.NeuralNetwork):
             w, h = self.__calcEncodeableSize(self.nnManager.inputSize)
             manip = self.pipeline.createImageManip()
             manip.initialConfig.setResize(w, h)
 
-            videnc.setDefaultProfilePreset(w, h, 30, dai.VideoEncoderProperties.Profile.MJPEG)
+            videnc.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.MJPEG)
             nodeOutput.link(manip.inputImage)
             manip.out.link(videnc.input)
         else:
@@ -511,7 +511,7 @@ class PipelineManager:
             encIn = self.nodes.monoRight.out
 
         enc = self.pipeline.createVideoEncoder()
-        enc.setDefaultProfilePreset(*encResolution, encFps, encProfile)
+        enc.setDefaultProfilePreset(encFps, encProfile)
         enc.setQuality(encQuality)
         encIn.link(enc.input)
         setattr(self.nodes, nodeName, enc)
