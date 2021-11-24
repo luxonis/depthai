@@ -62,7 +62,7 @@ jobs:
    # Fetches previous tag
     - name: Get previous tag
       id: previoustag
-      run: echo "::set-output name=tag::${git tag --sort=-creatordate | grep -v sdk | sed -n 2p}"
+      run: echo ("PREVIOUS_TAG=" + ${git tag --sort=-creatordate | grep -v sdk | sed -n 2p}) >> $env:GITHUB_ENV
 
    # Create GitHub release
     - uses: actions/create-release@master
@@ -80,13 +80,12 @@ jobs:
 
           ## Misc
 
-          **Full Changelog**: https://github.com/luxonis/depthai/compare/${{ steps.previoustag.outputs.tag }}...${{ steps.tag.outputs.version }}
+          **Full Changelog**: https://github.com/luxonis/depthai/compare/${{ env.PREVIOUS_TAG }}...${{ steps.tag.outputs.version }}
 
         draft: true
 
-   # Sign Launcher
-    - name: Sign Windows Launcher
-      run: dir ${{ github.workspace }}\installers /s
+    - name: Show workspace
+      run: cd ${{ github.workspace }} && tree /f
 
     # Upload release assets
     - name: Upload Windows Installer
