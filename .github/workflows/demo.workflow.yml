@@ -58,11 +58,6 @@ jobs:
     - name: Get current tag
       id: tag
       uses: battila7/get-version-action@v2
-   # Fetches previous tag
-    - name: Get previous tag
-      id: previoustag
-      run: echo "PREVIOUS_TAG=${git tag --sort=-creatordate | grep -v sdk | sed -n 2p}" >> $env:GITHUB_ENV
-
    # Create GitHub release
     - uses: actions/create-release@master
       id: createRelease
@@ -79,7 +74,7 @@ jobs:
 
           ## Misc
 
-          **Full Changelog**: https://github.com/luxonis/depthai/compare/$env:PREVIOUS_TAG...${{ steps.tag.outputs.version }}
+          **Full Changelog**: https://github.com/luxonis/depthai/compare/${git tag --sort=-creatordate | grep -v sdk | sed -n 2p}...${{ steps.tag.outputs.version }}
 
         draft: true
 
