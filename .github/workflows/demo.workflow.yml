@@ -74,12 +74,9 @@ jobs:
 
           ## Misc
 
-          **Full Changelog**: https://github.com/luxonis/depthai/compare/${git tag --sort=-creatordate | grep -v sdk | sed -n 2p}...${{ steps.tag.outputs.version }}
+          **Full Changelog**: https://github.com/luxonis/depthai/compare/${{ git tag --sort=-creatordate | grep -v sdk | sed -n 2p }}...${{ steps.tag.outputs.version }}
 
         draft: true
-
-    - name: Show workspace
-      run: cd ${{ github.workspace }} && tree /f
 
     # Upload release assets
     - name: Upload Windows Installer
