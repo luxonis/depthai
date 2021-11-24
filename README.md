@@ -174,6 +174,16 @@ with the help of the `myriad_compile` tool. When producing blobs, the following 
     Example of command execution:
 
        <path-to-openvino-folder>/deployment_tools/inference_engine/lib/intel64/myriad_compile -m ./ResNet50.xml -o ResNet50.blob -ip U8 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
+       
+## Usage statistics
+
+By default, the demo script will collect anonymous usage statistics during runtime. These include:
+- Device-specific information (like mxid, connected cameras, device state and connection type)
+- Environment-specific information (like OS type, python version, package versions)
+
+We gather this data to better understand what environemnts are our users using, as well as assist better in support questions. 
+
+**All of the data we collect is anonymous and you can disable it at any time**. To do so, click on the "Misc" tab and disable sending the statistics.
 
 ## Reporting issues
 

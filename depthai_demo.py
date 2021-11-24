@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import os
 import sys
 import time
@@ -14,6 +15,7 @@ import platform
 
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
+from depthai_helpers.metrics import MetricManager
 from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, resizeLetterbox
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
@@ -58,9 +60,10 @@ class Demo:
         self.setup(conf)
         self.run()
 
-    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True):
+    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True, collectMetrics=False):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
+        self.toggleMetrics(collectMetrics)
 
         self.onNewFrame = onNewFrame
         self.onShowFrame = onShowFrame
@@ -88,6 +91,12 @@ class Demo:
             self.onIter = onIter
         if shouldRun is not None:
             self.shouldRun = shouldRun
+
+    def toggleMetrics(self, enabled):
+        if enabled:
+            self.metrics = MetricManager()
+        else:
+            self.metrics = None
 
     def setup(self, conf: ConfigManager):
         print("Setting up demo...")
@@ -122,6 +131,8 @@ class Demo:
             self._pm.setNnManager(self._nnManager)
 
         self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        if self.metrics is not None:
+            self.metrics.reportDevice(self._device)
         if self._deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
             print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
         self._conf.adjustParamsToDevice(self._device)
@@ -583,6 +594,7 @@ if __name__ == "__main__":
             else:
                 self.signals.setDataSignal.emit(["countLabels", []])
             self.signals.setDataSignal.emit(["depthEnabled", self.conf.useDepth])
+            self.signals.setDataSignal.emit(["statisticsAccepted", self.instance.metrics is not None])
             self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 
@@ -620,7 +632,17 @@ if __name__ == "__main__":
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
 
+        def setupDataCollection(self):
+            try:
+                with Path(".consent").open() as f:
+                    accepted = json.load(f)["statistics"]
+            except:
+                accepted = True
+
+            self._demoInstance.toggleMetrics(accepted)
+
         def start(self):
+            self.setupDataCollection()
             self.running = True
             self.worker = Worker(self._demoInstance, parent=self, conf=self.confManager, selectedPreview=self.selectedPreview)
             self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
@@ -756,6 +778,14 @@ if __name__ == "__main__":
             self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
             if len(devices) > 0:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
+
+        def guiOnStaticticsConsent(self, value):
+            try:
+                with Path('.consent').open('w') as f:
+                    json.dump({"statistics": value}, f)
+            except:
+                pass
+            self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
         def guiOnToggleColorEncoding(self, enabled, fps):
             oldConfig = self.confManager.args.encode or {}
