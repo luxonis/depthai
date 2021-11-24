@@ -41,7 +41,6 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
-        persist-credentials: ''
     - name: Download Windows installer
       uses: actions/download-artifact@v2
       with:
