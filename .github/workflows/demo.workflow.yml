@@ -56,10 +56,13 @@ jobs:
       with:
         submodules: 'recursive'
         persist-credentials: ''
+    - name: Get current tag
+      id: tag
+      run: echo ::set-output name=version::${GITHUB_REF#refs/*/}
    # Fetches previous tag
-    - name: 'Get Previous tag'
+    - name: Get previous tag
       id: previoustag
-      uses: "WyriHaximus/github-action-get-previous-tag@v1"
+      uses: WyriHaximus/github-action-get-previous-tag@v1
 
    # Create GitHub release
     - uses: actions/create-release@master
@@ -68,8 +71,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: DepthAI Demo ${{ github.ref }}
+        tag_name: ${{ steps.tag.outputs.version }}
+        release_name: DepthAI Demo ${{ steps.tag.outputs.version }}
         body: |
           ## Features
 
@@ -80,6 +83,10 @@ jobs:
           **Full Changelog**: https://github.com/luxonis/depthai/compare/${{ steps.previoustag.outputs.tag }}...${{ steps.tag.outputs.version }}
 
         draft: true
+
+   # Sign Launcher
+    - name: Sign Windows Launcher
+      run: dir ${{ github.workspace }}\installers /s /b /o:gn
 
     # Upload release assets
     - name: Upload Windows Installer
