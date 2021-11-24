@@ -202,7 +202,7 @@ class Worker(QtCore.QThread):
                             # DepthAI repo not available, clone first
                             splashScreen.updateSplashMessage('Updating DepthAI Repository ...')
                             splashScreen.enableHeartbeat(True)
-                            lastCall = subprocess.run([gitExecutable, 'checkout', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                            lastCall = subprocess.run([gitExecutable, 'checkout', '--recurse-submodules ', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
                             if lastCall.returncode != 0:
                                 # Uncommited changes - redo with a prompt to force
                                 errMessage = lastCall.stderr.decode()
@@ -212,7 +212,7 @@ class Worker(QtCore.QThread):
                                 self.signalUpdateQuestion.emit(title, message)
 
                                 if self.shouldUpdate == True:
-                                    lastCall = subprocess.run([gitExecutable, 'checkout', '-f', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                                    lastCall = subprocess.run([gitExecutable, 'checkout', '--recurse-submodules', '-f', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
                                     if lastCall.returncode != 0:
                                         # Stop animation
                                         splashScreen.updateSplashMessage('')
