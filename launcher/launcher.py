@@ -202,18 +202,28 @@ class Worker(QtCore.QThread):
                             # DepthAI repo not available, clone first
                             splashScreen.updateSplashMessage('Updating DepthAI Repository ...')
                             splashScreen.enableHeartbeat(True)
-                            lastCall = subprocess.run([gitExecutable, 'checkout', '--recurse-submodules ', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
-                            if lastCall.returncode != 0:
+                            lastCall = subprocess.run([gitExecutable, 'status', '--porcelain'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE)
+                            filesToRemove = lastCall.stdout.decode()
+                            lastCall = subprocess.run([gitExecutable, 'checkout', '--recurse-submodules', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                            if lastCall.returncode != 0 or filesToRemove != "":
                                 # Uncommited changes - redo with a prompt to force
+                                # Or unclean working directory
                                 errMessage = lastCall.stderr.decode()
                                 title = 'Force Update'
-                                message = f'DepthAI Repository has uncommited changes. Do you want to override the changes?\n{errMessage}'
+                                message = f'DepthAI Repository has changes. Do you want to override the changes?'
+                                if lastCall.returncode != 0:
+                                    message = f'{message}\n{errMessage}'
+                                if filesToRemove != "":
+                                    message = f'{message}\nWould also remove:\n{filesToRemove}'
                                 print(f'Message Box ({title}): {message}')
                                 self.signalUpdateQuestion.emit(title, message)
 
                                 if self.shouldUpdate == True:
                                     lastCall = subprocess.run([gitExecutable, 'checkout', '--recurse-submodules', '-f', newVersionTag], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
-                                    if lastCall.returncode != 0:
+                                    checkoutSuccess = lastCall.returncode == 0
+                                    lastCall = subprocess.run([gitExecutable, 'clean', '-fd'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                                    cleanSuccess = lastCall.returncode == 0
+                                    if checkoutSuccess == False or cleanSuccess == False:
                                         # Stop animation
                                         splashScreen.updateSplashMessage('')
                                         splashScreen.enableHeartbeat(False)
