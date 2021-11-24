@@ -54,7 +54,10 @@ jobs:
         Set-Content -Path certificate\certificate.txt -Value '${{ secrets.WINDOWS_CERTIFICATE }}'
         certutil -decode certificate\certificate.txt certificate\certificate.pfx
         & 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe' sign /td sha256 /fd sha256 /f certificate\certificate.pfx /p '${{ secrets.WINDOWS_CERTIFICATE_PASS }}' /tr http://timestamp.digicert.com installers/DepthAI_setup.exe
-
+   # Fetches previous tag
+    - name: 'Get Previous tag'
+      id: previoustag
+      uses: "WyriHaximus/github-action-get-previous-tag@v1"
    # Create GitHub release
     - uses: actions/create-release@master
       id: createRelease
@@ -70,6 +73,8 @@ jobs:
           ## Bugs
 
           ## Misc
+
+          **Full Changelog**: https://github.com/luxonis/depthai/compare/${{ steps.previoustag.outputs.tag }}...${{ github.ref }}
 
         draft: true
 
