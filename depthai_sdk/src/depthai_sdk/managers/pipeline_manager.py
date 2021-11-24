@@ -493,21 +493,16 @@ class PipelineManager:
         if cameraName == Previews.color.name:
             if not hasattr(self.nodes, 'camRgb'):
                 raise RuntimeError("RGB camera not initialized. Call createColorCam(res, fps) first!")
-            encResolution = (self.nodes.camRgb.getVideoWidth(), self.nodes.camRgb.getVideoHeight())
             encProfile = dai.VideoEncoderProperties.Profile.H264_MAIN
             encIn = self.nodes.camRgb.video
 
         elif cameraName == Previews.left.name:
             if not hasattr(self.nodes, 'monoLeft'):
                 raise RuntimeError("Left mono camera not initialized. Call createLeftCam(res, fps) first!")
-            encResolution = (
-            self.nodes.monoLeft.getResolutionWidth(), self.nodes.monoLeft.getResolutionHeight())
             encIn = self.nodes.monoLeft.out
         elif cameraName == Previews.right.name:
             if not hasattr(self.nodes, 'monoRight'):
                 raise RuntimeError("Right mono camera not initialized. Call createRightCam(res, fps) first!")
-            encResolution = (
-            self.nodes.monoRight.getResolutionWidth(), self.nodes.monoRight.getResolutionHeight())
             encIn = self.nodes.monoRight.out
 
         enc = self.pipeline.createVideoEncoder()
