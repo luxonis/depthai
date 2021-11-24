@@ -74,8 +74,6 @@ jobs:
 
           ## Misc
 
-          **Full Changelog**: https://github.com/luxonis/depthai/compare/${{ git tag --sort=-creatordate | grep -v sdk | sed -n 2p }}...${{ steps.tag.outputs.version }}
-
         draft: true
 
     # Upload release assets
