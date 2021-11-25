@@ -11,6 +11,7 @@ from pathlib import Path
 import cv2
 import depthai as dai
 import platform
+import numpy as np
 
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
@@ -475,7 +476,7 @@ if __name__ == "__main__":
 
     class WorkerSignals(QObject):
         updateConfSignal = pyqtSignal(list)
-        updatePreviewSignal = pyqtSignal(QImage)
+        updatePreviewSignal = pyqtSignal(np.ndarray)
         setDataSignal = pyqtSignal(list)
         exitSignal = pyqtSignal()
         errorSignal = pyqtSignal(str)
@@ -556,15 +557,8 @@ if __name__ == "__main__":
         def onShowFrame(self, frame, source):
             if "onShowFrame" in self.file_callbacks:
                 self.file_callbacks["onShowFrame"](frame, source)
-            writerObject = self.parent.window.findChild(QObject, "writer")
-            w, h = int(writerObject.width()), int(writerObject.height())
             if source == self.selectedPreview:
-                scaledFrame = resizeLetterbox(frame, (w, h))
-                if len(frame.shape) == 3:
-                    img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, QImage.Format_BGR888)
-                else:
-                    img = QImage(scaledFrame.data, w, h, w, QImage.Format_Grayscale8)
-                self.signals.updatePreviewSignal.emit(img)
+                self.signals.updatePreviewSignal.emit(frame)
 
         def onSetup(self, instance):
             if "onSetup" in self.file_callbacks:

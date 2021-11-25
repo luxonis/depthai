@@ -11,7 +11,8 @@ import depthai as dai
 # To be used on the @QmlElement decorator
 # (QML_IMPORT_MINOR_VERSION is optional)
 from PyQt5.QtWidgets import QApplication
-from depthai_sdk import Previews
+from depthai_sdk import Previews, resizeLetterbox
+
 
 class Singleton(type(QQuickPaintedItem)):
     _instances = {}
@@ -289,8 +290,14 @@ class DemoQtGui:
         name, value = data
         self.window.setProperty(name, value)
 
-    def updatePreview(self, data):
-        self.writer.update_frame(data)
+    def updatePreview(self, frame):
+        w, h = int(self.writer.width()), int(self.writer.height())
+        scaledFrame = resizeLetterbox(frame, (w, h))
+        if len(frame.shape) == 3:
+            img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, QImage.Format_BGR888)
+        else:
+            img = QImage(scaledFrame.data, w, h, w, QImage.Format_Grayscale8)
+        self.writer.update_frame(img)
 
     def startGui(self):
         self.writer = self.window.findChild(QObject, "writer")
