@@ -50,9 +50,12 @@ class MetricManager:
                 "usb": usb
             }
         }
-        self.demo_table.update({
-            f"devices/{mxid}": data
-        })
+        try:
+            self.demo_table.update({
+                f"devices/{mxid}": data
+            })
+        except:
+            pass
 
 if __name__ == "__main__":
     mm = MetricManager()
