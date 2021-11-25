@@ -477,7 +477,19 @@ class Demo:
             print(','.join(map(str, data.values())), file=self._reportFile)
 
 
-if __name__ == "__main__":
+def prepareConfManager(in_args):
+    confManager = ConfigManager(in_args)
+    confManager.linuxCheckApplyUsbRules()
+    if not confManager.useCamera:
+        if str(confManager.args.video).startswith('https'):
+            confManager.args.video = downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS)
+            print("Youtube video downloaded.")
+        if not Path(confManager.args.video).exists():
+            raise ValueError("Path {} does not exists!".format(confManager.args.video))
+    return confManager
+
+
+def runQt():
     os.environ["QT_QUICK_BACKEND"] = "software"
     from gui.main import DemoQtGui
     from PySide6.QtGui import QImage
@@ -600,14 +612,7 @@ if __name__ == "__main__":
     class App(DemoQtGui):
         def __init__(self):
             super().__init__()
-            self.confManager = ConfigManager(args)
-            self.confManager.linuxCheckApplyUsbRules()
-            if not self.confManager.useCamera:
-                if str(self.confManager.args.video).startswith('https'):
-                    self.confManager.args.video = downloadYTVideo(self.confManager.args.video, DEPTHAI_VIDEOS)
-                    print("Youtube video downloaded.")
-                if not Path(self.confManager.args.video).exists():
-                    raise ValueError("Path {} does not exists!".format(self.confManager.args.video))
+            self.confManager = prepareConfManager(args)
             self.running = False
             self.selectedPreview = self.confManager.args.show[0] if len(self.confManager.args.show) > 0 else "color"
             self.useDisparity = False
@@ -871,5 +876,18 @@ if __name__ == "__main__":
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
-
     App().start()
+
+
+def runOpenCv():
+    confManager = prepareConfManager(args)
+    demo = Demo()
+    demo.run_all(confManager)
+
+
+if __name__ == "__main__":
+    is_pi = platform.machine().startswith("arm")
+    if args.guiType == "opencv" or (args.guiType == "auto" and is_pi):
+        runOpenCv()
+    else:
+        runQt()
