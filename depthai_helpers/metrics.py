@@ -22,7 +22,7 @@ class MetricManager:
     def reportDevice(self, device: dai.Device):
         try:
             device_info = device.getDeviceInfo()
-            mxid = device_info.getMxId()
+            mxid = device.getMxId()
         except:
             return
         try:
