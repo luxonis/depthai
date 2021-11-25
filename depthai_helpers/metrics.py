@@ -44,7 +44,6 @@ class MetricManager:
             "device": {
                 "cameras": cameras,
                 "state": device_info.state.name,
-                "name": device_info.desc.name,
                 "platform": device_info.desc.platform.name,
                 "protocol": device_info.desc.protocol.name,
                 "usb": usb
