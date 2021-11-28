@@ -294,9 +294,9 @@ class DemoQtGui:
         w, h = int(self.writer.width()), int(self.writer.height())
         scaledFrame = resizeLetterbox(frame, (w, h))
         if len(frame.shape) == 3:
-            img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, QImage.Format_BGR888)
+            img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, 29)  # 29 - QImage.Format_BGR888
         else:
-            img = QImage(scaledFrame.data, w, h, w, QImage.Format_Grayscale8)
+            img = QImage(scaledFrame.data, w, h, w, 24)  # 24 - QImage.Format_Grayscale8
         self.writer.update_frame(img)
 
     def startGui(self):
