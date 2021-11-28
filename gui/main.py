@@ -168,7 +168,7 @@ class DepthBridge(QObject):
 
     @pyqtSlot(int, int)
     def setDepthRange(self, valFrom, valTo):
-        instance.guiOnDepthSetupUpdate(depthFrom=valFrom, depthTo=valTo)
+        instance.guiOnDepthSetupUpdate(depthFrom=int(valFrom * 1000), depthTo=int(valTo * 1000))
 
     @pyqtSlot(str)
     def setMedianFilter(self, state):
