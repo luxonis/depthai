@@ -881,8 +881,10 @@ if __name__ == "__main__":
     is_pi = platform.machine().startswith("arm")
     use_cv = args.guiType == "cv" or (args.guiType == "auto" and is_pi)
     try:
-        import PySide6
-    except:
+        import PyQt5
+    except Exception as ex:
+        print("Package PyQT5 is not available! {}".format(ex))
+        print("Switching to OpenCV backend...")
         use_cv = True
     if use_cv:
         args.guiType = "cv"
