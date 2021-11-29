@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import json
 import os
 import sys
 import time
@@ -15,6 +16,7 @@ import numpy as np
 
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
+from depthai_helpers.metrics import MetricManager
 from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, resizeLetterbox
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
@@ -59,9 +61,10 @@ class Demo:
         self.setup(conf)
         self.run()
 
-    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True):
+    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True, collectMetrics=False):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
+        self.toggleMetrics(collectMetrics)
 
         self.onNewFrame = onNewFrame
         self.onShowFrame = onShowFrame
@@ -89,6 +92,12 @@ class Demo:
             self.onIter = onIter
         if shouldRun is not None:
             self.shouldRun = shouldRun
+
+    def toggleMetrics(self, enabled):
+        if enabled:
+            self.metrics = MetricManager()
+        else:
+            self.metrics = None
 
     def setup(self, conf: ConfigManager):
         print("Setting up demo...")
@@ -123,6 +132,8 @@ class Demo:
             self._pm.setNnManager(self._nnManager)
 
         self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        if self.metrics is not None:
+            self.metrics.reportDevice(self._device)
         if self._deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
             print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
         self._conf.adjustParamsToDevice(self._device)
@@ -467,7 +478,20 @@ class Demo:
             print(','.join(map(str, data.values())), file=self._reportFile)
 
 
-if __name__ == "__main__":
+def prepareConfManager(in_args):
+    confManager = ConfigManager(in_args)
+    confManager.linuxCheckApplyUsbRules()
+    if not confManager.useCamera:
+        if str(confManager.args.video).startswith('https'):
+            confManager.args.video = downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS)
+            print("Youtube video downloaded.")
+        if not Path(confManager.args.video).exists():
+            raise ValueError("Path {} does not exists!".format(confManager.args.video))
+    return confManager
+
+
+def runQt():
+    os.environ["QT_QUICK_BACKEND"] = "software"
     from gui.main import DemoQtGui, ImageWriter
     from PyQt5.QtWidgets import QMessageBox
     from PyQt5.QtGui import QImage
@@ -500,7 +524,7 @@ if __name__ == "__main__":
             self.signals.exitSignal.connect(self.terminate)
             self.signals.updateConfSignal.connect(self.updateConf)
 
-        
+
         def run(self):
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
@@ -541,7 +565,7 @@ if __name__ == "__main__":
             self.running = False
             self.signals.setDataSignal.emit(["restartRequired", False])
 
-        
+
         def updateConf(self, argsList):
             self.conf.args = argparse.Namespace(**dict(argsList))
 
@@ -573,20 +597,14 @@ if __name__ == "__main__":
             else:
                 self.signals.setDataSignal.emit(["countLabels", []])
             self.signals.setDataSignal.emit(["depthEnabled", self.conf.useDepth])
+            self.signals.setDataSignal.emit(["statisticsAccepted", self.instance.metrics is not None])
             self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 
     class App(DemoQtGui):
         def __init__(self):
             super().__init__()
-            self.confManager = ConfigManager(args)
-            self.confManager.linuxCheckApplyUsbRules()
-            if not self.confManager.useCamera:
-                if str(self.confManager.args.video).startswith('https'):
-                    self.confManager.args.video = downloadYTVideo(self.confManager.args.video, DEPTHAI_VIDEOS)
-                    print("Youtube video downloaded.")
-                if not Path(self.confManager.args.video).exists():
-                    raise ValueError("Path {} does not exists!".format(self.confManager.args.video))
+            self.confManager = prepareConfManager(args)
             self.running = False
             self.selectedPreview = self.confManager.args.show[0] if len(self.confManager.args.show) > 0 else "color"
             self.useDisparity = False
@@ -600,7 +618,7 @@ if __name__ == "__main__":
             if shouldUpdate:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
-        
+
         def showError(self, error):
             print(error, file=sys.stderr)
             msgBox = QMessageBox()
@@ -610,7 +628,17 @@ if __name__ == "__main__":
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
 
+        def setupDataCollection(self):
+            try:
+                with Path(".consent").open() as f:
+                    accepted = json.load(f)["statistics"]
+            except:
+                accepted = True
+
+            self._demoInstance.toggleMetrics(accepted)
+
         def start(self):
+            self.setupDataCollection()
             self.running = True
             self.worker = Worker(self._demoInstance, parent=self, conf=self.confManager, selectedPreview=self.selectedPreview)
             self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
@@ -747,6 +775,14 @@ if __name__ == "__main__":
             if len(devices) > 0:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
+        def guiOnStaticticsConsent(self, value):
+            try:
+                with Path('.consent').open('w') as f:
+                    json.dump({"statistics": value}, f)
+            except:
+                pass
+            self.worker.signals.setDataSignal.emit(["restartRequired", True])
+
         def guiOnToggleColorEncoding(self, enabled, fps):
             oldConfig = self.confManager.args.encode or {}
             if enabled:
@@ -832,5 +868,25 @@ if __name__ == "__main__":
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
-
     App().start()
+
+
+def runOpenCv():
+    confManager = prepareConfManager(args)
+    demo = Demo()
+    demo.run_all(confManager)
+
+
+if __name__ == "__main__":
+    is_pi = platform.machine().startswith("arm")
+    use_cv = args.guiType == "cv" or (args.guiType == "auto" and is_pi)
+    try:
+        import PySide6
+    except:
+        use_cv = True
+    if use_cv:
+        args.guiType = "cv"
+        runOpenCv()
+    else:
+        args.guiType = "qt"
+        runQt()

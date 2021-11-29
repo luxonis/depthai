@@ -103,32 +103,32 @@ class PipelineManager:
             if node.video == nodeOutput:
                 size = self.__calcEncodeableSize(node.getVideoSize())
                 node.setVideoSize(size)
-                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             elif node.preview == nodeOutput:
                 size = self.__calcEncodeableSize(node.getPreviewSize())
                 node.setPreviewSize(size)
-                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             elif node.still == nodeOutput:
                 size = self.__calcEncodeableSize(node.getStillSize())
                 node.setStillSize(size)
-                videnc.setDefaultProfilePreset(*size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
 
             nodeOutput.link(videnc.input)
         elif isinstance(node, dai.node.MonoCamera):
-            videnc.setDefaultProfilePreset(node.getResolutionWidth(), node.getResolutionHeight(), node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             nodeOutput.link(videnc.input)
         elif isinstance(node, dai.node.StereoDepth):
             cameraNode = getattr(self.nodes, 'monoLeft', getattr(self.nodes, 'monoRight', None))
             if cameraNode is None:
                 raise RuntimeError("Unable to find mono camera node to determine frame size!")
-            videnc.setDefaultProfilePreset(cameraNode.getResolutionWidth(), cameraNode.getResolutionHeight(), cameraNode.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            videnc.setDefaultProfilePreset(cameraNode.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             nodeOutput.link(videnc.input)
         elif isinstance(node, dai.NeuralNetwork):
             w, h = self.__calcEncodeableSize(self.nnManager.inputSize)
             manip = self.pipeline.createImageManip()
             manip.initialConfig.setResize(w, h)
 
-            videnc.setDefaultProfilePreset(w, h, 30, dai.VideoEncoderProperties.Profile.MJPEG)
+            videnc.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.MJPEG)
             nodeOutput.link(manip.inputImage)
             manip.out.link(videnc.input)
         else:
@@ -493,25 +493,20 @@ class PipelineManager:
         if cameraName == Previews.color.name:
             if not hasattr(self.nodes, 'camRgb'):
                 raise RuntimeError("RGB camera not initialized. Call createColorCam(res, fps) first!")
-            encResolution = (self.nodes.camRgb.getVideoWidth(), self.nodes.camRgb.getVideoHeight())
             encProfile = dai.VideoEncoderProperties.Profile.H264_MAIN
             encIn = self.nodes.camRgb.video
 
         elif cameraName == Previews.left.name:
             if not hasattr(self.nodes, 'monoLeft'):
                 raise RuntimeError("Left mono camera not initialized. Call createLeftCam(res, fps) first!")
-            encResolution = (
-            self.nodes.monoLeft.getResolutionWidth(), self.nodes.monoLeft.getResolutionHeight())
             encIn = self.nodes.monoLeft.out
         elif cameraName == Previews.right.name:
             if not hasattr(self.nodes, 'monoRight'):
                 raise RuntimeError("Right mono camera not initialized. Call createRightCam(res, fps) first!")
-            encResolution = (
-            self.nodes.monoRight.getResolutionWidth(), self.nodes.monoRight.getResolutionHeight())
             encIn = self.nodes.monoRight.out
 
         enc = self.pipeline.createVideoEncoder()
-        enc.setDefaultProfilePreset(*encResolution, encFps, encProfile)
+        enc.setDefaultProfilePreset(encFps, encProfile)
         enc.setQuality(encQuality)
         encIn.link(enc.input)
         setattr(self.nodes, nodeName, enc)

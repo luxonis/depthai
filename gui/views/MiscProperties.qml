@@ -176,7 +176,7 @@ ListView {
             id: textField3
             x: 110
             y: 352
-            width: 227
+            width: 170
             height: 27
             bottomPadding: 7
             placeholderText: qsTr("/path/to/report.csv")
@@ -203,7 +203,7 @@ ListView {
             id: textField4
             x: 116
             y: 150
-            width: 227
+            width: 170
             height: 27
             bottomPadding: 7
             placeholderText: qsTr("/path/to/output/directory/")
@@ -224,6 +224,34 @@ ListView {
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             font.family: "Courier"
+        }
+
+        Text {
+            id: textOptions
+            x: 350
+            y: 8
+            width: 185
+            height: 30
+            color: "#ffffff"
+            text: qsTr("Demo options")
+            font.pixelSize: 26
+            horizontalAlignment: Text.AlignHCenter
+            font.family: "Courier"
+            font.styleName: "Regular"
+        }
+
+        Switch {
+            id: consentSwitch
+            x: 350
+            y: 40
+            checked: statisticsAccepted
+            width: 250
+            height: 27
+            text: qsTr("Send anonymous usage data")
+            bottomPadding: 5
+            onToggled: {
+                appBridge.toggleStatisticsConsent(consentSwitch.checked)
+            }
         }
     }
 }
