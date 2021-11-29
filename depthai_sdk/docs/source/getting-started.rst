@@ -23,9 +23,9 @@ Example usages
 The original "user" of this SDK was the `demo script <https://github.com/luxonis/depthai/blob/main/depthai_demo.py>`__, where you can see how the SDK is used.
 Below, you can find a list of other projects that also use the SDK and are available to use as a reference
 
-* `<https://github.com/luxonis/depthai-experiments/tree/sdk/gen2-human-pose>`__
-* `<https://github.com/luxonis/depthai-experiments/tree/sdk/gen2-road-segmentation>`__
-* `<https://github.com/luxonis/depthai-experiments/tree/sdk/gen2-people-counter>`__
+* `<https://github.com/luxonis/depthai-experiments/tree/master/gen2-human-pose>`__
+* `<https://github.com/luxonis/depthai-experiments/tree/master/gen2-road-segmentation>`__
+* `<https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__
 
 Installation
 ------------
