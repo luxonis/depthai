@@ -887,7 +887,14 @@ def runOpenCv():
 
 if __name__ == "__main__":
     is_pi = platform.machine().startswith("arm")
-    if args.guiType == "opencv" or (args.guiType == "auto" and is_pi):
+    use_cv = args.guiType == "cv" or (args.guiType == "auto" and is_pi)
+    try:
+        import PySide6
+    except:
+        use_cv = True
+    if use_cv:
+        args.guiType = "cv"
         runOpenCv()
     else:
+        args.guiType = "qt"
         runQt()

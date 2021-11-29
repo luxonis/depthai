@@ -138,21 +138,26 @@ class ConfigManager:
             return
 
         self.args.show.append(Previews.color.name)
-        if self.useNN:
-            self.args.show.append(Previews.nnInput.name)
-
         if self.useDepth:
             if self.lowBandwidth:
-                self.args.show.append(Previews.disparity.name)
                 self.args.show.append(Previews.disparityColor.name)
             else:
                 self.args.show.append(Previews.depth.name)
-                self.args.show.append(Previews.depthRaw.name)
-            self.args.show.append(Previews.rectifiedLeft.name)
-            self.args.show.append(Previews.rectifiedRight.name)
-        else:
-            self.args.show.append(Previews.left.name)
-            self.args.show.append(Previews.right.name)
+
+        if self.args.guiType == "qt":
+            if self.useNN:
+                self.args.show.append(Previews.nnInput.name)
+
+            if self.useDepth:
+                if self.lowBandwidth:
+                    self.args.show.append(Previews.disparityColor.name)
+                else:
+                    self.args.show.append(Previews.depthRaw.name)
+                self.args.show.append(Previews.rectifiedLeft.name)
+                self.args.show.append(Previews.rectifiedRight.name)
+            else:
+                self.args.show.append(Previews.left.name)
+                self.args.show.append(Previews.right.name)
 
     def adjustParamsToDevice(self, device):
         deviceInfo = device.getDeviceInfo()
