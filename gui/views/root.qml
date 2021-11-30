@@ -53,7 +53,6 @@ import QtQuick.Layouts 1.11
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
-import Qt.labs.platform 1.1
 
 import dai.gui 1.0
 

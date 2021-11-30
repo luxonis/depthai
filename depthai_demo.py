@@ -12,6 +12,7 @@ from pathlib import Path
 import cv2
 import depthai as dai
 import platform
+import numpy as np
 
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
@@ -491,19 +492,18 @@ def prepareConfManager(in_args):
 
 def runQt():
     os.environ["QT_QUICK_BACKEND"] = "software"
-    from gui.main import DemoQtGui
-    from PySide6.QtGui import QImage
-
-    from PySide6.QtCore import QRunnable, Slot, QThreadPool, QObject, Signal
-    from PySide6.QtWidgets import QMessageBox
+    from gui.main import DemoQtGui, ImageWriter
+    from PyQt5.QtWidgets import QMessageBox
+    from PyQt5.QtGui import QImage
+    from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 
 
     class WorkerSignals(QObject):
-        updateConfSignal = Signal(list)
-        updatePreviewSignal = Signal(QImage)
-        setDataSignal = Signal(list)
-        exitSignal = Signal()
-        errorSignal = Signal(str)
+        updateConfSignal = pyqtSignal(list)
+        updatePreviewSignal = pyqtSignal(np.ndarray)
+        setDataSignal = pyqtSignal(list)
+        exitSignal = pyqtSignal()
+        errorSignal = pyqtSignal(str)
 
     class Worker(QRunnable):
         def __init__(self, instance, parent, conf, selectedPreview=None):
@@ -524,7 +524,7 @@ def runQt():
             self.signals.exitSignal.connect(self.terminate)
             self.signals.updateConfSignal.connect(self.updateConf)
 
-        @Slot()
+
         def run(self):
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
@@ -561,12 +561,11 @@ def runQt():
             except Exception as ex:
                 self.onError(ex)
 
-        @Slot()
         def terminate(self):
             self.running = False
             self.signals.setDataSignal.emit(["restartRequired", False])
 
-        @Slot(list)
+
         def updateConf(self, argsList):
             self.conf.args = argparse.Namespace(**dict(argsList))
 
@@ -582,15 +581,8 @@ def runQt():
         def onShowFrame(self, frame, source):
             if "onShowFrame" in self.file_callbacks:
                 self.file_callbacks["onShowFrame"](frame, source)
-            writerObject = self.parent.window.findChild(QObject, "writer")
-            w, h = int(writerObject.width()), int(writerObject.height())
             if source == self.selectedPreview:
-                scaledFrame = resizeLetterbox(frame, (w, h))
-                if len(frame.shape) == 3:
-                    img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, QImage.Format_BGR888)
-                else:
-                    img = QImage(scaledFrame.data, w, h, w, QImage.Format_Grayscale8)
-                self.signals.updatePreviewSignal.emit(img)
+                self.signals.updatePreviewSignal.emit(frame)
 
         def onSetup(self, instance):
             if "onSetup" in self.file_callbacks:
@@ -626,7 +618,7 @@ def runQt():
             if shouldUpdate:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
-        @Slot(str)
+
         def showError(self, error):
             print(error, file=sys.stderr)
             msgBox = QMessageBox()
@@ -889,7 +881,7 @@ if __name__ == "__main__":
     use_cv = args.guiType == "cv"
     if not use_cv:
         try:
-            import PySide6
+            import PyQt5
         except:
             if args.guiType == "qt":
                 raise
