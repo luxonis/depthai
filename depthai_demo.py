@@ -10,6 +10,7 @@ from itertools import cycle
 from pathlib import Path
 
 import cv2
+os.environ["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
 import depthai as dai
 import platform
 import numpy as np
