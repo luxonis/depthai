@@ -879,14 +879,15 @@ def runOpenCv():
 
 
 if __name__ == "__main__":
-    is_pi = platform.machine().startswith("arm")
-    use_cv = args.guiType == "cv" or (args.guiType == "auto" and is_pi)
-    try:
-        import PyQt5
-    except Exception as ex:
-        print("Package PyQT5 is not available! {}".format(ex))
-        print("Switching to OpenCV backend...")
-        use_cv = True
+    use_cv = args.guiType == "cv"
+    if not use_cv:
+        try:
+            import PyQt5
+        except:
+            if args.guiType == "qt":
+                raise
+            else:
+                use_cv = True
     if use_cv:
         args.guiType = "cv"
         runOpenCv()
