@@ -123,7 +123,7 @@ def parseArgs():
                                                                                                                  "If set to \"high\", the output streams will stay uncompressed\n"
                                                                                                                  "If set to \"low\", the output streams will be MJPEG-encoded\n"
                                                                                                                  "If set to \"auto\" (default), the optimal bandwidth will be selected based on your connection type and speed")
-    parser.add_argument('-gt', '--guiType', type=str, default="auto", choices=["auto", "qt", "cv"], help="Specify GUI type of the demo. \"cv\" uses buil-in OpenCV display methods, \"qt\" uses Qt to display interactive GUI. \"auto\" will use OpenCV for Raspberry Pi and Qt for other platforms")
+    parser.add_argument('-gt', '--guiType', type=str, default="auto", choices=["auto", "qt", "cv"], help="Specify GUI type of the demo. \"cv\" uses built-in OpenCV display methods, \"qt\" uses Qt to display interactive GUI. \"auto\" will use OpenCV for Raspberry Pi and Qt for other platforms")
     parser.add_argument('-usbs', '--usbSpeed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
     parser.add_argument('-enc', '--encode', type=_comaSeparated(default=30.0, cast=float), nargs="+", default=[],
                         help="Define which cameras to encode (record) \n"
