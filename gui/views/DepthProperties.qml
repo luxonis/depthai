@@ -143,7 +143,7 @@ ListView {
         Slider {
             id: sigmaSlider
             x: 362
-            y: 133
+            y: 138
             width: 200
             height: 25
             stepSize: 1
@@ -169,7 +169,7 @@ ListView {
         Text {
             id: text6
             x: 360
-            y: 115
+            y: 120
             width: 200
             height: 25
             color: "#ffffff"
@@ -196,36 +196,16 @@ ListView {
         Text {
             id: text9
             x: 362
-            y: 158
+            y: 169
             width: 200
             height: 25
             color: "#ffffff"
-            text: qsTr("Depth Range")
+            text: qsTr("Depth Range [m]")
             font.pixelSize: 18
             horizontalAlignment: Text.AlignHCenter
             font.styleName: "Regular"
             font.weight: Font.Medium
             font.family: "Courier"
-        }
-
-        RangeSlider {
-            id: depthRangeSlider
-            x: 364
-            y: 181
-            width: 198
-            height: 27
-            snapMode: RangeSlider.NoSnap
-            stepSize: 100
-            to: 10000
-            focusPolicy: Qt.StrongFocus
-            second.value: 10000
-            first.value: 0
-            first.onMoved: {
-                depthBridge.setDepthRange(first.value, second.value)
-            }
-            second.onMoved: {
-                depthBridge.setDepthRange(first.value, second.value)
-            }
         }
 
         Text {
@@ -243,33 +223,9 @@ ListView {
         }
 
         Text {
-            id: text32
-            x: 566
-            y: 185
-            width: 17
-            height: 20
-            color: "#ffffff"
-            text: (depthRangeSlider.second.value / 1000).toFixed(1) + "m"
-            font.pixelSize: 12
-            rotation: 0
-        }
-
-        Text {
-            id: text33
-            x: 337
-            y: 185
-            width: 17
-            height: 20
-            color: "#ffffff"
-            text: (depthRangeSlider.first.value / 1000).toFixed(1) + "m"
-            font.pixelSize: 12
-            rotation: 0
-        }
-
-        Text {
             id: text10
             x: 360
-            y: 214
+            y: 236
             width: 200
             height: 25
             color: "#ffffff"
@@ -284,7 +240,7 @@ ListView {
         Slider {
             id: lrcSlider
             x: 361
-            y: 233
+            y: 256
             width: 198
             height: 27
             stepSize: 1
@@ -299,22 +255,11 @@ ListView {
         Text {
             id: text34
             x: 566
-            y: 233
+            y: 260
             width: 17
             height: 20
             color: "#ffffff"
             text: lrcSlider.value
-            font.pixelSize: 12
-            rotation: 0
-        }
-
-        Text {
-            id: text35
-            x: 337
-            y: 233
-            width: 17
-            height: 20
-            color: "#ffffff"
             font.pixelSize: 12
             rotation: 0
         }
@@ -336,11 +281,73 @@ ListView {
             }
         }
 
+        Text {
+            id: text32
+            x: 343
+            y: 197
+            width: 40
+            height: 25
+            color: "#ffffff"
+            text: qsTr("Min")
+            font.pixelSize: 12
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.family: "Courier"
+        }
+
+        TextField {
+            id: textField6
+            x: 381
+            y: 197
+            width: 60
+            height: 25
+            text: "0"
+            placeholderText: "Min depth"
+            bottomPadding: 5
+            validator: DoubleValidator {
+            }
+            font.family: "Courier"
+            onEditingFinished: {
+                depthBridge.setDepthRange(textField6.text, textField7.text)
+            }
+        }
+
+        TextField {
+            id: textField7
+            x: 499
+            y: 197
+            width: 60
+            height: 25
+            text: "10"
+            placeholderText: "Max depth"
+            bottomPadding: 5
+            validator: DoubleValidator {
+            }
+            font.family: "Courier"
+            onEditingFinished: {
+                depthBridge.setDepthRange(textField6.text, textField7.text)
+            }
+        }
+
+        Text {
+            id: text33
+            x: 456
+            y: 197
+            width: 40
+            height: 25
+            color: "#ffffff"
+            text: qsTr("Max")
+            font.pixelSize: 12
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.family: "Courier"
+        }
+
 
     }
 }
 /*##^##
 Designer {
-    D{i:0;autoSize:true;height:480;width:640}D{i:7}D{i:24}
+    D{i:0;autoSize:true;height:480;width:640}
 }
 ##^##*/

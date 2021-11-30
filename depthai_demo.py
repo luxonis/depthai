@@ -12,6 +12,7 @@ from pathlib import Path
 import cv2
 import depthai as dai
 import platform
+import numpy as np
 
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
@@ -477,21 +478,32 @@ class Demo:
             print(','.join(map(str, data.values())), file=self._reportFile)
 
 
-if __name__ == "__main__":
-    os.environ["QT_QUICK_BACKEND"] = "software"
-    from gui.main import DemoQtGui
-    from PySide6.QtGui import QImage
+def prepareConfManager(in_args):
+    confManager = ConfigManager(in_args)
+    confManager.linuxCheckApplyUsbRules()
+    if not confManager.useCamera:
+        if str(confManager.args.video).startswith('https'):
+            confManager.args.video = downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS)
+            print("Youtube video downloaded.")
+        if not Path(confManager.args.video).exists():
+            raise ValueError("Path {} does not exists!".format(confManager.args.video))
+    return confManager
 
-    from PySide6.QtCore import QRunnable, Slot, QThreadPool, QObject, Signal
-    from PySide6.QtWidgets import QMessageBox
+
+def runQt():
+    os.environ["QT_QUICK_BACKEND"] = "software"
+    from gui.main import DemoQtGui, ImageWriter
+    from PyQt5.QtWidgets import QMessageBox
+    from PyQt5.QtGui import QImage
+    from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
 
 
     class WorkerSignals(QObject):
-        updateConfSignal = Signal(list)
-        updatePreviewSignal = Signal(QImage)
-        setDataSignal = Signal(list)
-        exitSignal = Signal()
-        errorSignal = Signal(str)
+        updateConfSignal = pyqtSignal(list)
+        updatePreviewSignal = pyqtSignal(np.ndarray)
+        setDataSignal = pyqtSignal(list)
+        exitSignal = pyqtSignal()
+        errorSignal = pyqtSignal(str)
 
     class Worker(QRunnable):
         def __init__(self, instance, parent, conf, selectedPreview=None):
@@ -512,7 +524,7 @@ if __name__ == "__main__":
             self.signals.exitSignal.connect(self.terminate)
             self.signals.updateConfSignal.connect(self.updateConf)
 
-        @Slot()
+
         def run(self):
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
@@ -549,12 +561,11 @@ if __name__ == "__main__":
             except Exception as ex:
                 self.onError(ex)
 
-        @Slot()
         def terminate(self):
             self.running = False
             self.signals.setDataSignal.emit(["restartRequired", False])
 
-        @Slot(list)
+
         def updateConf(self, argsList):
             self.conf.args = argparse.Namespace(**dict(argsList))
 
@@ -570,15 +581,8 @@ if __name__ == "__main__":
         def onShowFrame(self, frame, source):
             if "onShowFrame" in self.file_callbacks:
                 self.file_callbacks["onShowFrame"](frame, source)
-            writerObject = self.parent.window.findChild(QObject, "writer")
-            w, h = int(writerObject.width()), int(writerObject.height())
             if source == self.selectedPreview:
-                scaledFrame = resizeLetterbox(frame, (w, h))
-                if len(frame.shape) == 3:
-                    img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, QImage.Format_BGR888)
-                else:
-                    img = QImage(scaledFrame.data, w, h, w, QImage.Format_Grayscale8)
-                self.signals.updatePreviewSignal.emit(img)
+                self.signals.updatePreviewSignal.emit(frame)
 
         def onSetup(self, instance):
             if "onSetup" in self.file_callbacks:
@@ -600,14 +604,7 @@ if __name__ == "__main__":
     class App(DemoQtGui):
         def __init__(self):
             super().__init__()
-            self.confManager = ConfigManager(args)
-            self.confManager.linuxCheckApplyUsbRules()
-            if not self.confManager.useCamera:
-                if str(self.confManager.args.video).startswith('https'):
-                    self.confManager.args.video = downloadYTVideo(self.confManager.args.video, DEPTHAI_VIDEOS)
-                    print("Youtube video downloaded.")
-                if not Path(self.confManager.args.video).exists():
-                    raise ValueError("Path {} does not exists!".format(self.confManager.args.video))
+            self.confManager = prepareConfManager(args)
             self.running = False
             self.selectedPreview = self.confManager.args.show[0] if len(self.confManager.args.show) > 0 else "color"
             self.useDisparity = False
@@ -621,7 +618,7 @@ if __name__ == "__main__":
             if shouldUpdate:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
-        @Slot(str)
+
         def showError(self, error):
             print(error, file=sys.stderr)
             msgBox = QMessageBox()
@@ -871,5 +868,27 @@ if __name__ == "__main__":
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
-
     App().start()
+
+
+def runOpenCv():
+    confManager = prepareConfManager(args)
+    demo = Demo()
+    demo.run_all(confManager)
+
+
+if __name__ == "__main__":
+    is_pi = platform.machine().startswith("arm")
+    use_cv = args.guiType == "cv" or (args.guiType == "auto" and is_pi)
+    try:
+        import PyQt5
+    except Exception as ex:
+        print("Package PyQT5 is not available! {}".format(ex))
+        print("Switching to OpenCV backend...")
+        use_cv = True
+    if use_cv:
+        args.guiType = "cv"
+        runOpenCv()
+    else:
+        args.guiType = "qt"
+        runQt()
