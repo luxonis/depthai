@@ -1,4 +1,5 @@
-numpy>1.19
+numpy>=1.19; python_version < "3.7"
+numpy>=1.21; python_version >= "3.7"
 opencv-python>4
 opencv-contrib-python>4
 blobconverter>=1.2.6
