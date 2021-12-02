@@ -661,7 +661,7 @@ def runQt():
                 current_mxid = self._demoInstance._device.getMxId()
                 protocol = self._demoInstance._deviceInfo.desc.protocol
             self.worker.signals.exitSignal.emit()
-            self.threadpool.waitForDone(100)
+            self.threadpool.waitForDone(5000)
 
             if wait and current_mxid is not None and protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
                 start = time.time()
@@ -669,7 +669,7 @@ def runQt():
                     if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
                         break
                 else:
-                    raise RuntimeError("Device not available again after 10 seconds!")
+                    print(f"[Warning] Device not available again after 10 seconds! MXID: {current_mxid}")
 
         def restartDemo(self):
             self.stop()
