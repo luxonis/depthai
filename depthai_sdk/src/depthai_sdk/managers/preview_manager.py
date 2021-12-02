@@ -168,6 +168,8 @@ class PreviewManager:
                     cv2.circle(frame, point, 3, (255, 255, 255), -1)
                     cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 4, cv2.LINE_AA)
                     cv2.putText(frame, str(value), (point[0] + 5, point[1] + 5), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            if self._fpsHandler is not None:
+                self._fpsHandler.drawFps(frame, name)
             if callable(callback):
                 newFrame = callback(frame, name)
                 if newFrame is not None:
