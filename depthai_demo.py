@@ -424,7 +424,6 @@ class Demo:
                 self._pm.updateColorCamConfig(self._device, **parsedConfig[Previews.color.name])
 
     def _showFramesCallback(self, frame, name):
-        self._fps.drawFps(frame, name)
         returnFrame = self.onShowFrame(frame, name)
         return returnFrame if returnFrame is not None else frame
 
