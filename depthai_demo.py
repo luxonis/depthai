@@ -253,12 +253,14 @@ class Demo:
 
         try:
             while self.shouldRun():
+                print("ITER")
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
         except StopIteration:
             pass
         finally:
+            print("STOP")
             self.stop()
 
     def stop(self):
