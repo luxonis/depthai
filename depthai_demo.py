@@ -253,14 +253,12 @@ class Demo:
 
         try:
             while self.shouldRun():
-                print("ITER")
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
         except StopIteration:
             pass
         finally:
-            print("STOP")
             self.stop()
 
     def stop(self):
@@ -661,7 +659,7 @@ def runQt():
                 current_mxid = self._demoInstance._device.getMxId()
                 protocol = self._demoInstance._deviceInfo.desc.protocol
             self.worker.signals.exitSignal.emit()
-            self.threadpool.waitForDone(5000)
+            self.threadpool.waitForDone(10000)
 
             if wait and current_mxid is not None and protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
                 start = time.time()
