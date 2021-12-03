@@ -9,6 +9,15 @@ from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
 
+try:
+    from PyQt5.QtCore import QLibraryInfo
+    os.environ["LD_LIBRARY_PATH"] = QLibraryInfo.location(QLibraryInfo.LibrariesPath)
+    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
+    os.environ["QT_QUICK_BACKEND"] = "software"
+    qt_available = True
+except:
+    qt_available = False
+
 import cv2
 
 os.environ["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
@@ -492,13 +501,9 @@ def prepareConfManager(in_args):
 
 
 def runQt():
-    from PyQt5.QtCore import QLibraryInfo
-    os.environ["LD_LIBRARY_PATH"] = QLibraryInfo.location(QLibraryInfo.LibrariesPath)
     from gui.main import DemoQtGui
     from PyQt5.QtWidgets import QMessageBox
     from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, QThreadPool
-    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
-    os.environ["QT_QUICK_BACKEND"] = "software"
 
 
     class WorkerSignals(QObject):
@@ -881,15 +886,8 @@ def runOpenCv():
 
 
 if __name__ == "__main__":
-    use_cv = args.guiType == "cv"
-    if not use_cv:
-        try:
-            import PyQt5
-        except:
-            if args.guiType == "qt":
-                raise
-            else:
-                use_cv = True
+    use_cv = args.guiType == "cv" or not qt_available
+
     if use_cv:
         args.guiType = "cv"
         runOpenCv()
