@@ -13,7 +13,7 @@ class PreviewManager:
     #: dict: Contains name -> frame mapping that can be used to modify specific frames directly
     frames = {}
 
-    def __init__(self, display=[], nnSource=None, colorMap=cv2.COLORMAP_JET, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False, fpsHandler=None, createWindows=True):
+    def __init__(self, display=[], nnSource=None, colorMap=None, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False, fpsHandler=None, createWindows=True):
         """
         Args:
             display (list, Optional): List of :obj:`depthai_sdk.Previews` objects representing the streams to display
@@ -30,7 +30,11 @@ class PreviewManager:
         """
         self.sync = sync
         self.nnSource = nnSource
-        self.colorMap = colorMap
+        if colorMap is not None:
+            self.colorMap = colorMap
+        else:
+            self.colorMap = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
+            self.colorMap[0] = [0, 0, 0]
         self.lowBandwidth = lowBandwidth
         self.scale = scale
         self.dispMultiplier = dispMultiplier
