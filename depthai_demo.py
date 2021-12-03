@@ -9,9 +9,10 @@ from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
 
-os.environ["QT_QPA_PLATFORM"] = "minimal"
 import cv2
-os.environ["QT_QPA_PLATFORM"] = "xcb"
+for k, v in os.environ.items():
+    if k.startswith("QT_") and "cv2" in v:
+        del os.environ[k]
 
 os.environ["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
 import depthai as dai
