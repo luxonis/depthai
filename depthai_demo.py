@@ -13,8 +13,6 @@ import cv2
 
 try:
     from PyQt5.QtCore import QLibraryInfo
-    from ctypes import cdll
-    cdll.LoadLibrary(QLibraryInfo.location(QLibraryInfo.PluginsPath) + "/platforms/libqxcb.so")
     os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
     os.environ["QT_QUICK_BACKEND"] = "software"
     qt_available = True
@@ -887,8 +885,10 @@ def runOpenCv():
 
 
 if __name__ == "__main__":
-    use_cv = args.guiType == "cv" or not qt_available
+    if args.guiType == "qt" and not qt_available:
+        raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
 
+    use_cv = args.guiType == "cv" or not qt_available
     if use_cv:
         args.guiType = "cv"
         runOpenCv()
