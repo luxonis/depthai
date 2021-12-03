@@ -493,10 +493,10 @@ def prepareConfManager(in_args):
 
 def runQt():
     from PyQt5.QtCore import QLibraryInfo
+    os.environ["LD_LIBRARY_PATH"] = QLibraryInfo.location(QLibraryInfo.LibrariesPath)
     from gui.main import DemoQtGui
     from PyQt5.QtWidgets import QMessageBox
     from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, QThreadPool
-    os.environ["LD_LIBRARY_PATH"] = QLibraryInfo.location(QLibraryInfo.LibrariesPath)
     os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
     os.environ["QT_QUICK_BACKEND"] = "software"
 
