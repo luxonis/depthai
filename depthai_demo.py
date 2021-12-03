@@ -10,9 +10,6 @@ from itertools import cycle
 from pathlib import Path
 
 import cv2
-for k, v in os.environ.items():
-    if k.startswith("QT_") and "cv2" in v:
-        del os.environ[k]
 
 os.environ["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
 import depthai as dai
@@ -495,6 +492,9 @@ def prepareConfManager(in_args):
 
 
 def runQt():
+    import importlib
+    xcb_qt = Path(next(iter(importlib.util.find_spec('PyQt5').submodule_search_locations))) / "Qt5/plugins/platforms/libqxcb.so"
+    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = xcb_qt
     os.environ["QT_QUICK_BACKEND"] = "software"
     from gui.main import DemoQtGui, ImageWriter
     from PyQt5.QtWidgets import QMessageBox
