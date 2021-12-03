@@ -9,6 +9,8 @@ from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
 
+import cv2
+
 try:
     from PyQt5.QtCore import QLibraryInfo
     os.environ["LD_LIBRARY_PATH"] = QLibraryInfo.location(QLibraryInfo.LibrariesPath)
@@ -17,8 +19,6 @@ try:
     qt_available = True
 except:
     qt_available = False
-
-import cv2
 
 os.environ["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
 import depthai as dai
