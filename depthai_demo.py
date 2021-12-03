@@ -494,6 +494,7 @@ def prepareConfManager(in_args):
 def runQt():
     import importlib
     xcb_qt = Path(next(iter(importlib.util.find_spec('PyQt5').submodule_search_locations))) / "Qt5/plugins/platforms/libqxcb.so"
+    del os.environ["QT_QPA_FONTDIR"]
     os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(xcb_qt)
     os.environ["QT_QUICK_BACKEND"] = "software"
     from gui.main import DemoQtGui, ImageWriter
