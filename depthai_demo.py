@@ -14,7 +14,7 @@ import cv2
 try:
     from PyQt5.QtCore import QLibraryInfo
     from ctypes import cdll
-    cdll.LoadLibrary(QLibraryInfo.location(QLibraryInfo.PluginsPath) + "/libqxcb.so")
+    cdll.LoadLibrary(QLibraryInfo.location(QLibraryInfo.PluginsPath) + "/platforms/libqxcb.so")
     os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
     os.environ["QT_QUICK_BACKEND"] = "software"
     qt_available = True
