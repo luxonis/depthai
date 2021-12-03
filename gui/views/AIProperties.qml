@@ -159,7 +159,7 @@ ListView {
             id: aiAdvancedSwitch
             x: 167
             y: 228
-            text: qsTr("Show advanced options")
+            text: qsTr("<font color=\"white\">Show advanced options</font>")
             font.family: "Courier"
             autoExclusive: false
             transformOrigin: Item.Center
@@ -301,7 +301,7 @@ ListView {
             y: 0
             width: 167
             height: 38
-            text: qsTr("Enabled")
+            text: qsTr("<font color=\"white\">Enabled</font>")
             checked: true
             autoExclusive: false
             font.family: "Courier"

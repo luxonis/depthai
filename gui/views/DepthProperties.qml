@@ -65,7 +65,7 @@ ListView {
             id: switch1
             x: 0
             y: 187
-            text: qsTr("Left Right Check")
+            text: qsTr("<font color=\"white\">Left Right Check</font>")
             transformOrigin: Item.Center
             font.preferShaping: false
             font.kerning: false
@@ -78,11 +78,11 @@ ListView {
 
         Switch {
             id: switch5
-            x: 328
+            x: 275
             y: 0
             width: 167
             height: 38
-            text: qsTr("Enabled")
+            text: qsTr("<font color=\"white\">Enabled</font>")
             autoExclusive: false
             font.family: "Courier"
             checked: true
@@ -99,7 +99,7 @@ ListView {
             id: switch2
             x: 0
             y: 233
-            text: qsTr("Extended Disparity")
+            text: qsTr("<font color=\"white\">Extended Disparity</font>")
             autoExclusive: false
             font.kerning: false
             font.family: "Courier"
@@ -114,7 +114,7 @@ ListView {
             id: switch3
             x: 0
             y: 141
-            text: qsTr("Subpixel")
+            text: qsTr("<font color=\"white\">Subpixel</font>")
             autoExclusive: false
             font.kerning: false
             transformOrigin: Item.Center
@@ -210,7 +210,7 @@ ListView {
 
         Text {
             id: text1
-            x: 44
+            x: 0
             y: 4
             width: 285
             height: 30
@@ -266,11 +266,11 @@ ListView {
 
         Switch {
             id: switch6
-            x: 443
+            x: 400
             y: 0
-            width: 169
+            width: 200
             height: 38
-            text: qsTr("Use Disparity")
+            text: qsTr("<font color=\"white\">Use Disparity</font>")
             autoExclusive: false
             font.family: "Courier"
             font.kerning: false
