@@ -36,7 +36,7 @@ ListView {
 
         TextField {
             id: encColorFps
-            x: 110
+            x: 140
             y: 44
             width: 83
             height: 27
@@ -52,9 +52,9 @@ ListView {
             id: encColorSwitch
             x: 8
             y: 44
-            width: 96
+            width: 150
             height: 27
-            text: qsTr("Color")
+            text: qsTr("<font color=\"white\">Color</font>")
             bottomPadding: 5
             onToggled: {
                 appBridge.toggleColorEncoding(encColorSwitch.checked, encColorFps.text)
@@ -64,7 +64,7 @@ ListView {
         TextField {
             enabled: depthEnabled
             id: encLeftFps
-            x: 110
+            x: 140
             y: 77
             width: 83
             height: 27
@@ -81,9 +81,9 @@ ListView {
             id: encLeftSwitch
             x: 8
             y: 77
-            width: 96
+            width: 150
             height: 27
-            text: qsTr("Left")
+            text: qsTr("<font color=\"white\">Left</font>")
             bottomPadding: 5
             onToggled: {
                 appBridge.toggleLeftEncoding(encLeftSwitch.checked, encLeftFps.text)
@@ -93,7 +93,7 @@ ListView {
         TextField {
             enabled: depthEnabled
             id: encRightFps
-            x: 110
+            x: 140
             y: 110
             width: 83
             height: 27
@@ -110,9 +110,9 @@ ListView {
             id: encRightSwitch
             x: 8
             y: 110
-            width: 96
+            width: 150
             height: 27
-            text: qsTr("Right")
+            text: qsTr("<font color=\"white\">Right</font>")
             bottomPadding: 5
             onToggled: {
                 appBridge.toggleRightEncoding(encLeftSwitch.checked, encLeftFps.text)
@@ -139,7 +139,7 @@ ListView {
             y: 239
             width: 185
             height: 27
-            text: qsTr("Temperature")
+            text: qsTr("<font color=\"white\">Temperature</font>")
             bottomPadding: 5
             onToggled: {
                 appBridge.selectReportingOptions(tempSwitch.checked, cpuSwitch.checked, memSwitch.checked)
@@ -152,7 +152,7 @@ ListView {
             y: 272
             width: 185
             height: 27
-            text: qsTr("CPU")
+            text: qsTr("<font color=\"white\">CPU</font>")
             bottomPadding: 5
             onToggled: {
                 appBridge.selectReportingOptions(tempSwitch.checked, cpuSwitch.checked, memSwitch.checked)
@@ -165,7 +165,7 @@ ListView {
             y: 305
             width: 185
             height: 27
-            text: qsTr("Memory")
+            text: qsTr("<font color=\"white\">Memory</font>")
             bottomPadding: 5
             onToggled: {
                 appBridge.selectReportingOptions(tempSwitch.checked, cpuSwitch.checked, memSwitch.checked)
@@ -242,12 +242,12 @@ ListView {
 
         Switch {
             id: consentSwitch
-            x: 350
+            x: 330
             y: 40
             checked: statisticsAccepted
-            width: 250
+            width: 270
             height: 27
-            text: qsTr("Send anonymous usage data")
+            text: qsTr("<font color=\"white\">Send anonymous usage data</font>")
             bottomPadding: 5
             onToggled: {
                 appBridge.toggleStatisticsConsent(consentSwitch.checked)
