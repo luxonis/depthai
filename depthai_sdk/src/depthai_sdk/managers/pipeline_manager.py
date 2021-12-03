@@ -290,7 +290,7 @@ class PipelineManager:
         if useDisparity:
             self.nodes.xoutDisparity = self.pipeline.createXLinkOut()
             self.nodes.xoutDisparity.setStreamName(Previews.disparity.name)
-            if self.lowBandwidth:
+            if False:
                 self._mjpegLink(self.nodes.stereo, self.nodes.xoutDisparity, self.nodes.stereo.disparity)
             else:
                 self.nodes.stereo.disparity.link(self.nodes.xoutDisparity.input)
