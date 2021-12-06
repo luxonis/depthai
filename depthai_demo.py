@@ -11,7 +11,7 @@ from pathlib import Path
 import platform
 
 try:
-    import cv2Ļ
+    import cv2
     import depthai as dai
     import numpy as np
 except Exception as ex:
