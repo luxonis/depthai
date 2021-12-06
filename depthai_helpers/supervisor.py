@@ -30,14 +30,14 @@ class Supervisor:
 
         try:
             new_args = createNewArgs(args)
-            subprocess.check_call(sys.argv[:2] + new_args)
+            subprocess.check_call(sys.argv[:2] + new_args, env=new_env)
         except subprocess.CalledProcessError as ex:
             print("Error while running demo script... {}".format(ex))
             print("Waiting 5s for the device to be discoverable again...")
             time.sleep(5)
             args.guiType = "cv"
             new_args = createNewArgs(args)
-            subprocess.check_call(sys.argv[:2] + new_args)
+            subprocess.check_call(sys.argv[:2] + new_args, env=new_env)
 
     def checkQtAvailability(self):
         try:
