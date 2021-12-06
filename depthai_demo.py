@@ -11,19 +11,10 @@ from pathlib import Path
 
 import cv2
 
-try:
-    from PyQt5.QtCore import QLibraryInfo
-    os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
-    os.environ["QT_QUICK_BACKEND"] = "software"
-    qt_available = True
-except:
-    qt_available = False
-
-os.environ["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
 import depthai as dai
 import platform
 import numpy as np
-
+from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.metrics import MetricManager
@@ -31,9 +22,11 @@ from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, resizeLetterbox
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
-print('Using depthai module from: ', dai.__file__)
-print('Depthai version installed: ', dai.__version__)
 args = parseArgs()
+if not args.noSupervisor:
+    print('Using depthai module from: ', dai.__file__)
+    print('Depthai version installed: ', dai.__version__)
+
 if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
     checkRequirementsVersion()
 
@@ -885,13 +878,16 @@ def runOpenCv():
 
 
 if __name__ == "__main__":
-    if args.guiType == "qt" and not qt_available:
-        raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
-
-    use_cv = args.guiType == "cv" or not qt_available
-    if use_cv:
-        args.guiType = "cv"
-        runOpenCv()
+    if args.noSupervisor:
+        if args.guiType == "qt":
+            runQt()
+        else:
+            args.guiType = "cv"
+            runOpenCv()
     else:
-        args.guiType = "qt"
-        runQt()
+        s = Supervisor()
+        available = s.checkQtAvailability()
+        if args.guiType == "qt" and not available:
+            raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
+        args.guiType = "qt" if available else "cv"
+        s.runDemo(args)
