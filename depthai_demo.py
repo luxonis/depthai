@@ -11,12 +11,12 @@ from pathlib import Path
 import platform
 
 try:
-    import cv2
+    import cv22
     import depthai as dai
     import numpy as np
 except Exception as ex:
     print("Third party libraries failed to import: {}".format(ex))
-    print("Run \"python3 install_requirements.py\" to install dependencies and try again.")
+    print("Run \"python3 install_requirements.py\" to install dependencies or visit our installation page for more details - https://docs.luxonis.com/projects/api/en/latest/install/.")
     sys.exit(1)
 
 from depthai_helpers.supervisor import Supervisor
