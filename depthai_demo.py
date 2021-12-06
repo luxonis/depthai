@@ -8,12 +8,17 @@ import traceback
 from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
-
-import cv2
-
-import depthai as dai
 import platform
-import numpy as np
+
+try:
+    import cv2
+    import depthai as dai
+    import numpy as np
+except Exception as ex:
+    print("Third party libraries failed to import: {}".format(ex))
+    print("Run \"python3 install_requirements.py\" to install dependencies and try again.")
+    sys.exit(1)
+
 from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
