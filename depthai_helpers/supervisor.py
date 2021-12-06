@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 def createNewArgs(args):
@@ -31,6 +32,9 @@ class Supervisor:
             new_args = createNewArgs(args)
             subprocess.check_call(sys.argv[:2] + new_args)
         except subprocess.CalledProcessError as ex:
+            print("Error while running demo script... {}".format(ex))
+            print("Waiting 5s for the device to be discoverable again...")
+            time.sleep(5)
             args.guiType = "cv"
             new_args = createNewArgs(args)
             subprocess.check_call(sys.argv[:2] + new_args)
