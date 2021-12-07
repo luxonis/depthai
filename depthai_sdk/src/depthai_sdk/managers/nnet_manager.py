@@ -52,7 +52,6 @@ class NNetManager:
     _textType = cv2.FONT_HERSHEY_SIMPLEX
     _outputFormat = "raw"
     _metadata = None
-    _flipDetection = False
     _fullFov = True
     _config = None
     _nnFamily = None
@@ -109,7 +108,7 @@ class NNetManager:
         else:
             return 0
 
-    def createNN(self, pipeline, nodes, blobPath, source="color", flipDetection=False, useDepth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, fullFov=True):
+    def createNN(self, pipeline, nodes, blobPath, source="color", useDepth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, fullFov=True):
         """
         Creates nodes and connections in provided pipeline that will allow to run NN model and consume it's results.
 
@@ -128,8 +127,6 @@ class NNetManager:
             fullFov (bool, Optional): If set to False, manager will include crop offset when scaling the detections.
                 Usually should be set to True (if you don't perform aspect ratio crop or when `keepAspectRatio` flag
                 on camera/manip node is set to False
-            flipDetection (bool, Optional): Whether the bounding box coordinates should be flipped horizontally. Useful when
-                using rectified images as input.
 
         Returns:
             depthai.node.NeuralNetwork: Configured NN node that was added to the pipeline
@@ -143,7 +140,6 @@ class NNetManager:
             raise RuntimeError("Unable to determine the nn input size. Please use --cnnInputSize flag to specify it in WxH format: -nnSize <width>x<height>")
 
         self.source = source
-        self._flipDetection = flipDetection
         self._fullFov = fullFov
         if self._nnFamily == "mobilenet":
             nodes.nn = pipeline.createMobileNetSpatialDetectionNetwork() if useDepth else pipeline.createMobileNetDetectionNetwork()
@@ -237,12 +233,7 @@ class NNetManager:
             RuntimeError: if outputFormat specified in model config file is not recognized
         """
         if self._outputFormat == "detection":
-            detections = inNn.detections
-            if self._flipDetection:
-                for detection in detections:
-                    # Since rectified frames are horizontally flipped by default
-                    detection.xmin, detection.xmax = 1 - detection.xmax, 1 - detection.xmin
-            return detections
+            return inNn.detections
         elif self._outputFormat == "raw":
             if self._handler is not None:
                 return self._handler.decode(self, inNn)
