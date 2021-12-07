@@ -179,7 +179,7 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth:
+        if False:
             rawFrame = cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             rawFrame = packet.getFrame()
