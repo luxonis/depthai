@@ -889,8 +889,9 @@ if __name__ == "__main__":
             runOpenCv()
     else:
         s = Supervisor()
-        available = s.checkQtAvailability()
-        if args.guiType == "qt" and not available:
-            raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
-        args.guiType = "qt" if available and args.guiType in ("auto", "qt") else "cv"
+        if args.guiType != "cv":
+            available = s.checkQtAvailability()
+            if args.guiType == "qt" and not available:
+                raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
+            args.guiType = "qt" if available else "cv"
         s.runDemo(args)
