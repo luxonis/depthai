@@ -202,8 +202,6 @@ class Demo:
                 blobPath=self._blobManager.getBlob(shaves=self._conf.shaves, openvinoVersion=self._nnManager.openvinoVersion),
                 useDepth=self._conf.useDepth, minDepth=self._conf.args.minDepth, maxDepth=self._conf.args.maxDepth,
                 sbbScaleFactor=self._conf.args.sbbScaleFactor, fullFov=not self._conf.args.disableFullFovNn,
-                flipDetection=self._conf.getModelSource() in (
-                "rectifiedLeft", "rectifiedRight") and not self._conf.args.stereoLrCheck,
             )
 
             self._pm.addNn(

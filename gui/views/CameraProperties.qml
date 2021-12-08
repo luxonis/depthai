@@ -573,7 +573,7 @@ ListView {
             id: advancedSwitch
             x: 132
             y: 216
-            text: qsTr("Show advanced options")
+            text: qsTr("<font color=\"white\">Show advanced options</font>")
             font.pointSize: 21
             transformOrigin: Item.Center
             autoExclusive: false
