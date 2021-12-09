@@ -22,6 +22,7 @@ def createNewArgs(args):
 
 class Supervisor:
     def runDemo(self, args):
+        repo_root = Path(__file__).parent.parent
         args.noSupervisor = True
         new_args = createNewArgs(args)
         env = os.environ.copy()
@@ -33,7 +34,7 @@ class Supervisor:
             new_env["LD_LIBRARY_PATH"] = str(Path(importlib.util.find_spec("PyQt5").origin).parent / "Qt5/lib")
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
             try:
-                subprocess.check_call(' '.join(sys.argv[:2] + new_args), env=new_env, shell=True)
+                subprocess.check_call(' '.join(sys.argv[:2] + new_args), env=new_env, shell=True, cwd=repo_root)
             except subprocess.CalledProcessError as ex:
                 print("Error while running demo script... {}".format(ex))
                 print("Waiting 5s for the device to be discoverable again...")
@@ -43,7 +44,7 @@ class Supervisor:
             new_env = env.copy()
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
             new_args = createNewArgs(args)
-            subprocess.check_call(' '.join(sys.argv[:2] + new_args), env=new_env, shell=True)
+            subprocess.check_call(' '.join(sys.argv[:2] + new_args), env=new_env, shell=True, cwd=repo_root)
 
     def checkQtAvailability(self):
         return importlib.util.find_spec("PyQt5") is not None
