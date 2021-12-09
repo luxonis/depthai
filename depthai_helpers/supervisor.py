@@ -1,4 +1,5 @@
 import os
+import site
 import subprocess
 import sys
 import time
@@ -25,6 +26,7 @@ class Supervisor:
             from PyQt5.QtCore import QLibraryInfo
             new_env["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
             new_env["QT_QUICK_BACKEND"] = "software"
+            new_env["LD_LIBRARY_PATH"] = QLibraryInfo.location(QLibraryInfo.LibrariesPath)
         new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
         args.noSupervisor = True
 
