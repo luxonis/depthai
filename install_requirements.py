@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
+import os.path
 import platform
+import shutil
 import subprocess
 import sys
 
@@ -38,7 +40,53 @@ if not in_venv:
     pip_install.append("--user")
     pip_package_install.append("--user")
 
-subprocess.check_call(pip_install + ["pip", "-U"])
+# subprocess.check_call(pip_install + ["pip", "-U"])
+
+
+def build_from_source():
+    import urllib.request
+    import tarfile
+    from pathlib import Path
+
+    # Download Qt 5.15
+    qt_path = Path("libs/qt5")
+    if os.path.isdir(qt_path):
+        print(f"Found a downloaded instance of Qt in {qt_path}, skipping download.")
+    else:
+        print(f"Downloading Qt sources in {qt_path} ...")
+        subprocess.check_call(["git", "clone", "https://code.qt.io/qt/qt5.git", str(qt_path.absolute())])
+        subprocess.check_call(["git", "checkout", "5.12.12"], cwd=qt_path)
+        subprocess.check_call(["git", "submodule", "update", "--init", "--recursive"], cwd=qt_path)
+
+    qt_build_path = qt_path / "qt-build"
+    if qt_build_path.exists():
+        shutil.rmtree(qt_build_path)
+    qt_build_path.mkdir()
+    print("Configuring Qt...")
+    configure_options = ["-prefix", qt_path.absolute() / "qtbase", "-opensource", "-confirm-license", "-release", "-nomake", "examples", "-nomake", "tests"]
+    if os.name == 'nt':
+        subprocess.check_call(["../configure.bat", *configure_options], cwd=qt_build_path)
+    else:
+        subprocess.check_call(["../configure", *configure_options], cwd=qt_build_path)
+    subprocess.check_call(["make", "-j", os.cpu_count()], cwd=qt_build_path)
+
+
+
+    pyqt5_url = "https://pypi.io/packages/source/p/pyqt5/PyQt5-5.15.6.tar.gz"
+    pyqt5_path = Path("libs") / os.path.basename(pyqt5_url).replace('.tar.gz', '')
+    if os.path.isdir(qt_path):
+       print("Found a downloaded instance of PyQt5 in {}, skipping download.".format(pyqt5_path))
+    else:
+        print("Downloading and extracting PyQt5 sources in {} ...".format(pyqt5_path))
+        tarfile.open(fileobj=urllib.request.urlopen(pyqt5_url), mode="r|gz").extractall(path="libs")
+
+    # subprocess.check_call(pip_package_install + ["pyqt-builder"])
+    # subprocess.check_call(["./configure -prefix $PWD/qtbase"], cwd=qt_path)
+
+
+build_from_source()
+sys.exit(0)
+
 
 subprocess.check_call(pip_call + ["uninstall", "opencv-python", "opencv-contrib-python", "--yes"])
 subprocess.check_call(pip_call + ["uninstall", "depthai", "--yes"])
