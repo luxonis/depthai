@@ -22,9 +22,10 @@ class Supervisor:
     def runDemo(self, args):
         args.noSupervisor = True
         new_args = createNewArgs(args)
+        env = os.environ.copy()
 
         if args.guiType == "qt":
-            new_env = os.environ.copy()
+            new_env = env.copy()
             from PyQt5.QtCore import QLibraryInfo
             new_env["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
             new_env["QT_QUICK_BACKEND"] = "software"
@@ -38,7 +39,7 @@ class Supervisor:
                 time.sleep(5)
                 args.guiType = "cv"
         if args.guiType == "cv":
-            new_env = os.environ.copy()
+            new_env = env.copy()
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
             new_args = createNewArgs(args)
             subprocess.check_call(sys.argv[:2] + new_args, env=new_env)
