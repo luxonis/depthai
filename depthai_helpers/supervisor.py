@@ -1,9 +1,8 @@
+import importlib.util
 import os
-import site
 import subprocess
 import sys
 import time
-from pathlib import Path
 
 def createNewArgs(args):
     def removeArg(name, withValue=True):
@@ -44,22 +43,4 @@ class Supervisor:
             subprocess.check_call(sys.argv[:2] + new_args, env=new_env)
 
     def checkQtAvailability(self):
-        try:
-            from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QLabel, QApplication
-            from PyQt5.QtGui import QPixmap
-            from PyQt5.QtCore import Qt, QTimer
-
-            app = QApplication([sys.argv[0]])
-
-            label = QLabel()
-            px = QPixmap(str(Path(__file__).parent / "logo.png"))
-            label.setPixmap(px)
-            label.resize(200, 200)
-            label.setWindowFlags(Qt.FramelessWindowHint)
-            label.setAttribute(Qt.WA_TranslucentBackground)
-            label.show()
-            QTimer.singleShot(10, label.close)
-            exit_code = app.exec_()
-            return exit_code == 0
-        except:
-            return False
+        return importlib.util.find_spec("PyQt5") is not None
