@@ -3,6 +3,8 @@ import os
 import subprocess
 import sys
 import time
+from pathlib import Path
+
 
 def createNewArgs(args):
     def removeArg(name, withValue=True):
@@ -26,10 +28,9 @@ class Supervisor:
 
         if args.guiType == "qt":
             new_env = env.copy()
-            from PyQt5.QtCore import QLibraryInfo
-            new_env["QT_QPA_PLATFORM_PLUGIN_PATH"] = QLibraryInfo.location(QLibraryInfo.PluginsPath)
+            new_env["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(Path(importlib.util.find_spec("PyQt5").origin).parent / "Qt5/plugins")
             new_env["QT_QUICK_BACKEND"] = "software"
-            new_env["LD_LIBRARY_PATH"] = QLibraryInfo.location(QLibraryInfo.LibrariesPath)
+            new_env["LD_LIBRARY_PATH"] = str(Path(importlib.util.find_spec("PyQt5").origin).parent / "Qt5/lib")
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
             try:
                 subprocess.check_call(sys.argv[:2] + new_args, env=new_env)

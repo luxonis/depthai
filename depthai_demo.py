@@ -11,11 +11,7 @@ from pathlib import Path
 import platform
 
 try:
-    a = set(os.environ.items())
     import cv2
-    b = set(os.environ.items())
-    print("DIFF: ", a ^ b)
-
     import depthai as dai
     import numpy as np
 except Exception as ex:
