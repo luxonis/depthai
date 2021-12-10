@@ -28,6 +28,13 @@ from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, 
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
 args = parseArgs()
+
+if args.noSupervisor and args.guiType == "qt":
+    if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
+        os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
+    if "QT_QPA_FONTDIR" in os.environ:
+        os.environ.pop("QT_QPA_FONTDIR")
+
 if not args.noSupervisor:
     print('Using depthai module from: ', dai.__file__)
     print('Depthai version installed: ', dai.__version__)

@@ -29,7 +29,6 @@ class Supervisor:
 
         if args.guiType == "qt":
             new_env = env.copy()
-            new_env["QT_QPA_PLATFORM_PLUGIN_PATH"] = str(Path(importlib.util.find_spec("PyQt5").origin).parent / "Qt5/plugins")
             new_env["QT_QUICK_BACKEND"] = "software"
             new_env["LD_LIBRARY_PATH"] = str(Path(importlib.util.find_spec("PyQt5").origin).parent / "Qt5/lib")
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
