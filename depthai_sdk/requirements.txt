@@ -2,6 +2,6 @@ numpy>=1.19; python_version < "3.7"
 numpy>=1.21; python_version >= "3.7"
 opencv-python>4
 opencv-contrib-python>4
-blobconverter>=1.2.6
+blobconverter>=1.2.8
 pytube>=11.0.1
 depthai>2
