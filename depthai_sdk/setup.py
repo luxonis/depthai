@@ -7,7 +7,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='depthai-sdk',
-    version='1.1.3',
+    version='1.1.4',
     description='This package contains convenience classes and functions that help in most common tasks while using DepthAI API',
     long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
