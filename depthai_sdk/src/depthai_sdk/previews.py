@@ -270,7 +270,7 @@ class MouseClickTracker:
             name (str): Name of the frame
         """
         point = self.points.get(name, None)
-        if point is not None:
+        if point is not None and frame is not None:
             if name in (Previews.depthRaw.name, Previews.depth.name):
                 self.values[name] = "{}mm".format(frame[point[1]][point[0]])
             elif name in (Previews.disparityColor.name, Previews.disparity.name):

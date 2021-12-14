@@ -8,13 +8,18 @@ import traceback
 from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
-
-import cv2
-os.environ["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
-import depthai as dai
 import platform
-import numpy as np
 
+try:
+    import cv2
+    import depthai as dai
+    import numpy as np
+except Exception as ex:
+    print("Third party libraries failed to import: {}".format(ex))
+    print("Run \"python3 install_requirements.py\" to install dependencies or visit our installation page for more details - https://docs.luxonis.com/projects/api/en/latest/install/")
+    sys.exit(1)
+
+from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.metrics import MetricManager
@@ -22,9 +27,18 @@ from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, resizeLetterbox
 from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
-print('Using depthai module from: ', dai.__file__)
-print('Depthai version installed: ', dai.__version__)
 args = parseArgs()
+
+if args.noSupervisor and args.guiType == "qt":
+    if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
+        os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
+    if "QT_QPA_FONTDIR" in os.environ:
+        os.environ.pop("QT_QPA_FONTDIR")
+
+if not args.noSupervisor:
+    print('Using depthai module from: ', dai.__file__)
+    print('Depthai version installed: ', dai.__version__)
+
 if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
     checkRequirementsVersion()
 
@@ -489,11 +503,9 @@ def prepareConfManager(in_args):
 
 
 def runQt():
-    os.environ["QT_QUICK_BACKEND"] = "software"
-    from gui.main import DemoQtGui, ImageWriter
+    from gui.main import DemoQtGui
     from PyQt5.QtWidgets import QMessageBox
-    from PyQt5.QtGui import QImage
-    from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QRunnable, QThreadPool
+    from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, QThreadPool
 
 
     class WorkerSignals(QObject):
@@ -876,18 +888,17 @@ def runOpenCv():
 
 
 if __name__ == "__main__":
-    use_cv = args.guiType == "cv"
-    if not use_cv:
-        try:
-            import PyQt5
-        except:
-            if args.guiType == "qt":
-                raise
-            else:
-                use_cv = True
-    if use_cv:
-        args.guiType = "cv"
-        runOpenCv()
+    if args.noSupervisor:
+        if args.guiType == "qt":
+            runQt()
+        else:
+            args.guiType = "cv"
+            runOpenCv()
     else:
-        args.guiType = "qt"
-        runQt()
+        s = Supervisor()
+        if args.guiType != "cv":
+            available = s.checkQtAvailability()
+            if args.guiType == "qt" and not available:
+                raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
+            args.guiType = "qt" if available else "cv"
+        s.runDemo(args)
