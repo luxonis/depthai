@@ -76,7 +76,7 @@ class Demo:
         self.setup(conf)
         self.run()
 
-    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True, collectMetrics=False):
+    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True, showDownloadProgress=None, collectMetrics=False):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
         self.toggleMetrics(collectMetrics)
@@ -89,8 +89,9 @@ class Demo:
         self.onTeardown = onTeardown
         self.onIter = onIter
         self.shouldRun = shouldRun
-    
-    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, shouldRun=None):
+        self.showDownloadProgress = showDownloadProgress
+
+    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, shouldRun=None, showDownloadProgress=None):
         if onNewFrame is not None:
             self.onNewFrame = onNewFrame
         if onShowFrame is not None:
@@ -107,6 +108,8 @@ class Demo:
             self.onIter = onIter
         if shouldRun is not None:
             self.shouldRun = shouldRun
+        if showDownloadProgress is not None:
+            self.showDownloadProgress = showDownloadProgress
 
     def toggleMetrics(self, enabled):
         if enabled:
@@ -136,6 +139,7 @@ class Demo:
             self._blobManager = BlobManager(
                 zooDir=DEPTHAI_ZOO,
                 zooName=self._conf.getModelName(),
+                progressFunc=self.showDownloadProgress
             )
             self._nnManager = NNetManager(inputSize=self._conf.inputSize)
 
@@ -510,6 +514,7 @@ def runQt():
 
     class WorkerSignals(QObject):
         updateConfSignal = pyqtSignal(list)
+        updateDownloadProgressSignal = pyqtSignal(int, int)
         updatePreviewSignal = pyqtSignal(np.ndarray)
         setDataSignal = pyqtSignal(list)
         exitSignal = pyqtSignal()
@@ -538,7 +543,7 @@ def runQt():
         def run(self):
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
-            self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup)
+            self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, showDownloadProgress=self.showDownloadProgress)
             self.conf.args.bandwidth = "auto"
             if self.conf.args.deviceId is None:
                 devices = dai.Device.getAllAvailableDevices()
@@ -593,6 +598,9 @@ def runQt():
                 self.file_callbacks["onShowFrame"](frame, source)
             if source == self.selectedPreview:
                 self.signals.updatePreviewSignal.emit(frame)
+
+        def showDownloadProgress(self, curr, total):
+            self.signals.updateDownloadProgressSignal.emit(curr, total)
 
         def onSetup(self, instance):
             if "onSetup" in self.file_callbacks:
@@ -652,6 +660,7 @@ def runQt():
             self.running = True
             self.worker = Worker(self._demoInstance, parent=self, conf=self.confManager, selectedPreview=self.selectedPreview)
             self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
+            self.worker.signals.updateDownloadProgressSignal.connect(self.updateDownloadProgress)
             self.worker.signals.setDataSignal.connect(self.setData)
             self.worker.signals.errorSignal.connect(self.showError)
             self.threadpool.start(self.worker)

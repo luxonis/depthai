@@ -2,6 +2,8 @@
 import sys
 from pathlib import Path
 
+import blobconverter
+import cv2
 from PyQt5.QtQml import QQmlApplicationEngine, qmlRegisterType, qmlRegisterSingletonType, QQmlEngine
 from PyQt5.QtQuick import QQuickPaintedItem
 from PyQt5.QtGui import QImage
@@ -11,7 +13,7 @@ import depthai as dai
 # To be used on the @QmlElement decorator
 # (QML_IMPORT_MINOR_VERSION is optional)
 from PyQt5.QtWidgets import QApplication
-from depthai_sdk import Previews, resizeLetterbox
+from depthai_sdk import Previews, resizeLetterbox, createBlankFrame
 
 
 class Singleton(type(QQuickPaintedItem)):
@@ -266,6 +268,7 @@ class DemoQtGui:
     instance = None
     writer = None
     window = None
+    progressFrame = None
 
     def __init__(self):
         global instance
@@ -299,8 +302,42 @@ class DemoQtGui:
             img = QImage(scaledFrame.data, w, h, w, 24)  # 24 - QImage.Format_Grayscale8
         self.writer.update_frame(img)
 
+    def updateDownloadProgress(self, curr, total):
+        frame = self.createProgressFrame(curr / total)
+        img = QImage(frame.data, frame.shape[1], frame.shape[0], frame.shape[2] * frame.shape[1], 29)  # 29 - QImage.Format_BGR888
+        self.writer.update_frame(img)
+
+    def createProgressFrame(self, donePercentage=None):
+        confManager = getattr(self, "confManager", None)
+        w, h = int(self.writer.width()), int(self.writer.height())
+        if self.progressFrame is None:
+            self.progressFrame = createBlankFrame(w, h)
+            if confManager is None:
+                downloadText = "Downloading model blob..."
+            else:
+                downloadText = f"Downloading {confManager.getModelName()} blob..."
+            textsize = cv2.getTextSize(downloadText, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
+            offset = int((w - textsize) / 2)
+            cv2.putText(self.progressFrame, downloadText, (offset, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
+            cv2.putText(self.progressFrame, downloadText, (offset, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+
+        newFrame = self.progressFrame.copy()
+        if donePercentage is not None:
+            cv2.rectangle(newFrame, (100, 300), (460, 350), (255, 255, 255), cv2.FILLED)
+            cv2.rectangle(newFrame, (110, 310), (int(110 + 340 * donePercentage), 340), (0, 0, 0), cv2.FILLED)
+        return newFrame
+
+    def showSetupFrame(self, text):
+        w, h = int(self.writer.width()), int(self.writer.height())
+        setupFrame = createBlankFrame(w, h)
+        cv2.putText(setupFrame, text, (200, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
+        cv2.putText(setupFrame, text, (200, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+        img = QImage(setupFrame.data, w, h, setupFrame.shape[2] * w, 29)  # 29 - QImage.Format_BGR888
+        self.writer.update_frame(img)
+
     def startGui(self):
         self.writer = self.window.findChild(QObject, "writer")
+        self.showSetupFrame("Starting demo...")
         medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))[::-1]
         self.setData(["medianChoices", medianChoices])
         colorChoices = list(filter(lambda name: name[0].isupper(), vars(dai.ColorCameraProperties.SensorResolution).keys()))
@@ -310,4 +347,5 @@ class DemoQtGui:
         self.setData(["modelSourceChoices", [Previews.color.name, Previews.left.name, Previews.right.name]])
         versionChoices = sorted(filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO).keys()), reverse=True)
         self.setData(["ovVersions", versionChoices])
+        self.createProgressFrame()
         return self.app.exec()
