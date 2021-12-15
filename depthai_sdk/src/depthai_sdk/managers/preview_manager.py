@@ -3,6 +3,7 @@ import math
 import cv2
 import depthai as dai
 from ..previews import Previews, MouseClickTracker
+import numpy as np
 
 
 class PreviewManager:
