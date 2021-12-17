@@ -28,5 +28,5 @@ class App:
         subprocess.check_call([self.appInterpreter, '-m', 'pip', 'install', '-r', str(self.appRequirements)], cwd=self.appPath)
 
     def runApp(self):
-        subprocess.check_call(' '.join([self.appInterpreter, self.appEntrypoint]), shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([self.appInterpreter, str(self.appEntrypoint)]), shell=True, cwd=self.appPath)
 
