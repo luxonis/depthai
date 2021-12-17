@@ -10,6 +10,8 @@ from itertools import cycle
 from pathlib import Path
 import platform
 
+from depthai_helpers.app_manager import App
+
 try:
     import cv2
     import depthai as dai
@@ -897,7 +899,11 @@ def runOpenCv():
 
 
 if __name__ == "__main__":
-    if args.noSupervisor:
+    if args.app is not None:
+        app = App(appName=args.app)
+        app.createVenv()
+        app.runApp()
+    elif args.noSupervisor:
         if args.guiType == "qt":
             runQt()
         else:
