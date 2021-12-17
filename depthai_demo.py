@@ -12,7 +12,7 @@ import platform
 
 from depthai_helpers.app_manager import App
 if __name__ == "__main__":
-    if sys.argv.index('--app') > 0:
+    if '--app' in sys.argv:
         app = App(appName=sys.argv[sys.argv.index('--app') + 1])
         app.createVenv()
         app.runApp()
