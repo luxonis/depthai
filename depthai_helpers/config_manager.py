@@ -104,16 +104,20 @@ class ConfigManager:
             return dai.ColorCameraProperties.SensorResolution.THE_4_K
         elif self.args.rgbResolution == 3040:
             return dai.ColorCameraProperties.SensorResolution.THE_12_MP
-        else:
+        elif self.args.rgbResolution == 1080:
             return dai.ColorCameraProperties.SensorResolution.THE_1080_P
+        else:
+            return dai.ColorCameraProperties.SensorResolution.THE_720_P
 
     def getMonoResolution(self):
         if self.args.monoResolution == 720:
             return dai.MonoCameraProperties.SensorResolution.THE_720_P
         elif self.args.monoResolution == 800:
             return dai.MonoCameraProperties.SensorResolution.THE_800_P
-        else:
+        elif self.args.monoResolution == 400:
             return dai.MonoCameraProperties.SensorResolution.THE_400_P
+        else:
+            return dai.MonoCameraProperties.SensorResolution.THE_720_P
 
     def getMedianFilter(self):
         if self.args.stereoMedianSize == 3:

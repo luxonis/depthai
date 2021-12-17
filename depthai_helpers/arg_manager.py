@@ -70,7 +70,7 @@ def parseArgs():
     parser.add_argument('-sh', '--shaves', type=int, help="Number of MyriadX SHAVEs to use for neural network blob compilation")
     parser.add_argument('-cnnsize', '--cnnInputSize', default=None, type=str,
                         help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
-    parser.add_argument("-rgbr", "--rgbResolution", default=1080, type=int, choices=[1080, 2160, 3040],
+    parser.add_argument("-rgbr", "--rgbResolution", default=720, type=int, choices=[720, 800, 1080, 2160, 3040],
                         help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
     parser.add_argument("-rgbf", "--rgbFps", default=30.0, type=float,
                         help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
@@ -109,7 +109,7 @@ def parseArgs():
     parser.add_argument('--reportFile', help="Save report data to specified target file in CSV format")
     parser.add_argument('-sync', '--sync', action="store_true",
                         help="Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute")
-    parser.add_argument("-monor", "--monoResolution", default=400, type=int, choices=[400,720,800],
+    parser.add_argument("-monor", "--monoResolution", default=720, type=int, choices=[400,720,800],
                         help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
     parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
                         help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
