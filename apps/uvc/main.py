@@ -1,40 +1,37 @@
 #!/usr/bin/env python3
-
-import cv2
 import depthai as dai
+import time
 
-# Create pipeline
+enable_4k = True  # Will downscale 4K -> 1080p
+
+# Start defining a pipeline
 pipeline = dai.Pipeline()
 
-# Define source and output
-camRgb = pipeline.create(dai.node.ColorCamera)
-xoutRgb = pipeline.create(dai.node.XLinkOut)
+# Define a source - color camera
+cam_rgb = pipeline.createColorCamera()
+cam_rgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+cam_rgb.setInterleaved(False)
 
-xoutRgb.setStreamName("rgb")
+if enable_4k:
+    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+    cam_rgb.setIspScale(1, 2)
+else:
+    cam_rgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
 
-# Properties
-camRgb.setPreviewSize(300, 300)
-camRgb.setInterleaved(False)
-camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+# Create an UVC (USB Video Class) output node. It needs 1920x1080, NV12 input
+uvc = pipeline.createUVC()
+cam_rgb.video.link(uvc.input)
 
-# Linking
-camRgb.preview.link(xoutRgb.input)
-
-# Connect to device and start pipeline
+# Pipeline defined, now the device is connected to
 with dai.Device(pipeline) as device:
+    print("\nDevice started, please keep this process running")
+    print("and open an UVC viewer. Example on Linux:")
+    print("    guvcview -d /dev/video0")
+    print("\nTo close: Ctrl+C")
 
-    print('Connected cameras: ', device.getConnectedCameras())
-    # Print out usb speed
-    print('Usb speed: ', device.getUsbSpeed().name)
-
-    # Output queue will be used to get the rgb frames from the output defined above
-    qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-
+    # Doing nothing here, just keeping the host feeding the watchdog
     while True:
-        inRgb = qRgb.get()  # blocking call, will wait until a new data has arrived
-
-        # Retrieve 'bgr' (opencv format) frame
-        cv2.imshow("rgb", inRgb.getCvFrame())
-
-        if cv2.waitKey(1) == ord('q'):
+        try:
+            time.sleep(0.1)
+        except KeyboardInterrupt:
             break
