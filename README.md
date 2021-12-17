@@ -2,6 +2,10 @@
 
 This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
+_Click on the GIF below to see a full example run_
+[![depthai demo](https://user-images.githubusercontent.com/5244214/142426845-82f5f8fd-ad1a-4873-97a5-2b3fcdb0ca2e.gif)](https://www.youtube.com/watch?v=sCZpsFQBffk)
+
+
 __Documentation is available at [https://docs.luxonis.com/](https://docs.luxonis.com/).__
 
 ## Python modules (Dependencies)
@@ -35,7 +39,10 @@ usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] 
                        [-s {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...]]
                        [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--reportFile REPORTFILE] [-sync] [-monor {400,720,800}] [-monof MONOFPS] [-cb CALLBACK]
                        [--openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--count COUNTLABEL] [-dev DEVICEID] [-bandw {auto,low,high}] [-usbs {usb2,usb3}]
-                       [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT] [-xls XLINKCHUNKSIZE] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]]
+                       [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT] [-xls XLINKCHUNKSIZE] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControlls] 
+                       [--cameraExposure CAMERAEXPOSURE] [--cameraSensitivity CAMERASENSITIVITY] [--cameraSaturation CAMERASATURATION] [--cameraContrast CAMERACONTRAST]
+                       [--cameraBrightness CAMERABRIGHTNESS] [--cameraSharpness CAMERASHARPNESS]
+
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -126,6 +133,19 @@ optional arguments:
                         Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG) 
                         Format: camera_name,camera_orientation 
                         Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG
+  --cameraControlls      Show camera configuration options in GUI and controll them using keyboard
+  --cameraExposure CAMERAEXPOSURE
+                        Specify camera saturation
+  --cameraSensitivity CAMERASENSITIVITY
+                        Specify camera sensitivity
+  --cameraSaturation CAMERASATURATION
+                        Specify image saturation
+  --cameraContrast CAMERACONTRAST
+                        Specify image contrast
+  --cameraBrightness CAMERABRIGHTNESS
+                        Specify image brightness
+  --cameraSharpness CAMERASHARPNESS
+                        Specify image sharpness
 ```
 
 
@@ -154,6 +174,16 @@ with the help of the `myriad_compile` tool. When producing blobs, the following 
     Example of command execution:
 
        <path-to-openvino-folder>/deployment_tools/inference_engine/lib/intel64/myriad_compile -m ./ResNet50.xml -o ResNet50.blob -ip U8 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
+       
+## Usage statistics
+
+By default, the demo script will collect anonymous usage statistics during runtime. These include:
+- Device-specific information (like mxid, connected cameras, device state and connection type)
+- Environment-specific information (like OS type, python version, package versions)
+
+We gather this data to better understand what environemnts are our users using, as well as assist better in support questions. 
+
+**All of the data we collect is anonymous and you can disable it at any time**. To do so, click on the "Misc" tab and disable sending the statistics.
 
 ## Reporting issues
 

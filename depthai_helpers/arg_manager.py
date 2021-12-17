@@ -123,6 +123,7 @@ def parseArgs():
                                                                                                                  "If set to \"high\", the output streams will stay uncompressed\n"
                                                                                                                  "If set to \"low\", the output streams will be MJPEG-encoded\n"
                                                                                                                  "If set to \"auto\" (default), the optimal bandwidth will be selected based on your connection type and speed")
+    parser.add_argument('-gt', '--guiType', type=str, default="auto", choices=["auto", "qt", "cv"], help="Specify GUI type of the demo. \"cv\" uses built-in OpenCV display methods, \"qt\" uses Qt to display interactive GUI. \"auto\" will use OpenCV for Raspberry Pi and Qt for other platforms")
     parser.add_argument('-usbs', '--usbSpeed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
     parser.add_argument('-enc', '--encode', type=_comaSeparated(default=30.0, cast=float), nargs="+", default=[],
                         help="Define which cameras to encode (record) \n"
@@ -130,10 +131,20 @@ def parseArgs():
                              "Example: -enc left color \n"
                              "Example: -enc color right,10 left,10")
     parser.add_argument('-encout', '--encodeOutput', type=Path, default=projectRoot, help="Path to directory where to store encoded files. Default: %(default)s")
-    parser.add_argument('-xls', '--xlinkChunkSize', type=int, default = None, help="Specify XLink chunk size")
+    parser.add_argument('-xls', '--xlinkChunkSize', type=int, help="Specify XLink chunk size")
+    parser.add_argument('-poeq', '--poeQuality', type=checkRange(1, 100), default=100, help="Specify PoE encoding video quality (1-100)")
     parser.add_argument('-camo', '--cameraOrientation', type=_comaSeparated(default="AUTO", cast=orientationCast), nargs="+", default=[],
                         help=("Define cameras orientation (available: {}) \n"
                              "Format: camera_name,camera_orientation \n"
                              "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(orientationChoices))
                         )
+    parser.add_argument("--cameraControlls", action="store_true", help="Show camera configuration options in GUI and control them using keyboard")
+    parser.add_argument("--cameraExposure", type=_comaSeparated("all", int), nargs="+", help="Specify camera saturation")
+    parser.add_argument("--cameraSensitivity", type=_comaSeparated("all", int), nargs="+", help="Specify camera sensitivity")
+    parser.add_argument("--cameraSaturation", type=_comaSeparated("all", int), nargs="+", help="Specify image saturation")
+    parser.add_argument("--cameraContrast", type=_comaSeparated("all", int), nargs="+", help="Specify image contrast")
+    parser.add_argument("--cameraBrightness", type=_comaSeparated("all", int), nargs="+", help="Specify image brightness")
+    parser.add_argument("--cameraSharpness", type=_comaSeparated("all", int), nargs="+", help="Specify image sharpness")
+    parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
+    parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
     return parser.parse_args()
