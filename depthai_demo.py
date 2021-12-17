@@ -11,6 +11,12 @@ from pathlib import Path
 import platform
 
 from depthai_helpers.app_manager import App
+if __name__ == "__main__":
+    if sys.argv.index('--app') > 0:
+        app = App(appName=sys.argv[sys.argv.index('--app') + 1])
+        app.createVenv()
+        app.runApp()
+        sys.exit(0)
 
 try:
     import cv2
@@ -899,11 +905,7 @@ def runOpenCv():
 
 
 if __name__ == "__main__":
-    if args.app is not None:
-        app = App(appName=args.app)
-        app.createVenv()
-        app.runApp()
-    elif args.noSupervisor:
+    if args.noSupervisor:
         if args.guiType == "qt":
             runQt()
         else:
