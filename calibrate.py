@@ -280,7 +280,7 @@ class Main:
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + rgb + right", info_frame)
+        cv2.imshow("left + right + rgb", info_frame)
         cv2.waitKey(2000)
 
     def show_failed_orientation(self):
@@ -472,7 +472,7 @@ class Main:
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
-            cv2.imshow("left + rgb + right", combine_img)
+            cv2.imshow("left + right + rgb", combine_img)
             frame_list.clear()
 
     def calibrate(self):
