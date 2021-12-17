@@ -11,6 +11,7 @@ class App:
         self.appName = appName
         self.appPath = appPath or Path(__file__).parent.parent / "apps" / self.appName
         self.venvPath = self.appPath / "venv"
+        self.appPip = str(self.venvPath / "bin" / "pip")
         self.appInterpreter = str(self.venvPath / "bin" / "python")
         self.appRequirements = appRequirements or self.appPath / "requirements.txt"
         self.appEntrypoint = appEntrypoint or self.appPath / "main.py"
@@ -26,10 +27,10 @@ class App:
             print("Existing venv found.")
         else:
             print("Creating venv...")
-            subprocess.check_call(' '.join([sys.executable, '-m', 'venv', str(self.venvPath)]), env=initEnv, cwd=self.appPath)
+            subprocess.check_call(' '.join([sys.executable, '-m', 'venv', str(self.venvPath)]), cwd=self.appPath)
         print("Installing requirements...")
-        subprocess.check_call(' '.join([self.appInterpreter, '-m', 'pip', 'install', '-r', str(self.appRequirements)]), env=initEnv, shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([self.appPip, 'install', '-r', str(self.appRequirements)]), shell=True, cwd=self.appPath)
 
     def runApp(self):
-        subprocess.check_call(' '.join([self.appInterpreter, str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([self.appInterpreter, str(self.appEntrypoint)]), shell=True, cwd=self.appPath)
 
