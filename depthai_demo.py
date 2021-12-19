@@ -279,7 +279,9 @@ class Demo:
 
     def stop(self):
         print("Stopping demo...")
+        print("Closing device...")
         self._device.close()
+        print("Device closed.")
         del self._device
         self._pm.closeDefaultQueues()
         if self._conf.useCamera:
