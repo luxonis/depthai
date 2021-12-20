@@ -46,8 +46,7 @@ try:
     import sentry_sdk
 
     sentry_sdk.init(
-        "https://examplePublicKey@o0.ingest.sentry.io/0",
-
+        "https://159e328c631a4d3eb0248c0d92e41db3@o1095304.ingest.sentry.io/6114622",
         # Set traces_sample_rate to 1.0 to capture 100%
         # of transactions for performance monitoring.
         # We recommend adjusting this value in production.
