@@ -39,8 +39,8 @@ if not args.noSupervisor:
     print('Using depthai module from: ', dai.__file__)
     print('Depthai version installed: ', dai.__version__)
 
-# if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
-#     checkRequirementsVersion()
+if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
+    checkRequirementsVersion()
 
 try:
     import sentry_sdk
