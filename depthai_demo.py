@@ -39,9 +39,22 @@ if not args.noSupervisor:
     print('Using depthai module from: ', dai.__file__)
     print('Depthai version installed: ', dai.__version__)
 
-if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
-    checkRequirementsVersion()
+# if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
+#     checkRequirementsVersion()
 
+try:
+    import sentry_sdk
+
+    sentry_sdk.init(
+        "https://examplePublicKey@o0.ingest.sentry.io/0",
+
+        # Set traces_sample_rate to 1.0 to capture 100%
+        # of transactions for performance monitoring.
+        # We recommend adjusting this value in production.
+        traces_sample_rate=1.0,
+    )
+except Exception as ex:
+    print("Logging and crash reporting disabled! {}".format(ex))
 
 class Trackbars:
     instances = {}
