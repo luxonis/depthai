@@ -27,10 +27,11 @@ class App:
             print("Existing venv found.")
         else:
             print("Creating venv...")
-            subprocess.check_call(' '.join([sys.executable, '-m', 'venv', str(self.venvPath)]), cwd=self.appPath)
+            subprocess.check_call(' '.join([sys.executable, '-m', 'venv', str(self.venvPath)]), env=initEnv, cwd=self.appPath)
         print("Installing requirements...")
-        subprocess.check_call(' '.join([self.appPip, 'install', '-r', str(self.appRequirements)]), shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([self.appPip, 'install', '-U', "pip"]), env=initEnv, shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([self.appPip, 'install', '-r', str(self.appRequirements)]), env=initEnv, shell=True, cwd=self.appPath)
 
     def runApp(self):
-        subprocess.check_call(' '.join([self.appInterpreter, str(self.appEntrypoint)]), shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([self.appInterpreter, str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath)
 
