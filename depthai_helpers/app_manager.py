@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -26,10 +27,14 @@ class App:
             print("Error accessing \"venv\" module! Please try to install \"python3-venv\" or see oficial docs here - https://docs.python.org/3/library/venv.html", file=sys.stderr)
             raise
 
-        if not force and Path(self.appInterpreter).exists():
+        if not force and Path(self.appInterpreter).exists() and Path(self.appPip).exists():
             print("Existing venv found.")
         else:
-            print("Creating venv...")
+            if self.venvPath.exists():
+                print("Recreating venv...")
+                shutil.rmtree(self.venvPath)
+            else:
+                print("Creating venv...")
             subprocess.check_call(' '.join([quoted(sys.executable), '-m', 'venv', str(self.venvPath)]), shell=True, env=initEnv, cwd=self.appPath)
         print("Installing requirements...")
         subprocess.check_call(' '.join([quoted(self.appPip), 'install', '-U', "pip"]), env=initEnv, shell=True, cwd=self.appPath)
