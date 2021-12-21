@@ -9,6 +9,6 @@ opencv-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machine == "a
 opencv-contrib-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machine == "armv7l"
 -e ./depthai_sdk
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-depthai-data-local/wheels/
-pyqt5>5,<6 ; platform_machine != "armv6l" and platform_machine != "armv7l"
+pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l"
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 depthai==2.13.3.0
