@@ -14,8 +14,8 @@ class App:
         self.appName = appName
         self.appPath = appPath or Path(__file__).parent.parent / "apps" / self.appName
         self.venvPath = self.appPath / "venv"
-        self.appPip = str(self.venvPath / "bin" / "pip")
-        self.appInterpreter = str(self.venvPath / "bin" / "python")
+        self.appPip = str(self.venvPath / "bin" / "pip") if os.name != 'nt' else (self.venvPath / "Scripts" / "pip.exe")
+        self.appInterpreter = str(self.venvPath / "bin" / "python") if os.name != 'nt' else (self.venvPath / "Scripts" / "python.exe")
         self.appRequirements = appRequirements or self.appPath / "requirements.txt"
         self.appEntrypoint = appEntrypoint or self.appPath / "main.py"
 
