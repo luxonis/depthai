@@ -6,6 +6,9 @@ from pathlib import Path
 initEnv = os.environ.copy()
 
 
+def quoted(val):
+    return '"' + str(val) + '"'
+
 class App:
     def __init__(self, appName, appPath=None, appRequirements=None, appEntrypoint=None):
         self.appName = appName
@@ -18,7 +21,7 @@ class App:
 
     def createVenv(self, force=False):
         try:
-            subprocess.check_call([sys.executable, '-m', 'venv', '-h'], env=initEnv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.check_call(' '.join([quoted(sys.executable), '-m', 'venv', '-h']), env=initEnv, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except:
             print("Error accessing \"venv\" module! Please try to install \"python3-venv\" or see oficial docs here - https://docs.python.org/3/library/venv.html", file=sys.stderr)
             raise
@@ -27,11 +30,11 @@ class App:
             print("Existing venv found.")
         else:
             print("Creating venv...")
-            subprocess.check_call(' '.join([sys.executable, '-m', 'venv', str(self.venvPath)]), env=initEnv, cwd=self.appPath)
+            subprocess.check_call(' '.join([quoted(sys.executable), '-m', 'venv', str(self.venvPath)]), shell=True, env=initEnv, cwd=self.appPath)
         print("Installing requirements...")
-        subprocess.check_call(' '.join([self.appPip, 'install', '-U', "pip"]), env=initEnv, shell=True, cwd=self.appPath)
-        subprocess.check_call(' '.join([self.appPip, 'install', '-r', str(self.appRequirements)]), env=initEnv, shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([quoted(self.appPip), 'install', '-U', "pip"]), env=initEnv, shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([quoted(self.appPip), 'install', '--prefer-binary', '-r', str(self.appRequirements)]), env=initEnv, shell=True, cwd=self.appPath)
 
     def runApp(self):
-        subprocess.check_call(' '.join([self.appInterpreter, str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([quoted(self.appInterpreter), str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath)
 
