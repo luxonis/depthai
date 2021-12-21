@@ -37,8 +37,8 @@ class App:
                 print("Creating venv...")
             subprocess.check_call(' '.join([quoted(sys.executable), '-m', 'venv', str(self.venvPath)]), shell=True, env=initEnv, cwd=self.appPath)
         print("Installing requirements...")
-        subprocess.check_call(' '.join([quoted(self.appPip), 'install', '-U', "pip"]), env=initEnv, shell=True, cwd=self.appPath)
-        subprocess.check_call(' '.join([quoted(self.appPip), 'install', '--prefer-binary', '-r', str(self.appRequirements)]), env=initEnv, shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([quoted(self.appInterpreter), '-m', 'pip', 'install', '-U', 'pip']), env=initEnv, shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([quoted(self.appInterpreter), '-m', 'pip', 'install', '--prefer-binary', '-r', str(self.appRequirements)]), env=initEnv, shell=True, cwd=self.appPath)
 
     def runApp(self):
         subprocess.check_call(' '.join([quoted(self.appInterpreter), str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath)
