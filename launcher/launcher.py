@@ -290,8 +290,9 @@ class Worker(QtCore.QThread):
                 # Print out stderr first
                 sys.stderr.write(ret.stderr.decode())
 
-                # Retry if failed by an ModuleNotFoundError, by installing the requirements
-                if ret.returncode != 0 and ('ModuleNotFoundError' in str(ret.stderr) or 'Version mismatch' in str(ret.stderr)):
+                print(f'DepthAI Demo ret code: {ret.returncode}')
+                # Install dependencies if demo signaled missing dependencies
+                if ret.returncode == 42:
                     skipSplashQuitFirstTime = True
                     print(f'Dependency issue raised. Retrying by installing requirements and restarting demo.')
 
@@ -306,6 +307,7 @@ class Worker(QtCore.QThread):
                         title = 'Error Installing DepthAI Requirements'
                         message = f"Couldn't install DepthAI requirements. Check internet connection and try again. Log available at: {LOG_FILE_PATH}"
                         print(f'Message Box ({title}): {message}')
+                        print(f'Install dependencies call failed with return code: {installReqCall.returncode}, message: {installReqCall.stderr.decode()}')
                         self.sigCritical.emit(title, message)
                         raise Exception(title)
 

@@ -17,7 +17,7 @@ try:
 except Exception as ex:
     print("Third party libraries failed to import: {}".format(ex))
     print("Run \"python3 install_requirements.py\" to install dependencies or visit our installation page for more details - https://docs.luxonis.com/projects/api/en/latest/install/")
-    sys.exit(1)
+    sys.exit(42)
 
 from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.arg_manager import parseArgs
