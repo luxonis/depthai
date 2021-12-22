@@ -252,13 +252,6 @@ class Worker(QtCore.QThread):
                             # Exit current launcher
                             raise Exception('Shutting down and starting updated launcher')
 
-                            # # present message of installing dependencies
-                            # splashScreen.updateSplashMessage('Installing DepthAI Requirements ...')
-                            # splashScreen.enableHeartbeat(True)
-                            # # Install requirements for depthai_demo.py
-                            # subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository)
-
-
             except subprocess.CalledProcessError as ex:
                 errMessage = lastCall.stderr.decode()
                 title = 'Git Error'

@@ -605,7 +605,6 @@ def runQt():
         def onSetup(self, instance):
             if "onSetup" in self.file_callbacks:
                 self.file_callbacks["onSetup"](instance)
-            self.selectedPreview = self.conf.args.show[0]
             self.signals.updateConfSignal.emit(list(vars(self.conf.args).items()))
             self.signals.setDataSignal.emit(["previewChoices", self.conf.args.show])
             devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
