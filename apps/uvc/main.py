@@ -6,7 +6,7 @@ import time
 
 if os.name == 'nt':
     print("This app is temporarily disabled on Windows system due to an issue with USB descriptors. We are working on resolving this issue")
-    raise SystemExit(1)
+    raise SystemExit(0)
 
 enable_4k = True  # Will downscale 4K -> 1080p
 
