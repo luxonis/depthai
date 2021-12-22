@@ -5,7 +5,6 @@ import sys
 import os
 
 scriptDirectory = os.path.dirname(os.path.realpath(__file__))
-print(f'Script dir: {scriptDirectory}')
 thisPlatform = platform.machine()
 
 # https://stackoverflow.com/a/58026969/5494277

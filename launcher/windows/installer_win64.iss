@@ -23,7 +23,7 @@
         ? \
             Local[0] = FindGetFileName(FindHandle), \
             Local[1] = Source + "\\" + Local[0], \
-            (Local[0] != "." && Local[0] != ".." && Local[0] != "launcher" \
+            (Local[0] != "." && Local[0] != ".." && Local[0] != "windows" \
                 ? (DirExists(Local[1]) \
                       ? ProcessFolder(Local[1], DestDir + "\\" + Local[0]) \
                       : FileEntry(Local[1], DestDir)) \
@@ -88,13 +88,13 @@ Source: "build\PortableGit\*"; DestDir: "{app}\PortableGit"; Flags: ignoreversio
 Source: "src\create_shortcut.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "src\prerequisite.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
-; Install launcher sources
+; ; Install launcher sources
 Source: "..\{#MyAppIconName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\launcher.py"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\splash2.png"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\splash_screen.py"; DestDir: "{app}"; Flags: ignoreversion
-; NOTE: Don't use "Flags: ignoreversion" on any shared system files
+; Source: "..\launcher.py"; DestDir: "{app}"; Flags: ignoreversion
+; Source: "..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
+; Source: "..\splash2.png"; DestDir: "{app}"; Flags: ignoreversion
+; Source: "..\splash_screen.py"; DestDir: "{app}"; Flags: ignoreversion
+; ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppIconName}"
