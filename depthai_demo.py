@@ -10,6 +10,8 @@ from itertools import cycle
 from pathlib import Path
 import platform
 
+from log_system_information import make_sys_report
+
 try:
     import cv2
     import depthai as dai
@@ -42,6 +44,7 @@ if not args.noSupervisor:
 if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
     checkRequirementsVersion()
 
+sentryEnabled = False
 try:
     import sentry_sdk
 
@@ -51,7 +54,10 @@ try:
         # of transactions for performance monitoring.
         # We recommend adjusting this value in production.
         traces_sample_rate=1.0,
+        with_locals=False,
     )
+    sentry_sdk.set_context("syslog", make_sys_report(anonymous=True, skipUsb=True, skipPackages=True))
+    sentryEnabled = True
 except Exception as ex:
     print("Logging and crash reporting disabled! {}".format(ex))
 
@@ -163,6 +169,12 @@ class Demo:
             self._pm.setNnManager(self._nnManager)
 
         self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        if sentryEnabled:
+            try:
+                from sentry_sdk import set_user
+                set_user({"mxid": self._device.getMxId()})
+            except:
+                pass
         if self.metrics is not None:
             self.metrics.reportDevice(self._device)
         if self._deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
@@ -286,6 +298,11 @@ class Demo:
                 self.loop()
         except StopIteration:
             pass
+        except Exception as ex:
+            if sentryEnabled:
+                from sentry_sdk import capture_exception
+                capture_exception(ex)
+            raise
         finally:
             self.stop()
 
