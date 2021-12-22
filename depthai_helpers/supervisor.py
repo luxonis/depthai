@@ -17,7 +17,7 @@ def createNewArgs(args):
     removeArg("-gt")
     removeArg("--guiType")
     removeArg("--noSupervisor")
-    return sys.argv[2:] + ["--noSupervisor", "--guiType", args.guiType]
+    return sys.argv[1:] + ["--noSupervisor", "--guiType", args.guiType]
 
 
 class Supervisor:
