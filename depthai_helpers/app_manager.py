@@ -26,6 +26,11 @@ class App:
         except:
             print("Error accessing \"venv\" module! Please try to install \"python3-venv\" or see oficial docs here - https://docs.python.org/3/library/venv.html", file=sys.stderr)
             raise
+        try:
+            subprocess.check_call(' '.join([quoted(sys.executable), '-m', 'pip', '-h']), env=initEnv, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except:
+            print("Error accessing \"pip\" module! Please try to install \"python3-pip\" or see oficial docs here - https://pip.pypa.io/en/stable/installation/", file=sys.stderr)
+            raise
 
         if not force and Path(self.appInterpreter).exists() and Path(self.appPip).exists():
             print("Existing venv found.")
