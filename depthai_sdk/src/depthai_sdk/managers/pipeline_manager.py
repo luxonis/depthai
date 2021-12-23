@@ -136,7 +136,7 @@ class PipelineManager:
         videnc.setQuality(self.poeQuality)
         videnc.bitstream.link(xout.input)
 
-    def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, xout=False):
+    def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, colorOrder=dai.ColorCameraProperties.ColorOrder.BGR, xout=False):
         """
         Creates :obj:`depthai.node.ColorCamera` node based on specified attributes
 
@@ -147,6 +147,7 @@ class PipelineManager:
             fullFov (bool, Optional): If set to :code:`True`, full frame will be scaled down to nn size. If to :code:`False`,
                 it will first center crop the frame to meet the NN aspect ratio and then scale down the image.
             orientation (depthai.CameraImageOrientation, Optional): Custom camera orientation to be set on the device
+            colorOrder (depthai.ColorCameraProperties, Optional): Color order to be used
             xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
         """
         self.nodes.camRgb = self.pipeline.createColorCamera()
@@ -154,6 +155,7 @@ class PipelineManager:
             self.nodes.camRgb.setPreviewSize(*previewSize)
         self.nodes.camRgb.setInterleaved(False)
         self.nodes.camRgb.setResolution(res)
+        self.nodes.camRgb.setColorOrder(colorOrder)
         self.nodes.camRgb.setFps(fps)
         if orientation is not None:
             self.nodes.camRgb.setImageOrientation(orientation)

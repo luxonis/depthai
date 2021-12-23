@@ -10,7 +10,13 @@ from itertools import cycle
 from pathlib import Path
 import platform
 
-from log_system_information import make_sys_report
+from depthai_helpers.app_manager import App
+if __name__ == "__main__":
+    if '--app' in sys.argv:
+        app = App(appName=sys.argv[sys.argv.index('--app') + 1])
+        app.createVenv()
+        app.runApp()
+        sys.exit(0)
 
 try:
     import cv2
@@ -21,6 +27,7 @@ except Exception as ex:
     print("Run \"python3 install_requirements.py\" to install dependencies or visit our installation page for more details - https://docs.luxonis.com/projects/api/en/latest/install/")
     sys.exit(1)
 
+from log_system_information import make_sys_report
 from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
