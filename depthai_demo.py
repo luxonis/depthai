@@ -532,7 +532,8 @@ class Demo:
 
 def prepareConfManager(in_args):
     confManager = ConfigManager(in_args)
-    confManager.linuxCheckApplyUsbRules()
+    if not confManager.skipUdevCheck:
+        confManager.linuxCheckApplyUsbRules()
     if not confManager.useCamera:
         if str(confManager.args.video).startswith('https'):
             confManager.args.video = downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS)

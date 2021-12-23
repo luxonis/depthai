@@ -147,5 +147,6 @@ def parseArgs():
     parser.add_argument("--cameraBrightness", type=_comaSeparated("all", int), nargs="+", help="Specify image brightness")
     parser.add_argument("--cameraSharpness", type=_comaSeparated("all", int), nargs="+", help="Specify image sharpness")
     parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
+    parser.add_argument('--skipUdevCheck', action="store_true", help="Disable udev rules check")
     parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
     return parser.parse_args()
