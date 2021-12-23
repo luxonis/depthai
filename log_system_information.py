@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 import json
-from pip._internal.operations.freeze import freeze
 import platform
 
 
-def make_sys_report(anonymous=False, skipUsb=False):
+def make_sys_report(anonymous=False, skipUsb=False, skipPackages=False):
     def get_usb():
         try:
             import usb.core
@@ -38,9 +37,11 @@ def make_sys_report(anonymous=False, skipUsb=False):
         "system": platform.system(),
         "version": platform.version(),
         "win32_ver": ' '.join(platform.win32_ver()).strip(),
-        "packages": list(freeze(local_only=True)),
     }
 
+    if not skipPackages:
+        from pip._internal.operations.freeze import freeze
+        result["packages"] = list(freeze(local_only=True))
     if not skipUsb:
         result["usb"] = list(get_usb())
     if not anonymous:
