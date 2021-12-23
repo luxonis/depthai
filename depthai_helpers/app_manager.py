@@ -1,7 +1,9 @@
 import os
 import shutil
+import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 initEnv = os.environ.copy()
@@ -49,6 +51,12 @@ class App:
         subprocess.check_call(' '.join([quoted(self.appInterpreter), '-m', 'pip', 'install', '-U', 'pip']), env=initEnv, shell=True, cwd=self.appPath)
         subprocess.check_call(' '.join([quoted(self.appInterpreter), '-m', 'pip', 'install', '--prefer-binary', '-r', str(self.appRequirements)]), env=initEnv, shell=True, cwd=self.appPath)
 
-    def runApp(self):
-        subprocess.check_call(' '.join([quoted(self.appInterpreter), str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath)
+    def runApp(self, shouldRun = lambda: True):
+        pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath, preexec_fn=os.setsid)
+        while shouldRun():
+            try:
+                time.sleep(1)
+            except KeyboardInterrupt:
+                break
+        os.killpg(os.getpgid(pro.pid), signal.SIGTERM)
 
