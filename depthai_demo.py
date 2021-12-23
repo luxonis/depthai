@@ -17,7 +17,7 @@ try:
 except Exception as ex:
     print("Third party libraries failed to import: {}".format(ex))
     print("Run \"python3 install_requirements.py\" to install dependencies or visit our installation page for more details - https://docs.luxonis.com/projects/api/en/latest/install/")
-    sys.exit(1)
+    sys.exit(42)
 
 from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.arg_manager import parseArgs
@@ -605,7 +605,6 @@ def runQt():
         def onSetup(self, instance):
             if "onSetup" in self.file_callbacks:
                 self.file_callbacks["onSetup"](instance)
-            self.selectedPreview = self.conf.args.show[0]
             self.signals.updateConfSignal.emit(list(vars(self.conf.args).items()))
             self.signals.setDataSignal.emit(["previewChoices", self.conf.args.show])
             devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))

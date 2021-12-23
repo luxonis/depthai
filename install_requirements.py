@@ -2,7 +2,9 @@
 import platform
 import subprocess
 import sys
+import os
 
+scriptDirectory = os.path.dirname(os.path.realpath(__file__))
 thisPlatform = platform.machine()
 
 # https://stackoverflow.com/a/58026969/5494277
@@ -42,10 +44,10 @@ subprocess.check_call(pip_install + ["pip", "-U"])
 
 subprocess.check_call(pip_call + ["uninstall", "opencv-python", "opencv-contrib-python", "--yes"])
 subprocess.check_call(pip_call + ["uninstall", "depthai", "--yes"])
-subprocess.check_call(pip_package_install + ["-r", "requirements.txt"])
+subprocess.check_call(pip_package_install + ["-r", "requirements.txt"], cwd=scriptDirectory)
 
 try:
-    subprocess.check_call(pip_package_install + ["-r", "requirements-optional.txt"], stderr=subprocess.DEVNULL)
+    subprocess.check_call(pip_package_install + ["-r", "requirements-optional.txt"], cwd=scriptDirectory, stderr=subprocess.DEVNULL)
 except subprocess.CalledProcessError as ex:
     print("Optional dependencies were not installed. This is not an error.")
 
