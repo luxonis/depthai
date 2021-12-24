@@ -101,6 +101,25 @@ class PreviewManager:
         for queue in self.outputQueues:
             queue.close()
 
+    def _processFrame(self, frame, packet, queueName):
+        if self._fpsHandler is not None:
+            self._fpsHandler.tick(queueName)
+        if self.scale is not None and queueName in self.scale:
+            h, w = frame.shape[0:2]
+            frame = cv2.resize(frame, (int(w * self.scale[queueName]), int(h * self.scale[queueName])), interpolation=cv2.INTER_AREA)
+        if self._mouseTracker is not None:
+            if queueName == Previews.disparity.name:
+                rawFrame = packet.getFrame() if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+                self._mouseTracker.extractValue(Previews.disparity.name, rawFrame)
+                self._mouseTracker.extractValue(Previews.disparityColor.name, rawFrame)
+            if queueName == Previews.depthRaw.name:
+                rawFrame = packet.getFrame()  # if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED) TODO uncomment once depth encoding is possible
+                self._mouseTracker.extractValue(Previews.depthRaw.name, rawFrame)
+                self._mouseTracker.extractValue(Previews.depth.name, rawFrame)
+            else:
+                self._mouseTracker.extractValue(queueName, frame)
+        return frame
+
 
     def prepareFrames(self, blocking=False, callback=None):
         """
@@ -117,30 +136,15 @@ class PreviewManager:
             else:
                 packet = queue.tryGet()
             if packet is not None:
-                if self._fpsHandler is not None:
-                    self._fpsHandler.tick(queue.getName())
                 frame = getattr(Previews, queue.getName()).value(packet, self)
                 if frame is None:
                     print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
                     continue
-                if self.scale is not None and queue.getName() in self.scale:
-                    h, w = frame.shape[0:2]
-                    frame = cv2.resize(frame, (int(w * self.scale[queue.getName()]), int(h * self.scale[queue.getName()])), interpolation=cv2.INTER_AREA)
+                frame = self._processFrame(frame, packet, queue.getName())
                 if queue.getName() in self._display:
                     if callback is not None:
                         callback(frame, queue.getName())
                     self._rawFrames[queue.getName()] = frame
-                if self._mouseTracker is not None:
-                    if queue.getName() == Previews.disparity.name:
-                        rawFrame = packet.getFrame() if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
-                        self._mouseTracker.extractValue(Previews.disparity.name, rawFrame)
-                        self._mouseTracker.extractValue(Previews.disparityColor.name, rawFrame)
-                    if queue.getName() == Previews.depthRaw.name:
-                        rawFrame = packet.getFrame()  # if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED) TODO uncomment once depth encoding is possible
-                        self._mouseTracker.extractValue(Previews.depthRaw.name, rawFrame)
-                        self._mouseTracker.extractValue(Previews.depth.name, rawFrame)
-                    else:
-                        self._mouseTracker.extractValue(queue.getName(), frame)
 
                 if queue.getName() == Previews.disparity.name and Previews.disparityColor.name in self._display:
                     if self._fpsHandler is not None:
