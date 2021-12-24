@@ -75,6 +75,7 @@ ApplicationWindow {
     property var deviceChoices
     property var depthEnabled: true
     property var statisticsAccepted: true
+    property var runningApp
 
     AppBridge {
         id: appBridge
