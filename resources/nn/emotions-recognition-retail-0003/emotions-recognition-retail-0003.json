@@ -1,0 +1,22 @@
+{
+    "nn_config":
+    {
+        "output_format" : "raw",
+        "input_size": "64x64"
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "neutral",
+            "happy",
+            "sad",
+            "surprise",
+            "anger"
+        ]
+    }
+}
+
+
+
+1782
