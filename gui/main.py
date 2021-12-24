@@ -63,6 +63,14 @@ class AppBridge(QObject):
         instance.guiOnToggleSyncPreview(value)
 
     @pyqtSlot(str)
+    def runApp(self, appName):
+        instance.guiOnRunApp(appName)
+
+    @pyqtSlot(str)
+    def terminateApp(self, appName):
+        instance.guiOnTerminateApp(appName)
+
+    @pyqtSlot(str)
     def selectDevice(self, value):
         instance.guiOnSelectDevice(value)
 

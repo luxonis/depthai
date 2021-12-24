@@ -33,7 +33,7 @@ from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.metrics import MetricManager
 from depthai_helpers.version_check import checkRequirementsVersion
-from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, resizeLetterbox
+from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, createBlankFrame
 from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
 args = parseArgs()
@@ -98,10 +98,17 @@ class Demo:
     LRCT_MAX = int(os.getenv("LRCT_MAX", 10))
 
     def run_all(self, conf):
-        self.setup(conf)
-        self.run()
+        if conf.args.app is not None:
+            app = App(appName=conf.args.app)
+            self.onAppSetup(app)
+            app.createVenv()
+            self.onAppStart(app)
+            app.runApp(shouldRun=self.shouldRun)
+        else:
+            self.setup(conf)
+            self.run()
 
-    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, shouldRun = lambda: True, showDownloadProgress=None, collectMetrics=False):
+    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, onAppSetup = noop, onAppStart = noop, shouldRun = lambda: True, showDownloadProgress=None, collectMetrics=False):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
         self.toggleMetrics(collectMetrics)
@@ -115,8 +122,10 @@ class Demo:
         self.onIter = onIter
         self.shouldRun = shouldRun
         self.showDownloadProgress = showDownloadProgress
+        self.onAppSetup = onAppSetup
+        self.onAppStart = onAppStart
 
-    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, shouldRun=None, showDownloadProgress=None):
+    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
         if onNewFrame is not None:
             self.onNewFrame = onNewFrame
         if onShowFrame is not None:
@@ -135,6 +144,10 @@ class Demo:
             self.shouldRun = shouldRun
         if showDownloadProgress is not None:
             self.showDownloadProgress = showDownloadProgress
+        if onAppSetup is not None:
+            self.onAppSetup = onAppSetup
+        if onAppStart is not None:
+            self.onAppStart = onAppStart
 
     def toggleMetrics(self, enabled):
         if enabled:
@@ -570,7 +583,7 @@ def runQt():
         def run(self):
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
-            self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, showDownloadProgress=self.showDownloadProgress)
+            self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
             self.conf.args.bandwidth = "auto"
             if self.conf.args.deviceId is None:
                 devices = dai.Device.getAllAvailableDevices()
@@ -626,6 +639,18 @@ def runQt():
             if source == self.selectedPreview:
                 self.signals.updatePreviewSignal.emit(frame)
 
+        def onAppSetup(self, app):
+            setupFrame = createBlankFrame(500, 500)
+            cv2.putText(setupFrame, "Preparing {} app...".format(app.appName), (150, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
+            cv2.putText(setupFrame, "Preparing {} app...".format(app.appName), (150, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+            self.signals.updatePreviewSignal.emit(setupFrame)
+
+        def onAppStart(self, app):
+            setupFrame = createBlankFrame(500, 500)
+            cv2.putText(setupFrame, "Running {} app... (check console)".format(app.appName), (100, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
+            cv2.putText(setupFrame, "Running {} app... (check console)".format(app.appName), (100, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+            self.signals.updatePreviewSignal.emit(setupFrame)
+
         def showDownloadProgress(self, curr, total):
             self.signals.updateDownloadProgressSignal.emit(curr, total)
 
@@ -645,7 +670,7 @@ def runQt():
             self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
 
-    class App(DemoQtGui):
+    class GuiApp(DemoQtGui):
         def __init__(self):
             super().__init__()
             self.confManager = prepareConfManager(args)
@@ -697,21 +722,22 @@ def runQt():
                 sys.exit(exit_code)
 
         def stop(self, wait=True):
-            current_mxid = None
-            protocol = None
             if hasattr(self._demoInstance, "_device"):
                 current_mxid = self._demoInstance._device.getMxId()
-                protocol = self._demoInstance._deviceInfo.desc.protocol
+            else:
+                current_mxid = self.confManager.args.deviceId
             self.worker.signals.exitSignal.emit()
             self.threadpool.waitForDone(10000)
 
-            if wait and current_mxid is not None and protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
+            if wait and current_mxid is not None:
                 start = time.time()
-                while time.time() - start < 10:
+                while time.time() - start < 30:
                     if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
                         break
+                    else:
+                        time.sleep(0.1)
                 else:
-                    print(f"[Warning] Device not available again after 10 seconds! MXID: {current_mxid}")
+                    print(f"[Warning] Device not available again after 30 seconds! MXID: {current_mxid}")
 
         def restartDemo(self):
             self.stop()
@@ -900,6 +926,18 @@ def runQt():
                     self.selectedPreview = filtered[0]
                 self.updateArg("show", filtered)
 
+        def guiOnRunApp(self, appName):
+            self.stop()
+            self.updateArg("app", appName, shouldUpdate=False)
+            self.setData(["runningApp", appName])
+            self.start()
+
+        def guiOnTerminateApp(self, appName):
+            self.stop()
+            self.updateArg("app", None, shouldUpdate=False)
+            self.setData(["runningApp", ""])
+            self.start()
+
         def guiOnToggleDisparity(self, value):
             self.useDisparity = value
             depthPreviews = [Previews.depth.name, Previews.depthRaw.name]
@@ -916,7 +954,7 @@ def runQt():
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
-    App().start()
+    GuiApp().start()
 
 
 def runOpenCv():
