@@ -13,10 +13,13 @@ import platform
 from depthai_helpers.app_manager import App
 if __name__ == "__main__":
     if '--app' in sys.argv:
-        app = App(appName=sys.argv[sys.argv.index('--app') + 1])
-        app.createVenv()
-        app.runApp()
-        sys.exit(0)
+        try:
+            app = App(appName=sys.argv[sys.argv.index('--app') + 1])
+            app.createVenv()
+            app.runApp()
+            sys.exit(0)
+        except KeyboardInterrupt:
+            sys.exit(0)
 
 try:
     import cv2
@@ -622,6 +625,8 @@ def runQt():
                 self.conf.args.show.append(Previews.rectifiedRight.name)
             try:
                 self.instance.run_all(self.conf)
+            except KeyboardInterrupt:
+                sys.exit(0)
             except Exception as ex:
                 self.onError(ex)
 
@@ -970,17 +975,20 @@ def runOpenCv():
 
 
 if __name__ == "__main__":
-    if args.noSupervisor:
-        if args.guiType == "qt":
-            runQt()
+    try:
+        if args.noSupervisor:
+            if args.guiType == "qt":
+                runQt()
+            else:
+                args.guiType = "cv"
+                runOpenCv()
         else:
-            args.guiType = "cv"
-            runOpenCv()
-    else:
-        s = Supervisor()
-        if args.guiType != "cv":
-            available = s.checkQtAvailability()
-            if args.guiType == "qt" and not available:
-                raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
-            args.guiType = "qt" if available else "cv"
-        s.runDemo(args)
+            s = Supervisor()
+            if args.guiType != "cv":
+                available = s.checkQtAvailability()
+                if args.guiType == "qt" and not available:
+                    raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
+                args.guiType = "qt" if available else "cv"
+            s.runDemo(args)
+    except KeyboardInterrupt:
+        sys.exit(0)
