@@ -34,7 +34,7 @@ from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_V
 from depthai_helpers.metrics import MetricManager
 from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, resizeLetterbox
-from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PipelineManager, EncodingManager, BlobManager
+from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
 args = parseArgs()
 
@@ -194,7 +194,8 @@ class Demo:
         self._fps = FPSHandler() if self._conf.useCamera else FPSHandler(self._cap)
 
         if self._conf.useCamera:
-            self._pv = SyncedPreviewManager(display=self._conf.args.show, nnSource=self._conf.getModelSource(), colorMap=self._conf.getColorMap(),
+            pvClass = SyncedPreviewManager if self._conf.args.syncPreviews else PreviewManager
+            self._pv = pvClass(display=self._conf.args.show, nnSource=self._conf.getModelSource(), colorMap=self._conf.getColorMap(),
                                 dispMultiplier=self._conf.dispMultiplier, mouseTracker=True, lowBandwidth=self._conf.lowBandwidth,
                                 scale=self._conf.args.scale, fpsHandler=self._fps, createWindows=self._displayFrames,
                                 depthConfig=self._pm._depthConfig)
@@ -826,6 +827,9 @@ def runQt():
             except:
                 pass
             self.worker.signals.setDataSignal.emit(["restartRequired", True])
+
+        def guiOnToggleSyncPreview(self, value):
+            self.updateArg("syncPreviews", value)
 
         def guiOnToggleColorEncoding(self, enabled, fps):
             oldConfig = self.confManager.args.encode or {}

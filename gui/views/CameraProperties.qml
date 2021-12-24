@@ -582,6 +582,18 @@ ListView {
             checked: false
             font.preferShaping: false
         }
+
+        Switch {
+            id: syncPreviewsSwitch
+            x: 203
+            y: 158
+            width: 164
+            height: 28
+            text: qsTr("<font color=\"white\">Sync Previews</font>")
+            onToggled: {
+                appBridge.toggleSyncPreview(syncPreviewsSwitch.checked)
+            }
+        }
     }
 }
 /*##^##

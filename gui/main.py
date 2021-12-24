@@ -58,6 +58,10 @@ class AppBridge(QObject):
     def toggleStatisticsConsent(self, value):
         instance.guiOnStaticticsConsent(value)
 
+    @pyqtSlot(bool)
+    def toggleSyncPreview(self, value):
+        instance.guiOnToggleSyncPreview(value)
+
     @pyqtSlot(str)
     def selectDevice(self, value):
         instance.guiOnSelectDevice(value)
