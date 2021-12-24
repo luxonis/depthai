@@ -34,7 +34,7 @@ from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_V
 from depthai_helpers.metrics import MetricManager
 from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, resizeLetterbox
-from depthai_sdk.managers import NNetManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
+from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PipelineManager, EncodingManager, BlobManager
 
 args = parseArgs()
 
@@ -193,25 +193,25 @@ class Demo:
         self._cap = cv2.VideoCapture(self._conf.args.video) if not self._conf.useCamera else None
         self._fps = FPSHandler() if self._conf.useCamera else FPSHandler(self._cap)
 
-        if self._conf.useCamera or self._conf.args.sync:
-            self._pv = PreviewManager(display=self._conf.args.show, nnSource=self._conf.getModelSource(), colorMap=self._conf.getColorMap(),
+        if self._conf.useCamera:
+            self._pv = SyncedPreviewManager(display=self._conf.args.show, nnSource=self._conf.getModelSource(), colorMap=self._conf.getColorMap(),
                                 dispMultiplier=self._conf.dispMultiplier, mouseTracker=True, lowBandwidth=self._conf.lowBandwidth,
-                                scale=self._conf.args.scale, sync=self._conf.args.sync, fpsHandler=self._fps, createWindows=self._displayFrames,
+                                scale=self._conf.args.scale, fpsHandler=self._fps, createWindows=self._displayFrames,
                                 depthConfig=self._pm._depthConfig)
 
             if self._conf.leftCameraEnabled:
                 self._pm.createLeftCam(self._monoRes, self._conf.args.monoFps,
                                  orientation=self._conf.args.cameraOrientation.get(Previews.left.name),
-                                 xout=Previews.left.name in self._conf.args.show and (self._conf.getModelSource() != "left" or not self._conf.args.sync))
+                                 xout=Previews.left.name in self._conf.args.show)
             if self._conf.rightCameraEnabled:
                 self._pm.createRightCam(self._monoRes, self._conf.args.monoFps,
                                   orientation=self._conf.args.cameraOrientation.get(Previews.right.name),
-                                  xout=Previews.right.name in self._conf.args.show and (self._conf.getModelSource() != "right" or not self._conf.args.sync))
+                                  xout=Previews.right.name in self._conf.args.show)
             if self._conf.rgbCameraEnabled:
                 self._pm.createColorCam(self._nnManager.inputSize if self._conf.useNN else self._conf.previewSize, self._rgbRes, self._conf.args.rgbFps,
                                   orientation=self._conf.args.cameraOrientation.get(Previews.color.name),
                                   fullFov=not self._conf.args.disableFullFovNn,
-                                  xout=Previews.color.name in self._conf.args.show and (self._conf.getModelSource() != "color" or not self._conf.args.sync))
+                                  xout=Previews.color.name in self._conf.args.show)
 
             if self._conf.useDepth:
                 self._pm.createDepth(
@@ -224,10 +224,8 @@ class Demo:
                     self._conf.args.subpixel,
                     useDepth=Previews.depth.name in self._conf.args.show or Previews.depthRaw.name in self._conf.args.show,
                     useDisparity=Previews.disparity.name in self._conf.args.show or Previews.disparityColor.name in self._conf.args.show,
-                    useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show and (
-                                self._conf.getModelSource() != "rectifiedLeft" or not self._conf.args.sync),
-                    useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show and (
-                                self._conf.getModelSource() != "rectifiedRight" or not self._conf.args.sync),
+                    useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show,
+                    useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show,
                 )
 
             self._encManager = None
@@ -246,10 +244,8 @@ class Demo:
                 sbbScaleFactor=self._conf.args.sbbScaleFactor, fullFov=not self._conf.args.disableFullFovNn,
             )
 
-            self._pm.addNn(
-                nn=self._nn, sync=self._conf.args.sync, xoutNnInput=Previews.nnInput.name in self._conf.args.show,
-                useDepth=self._conf.useDepth, xoutSbb=self._conf.args.spatialBoundingBox and self._conf.useDepth
-            )
+            self._pm.addNn(nn=self._nn, xoutNnInput=Previews.nnInput.name in self._conf.args.show,
+                           xoutSbb=self._conf.args.spatialBoundingBox and self._conf.useDepth)
 
     def run(self):
         self._device.startPipeline(self._pm.pipeline)
@@ -289,8 +285,6 @@ class Demo:
             self._pv.createQueues(self._device, self._createQueueCallback)
             if self._encManager is not None:
                 self._encManager.createDefaultQueues(self._device)
-        elif self._conf.args.sync:
-            self._hostOut = self._device.getOutputQueue(Previews.nnInput.name, maxSize=1, blocking=False)
 
         self._seqNum = 0
         self._hostFrame = None
@@ -360,17 +354,13 @@ class Demo:
 
             self._nnManager.sendInputFrame(rawHostFrame, self._seqNum)
             self._seqNum += 1
-
-            if not self._conf.args.sync:
-                self._hostFrame = rawHostFrame
+            self._hostFrame = rawHostFrame
             self._fps.tick('host')
 
         if self._nnManager is not None:
             inNn = self._nnManager.outputQueue.tryGet()
             if inNn is not None:
                 self.onNn(inNn)
-                if not self._conf.useCamera and self._conf.args.sync:
-                    self._hostFrame = Previews.nnInput.value(self._hostOut.get())
                 self._nnData = self._nnManager.decode(inNn)
                 self._fps.tick('nn')
 

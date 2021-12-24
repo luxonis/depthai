@@ -107,8 +107,6 @@ def parseArgs():
     parser.add_argument('-s', '--show', default=[], nargs="+", choices=_streamChoices, help="Choose which previews to show. Default: %(default)s")
     parser.add_argument('--report', nargs="+", default=[], choices=["temp", "cpu", "memory"], help="Display device utilization data")
     parser.add_argument('--reportFile', help="Save report data to specified target file in CSV format")
-    parser.add_argument('-sync', '--sync', action="store_true",
-                        help="Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute")
     parser.add_argument("-monor", "--monoResolution", default=400, type=int, choices=[400,720,800],
                         help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
     parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
@@ -148,4 +146,5 @@ def parseArgs():
     parser.add_argument("--cameraSharpness", type=_comaSeparated("all", int), nargs="+", help="Specify image sharpness")
     parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
     parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
+    parser.add_argument('--syncPreviews', action="store_true", help="Enable frame synchronization. If enabled, all frames will be synced before preview (same sequence number)")
     return parser.parse_args()

@@ -402,20 +402,18 @@ class PipelineManager:
             self._depthConfig.algorithmControl.enableLeftRightCheck = lrc
         self._depthConfigInputQueue.send(self._depthConfig)
 
-    def addNn(self, nn, sync=False, useDepth=False, xoutNnInput=False, xoutSbb=False):
+    def addNn(self, nn, xoutNnInput=False, xoutSbb=False):
         """
         Adds NN node to current pipeline. Usually obtained by calling :obj:`depthai_sdk.managers.NNetManager.createNN` method
         first
 
         Args:
             nn (depthai.node.NeuralNetwork): prepared NeuralNetwork node to be attached to the pipeline
-            sync (bool): Will attach NN's passthough output to source XLinkOut, making the frame appear in the output queue same time as NN-results packet
-            useDepth (bool): If used together with :code:`sync` flag, will attach NN's passthoughDepth output to depth XLinkOut, making the depth frame appear in the output queue same time as NN-results packet
             xoutNnInput (bool): Set to :code:`True` to create output queue for NN's passthough frames
             xoutSbb (bool): Set to :code:`True` to create output queue for Spatial Bounding Boxes (area that is used to calculate spatial location)
         """
         # TODO adjust this function once passthrough frame type (8) is supported by VideoEncoder (for self.MjpegLink)
-        if xoutNnInput or (sync and self.nnManager.source == "host"):
+        if xoutNnInput:
             self.nodes.xoutNnInput = self.pipeline.createXLinkOut()
             self.nodes.xoutNnInput.setStreamName(Previews.nnInput.name)
             nn.passthrough.link(self.nodes.xoutNnInput.input)
@@ -424,39 +422,6 @@ class PipelineManager:
             self.nodes.xoutSbb = self.pipeline.createXLinkOut()
             self.nodes.xoutSbb.setStreamName("sbb")
             nn.boundingBoxMapping.link(self.nodes.xoutSbb.input)
-
-        if sync:
-            if self.nnManager.source == "color":
-                if not hasattr(self.nodes, "xoutRgb"):
-                    self.nodes.xoutRgb = self.pipeline.createXLinkOut()
-                    self.nodes.xoutRgb.setStreamName(Previews.color.name)
-                nn.passthrough.link(self.nodes.xoutRgb.input)
-            elif self.nnManager.source == "left":
-                if not hasattr(self.nodes, "xoutLeft"):
-                    self.nodes.xoutLeft = self.pipeline.createXLinkOut()
-                    self.nodes.xoutLeft.setStreamName(Previews.left.name)
-                nn.passthrough.link(self.nodes.xoutLeft.input)
-            elif self.nnManager.source == "right":
-                if not hasattr(self.nodes, "xoutRight"):
-                    self.nodes.xoutRight = self.pipeline.createXLinkOut()
-                    self.nodes.xoutRight.setStreamName(Previews.right.name)
-                nn.passthrough.link(self.nodes.xoutRight.input)
-            elif self.nnManager.source == "rectifiedLeft":
-                if not hasattr(self.nodes, "xoutRectLeft"):
-                    self.nodes.xoutRectLeft = self.pipeline.createXLinkOut()
-                    self.nodes.xoutRectLeft.setStreamName(Previews.rectifiedLeft.name)
-                nn.passthrough.link(self.nodes.xoutRectLeft.input)
-            elif self.nnManager.source == "rectifiedRight":
-                if not hasattr(self.nodes, "xoutRectRight"):
-                    self.nodes.xoutRectRight = self.pipeline.createXLinkOut()
-                    self.nodes.xoutRectRight.setStreamName(Previews.rectifiedRight.name)
-                nn.passthrough.link(self.nodes.xoutRectRight.input)
-
-            if self.nnManager._nnFamily in ("YOLO", "mobilenet") and useDepth:
-                if not hasattr(self.nodes, "xoutDepth"):
-                    self.nodes.xoutDepth = self.pipeline.createXLinkOut()
-                    self.nodes.xoutDepth.setStreamName(Previews.depth.name)
-                nn.passthroughDepth.link(self.nodes.xoutDepth.input)
 
     def createSystemLogger(self, rate=1):
         """
