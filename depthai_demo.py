@@ -532,7 +532,7 @@ class Demo:
 
 def prepareConfManager(in_args):
     confManager = ConfigManager(in_args)
-    if not confManager.skipUdevCheck:
+    if not confManager.args.skipUdevCheck:
         confManager.linuxCheckApplyUsbRules()
     if not confManager.useCamera:
         if str(confManager.args.video).startswith('https'):
