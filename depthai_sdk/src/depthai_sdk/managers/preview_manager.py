@@ -1,7 +1,10 @@
 import math
+from datetime import timedelta
 
 import cv2
 import depthai as dai
+from depthai_sdk import DelayQueue
+
 from ..previews import Previews, MouseClickTracker
 import numpy as np
 
@@ -99,28 +102,29 @@ class PreviewManager:
         for queue in self.outputQueues:
             queue.close()
 
-    def _processFrame(self, frame, packet, queueName):
+    def _processFrame(self, frame, queueName):
         if self._fpsHandler is not None:
             self._fpsHandler.tick(queueName)
         if self.scale is not None and queueName in self.scale:
             h, w = frame.shape[0:2]
             frame = cv2.resize(frame, (int(w * self.scale[queueName]), int(h * self.scale[queueName])), interpolation=cv2.INTER_AREA)
+        return frame
+
+    def _addRawFrame(self, frame, packet, name):
+        if name in self._display:
+            self._rawFrames[name] = frame
+
         if self._mouseTracker is not None:
-            if queueName == Previews.disparity.name:
+            if name == Previews.disparity.name:
                 rawFrame = packet.getFrame() if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
                 self._mouseTracker.extractValue(Previews.disparity.name, rawFrame)
                 self._mouseTracker.extractValue(Previews.disparityColor.name, rawFrame)
-            if queueName == Previews.depthRaw.name:
+            if name == Previews.depthRaw.name:
                 rawFrame = packet.getFrame()  # if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED) TODO uncomment once depth encoding is possible
                 self._mouseTracker.extractValue(Previews.depthRaw.name, rawFrame)
                 self._mouseTracker.extractValue(Previews.depth.name, rawFrame)
             else:
-                self._mouseTracker.extractValue(queueName, frame)
-        return frame
-
-    def _addRawFrame(self, frame, name):
-        if name in self._display:
-            self._rawFrames[name] = frame
+                self._mouseTracker.extractValue(name, frame)
 
         if name == Previews.disparity.name and Previews.disparityColor.name in self._display:
             if self._fpsHandler is not None:
@@ -152,11 +156,11 @@ class PreviewManager:
                 if frame is None:
                     print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
                     continue
-                frame = self._processFrame(frame, packet, queue.getName())
+                frame = self._processFrame(frame, queue.getName())
                 if queue.getName() in self._display:
                     if callback is not None:
                         callback(frame, queue.getName())
-                self._addRawFrame(frame, queue.getName())
+                self._addRawFrame(frame, packet, queue.getName())
 
         for name in self._rawFrames:
             newFrame = self._rawFrames[name].copy()
@@ -214,9 +218,18 @@ class SyncedPreviewManager(PreviewManager):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.seq_frames = {}
+        self.seq_packets = {}
+        self.packets_q = None
         self.last_seqs = {}
+        self.syncedPackets = {}
 
+    def __get_next_seq_packet(self, seqKey, name, defaultPacket):
+        if seqKey not in self.seq_packets:
+            return defaultPacket
+        elif name not in self.seq_packets:
+            return self.__get_next_seq_packet(seqKey + 1, name, defaultPacket)
+        else:
+            return self.seq_packets[seqKey][name]
 
     def prepareFrames(self, blocking=False, callback=None):
         """
@@ -228,33 +241,55 @@ class SyncedPreviewManager(PreviewManager):
             blocking (bool, Optional): If set to :code:`True`, will wait for a packet in each queue to be available
             callback (func, Optional): Function that will be executed once packet with frame has arrived
         """
+
         for queue in self.outputQueues:
             if blocking:
                 packet = queue.get()
             else:
                 packet = queue.tryGet()
             if packet is not None:
-                packets = self.seq_frames.get(packet.getSequenceNum(), {})
+                seq = packet.getSequenceNum()
+                packets = self.seq_packets.get(seq, {})
                 packets[queue.getName()] = packet
-                self.seq_frames[packet.getSequenceNum()] = packets
-                self.last_seqs[queue.getName()] = packet.getSequenceNum()
+                self.seq_packets[seq] = packets
+                self.last_seqs[queue.getName()] = seq
 
                 if len(packets) == len(self.outputQueues):
-                    for synced_name, synced_packet in packets.items():
-                        synced_frame = getattr(Previews, synced_name).value(synced_packet, self)
-                        if synced_frame is None:
-                            print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(synced_name))
-                            continue
-                        synced_frame = self._processFrame(synced_frame, packet, synced_name)
-                        if synced_name in self._display:
-                            if callback is not None:
-                                callback(synced_frame, synced_name)
-                        self._addRawFrame(synced_frame, synced_name)
+                    self.packets_q = DelayQueue(maxsize=100)
+                    prevTimestamp = None
+                    prevDelay = timedelta()
+                    unsyncedSeq = sorted(list(filter(lambda itemSeq: itemSeq < seq, self.seq_packets.keys())))
+                    for seqKey in unsyncedSeq:
+                        unsynced = {
+                            synced_name: self.__get_next_seq_packet(seqKey, synced_name, synced_packet)
+                            for synced_name, synced_packet in packets.items()
+                        }
+                        ts = next(iter(unsynced.values())).getTimestamp()
+                        if prevTimestamp is None:
+                            delay = timedelta()
+                        else:
+                            delta = ts - prevTimestamp
+                            delay = delta + prevDelay
+                            prevDelay += delta
 
-        if len(self.last_seqs) == len(self.outputQueues):
-            min_seq = min(self.last_seqs.values())
-            for key in list(filter(lambda seq: seq < min_seq, self.seq_frames.keys())):
-                del self.seq_frames[key]
+                        prevTimestamp = ts
+                        print(delay.microseconds)
+                        self.packets_q.put(unsynced, delay.microseconds)
+                        del self.seq_packets[seqKey]
+
+        if self.packets_q is not None:
+            packets = self.packets_q.get()
+            if packets is not None:
+                for name, packet in packets.items():
+                    frame = getattr(Previews, name).value(packet, self)
+                    if frame is None:
+                        print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(name))
+                        continue
+                    frame = self._processFrame(frame, name)
+                    if name in self._display:
+                        if callback is not None:
+                            callback(frame, name)
+                        self._addRawFrame(frame, packet, name)
 
         for name in self._rawFrames:
             newFrame = self._rawFrames[name].copy()
