@@ -1,5 +1,6 @@
 import importlib.util
 import os
+import platform
 import subprocess
 import sys
 import time
@@ -32,6 +33,8 @@ class Supervisor:
             new_env["QT_QUICK_BACKEND"] = "software"
             new_env["LD_LIBRARY_PATH"] = str(Path(importlib.util.find_spec("PyQt5").origin).parent / "Qt5/lib")
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
+            if platform.machine() == 'aarch64':  # Jetson
+                new_env['OPENBLAS_CORETYPE'] = "ARMV8"
             try:
                 subprocess.check_call(' '.join([f'"{sys.executable}"', "depthai_demo.py"] + new_args), env=new_env, shell=True, cwd=repo_root)
             except subprocess.CalledProcessError as ex:
