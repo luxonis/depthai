@@ -1,5 +1,5 @@
 import QtQuick 2.0
-import QtQuick.Layouts 1.11
+import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
@@ -578,7 +578,6 @@ ListView {
             transformOrigin: Item.Center
             autoExclusive: false
             font.family: "Courier"
-            font.kerning: false
             checked: false
             font.preferShaping: false
         }

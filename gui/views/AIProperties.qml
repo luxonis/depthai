@@ -1,5 +1,5 @@
 import QtQuick 2.0
-import QtQuick.Layouts 1.11
+import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
@@ -166,7 +166,6 @@ ListView {
             font.pointSize: 21
             checked: false
             font.preferShaping: false
-            font.kerning: false
         }
 
         Rectangle {
@@ -243,7 +242,6 @@ ListView {
                 autoExclusive: false
                 transformOrigin: Item.Center
                 font.preferShaping: false
-                font.kerning: false
                 onToggled: {
                     aiBridge.setSbb(switch3.checked)
                 }
@@ -305,7 +303,6 @@ ListView {
             checked: true
             autoExclusive: false
             font.family: "Courier"
-            font.kerning: false
             transformOrigin: Item.Center
             font.preferShaping: false
             onToggled: {

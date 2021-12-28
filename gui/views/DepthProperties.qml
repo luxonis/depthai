@@ -1,5 +1,5 @@
 import QtQuick 2.0
-import QtQuick.Layouts 1.11
+import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
@@ -68,7 +68,6 @@ ListView {
             text: qsTr("<font color=\"white\">Left Right Check</font>")
             transformOrigin: Item.Center
             font.preferShaping: false
-            font.kerning: false
             font.family: "Courier"
             autoExclusive: false
             onToggled: {
@@ -86,7 +85,6 @@ ListView {
             autoExclusive: false
             font.family: "Courier"
             checked: true
-            font.kerning: false
             transformOrigin: Item.Center
             font.preferShaping: false
             onToggled: {
@@ -101,7 +99,6 @@ ListView {
             y: 233
             text: qsTr("<font color=\"white\">Extended Disparity</font>")
             autoExclusive: false
-            font.kerning: false
             font.family: "Courier"
             font.preferShaping: false
             transformOrigin: Item.Center
@@ -116,7 +113,6 @@ ListView {
             y: 141
             text: qsTr("<font color=\"white\">Subpixel</font>")
             autoExclusive: false
-            font.kerning: false
             transformOrigin: Item.Center
             font.preferShaping: false
             font.family: "Courier"
@@ -273,7 +269,6 @@ ListView {
             text: qsTr("<font color=\"white\">Use Disparity</font>")
             autoExclusive: false
             font.family: "Courier"
-            font.kerning: false
             transformOrigin: Item.Center
             font.preferShaping: false
             onToggled: {
