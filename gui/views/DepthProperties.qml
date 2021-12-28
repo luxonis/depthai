@@ -1,5 +1,5 @@
 import QtQuick 2.0
-import QtQuick.Layouts 1.11
+import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
@@ -67,8 +67,6 @@ ListView {
             y: 187
             text: qsTr("<font color=\"white\">Left Right Check</font>")
             transformOrigin: Item.Center
-            font.preferShaping: false
-            font.kerning: false
             font.family: "Courier"
             autoExclusive: false
             onToggled: {
@@ -86,9 +84,7 @@ ListView {
             autoExclusive: false
             font.family: "Courier"
             checked: true
-            font.kerning: false
             transformOrigin: Item.Center
-            font.preferShaping: false
             onToggled: {
                 appBridge.toggleDepth(switch5.checked)
             }
@@ -101,9 +97,7 @@ ListView {
             y: 233
             text: qsTr("<font color=\"white\">Extended Disparity</font>")
             autoExclusive: false
-            font.kerning: false
             font.family: "Courier"
-            font.preferShaping: false
             transformOrigin: Item.Center
             onToggled: {
                 depthBridge.toggleExtendedDisparity(switch2.checked)
@@ -116,9 +110,7 @@ ListView {
             y: 141
             text: qsTr("<font color=\"white\">Subpixel</font>")
             autoExclusive: false
-            font.kerning: false
             transformOrigin: Item.Center
-            font.preferShaping: false
             font.family: "Courier"
             onToggled: {
                 depthBridge.toggleSubpixel(switch3.checked)
@@ -273,9 +265,7 @@ ListView {
             text: qsTr("<font color=\"white\">Use Disparity</font>")
             autoExclusive: false
             font.family: "Courier"
-            font.kerning: false
             transformOrigin: Item.Center
-            font.preferShaping: false
             onToggled: {
                 appBridge.toggleDisparity(switch6.checked)
             }

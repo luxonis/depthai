@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
+import sys
+import threading
+
+if sys.version_info[0] < 3:
+    raise Exception("Must be using Python 3")
 import argparse
 import json
 import os
-import sys
 import time
 import traceback
 from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
 import platform
+
+if platform.machine() == 'aarch64':  # Jetson
+    os.environ['OPENBLAS_CORETYPE'] = "ARMV8"
 
 from depthai_helpers.app_manager import App
 if __name__ == "__main__":
@@ -988,7 +995,12 @@ if __name__ == "__main__":
                 available = s.checkQtAvailability()
                 if args.guiType == "qt" and not available:
                     raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
-                args.guiType = "qt" if available else "cv"
+                if args.guiType == "auto" and platform.machine() == 'aarch64':  # Disable Qt by default on Jetson due to Qt issues
+                    args.guiType = "cv"
+                elif available:
+                    args.guiType = "qt"
+                else:
+                    args.guiType = "cv"
             s.runDemo(args)
     except KeyboardInterrupt:
         sys.exit(0)
