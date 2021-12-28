@@ -985,8 +985,7 @@ if __name__ == "__main__":
     try:
         if args.noSupervisor:
             if args.guiType == "qt":
-                sys.setrecursionlimit(100000)
-                threading.stack_size(200000000)
+                sys.setrecursionlimit(10000)
                 runQt()
             else:
                 args.guiType = "cv"
