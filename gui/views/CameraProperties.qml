@@ -579,7 +579,6 @@ ListView {
             autoExclusive: false
             font.family: "Courier"
             checked: false
-            font.preferShaping: false
         }
     }
 }

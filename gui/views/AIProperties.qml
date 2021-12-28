@@ -165,7 +165,6 @@ ListView {
             transformOrigin: Item.Center
             font.pointSize: 21
             checked: false
-            font.preferShaping: false
         }
 
         Rectangle {
@@ -241,7 +240,6 @@ ListView {
                 font.family: "Courier"
                 autoExclusive: false
                 transformOrigin: Item.Center
-                font.preferShaping: false
                 onToggled: {
                     aiBridge.setSbb(switch3.checked)
                 }
@@ -304,7 +302,6 @@ ListView {
             autoExclusive: false
             font.family: "Courier"
             transformOrigin: Item.Center
-            font.preferShaping: false
             onToggled: {
                 appBridge.toggleNN(switch5.checked)
             }

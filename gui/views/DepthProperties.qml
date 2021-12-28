@@ -67,7 +67,6 @@ ListView {
             y: 187
             text: qsTr("<font color=\"white\">Left Right Check</font>")
             transformOrigin: Item.Center
-            font.preferShaping: false
             font.family: "Courier"
             autoExclusive: false
             onToggled: {
@@ -86,7 +85,6 @@ ListView {
             font.family: "Courier"
             checked: true
             transformOrigin: Item.Center
-            font.preferShaping: false
             onToggled: {
                 appBridge.toggleDepth(switch5.checked)
             }
@@ -100,7 +98,6 @@ ListView {
             text: qsTr("<font color=\"white\">Extended Disparity</font>")
             autoExclusive: false
             font.family: "Courier"
-            font.preferShaping: false
             transformOrigin: Item.Center
             onToggled: {
                 depthBridge.toggleExtendedDisparity(switch2.checked)
@@ -114,7 +111,6 @@ ListView {
             text: qsTr("<font color=\"white\">Subpixel</font>")
             autoExclusive: false
             transformOrigin: Item.Center
-            font.preferShaping: false
             font.family: "Courier"
             onToggled: {
                 depthBridge.toggleSubpixel(switch3.checked)
@@ -270,7 +266,6 @@ ListView {
             autoExclusive: false
             font.family: "Courier"
             transformOrigin: Item.Center
-            font.preferShaping: false
             onToggled: {
                 appBridge.toggleDisparity(switch6.checked)
             }
