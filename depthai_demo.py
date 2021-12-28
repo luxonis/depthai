@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 import sys
+import threading
+
 if sys.version_info[0] < 3:
     raise Exception("Must be using Python 3")
 import argparse
@@ -983,6 +985,8 @@ if __name__ == "__main__":
     try:
         if args.noSupervisor:
             if args.guiType == "qt":
+                sys.setrecursionlimit(100000)
+                threading.stack_size(200000000)
                 runQt()
             else:
                 args.guiType = "cv"
