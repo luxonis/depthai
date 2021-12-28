@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
+import sys
+if sys.version_info[0] < 3:
+    raise Exception("Must be using Python 3")
 import argparse
 import json
 import os
-import sys
 import time
 import traceback
 from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
 import platform
+
+if platform.machine() == 'aarch64':  # Jetson
+    os.environ['OPENBLAS_CORETYPE'] = "ARMV8"
 
 from depthai_helpers.app_manager import App
 if __name__ == "__main__":
