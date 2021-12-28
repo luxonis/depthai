@@ -993,7 +993,12 @@ if __name__ == "__main__":
                 available = s.checkQtAvailability()
                 if args.guiType == "qt" and not available:
                     raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
-                args.guiType = "qt" if available else "cv"
+                if args.guiType == "auto" and platform.machine() == 'aarch64':  # Disable Qt by default on Jetson due to Qt issues
+                    args.guiType = "cv"
+                elif available:
+                    args.guiType = "qt"
+                else:
+                    args.guiType = "cv"
             s.runDemo(args)
     except KeyboardInterrupt:
         sys.exit(0)
