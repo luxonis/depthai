@@ -179,7 +179,7 @@ class Demo:
                 zooName=self._conf.getModelName(),
                 progressFunc=self.showDownloadProgress
             )
-            self._nnManager = NNetManager(inputSize=self._conf.inputSize)
+            self._nnManager = NNetManager(inputSize=self._conf.inputSize, bufferSize=10 if self._conf.args.syncPreviews else 0)
 
             if self._conf.getModelDir() is not None:
                 configPath = self._conf.getModelDir() / Path(self._conf.getModelName()).with_suffix(f".json")
@@ -372,11 +372,12 @@ class Demo:
             self._fps.tick('host')
 
         if self._nnManager is not None:
-            inNn = self._nnManager.outputQueue.tryGet()
+            newData, inNn = self._nnManager.parse()
             if inNn is not None:
-                self.onNn(inNn)
-                self._nnData = self._nnManager.decode(inNn)
+                self.onNn(inNn, newData)
                 self._fps.tick('nn')
+            if newData is not None:
+                self._nnData = newData
 
         if self._conf.useCamera:
             if self._nnManager is not None:

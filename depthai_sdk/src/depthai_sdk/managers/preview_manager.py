@@ -218,18 +218,19 @@ class SyncedPreviewManager(PreviewManager):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.seq_packets = {}
-        self.packets_q = None
-        self.last_seqs = {}
-        self.syncedPackets = {}
+        self._seqPackets = {}
+        self._packetsQ = None
+        self._lastSeqs = {}
+        self._syncedPackets = {}
+        self.nnSyncSeq = None
 
     def __get_next_seq_packet(self, seqKey, name, defaultPacket):
-        if seqKey not in self.seq_packets:
+        if seqKey not in self._seqPackets:
             return defaultPacket
-        elif name not in self.seq_packets:
+        elif name not in self._seqPackets:
             return self.__get_next_seq_packet(seqKey + 1, name, defaultPacket)
         else:
-            return self.seq_packets[seqKey][name]
+            return self._seqPackets[seqKey][name]
 
     def prepareFrames(self, blocking=False, callback=None):
         """
@@ -249,16 +250,16 @@ class SyncedPreviewManager(PreviewManager):
                 packet = queue.tryGet()
             if packet is not None:
                 seq = packet.getSequenceNum()
-                packets = self.seq_packets.get(seq, {})
+                packets = self._seqPackets.get(seq, {})
                 packets[queue.getName()] = packet
-                self.seq_packets[seq] = packets
-                self.last_seqs[queue.getName()] = seq
+                self._seqPackets[seq] = packets
+                self._lastSeqs[queue.getName()] = seq
 
                 if len(packets) == len(self.outputQueues):
-                    self.packets_q = DelayQueue(maxsize=100)
+                    self._packetsQ = DelayQueue(maxsize=100)
                     prevTimestamp = None
                     prevDelay = timedelta()
-                    unsyncedSeq = sorted(list(filter(lambda itemSeq: itemSeq < seq, self.seq_packets.keys())))
+                    unsyncedSeq = sorted(list(filter(lambda itemSeq: itemSeq < seq, self._seqPackets.keys())))
                     for seqKey in unsyncedSeq:
                         unsynced = {
                             synced_name: self.__get_next_seq_packet(seqKey, synced_name, synced_packet)
@@ -273,13 +274,13 @@ class SyncedPreviewManager(PreviewManager):
                             prevDelay += delta
 
                         prevTimestamp = ts
-                        print(delay.microseconds)
-                        self.packets_q.put(unsynced, delay.microseconds)
-                        del self.seq_packets[seqKey]
+                        self._packetsQ.put(unsynced, delay.microseconds)
+                        del self._seqPackets[seqKey]
 
-        if self.packets_q is not None:
-            packets = self.packets_q.get()
+        if self._packetsQ is not None:
+            packets = self._packetsQ.get()
             if packets is not None:
+                self.nnSyncSeq = min(map(lambda packet: packet.getSequenceNum(), packets.values()))
                 for name, packet in packets.items():
                     frame = getattr(Previews, name).value(packet, self)
                     if frame is None:

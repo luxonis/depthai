@@ -4,7 +4,7 @@ import depthai as dai
 import cv2
 import numpy as np
 
-from .preview_manager import PreviewManager
+from .preview_manager import PreviewManager, SyncedPreviewManager
 from ..previews import Previews
 from ..utils import loadModule, toTensorResult, frameNorm, toPlanar
 
@@ -15,13 +15,14 @@ class NNetManager:
     decoding neural network output automatically or by using external handler file.
     """
 
-    def __init__(self, inputSize, nnFamily=None, labels=[], confidence=0.5):
+    def __init__(self, inputSize, nnFamily=None, labels=[], confidence=0.5, bufferSize=0):
         """
         Args:
             inputSize (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
             nnFamily (str, Optional): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
             labels (list, Optional): Allows to display class label instead of ID when drawing nn detections.
             confidence (float, Optional): Specify detection nn's confidence threshold
+            bufferSize (int, Optional): Specify how many nn data items to store in :attr:`buffer`
         """
         self.inputSize = inputSize
         self._nnFamily = nnFamily
@@ -29,6 +30,7 @@ class NNetManager:
             self._outputFormat = "detection"
         self._labels = labels
         self._confidence = confidence
+        self._bufferSize = bufferSize
 
     #: list: List of available neural network inputs
     sourceChoices = ("color", "left", "right", "rectifiedLeft", "rectifiedRight", "host")
@@ -42,6 +44,8 @@ class NNetManager:
     inputQueue = None
     #: depthai.DataOutputQueue: DepthAI output queue object that allows to receive NN results from the device.
     outputQueue = None
+    #: dict: nn data buffer, disabled by default. Stores parsed nn data with packet sequence number as dict key
+    buffer = {}
 
 
     _bboxColors = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
@@ -219,6 +223,21 @@ class NNetManager:
             print(f"Label of ouf bounds (label index: {label}, available labels: {len(self._labels)}")
             return str(label)
 
+    def parse(self, blocking=False):
+        if blocking:
+            inNn = self.outputQueue.get()
+        else:
+            inNn = self.outputQueue.tryGet()
+        if inNn is not None:
+            data = self.decode(inNn)
+            if self._bufferSize > 0:
+                if len(self.buffer) == self._bufferSize:
+                    del self.buffer[min(self.buffer.keys())]
+                self.buffer[inNn.getSequenceNum()] = data
+            return data, inNn
+        else:
+            return None, None
+
     def decode(self, inNn):
         """
         Decodes NN output. Performs generic handling for supported detection networks or calls custom handler methods
@@ -304,12 +323,18 @@ class NNetManager:
                                 self._textType, 0.5, self._textBgColor, 4, self._lineType)
                     cv2.putText(frame, "Z: {:.2f} m".format(zMeters), (bbox[0] + 10, bbox[1] + 90),
                                 self._textType, 0.5, self._textColor, 1, self._lineType)
-            for detection in decodedData:
-                if isinstance(source, PreviewManager):
+            if isinstance(source, SyncedPreviewManager):
+                data = self.buffer.get(source.nnSyncSeq, self.buffer[max(self.buffer.keys())])
+                for detection in data:
                     for name, frame in source.frames.items():
                         drawDetection(frame, detection)
-                else:
-                    drawDetection(source, detection)
+            else:
+                for detection in decodedData:
+                    if isinstance(source, PreviewManager):
+                        for name, frame in source.frames.items():
+                            drawDetection(frame, detection)
+                    else:
+                        drawDetection(source, detection)
 
             if self._countLabel is not None:
                 self._drawCount(source, decodedData)
