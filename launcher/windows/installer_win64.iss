@@ -165,8 +165,8 @@ begin
     Log('Creating main shortcut');
     ExtractTemporaryFile('create_shortcut.ps1');
     ForceDirectories(ExpandConstant('{app}'));
-    FileCopy(ExpandConstant('{tmp}\create_shortcut.ps1'), ExpandConstant('{app}\create_shortcut.ps1'), False);
-    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -File {app}\create_shortcut.ps1'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    FileCopy(ExpandConstant('{tmp}\create_shortcut.ps1'), ExpandConstant('"{app}\create_shortcut.ps1"'), False);
+    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -File "{app}\create_shortcut.ps1"'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
     
   end;
 end;
