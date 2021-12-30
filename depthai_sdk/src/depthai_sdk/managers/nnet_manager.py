@@ -324,10 +324,11 @@ class NNetManager:
                     cv2.putText(frame, "Z: {:.2f} m".format(zMeters), (bbox[0] + 10, bbox[1] + 90),
                                 self._textType, 0.5, self._textColor, 1, self._lineType)
             if isinstance(source, SyncedPreviewManager):
-                data = self.buffer.get(source.nnSyncSeq, self.buffer[max(self.buffer.keys())])
-                for detection in data:
-                    for name, frame in source.frames.items():
-                        drawDetection(frame, detection)
+                if len(self.buffer) > 0:
+                    data = self.buffer.get(source.nnSyncSeq, self.buffer[max(self.buffer.keys())])
+                    for detection in data:
+                        for name, frame in source.frames.items():
+                            drawDetection(frame, detection)
             else:
                 for detection in decodedData:
                     if isinstance(source, PreviewManager):

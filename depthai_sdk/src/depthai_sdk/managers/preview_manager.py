@@ -287,10 +287,9 @@ class SyncedPreviewManager(PreviewManager):
                         print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(name))
                         continue
                     frame = self._processFrame(frame, name)
-                    if name in self._display:
-                        if callback is not None:
-                            callback(frame, name)
-                        self._addRawFrame(frame, packet, name)
+                    if callback is not None:
+                        callback(frame, name)
+                    self._addRawFrame(frame, packet, name)
 
         for name in self._rawFrames:
             newFrame = self._rawFrames[name].copy()
