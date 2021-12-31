@@ -4,10 +4,6 @@ import platform
 import depthai as dai
 import time
 
-if os.name == 'nt':
-    print("This app is temporarily disabled on Windows system due to an issue with USB descriptors. We are working on resolving this issue")
-    raise SystemExit(0)
-
 if platform.machine() == 'aarch64':
     print("This app is temporarily disabled on AARCH64 systems due to an issue with stream preview. We are working on resolving this issue")
     raise SystemExit(0)
