@@ -52,7 +52,10 @@ class App:
         subprocess.check_call(' '.join([quoted(self.appInterpreter), '-m', 'pip', 'install', '--prefer-binary', '-r', str(self.appRequirements)]), env=initEnv, shell=True, cwd=self.appPath)
 
     def runApp(self, shouldRun = lambda: True):
-        pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath, preexec_fn=os.setsid)
+        if os.name == 'nt':
+            pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath)
+        else:
+            pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath, preexec_fn=os.setsid)
         while shouldRun():
             try:
                 time.sleep(1)
