@@ -177,7 +177,7 @@ class Demo:
             reportFileP = Path(self._conf.args.reportFile).with_suffix('.csv')
             reportFileP.parent.mkdir(parents=True, exist_ok=True)
             self._reportFile = reportFileP.open('a')
-        self._pm = PipelineManager(openvinoVersion=self._openvinoVersion)
+        self._pm = PipelineManager(openvinoVersion=self._openvinoVersion, lowCapabilities=self._conf.lowCapabilities)
 
         if self._conf.args.xlinkChunkSize is not None:
             self._pm.setXlinkChunkSize(self._conf.args.xlinkChunkSize)
@@ -218,9 +218,8 @@ class Demo:
 
         if self._conf.useCamera or self._conf.args.sync:
             self._pv = PreviewManager(display=self._conf.args.show, nnSource=self._conf.getModelSource(), colorMap=self._conf.getColorMap(),
-                                dispMultiplier=self._conf.dispMultiplier, mouseTracker=True, lowBandwidth=self._conf.lowBandwidth,
-                                scale=self._conf.args.scale, sync=self._conf.args.sync, fpsHandler=self._fps, createWindows=self._displayFrames,
-                                depthConfig=self._pm._depthConfig)
+                                dispMultiplier=self._conf.dispMultiplier, mouseTracker=True, decode=self._conf.lowBandwidth and not self._conf.lowCapabilities,
+                                sync=self._conf.args.sync, fpsHandler=self._fps, createWindows=self._displayFrames, depthConfig=self._pm._depthConfig)
 
             if self._conf.leftCameraEnabled:
                 self._pm.createLeftCam(self._monoRes, self._conf.args.monoFps,
@@ -231,7 +230,7 @@ class Demo:
                                   orientation=self._conf.args.cameraOrientation.get(Previews.right.name),
                                   xout=Previews.right.name in self._conf.args.show and (self._conf.getModelSource() != "right" or not self._conf.args.sync))
             if self._conf.rgbCameraEnabled:
-                self._pm.createColorCam(self._nnManager.inputSize if self._conf.useNN else self._conf.previewSize, self._rgbRes, self._conf.args.rgbFps,
+                self._pm.createColorCam(previewSize=self._conf.previewSize, res=self._rgbRes, fps=self._conf.args.rgbFps,
                                   orientation=self._conf.args.cameraOrientation.get(Previews.color.name),
                                   fullFov=not self._conf.args.disableFullFovNn,
                                   xout=Previews.color.name in self._conf.args.show and (self._conf.getModelSource() != "color" or not self._conf.args.sync))
