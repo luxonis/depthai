@@ -245,11 +245,15 @@ class ConfigManager:
 
     @property
     def previewSize(self):
-        return self.inputSize or (576, 324)
+        return (576, 320)
 
     @property
     def lowBandwidth(self):
         return self.args.bandwidth == "low"
+
+    @property
+    def lowCapabilities(self):
+        return platform.machine().startswith("arm") or platform.machine().startswith("aarch")
 
     @property
     def shaves(self):

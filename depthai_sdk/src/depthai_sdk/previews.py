@@ -38,7 +38,7 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        # if manager is not None and manager.lowBandwidth: TODO change once passthrough frame type (8) is supported by VideoEncoder
+        # if manager is not None and manager.decode: TODO change once passthrough frame type (8) is supported by VideoEncoder
         if False:
             frame = PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_COLOR)
         else:
@@ -59,7 +59,7 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth:
+        if manager is not None and manager.decode:
             return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_COLOR)
         else:
             return packet.getCvFrame()
@@ -76,7 +76,7 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth:
+        if manager is not None and manager.decode:
             return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
@@ -93,7 +93,7 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth:
+        if manager is not None and manager.decode:
             return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
@@ -110,7 +110,7 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        # if manager is not None and manager.lowBandwidth:  # disabled to limit the memory usage
+        # if manager is not None and manager.decode:  # disabled to limit the memory usage
         if False:
             return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
@@ -128,7 +128,7 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        # if manager is not None and manager.lowBandwidth:  # disabled to limit the memory usage
+        # if manager is not None and manager.decode:  # disabled to limit the memory usage
         if False:
             return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
@@ -146,7 +146,7 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        # if manager is not None and manager.lowBandwidth:  TODO change once depth frame type (14) is supported by VideoEncoder
+        # if manager is not None and manager.decode:  TODO change once depth frame type (14) is supported by VideoEncoder
         if False:
             return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_UNCHANGED)
         else:

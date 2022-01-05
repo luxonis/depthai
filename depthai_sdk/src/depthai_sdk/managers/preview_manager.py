@@ -17,7 +17,7 @@ class PreviewManager:
     #: dict: Contains name -> frame mapping that can be used to modify specific frames directly
     frames = {}
 
-    def __init__(self, display=[], nnSource=None, colorMap=None, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, fpsHandler=None, createWindows=True):
+    def __init__(self, display=[], nnSource=None, colorMap=None, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, decode=False, fpsHandler=None, createWindows=True):
         """
         Args:
             display (list, Optional): List of :obj:`depthai_sdk.Previews` objects representing the streams to display
@@ -25,8 +25,7 @@ class PreviewManager:
             fpsHandler (depthai_sdk.fps.FPSHandler, Optional): if provided, will use fps handler to modify stream FPS and display it
             nnSource (str, Optional): Specifies NN source camera
             colorMap (cv2 color map, Optional): Color map applied on the depth frames
-            lowBandwidth (bool, Optional): If set to :code:`True`, will decode the received frames assuming they were encoded with MJPEG encoding
-            scale (dict, Optional): Allows to scale down frames before preview. Useful when previewing e.g. 4K frames
+            decode (bool, Optional): If set to :code:`True`, will decode the received frames assuming they were encoded with MJPEG encoding
             dispMultiplier (float, Optional): Multiplier used for depth <-> disparity calculations (calculated on baseline and focal)
             depthConfig (depthai.StereoDepthConfig, optional): Configuration used for depth <-> disparity calculations
             createWindows (bool, Optional): If True, will create preview windows using OpenCV (enabled by default)
@@ -37,8 +36,7 @@ class PreviewManager:
         else:
             self.colorMap = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
             self.colorMap[0] = [0, 0, 0]
-        self.lowBandwidth = lowBandwidth
-        self.scale = scale
+        self.decode = decode
         self.dispMultiplier = dispMultiplier
         self._depthConfig = depthConfig
         self._fpsHandler = fpsHandler
@@ -105,9 +103,6 @@ class PreviewManager:
     def _processFrame(self, frame, queueName):
         if self._fpsHandler is not None:
             self._fpsHandler.tick(queueName)
-        if self.scale is not None and queueName in self.scale:
-            h, w = frame.shape[0:2]
-            frame = cv2.resize(frame, (int(w * self.scale[queueName]), int(h * self.scale[queueName])), interpolation=cv2.INTER_AREA)
         return frame
 
     def _addRawFrame(self, frame, packet, name):
@@ -116,11 +111,11 @@ class PreviewManager:
 
         if self._mouseTracker is not None:
             if name == Previews.disparity.name:
-                rawFrame = packet.getFrame() if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+                rawFrame = packet.getFrame() if not self.decode else cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
                 self._mouseTracker.extractValue(Previews.disparity.name, rawFrame)
                 self._mouseTracker.extractValue(Previews.disparityColor.name, rawFrame)
             if name == Previews.depthRaw.name:
-                rawFrame = packet.getFrame()  # if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED) TODO uncomment once depth encoding is possible
+                rawFrame = packet.getFrame()  # if not self.decode else cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED) TODO uncomment once depth encoding is possible
                 self._mouseTracker.extractValue(Previews.depthRaw.name, rawFrame)
                 self._mouseTracker.extractValue(Previews.depth.name, rawFrame)
             else:

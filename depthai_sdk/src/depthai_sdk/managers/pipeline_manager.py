@@ -10,9 +10,10 @@ class PipelineManager:
     and connection logic onto a set of convenience functions.
     """
 
-    def __init__(self, openvinoVersion=None, poeQuality=100):
+    def __init__(self, openvinoVersion=None, poeQuality=100, lowCapabilities=False):
         self.openvinoVersion=openvinoVersion
         self.poeQuality = poeQuality
+        self.lowCapabilities = lowCapabilities
 
         #: depthai.Pipeline: Ready to use requested pipeline. Can be passed to :obj:`depthai.Device` to start execution
         self.pipeline = dai.Pipeline()
@@ -28,6 +29,8 @@ class PipelineManager:
     poeQuality = None
     #: bool: If set to :code:`True`, manager will MJPEG-encode the packets sent from device to host to lower the bandwidth usage. **Can break** if more than 3 encoded outputs requested
     lowBandwidth = False
+    #: bool: If set to :code:`True`, manager will try to optimize the pipeline to reduce the amount of host-side calculations (useful for RPi or other embedded systems)
+    lowCapabilities = False
 
     _depthConfig = dai.StereoDepthConfig()
     _rgbConfig = dai.CameraControl()
@@ -136,12 +139,12 @@ class PipelineManager:
         videnc.setQuality(self.poeQuality)
         videnc.bitstream.link(xout.input)
 
-    def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, colorOrder=dai.ColorCameraProperties.ColorOrder.BGR, xout=False):
+    def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, colorOrder=dai.ColorCameraProperties.ColorOrder.BGR, xout=False, frameSize=None):
         """
         Creates :obj:`depthai.node.ColorCamera` node based on specified attributes
 
         Args:
-            previewSize (tuple, Optional): Size of the preview output - :code:`(width, height)`. Usually same as NN input
+            previewSize (tuple, Optional): Size of the preview - :code:`(width, height)`
             res (depthai.ColorCameraProperties.SensorResolution, Optional): Camera resolution to be used
             fps (int, Optional): Camera FPS set on the device. Can limit / increase the amount of frames produced by the camera
             fullFov (bool, Optional): If set to :code:`True`, full frame will be scaled down to nn size. If to :code:`False`,
@@ -163,17 +166,17 @@ class PipelineManager:
         self.nodes.xoutRgb = self.pipeline.createXLinkOut()
         self.nodes.xoutRgb.setStreamName(Previews.color.name)
         if xout:
-            if self.lowBandwidth:
+            if self.lowBandwidth and not self.lowCapabilities:
                 self._mjpegLink(self.nodes.camRgb, self.nodes.xoutRgb, self.nodes.camRgb.video)
             else:
-                self.nodes.camRgb.video.link(self.nodes.xoutRgb.input)
+                self.nodes.camRgb.preview.link(self.nodes.xoutRgb.input)
         self.nodes.xinRgbControl = self.pipeline.createXLinkIn()
         self.nodes.xinRgbControl.setMaxDataSize(1024)
         self.nodes.xinRgbControl.setStreamName(Previews.color.name + "_control")
         self.nodes.xinRgbControl.out.link(self.nodes.camRgb.inputControl)
 
 
-    def createLeftCam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
+    def createLeftCam(self, res=None, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.LEFT`
 
@@ -187,13 +190,16 @@ class PipelineManager:
         self.nodes.monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
         if orientation is not None:
             self.nodes.monoLeft.setImageOrientation(orientation)
-        self.nodes.monoLeft.setResolution(res)
+        if res is None:
+            self.nodes.monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P if self.lowBandwidth and self.lowCapabilities else dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        else:
+            self.nodes.monoLeft.setResolution(res)
         self.nodes.monoLeft.setFps(fps)
 
         self.nodes.xoutLeft = self.pipeline.createXLinkOut()
         self.nodes.xoutLeft.setStreamName(Previews.left.name)
         if xout:
-            if self.lowBandwidth:
+            if self.lowBandwidth and not self.lowCapabilities:
                 self._mjpegLink(self.nodes.monoLeft, self.nodes.xoutLeft, self.nodes.monoLeft.out)
             else:
                 self.nodes.monoLeft.out.link(self.nodes.xoutLeft.input)
@@ -202,7 +208,7 @@ class PipelineManager:
         self.nodes.xinLeftControl.setStreamName(Previews.left.name + "_control")
         self.nodes.xinLeftControl.out.link(self.nodes.monoLeft.inputControl)
 
-    def createRightCam(self, res=dai.MonoCameraProperties.SensorResolution.THE_720_P, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
+    def createRightCam(self, res=None, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.RIGHT`
 
@@ -216,13 +222,16 @@ class PipelineManager:
         self.nodes.monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         if orientation is not None:
             self.nodes.monoRight.setImageOrientation(orientation)
-        self.nodes.monoRight.setResolution(res)
+        if res is None:
+            self.nodes.monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P if self.lowBandwidth and self.lowCapabilities else dai.MonoCameraProperties.SensorResolution.THE_720_P)
+        else:
+            self.nodes.monoRight.setResolution(res)
         self.nodes.monoRight.setFps(fps)
 
         self.nodes.xoutRight = self.pipeline.createXLinkOut()
         self.nodes.xoutRight.setStreamName(Previews.right.name)
         if xout:
-            if self.lowBandwidth:
+            if self.lowBandwidth and not self.lowCapabilities:
                 self._mjpegLink(self.nodes.monoRight, self.nodes.xoutRight, self.nodes.monoRight.out)
             else:
                 self.nodes.monoRight.out.link(self.nodes.xoutRight.input)
@@ -283,7 +292,7 @@ class PipelineManager:
         if useDepth:
             self.nodes.xoutDepth = self.pipeline.createXLinkOut()
             self.nodes.xoutDepth.setStreamName(Previews.depthRaw.name)
-            # if self.lowBandwidth:  TODO change once depth frame type (14) is supported by VideoEncoder
+            # if self.lowBandwidth and not self.lowCapabilities:  TODO change once depth frame type (14) is supported by VideoEncoder
             if False:
                 self._mjpegLink(self.nodes.stereo, self.nodes.xoutDepth, self.nodes.stereo.depth)
             else:
