@@ -6,23 +6,22 @@ import cv2
 import numpy as np
 try:
     from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT, TJPF_GRAY
-    turboAvailable = True
+    turbo = TurboJPEG()
 except:
-    turboAvailable = False
+    turbo = None
 
 
 class PreviewDecoder:
-    mjpeg = TurboJPEG() if turboAvailable else None
 
     @staticmethod
     def __jpegDecode(data, type):
-        if PreviewDecoder.mjpeg is not None:
+        if turbo is not None:
             if type == cv2.IMREAD_GRAYSCALE:
-                return PreviewDecoder.mjpeg.decode(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT, pixel_format=TJPF_GRAY)
+                return turbo.decode(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT, pixel_format=TJPF_GRAY)
             if type == cv2.IMREAD_UNCHANGED:
-                return PreviewDecoder.mjpeg.decode_to_yuv(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT)
+                return turbo.decode_to_yuv(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT)
             else:
-                return PreviewDecoder.mjpeg.decode(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT)
+                return turbo.decode(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT)
         else:
             return cv2.imdecode(data, type)
 
