@@ -187,8 +187,8 @@ class Main:
             cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
             cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
                 
-        #res = dai.ColorCameraProperties.SensorResolution.THE_800_P  # For OV9782 on L/R
-        res = dai.ColorCameraProperties.SensorResolution.THE_1080_P # For AR0234/etc
+        res = dai.ColorCameraProperties.SensorResolution.THE_800_P  # For OV9782 on L/R
+        #res = dai.ColorCameraProperties.SensorResolution.THE_1080_P # For AR0234/etc
 
         cam_left.setResolution(res)
         if res == dai.ColorCameraProperties.SensorResolution.THE_1080_P:
