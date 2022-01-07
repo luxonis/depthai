@@ -1,7 +1,10 @@
 import math
+from datetime import timedelta
 
 import cv2
 import depthai as dai
+from depthai_sdk import DelayQueue
+
 from ..previews import Previews, MouseClickTracker
 import numpy as np
 
@@ -14,30 +17,26 @@ class PreviewManager:
     #: dict: Contains name -> frame mapping that can be used to modify specific frames directly
     frames = {}
 
-    def __init__(self, display=[], nnSource=None, colorMap=None, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, lowBandwidth=False, scale=None, sync=False, fpsHandler=None, createWindows=True):
+    def __init__(self, display=[], nnSource=None, colorMap=None, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, decode=False, fpsHandler=None, createWindows=True):
         """
         Args:
             display (list, Optional): List of :obj:`depthai_sdk.Previews` objects representing the streams to display
             mouseTracker (bool, Optional): If set to :code:`True`, will enable mouse tracker on the preview windows that will display selected pixel value
             fpsHandler (depthai_sdk.fps.FPSHandler, Optional): if provided, will use fps handler to modify stream FPS and display it
-            sync (bool, Optional): If set to :code:`True`, will assume that neural network source camera will not contain raw frame but scaled frame used by NN
             nnSource (str, Optional): Specifies NN source camera
             colorMap (cv2 color map, Optional): Color map applied on the depth frames
-            lowBandwidth (bool, Optional): If set to :code:`True`, will decode the received frames assuming they were encoded with MJPEG encoding
-            scale (dict, Optional): Allows to scale down frames before preview. Useful when previewing e.g. 4K frames
+            decode (bool, Optional): If set to :code:`True`, will decode the received frames assuming they were encoded with MJPEG encoding
             dispMultiplier (float, Optional): Multiplier used for depth <-> disparity calculations (calculated on baseline and focal)
             depthConfig (depthai.StereoDepthConfig, optional): Configuration used for depth <-> disparity calculations
             createWindows (bool, Optional): If True, will create preview windows using OpenCV (enabled by default)
         """
-        self.sync = sync
         self.nnSource = nnSource
         if colorMap is not None:
             self.colorMap = colorMap
         else:
             self.colorMap = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
             self.colorMap[0] = [0, 0, 0]
-        self.lowBandwidth = lowBandwidth
-        self.scale = scale
+        self.decode = decode
         self.dispMultiplier = dispMultiplier
         self._depthConfig = depthConfig
         self._fpsHandler = fpsHandler
@@ -101,6 +100,37 @@ class PreviewManager:
         for queue in self.outputQueues:
             queue.close()
 
+    def _processFrame(self, frame, queueName):
+        if self._fpsHandler is not None:
+            self._fpsHandler.tick(queueName)
+        return frame
+
+    def _addRawFrame(self, frame, packet, name):
+        if name in self._display:
+            self._rawFrames[name] = frame
+
+        if self._mouseTracker is not None:
+            if name == Previews.disparity.name:
+                rawFrame = packet.getFrame() if not self.decode else cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+                self._mouseTracker.extractValue(Previews.disparity.name, rawFrame)
+                self._mouseTracker.extractValue(Previews.disparityColor.name, rawFrame)
+            if name == Previews.depthRaw.name:
+                rawFrame = packet.getFrame()  # if not self.decode else cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED) TODO uncomment once depth encoding is possible
+                self._mouseTracker.extractValue(Previews.depthRaw.name, rawFrame)
+                self._mouseTracker.extractValue(Previews.depth.name, rawFrame)
+            else:
+                self._mouseTracker.extractValue(name, frame)
+
+        if name == Previews.disparity.name and Previews.disparityColor.name in self._display:
+            if self._fpsHandler is not None:
+                self._fpsHandler.tick(Previews.disparityColor.name)
+            self._rawFrames[Previews.disparityColor.name] = Previews.disparityColor.value(frame, self)
+
+        if name == Previews.depthRaw.name and Previews.depth.name in self._display:
+            if self._fpsHandler is not None:
+                self._fpsHandler.tick(Previews.depth.name)
+            self._rawFrames[Previews.depth.name] = Previews.depth.value(frame, self)
+
 
     def prepareFrames(self, blocking=False, callback=None):
         """
@@ -117,46 +147,21 @@ class PreviewManager:
             else:
                 packet = queue.tryGet()
             if packet is not None:
-                if self._fpsHandler is not None:
-                    self._fpsHandler.tick(queue.getName())
                 frame = getattr(Previews, queue.getName()).value(packet, self)
                 if frame is None:
                     print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
                     continue
-                if self.scale is not None and queue.getName() in self.scale:
-                    h, w = frame.shape[0:2]
-                    frame = cv2.resize(frame, (int(w * self.scale[queue.getName()]), int(h * self.scale[queue.getName()])), interpolation=cv2.INTER_AREA)
+                frame = self._processFrame(frame, queue.getName())
                 if queue.getName() in self._display:
                     if callback is not None:
                         callback(frame, queue.getName())
-                    self._rawFrames[queue.getName()] = frame
-                if self._mouseTracker is not None:
-                    if queue.getName() == Previews.disparity.name:
-                        rawFrame = packet.getFrame() if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
-                        self._mouseTracker.extractValue(Previews.disparity.name, rawFrame)
-                        self._mouseTracker.extractValue(Previews.disparityColor.name, rawFrame)
-                    if queue.getName() == Previews.depthRaw.name:
-                        rawFrame = packet.getFrame()  # if not self.lowBandwidth else cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED) TODO uncomment once depth encoding is possible
-                        self._mouseTracker.extractValue(Previews.depthRaw.name, rawFrame)
-                        self._mouseTracker.extractValue(Previews.depth.name, rawFrame)
-                    else:
-                        self._mouseTracker.extractValue(queue.getName(), frame)
+                self._addRawFrame(frame, packet, queue.getName())
 
-                if queue.getName() == Previews.disparity.name and Previews.disparityColor.name in self._display:
-                    if self._fpsHandler is not None:
-                        self._fpsHandler.tick(Previews.disparityColor.name)
-                    self._rawFrames[Previews.disparityColor.name] = Previews.disparityColor.value(frame, self)
-
-                if queue.getName() == Previews.depthRaw.name and Previews.depth.name in self._display:
-                    if self._fpsHandler is not None:
-                        self._fpsHandler.tick(Previews.depth.name)
-                    self._rawFrames[Previews.depth.name] = Previews.depth.value(frame, self)
-
-            for name in self._rawFrames:
-                newFrame = self._rawFrames[name].copy()
-                if name == Previews.depthRaw.name:
-                    newFrame = cv2.normalize(newFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
-                self.frames[name] = newFrame
+        for name in self._rawFrames:
+            newFrame = self._rawFrames[name].copy()
+            if name == Previews.depthRaw.name:
+                newFrame = cv2.normalize(newFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+            self.frames[name] = newFrame
 
     def showFrames(self, callback=None):
         """
@@ -199,3 +204,90 @@ class PreviewManager:
             numpy.ndarray: Resolved frame, will default to :code:`None` if not present
         """
         return self.frames.get(name, None)
+
+
+class SyncedPreviewManager(PreviewManager):
+    """
+    Extension of the regular PreviewManager that allows to display all of the frames in sync
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._seqPackets = {}
+        self._packetsQ = None
+        self._lastSeqs = {}
+        self._syncedPackets = {}
+        self.nnSyncSeq = None
+
+    def __get_next_seq_packet(self, seqKey, name, defaultPacket):
+        if seqKey not in self._seqPackets:
+            return defaultPacket
+        elif name not in self._seqPackets:
+            return self.__get_next_seq_packet(seqKey + 1, name, defaultPacket)
+        else:
+            return self._seqPackets[seqKey][name]
+
+    def prepareFrames(self, blocking=False, callback=None):
+        """
+        This overridden function serves the same purpose - to prepare ready to use frames - but before it provide any data
+        it will sync all of the packets first, using their sequence number. So any frames retrievable from this class, after
+        this method is called, will be in sync with each other.
+
+        Args:
+            blocking (bool, Optional): If set to :code:`True`, will wait for a packet in each queue to be available
+            callback (func, Optional): Function that will be executed once packet with frame has arrived
+        """
+
+        for queue in self.outputQueues:
+            if blocking:
+                packet = queue.get()
+            else:
+                packet = queue.tryGet()
+            if packet is not None:
+                seq = packet.getSequenceNum()
+                packets = self._seqPackets.get(seq, {})
+                packets[queue.getName()] = packet
+                self._seqPackets[seq] = packets
+                self._lastSeqs[queue.getName()] = seq
+
+                if len(packets) == len(self.outputQueues):
+                    self._packetsQ = DelayQueue(maxsize=100)
+                    prevTimestamp = None
+                    prevDelay = timedelta()
+                    unsyncedSeq = sorted(list(filter(lambda itemSeq: itemSeq < seq, self._seqPackets.keys())))
+                    for seqKey in unsyncedSeq:
+                        unsynced = {
+                            synced_name: self.__get_next_seq_packet(seqKey, synced_name, synced_packet)
+                            for synced_name, synced_packet in packets.items()
+                        }
+                        ts = next(iter(unsynced.values())).getTimestamp()
+                        if prevTimestamp is None:
+                            delay = timedelta()
+                        else:
+                            delta = ts - prevTimestamp
+                            delay = delta + prevDelay
+                            prevDelay += delta
+
+                        prevTimestamp = ts
+                        self._packetsQ.put(unsynced, delay.microseconds)
+                        del self._seqPackets[seqKey]
+
+        if self._packetsQ is not None:
+            packets = self._packetsQ.get()
+            if packets is not None:
+                self.nnSyncSeq = min(map(lambda packet: packet.getSequenceNum(), packets.values()))
+                for name, packet in packets.items():
+                    frame = getattr(Previews, name).value(packet, self)
+                    if frame is None:
+                        print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(name))
+                        continue
+                    frame = self._processFrame(frame, name)
+                    if callback is not None:
+                        callback(frame, name)
+                    self._addRawFrame(frame, packet, name)
+
+        for name in self._rawFrames:
+            newFrame = self._rawFrames[name].copy()
+            if name == Previews.depthRaw.name:
+                newFrame = cv2.normalize(newFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
+            self.frames[name] = newFrame

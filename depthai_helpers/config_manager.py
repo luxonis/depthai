@@ -24,11 +24,9 @@ class ConfigManager:
         self.args.encode = dict(self.args.encode)
         self.args.cameraOrientation = dict(self.args.cameraOrientation)
         if self.args.scale is None:
-            self.args.scale = {"color": 0.37 if not self.args.sync else 1}
+            self.args.scale = {"color": 0.37}
         else:
             self.args.scale = dict(self.args.scale)
-        if not self.useCamera and not self.args.sync:
-            print("[WARNING] When using video file as an input, it's highly recommended to run the demo with \"--sync\" flag")
         if (Previews.left.name in self.args.cameraOrientation or Previews.right.name in self.args.cameraOrientation) and self.useDepth:
             print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
 
@@ -247,17 +245,21 @@ class ConfigManager:
 
     @property
     def previewSize(self):
-        return self.inputSize or (576, 324)
+        return (576, 320)
 
     @property
     def lowBandwidth(self):
         return self.args.bandwidth == "low"
 
     @property
+    def lowCapabilities(self):
+        return platform.machine().startswith("arm") or platform.machine().startswith("aarch")
+
+    @property
     def shaves(self):
         if self.args.shaves is not None:
             return self.args.shaves
-        if not self.useCamera and not self.args.sync:
+        if not self.useCamera:
             return 8
         if self.args.rgbResolution > 1080:
             return 5
