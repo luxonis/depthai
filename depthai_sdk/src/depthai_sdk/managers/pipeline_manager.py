@@ -139,7 +139,7 @@ class PipelineManager:
         videnc.setQuality(self.poeQuality)
         videnc.bitstream.link(xout.input)
 
-    def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, colorOrder=dai.ColorCameraProperties.ColorOrder.BGR, xout=False, frameSize=None):
+    def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, colorOrder=dai.ColorCameraProperties.ColorOrder.BGR, xout=False):
         """
         Creates :obj:`depthai.node.ColorCamera` node based on specified attributes
 
@@ -167,7 +167,11 @@ class PipelineManager:
         self.nodes.xoutRgb.setStreamName(Previews.color.name)
         if xout:
             if self.lowBandwidth and not self.lowCapabilities:
-                self._mjpegLink(self.nodes.camRgb, self.nodes.xoutRgb, self.nodes.camRgb.video)
+                manip = self.pipeline.createImageManip()
+                manip.setMaxOutputFrameSize(previewSize[0] * previewSize[1] * 3)
+                manip.setFrameType(dai.ImgFrame.Type.NV12)
+                self.nodes.camRgb.preview.link(manip.inputImage)
+                self._mjpegLink(self.nodes.camRgb, self.nodes.xoutRgb, manip.out)
             else:
                 self.nodes.camRgb.preview.link(self.nodes.xoutRgb.input)
         self.nodes.xinRgbControl = self.pipeline.createXLinkIn()
