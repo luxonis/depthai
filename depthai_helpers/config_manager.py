@@ -8,6 +8,7 @@ import numpy as np
 
 from depthai_helpers.cli_utils import cliPrint, PrintColors
 from depthai_sdk.previews import Previews
+from depthai_sdk import downloadYTVideo
 
 
 DEPTHAI_ZOO = Path(__file__).parent.parent / Path(f"resources/nn/")
@@ -270,4 +271,15 @@ class ConfigManager:
         val = 255 / self.maxDisparity
         return val
 
+
+def prepareConfManager(in_args):
+    confManager = ConfigManager(in_args)
+    confManager.linuxCheckApplyUsbRules()
+    if not confManager.useCamera:
+        if str(confManager.args.video).startswith('https'):
+            confManager.args.video = downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS)
+            print("Youtube video downloaded.")
+        if not Path(confManager.args.video).exists():
+            raise ValueError("Path {} does not exists!".format(confManager.args.video))
+    return confManager
 
