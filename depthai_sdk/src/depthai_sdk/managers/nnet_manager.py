@@ -354,7 +354,7 @@ class NNetManager:
             if self._countLabel is not None:
                 self._drawCount(source, self.results)
 
-        elif self._outputFormat == "raw" and self._handler is not None:
+        elif self.results is not None and self._outputFormat == "raw" and self._handler is not None:
             if isinstance(source, PreviewManager):
                 frames = list(source.frames.items())
             else:

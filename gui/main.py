@@ -324,10 +324,7 @@ class DemoQtGui:
         w, h = int(self.writer.width()), int(self.writer.height())
         if self.progressFrame is None:
             self.progressFrame = createBlankFrame(w, h)
-            if confManager is None:
-                downloadText = "Downloading model blob..."
-            else:
-                downloadText = f"Downloading {confManager.getModelName()} blob..."
+            downloadText = f"Downloading model blob..."
             textsize = cv2.getTextSize(downloadText, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
             offset = int((w - textsize) / 2)
             cv2.putText(self.progressFrame, downloadText, (offset, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
