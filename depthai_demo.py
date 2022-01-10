@@ -189,7 +189,7 @@ class Demo:
                 zooName=self._conf.getModelName(),
                 progressFunc=self.showDownloadProgress
             )
-            self._nnManager = NNetManager(inputSize=self._conf.inputSize, bufferSize=10 if self._conf.args.syncPreviews else 0)
+            self._nnManager = NNetManager(inputSize=self._conf.inputSize, bufferSize=10 if self._conf.args.sync else 0)
 
             if self._conf.getModelDir() is not None:
                 configPath = self._conf.getModelDir() / Path(self._conf.getModelName()).with_suffix(f".json")
@@ -217,7 +217,7 @@ class Demo:
         self._fps = FPSHandler() if self._conf.useCamera else FPSHandler(self._cap)
 
         if self._conf.useCamera:
-            pvClass = SyncedPreviewManager if self._conf.args.syncPreviews else PreviewManager
+            pvClass = SyncedPreviewManager if self._conf.args.sync else PreviewManager
             self._pv = pvClass(display=self._conf.args.show, nnSource=self._conf.getModelSource(), colorMap=self._conf.getColorMap(),
                                dispMultiplier=self._conf.dispMultiplier, mouseTracker=True, decode=self._conf.lowBandwidth and not self._conf.lowCapabilities,
                                fpsHandler=self._fps, createWindows=self._displayFrames, depthConfig=self._pm._depthConfig)
@@ -861,8 +861,8 @@ def runQt():
                 pass
             self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
-        def guiOnToggleSyncPreview(self, value):
-            self.updateArg("syncPreviews", value)
+        def guiOnToggleSync(self, value):
+            self.updateArg("sync", value)
 
         def guiOnToggleColorEncoding(self, enabled, fps):
             oldConfig = self.confManager.args.encode or {}

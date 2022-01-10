@@ -2,12 +2,10 @@ import math
 import threading
 import time
 import traceback
-from datetime import timedelta
 from queue import Queue
 
 import cv2
 import depthai as dai
-from depthai_sdk import DelayQueue
 
 from ..previews import Previews, MouseClickTracker
 import numpy as np
