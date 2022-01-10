@@ -1,5 +1,6 @@
 import math
 import threading
+import time
 from datetime import timedelta
 
 import cv2
@@ -76,7 +77,10 @@ class PreviewManager:
 
     def _consumeQueue(self, queue):
         if self._blocking:
+            start = time.monotonic()
             packet = queue.get()
+            elapsed = int(1000 * (time.monotonic() - start))
+            print(f"WAIT TIME [{queue.getName()}]: {elapsed}ms")
         else:
             packet = queue.tryGet()
         if packet is not None:
@@ -114,12 +118,12 @@ class PreviewManager:
             if self._createWindows and self._mouseTracker is not None:
                 cv2.setMouseCallback(name, self._mouseTracker.selectPoint(name))
             if name not in (Previews.disparityColor.name, Previews.depth.name):  # generated on host
-                self.outputQueues.append(device.getOutputQueue(name=name, maxSize=1, blocking=False))
+                self.outputQueues.append(device.getOutputQueue(name=name, maxSize=4, blocking=False))
 
         if Previews.disparityColor.name in self._display and Previews.disparity.name not in self._display:
-            self.outputQueues.append(device.getOutputQueue(name=Previews.disparity.name, maxSize=1, blocking=False))
+            self.outputQueues.append(device.getOutputQueue(name=Previews.disparity.name, maxSize=4, blocking=False))
         if Previews.depth.name in self._display and Previews.depthRaw.name not in self._display:
-            self.outputQueues.append(device.getOutputQueue(name=Previews.depthRaw.name, maxSize=1, blocking=False))
+            self.outputQueues.append(device.getOutputQueue(name=Previews.depthRaw.name, maxSize=4, blocking=False))
 
     def closeQueues(self):
         """
