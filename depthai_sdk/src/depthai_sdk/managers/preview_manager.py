@@ -1,4 +1,5 @@
 import math
+import threading
 from datetime import timedelta
 
 import cv2
@@ -17,7 +18,7 @@ class PreviewManager:
     #: dict: Contains name -> frame mapping that can be used to modify specific frames directly
     frames = {}
 
-    def __init__(self, display=[], nnSource=None, colorMap=None, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, decode=False, fpsHandler=None, createWindows=True):
+    def __init__(self, display=[], nnSource=None, colorMap=None, depthConfig=None, dispMultiplier=255/96, mouseTracker=False, blocking=True, decode=False, fpsHandler=None, createWindows=True, useThreads=True):
         """
         Args:
             display (list, Optional): List of :obj:`depthai_sdk.Previews` objects representing the streams to display
@@ -29,6 +30,8 @@ class PreviewManager:
             dispMultiplier (float, Optional): Multiplier used for depth <-> disparity calculations (calculated on baseline and focal)
             depthConfig (depthai.StereoDepthConfig, optional): Configuration used for depth <-> disparity calculations
             createWindows (bool, Optional): If True, will create preview windows using OpenCV (enabled by default)
+            blocking (bool, Optional): If set to :code:`True`, will wait for a packet in each queue to be available
+            useThreads (bool, Optional): If True, will spawn a separate process to consume each queue (enabled by default)
         """
         self.nnSource = nnSource
         if colorMap is not None:
@@ -44,6 +47,9 @@ class PreviewManager:
         self._display = display
         self._createWindows = createWindows
         self._rawFrames = {}
+        self._useThreads = useThreads
+        self._threads = None
+        self._blocking = blocking
 
     def collectCalibData(self, device):
         """
@@ -67,6 +73,29 @@ class PreviewManager:
             self.fov = 71.86
             self.focal = 440
         self.dispScaleFactor = self.baseline * self.focal
+
+    def _consumeQueue(self, queue):
+        if self._blocking:
+            packet = queue.get()
+        else:
+            packet = queue.tryGet()
+        if packet is not None:
+            frame = getattr(Previews, queue.getName()).value(packet, self)
+            if frame is None:
+                print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
+            else:
+                frame = self._processFrame(frame, queue.getName())
+                self._addRawFrame(frame, packet, queue.getName())
+            return frame
+
+    def _consumeThread(self, outQueue, callback=None):
+        try:
+            while not outQueue.isClosed():
+                frame = self._consumeQueue(outQueue)
+                if outQueue.getName() in self._display and callback is not None:
+                    callback(frame, outQueue.getName())
+        except RuntimeError:
+            pass
 
     def createQueues(self, device, callback=None):
         """
@@ -100,6 +129,10 @@ class PreviewManager:
         for queue in self.outputQueues:
             queue.close()
 
+        if self._useThreads and self._threads is not None:
+            for thread in self._threads:
+                thread.join()
+
     def _processFrame(self, frame, queueName):
         if self._fpsHandler is not None:
             self._fpsHandler.tick(queueName)
@@ -132,32 +165,25 @@ class PreviewManager:
             self._rawFrames[Previews.depth.name] = Previews.depth.value(frame, self)
 
 
-    def prepareFrames(self, blocking=False, callback=None):
+    def prepareFrames(self, callback=None):
         """
         This function consumes output queues' packets and parses them to obtain ready to use frames.
         To convert the frames from packets, this manager uses methods defined in :obj:`depthai_sdk.previews.PreviewDecoder`.
 
         Args:
-            blocking (bool, Optional): If set to :code:`True`, will wait for a packet in each queue to be available
-            callback (func, Optional): Function that will be executed once packet with frame has arrived
+            callback (func, Optional): Function that will be executed once a new frame is available
         """
-        for queue in self.outputQueues:
-            if blocking:
-                packet = queue.get()
-            else:
-                packet = queue.tryGet()
-            if packet is not None:
-                frame = getattr(Previews, queue.getName()).value(packet, self)
-                if frame is None:
-                    print("[WARNING] Conversion of the {} frame has failed! (None value detected)".format(queue.getName()))
-                    continue
-                frame = self._processFrame(frame, queue.getName())
-                if queue.getName() in self._display:
-                    if callback is not None:
-                        callback(frame, queue.getName())
-                self._addRawFrame(frame, packet, queue.getName())
+        if not self._useThreads:
+            for queue in self.outputQueues:
+                frame = self._consumeQueue(queue)
+                if queue.getName() in self._display and callback is not None:
+                    callback(frame, queue.getName())
+        elif self._threads is None:
+            self._threads = [threading.Thread(target=self._consumeThread, args=(queue, callback)) for queue in self.outputQueues]
+            for thread in self._threads:
+                thread.start()
 
-        for name in self._rawFrames:
+        for name in list(self._rawFrames.keys()):
             newFrame = self._rawFrames[name].copy()
             if name == Previews.depthRaw.name:
                 newFrame = cv2.normalize(newFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
@@ -218,6 +244,7 @@ class SyncedPreviewManager(PreviewManager):
         self._lastSeqs = {}
         self._syncedPackets = {}
         self.nnSyncSeq = None
+        self._syncThread = None
 
     def __get_next_seq_packet(self, seqKey, name, defaultPacket):
         if seqKey not in self._seqPackets:
@@ -227,50 +254,43 @@ class SyncedPreviewManager(PreviewManager):
         else:
             return self._seqPackets[seqKey][name]
 
-    def prepareFrames(self, blocking=False, callback=None):
-        """
-        This overridden function serves the same purpose - to prepare ready to use frames - but before it provide any data
-        it will sync all of the packets first, using their sequence number. So any frames retrievable from this class, after
-        this method is called, will be in sync with each other.
+    def _consumeQueue(self, queue):
+        if self._blocking:
+            packet = queue.get()
+        else:
+            packet = queue.tryGet()
+        if packet is not None:
+            seq = packet.getSequenceNum()
+            packets = self._seqPackets.get(seq, {})
+            packets[queue.getName()] = packet
+            self._seqPackets[seq] = packets
+            self._lastSeqs[queue.getName()] = seq
+        return packet
 
-        Args:
-            blocking (bool, Optional): If set to :code:`True`, will wait for a packet in each queue to be available
-            callback (func, Optional): Function that will be executed once packet with frame has arrived
-        """
+    def _syncPackets(self, callback=None):
+        newSynced = next(filter(lambda _, packets: len(packets) == len(self.outputQueues), self._seqPackets.items()), None)
+        if newSynced is not None:
+            seq, packets = newSynced
+            self._packetsQ = DelayQueue(maxsize=100)
+            prevTimestamp = None
+            prevDelay = timedelta()
+            unsyncedSeq = sorted(list(filter(lambda itemSeq: itemSeq < seq, self._seqPackets.keys())))
+            for seqKey in unsyncedSeq:
+                unsynced = {
+                    synced_name: self.__get_next_seq_packet(seqKey, synced_name, synced_packet)
+                    for synced_name, synced_packet in packets.items()
+                }
+                ts = next(iter(unsynced.values())).getTimestamp()
+                if prevTimestamp is None:
+                    delay = timedelta()
+                else:
+                    delta = ts - prevTimestamp
+                    delay = delta + prevDelay
+                    prevDelay += delta
 
-        for queue in self.outputQueues:
-            if blocking:
-                packet = queue.get()
-            else:
-                packet = queue.tryGet()
-            if packet is not None:
-                seq = packet.getSequenceNum()
-                packets = self._seqPackets.get(seq, {})
-                packets[queue.getName()] = packet
-                self._seqPackets[seq] = packets
-                self._lastSeqs[queue.getName()] = seq
-
-                if len(packets) == len(self.outputQueues):
-                    self._packetsQ = DelayQueue(maxsize=100)
-                    prevTimestamp = None
-                    prevDelay = timedelta()
-                    unsyncedSeq = sorted(list(filter(lambda itemSeq: itemSeq < seq, self._seqPackets.keys())))
-                    for seqKey in unsyncedSeq:
-                        unsynced = {
-                            synced_name: self.__get_next_seq_packet(seqKey, synced_name, synced_packet)
-                            for synced_name, synced_packet in packets.items()
-                        }
-                        ts = next(iter(unsynced.values())).getTimestamp()
-                        if prevTimestamp is None:
-                            delay = timedelta()
-                        else:
-                            delta = ts - prevTimestamp
-                            delay = delta + prevDelay
-                            prevDelay += delta
-
-                        prevTimestamp = ts
-                        self._packetsQ.put(unsynced, delay.microseconds)
-                        del self._seqPackets[seqKey]
+                prevTimestamp = ts
+                self._packetsQ.put(unsynced, delay.microseconds)
+                del self._seqPackets[seqKey]
 
         if self._packetsQ is not None:
             packets = self._packetsQ.get()
@@ -285,6 +305,34 @@ class SyncedPreviewManager(PreviewManager):
                     if callback is not None:
                         callback(frame, name)
                     self._addRawFrame(frame, packet, name)
+
+    def closeQueues(self):
+        super().closeQueues()
+        if self._useThreads and self._syncThread is not None:
+            self._syncThread.join()
+
+
+    def prepareFrames(self, callback=None):
+        """
+        This overridden function serves the same purpose - to prepare ready to use frames - but before it provide any data
+        it will sync all of the packets first, using their sequence number. So any frames retrievable from this class, after
+        this method is called, will be in sync with each other.
+
+        Args:
+            callback (func, Optional): Function that will be executed once packet with frame has arrived
+        """
+
+        if not self._useThreads:
+            for queue in self.outputQueues:
+                self._consumeQueue(queue)
+            self._syncPackets(callback)
+        elif self._syncThread is None:
+            self._threads = [threading.Thread(target=self._consumeThread, args=(queue, callback)) for queue in self.outputQueues]
+            for thread in self._threads:
+                thread.start()
+            self._syncThread = threading.Thread(target=self._syncPackets, args=(callback))
+            self._syncThread.start()
+
 
         for name in self._rawFrames:
             newFrame = self._rawFrames[name].copy()
