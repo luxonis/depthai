@@ -274,7 +274,7 @@ class Demo:
         self._device.startPipeline(self._pm.pipeline)
         self._pm.createDefaultQueues(self._device)
         if self._conf.useNN:
-            self._nnManager.createQueues(self._device)
+            self._nnManager.createQueues(self._device, self._nnParseCallback)
 
         self._sbbOut = self._device.getOutputQueue("sbb", maxSize=1, blocking=False) if self._conf.useNN and self._conf.args.spatialBoundingBox else None
         self._logOut = self._device.getOutputQueue("systemLogger", maxSize=30, blocking=False) if len(self._conf.args.report) > 0 else None
@@ -311,7 +311,6 @@ class Demo:
 
         self._seqNum = 0
         self._hostFrame = None
-        self._nnData = []
         self._sbbRois = []
         self.onSetup(self)
 
@@ -380,22 +379,14 @@ class Demo:
             self._hostFrame = rawHostFrame
             self._fps.tick('host')
 
-        if self._nnManager is not None:
-            newData, inNn = self._nnManager.parse()
-            if inNn is not None:
-                self.onNn(inNn, newData)
-                self._fps.tick('nn')
-            if newData is not None:
-                self._nnData = newData
-
         if self._conf.useCamera:
             if self._nnManager is not None:
-                self._nnManager.draw(self._pv, self._nnData)
+                self._nnManager.draw(self._pv)
             self._pv.showFrames(callback=self._showFramesCallback)
         elif self._hostFrame is not None:
             debugHostFrame = self._hostFrame.copy()
             if self._nnManager is not None:
-                self._nnManager.draw(debugHostFrame, self._nnData)
+                self._nnManager.draw(debugHostFrame)
             self._fps.drawFps(debugHostFrame, "host")
             if self._displayFrames:
                 cv2.imshow("host", debugHostFrame)
@@ -453,6 +444,10 @@ class Demo:
 
                 if update:
                     self._updateCameraConfigs()
+
+    def _nnParseCallback(self, inNn, newData):
+        self.onNn(inNn, newData)
+        self._fps.tick('nn')
 
     def _createQueueCallback(self, queueName):
         if self._displayFrames and queueName in [Previews.disparityColor.name, Previews.disparity.name, Previews.depth.name, Previews.depthRaw.name]:

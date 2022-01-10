@@ -1,4 +1,5 @@
 import json
+import threading
 from pathlib import Path
 import depthai as dai
 import cv2
@@ -15,7 +16,7 @@ class NNetManager:
     decoding neural network output automatically or by using external handler file.
     """
 
-    def __init__(self, inputSize, nnFamily=None, labels=[], confidence=0.5, bufferSize=0):
+    def __init__(self, inputSize, nnFamily=None, labels=[], confidence=0.5, bufferSize=0, useThreads=True, blocking=True):
         """
         Args:
             inputSize (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
@@ -23,6 +24,8 @@ class NNetManager:
             labels (list, Optional): Allows to display class label instead of ID when drawing nn detections.
             confidence (float, Optional): Specify detection nn's confidence threshold
             bufferSize (int, Optional): Specify how many nn data items to store in :attr:`buffer`
+            blocking (bool, Optional): If set to :code:`True`, will wait for a packet in nn queue to be available
+            useThreads (bool, Optional): If True, will spawn a separate process to consume NN output queue (enabled by default)
         """
         self.inputSize = inputSize
         self._nnFamily = nnFamily
@@ -31,9 +34,13 @@ class NNetManager:
         self._labels = labels
         self._confidence = confidence
         self._bufferSize = bufferSize
+        self._useThreads = useThreads
+        self._blocking = blocking
 
     #: list: List of available neural network inputs
     sourceChoices = ("color", "left", "right", "rectifiedLeft", "rectifiedRight", "host")
+    #: list: Most recent decoded results received from NN node
+    results = None
     #: str: Selected neural network input
     source = None
     #: tuple: NN input size (width, height)
@@ -60,6 +67,7 @@ class NNetManager:
     _config = None
     _nnFamily = None
     _handler = None
+    _thread = None
 
     def readConfig(self, path):
         """
@@ -223,8 +231,8 @@ class NNetManager:
             print(f"Label of ouf bounds (label index: {label}, available labels: {len(self._labels)}")
             return str(label)
 
-    def parse(self, blocking=False):
-        if blocking:
+    def parse(self, callback):
+        if self._blocking:
             inNn = self.outputQueue.get()
         else:
             inNn = self.outputQueue.tryGet()
@@ -234,9 +242,15 @@ class NNetManager:
                 if len(self.buffer) == self._bufferSize:
                     del self.buffer[min(self.buffer.keys())]
                 self.buffer[inNn.getSequenceNum()] = data
-            return data, inNn
-        else:
-            return None, None
+            self.results = data
+            callback(inNn, data)
+
+    def _decodeThread(self, callback=None):
+        try:
+            while not self.outputQueue.isClosed():
+                self.parse(callback)
+        except RuntimeError:
+            pass
 
     def decode(self, inNn):
         """
@@ -278,7 +292,7 @@ class NNetManager:
         else:
             drawCnt(source, len(cntList))
 
-    def draw(self, source, decodedData):
+    def draw(self, source):
         """
         Draws NN results onto the frames. It's responsible to correctly map the results onto each frame requested,
         including applying crop offset or preparing a correct normalization frame, then draws them with all information
@@ -329,8 +343,8 @@ class NNetManager:
                     for detection in data:
                         for name, frame in source.frames.items():
                             drawDetection(frame, detection)
-            else:
-                for detection in decodedData:
+            elif self.results is not None:
+                for detection in self.results:
                     if isinstance(source, PreviewManager):
                         for name, frame in source.frames.items():
                             drawDetection(frame, detection)
@@ -338,26 +352,31 @@ class NNetManager:
                         drawDetection(source, detection)
 
             if self._countLabel is not None:
-                self._drawCount(source, decodedData)
+                self._drawCount(source, self.results)
 
         elif self._outputFormat == "raw" and self._handler is not None:
             if isinstance(source, PreviewManager):
                 frames = list(source.frames.items())
             else:
                 frames = [("host", source)]
-            self._handler.draw(self, decodedData, frames)
+            self._handler.draw(self, self.results, frames)
 
-    def createQueues(self, device):
+    def createQueues(self, device, onNewResults=None):
         """
         Creates output queue for NeuralNetwork node and, if using :code:`host` as a :attr:`source`, it will also create
         input queue.
 
         Args:
             device (depthai.Device): Running device instance
+            onNewResults (func, Optional): Callback called when new results are received by decoding threads (not used if threading is disabled)
         """
         if self.source == "host":
             self.inputQueue = device.getInputQueue("nnIn", maxSize=1, blocking=False)
         self.outputQueue = device.getOutputQueue("nnOut", maxSize=1, blocking=False)
+
+        if self._useThreads:
+            self._thread = threading.Thread(target=self._decodeThread, args=(onNewResults, ))
+            self._thread.start()
 
     def closeQueues(self):
         """
@@ -367,6 +386,8 @@ class NNetManager:
             self.inputQueue.close()
         if self.outputQueue is not None:
             self.outputQueue.close()
+        if self._thread is not None:
+            self._thread.join()
 
     def sendInputFrame(self, frame, seqNum=None):
         """

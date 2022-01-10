@@ -1,7 +1,9 @@
 import math
 import threading
 import time
+import traceback
 from datetime import timedelta
+from queue import Queue
 
 import cv2
 import depthai as dai
@@ -80,7 +82,7 @@ class PreviewManager:
             start = time.monotonic()
             packet = queue.get()
             elapsed = int(1000 * (time.monotonic() - start))
-            print(f"WAIT TIME [{queue.getName()}]: {elapsed}ms")
+            # print(f"WAIT TIME [{queue.getName()}]: {elapsed}ms")
         else:
             packet = queue.tryGet()
         if packet is not None:
@@ -272,31 +274,20 @@ class SyncedPreviewManager(PreviewManager):
         return packet
 
     def _syncPackets(self, callback=None):
-        newSynced = next(filter(lambda _, packets: len(packets) == len(self.outputQueues), self._seqPackets.items()), None)
+        newSynced = next(filter(lambda items: len(items[1]) == len(self.outputQueues), list(self._seqPackets.items())), None)
         if newSynced is not None:
             seq, packets = newSynced
-            self._packetsQ = DelayQueue(maxsize=100)
-            prevTimestamp = None
-            prevDelay = timedelta()
-            unsyncedSeq = sorted(list(filter(lambda itemSeq: itemSeq < seq, self._seqPackets.keys())))
-            for seqKey in unsyncedSeq:
-                unsynced = {
+            self._packetsQ = Queue(maxsize=100)
+            completedSeqs = sorted(list(filter(lambda itemSeq: itemSeq <= seq, self._seqPackets.keys())))
+            for seqKey in completedSeqs:
+                packetPair = {
                     synced_name: self.__get_next_seq_packet(seqKey, synced_name, synced_packet)
                     for synced_name, synced_packet in packets.items()
                 }
-                ts = next(iter(unsynced.values())).getTimestamp()
-                if prevTimestamp is None:
-                    delay = timedelta()
-                else:
-                    delta = ts - prevTimestamp
-                    delay = delta + prevDelay
-                    prevDelay += delta
-
-                prevTimestamp = ts
-                self._packetsQ.put(unsynced, delay.microseconds)
+                self._packetsQ.put(packetPair)
                 del self._seqPackets[seqKey]
 
-        if self._packetsQ is not None:
+        if self._packetsQ is not None and not self._packetsQ.empty():
             packets = self._packetsQ.get()
             if packets is not None:
                 self.nnSyncSeq = min(map(lambda packet: packet.getSequenceNum(), packets.values()))
@@ -309,6 +300,15 @@ class SyncedPreviewManager(PreviewManager):
                     if callback is not None:
                         callback(frame, name)
                     self._addRawFrame(frame, packet, name)
+
+    def _syncThreadFunc(self, callback=None):
+        try:
+            while not any(filter(lambda queue: queue.isClosed(), self.outputQueues)):
+                self._syncPackets(callback)
+        except RuntimeError:
+            traceback.print_exc()
+            pass
+        print(any(filter(lambda queue: queue.isClosed(), self.outputQueues)), list(filter(lambda queue: queue.isClosed(), self.outputQueues)), "EXITED")
 
     def closeQueues(self):
         super().closeQueues()
@@ -334,7 +334,7 @@ class SyncedPreviewManager(PreviewManager):
             self._threads = [threading.Thread(target=self._consumeThread, args=(queue, callback)) for queue in self.outputQueues]
             for thread in self._threads:
                 thread.start()
-            self._syncThread = threading.Thread(target=self._syncPackets, args=(callback))
+            self._syncThread = threading.Thread(target=self._syncThreadFunc, args=(callback, ))
             self._syncThread.start()
 
 
