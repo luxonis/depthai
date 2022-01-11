@@ -77,10 +77,7 @@ class PreviewManager:
 
     def _consumeQueue(self, queue):
         if self._blocking:
-            start = time.monotonic()
             packet = queue.get()
-            elapsed = int(1000 * (time.monotonic() - start))
-            # print(f"WAIT TIME [{queue.getName()}]: {elapsed}ms")
         else:
             packet = queue.tryGet()
         if packet is not None:
