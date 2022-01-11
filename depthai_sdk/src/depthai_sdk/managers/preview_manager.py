@@ -304,9 +304,7 @@ class SyncedPreviewManager(PreviewManager):
             while not any(filter(lambda queue: queue.isClosed(), self.outputQueues)):
                 self._syncPackets(callback)
         except RuntimeError:
-            traceback.print_exc()
             pass
-        print(any(filter(lambda queue: queue.isClosed(), self.outputQueues)), list(filter(lambda queue: queue.isClosed(), self.outputQueues)), "EXITED")
 
     def closeQueues(self):
         super().closeQueues()
@@ -336,7 +334,7 @@ class SyncedPreviewManager(PreviewManager):
             self._syncThread.start()
 
 
-        for name in self._rawFrames:
+        for name in list(self._rawFrames.keys()):
             newFrame = self._rawFrames[name].copy()
             if name == Previews.depthRaw.name:
                 newFrame = cv2.normalize(newFrame, None, 255, 0, cv2.NORM_INF, cv2.CV_8UC1)
