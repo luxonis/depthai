@@ -59,8 +59,8 @@ class AppBridge(QObject):
         instance.guiOnStaticticsConsent(value)
 
     @pyqtSlot(bool)
-    def toggleSyncPreview(self, value):
-        instance.guiOnToggleSyncPreview(value)
+    def toggleSync(self, value):
+        instance.guiOnToggleSync(value)
 
     @pyqtSlot(str)
     def runApp(self, appName):

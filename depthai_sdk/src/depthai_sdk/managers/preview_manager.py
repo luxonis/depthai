@@ -295,6 +295,7 @@ class SyncedPreviewManager(PreviewManager):
                     if callback is not None:
                         callback(frame, name)
                     self._addRawFrame(frame, packet, name)
+                    time.sleep(0.002)
 
     def _syncThreadFunc(self, callback=None):
         try:
