@@ -11,6 +11,6 @@ pyserial
 esptool
 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==0.4.0.0+3ad2bf8dc64b5f1ce42cd9dedad3f310a9ae1db1
+depthai==0.4.0.0+1a7404bc05a19c0128be109250a4b083c2fa7b9a
 
 

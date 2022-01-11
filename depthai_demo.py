@@ -369,6 +369,24 @@ class DepthAI:
                 log_csv_writer = csv.writer(log_fopen, delimiter=',')
                 log_csv_writer.writerow(header)
     
+        if self.device.is_projector_connected():
+            if 1:
+                # standard init
+                self.device.send_ir_write_command(0, 0x2, 0x1)
+                self.device.send_ir_write_command(0, 0x3, 0x0)
+                self.device.send_ir_write_command(0, 0x4, 0x0)
+                self.device.send_ir_write_command(0, 0x5, 0x0)
+                self.device.send_ir_write_command(0, 0x6, 0x0)
+                self.device.send_ir_write_command(0, 0x7, 0x9)
+                self.device.send_ir_write_command(0, 0x8, 0x1a)
+                self.device.send_ir_write_command(0, 0x9, 0x8)
+                self.device.send_ir_write_command(0, 0x1, 0x24) # 0x24-off, 0x25-flood IR, 0x26-projector, 0x27-both
+                self.device.send_ir_write_command(0, 0x3, 10) # Brightness flood IR : 0..127. Warning: not too high
+                self.device.send_ir_write_command(0, 0x4, 10) # Brightness projector: 0..127. Warning: not too high
+            else: # GUI, needs `PySimpleGUI` in requirements and `sudo apt install python3-tk`
+                from depthai_helpers import ir_handler
+                ir_handler.start_ir_handler(self.device)
+
         while self.runThread:
             # retreive data from the device
             # data is stored in packets, there are nnet (Neural NETwork) packets which have additional functions for NNet result interpretation
