@@ -212,7 +212,7 @@ class Main:
                 dai.ColorCameraProperties.SensorResolution.THE_800_P)
             rgb_cam.setInterleaved(False)
             rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-            rgb_cam.setIspScale(2, 3)
+            #rgb_cam.setIspScale(2, 3)
             # rgb_cam.initialControl.setManualFocus(self.focus_value)
             rgb_cam.setFps(self.args.fps)
 

@@ -2,4 +2,4 @@ requests==2.24.0
 argcomplete==1.12.1
 -e ./depthai_sdk
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.13.3.0.dev+a7f2d751ed3c8d4515f64411a57437d162b8d026
+depthai==2.13.3.0.dev+bbf6f0cf87c1c46959a579b96454bcddfdbab1e9
