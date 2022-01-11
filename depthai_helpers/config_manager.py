@@ -261,8 +261,6 @@ class ConfigManager:
             return self.args.shaves
         if not self.useCamera:
             return 8
-        if self.args.rgbResolution > 1080:
-            return 4
         return 4
 
     @property
