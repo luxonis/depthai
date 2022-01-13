@@ -151,6 +151,8 @@ class DepthAI:
         frame_count_prev['nn'] = {}
         preview_shape = None
         left_pose = None
+        ir_proj_mask = 0  # Keeps track of what was tested
+        ir_proj_prev = 0  # Previous value set, to not repeat operations
         
         NN_cams = {'rgb', 'left', 'right'}
 
@@ -220,6 +222,9 @@ class DepthAI:
                     log_list.append("pass")
                 else:
                     log_list.append("fail")
+            if 'Pro' in test_type:
+                log_list.append(self.device.is_projector_connected())
+                log_list.append(ir_proj_mask)
 
             with open(log_file, mode='a') as log_fopen:
                 # header = 
@@ -300,6 +305,9 @@ class DepthAI:
         else:
             auto_checkbox_names = ["USB3", "RGB camera connected", "JPEG Encoding Stream", "previewout-rgb Stream"]
             op_checkbox_names = ["JPEG Encoding", "Previewout-rgb stream"]
+        action_checkbox_names = []
+        if 'Pro' in test_type:
+            action_checkbox_names.extend(["IR Dot Projector", "IR Flood Light"])
         
         mipi_streams = [val for val in auto_checkbox_names if 'Stream' in val]
         # print(mipi_streams)
@@ -342,6 +350,22 @@ class DepthAI:
                             Checkbox(screen, x + (80*2), y_axis-5, outline_color=red, check_color=red, disable_pass = True)]
             op_checkbox_dict[op_checkbox_names[i]] = checker_list
 
+        y = 380-50
+        x = 330+200
+    
+        action_checkbox_dict = {}
+        for i in range(len(action_checkbox_names)):
+            w, h = font.size(action_checkbox_names[i])
+            x_axis = x - w
+            y_axis = y +  (40*i)
+            font_surf = font.render(action_checkbox_names[i], True, green)
+            screen.blit(font_surf, (x_axis,y_axis))
+            action_checkbox_dict[action_checkbox_names[i]] = Checkbox(screen, x + 10, y_axis-5, outline_color=green, 
+                                                        check_color=orange,
+                                                        text_checked   = "ON",
+                                                        text_unchecked = "OFF",
+                                                        text_untested  = "FAIL")
+
         # adding save button
         save_button =  pygame.Rect(600, 430, 60, 35)
         pygame.draw.rect(screen, orange, save_button)
@@ -363,6 +387,8 @@ class DepthAI:
         else:
             header = ['time', 'test_type', 'Mx_serial_id', 'USB_speed', 'rgb_camera', 'JPEG Encoding Stream', 
                       'previewout-rgb Stream', 'op JPEG Encoding', 'op Previewout-rgb stream']
+        if 'Pro' in test_type:
+            header.extend(['IR found', 'IR test'])
                 
         if not os.path.exists(log_file):
             with open(log_file, mode='w') as log_fopen:
@@ -381,8 +407,8 @@ class DepthAI:
                 self.device.send_ir_write_command(0, 0x8, 0x1a)
                 self.device.send_ir_write_command(0, 0x9, 0x8)
                 self.device.send_ir_write_command(0, 0x1, 0x24) # 0x24-off, 0x25-flood IR, 0x26-projector, 0x27-both
-                self.device.send_ir_write_command(0, 0x3, 10) # Brightness flood IR : 0..127. Warning: not too high
-                self.device.send_ir_write_command(0, 0x4, 10) # Brightness projector: 0..127. Warning: not too high
+                self.device.send_ir_write_command(0, 0x3, 20) # Brightness flood IR : 0..127. Warning: not too high. 20 = 245mA
+                self.device.send_ir_write_command(0, 0x4, 20) # Brightness projector: 0..127. Warning: not too high. 20 = 245mA
             else: # GUI, needs `PySimpleGUI` in requirements and `sudo apt install python3-tk`
                 from depthai_helpers import ir_handler
                 ir_handler.start_ir_handler(self.device)
@@ -409,6 +435,9 @@ class DepthAI:
                     os._exit(10)
 
             if self.device.is_device_changed():
+                ir_proj_mask = 0
+                ir_proj_prev = 0
+
                 try:
                     if cv2.getWindowProperty('jpegout', 0) >= 0: cv2.destroyWindow('jpegout')  
                     cv2.waitKey(1)
@@ -515,6 +544,18 @@ class DepthAI:
                     else:
                         auto_checkbox_dict[auto_checkbox_names[1]].uncheck()
 
+                if 'Pro' in test_type:
+                    if self.device.is_projector_connected():
+                        action_checkbox_dict[action_checkbox_names[0]].uncheck()
+                        action_checkbox_dict[action_checkbox_names[1]].uncheck()
+                        pygame.draw.rect(screen, white, pygame.Rect(710, 330, 180, 70))
+                    else:
+                        action_checkbox_dict[action_checkbox_names[0]].setUnattended()
+                        action_checkbox_dict[action_checkbox_names[1]].setUnattended()
+                        pygame.draw.rect(screen, red, pygame.Rect(710, 330, 180, 70))
+                        pygame_render_text(screen, 'IR LED driver',     (720, 338), white)
+                        pygame_render_text(screen, 'detect failed !!!', (720, 338+35), white)
+
                 left_window_set = False
                 right_window_set = False
                 jpeg_window_set = 0
@@ -583,6 +624,20 @@ class DepthAI:
                     ob2.update_checkbox_rel(event, ob1, ob3)
                     ob3.update_checkbox_rel(event, ob1, ob2) 
             
+                if 'Pro' in test_type:
+                    mask = 0
+                    for i in range(len(action_checkbox_names)):
+                        ob = action_checkbox_dict[action_checkbox_names[i]]
+                        ob.update_checkbox(event)
+                        if ob.is_checked():
+                            if i == 0: mask |= 0x2
+                            if i == 1: mask |= 0x1
+                    if ir_proj_prev != mask:
+                        ir_proj_prev = mask
+                        print("============== IR enable:", mask)
+                        self.device.send_ir_write_command(0, 0x1, 0x24 | mask)
+                    ir_proj_mask |= mask
+                
             for i in range(len(auto_checkbox_names)):
                 auto_checkbox_dict[auto_checkbox_names[i]].render_checkbox()
     
@@ -591,6 +646,9 @@ class DepthAI:
                 op_checkbox_dict[op_checkbox_names[i]][1].render_checkbox()
                 op_checkbox_dict[op_checkbox_names[i]][2].render_checkbox()
             
+            for i in range(len(action_checkbox_names)):
+                action_checkbox_dict[action_checkbox_names[i]].render_checkbox()
+
             pygame.display.update()
 
             for _, nnet_packet in enumerate(self.nnet_packets):

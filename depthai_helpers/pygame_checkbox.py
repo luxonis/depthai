@@ -14,7 +14,7 @@ def pygame_render_text(surface, text, pose, color=(0,0,0), font_size = 30 ):
 class Checkbox:
     def __init__(self, surface, x, y, color=(230, 230, 230), caption="", outline_color=(0, 0, 0),
                  check_color=(0, 0, 0), font_size=30, font_color=(0, 0, 0), text_offset=(28, 1),
-                disable_pass = False, check = False):
+                disable_pass = False, check = False, text_checked = "", text_unchecked = "", text_untested = ""):
         self.surface = surface
         self.x = x
         self.y = y
@@ -26,9 +26,9 @@ class Checkbox:
         self.fc = font_color
         self.to = text_offset
         if not disable_pass:
-            self.test_pass     = "PASS        "
-            self.test_fail     = "FAIL        "
-            self.test_untested = "WAITING"
+            self.test_pass     = text_checked   if text_checked   else "PASS        "
+            self.test_fail     = text_unchecked if text_unchecked else "FAIL        "
+            self.test_untested = text_untested  if text_untested  else "WAITING"
         else:
             self.test_pass = ""
             self.test_fail = ""
