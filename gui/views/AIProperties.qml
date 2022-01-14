@@ -236,7 +236,7 @@ ListView {
                 y: 375
                 width: 250
                 height: 48
-                text: qsTr("Spatial Bounding Boxes")
+                text: qsTr("<font color=\"white\">Spatial Bounding Boxes</font>")
                 font.family: "Courier"
                 autoExclusive: false
                 transformOrigin: Item.Center
