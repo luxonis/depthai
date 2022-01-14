@@ -123,6 +123,9 @@ class CliArgs:
         
         parser.add_argument("-fb", "--flashBootloader", default=False, action="store_true",
                             help="Enables flashing bootloader to the device")
+
+        parser.add_argument("-fub", "--flashUsbBoot", default=False, action="store_true",
+                            help="Enables flashing the USB boot header to the device")
                             
         parser.add_argument("-b", "--baseline", default=None, type=float,
                             help="Left/Right camera baseline in [cm]. Default: 9.0cm.")
