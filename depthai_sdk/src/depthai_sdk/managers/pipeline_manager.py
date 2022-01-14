@@ -270,7 +270,7 @@ class PipelineManager:
 
         self._depthConfig = self.nodes.stereo.initialConfig.get()
 
-        self.nodes.stereo.setRuntimeModeSwitch(True)
+        # self.nodes.stereo.setRuntimeModeSwitch(True)
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
