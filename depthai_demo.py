@@ -189,7 +189,7 @@ class Demo:
                 zooName=self._conf.getModelName(),
                 progressFunc=self.showDownloadProgress
             )
-            self._nnManager = NNetManager(inputSize=self._conf.inputSize, bufferSize=10 if self._conf.args.sync else 0)
+            self._nnManager = NNetManager(inputSize=self._conf.inputSize, sync=self._conf.args.sync)
 
             if self._conf.getModelDir() is not None:
                 configPath = self._conf.getModelDir() / Path(self._conf.getModelName()).with_suffix(f".json")
