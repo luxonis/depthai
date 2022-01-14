@@ -249,6 +249,7 @@ class Demo:
                     useDisparity=Previews.disparity.name in self._conf.args.show or Previews.disparityColor.name in self._conf.args.show,
                     useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show,
                     useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show,
+                    alignment=dai.CameraBoardSocket.RGB if self._conf.args.stereoLrCheck else None
                 )
 
             self._encManager = None

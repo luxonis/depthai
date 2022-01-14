@@ -240,7 +240,7 @@ class PipelineManager:
         self.nodes.xinRightControl.setStreamName(Previews.right.name + "_control")
         self.nodes.xinRightControl.out.link(self.nodes.monoRight.inputControl)
 
-    def createDepth(self, dct=245, median=dai.MedianFilter.KERNEL_7x7, sigma=0, lr=False, lrcThreshold=4, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False):
+    def createDepth(self, dct=245, median=dai.MedianFilter.KERNEL_7x7, sigma=0, lr=False, lrcThreshold=4, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False, runtimeSwitch=False, alignment=None):
         """
         Creates :obj:`depthai.node.StereoDepth` node based on specified attributes
 
@@ -257,6 +257,8 @@ class PipelineManager:
             useDepth (bool, Optional): Set to :code:`True` to create output queue for depth frames
             useRectifiedLeft (bool, Optional): Set to :code:`True` to create output queue for rectified left frames
             useRectifiedRigh (bool, Optional): Set to :code:`True` to create output queue for rectified righ frames
+            runtimeSwitch (bool, Optional): Allows to change the depth configuration during the runtime but allocates resources for worst-case scenario (disabled by default)
+            alignment (depthai.CameraBoardSocket, Optional): Aligns the depth map to the specified camera socket
 
         Raises:
             RuntimeError: if left of right mono cameras were not initialized
@@ -270,10 +272,18 @@ class PipelineManager:
 
         self._depthConfig = self.nodes.stereo.initialConfig.get()
 
-        # self.nodes.stereo.setRuntimeModeSwitch(True)
+        self.nodes.stereo.setRuntimeModeSwitch(runtimeSwitch)
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
+        if alignment is not None:
+            self.nodes.stereo.setDepthAlign(alignment)
+            if alignment == dai.CameraBoardSocket.RGB:
+                self.nodes.stereo.setOutputSize(*self.nodes.camRgb.getPreviewSize())
+            elif alignment == dai.CameraBoardSocket.LEFT:
+                self.nodes.stereo.setOutputSize(*self.nodes.monoLeft.getResolutionSize())
+            elif alignment == dai.CameraBoardSocket.RIGHT:
+                self.nodes.stereo.setOutputSize(*self.nodes.monoRight.getResolutionSize())
 
         # Create mono left/right cameras if we haven't already
         if not hasattr(self.nodes, 'monoLeft'):
