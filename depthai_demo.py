@@ -407,8 +407,8 @@ class DepthAI:
                 self.device.send_ir_write_command(0, 0x8, 0x1a)
                 self.device.send_ir_write_command(0, 0x9, 0x8)
                 self.device.send_ir_write_command(0, 0x1, 0x24) # 0x24-off, 0x25-flood IR, 0x26-projector, 0x27-both
-                self.device.send_ir_write_command(0, 0x3, 20) # Brightness flood IR : 0..127. Warning: not too high. 20 = 245mA
-                self.device.send_ir_write_command(0, 0x4, 20) # Brightness projector: 0..127. Warning: not too high. 20 = 245mA
+                self.device.send_ir_write_command(0, 0x3, 7) # Brightness flood IR : 0..127. Warning: not too high. 7 = 93mA
+                self.device.send_ir_write_command(0, 0x4, 7) # Brightness projector: 0..127. Warning: not too high. 7 = 93mA
             else: # GUI, needs `PySimpleGUI` in requirements and `sudo apt install python3-tk`
                 from depthai_helpers import ir_handler
                 ir_handler.start_ir_handler(self.device)
