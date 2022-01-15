@@ -73,7 +73,7 @@ class BlobManager:
             pathlib.Path: Path to compiled MyriadX blob
 
         Raises:
-            SystemExit: If model name is not found in the zoo, this method will print all available onces and terminate
+            SystemExit: If model name is not found in the zoo, this method will print all available ones and terminate
             RuntimeError: If conversion failed with unknown status
             Exception: If some unknown error will occur (reraise)
         """

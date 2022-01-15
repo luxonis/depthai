@@ -11,7 +11,7 @@ from ..utils import loadModule, toTensorResult, frameNorm, toPlanar
 
 class NNetManager:
     """
-    Manager class handling all NN-related functionalities. It's capable of creating appropreate nodes and connections,
+    Manager class handling all NN-related functionalities. It's capable of creating appropriate nodes and connections,
     decoding neural network output automatically or by using external handler file.
     """
 
@@ -376,7 +376,7 @@ class NNetManager:
 
         Args:
             frame (numpy.ndarray): Frame to be sent to the device
-            seqNum (int, Optional): Sequence number set on ImgFrame. Useful in syncronization scenarios
+            seqNum (int, Optional): Sequence number set on ImgFrame. Useful in synchronization scenarios
 
         Returns:
             numpy.ndarray: scaled frame that was sent to the NN (same width/height as NN input)

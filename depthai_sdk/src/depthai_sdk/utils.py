@@ -228,7 +228,7 @@ def cropToAspectRatio(frame, size):
     Crop the frame to desired aspect ratio and then scales it down to desired size
     Args:
         frame (numpy.ndarray): Source frame that will be cropped
-        size (tuple): Desired frame size (width, heigth)
+        size (tuple): Desired frame size (width, height)
     Returns:
          numpy.ndarray: Cropped frame
     """
@@ -238,7 +238,7 @@ def cropToAspectRatio(frame, size):
     currentRatio = w / h
     newRatio = size[0] / size[1]
 
-    # Crop width/heigth to match the aspect ratio needed by the NN
+    # Crop width/height to match the aspect ratio needed by the NN
     if newRatio < currentRatio:  # Crop width
         # Use full height, crop width
         newW = (newRatio/currentRatio) * w
@@ -256,7 +256,7 @@ def resizeLetterbox(frame, size):
     Transforms the frame to meet the desired size, preserving the aspect ratio and adding black borders (letterboxing)
     Args:
         frame (numpy.ndarray): Source frame that will be resized
-        size (tuple): Desired frame size (width, heigth)
+        size (tuple): Desired frame size (width, height)
     Returns:
          numpy.ndarray: Resized frame
     """

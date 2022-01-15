@@ -256,7 +256,7 @@ class PipelineManager:
             useDisparity (bool, Optional): Set to :code:`True` to create output queue for disparity frames
             useDepth (bool, Optional): Set to :code:`True` to create output queue for depth frames
             useRectifiedLeft (bool, Optional): Set to :code:`True` to create output queue for rectified left frames
-            useRectifiedRigh (bool, Optional): Set to :code:`True` to create output queue for rectified righ frames
+            useRectifiedRigh (bool, Optional): Set to :code:`True` to create output queue for rectified right frames
 
         Raises:
             RuntimeError: if left of right mono cameras were not initialized
