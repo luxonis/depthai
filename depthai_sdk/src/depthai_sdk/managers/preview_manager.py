@@ -1,9 +1,9 @@
 import math
 from datetime import timedelta
+from queue import Queue
 
 import cv2
 import depthai as dai
-from depthai_sdk import DelayQueue
 
 from ..previews import Previews, MouseClickTracker
 import numpy as np
@@ -251,29 +251,21 @@ class SyncedPreviewManager(PreviewManager):
                 self._lastSeqs[queue.getName()] = seq
 
                 if len(packets) == len(self.outputQueues):
-                    self._packetsQ = DelayQueue(maxsize=100)
-                    prevTimestamp = None
-                    prevDelay = timedelta()
+                    self._packetsQ = Queue(maxsize=100)
                     unsyncedSeq = sorted(list(filter(lambda itemSeq: itemSeq < seq, self._seqPackets.keys())))
                     for seqKey in unsyncedSeq:
                         unsynced = {
                             synced_name: self.__get_next_seq_packet(seqKey, synced_name, synced_packet)
                             for synced_name, synced_packet in packets.items()
                         }
-                        ts = next(iter(unsynced.values())).getTimestamp()
-                        if prevTimestamp is None:
-                            delay = timedelta()
-                        else:
-                            delta = ts - prevTimestamp
-                            delay = delta + prevDelay
-                            prevDelay += delta
-
-                        prevTimestamp = ts
-                        self._packetsQ.put(unsynced, delay.microseconds)
+                        self._packetsQ.put(unsynced)
                         del self._seqPackets[seqKey]
 
         if self._packetsQ is not None:
-            packets = self._packetsQ.get()
+            try:
+                packets = self._packetsQ.get_nowait()
+            except:
+                packets = None
             if packets is not None:
                 self.nnSyncSeq = min(map(lambda packet: packet.getSequenceNum(), packets.values()))
                 for name, packet in packets.items():
