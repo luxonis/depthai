@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "depthai-demo"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+
+[[tool.poetry.source]]
+name = "luxonis"
+url = "https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/"
+secondary = true
+
+#[[tool.poetry.source]]
+#name = "piwheels"
+#url = "https://www.piwheels.org/simple"
+#secondary = false
+
+[tool.poetry.dependencies]
+python ">=3.8,<4"
+requests = "==2.26.0"
+Pyrebase4 = "==4.5"
+argcomplete = "==1.12.1"
+opencv-python = [{version="==4.5.4.58",markers='platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l" and python_version == "3.10"'},
+{version="==4.5.1.48",markers='platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l" and python_version != "3.10"'},
+{version="==4.4.0.46",markers='platform_machine == "armv6l" or platform_machine == "armv7l"'}]
+
+opencv-contrib-python = [{version="==4.5.4.58",markers='platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l" and python_version == "3.10"'},
+{version="==4.5.1.48",markers='platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l" and python_version != "3.10"'},
+{version="==4.4.0.46",markers='platform_machine == "armv6l" or platform_machine == "armv7l"'}]
+
+depthai = "==2.14.1.0.dev+27fa4519f289498e84768ab5229a1a45efb7e4df"
+depthai-sdk = {path = "depthai_sdk"}
+pyqt5 = {version=">5,<5.15.6", markers='platform_machine != "armv6l" and platform_machine != "armv7l" and platform_machine != "aarch64"'}
+
+
+[tool.poetry.dev-dependencies]
+ffmpy3 = "==0.2.4"
+pyusb= "==1.2.1"
+sentry-sdk = "==1.5.2"
+open3d = {version="==0.10.0.0", markers ='platform_machine != "armv6l" and platform_machine != "armv7l" and python_version < "3.9" and platform_machine != "aarch64"'}
+
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
