@@ -15,7 +15,10 @@ To get the versions of these packages you need for the program, use pip: (Make s
 ```
 python3 install_requirements.py
 ```
-
+Or using [poetry](https://python-poetry.org/):
+```
+poetry install
+```
 ## Examples
 
 `python3 depthai_demo.py` - RGB & CNN inference example
