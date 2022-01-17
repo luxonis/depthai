@@ -16,6 +16,7 @@ secondary = true
 
 [tool.poetry.dependencies]
 python ">=3.8,<4"
+pip=">=21.3.1"
 requests = "==2.26.0"
 Pyrebase4 = "==4.5"
 argcomplete = "==1.12.1"
