@@ -9,14 +9,14 @@ name = "luxonis"
 url = "https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/"
 secondary = true
 
-#[[tool.poetry.source]]
-#name = "piwheels"
-#url = "https://www.piwheels.org/simple"
-#secondary = false
+[[tool.poetry.source]]
+name = "piwheels"
+url = "https://www.piwheels.org/simple"
+secondary = true
 
 [tool.poetry.dependencies]
-python ">=3.8,<4"
-pip=">=21.3.1"
+python = ">=3.8,<4"
+pip=">=21.5.1"
 requests = "==2.26.0"
 Pyrebase4 = "==4.5"
 argcomplete = "==1.12.1"
