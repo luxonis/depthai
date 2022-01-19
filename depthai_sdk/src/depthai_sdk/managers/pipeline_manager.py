@@ -277,7 +277,6 @@ class PipelineManager:
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
         if alignment is not None:
-            print("TEST", alignment)
             self.nodes.stereo.setDepthAlign(alignment)
             if alignment == dai.CameraBoardSocket.RGB:
                 self.nodes.stereo.setOutputSize(*self.nodes.camRgb.getPreviewSize())
