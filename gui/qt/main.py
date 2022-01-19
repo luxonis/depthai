@@ -67,8 +67,8 @@ class AppBridge(QObject):
         instance.guiOnStaticticsConsent(value)
 
     @pyqtSlot(bool)
-    def toggleSyncPreview(self, value):
-        instance.guiOnToggleSyncPreview(value)
+    def guiOnToggleSync(self, value):
+        self.updateArg("sync", value)
 
     @pyqtSlot(str)
     def runApp(self, appName):
@@ -332,10 +332,7 @@ class DemoQtGui:
         w, h = int(self.writer.width()), int(self.writer.height())
         if self.progressFrame is None:
             self.progressFrame = createBlankFrame(w, h)
-            if confManager is None:
-                downloadText = "Downloading model blob..."
-            else:
-                downloadText = f"Downloading {confManager.getModelName()} blob..."
+            downloadText = "Downloading model blob..."
             textsize = cv2.getTextSize(downloadText, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
             offset = int((w - textsize) / 2)
             cv2.putText(self.progressFrame, downloadText, (offset, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
@@ -674,8 +671,8 @@ class GuiApp(DemoQtGui):
             pass
         self.worker.signals.setDataSignal.emit(["restartRequired", True])
 
-    def guiOnToggleSyncPreview(self, value):
-        self.updateArg("syncPreviews", value)
+    def guiOnToggleSync(self, value):
+        self.updateArg("sync", value)
 
     def guiOnToggleColorEncoding(self, enabled, fps):
         oldConfig = self.confManager.args.encode or {}
