@@ -249,7 +249,7 @@ class Demo:
                     useDisparity=Previews.disparity.name in self._conf.args.show or Previews.disparityColor.name in self._conf.args.show,
                     useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show,
                     useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show,
-                    alignment=dai.CameraBoardSocket.RGB if self._conf.args.stereoLrCheck else None
+                    alignment=dai.CameraBoardSocket.RGB if self._conf.args.stereoLrCheck and self._conf.args.rgbDepthAlign else None
                 )
 
             self._encManager = None
@@ -312,7 +312,6 @@ class Demo:
 
         self._seqNum = 0
         self._hostFrame = None
-        self._nnData = []
         self._sbbRois = []
         self.onSetup(self)
 
@@ -382,21 +381,19 @@ class Demo:
             self._fps.tick('host')
 
         if self._nnManager is not None:
-            newData, inNn = self._nnManager.parse()
+            inNn = self._nnManager.parse()
             if inNn is not None:
-                self.onNn(inNn, newData)
+                self.onNn(inNn)
                 self._fps.tick('nn')
-            if newData is not None:
-                self._nnData = newData
 
         if self._conf.useCamera:
             if self._nnManager is not None:
-                self._nnManager.draw(self._pv, self._nnData)
+                self._nnManager.draw(self._pv)
             self._pv.showFrames(callback=self._showFramesCallback)
         elif self._hostFrame is not None:
             debugHostFrame = self._hostFrame.copy()
             if self._nnManager is not None:
-                self._nnManager.draw(debugHostFrame, self._nnData)
+                self._nnManager.draw(debugHostFrame)
             self._fps.drawFps(debugHostFrame, "host")
             if self._displayFrames:
                 cv2.imshow("host", debugHostFrame)
@@ -869,6 +866,9 @@ def runQt():
 
         def guiOnToggleSyncPreview(self, value):
             self.updateArg("syncPreviews", value)
+
+        def guiOnToggleRgbDepthAlignment(self, value):
+            self.updateArg("rgbDepthAlign", value)
 
         def guiOnToggleColorEncoding(self, enabled, fps):
             oldConfig = self.confManager.args.encode or {}

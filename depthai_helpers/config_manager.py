@@ -261,9 +261,16 @@ class ConfigManager:
             return self.args.shaves
         if not self.useCamera:
             return 8
-        if self.args.rgbResolution > 1080:
-            return 5
-        return 6
+        else:
+            shaves_available = 6
+
+            if self.args.rgbResolution > 1080:
+                shaves_available -= 1
+
+            if self.args.rgbDepthAlign:
+                shaves_available -= 1
+
+            return shaves_available
 
     @property
     def dispMultiplier(self):

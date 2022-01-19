@@ -6,7 +6,7 @@ def onShowFrame(frame, source):
     pass
 
 
-def onNn(nn_packet, decoded_data):
+def onNn(nn_packet):
     pass
 
 

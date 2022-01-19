@@ -40,6 +40,8 @@ class NNetManager:
     inputSize = None
     #: depthai.OpenVINO.Version: OpenVINO version, available only if parsed from config file (see :func:`readConfig`)
     openvinoVersion = None
+    #: list: Most recent NN data received from NeuralNetwork node
+    latestData = []
     #: depthai.DataInputQueue: DepthAI input queue object that allows to send images from host to device (used only with :code:`host` source)
     inputQueue = None
     #: depthai.DataOutputQueue: DepthAI output queue object that allows to receive NN results from the device.
@@ -229,14 +231,14 @@ class NNetManager:
         else:
             inNn = self.outputQueue.tryGet()
         if inNn is not None:
-            data = self.decode(inNn)
+            self.latestData = self.decode(inNn)
             if self._bufferSize > 0:
                 if len(self.buffer) == self._bufferSize:
                     del self.buffer[min(self.buffer.keys())]
-                self.buffer[inNn.getSequenceNum()] = data
-            return data, inNn
+                self.buffer[inNn.getSequenceNum()] = self.latestData
+            return inNn
         else:
-            return None, None
+            return None
 
     def decode(self, inNn):
         """
@@ -278,7 +280,7 @@ class NNetManager:
         else:
             drawCnt(source, len(cntList))
 
-    def draw(self, source, decodedData):
+    def draw(self, source):
         """
         Draws NN results onto the frames. It's responsible to correctly map the results onto each frame requested,
         including applying crop offset or preparing a correct normalization frame, then draws them with all information
@@ -292,8 +294,6 @@ class NNetManager:
 
                 If supplied with :class:`depthai_sdk.managers.PreviewManager` instance, it will print the count label
                 on all of the frames that it stores
-
-            decodedData: Detections from neural network node, usually returned from :func:`decode` method
         """
         if self._outputFormat == "detection":
             def drawDetection(frame, detection):
@@ -330,7 +330,7 @@ class NNetManager:
                         for name, frame in source.frames.items():
                             drawDetection(frame, detection)
             else:
-                for detection in decodedData:
+                for detection in self.latestData:
                     if isinstance(source, PreviewManager):
                         for name, frame in source.frames.items():
                             drawDetection(frame, detection)
@@ -338,14 +338,14 @@ class NNetManager:
                         drawDetection(source, detection)
 
             if self._countLabel is not None:
-                self._drawCount(source, decodedData)
+                self._drawCount(source, self.latestData)
 
         elif self._outputFormat == "raw" and self._handler is not None:
             if isinstance(source, PreviewManager):
                 frames = list(source.frames.items())
             else:
                 frames = [("host", source)]
-            self._handler.draw(self, decodedData, frames)
+            self._handler.draw(self, self.latestData, frames)
 
     def createQueues(self, device):
         """
