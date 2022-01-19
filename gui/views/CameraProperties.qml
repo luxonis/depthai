@@ -582,14 +582,14 @@ ListView {
         }
 
         Switch {
-            id: syncPreviewsSwitch
+            id: syncSwitch
             x: 203
             y: 158
             width: 164
             height: 28
-            text: qsTr("<font color=\"white\">Sync Previews</font>")
+            text: qsTr("<font color=\"white\">Enable sync</font>")
             onToggled: {
-                appBridge.toggleSyncPreview(syncPreviewsSwitch.checked)
+                appBridge.toggleSync(syncSwitch.checked)
             }
         }
 

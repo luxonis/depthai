@@ -11,18 +11,18 @@ from ..utils import loadModule, toTensorResult, frameNorm, toPlanar
 
 class NNetManager:
     """
-    Manager class handling all NN-related functionalities. It's capable of creating appropreate nodes and connections,
+    Manager class handling all NN-related functionalities. It's capable of creating appropriate nodes and connections,
     decoding neural network output automatically or by using external handler file.
     """
 
-    def __init__(self, inputSize, nnFamily=None, labels=[], confidence=0.5, bufferSize=0):
+    def __init__(self, inputSize, nnFamily=None, labels=[], confidence=0.5, sync=False):
         """
         Args:
             inputSize (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
             nnFamily (str, Optional): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
             labels (list, Optional): Allows to display class label instead of ID when drawing nn detections.
             confidence (float, Optional): Specify detection nn's confidence threshold
-            bufferSize (int, Optional): Specify how many nn data items to store in :attr:`buffer`
+            sync (bool, Optional): Store NN results for preview syncing (to be used with SyncedPreviewManager
         """
         self.inputSize = inputSize
         self._nnFamily = nnFamily
@@ -30,7 +30,7 @@ class NNetManager:
             self._outputFormat = "detection"
         self._labels = labels
         self._confidence = confidence
-        self._bufferSize = bufferSize
+        self._sync = sync
 
     #: list: List of available neural network inputs
     sourceChoices = ("color", "left", "right", "rectifiedLeft", "rectifiedRight", "host")
@@ -232,9 +232,7 @@ class NNetManager:
             inNn = self.outputQueue.tryGet()
         if inNn is not None:
             self.latestData = self.decode(inNn)
-            if self._bufferSize > 0:
-                if len(self.buffer) == self._bufferSize:
-                    del self.buffer[min(self.buffer.keys())]
+            if self._sync:
                 self.buffer[inNn.getSequenceNum()] = self.latestData
             return inNn
         else:
@@ -324,8 +322,10 @@ class NNetManager:
                     cv2.putText(frame, "Z: {:.2f} m".format(zMeters), (bbox[0] + 10, bbox[1] + 90),
                                 self._textType, 0.5, self._textColor, 1, self._lineType)
             if isinstance(source, SyncedPreviewManager):
-                if len(self.buffer) > 0:
+                if len(self.buffer) > 0 and source.nnSyncSeq is not None:
                     data = self.buffer.get(source.nnSyncSeq, self.buffer[max(self.buffer.keys())])
+                    for old_key in list(filter(lambda key: key < source.nnSyncSeq, self.buffer.keys())):
+                        del self.buffer[old_key]
                     for detection in data:
                         for name, frame in source.frames.items():
                             drawDetection(frame, detection)
@@ -376,7 +376,7 @@ class NNetManager:
 
         Args:
             frame (numpy.ndarray): Frame to be sent to the device
-            seqNum (int, Optional): Sequence number set on ImgFrame. Useful in syncronization scenarios
+            seqNum (int, Optional): Sequence number set on ImgFrame. Useful in synchronization scenarios
 
         Returns:
             numpy.ndarray: scaled frame that was sent to the NN (same width/height as NN input)

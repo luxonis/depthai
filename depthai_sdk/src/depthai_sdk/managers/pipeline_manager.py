@@ -256,7 +256,7 @@ class PipelineManager:
             useDisparity (bool, Optional): Set to :code:`True` to create output queue for disparity frames
             useDepth (bool, Optional): Set to :code:`True` to create output queue for depth frames
             useRectifiedLeft (bool, Optional): Set to :code:`True` to create output queue for rectified left frames
-            useRectifiedRigh (bool, Optional): Set to :code:`True` to create output queue for rectified righ frames
+            useRectifiedRigh (bool, Optional): Set to :code:`True` to create output queue for rectified right frames
             runtimeSwitch (bool, Optional): Allows to change the depth configuration during the runtime but allocates resources for worst-case scenario (disabled by default)
             alignment (depthai.CameraBoardSocket, Optional): Aligns the depth map to the specified camera socket
 
