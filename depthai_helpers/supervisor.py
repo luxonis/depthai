@@ -39,7 +39,7 @@ class Supervisor:
                 print("Waiting 5s for the device to be discoverable again...")
                 time.sleep(5)
                 args.guiType = "cv"
-        if args.guiType == "cv":
+        else:
             new_env = env.copy()
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
             new_args = createNewArgs(args)
