@@ -17,8 +17,7 @@ from depthai_helpers.config_manager import prepareConfManager
 
 
 class HttpHandler(SimpleHTTPRequestHandler):
-    static_prefix = "/app"
-    static_path = "./static"
+    static_path = "./dist"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str((Path(__file__).parent / self.static_path).absolute()), **kwargs)
@@ -29,11 +28,11 @@ class HttpHandler(SimpleHTTPRequestHandler):
             "/stream": self.stream
         }
 
-    def translate_path(self, path):
-        if path.startswith(self.static_prefix):
-            return super().translate_path(path[len(self.static_prefix):])
-        else:
-            return super().translate_path("/404.html")
+    # def translate_path(self, path):
+    #     if path.startswith(self.static_prefix):
+    #         return super().translate_path(path[len(self.static_prefix):])
+    #     else:
+    #         return super().translate_path("/404.html")
 
     def do_GET(self):
         if self.path in self.routes.keys():
@@ -137,7 +136,7 @@ class WebApp:
 
         if self.webserver is None:
             self.webserver = HTTPServer((self.confManager.args.host, self.confManager.args.port), HttpHandler)
-            print("Server started http://{}:{}/app/".format(self.confManager.args.host, self.confManager.args.port))
+            print("Server started http://{}:{}".format(self.confManager.args.host, self.confManager.args.port))
 
             try:
                 self.webserver.serve_forever()
