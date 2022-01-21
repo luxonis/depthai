@@ -410,22 +410,10 @@ class Worker(QRunnable):
                 if defaultDevice is None:
                     defaultDevice = devices[0].getMxId()
                 self.conf.args.deviceId = defaultDevice
-        if Previews.color.name not in self.conf.args.show:
-            self.conf.args.show.append(Previews.color.name)
-        if Previews.nnInput.name not in self.conf.args.show:
-            self.conf.args.show.append(Previews.nnInput.name)
-        if Previews.depth.name not in self.conf.args.show and Previews.disparityColor.name not in self.conf.args.show:
-            self.conf.args.show.append(Previews.depth.name)
-        if Previews.depthRaw.name not in self.conf.args.show and Previews.disparity.name not in self.conf.args.show:
-            self.conf.args.show.append(Previews.depthRaw.name)
-        if Previews.left.name not in self.conf.args.show:
-            self.conf.args.show.append(Previews.left.name)
-        if Previews.rectifiedLeft.name not in self.conf.args.show:
-            self.conf.args.show.append(Previews.rectifiedLeft.name)
-        if Previews.right.name not in self.conf.args.show:
-            self.conf.args.show.append(Previews.right.name)
-        if Previews.rectifiedRight.name not in self.conf.args.show:
-            self.conf.args.show.append(Previews.rectifiedRight.name)
+        self.conf.args.show = [
+            Previews.color.name, Previews.nnInput.name, Previews.depth.name, Previews.depthRaw.name, Previews.left.name,
+            Previews.rectifiedLeft.name, Previews.right.name, Previews.rectifiedRight.name
+        ]
         try:
             self.instance.run_all(self.conf)
         except KeyboardInterrupt:

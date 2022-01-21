@@ -147,4 +147,6 @@ def parseArgs():
     parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
     parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
     parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")
+    parser.add_argument('--host', default="127.0.0.1", help="Specify host address to which web server will bind (used only with guiType set to `web`)")
+    parser.add_argument('--port', default=8090, type=int, help="Specify port to which web server will bind (used only with guiType set to `web`)")
     return parser.parse_args()

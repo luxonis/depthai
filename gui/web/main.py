@@ -1,28 +1,79 @@
 # This Python file uses the following encoding: utf-8
+import sys
+import threading
 import time
+import traceback
 from functools import cmp_to_key
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+from io import BytesIO
+from pathlib import Path
 
+from PIL import Image
 import cv2
 import depthai as dai
-from depthai_sdk import createBlankFrame
+from depthai_sdk import createBlankFrame, Previews
 
 from depthai_helpers.config_manager import prepareConfManager
+
+
+class HttpHandler(SimpleHTTPRequestHandler):
+    static_prefix = "/app"
+    static_path = "./static"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory=str((Path(__file__).parent / self.static_path).absolute()), **kwargs)
+
+    def setup(self):
+        super().setup()
+        self.routes = {
+            "/stream": self.stream
+        }
+
+    def translate_path(self, path):
+        if path.startswith(self.static_prefix):
+            return super().translate_path(path[len(self.static_prefix):])
+        else:
+            return super().translate_path("/404.html")
+
+    def do_GET(self):
+        if self.path in self.routes.keys():
+            return self.routes[self.path]()
+        else:
+            return super().do_GET()
+
+    def stream(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
+        self.end_headers()
+        while True:
+            if hasattr(self.server, 'frametosend'):
+                image = Image.fromarray(cv2.cvtColor(self.server.frametosend, cv2.COLOR_BGR2RGB))
+                stream_file = BytesIO()
+                image.save(stream_file, 'JPEG')
+                self.wfile.write("--jpgboundary".encode())
+
+                self.send_header('Content-type', 'image/jpeg')
+                self.send_header('Content-length', str(stream_file.getbuffer().nbytes))
+                self.end_headers()
+                image.save(self.wfile, 'JPEG')
+
 
 class WebApp:
     def __init__(self, instance, args):
         super().__init__()
         self.confManager = prepareConfManager(args)
         self.running = False
+        self.webserver = None
         self.selectedPreview = self.confManager.args.show[0] if len(self.confManager.args.show) > 0 else "color"
         self._demoInstance = instance
-        self._demoInstance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
+        self.thread = None
 
     def shouldRun(self):
         return True
 
     def onShowFrame(self, frame, source):
         if source == self.selectedPreview:
-            print(frame, source)
+            self.webserver.frametosend = frame
 
     def onSetup(self, instance):
         previewChoices = self.confManager.args.show
@@ -47,15 +98,62 @@ class WebApp:
     def showDownloadProgress(self, curr, total):
         print(curr, total)
 
+    def onError(self, ex: Exception):
+        exception_message = ''.join(traceback.format_tb(ex.__traceback__) + [str(ex)])
+        print(exception_message)
+
+    def runDemo(self):
+        self._demoInstance.setCallbacks(
+            shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup,
+            onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress
+        )
+        self.confManager.args.bandwidth = "auto"
+        if self.confManager.args.deviceId is None:
+            devices = dai.Device.getAllAvailableDevices()
+            if len(devices) > 0:
+                defaultDevice = next(map(
+                    lambda info: info.getMxId(),
+                    filter(lambda info: info.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC, devices)
+                ), None)
+                if defaultDevice is None:
+                    defaultDevice = devices[0].getMxId()
+                self.confManager.args.deviceId = defaultDevice
+        self.confManager.args.show = [
+            Previews.color.name, Previews.nnInput.name, Previews.depth.name, Previews.depthRaw.name, Previews.left.name,
+            Previews.rectifiedLeft.name, Previews.right.name, Previews.rectifiedRight.name
+        ]
+        try:
+            self._demoInstance.run_all(self.confManager)
+        except KeyboardInterrupt:
+            sys.exit(0)
+        except Exception as ex:
+            self.onError(ex)
+
     def start(self):
         self.running = True
-        print("Starting...")
+        self.thread = threading.Thread(target=self.runDemo)
+        self.thread.daemon = True
+        self.thread.start()
+
+        if self.webserver is None:
+            self.webserver = HTTPServer((self.confManager.args.host, self.confManager.args.port), HttpHandler)
+            print("Server started http://{}:{}/app/".format(self.confManager.args.host, self.confManager.args.port))
+
+            try:
+                self.webserver.serve_forever()
+            except KeyboardInterrupt:
+                pass
+
+            self.webserver.server_close()
 
     def stop(self, wait=True):
         if hasattr(self._demoInstance, "_device"):
             current_mxid = self._demoInstance._device.getMxId()
         else:
             current_mxid = self.confManager.args.deviceId
+
+        self.running = False
+        self.thread.join()
 
         if wait and current_mxid is not None:
             start = time.time()
