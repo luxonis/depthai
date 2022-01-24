@@ -67,7 +67,7 @@ class App:
             except KeyboardInterrupt:
                 break
         if os.name == 'nt':
-            os.kill(pro.pid, signal.SIGTERM)
+            subprocess.call(['taskkill', '/F', '/T', '/PID', str(pro.pid)])
         else:
             os.killpg(os.getpgid(pro.pid), signal.SIGTERM)
 
