@@ -43,19 +43,19 @@ class App:
             else:
                 print("Creating venv...")
             try:
-                subprocess.check_call(' '.join([quoted(sys.executable), '-m', 'venv', str(self.venvPath)]), shell=True, env=initEnv, cwd=self.appPath)
+                subprocess.check_call(' '.join([quoted(sys.executable), '-m', 'venv', quoted(str(self.venvPath.absolute()))]), shell=True, env=initEnv, cwd=self.appPath)
             except:
                 print(f"Error creating a new virtual environment using \"venv\" module! Please try to install \"python3.{sys.version_info[1]}-venv\" again", file=sys.stderr)
                 sys.exit(1)
         print("Installing requirements...")
         subprocess.check_call(' '.join([quoted(self.appInterpreter), '-m', 'pip', 'install', '-U', 'pip']), env=initEnv, shell=True, cwd=self.appPath)
-        subprocess.check_call(' '.join([quoted(self.appInterpreter), '-m', 'pip', 'install', '--prefer-binary', '-r', str(self.appRequirements)]), env=initEnv, shell=True, cwd=self.appPath)
+        subprocess.check_call(' '.join([quoted(self.appInterpreter), '-m', 'pip', 'install', '--prefer-binary', '-r', quoted(str(self.appRequirements))]), env=initEnv, shell=True, cwd=self.appPath)
 
     def runApp(self, shouldRun = lambda: True):
         if os.name == 'nt':
-            pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath)
+            pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), quoted(str(self.appEntrypoint))]), env=initEnv, shell=True, cwd=self.appPath)
         else:
-            pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), str(self.appEntrypoint)]), env=initEnv, shell=True, cwd=self.appPath, preexec_fn=os.setsid)
+            pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), quoted(str(self.appEntrypoint))]), env=initEnv, shell=True, cwd=self.appPath, preexec_fn=os.setsid)
         while shouldRun():
             try:
                 time.sleep(1)
