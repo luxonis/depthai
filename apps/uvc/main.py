@@ -4,6 +4,10 @@ import platform
 import depthai as dai
 import time
 
+from depthai_helpers.arg_manager import parseArgs
+
+args = parseArgs()
+
 if platform.machine() == 'aarch64':
     print("This app is temporarily disabled on AARCH64 systems due to an issue with stream preview. We are working on resolving this issue")
     raise SystemExit(0)
@@ -29,7 +33,7 @@ uvc = pipeline.createUVC()
 cam_rgb.video.link(uvc.input)
 
 # Pipeline defined, now the device is connected to
-with dai.Device(pipeline) as device:
+with dai.Device(pipeline, usb2Mode=args.usbSpeed == "usb2") as device:
     print("\nDevice started, please keep this process running")
     print("and open an UVC viewer. Example on Linux:")
     print("    guvcview -d /dev/video0")

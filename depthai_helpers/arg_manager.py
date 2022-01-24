@@ -1,13 +1,6 @@
-import os
 import argparse
 from pathlib import Path
-import cv2
 import depthai as dai
-try:
-    import argcomplete
-except ImportError:
-    raise ImportError('\033[1;5;31m argcomplete module not found, run: python3 install_requirements.py \033[0m')
-from depthai_sdk.previews import Previews
 
 
 def checkRange(minVal, maxVal):
@@ -55,12 +48,16 @@ def orientationCast(arg):
 
 openvinoVersions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
 _streamChoices = ("nnInput", "color", "left", "right", "depth", "depthRaw", "disparity", "disparityColor", "rectifiedLeft", "rectifiedRight")
-colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
+try:
+    import cv2
+    colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
+except:
+    colorMaps = None
 projectRoot = Path(__file__).parent.parent
 
 def parseArgs():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-cam', '--camera', choices=[Previews.left.name, Previews.right.name, Previews.color.name], default=Previews.color.name, help="Use one of DepthAI cameras for inference (conflicts with -vid)")
+    parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
     parser.add_argument('-dd', '--disableDepth', action="store_true", help="Disable depth information")
     parser.add_argument('-dnn', '--disableNeuralNetwork', action="store_true", help="Disable neural network inference")
