@@ -7,7 +7,11 @@ import time
 from pathlib import Path
 
 initEnv = os.environ.copy()
-initEnv["PYTHONPATH"] = ":".join(initEnv.get("PYTHONPATH", "").split(":") + [str(Path(__file__).parent.parent.absolute())])
+if "PYTHONPATH" in initEnv:
+    initEnv["PYTHONPATH"] += ":" + str(Path(__file__).parent.parent.absolute())
+else:
+    initEnv["PYTHONPATH"] = str(Path(__file__).parent.parent.absolute())
+
 
 
 def quoted(val):
@@ -62,5 +66,8 @@ class App:
                 time.sleep(1)
             except KeyboardInterrupt:
                 break
-        os.killpg(os.getpgid(pro.pid), signal.SIGTERM)
+        if os.name == 'nt':
+            os.kill(pro.pid, signal.SIGTERM)
+        else:
+            os.killpg(os.getpgid(pro.pid), signal.SIGTERM)
 

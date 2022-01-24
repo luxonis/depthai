@@ -6,6 +6,7 @@ from depthai_helpers.arg_manager import parseArgs
 
 args = parseArgs()
 
+
 if platform.machine() == 'aarch64':
     print("This app is temporarily disabled on AARCH64 systems due to an issue with stream preview. We are working on resolving this issue")
     raise SystemExit(0)
