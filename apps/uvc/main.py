@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-import os
 import platform
 import depthai as dai
 import time
-
 from depthai_helpers.arg_manager import parseArgs
 
 args = parseArgs()

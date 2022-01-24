@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 initEnv = os.environ.copy()
+initEnv["PYTHONPATH"] = ":".join(initEnv.get("PYTHONPATH", "").split(":") + [str(Path(__file__).parent.parent.absolute())])
 
 
 def quoted(val):
