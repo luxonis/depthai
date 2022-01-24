@@ -61,13 +61,14 @@ class App:
             pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), quoted(str(self.appEntrypoint))]), env=initEnv, shell=True, cwd=self.appPath)
         else:
             pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), quoted(str(self.appEntrypoint))]), env=initEnv, shell=True, cwd=self.appPath, preexec_fn=os.setsid)
-        while shouldRun():
+        while shouldRun() and pro.poll() is None:
             try:
                 time.sleep(1)
             except KeyboardInterrupt:
                 break
-        if os.name == 'nt':
-            subprocess.call(['taskkill', '/F', '/T', '/PID', str(pro.pid)])
-        else:
-            os.killpg(os.getpgid(pro.pid), signal.SIGTERM)
+        if pro.poll() is not None:
+            if os.name == 'nt':
+                subprocess.call(['taskkill', '/F', '/T', '/PID', str(pro.pid)])
+            else:
+                os.kill(pro.pid, signal.SIGTERM)
 
