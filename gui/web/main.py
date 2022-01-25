@@ -49,20 +49,23 @@ class HttpHandler(SimpleHTTPRequestHandler):
         self.wfile.write(json.dumps(getattr(self.server, 'config', {})).encode('UTF-8'))
 
     def stream(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
-        self.end_headers()
-        while True:
-            if hasattr(self.server, 'frametosend'):
-                image = Image.fromarray(cv2.cvtColor(self.server.frametosend, cv2.COLOR_BGR2RGB))
-                stream_file = BytesIO()
-                image.save(stream_file, 'JPEG')
-                self.wfile.write("--jpgboundary".encode())
+        try:
+            self.send_response(200)
+            self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
+            self.end_headers()
+            while True:
+                if hasattr(self.server, 'frametosend'):
+                    image = Image.fromarray(cv2.cvtColor(self.server.frametosend, cv2.COLOR_BGR2RGB))
+                    stream_file = BytesIO()
+                    image.save(stream_file, 'JPEG')
+                    self.wfile.write("--jpgboundary".encode())
 
-                self.send_header('Content-type', 'image/jpeg')
-                self.send_header('Content-length', str(stream_file.getbuffer().nbytes))
-                self.end_headers()
-                image.save(self.wfile, 'JPEG')
+                    self.send_header('Content-type', 'image/jpeg')
+                    self.send_header('Content-length', str(stream_file.getbuffer().nbytes))
+                    self.end_headers()
+                    image.save(self.wfile, 'JPEG')
+        except BrokenPipeError:
+            return
 
 
 class WebApp:

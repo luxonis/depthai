@@ -39,7 +39,7 @@ function App() {
           }
         </Col>
         <Col md={12} sm={24}>
-          <Card bodyStyle={{padding: 0}}>
+          <Card bordered={false} bodyStyle={{padding: 0, maxWidth: 700}}>
             <Tabs animated centered defaultActiveKey="ai">
               <Tabs.TabPane tab={<span className="tab-indicator"><ExperimentOutlined/><span>AI</span></span>} key="ai">
                 <AIProperties/>

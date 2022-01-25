@@ -55,7 +55,7 @@ function AIProperties() {
           <Slider marks={{0: '0', 1: '1'}} step={0.1} min={0} max={1} defaultValue={0.3}/>
         </div>
       </div>
-      <Button type="primary" block size="large">
+      <Button className="restart-button" type="primary" block size="large">
         Apply and Restart
       </Button>
     </>

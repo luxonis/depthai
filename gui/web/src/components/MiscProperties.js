@@ -42,7 +42,7 @@ function MiscProperties() {
           </div>
         </Col>
       </Row>
-      <Button type="primary" block size="large">
+      <Button className="restart-button" type="primary" block size="large">
         Apply and Restart
       </Button>
     </>
