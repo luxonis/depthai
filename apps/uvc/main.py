@@ -9,7 +9,7 @@ args = parseArgs()
 
 if platform.machine() == 'aarch64':
     print("This app is temporarily disabled on AARCH64 systems due to an issue with stream preview. We are working on resolving this issue")
-    raise SystemExit(0)
+    raise SystemExit(1)
 
 enable_4k = True  # Will downscale 4K -> 1080p
 
@@ -36,7 +36,7 @@ cam_rgb.video.link(uvc.input)
 with dai.Device(pipeline, usb2Mode=args.usbSpeed == "usb2") as device:
     if device.getDeviceInfo().desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC and device.getUsbSpeed() not in (dai.UsbSpeed.SUPER, dai.UsbSpeed.SUPER_PLUS):
         print("This app is temporarily disabled with USB2 connection speed due to known issue. We're working on resolving it. In the meantime, please try again with a USB3 cable/port for the device connection")
-        raise SystemExit(0)
+        raise SystemExit(1)
     print("\nDevice started, please keep this process running")
     print("and open an UVC viewer. Example on Linux:")
     print("    guvcview -d /dev/video0")
