@@ -67,8 +67,12 @@ class App:
             except KeyboardInterrupt:
                 break
         if pro.poll() is not None:
-            if os.name == 'nt':
-                subprocess.call(['taskkill', '/F', '/T', '/PID', str(pro.pid)])
-            else:
-                os.kill(pro.pid, signal.SIGTERM)
+            try:
+                if os.name == 'nt':
+                    subprocess.call(['taskkill', '/F', '/T', '/PID', str(pro.pid)])
+                else:
+                    os.kill(pro.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+
 
