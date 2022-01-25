@@ -7,14 +7,20 @@ import {
   SlidersOutlined, QuestionCircleOutlined
 } from "@ant-design/icons";
 import AIProperties from "./components/AIProperties";
+import DepthProperties from "./components/DepthProperties";
 import CameraPreview from "./components/CameraPreview";
 import {useDispatch, useSelector} from "react-redux";
 import {fetchConfig} from "./store";
 import {useEffect} from "react";
+import CameraProperties from "./components/CameraProperties";
+import MiscProperties from "./components/MiscProperties";
 
 function App() {
   const fetched = useSelector((state) => state.demo.fetched)
+  const error = useSelector((state) => state.demo.error)
   const dispatch = useDispatch()
+
+  console.log(error)
 
   useEffect(() => {
     if(!fetched) {
@@ -24,28 +30,28 @@ function App() {
 
   return (
     <div className="root-container">
-      <Row align="middle">
-        <Col flex={1}>
+      <Row align="middle" gutter={{md: 20, sm: 0}}>
+        <Col md={12} sm={24}>
           {
-            fetched
+            fetched || error
               ? <CameraPreview/>
               : <Spin tip="Loading..."/>
           }
         </Col>
-        <Col flex={1}>
+        <Col md={12} sm={24}>
           <Card bodyStyle={{padding: 0}}>
-            <Tabs centered defaultActiveKey="ai">
+            <Tabs animated centered defaultActiveKey="ai">
               <Tabs.TabPane tab={<span className="tab-indicator"><ExperimentOutlined/><span>AI</span></span>} key="ai">
                 <AIProperties/>
               </Tabs.TabPane>
               <Tabs.TabPane tab={<span className="tab-indicator"><BorderOuterOutlined/> <span>Depth</span></span>} key="depth">
-                I'm Depth
+                <DepthProperties/>
               </Tabs.TabPane>
               <Tabs.TabPane tab={<span className="tab-indicator"><CameraOutlined/> <span>Camera</span></span>} key="camera">
-                I'm Camera
+                <CameraProperties/>
               </Tabs.TabPane>
               <Tabs.TabPane tab={<span className="tab-indicator"><SlidersOutlined/> <span>Misc</span></span>} key="misc">
-                I'm Misc
+                <MiscProperties/>
               </Tabs.TabPane>
             </Tabs>
           </Card>

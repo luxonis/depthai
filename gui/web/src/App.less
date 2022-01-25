@@ -1,5 +1,7 @@
 .root-container {
   min-height: 100vh;
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
   text-align: center;
   flex-direction: row;
@@ -8,10 +10,6 @@
   font-size: calc(10px + 2vmin);
   color: black;
 
-  .stream-preview {
-    width: 50vw;
-    height: 40vh;
-  }
   .ant-spin {
     width: 50vw;
     font-weight: bold;
@@ -27,6 +25,24 @@
 
   .preview-container {
     margin: auto 0;
+    box-shadow: 0 3px 10px rgb(0 0 0 / 0.5);
+    border-radius: 0 0 20px 20px;
+
+    .stream-preview {
+      width: 100%;
+      height: calc(100% * 9 / 16);
+    }
+
+
+    .preview-controls {
+      padding: 10px 0;
+      background-color: #444444;
+      border-radius: 0 0 20px 20px;
+      display: flex;
+      align-items: center;
+      vertical-align: middle;
+      justify-content: space-evenly;
+    }
   }
 
   .title-section {

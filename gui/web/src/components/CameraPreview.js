@@ -1,11 +1,13 @@
 import React from 'react'
 import {Button, Select} from "antd";
 import {PlayCircleOutlined} from "@ant-design/icons";
+import {useSelector} from "react-redux";
 
 const CameraPreview = () => {
+  const error = useSelector((state) => state.demo.error)
   return (
     <div className="preview-container">
-      <img className="stream-preview" src="/stream"/>
+      <img className="stream-preview" src={error ? "https://user-images.githubusercontent.com/5244214/151023826-313848a4-435b-4228-987a-b5b2017668b2.png" : "/stream"}/>
       <div className="preview-controls">
         <Select defaultValue="depth">
           <Select.Option value="depth">Depth</Select.Option>

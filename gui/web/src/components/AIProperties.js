@@ -10,38 +10,54 @@ function AIProperties() {
       </div>
       <div className="options-section">
         <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
-        <Typography.Title level={3}>Median filtering</Typography.Title>
-        <Select size="large" defaultValue="7x7">
-          <Select.Option value="7x7">Kernel 7x7</Select.Option>
-          <Select.Option value="5x5">Kernel 5x5</Select.Option>
-          <Select.Option value="3x3">Kernel 3x3</Select.Option>
-          <Select.Option value="None">No filtering</Select.Option>
+        <Typography.Title level={3}>Neural network</Typography.Title>
+        <Select size="large" defaultValue="mobilenet-ssd">
+          <Select.Option value="mobilenet-ssd">mobilenet-ssd</Select.Option>
+          <Select.Option value="face-detection-retail-0004">face-detection-retail-0004</Select.Option>
+          <Select.Option value="openpose2">openpose2</Select.Option>
+          <Select.Option value="vehicle-detection-adas-0001">vehicle-detection-adas-0001</Select.Option>
         </Select>
-        <div className="switchable-option"><Switch/> <span>Subpixel</span></div>
-        <div className="switchable-option"><Switch/> <span>Left Right Check</span></div>
-        <div className="switchable-option"><Switch/> <span>Extended Disparity</span></div>
+        <div className="switchable-option"><Switch/> <span>Full FOV input</span></div>
+        <div>
+          <Typography.Title level={3}>SHAVEs</Typography.Title>
+          <Slider marks={{0: '0', 12: '12'}} min={0} max={12} defaultValue={6}/>
+        </div>
+        <div>
+          <span>Model source</span>
+          <Select defaultValue="color">
+            <Select.Option value="color">color</Select.Option>
+            <Select.Option value="left">left</Select.Option>
+            <Select.Option value="right">right</Select.Option>
+          </Select>
+        </div>
       </div>
       <div className="options-section">
         <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
-        <Typography.Title level={3}>Confidence Threshold</Typography.Title>
-        <Slider marks={{0: '0', 255: '255'}} min={0} max={255} defaultValue={240}/>
-        <Typography.Title level={3}>Bilateral Sigma</Typography.Title>
-        <Slider marks={{0: '0', 250: '250'}} min={0} max={250} defaultValue={0}/>
-        <Typography.Title level={3}>LRC Threshold</Typography.Title>
-        <Slider marks={{0: '0', 10: '10'}} min={0} max={10} defaultValue={0}/>
-        <Typography.Title level={3}>Depth Range (m)</Typography.Title>
-        <Row>
-          <Col flex={2}>
-            <Input addonBefore="min" defaultValue="0"/>
-          </Col>
-          <Col flex={2}>
-            <Input addonBefore="max" defaultValue="10"/>
-          </Col>
-        </Row>
-        <Button type="primary" block size="large">
-          Apply and Restart
-        </Button>
+        <div>
+          <span>OpenVINO version</span>
+          <Select defaultValue="VERSION_2021_4">
+            <Select.Option value="VERSION_2021_4">VERSION_2021_4</Select.Option>
+            <Select.Option value="VERSION_2021_4">VERSION_2021_3</Select.Option>
+            <Select.Option value="VERSION_2021_4">VERSION_2021_2</Select.Option>
+          </Select>
+        </div>
+        <div>
+          <span>Label to count</span>
+          <Select defaultValue="color">
+            <Select.Option value="color">color</Select.Option>
+            <Select.Option value="left">left</Select.Option>
+            <Select.Option value="right">right</Select.Option>
+          </Select>
+        </div>
+        <div className="switchable-option"><Switch/> <span>Spatial Bounding Boxes (SBB)</span></div>
+        <div>
+          <span>SBB Factor</span>
+          <Slider marks={{0: '0', 1: '1'}} step={0.1} min={0} max={1} defaultValue={0.3}/>
+        </div>
       </div>
+      <Button type="primary" block size="large">
+        Apply and Restart
+      </Button>
     </>
   );
 }
