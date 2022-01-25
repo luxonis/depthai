@@ -1,0 +1,77 @@
+.root-container {
+  min-height: 100vh;
+  display: flex;
+  text-align: center;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: black;
+
+  .stream-preview {
+    width: 50vw;
+    height: 40vh;
+  }
+  .ant-spin {
+    width: 50vw;
+    font-weight: bold;
+  }
+
+  .tab-indicator {
+    padding: 0 10px;
+    span {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+  }
+
+  .preview-container {
+    margin: auto 0;
+  }
+
+  .title-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+  }
+
+  .options-section {
+    margin: 10px 20px;
+    position: relative;
+    text-align: left;
+    padding: 10px 10px;
+    border: 1px solid @border-color-base;
+    border-radius: 10px;
+
+    .ant-select-lg {
+      display: block;
+      margin: 20px 0;
+    }
+
+    .info-indicator {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
+
+    .switchable-option {
+      button {
+        width: 60px;
+      }
+      span {
+        margin-left: 5px;
+      }
+    }
+    .switchable-option + .switchable-option {
+      margin-top: 5px;
+    }
+
+    .ant-btn-block {
+      margin-top: 20px;
+      margin-bottom: 5px;
+      height: 60px;
+      font-weight: bold;
+    }
+  }
+}

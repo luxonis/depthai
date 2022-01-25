@@ -1,4 +1,5 @@
 # This Python file uses the following encoding: utf-8
+import json
 import sys
 import threading
 import time
@@ -25,7 +26,8 @@ class HttpHandler(SimpleHTTPRequestHandler):
     def setup(self):
         super().setup()
         self.routes = {
-            "/stream": self.stream
+            "/stream": self.stream,
+            "/config": self.config,
         }
 
     # def translate_path(self, path):
@@ -39,6 +41,12 @@ class HttpHandler(SimpleHTTPRequestHandler):
             return self.routes[self.path]()
         else:
             return super().do_GET()
+
+    def config(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        self.wfile.write(json.dumps(getattr(self.server, 'config', {})).encode('UTF-8'))
 
     def stream(self):
         self.send_response(200)
@@ -80,6 +88,14 @@ class WebApp:
         countLabels = instance._nnManager._labels if instance._nnManager is not None else []
         depthEnabled = self.confManager.useDepth
         modelChoices = sorted(self.confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))
+
+        self.webserver.config = {
+            "previewChoices": previewChoices,
+            "devices": devices,
+            "countLabels": countLabels,
+            "depthEnabled": depthEnabled,
+            "modelChoices": modelChoices,
+        }
 
 
     def onAppSetup(self, app):
