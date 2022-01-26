@@ -16,27 +16,20 @@ import CameraProperties from "./components/CameraProperties";
 import MiscProperties from "./components/MiscProperties";
 
 function App() {
-  const fetched = useSelector((state) => state.demo.fetched)
   const error = useSelector((state) => state.demo.error)
   const dispatch = useDispatch()
 
   console.log(error)
 
   useEffect(() => {
-    if(!fetched) {
-      dispatch(fetchConfig())
-    }
-  }, [fetched])
+    dispatch(fetchConfig())
+  }, [])
 
   return (
     <div className="root-container">
       <Row align="middle" gutter={{md: 20, sm: 0}}>
         <Col md={12} sm={24}>
-          {
-            fetched || error
-              ? <CameraPreview/>
-              : <Spin tip="Loading..."/>
-          }
+          <CameraPreview/>
         </Col>
         <Col md={12} sm={24}>
           <Card bordered={false} bodyStyle={{padding: 0, maxWidth: 700}}>

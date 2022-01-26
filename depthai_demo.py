@@ -4,12 +4,7 @@ import threading
 
 if sys.version_info[0] < 3:
     raise Exception("Must be using Python 3")
-import argparse
-import json
 import os
-import time
-import traceback
-from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
 import platform

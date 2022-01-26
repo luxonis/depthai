@@ -1,11 +1,12 @@
 # This Python file uses the following encoding: utf-8
 import json
+import mimetypes
 import sys
 import threading
 import time
 import traceback
 from functools import cmp_to_key
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import HTTPServer, SimpleHTTPRequestHandler, BaseHTTPRequestHandler
 from io import BytesIO
 from pathlib import Path
 
@@ -13,40 +14,66 @@ from PIL import Image
 import cv2
 import depthai as dai
 from depthai_sdk import createBlankFrame, Previews
-
+from depthai_helpers.arg_manager import openvinoVersions, colorMaps, streamChoices, cameraChoices, reportingChoices
 from depthai_helpers.config_manager import prepareConfManager
 
 
-class HttpHandler(SimpleHTTPRequestHandler):
-    static_path = "./dist"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, directory=str((Path(__file__).parent / self.static_path).absolute()), **kwargs)
+class HttpHandler(BaseHTTPRequestHandler):
+    static_path = Path(__file__).parent / "dist"
 
     def setup(self):
         super().setup()
         self.routes = {
             "/stream": self.stream,
             "/config": self.config,
+            "/update": self.update,
         }
-
-    # def translate_path(self, path):
-    #     if path.startswith(self.static_prefix):
-    #         return super().translate_path(path[len(self.static_prefix):])
-    #     else:
-    #         return super().translate_path("/404.html")
 
     def do_GET(self):
         if self.path in self.routes.keys():
             return self.routes[self.path]()
         else:
-            return super().do_GET()
+            filePath = self.static_path / self.path.lstrip("/")
+            if filePath.is_dir():
+                filePath = filePath / "index.html"
+            elif not filePath.exists():
+                filePath = filePath.with_suffix(".html")
+            print(filePath, self.static_path, self.path.lstrip("/"), self.static_path / self.path.lstrip("/"))
+
+            if filePath.exists():
+                self.send_response(200)
+                mimetype, _ = mimetypes.guess_type(filePath)
+                self.send_header('Content-type', mimetype)
+                self.end_headers()
+                with filePath.open('rb') as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_response(404)
+                self.end_headers()
+
+    def do_POST(self):
+        if self.path in self.routes.keys():
+            return self.routes[self.path]()
+        else:
+            self.send_response(404)
+            self.end_headers()
 
     def config(self):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
         self.wfile.write(json.dumps(getattr(self.server, 'config', {})).encode('UTF-8'))
+
+    def update(self):
+        content_len = int(self.headers.get("Content-Length", 0))
+        post_body = self.rfile.read(content_len)
+        test_data = json.loads(post_body)
+        print(test_data)
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.end_headers()
+        if not self.wfile.closed:
+            self.wfile.write(json.dumps(test_data).encode('UTF-8'))
 
     def stream(self):
         try:
@@ -67,6 +94,11 @@ class HttpHandler(SimpleHTTPRequestHandler):
         except BrokenPipeError:
             return
 
+
+class CustomHTTPServer(HTTPServer):
+  def finish_request(self, request, client_address):
+    request.settimeout(1) # Really short timeout as there is only 1 thread
+    HTTPServer.finish_request(self, request, client_address)
 
 class WebApp:
     def __init__(self, instance, args):
@@ -89,10 +121,34 @@ class WebApp:
         previewChoices = self.confManager.args.show
         devices = [instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
         countLabels = instance._nnManager._labels if instance._nnManager is not None else []
+        countLabel = instance._nnManager._countLabel if instance._nnManager is not None else None
         depthEnabled = self.confManager.useDepth
         modelChoices = sorted(self.confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))
 
         self.webserver.config = {
+            "ai": {
+                "enabled": self.confManager.useNN,
+                "model": {
+                    "current": self.confManager.getModelName(),
+                    "available": modelChoices,
+                },
+                "fullFov": not self.confManager.args.disableFullFovNn,
+                "source": {
+                    "current": self.confManager.getModelSource(),
+                    "available": cameraChoices
+                },
+                "shaves": self.confManager.shaves,
+                "ovVersion": {
+                    "current": instance._pm.pipeline.getOpenVINOVersion().name.replace("VERSION_", ""),
+                    "available": openvinoVersions,
+                },
+                "label": {
+                    "current": countLabel,
+                    "available": countLabels,
+                },
+                "sbb": self.confManager.args.spatialBoundingBox,
+                "sbbFactor": self.confManager.args.sbbScaleFactor,
+            },
             "previewChoices": previewChoices,
             "devices": devices,
             "countLabels": countLabels,
@@ -154,7 +210,7 @@ class WebApp:
         self.thread.start()
 
         if self.webserver is None:
-            self.webserver = HTTPServer((self.confManager.args.host, self.confManager.args.port), HttpHandler)
+            self.webserver = CustomHTTPServer((self.confManager.args.host, self.confManager.args.port), HttpHandler)
             print("Server started http://{}:{}".format(self.confManager.args.host, self.confManager.args.port))
 
             try:

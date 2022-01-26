@@ -1,5 +1,5 @@
 .root-container {
-  min-height: 100vh;
+  min-height: 99vh;
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
@@ -28,12 +28,17 @@
     margin: auto 0;
     box-shadow: 0 3px 10px rgb(0 0 0 / 0.5);
     border-radius: 0 0 20px 20px;
+    position: relative;
+
+    .ant-spin {
+      position: absolute;
+      top: calc(50% - 50px);
+    }
 
     .stream-preview {
       width: 100%;
       height: calc(100% * 9 / 16);
     }
-
 
     .preview-controls {
       padding: 10px 0;

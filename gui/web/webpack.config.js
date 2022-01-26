@@ -75,4 +75,11 @@ module.exports = {
       }),
     ],
   },
+  devServer: {
+    proxy: {
+      '/config': 'http://127.0.0.1:8090',
+      '/stream': 'http://127.0.0.1:8090',
+      '/update': 'http://127.0.0.1:8090',
+    },
+  },
 }
