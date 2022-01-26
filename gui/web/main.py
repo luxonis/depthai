@@ -62,18 +62,44 @@ class HttpHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
-        self.wfile.write(json.dumps(getattr(self.server, 'config', {})).encode('UTF-8'))
+        self.wfile.write(json.dumps(self.server.config).encode('UTF-8'))
 
     def update(self):
-        content_len = int(self.headers.get("Content-Length", 0))
-        post_body = self.rfile.read(content_len)
+        if self.server.instance is None:
+            self.send_response(202)
+            self.end_headers()
+            return
+
+        post_body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
         test_data = json.loads(post_body)
         print(test_data)
+        mapping = {
+            "ai": {
+                "enabled": lambda data: self.server.instance.updateArg("disableNeuralNetwork", not data),
+                "model": lambda data: self.server.instance.updateArg("cnnModel", data["current"]) if "current" in data else None,
+                "fullFov": lambda data: self.server.instance.updateArg("disableFullFovNn", not data),
+                "source": lambda data: self.server.instance.updateArg("camera", data["current"]),
+                "shaves": lambda data: self.server.instance.updateArg("shaves", data),
+                "ovVersion": lambda data: self.server.instance.updateArg("openvinoVersion", data["current"]) if "current" in data else None,
+                "label": lambda data: self.server.instance.updateArg("countLabel", data["current"]) if "current" in data else None,
+                "sbb": lambda data: self.server.instance.updateArg("spatialBoundingBox", data),
+                "sbbFactor": lambda data: self.server.instance.updateArg("sbbScaleFactor", data),
+            },
+        }
+
+        def call_mappings(in_dict, map_slice):
+            for key in in_dict:
+                if key in map_slice:
+                    if callable(map_slice[key]):
+                        map_slice[key](in_dict[key])
+                    elif isinstance(map_slice[key], dict):
+                        call_mappings(in_dict[key], map_slice[key])
+
+        call_mappings(test_data, mapping)
+        self.server.instance.restartDemo()
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
-        if not self.wfile.closed:
-            self.wfile.write(json.dumps(test_data).encode('UTF-8'))
 
     def stream(self):
         try:
@@ -81,7 +107,7 @@ class HttpHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
             self.end_headers()
             while True:
-                if hasattr(self.server, 'frametosend'):
+                if self.server.frametosend is not None:
                     image = Image.fromarray(cv2.cvtColor(self.server.frametosend, cv2.COLOR_BGR2RGB))
                     stream_file = BytesIO()
                     image.save(stream_file, 'JPEG')
@@ -96,9 +122,17 @@ class HttpHandler(BaseHTTPRequestHandler):
 
 
 class CustomHTTPServer(HTTPServer):
-  def finish_request(self, request, client_address):
-    request.settimeout(1) # Really short timeout as there is only 1 thread
-    HTTPServer.finish_request(self, request, client_address)
+    instance = None
+    config = {}
+    frametosend = None
+
+    def __init__(self, instance, handler):
+        super().__init__((instance.confManager.args.host, instance.confManager.args.port), handler)
+        self.instance = instance
+
+    def finish_request(self, request, client_address):
+        request.settimeout(1) # Really short timeout as there is only 1 thread
+        HTTPServer.finish_request(self, request, client_address)
 
 class WebApp:
     def __init__(self, instance, args):
@@ -110,8 +144,11 @@ class WebApp:
         self._demoInstance = instance
         self.thread = None
 
+    def updateArg(self, arg_name, arg_value):
+        setattr(self.confManager.args, arg_name, arg_value)
+
     def shouldRun(self):
-        return True
+        return self.running
 
     def onShowFrame(self, frame, source):
         if source == self.selectedPreview:
@@ -210,7 +247,7 @@ class WebApp:
         self.thread.start()
 
         if self.webserver is None:
-            self.webserver = CustomHTTPServer((self.confManager.args.host, self.confManager.args.port), HttpHandler)
+            self.webserver = CustomHTTPServer(self, HttpHandler)
             print("Server started http://{}:{}".format(self.confManager.args.host, self.confManager.args.port))
 
             try:
@@ -219,6 +256,9 @@ class WebApp:
                 pass
 
             self.webserver.server_close()
+        else:
+            self.webserver.frametosend = None
+            self.webserver.config = {}
 
     def stop(self, wait=True):
         if hasattr(self._demoInstance, "_device"):

@@ -4,19 +4,32 @@ import _ from 'lodash';
 
 export const fetchConfig = createAsyncThunk(
   'config/fetch',
-  async () => {
+  async (arg, thunk) => {
     const response = await request(GET, '/config')
+    if (_.isEmpty(response.data)) {
+      setTimeout(() => thunk.dispatch(fetchConfig()), 1000)
+      return thunk.rejectWithValue('Empty');
+    }
     return response.data
   }
 )
 
+function difference(object, base) {
+    return _.transform(object, (result, value, key) => {
+        if (!_.isEqual(value, base[key])) {
+            result[key] = (_.isObject(value) && _.isObject(base[key])) ? difference(value, base[key]) : value;
+        }
+    });
+}
+
 export const sendConfig = createAsyncThunk(
   'config/send',
   async (arg, thunk) => {
-    const updates = thunk.getState().demo.updates
-    console.log(updates)
+    const rawUpdates = thunk.getState().demo.updates
+    const rawConfig = thunk.getState().demo.rawConfig
+    const updates = difference(rawUpdates, rawConfig)
     const response = await request(POST, '/update', updates)
-    console.log("RESP", response.data)
+    thunk.dispatch(fetchConfig())
   }
 )
 
@@ -41,9 +54,6 @@ export const demoSlice = createSlice({
     builder.addCase(sendConfig.pending, (state, action) => {
       state.fetched = false
       state.restartRequired = false
-    })
-    builder.addCase(sendConfig.fulfilled, (state, action) => {
-      state.fetched = true
     })
     builder.addCase(fetchConfig.pending, (state, action) => {
       state.fetched = false
