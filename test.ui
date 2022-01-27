@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>UI_tests</class>
+ <widget class="QMainWindow" name="UI_tests">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>769</width>
-    <height>625</height>
+    <width>766</width>
+    <height>717</height>
    </rect>
   </property>
   <property name="font">
@@ -37,7 +37,7 @@
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;UNIT TEST IN PROGRESS&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QPushButton" name="save_but">
     <property name="geometry">
      <rect>
       <x>510</x>
@@ -75,7 +75,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;USB3&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;Left camera connected&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;Right Camera Connected&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;RGB Camera connected&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;JPEG Encoding Stream&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;preview-out-rgb Stream&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;left Stream&lt;/span&gt;&lt;/p&gt;&lt;p align=&quot;right&quot;&gt;&lt;span style=&quot; font-size:14pt;&quot;&gt;right Stream&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_7">
+    <widget class="QLabel" name="right_cam_res">
      <property name="geometry">
       <rect>
        <x>240</x>
@@ -88,7 +88,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; color:#00aa00;&quot;&gt;PASS&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_10">
+    <widget class="QLabel" name="prew_out_rgb_res">
      <property name="geometry">
       <rect>
        <x>240</x>
@@ -101,7 +101,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; color:#00aa00;&quot;&gt;PASS&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_9">
+    <widget class="QLabel" name="jpeg_enc_res">
      <property name="geometry">
       <rect>
        <x>240</x>
@@ -114,7 +114,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; color:#00aa00;&quot;&gt;PASS&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_6">
+    <widget class="QLabel" name="left_cam_res">
      <property name="geometry">
       <rect>
        <x>240</x>
@@ -127,7 +127,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; color:#00aa00;&quot;&gt;PASS&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_12">
+    <widget class="QLabel" name="right_strm_res">
      <property name="geometry">
       <rect>
        <x>240</x>
@@ -140,7 +140,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; color:#00aa00;&quot;&gt;PASS&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_13">
+    <widget class="QLabel" name="usb3_res">
      <property name="geometry">
       <rect>
        <x>240</x>
@@ -153,7 +153,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; color:#ff0000;&quot;&gt;FAIL&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_8">
+    <widget class="QLabel" name="rgb_cam_res">
      <property name="geometry">
       <rect>
        <x>240</x>
@@ -166,7 +166,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:14pt; color:#00aa00;&quot;&gt;PASS&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_11">
+    <widget class="QLabel" name="left_strm_res">
      <property name="geometry">
       <rect>
        <x>240</x>
@@ -192,7 +192,7 @@
     <property name="title">
      <string>Operator Tests</string>
     </property>
-    <widget class="QLabel" name="label_19">
+    <widget class="QLabel" name="NOT_TESTED_LABEL">
      <property name="geometry">
       <rect>
        <x>200</x>
@@ -205,7 +205,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; font-size:11pt; color:#aaaa00;&quot;&gt;Not&lt;br&gt;Tested&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QFrame" name="frame_2">
+    <widget class="QFrame" name="op_rgb_frame">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -223,7 +223,7 @@
      <property name="lineWidth">
       <number>0</number>
      </property>
-     <widget class="QRadioButton" name="radioButton_4">
+     <widget class="QRadioButton" name="rgb_fail_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -244,7 +244,7 @@
        <string/>
       </property>
      </widget>
-     <widget class="QRadioButton" name="radioButton_5">
+     <widget class="QRadioButton" name="rgb_ntes_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -268,7 +268,7 @@
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QRadioButton" name="radioButton_6">
+     <widget class="QRadioButton" name="rgb_pass_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -290,7 +290,7 @@
       </property>
      </widget>
     </widget>
-    <widget class="QLabel" name="label_5">
+    <widget class="QLabel" name="FAIL_LABEL">
      <property name="geometry">
       <rect>
        <x>270</x>
@@ -303,7 +303,7 @@
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; color:#ff0000;&quot;&gt;FAIL&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QFrame" name="frame_4">
+    <widget class="QFrame" name="op_right_frame">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -321,7 +321,7 @@
      <property name="lineWidth">
       <number>0</number>
      </property>
-     <widget class="QRadioButton" name="radioButton_10">
+     <widget class="QRadioButton" name="right_fail_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -342,7 +342,7 @@
        <string/>
       </property>
      </widget>
-     <widget class="QRadioButton" name="radioButton_11">
+     <widget class="QRadioButton" name="right_ntes_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -366,7 +366,7 @@
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QRadioButton" name="radioButton_12">
+     <widget class="QRadioButton" name="right_pass_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -388,7 +388,7 @@
       </property>
      </widget>
     </widget>
-    <widget class="QFrame" name="frame">
+    <widget class="QFrame" name="op_jpeg_frame">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -406,7 +406,7 @@
      <property name="lineWidth">
       <number>0</number>
      </property>
-     <widget class="QRadioButton" name="radioButton_3">
+     <widget class="QRadioButton" name="jpeg_fail_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -427,7 +427,7 @@
        <string/>
       </property>
      </widget>
-     <widget class="QRadioButton" name="radioButton_2">
+     <widget class="QRadioButton" name="jpeg_ntes_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -451,7 +451,7 @@
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QRadioButton" name="radioButton">
+     <widget class="QRadioButton" name="jpeg_pass_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -473,7 +473,7 @@
       </property>
      </widget>
     </widget>
-    <widget class="QLabel" name="label_18">
+    <widget class="QLabel" name="operator_tests_label">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -494,7 +494,7 @@ Stream Left &lt;br&gt;&lt;br&gt;
 Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_4">
+    <widget class="QLabel" name="PASS_LABEL">
      <property name="geometry">
       <rect>
        <x>150</x>
@@ -507,7 +507,7 @@ Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:11pt; color:#00aa7f;&quot;&gt;PASS&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
-    <widget class="QFrame" name="frame_3">
+    <widget class="QFrame" name="op_left_frame">
      <property name="geometry">
       <rect>
        <x>160</x>
@@ -525,7 +525,7 @@ Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      <property name="lineWidth">
       <number>0</number>
      </property>
-     <widget class="QRadioButton" name="radioButton_7">
+     <widget class="QRadioButton" name="left_fail_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -546,7 +546,7 @@ Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        <string/>
       </property>
      </widget>
-     <widget class="QRadioButton" name="radioButton_8">
+     <widget class="QRadioButton" name="left_ntes_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -570,7 +570,7 @@ Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QRadioButton" name="radioButton_9">
+     <widget class="QRadioButton" name="left_pass_but">
       <property name="enabled">
        <bool>true</bool>
       </property>
@@ -599,13 +599,13 @@ Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       <x>10</x>
       <y>430</y>
       <width>741</width>
-      <height>171</height>
+      <height>221</height>
      </rect>
     </property>
     <property name="title">
      <string>Logs</string>
     </property>
-    <widget class="QLabel" name="label_14">
+    <widget class="QLabel" name="date_time_label">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -618,7 +618,7 @@ Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       <string>date_time: </string>
      </property>
     </widget>
-    <widget class="QLabel" name="label_15">
+    <widget class="QLabel" name="test_type_label">
      <property name="geometry">
       <rect>
        <x>10</x>
@@ -631,11 +631,11 @@ Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       <string>test_type: </string>
      </property>
     </widget>
-    <widget class="QProgressBar" name="progressBar">
+    <widget class="QProgressBar" name="IMU_prog_bar">
      <property name="geometry">
       <rect>
-       <x>530</x>
-       <y>50</y>
+       <x>540</x>
+       <y>40</y>
        <width>118</width>
        <height>23</height>
       </rect>
@@ -644,17 +644,38 @@ Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
       <number>24</number>
      </property>
     </widget>
-    <widget class="QLabel" name="label_16">
+    <widget class="QLabel" name="FLASH_IMU_LABEL">
      <property name="geometry">
       <rect>
-       <x>440</x>
-       <y>50</y>
+       <x>450</x>
+       <y>40</y>
        <width>81</width>
        <height>17</height>
       </rect>
      </property>
      <property name="text">
       <string>Flash IMU</string>
+     </property>
+    </widget>
+    <widget class="QTextBrowser" name="logs_txt_browser">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>90</y>
+       <width>721</width>
+       <height>121</height>
+      </rect>
+     </property>
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a name=&quot;lipsum&quot;&gt;&lt;/a&gt;Lorem ipsum dolor sit amet, consectetur adipiscing elit. In dignissim tristique luctus. Aliquam erat volutpat. Nulla efficitur aliquet ultricies. Sed commodo nibh quis turpis faucibus sodales. Proin tempus volutpat tincidunt. Vivamus rutrum viverra dignissim. Nunc quis justo aliquam enim auctor vehicula id non lorem. &lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Mauris vehicula vulputate risus, at sagittis metus fermentum a. Vestibulum ornare neque vel suscipit rutrum. Etiam id facilisis odio, eu luctus diam. Morbi feugiat lacinia mauris a semper. Donec porta accumsan augue, ut mollis est ultricies sed. Nunc non mauris tincidunt, lacinia justo non, tincidunt lacus. Donec vitae gravida dui. Phasellus tempus tortor lorem, fringilla sodales est elementum et. Integer lacinia hendrerit vestibulum. Proin pellentesque nunc quis ante volutpat sodales. Curabitur justo sem, mattis in dolor dapibus, ultrices tincidunt ligula. Donec sit amet nisi nulla. Praesent hendrerit mauris gravida, scelerisque turpis sit amet, dapibus est. &lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Quisque eu nulla turpis. Duis sed nisl magna. Donec ac sagittis massa. Integer pharetra, tellus sit amet dignissim congue, libero mi auctor mauris, nec tristique tortor tortor ac nulla. Praesent magna elit, dapibus vitae dictum quis, viverra id nibh. Sed sagittis quam sit amet ante mollis blandit. Aliquam sit amet nibh neque. Nunc condimentum dui vel elit vestibulum, pharetra pulvinar urna convallis. Sed sed leo ipsum. Proin mollis lacinia finibus. &lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Vestibulum non sollicitudin massa, sed aliquet dolor. Mauris justo lacus, lacinia et porttitor sed, lacinia quis neque. Suspendisse mattis erat et risus accumsan varius. Vestibulum felis nisl, tincidunt et fringilla quis, porta vel nulla. Pellentesque vitae finibus dolor, eu aliquam tellus. Donec bibendum arcu non velit efficitur, vitae tempor ex porttitor. Sed gravida arcu ante, vitae tincidunt nibh iaculis in. Etiam massa ipsum, sodales sed mi sed, condimentum laoreet risus. Sed condimentum lectus in elit maximus, eu condimentum neque viverra. &lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Quisque risus erat, vestibulum ac volutpat vitae, sollicitudin ac sapien. Duis porta eleifend aliquam. Cras tempus augue justo, eu tincidunt diam blandit a. Praesent eget nulla ut erat tristique laoreet. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse egestas dictum leo, nec lacinia nisi dapibus sed. Donec pharetra sem a risus hendrerit laoreet. Vestibulum porttitor neque vel arcu maximus, sit amet tincidunt ipsum condimentum. Ut eget est mi. Aliquam a imperdiet est, eget elementum dolor. Aenean egestas eleifend nisi id rhoncus. Quisque sed odio vitae lectus dictum iaculis quis id sapien. Cras mollis nisl purus, eu laoreet massa tempor ac. Etiam faucibus, nunc eu venenatis interdum, odio odio egestas lectus, ac vehicula turpis ex nec mi. Etiam vitae pretium orci, nec gravida erat. Morbi porta malesuada eros, dictum porttitor sem ultricies et. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </widget>
@@ -664,7 +685,7 @@ Stream Right&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>769</width>
+     <width>766</width>
      <height>29</height>
     </rect>
    </property>
