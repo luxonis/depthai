@@ -21,6 +21,7 @@ import depthai as dai
 from PyQt5.QtWidgets import QApplication
 from depthai_sdk import Previews, resizeLetterbox, createBlankFrame, loadModule
 
+from depthai_helpers.arg_manager import projectRoot
 from depthai_helpers.config_manager import prepareConfManager
 
 
@@ -504,7 +505,7 @@ class GuiApp(DemoQtGui):
 
     def setupDataCollection(self):
         try:
-            with Path(".consent").open() as f:
+            with Path(projectRoot / ".consent").open() as f:
                 accepted = json.load(f)["statistics"]
         except:
             accepted = True
@@ -653,7 +654,7 @@ class GuiApp(DemoQtGui):
 
     def guiOnStaticticsConsent(self, value):
         try:
-            with Path('.consent').open('w') as f:
+            with Path(projectRoot / ".consent").open('w') as f:
                 json.dump({"statistics": value}, f)
         except:
             pass

@@ -14,7 +14,8 @@ from PIL import Image
 import cv2
 import depthai as dai
 from depthai_sdk import createBlankFrame, Previews
-from depthai_helpers.arg_manager import openvinoVersions, colorMaps, streamChoices, cameraChoices, reportingChoices
+from depthai_helpers.arg_manager import openvinoVersions, colorMaps, streamChoices, cameraChoices, reportingChoices, \
+    projectRoot
 from depthai_helpers.config_manager import prepareConfManager
 
 
@@ -155,12 +156,18 @@ class WebApp:
             self.webserver.frametosend = frame
 
     def onSetup(self, instance):
+        try:
+            with Path(projectRoot / ".consent").open() as f:
+                statisticsEnabled = json.load(f)["statistics"]
+        except:
+            statisticsEnabled = True
         previewChoices = self.confManager.args.show
         devices = [instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
         countLabels = instance._nnManager._labels if instance._nnManager is not None else []
         countLabel = instance._nnManager._countLabel if instance._nnManager is not None else None
         depthEnabled = self.confManager.useDepth
         modelChoices = sorted(self.confManager.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))
+        medianChoices = list(filter(lambda name: name.startswith('KERNEL_') or name.startswith('MEDIAN_'), vars(dai.MedianFilter).keys()))
 
         self.webserver.config = {
             "ai": {
@@ -186,11 +193,64 @@ class WebApp:
                 "sbb": self.confManager.args.spatialBoundingBox,
                 "sbbFactor": self.confManager.args.sbbScaleFactor,
             },
+            "depth": {
+                "enabled": depthEnabled,
+                "median": {
+                    "current": self.confManager.args.stereoMedianSize,
+                    "available": medianChoices
+                },
+                "subpixel": self.confManager.args.subpixel,
+                "lrc": self.confManager.args.stereoMedianSize,
+                "extended": self.confManager.args.extendedDisparity,
+                "confidence": self.confManager.args.disparityConfidenceThreshold,
+                "sigma": self.confManager.args.sigma,
+                "lrcThreshold": self.confManager.args.lrcThreshold,
+                "range": {
+                    "min": self.confManager.args.minDepth,
+                    "max": self.confManager.args.maxDepth,
+                },
+            },
+            "camera": {
+                "sync": self.confManager.args.maxDepth,
+                "color": {
+                    "fps": self.confManager.args.rgbFps,
+                    "resolution": self.confManager.args.rgbResolution,
+                    "iso": self.confManager.args.cameraSensitivity,
+                    "exposure": self.confManager.args.cameraExposure,
+                    "saturation": self.confManager.args.cameraSaturation,
+                    "contrast": self.confManager.args.cameraContrast,
+                    "brightness": self.confManager.args.cameraBrightness,
+                    "sharpness": self.confManager.args.cameraSharpness,
+                },
+                "mono": {
+                    "fps": self.confManager.args.monoFps,
+                    "resolution": self.confManager.args.monoResolution,
+                    "iso": self.confManager.args.cameraSensitivity,
+                    "exposure": self.confManager.args.cameraExposure,
+                    "saturation": self.confManager.args.cameraSaturation,
+                    "contrast": self.confManager.args.cameraContrast,
+                    "brightness": self.confManager.args.cameraBrightness,
+                    "sharpness": self.confManager.args.cameraSharpness,
+                }
+            },
+            "misc": {
+                "recording": {
+                    "color": self.confManager.args.encode.get("color", None) if self.confManager.args.encode is not None else None,
+                    "left": self.confManager.args.encode.get("left", None) if self.confManager.args.encode is not None else None,
+                    "right": self.confManager.args.encode.get("right", None) if self.confManager.args.encode is not None else None,
+                    "dest": self.confManager.args.encodeOutput,
+                },
+                "reporting": {
+                    "enabled": self.confManager.args.report,
+                    "dest": self.confManager.args.reportFile
+                },
+                "demo": {
+                    "statistics": statisticsEnabled,
+                }
+            },
             "previewChoices": previewChoices,
             "devices": devices,
-            "countLabels": countLabels,
             "depthEnabled": depthEnabled,
-            "modelChoices": modelChoices,
         }
 
 
