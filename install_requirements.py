@@ -27,11 +27,7 @@ if not pip_installed:
 if sys.version_info[0] != 3:
     raise RuntimeError("Demo script requires Python 3 to run (detected: Python {})".format(sys.version_info[0]))
 
-if platform.machine() == "arm64" and platform.system() == "Darwin":
-    err_str = "There are no prebuilt wheels for M1 processors. Please open the following link for a solution - https://discuss.luxonis.com/d/69-running-depthai-on-apple-m1-based-macs"
-    raise RuntimeError(err_str)
-
-is_pi = thisPlatform.startswith("arm")
+is_pi = platform.system() == "Linux" and thisPlatform.startswith("arm")
 prebuiltWheelsPythonVersion = [7,9]
 if is_pi and sys.version_info[1] not in prebuiltWheelsPythonVersion:
     print("[WARNING] There are no prebuilt wheels for Python 3.{} for OpenCV, building process on this device may be long and unstable".format(sys.version_info[1]))
