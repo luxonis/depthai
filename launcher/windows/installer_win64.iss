@@ -194,9 +194,6 @@ var
     ResultCode: Integer;
 begin
   Log('Installing prerequisites');
-  ExtractTemporaryFile('create_shortcut.ps1');
-  ForceDirectories(ExpandConstant('{app}'));
-  FileCopy(ExpandConstant('{tmp}\create_shortcut.ps1'), ExpandConstant('{app}\create_shortcut.ps1'), False);
   TmpFileName := ExpandConstant('{tmp}') + '\exec_stdout_stderr_tmp.txt';
   ExecParameter := '/C powershell.exe -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\prerequisite.ps1') + '" > "' + TmpFileName + '" 2>&1"';
   Log('Calling cmd.exe ' + ExecParameter)
