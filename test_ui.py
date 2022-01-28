@@ -1,7 +1,25 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
+import sys
+# from PyQt5.QtWidgets import QMessageBox
+import numpy as np
+import depthai
+import blobconverter
 
 
-class Ui_UI_tests(object):
+
+def save_event():
+    print('saved')
+
+class UiTests(object):
+    def __init__(self):
+        self.MB_INIT = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+        "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+        "p, li { white-space: pre-wrap; }\n"
+        "</style></head><body style=\" font-family:\'Sans Serif\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+        "<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">"
+        self.MB_END = "</p></body></html>"
+        self.all_logs = ""
+
     def setupUi(self, UI_tests):
         UI_tests.setObjectName("UI_tests")
         UI_tests.resize(766, 717)
@@ -19,6 +37,7 @@ class Ui_UI_tests(object):
         self.save_but = QtWidgets.QPushButton(self.centralwidget)
         self.save_but.setGeometry(QtCore.QRect(510, 390, 61, 25))
         self.save_but.setObjectName("save_but")
+        self.save_but.clicked.connect(save_event)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 341))
         self.automated_tests.setObjectName("automated_tests")
@@ -251,22 +270,37 @@ class Ui_UI_tests(object):
         self.date_time_label.setText(_translate("UI_tests", "date_time: "))
         self.test_type_label.setText(_translate("UI_tests", "test_type: "))
         self.FLASH_IMU_LABEL.setText(_translate("UI_tests", "Flash IMU"))
-        self.logs_txt_browser.setHtml(_translate("UI_tests", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Sans Serif\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><a name=\"lipsum\"></a>Lorem ipsum dolor sit amet, consectetur adipiscing elit. In dignissim tristique luctus. Aliquam erat volutpat. Nulla efficitur aliquet ultricies. Sed commodo nibh quis turpis faucibus sodales. Proin tempus volutpat tincidunt. Vivamus rutrum viverra dignissim. Nunc quis justo aliquam enim auctor vehicula id non lorem. </p>\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Mauris vehicula vulputate risus, at sagittis metus fermentum a. Vestibulum ornare neque vel suscipit rutrum. Etiam id facilisis odio, eu luctus diam. Morbi feugiat lacinia mauris a semper. Donec porta accumsan augue, ut mollis est ultricies sed. Nunc non mauris tincidunt, lacinia justo non, tincidunt lacus. Donec vitae gravida dui. Phasellus tempus tortor lorem, fringilla sodales est elementum et. Integer lacinia hendrerit vestibulum. Proin pellentesque nunc quis ante volutpat sodales. Curabitur justo sem, mattis in dolor dapibus, ultrices tincidunt ligula. Donec sit amet nisi nulla. Praesent hendrerit mauris gravida, scelerisque turpis sit amet, dapibus est. </p>\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Quisque eu nulla turpis. Duis sed nisl magna. Donec ac sagittis massa. Integer pharetra, tellus sit amet dignissim congue, libero mi auctor mauris, nec tristique tortor tortor ac nulla. Praesent magna elit, dapibus vitae dictum quis, viverra id nibh. Sed sagittis quam sit amet ante mollis blandit. Aliquam sit amet nibh neque. Nunc condimentum dui vel elit vestibulum, pharetra pulvinar urna convallis. Sed sed leo ipsum. Proin mollis lacinia finibus. </p>\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Vestibulum non sollicitudin massa, sed aliquet dolor. Mauris justo lacus, lacinia et porttitor sed, lacinia quis neque. Suspendisse mattis erat et risus accumsan varius. Vestibulum felis nisl, tincidunt et fringilla quis, porta vel nulla. Pellentesque vitae finibus dolor, eu aliquam tellus. Donec bibendum arcu non velit efficitur, vitae tempor ex porttitor. Sed gravida arcu ante, vitae tincidunt nibh iaculis in. Etiam massa ipsum, sodales sed mi sed, condimentum laoreet risus. Sed condimentum lectus in elit maximus, eu condimentum neque viverra. </p>\n"
-"<p style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Quisque risus erat, vestibulum ac volutpat vitae, sollicitudin ac sapien. Duis porta eleifend aliquam. Cras tempus augue justo, eu tincidunt diam blandit a. Praesent eget nulla ut erat tristique laoreet. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse egestas dictum leo, nec lacinia nisi dapibus sed. Donec pharetra sem a risus hendrerit laoreet. Vestibulum porttitor neque vel arcu maximus, sit amet tincidunt ipsum condimentum. Ut eget est mi. Aliquam a imperdiet est, eget elementum dolor. Aenean egestas eleifend nisi id rhoncus. Quisque sed odio vitae lectus dictum iaculis quis id sapien. Cras mollis nisl purus, eu laoreet massa tempor ac. Etiam faucibus, nunc eu venenatis interdum, odio odio egestas lectus, ac vehicula turpis ex nec mi. Etiam vitae pretium orci, nec gravida erat. Morbi porta malesuada eros, dictum porttitor sem ultricies et. </p></body></html>"))
+        # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
 
+    def print_logs(self, new_log):
+        self.all_logs += new_log + '<br>'
+        self.logs_txt_browser.setHtml(self.MB_INIT + self.all_logs + self.MB_END)
+
+    def test_connexion(self):
+        (result, info) = depthai.DeviceBootloader.getFirstAvailableDevice()
+        if result == True:
+            self.print_logs('TEST check if device connected: PASS')
+            return True
+        self.print_logs('TEST check if device connected: FAILED')
+        return False
+
+    # def update_bootloader(self):
+    #     (result, device) = depthai.DeviceBootloader.getFirstAvailableDevice()
+    #     if not result:
+    #         self.print_logs('ERROR device was dissconected!')
+    #         return False
+    #     bootloader = depthai.DeviceBootloader(device, allowFlashingBootloader=True)
+    #     # progress = lambda p: self.print_logs(f'Flashing progress: {p * 100:.1f}%')
+    #     # bootloader.flashBootloader(progress)
+    #     return True
 
 if __name__ == "__main__":
-    import sys
     app = QtWidgets.QApplication(sys.argv)
     UI_tests = QtWidgets.QMainWindow()
-    ui = Ui_UI_tests()
+    ui = UiTests()
     ui.setupUi(UI_tests)
     UI_tests.show()
+    ui.test_connexion()
+    ui.update_bootloader()
     sys.exit(app.exec_())
+
