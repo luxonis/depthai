@@ -22,6 +22,18 @@ jobs:
         submodules: 'recursive'
         persist-credentials: ''
 
+    - name: Get tag version
+      id: tag
+      uses: battila7/get-version-action@v2
+
+    - name: Set version (Release)
+      if: startsWith(github.ref, 'refs/tags/v') == true
+      run: echo '#define MyAppVersion "${{ steps.tag.outputs.version-without-v }}"' >| version.txt
+
+    - name: Set version
+      if: startsWith(github.ref, 'refs/tags/v') != true
+      run: echo '#define MyAppVersion "1.0-${{ github.sha }}"' >| version.txt
+
     - name: Build Windows Installer
       run: .\launcher\windows\build.ps1
 
