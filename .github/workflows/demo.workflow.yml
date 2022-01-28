@@ -28,11 +28,11 @@ jobs:
 
     - name: Set version (Release)
       if: startsWith(github.ref, 'refs/tags/v') == true
-      run: echo '#define MyAppVersion "${{ steps.tag.outputs.version-without-v }}"' >| version.txt
+      run: echo '#define MyAppVersion "${{ steps.tag.outputs.version-without-v }}"' > version.txt
 
     - name: Set version
       if: startsWith(github.ref, 'refs/tags/v') != true
-      run: echo '#define MyAppVersion "1.0-${{ github.sha }}"' >| version.txt
+      run: echo '#define MyAppVersion "1.0-${{ github.sha }}"' > version.txt
 
     - name: Build Windows Installer
       run: .\launcher\windows\build.ps1
