@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import depthai
 import blobconverter
-
+import depthai as dai
 
 
 def test_connexion():

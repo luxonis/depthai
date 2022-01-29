@@ -1,14 +1,79 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
+from PyQt5.QtWidgets import QMessageBox
 # from PyQt5.QtWidgets import QMessageBox
 import numpy as np
-import depthai
+import depthai as dai
 import blobconverter
 
 
+class DepthAICamera():
+    def __init__(self):
+        self.pipeline = dai.Pipeline()
+        self.camRgb = self.pipeline.create(dai.node.ColorCamera)
+        self.camLeft = self.pipeline.create(dai.node.MonoCamera)
+        self.camRight = self.pipeline.create(dai.node.MonoCamera)
 
-def save_event():
-    print('saved')
+        self.xoutRgb = self.pipeline.create(dai.node.XLinkOut)
+        self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
+        self.xoutRight = self.pipeline.create(dai.node.XLinkOut)
+
+        self.xoutRgb.setStreamName("rgb")
+        self.xoutLeft.setStreamName("left")
+        self.xoutRight.setStreamName("right")
+
+        self.camRgb.setPreviewSize(640, 400)
+        self.camRgb.setInterleaved(False)
+        self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+        self.camLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+        self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+        self.camRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+        self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+
+        self.camRgb.preview.link(self.xoutRgb.input)
+        self.camLeft.out.link(self.xoutLeft.input)
+        self.camRight.out.link(self.xoutRight.input)
+
+        self.device = dai.Device(self.pipeline)
+
+        print('Connected cameras: ', self.device.getConnectedCameras())
+        print('Usb speed: ', self.device.getUsbSpeed().name)
+
+        self.qRgb = self.device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+        self.qLeft = self.device.getOutputQueue(name="left", maxSize=4, blocking=False)
+        self.qRight = self.device.getOutputQueue(name='right', maxSize=4, blocking=False)
+
+    def get_image(self, cam_type):
+        if cam_type is 'RGB':
+            in_rgb = self.qRgb.get()
+            return in_rgb.getCvFrame()
+        if cam_type is 'LEFT':
+            in_left = self.qLeft.get()
+            return in_left.getCvFrame()
+        if cam_type is 'RIGHT':
+            in_right = self.qRight.get()
+            return in_right.getCvFrame()
+
+
+class Camera(QtWidgets.QWidget):
+    def __init__(self, get_image, camera_format):
+        super().__init__()
+        layout = QtWidgets.QVBoxLayout()
+        self.camera = QtWidgets.QLabel('ana are mere')
+        layout.addWidget(self.camera)
+        self.setLayout(layout)
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update_image)
+        self.timer.start(100)
+        self.get_image = get_image
+        self.camera_format = camera_format
+
+    def update_image(self):
+        image = self.get_image()
+        q_image = QtGui.QImage(image.data, image.shape[1], image.shape[0], self.camera_format)
+        pixmap = QtGui.QPixmap.fromImage(q_image)
+        self.camera.setPixmap(pixmap)
+
 
 class UiTests(object):
     def __init__(self):
@@ -37,7 +102,7 @@ class UiTests(object):
         self.save_but = QtWidgets.QPushButton(self.centralwidget)
         self.save_but.setGeometry(QtCore.QRect(510, 390, 61, 25))
         self.save_but.setObjectName("save_but")
-        self.save_but.clicked.connect(save_event)
+        self.save_but.clicked.connect(self.show_cameras)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 341))
         self.automated_tests.setObjectName("automated_tests")
@@ -237,6 +302,7 @@ class UiTests(object):
 
         self.retranslateUi(UI_tests)
         QtCore.QMetaObject.connectSlotsByName(UI_tests)
+        # self.save_but.clicked.connect(self.show_cameras)
 
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
@@ -272,17 +338,27 @@ class UiTests(object):
         self.FLASH_IMU_LABEL.setText(_translate("UI_tests", "Flash IMU"))
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
 
+
     def print_logs(self, new_log):
         self.all_logs += new_log + '<br>'
         self.logs_txt_browser.setHtml(self.MB_INIT + self.all_logs + self.MB_END)
 
     def test_connexion(self):
-        (result, info) = depthai.DeviceBootloader.getFirstAvailableDevice()
+        (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
         if result == True:
             self.print_logs('TEST check if device connected: PASS')
             return True
         self.print_logs('TEST check if device connected: FAILED')
         return False
+
+    def show_cameras(self):
+        self.depth_camera = DepthAICamera()
+        self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888)
+        self.rgb.show()
+        self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8)
+        self.left.show()
+        self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8)
+        self.right.show()
 
     # def update_bootloader(self):
     #     (result, device) = depthai.DeviceBootloader.getFirstAvailableDevice()
@@ -301,6 +377,6 @@ if __name__ == "__main__":
     ui.setupUi(UI_tests)
     UI_tests.show()
     ui.test_connexion()
-    ui.update_bootloader()
+    # ui.update_bootloader()
     sys.exit(app.exec_())
 
