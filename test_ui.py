@@ -6,6 +6,26 @@ import numpy as np
 import depthai as dai
 import blobconverter
 
+# self.usb3_res.setText('1')
+# self.left_cam_res.setText('2')
+# self.right_cam_res.setText('3')
+# self.rgb_cam_res.setText('4')
+# self.jpeg_enc_res.setText('5')
+# self.prew_out_rgb_res.setText('6')
+# self.left_strm_res.setText('7')
+# self.right_strm_res.setText('8')
+
+test_result = {
+    'usb3_res': '',
+    'left_cam_res': '',
+    'right_cam_res': '',
+    'rgb_cam_res': '',
+    'jpeg_enc_res': '',
+    'prew_out_rgb_res': '',
+    'left_strm_res': '',
+    'right_strm_res': ''
+}
+
 
 class DepthAICamera():
     def __init__(self):
@@ -38,21 +58,55 @@ class DepthAICamera():
 
         print('Connected cameras: ', self.device.getConnectedCameras())
         print('Usb speed: ', self.device.getUsbSpeed().name)
+        self.auto_tests()
 
-        self.qRgb = self.device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-        self.qLeft = self.device.getOutputQueue(name="left", maxSize=4, blocking=False)
-        self.qRight = self.device.getOutputQueue(name='right', maxSize=4, blocking=False)
+    def auto_tests(self):
+        try:
+            self.qRgb = self.device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
+            test_result['rgb_cam_res'] = 'PASS'
+        except RuntimeError:
+            test_result['rgb_cam_res'] = 'FAIL'
+        try:
+            self.qRgb.get()
+            test_result['prew_out_rgb_res'] = 'PASS'
+        except (AttributeError, RuntimeError):
+            test_result['prew_out_rgb_res'] = 'FAIL'
+
+        try:
+            self.qLeft = self.device.getOutputQueue(name="left", maxSize=4, blocking=False)
+            test_result['left_cam_res'] = 'PASS'
+        except RuntimeError:
+            test_result['left_cam_res'] = 'FAIL'
+        try:
+            self.qLeft.get()
+            test_result['left_strm_res'] = 'PASS'
+        except (AttributeError, RuntimeError):
+            test_result['left_strm_res'] = 'FAIL'
+
+        try:
+            self.qRight = self.device.getOutputQueue(name='right', maxSize=4, blocking=False)
+            test_result['right_cam_res'] = 'PASS'
+        except RuntimeError:
+            test_result['right_cam_res'] = 'FAIL'
+        try:
+            self.qRight.get()
+            test_result['right_strm_res'] = 'PASS'
+        except (AttributeError, RuntimeError):
+            test_result['right_strm_res'] = 'FAIL'
 
     def get_image(self, cam_type):
-        if cam_type is 'RGB':
-            in_rgb = self.qRgb.get()
-            return in_rgb.getCvFrame()
-        if cam_type is 'LEFT':
-            in_left = self.qLeft.get()
-            return in_left.getCvFrame()
-        if cam_type is 'RIGHT':
-            in_right = self.qRight.get()
-            return in_right.getCvFrame()
+        try:
+            if cam_type == 'RGB':
+                in_rgb = self.qRgb.get()
+                return True, in_rgb.getCvFrame()
+            if cam_type == 'LEFT':
+                in_left = self.qLeft.get()
+                return True, in_left.getCvFrame()
+            if cam_type == 'RIGHT':
+                in_right = self.qRight.get()
+                return True, in_right.getCvFrame()
+        except RuntimeError:
+            return False, None
 
 
 class Camera(QtWidgets.QWidget):
@@ -69,10 +123,14 @@ class Camera(QtWidgets.QWidget):
         self.camera_format = camera_format
 
     def update_image(self):
-        image = self.get_image()
-        q_image = QtGui.QImage(image.data, image.shape[1], image.shape[0], self.camera_format)
-        pixmap = QtGui.QPixmap.fromImage(q_image)
-        self.camera.setPixmap(pixmap)
+        status, image = self.get_image()
+        if status:
+            q_image = QtGui.QImage(image.data, image.shape[1], image.shape[0], self.camera_format)
+            pixmap = QtGui.QPixmap.fromImage(q_image)
+            self.camera.setPixmap(pixmap)
+        else:
+            # print('im hiding')
+            self.hide()
 
 
 class UiTests(object):
@@ -302,23 +360,29 @@ class UiTests(object):
 
         self.retranslateUi(UI_tests)
         QtCore.QMetaObject.connectSlotsByName(UI_tests)
+        self.red_pallete = QtGui.QPalette()
+        self.green_pallete = QtGui.QPalette()
+
+        self.red_pallete.setColor(QtGui.QPalette.WindowText, QtCore.Qt.red)
+        self.green_pallete.setColor(QtGui.QPalette.WindowText, QtCore.Qt.darkGreen)
+        # self.prew_out_rgb_res.setPalette(self.green_pallete)
         # self.save_but.clicked.connect(self.show_cameras)
 
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
         UI_tests.setWindowTitle(_translate("UI_tests", "MainWindow"))
         self.title.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\">UNIT TEST IN PROGRESS</p></body></html>"))
-        self.save_but.setText(_translate("UI_tests", "SAVE"))
+        self.save_but.setText("SAVE")
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
         self.automated_tests_labels.setText(_translate("UI_tests", "<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\">USB3</span></p><p align=\"right\"><span style=\" font-size:14pt;\">Left camera connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">Right Camera Connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">RGB Camera connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">JPEG Encoding Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">preview-out-rgb Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">left Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">right Stream</span></p></body></html>"))
-        self.right_cam_res.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:14pt; color:#00aa00;\">PASS</span></p></body></html>"))
-        self.prew_out_rgb_res.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:14pt; color:#00aa00;\">PASS</span></p></body></html>"))
-        self.jpeg_enc_res.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:14pt; color:#00aa00;\">PASS</span></p></body></html>"))
-        self.left_cam_res.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:14pt; color:#00aa00;\">PASS</span></p></body></html>"))
-        self.right_strm_res.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:14pt; color:#00aa00;\">PASS</span></p></body></html>"))
-        self.usb3_res.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:14pt; color:#ff0000;\">FAIL</span></p></body></html>"))
-        self.rgb_cam_res.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:14pt; color:#00aa00;\">PASS</span></p></body></html>"))
-        self.left_strm_res.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:14pt; color:#00aa00;\">PASS</span></p></body></html>"))
+        # self.usb3_res.setText('1')
+        # self.left_cam_res.setText('2')
+        # self.right_cam_res.setText('3')
+        # self.rgb_cam_res.setText('4')
+        # self.jpeg_enc_res.setText('5')
+        # self.prew_out_rgb_res.setText('6')
+        # self.left_strm_res.setText('7')
+        # self.right_strm_res.setText('8')
         self.operator_tests.setTitle(_translate("UI_tests", "Operator Tests"))
         self.NOT_TESTED_LABEL.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\"><span style=\" font-size:11pt; color:#aaaa00;\">Not<br>Tested</span></p></body></html>"))
         self.FAIL_LABEL.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:11pt; color:#ff0000;\">FAIL</span></p></body></html>"))
@@ -338,27 +402,88 @@ class UiTests(object):
         self.FLASH_IMU_LABEL.setText(_translate("UI_tests", "Flash IMU"))
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
 
-
     def print_logs(self, new_log):
         self.all_logs += new_log + '<br>'
         self.logs_txt_browser.setHtml(self.MB_INIT + self.all_logs + self.MB_END)
+        self.logs_txt_browser.moveCursor(QtGui.QTextCursor.End)
 
     def test_connexion(self):
         (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
-        if result == True:
+        if result:
             self.print_logs('TEST check if device connected: PASS')
             return True
         self.print_logs('TEST check if device connected: FAILED')
         return False
 
     def show_cameras(self):
-        self.depth_camera = DepthAICamera()
-        self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888)
-        self.rgb.show()
-        self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8)
-        self.left.show()
-        self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8)
-        self.right.show()
+        if hasattr(self, 'depth_camera'):
+            self.print_logs('Camera already connected')
+            self.rgb.show()
+            self.left.show()
+            self.right.show()
+            return
+        if self.test_connexion():
+            self.print_logs('Camera connected, starting tests...')
+            self.depth_camera = DepthAICamera()
+            self.set_result()
+            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888)
+            self.rgb.show()
+            self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8)
+            self.left.show()
+            self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8)
+            self.right.show()
+        else:
+            print(locals())
+            self.print_logs('No camera detected, check the connexion and try again...')
+
+    def set_result(self):
+        if test_result['usb3_res'] == 'PASS':
+            self.usb3_res.setPalette(self.green_pallete)
+        else:
+            self.usb3_res.setPalette(self.red_pallete)
+        self.usb3_res.setText(test_result['usb3_res'])
+
+        if test_result['left_cam_res'] == 'PASS':
+            self.left_cam_res.setPalette(self.green_pallete)
+        else:
+            self.left_cam_res.setPalette(self.red_pallete)
+        self.left_cam_res.setText(test_result['left_cam_res'])
+
+        if test_result['right_cam_res'] == 'PASS':
+            self.right_cam_res.setPalette(self.green_pallete)
+        else:
+            self.right_cam_res.setPalette(self.red_pallete)
+        self.right_cam_res.setText(test_result['right_cam_res'])
+
+        if test_result['rgb_cam_res'] == 'PASS':
+            self.rgb_cam_res.setPalette(self.green_pallete)
+        else:
+            self.rgb_cam_res.setPalette(self.red_pallete)
+        self.rgb_cam_res.setText(test_result['rgb_cam_res'])
+
+        if test_result['jpeg_enc_res'] == 'PASS':
+            self.jpeg_enc_res.setPalette(self.green_pallete)
+        else:
+            self.jpeg_enc_res.setPalette(self.red_pallete)
+        self.jpeg_enc_res.setText(test_result['jpeg_enc_res'])
+
+        if test_result['prew_out_rgb_res'] == 'PASS':
+            self.prew_out_rgb_res.setPalette(self.green_pallete)
+        else:
+            self.prew_out_rgb_res.setPalette(self.red_pallete)
+        self.prew_out_rgb_res.setText(test_result['prew_out_rgb_res'])
+
+        if test_result['left_strm_res'] == 'PASS':
+            self.left_strm_res.setPalette(self.green_pallete)
+        else:
+            self.left_strm_res.setPalette(self.red_pallete)
+        self.left_strm_res.setText(test_result['left_strm_res'])
+
+        if test_result['right_strm_res'] == 'PASS':
+            self.right_strm_res.setPalette(self.green_pallete)
+        else:
+            self.right_strm_res.setPalette(self.red_pallete)
+        self.right_strm_res.setText(test_result['right_cam_res'])
 
     # def update_bootloader(self):
     #     (result, device) = depthai.DeviceBootloader.getFirstAvailableDevice()
@@ -369,6 +494,7 @@ class UiTests(object):
     #     # progress = lambda p: self.print_logs(f'Flashing progress: {p * 100:.1f}%')
     #     # bootloader.flashBootloader(progress)
     #     return True
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
