@@ -135,7 +135,7 @@ def getDeviceInfo(deviceId=None):
         RuntimeError: if no DepthAI device was found or, if :code:`deviceId` was specified, no device with matching MX ID was found
         ValueError: if value supplied by the user when choosing the DepthAI device was incorrect
     """
-    deviceInfos = dai.Device.getAllAvailableDevices()
+    deviceInfos = dai.XLinkConnection.getAllConnectedDevices()
     if len(deviceInfos) == 0:
         raise RuntimeError("No DepthAI device found!")
     else:

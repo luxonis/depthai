@@ -30,7 +30,7 @@ def show_info_frame():
 
 
 def getDeviceInfo():
-    device_infos = dai.Device.getAllAvailableDevices()
+    device_infos = dai.Device.getAllConnectedDevices()
     if len(device_infos) == 0:
         raise RuntimeError("No DepthAI device found!")
     elif len(device_infos) == 1:

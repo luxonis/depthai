@@ -596,7 +596,7 @@ def runQt():
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
             self.conf.args.bandwidth = "auto"
             if self.conf.args.deviceId is None:
-                devices = dai.Device.getAllAvailableDevices()
+                devices = dai.XLinkConnection.getAllConnectedDevices()
                 if len(devices) > 0:
                     defaultDevice = next(map(
                         lambda info: info.getMxId(),
@@ -671,7 +671,7 @@ def runQt():
                 self.file_callbacks["onSetup"](instance)
             self.signals.updateConfSignal.emit(list(vars(self.conf.args).items()))
             self.signals.setDataSignal.emit(["previewChoices", self.conf.args.show])
-            devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+            devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices()))
             self.signals.setDataSignal.emit(["deviceChoices", devices])
             if instance._nnManager is not None:
                 self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
@@ -744,7 +744,7 @@ def runQt():
             if wait and current_mxid is not None:
                 start = time.time()
                 while time.time() - start < 30:
-                    if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
+                    if current_mxid in list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices())):
                         break
                     else:
                         time.sleep(0.1)
@@ -851,7 +851,7 @@ def runQt():
             self.updateArg("deviceId", selected)
 
         def guiOnReloadDevices(self):
-            devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+            devices = list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices()))
             if hasattr(self._demoInstance, "_deviceInfo"):
                 devices.insert(0, self._demoInstance._deviceInfo.getMxId())
             self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
