@@ -15,6 +15,8 @@ import blobconverter
 # self.left_strm_res.setText('7')
 # self.right_strm_res.setText('8')
 
+FPS = 10
+
 test_result = {
     'usb3_res': '',
     'left_cam_res': '',
@@ -25,10 +27,11 @@ test_result = {
     'left_strm_res': '',
     'right_strm_res': ''
 }
-
+update_res = False
 
 class DepthAICamera():
     def __init__(self):
+        global update_res
         self.pipeline = dai.Pipeline()
         self.camRgb = self.pipeline.create(dai.node.ColorCamera)
         self.camLeft = self.pipeline.create(dai.node.MonoCamera)
@@ -45,6 +48,8 @@ class DepthAICamera():
         self.camRgb.setPreviewSize(640, 400)
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+        self.camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
+        self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         self.camLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
         self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
         self.camRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
@@ -56,56 +61,108 @@ class DepthAICamera():
 
         self.device = dai.Device(self.pipeline)
 
-        print('Connected cameras: ', self.device.getConnectedCameras())
-        print('Usb speed: ', self.device.getUsbSpeed().name)
-        self.auto_tests()
+        cameras = self.device.getConnectedCameras()
+        if dai.CameraBoardSocket.RGB not in cameras:
+            test_result['rgb_cam_res'] = 'FAIL'
+        else:
+            test_result['rgb_cam_res'] = 'PASS'
+        if dai.CameraBoardSocket.LEFT not in cameras:
+            test_result['left_cam_res'] = 'FAIL'
+        else:
+            test_result['left_cam_res'] = 'PASS'
+        if dai.CameraBoardSocket.RIGHT not in cameras:
+            test_result['right_cam_res'] = 'FAIL'
+        else:
+            test_result['right_cam_res'] = 'PASS'
 
-    def auto_tests(self):
+        update_res = True
+
+        print('Usb speed: ', self.device.getUsbSpeed().name)
+        self.start_queue()
+        self._rgb_pass = 0
+        self._left_pass = 0
+        self._right_pass = 0
+        self._NR_TEST_FRAMES = 40
+        self._FRAME_WAIT = FPS*8
+        self._FRAMES_WAIT = FPS*3
+        self._rgb_timer = 0
+        self._left_timer = 0
+        self._right_timer = 0
+
+    def start_queue(self):
+        global update_res
         try:
             self.qRgb = self.device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
-            test_result['rgb_cam_res'] = 'PASS'
         except RuntimeError:
-            test_result['rgb_cam_res'] = 'FAIL'
-        try:
-            self.qRgb.get()
-            test_result['prew_out_rgb_res'] = 'PASS'
-        except (AttributeError, RuntimeError):
             test_result['prew_out_rgb_res'] = 'FAIL'
-
+            update_res = True
         try:
             self.qLeft = self.device.getOutputQueue(name="left", maxSize=4, blocking=False)
-            test_result['left_cam_res'] = 'PASS'
         except RuntimeError:
-            test_result['left_cam_res'] = 'FAIL'
-        try:
-            self.qLeft.get()
-            test_result['left_strm_res'] = 'PASS'
-        except (AttributeError, RuntimeError):
             test_result['left_strm_res'] = 'FAIL'
-
+            update_res = True
         try:
             self.qRight = self.device.getOutputQueue(name='right', maxSize=4, blocking=False)
-            test_result['right_cam_res'] = 'PASS'
         except RuntimeError:
-            test_result['right_cam_res'] = 'FAIL'
-        try:
-            self.qRight.get()
-            test_result['right_strm_res'] = 'PASS'
-        except (AttributeError, RuntimeError):
             test_result['right_strm_res'] = 'FAIL'
+            update_res = True
 
     def get_image(self, cam_type):
+        global update_res
         try:
+            image = None
             if cam_type == 'RGB':
-                in_rgb = self.qRgb.get()
-                return True, in_rgb.getCvFrame()
+                if test_result['rgb_cam_res'] == 'PASS':
+                    in_rgb = self.qRgb.tryGet()
+                    image = in_rgb.getCvFrame()
+                    if test_result['prew_out_rgb_res'] == '':
+                        if (self._rgb_timer > self._FRAME_WAIT) or (self._rgb_timer > self._FRAME_WAIT and self._rgb_pass == 0):
+                            test_result['prew_out_rgb_res'] = 'FAIL'
+                            update_res = True
+                        elif self._rgb_pass == self._NR_TEST_FRAMES:
+                            test_result['prew_out_rgb_res'] = 'PASS'
+                            update_res = True
+                        elif image is not None:
+                            self._rgb_pass += 1
+                        self._rgb_timer += 1
             if cam_type == 'LEFT':
-                in_left = self.qLeft.get()
-                return True, in_left.getCvFrame()
+                if test_result['left_cam_res'] == 'PASS':
+                    in_left = self.qLeft.tryGet()
+                    image = in_left.getCvFrame()
+                    if test_result['left_strm_res'] == '':
+                        if (self._left_timer > self._FRAME_WAIT) or (self._left_timer > self._FRAME_WAIT and self._left_pass == 0):
+                            test_result['left_strm_res'] = 'FAIL'
+                            update_res = True
+                        elif self._left_pass == self._NR_TEST_FRAMES:
+                            test_result['left_strm_res'] = 'PASS'
+                            update_res = True
+                        elif image is not None:
+                            self._left_pass += 1
             if cam_type == 'RIGHT':
-                in_right = self.qRight.get()
-                return True, in_right.getCvFrame()
+                if test_result['right_cam_res'] == 'PASS':
+                    in_right = self.qRight.tryGet()
+                    image = in_right.getCvFrame()
+                    if test_result['right_strm_res'] == '':
+                        if (self._right_timer > self._FRAME_WAIT) or (self._right_timer > self._FRAME_WAIT and self._right_pass == 0):
+                            test_result['right_strm_res'] = 'FAIL'
+                            update_res = True
+                        elif self._right_pass == self._NR_TEST_FRAMES:
+                            test_result['right_strm_res'] = 'PASS'
+                            update_res = True
+                        elif image is not None:
+                            self._right_pass += 1
+
+            return True, image
         except RuntimeError:
+            if cam_type == 'RGB' and self._rgb_pass < self._NR_TEST_FRAMES:
+                test_result['prew_out_rgb_res'] = 'FAIL'
+                update_res = True
+            if cam_type == 'LEFT' and self._left_pass < self._NR_TEST_FRAMES:
+                test_result['left_strm_res'] == 'FAIL'
+                update_res = True
+            if cam_type == 'RIGHT' and self._right_pass < self._NR_TEST_FRAMES:
+                test_result['right_cam_res'] == 'FAIL'
+                update_res = True
             return False, None
 
 
@@ -118,7 +175,7 @@ class Camera(QtWidgets.QWidget):
         self.setLayout(layout)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_image)
-        self.timer.start(100)
+        self.timer.start(1000//FPS)
         self.get_image = get_image
         self.camera_format = camera_format
 
@@ -368,6 +425,10 @@ class UiTests(object):
         # self.prew_out_rgb_res.setPalette(self.green_pallete)
         # self.save_but.clicked.connect(self.show_cameras)
 
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.set_result)
+        self.timer.start(1000//FPS)
+
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
         UI_tests.setWindowTitle(_translate("UI_tests", "MainWindow"))
@@ -375,14 +436,6 @@ class UiTests(object):
         self.save_but.setText("SAVE")
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
         self.automated_tests_labels.setText(_translate("UI_tests", "<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\">USB3</span></p><p align=\"right\"><span style=\" font-size:14pt;\">Left camera connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">Right Camera Connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">RGB Camera connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">JPEG Encoding Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">preview-out-rgb Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">left Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">right Stream</span></p></body></html>"))
-        # self.usb3_res.setText('1')
-        # self.left_cam_res.setText('2')
-        # self.right_cam_res.setText('3')
-        # self.rgb_cam_res.setText('4')
-        # self.jpeg_enc_res.setText('5')
-        # self.prew_out_rgb_res.setText('6')
-        # self.left_strm_res.setText('7')
-        # self.right_strm_res.setText('8')
         self.operator_tests.setTitle(_translate("UI_tests", "Operator Tests"))
         self.NOT_TESTED_LABEL.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\"><span style=\" font-size:11pt; color:#aaaa00;\">Not<br>Tested</span></p></body></html>"))
         self.FAIL_LABEL.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:11pt; color:#ff0000;\">FAIL</span></p></body></html>"))
@@ -425,7 +478,6 @@ class UiTests(object):
         if self.test_connexion():
             self.print_logs('Camera connected, starting tests...')
             self.depth_camera = DepthAICamera()
-            self.set_result()
             self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888)
             self.rgb.show()
             self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8)
@@ -437,6 +489,10 @@ class UiTests(object):
             self.print_logs('No camera detected, check the connexion and try again...')
 
     def set_result(self):
+        global update_res
+        if not update_res:
+            return
+        update_res = False
         if test_result['usb3_res'] == 'PASS':
             self.usb3_res.setPalette(self.green_pallete)
         else:
@@ -483,7 +539,7 @@ class UiTests(object):
             self.right_strm_res.setPalette(self.green_pallete)
         else:
             self.right_strm_res.setPalette(self.red_pallete)
-        self.right_strm_res.setText(test_result['right_cam_res'])
+        self.right_strm_res.setText(test_result['right_strm_res'])
 
     # def update_bootloader(self):
     #     (result, device) = depthai.DeviceBootloader.getFirstAvailableDevice()
