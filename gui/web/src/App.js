@@ -1,10 +1,9 @@
-import {Button, Card, Col, Input, Row, Select, Slider, Spin, Switch, Tabs, Typography} from "antd";
+import { Card, Col, Row, Tabs} from "antd";
 import {
   CameraOutlined,
   BorderOuterOutlined,
   ExperimentOutlined,
-  PlayCircleOutlined,
-  SlidersOutlined, QuestionCircleOutlined
+  SlidersOutlined,
 } from "@ant-design/icons";
 import AIProperties from "./components/AIProperties";
 import DepthProperties from "./components/DepthProperties";
@@ -27,23 +26,26 @@ function App() {
 
   return (
     <div className="root-container">
-      <Row align="middle" gutter={{md: 20, sm: 0}}>
-        <Col md={12} sm={24}>
+      <Row justify="space-around" align="top" gutter={{ xs: 8, sm: 16, md: 24, lg: 32 }}>
+        <Col>
           <CameraPreview/>
         </Col>
-        <Col md={12} sm={24}>
-          <Card bordered={false} bodyStyle={{padding: 0, maxWidth: 700}}>
-            <Tabs animated centered defaultActiveKey="ai">
+        <Col className="rightColumn">
+          <Card hoverable={false} bordered={false} bodyStyle={{padding: 0, maxWidth: 400}}>
+            <Tabs className="tab-group" animated defaultActiveKey="ai">
               <Tabs.TabPane tab={<span className="tab-indicator"><ExperimentOutlined/><span>AI</span></span>} key="ai">
                 <AIProperties/>
               </Tabs.TabPane>
-              <Tabs.TabPane tab={<span className="tab-indicator"><BorderOuterOutlined/> <span>Depth</span></span>} key="depth">
+              <Tabs.TabPane tab={<span className="tab-indicator"><BorderOuterOutlined/> <span>Depth</span></span>}
+                            key="depth">
                 <DepthProperties/>
               </Tabs.TabPane>
-              <Tabs.TabPane tab={<span className="tab-indicator"><CameraOutlined/> <span>Camera</span></span>} key="camera">
+              <Tabs.TabPane tab={<span className="tab-indicator"><CameraOutlined/> <span>Camera</span></span>}
+                            key="camera">
                 <CameraProperties/>
               </Tabs.TabPane>
-              <Tabs.TabPane tab={<span className="tab-indicator"><SlidersOutlined/> <span>Misc</span></span>} key="misc">
+              <Tabs.TabPane tab={<span className="tab-indicator"><SlidersOutlined/> <span>Misc</span></span>}
+                            key="misc">
                 <MiscProperties/>
               </Tabs.TabPane>
             </Tabs>

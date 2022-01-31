@@ -1,21 +1,24 @@
-import {Button, Col, Input, Row, Select, Slider, Switch, Typography} from "antd";
+import {Button, Col, Input, Row, Switch, Typography} from "antd";
 import {QuestionCircleOutlined} from "@ant-design/icons";
 
 function MiscProperties() {
   return (
     <>
-      <Row>
-        <Col span={12}>
+      <Row className="input-box">
+        <Col span={24}>
           <div className="options-section">
             <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
             <Typography.Title level={3}>Recording</Typography.Title>
-            <div className="switchable-option"><Switch/> <span>Color</span> <Input addonBefore="FPS" defaultValue="30"/></div>
-            <div className="switchable-option"><Switch/> <span>Left</span> <Input addonBefore="FPS" defaultValue="30"/></div>
-            <div className="switchable-option"><Switch/> <span>Right</span> <Input addonBefore="FPS" defaultValue="30"/></div>
+            <div className="switchable-option"><Switch/> <span>Color</span> <Input className="switchable-input" addonBefore="FPS" defaultValue="30"/>
+            </div>
+            <div className="switchable-option"><Switch/> <span>Left</span> <Input className="switchable-input" addonBefore="FPS" defaultValue="30"/>
+            </div>
+            <div className="switchable-option"><Switch/> <span>Right</span> <Input className="switchable-input" addonBefore="FPS" defaultValue="30"/>
+            </div>
             <Input addonBefore="Destination" type="file"/>
           </div>
         </Col>
-        <Col span={12}>
+        <Col span={24}>
           <div className="options-section">
             <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
             <Typography.Title level={3}>Demo options</Typography.Title>
@@ -24,7 +27,7 @@ function MiscProperties() {
         </Col>
       </Row>
       <Row>
-        <Col span={12}>
+        <Col span={24}>
           <div className="options-section">
             <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
             <Typography.Title level={3}>Recording</Typography.Title>
@@ -34,7 +37,7 @@ function MiscProperties() {
             <Input addonBefore="Destination" type="file"/>
           </div>
         </Col>
-        <Col span={12}>
+        <Col span={24}>
           <div className="options-section">
             <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
             <Typography.Title level={3}>Applications</Typography.Title>

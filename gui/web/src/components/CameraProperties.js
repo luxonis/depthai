@@ -9,18 +9,18 @@ function CameraProperties() {
       </div>
       <div className="options-section">
         <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
-        <Row>
+        <Row className="input-box" gutter={16}>
           <Col span={12}>
             <Typography.Title level={3}>Color</Typography.Title>
             <Input addonBefore="FPS" defaultValue="30"/>
-            <span>Resolution</span>
-            <Select defaultValue="THE_1080_P">
-              <Select.Option value="THE_1080_P">THE_1080_P</Select.Option>
-              <Select.Option value="THE_4K">THE_4K</Select.Option>
-              <Select.Option value="THE_13MP">THE_13MP</Select.Option>
-            </Select>
+              <span>Resolution</span>
+              <Select defaultValue="THE_1080_P">
+                <Select.Option value="THE_1080_P">THE_1080_P</Select.Option>
+                <Select.Option value="THE_4K">THE_4K</Select.Option>
+                <Select.Option value="THE_13MP">THE_13MP</Select.Option>
+              </Select>
           </Col>
-          <Col span={12}>
+          <Col className="column-grid" span={12}>
             <Typography.Title level={3}>Left + Right</Typography.Title>
             <Input addonBefore="FPS" defaultValue="30"/>
             <span>Resolution</span>
@@ -35,10 +35,14 @@ function CameraProperties() {
       </div>
       <div className="options-section">
         <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
-        <Row>
+        <Row className="input-box">
           <Col span={12}>
-            <Input addonBefore="ISO"/>
-            <Input addonBefore="Exposure"/>
+            <Col className="gutter-row" span={6}>
+              <Input addonBefore="ISO"/>
+            </Col>
+            <Col className="gutter-row" span={6}>
+              <Input addonBefore="Exposure"/>
+            </Col>
             <div>
               <span>Saturation</span>
               <Slider marks={{0: '0', 10: '10'}} min={0} max={10} defaultValue={5}/>

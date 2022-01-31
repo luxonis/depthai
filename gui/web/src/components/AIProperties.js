@@ -1,4 +1,4 @@
-import {Button, Col, Input, Row, Select, Slider, Switch, Typography} from "antd";
+import {Button, Select, Slider, Switch, Typography} from "antd";
 import {QuestionCircleOutlined} from "@ant-design/icons";
 import {useSelector, useDispatch} from "react-redux";
 import {sendConfig, updateAIConfig} from "../store";
@@ -43,7 +43,7 @@ function AIProperties() {
       </div>
       <div className="options-section">
         <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
-        <div>
+        <div className="single-option">
           <span>OpenVINO version</span>
           <Select disabled={!config.enabled} onChange={current => update({ovVersion: {current}})} value={config.ovVersion ? config.ovVersion.current : null}>
             {
@@ -53,7 +53,7 @@ function AIProperties() {
             }
           </Select>
         </div>
-        <div>
+        <div className="single-option">
           <span>Label to count</span>
           <Select disabled={!config.enabled} onChange={current => update({label: {current}})} value={config.label && config.label.current ? config.label.current : "None"}>
             <Select.Option value="null">None</Select.Option>

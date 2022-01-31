@@ -13,7 +13,7 @@ const CameraPreview = () => {
       {
         !fetched && <Spin tip="Loading..."/>
       }
-      <img className="stream-preview " src={fetched ? "/stream" : emptyImg}/>
+      <img alt="camera-gui" className="stream-preview " src={fetched ? "/stream" : emptyImg}/>
       <div className="preview-controls">
         <Select defaultValue="depth">
           <Select.Option value="depth">Depth</Select.Option>

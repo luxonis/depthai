@@ -5,8 +5,8 @@
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-image: url("background.jpg");
@@ -14,7 +14,7 @@ body {
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+  monospace;
 }
 
 @primary-color: #7EDBB6; // primary color for all components
@@ -30,16 +30,22 @@ code {
 @border-radius-base: 2px; // major border radius
 @border-color-base: #d9d9d9; // major border color
 @box-shadow-base: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08),
-  0 9px 28px 8px rgba(0, 0, 0, 0.05); // major shadow for layers
+0 9px 28px 8px rgba(0, 0, 0, 0.05); // major shadow for layers
+
+@margin-inside-column: 10px 0;
 
 .root-container {
+  margin-top: 50px;
+
   .ant-slider {
     .ant-slider-rail {
       background-color: #ABB5BE;
     }
+
     .ant-slider-track {
       background-color: #ABB5BE;
     }
+
     .ant-slider-handle, .ant-slider-dot {
       &, &:hover {
         background-color: @primary-color;
@@ -51,6 +57,8 @@ code {
   h2.ant-typography {
     margin-bottom: 0 !important;
   }
+
+  // adds
 
   .ant-tabs-tabs {
     .ant-btn {
@@ -64,5 +72,91 @@ code {
     box-sizing: border-box;
     border-radius: 4px;
     width: 100px;
+  }
+
+  .options-section {
+    padding-block: 2em;
+    box-sizing: content-box;
+
+    .ant-slider-handle {
+      border: none;
+    }
+
+    .single-option {
+      margin: @margin-inside-column;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .switchable-option {
+      display: flex;
+      flex-direction: row-reverse;
+      align-items: center;
+      justify-content: space-between;
+      margin: @margin-inside-column;
+
+      span {
+        margin: 0 6px 0 12px;
+      }
+    }
+  }
+
+  .ant-input-group-wrapper {
+    span {
+      margin: @margin-inside-column;
+    }
+  }
+
+  .ant-slider-handle {
+    width: 24px;
+    height: 24px;
+    margin-top: -10px;
+  }
+
+  .title-section {
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+
+    h2 {
+      font-size: 1rem;
+    }
+
+    span {
+      margin: 0 12px 0 6px;
+    }
+  }
+
+  .input-box {
+    .ant-input {
+      width: 100%;
+    }
+  }
+
+  .ant-tabs-centered {
+    justify-content: flex-start;
+  }
+
+  .ant-tabs-tab + .ant-tabs-tab {
+    margin: 0;
+  }
+
+  .ant-slider-step {
+    margin: 5px 0;
+  }
+
+  @media (max-width: 923px) {
+    .rightColumn {
+      margin: 25px 0 150px 0;
+    }
+  }
+
+  .ant-select {
+    margin: 0 5px;
+  }
+
+  .ant-select-dropdown {
+    width: 100%;
+    min-width: 320px;
   }
 }

@@ -1,4 +1,4 @@
-import {Button, Col, Input, Row, Select, Slider, Switch, Typography} from "antd";
+import {Button, Col, Input, Row, Select, Slider, Switch, Typography, Divider} from "antd";
 import {QuestionCircleOutlined} from "@ant-design/icons";
 
 function DepthProperties() {
@@ -17,6 +17,7 @@ function DepthProperties() {
           <Select.Option value="3x3">Kernel 3x3</Select.Option>
           <Select.Option value="None">No filtering</Select.Option>
         </Select>
+        <Divider />
         <div className="switchable-option"><Switch/> <span>Subpixel</span></div>
         <div className="switchable-option"><Switch/> <span>Left Right Check</span></div>
         <div className="switchable-option"><Switch/> <span>Extended Disparity</span></div>
@@ -30,7 +31,7 @@ function DepthProperties() {
         <Typography.Title level={3}>LRC Threshold</Typography.Title>
         <Slider marks={{0: '0', 10: '10'}} min={0} max={10} defaultValue={0}/>
         <Typography.Title level={3}>Depth Range (m)</Typography.Title>
-        <Row>
+        <Row className="input-box">
           <Col flex={2}>
             <Input addonBefore="min" defaultValue="0"/>
           </Col>
