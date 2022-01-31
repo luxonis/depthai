@@ -28,6 +28,7 @@ class HttpHandler(BaseHTTPRequestHandler):
             "/stream": self.stream,
             "/config": self.config,
             "/update": self.update,
+            "/updatePreview": self.updatePreview,
         }
 
     def do_GET(self):
@@ -65,6 +66,18 @@ class HttpHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(self.server.config).encode('UTF-8'))
 
+    def updatePreview(self):
+        if self.server.instance is None:
+            self.send_response(202)
+            self.end_headers()
+            return
+
+        post_body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
+        test_data = json.loads(post_body)
+        self.server.instance.selectedPreview = test_data["preview"]
+        self.send_response(200)
+        self.end_headers()
+
     def update(self):
         if self.server.instance is None:
             self.send_response(202)
@@ -73,7 +86,17 @@ class HttpHandler(BaseHTTPRequestHandler):
 
         post_body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
         test_data = json.loads(post_body)
-        print(test_data)
+
+        def updatePreview(data):
+            self.server.instance.selectedPreview = data
+
+        def updateStatistics(data):
+            try:
+                with Path(projectRoot / ".consent").open('w') as f:
+                    json.dump({"statistics": data}, f)
+            except:
+                pass
+
         mapping = {
             "ai": {
                 "enabled": lambda data: self.server.instance.updateArg("disableNeuralNetwork", not data),
@@ -86,6 +109,59 @@ class HttpHandler(BaseHTTPRequestHandler):
                 "sbb": lambda data: self.server.instance.updateArg("spatialBoundingBox", data),
                 "sbbFactor": lambda data: self.server.instance.updateArg("sbbScaleFactor", data),
             },
+            "depth": {
+                "enabled": lambda data: self.server.instance.updateArg("disableDepth", not data),
+                "median": lambda data: self.server.instance.updateArg("stereoMedianSize", int(data["current"].replace("KERNEL_", "").split("x")[0]) if data["current"].startswith("KERNEL_") else 0) if "current" in data else None,
+                "subpixel": lambda data: self.server.instance.updateArg("subpixel", data),
+                "lrc": lambda data: self.server.instance.updateArg("stereoLrCheck", data),
+                "extended": lambda data: self.server.instance.updateArg("extendedDisparity", data),
+                "confidence": lambda data: self.server.instance.updateArg("disparityConfidenceThreshold", data),
+                "sigma": lambda data: self.server.instance.updateArg("sigma", data),
+                "lrcThreshold": lambda data: self.server.instance.updateArg("lrcThreshold", data),
+                "range": {
+                    "min": lambda data: self.server.instance.updateArg("minDepth", data),
+                    "max": lambda data: self.server.instance.updateArg("maxDepth", data),
+                },
+            },
+            "camera": {
+                "sync": lambda data: self.server.instance.updateArg("sync", data),
+                "color": {
+                    "fps": lambda data: self.server.instance.updateArg("rgbFps", data),
+                    "resolution": lambda data: self.server.instance.updateArg("rgbResolution", data["current"]) if "current" in data else None,
+                    "iso": lambda data: self.server.instance.updateArg("cameraSensitivity", data),
+                    "exposure": lambda data: self.server.instance.updateArg("cameraExposure", data),
+                    "saturation": lambda data: self.server.instance.updateArg("cameraSaturation", data),
+                    "contrast": lambda data: self.server.instance.updateArg("cameraContrast", data),
+                    "brightness": lambda data: self.server.instance.updateArg("cameraBrightness", data),
+                    "sharpness": lambda data: self.server.instance.updateArg("cameraSharpness", data),
+                },
+                "mono": {
+                    "fps": lambda data: self.server.instance.updateArg("monoFps", data),
+                    "resolution": lambda data: self.server.instance.updateArg("monoResolution", data["current"]) if "current" in data else None,
+                    "iso": lambda data: self.server.instance.updateArg("cameraSensitivity", data),
+                    "exposure": lambda data: self.server.instance.updateArg("cameraExposure", data),
+                    "saturation": lambda data: self.server.instance.updateArg("cameraSaturation", data),
+                    "contrast": lambda data: self.server.instance.updateArg("cameraContrast", data),
+                    "brightness": lambda data: self.server.instance.updateArg("cameraBrightness", data),
+                    "sharpness": lambda data: self.server.instance.updateArg("cameraSharpness", data),
+                }
+            },
+            "misc": {
+                "recording": {
+                    "color": lambda data: self.server.instance.updateArg("encode", {**self.confManager.args.encode, "color": data}),
+                    "left": lambda data: self.server.instance.updateArg("left", {**self.confManager.args.encode, "left": data}),
+                    "right": lambda data: self.server.instance.updateArg("right", {**self.confManager.args.encode, "right": data}),
+                    "dest": lambda data: self.server.instance.updateArg("encodeOutput", data),
+                },
+                "reporting": {
+                    "enabled": lambda data: self.server.instance.updateArg("report", data),
+                    "dest": lambda data: self.server.instance.updateArg("reportFile", data),
+                },
+                "demo": {
+                    "statistics": updateStatistics,
+                }
+            },
+            "preview": updatePreview,
         }
 
         def call_mappings(in_dict, map_slice):
@@ -97,6 +173,18 @@ class HttpHandler(BaseHTTPRequestHandler):
                         call_mappings(in_dict[key], map_slice[key])
 
         call_mappings(test_data, mapping)
+        if "preview" in test_data:
+            del test_data["preview"]
+        if "depth" in test_data:
+            if "confidence" in test_data["depth"]:
+                del test_data["depth"]["confidence"]
+            if "subpixel" in test_data["depth"]:
+                del test_data["depth"]["subpixel"]
+            if "median" in test_data["depth"]:
+                del test_data["depth"]["median"]
+            if "sigma" in test_data["depth"]:
+                del test_data["depth"]["sigma"]
+        print(test_data)
         self.server.instance.restartDemo()
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
@@ -162,7 +250,7 @@ class WebApp:
         except:
             statisticsEnabled = True
         previewChoices = self.confManager.args.show
-        devices = [instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+        devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
         countLabels = instance._nnManager._labels if instance._nnManager is not None else []
         countLabel = instance._nnManager._countLabel if instance._nnManager is not None else None
         depthEnabled = self.confManager.useDepth
@@ -211,7 +299,7 @@ class WebApp:
                 },
             },
             "camera": {
-                "sync": self.confManager.args.maxDepth,
+                "sync": self.confManager.args.sync,
                 "color": {
                     "fps": self.confManager.args.rgbFps,
                     "resolution": self.confManager.args.rgbResolution,
@@ -238,18 +326,24 @@ class WebApp:
                     "color": self.confManager.args.encode.get("color", None) if self.confManager.args.encode is not None else None,
                     "left": self.confManager.args.encode.get("left", None) if self.confManager.args.encode is not None else None,
                     "right": self.confManager.args.encode.get("right", None) if self.confManager.args.encode is not None else None,
-                    "dest": self.confManager.args.encodeOutput,
+                    "dest": str(self.confManager.args.encodeOutput),
                 },
                 "reporting": {
                     "enabled": self.confManager.args.report,
-                    "dest": self.confManager.args.reportFile
+                    "dest": str(self.confManager.args.reportFile)
                 },
                 "demo": {
                     "statistics": statisticsEnabled,
                 }
             },
-            "previewChoices": previewChoices,
-            "devices": devices,
+            "preview": {
+                "current": self.selectedPreview,
+                "available": previewChoices,
+            },
+            "devices": {
+                "current": instance._deviceInfo.getMxId(),
+                "available": devices,
+            },
             "depthEnabled": depthEnabled,
         }
 

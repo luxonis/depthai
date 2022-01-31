@@ -24,12 +24,20 @@ function difference(object, base) {
 
 export const sendConfig = createAsyncThunk(
   'config/send',
-  async (arg, thunk) => {
+  async (act = true, thunk) => {
     const rawUpdates = thunk.getState().demo.updates
     const rawConfig = thunk.getState().demo.rawConfig
     const updates = difference(rawUpdates, rawConfig)
-    const response = await request(POST, '/update', updates)
+    await request(POST, '/update', updates)
     thunk.dispatch(fetchConfig())
+  }
+)
+
+export const updatePreview = createAsyncThunk(
+  'update-preview/send',
+  async (act, thunk) => {
+    const preview = thunk.getState().demo.config.previews.current
+    await request(POST, '/updatePreview', {preview})
   }
 )
 
@@ -48,6 +56,10 @@ export const demoSlice = createSlice({
       state.config.ai = _.merge(state.config.ai || {}, action.payload)
       state.updates.ai = _.merge(state.updates.ai || {}, action.payload)
       state.restartRequired = true
+    },
+    updatePreviewConfig: (state, action) => {
+      state.config.preview = _.merge(state.config.preview || {}, action.payload)
+      state.updates.preview = _.merge(state.updates.preview || {}, action.payload)
     }
   },
   extraReducers: (builder) => {
@@ -70,7 +82,7 @@ export const demoSlice = createSlice({
   },
 })
 
-export const { updateAIConfig } = demoSlice.actions;
+export const { updateAIConfig, updatePreviewConfig } = demoSlice.actions;
 
 
 export default configureStore({
