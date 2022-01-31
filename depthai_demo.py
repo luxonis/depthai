@@ -318,7 +318,7 @@ class Demo:
         self.onSetup(self)
 
         try:
-            while self.shouldRun():
+            while not self._device.isClosed() and self.shouldRun():
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
@@ -350,8 +350,14 @@ class Demo:
         self._fps.printStatus()
         self.onTeardown(self)
 
+    timer = time.monotonic()
 
     def loop(self):
+        diff = time.monotonic() - self.timer
+        if diff < 0.02:
+            time.sleep(diff)
+        self.timer = time.monotonic()
+
         if self._conf.useCamera:
             self._pv.prepareFrames(callback=self.onNewFrame)
             if self._encManager is not None:
