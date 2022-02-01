@@ -6,16 +6,8 @@ import numpy as np
 import depthai as dai
 import blobconverter
 
-# self.usb3_res.setText('1')
-# self.left_cam_res.setText('2')
-# self.right_cam_res.setText('3')
-# self.rgb_cam_res.setText('4')
-# self.jpeg_enc_res.setText('5')
-# self.prew_out_rgb_res.setText('6')
-# self.left_strm_res.setText('7')
-# self.right_strm_res.setText('8')
-
 FPS = 10
+
 
 test_result = {
     'usb3_res': '',
@@ -28,6 +20,9 @@ test_result = {
     'right_strm_res': ''
 }
 update_res = False
+prew_width = 0
+prew_height = 0
+
 
 class DepthAICamera():
     def __init__(self):
@@ -36,28 +31,35 @@ class DepthAICamera():
         self.camRgb = self.pipeline.create(dai.node.ColorCamera)
         self.camLeft = self.pipeline.create(dai.node.MonoCamera)
         self.camRight = self.pipeline.create(dai.node.MonoCamera)
+        self.videoEnc = self.pipeline.create(dai.node.VideoEncoder)
 
         self.xoutRgb = self.pipeline.create(dai.node.XLinkOut)
         self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
         self.xoutRight = self.pipeline.create(dai.node.XLinkOut)
+        self.xoutJpeg = self.pipeline.create(dai.node.XLinkOut)
 
         self.xoutRgb.setStreamName("rgb")
         self.xoutLeft.setStreamName("left")
         self.xoutRight.setStreamName("right")
+        self.xoutJpeg.setStreamName("jpeg")
 
-        self.camRgb.setPreviewSize(640, 400)
+        self.camRgb.setPreviewSize(1920, 1080)
+        self.camRgb.setPreviewKeepAspectRatio(True)
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
         self.camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
         self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         self.camLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-        self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+        self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
         self.camRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-        self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_480_P)
+        self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+        self.videoEnc.setDefaultProfilePreset(self.camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
 
         self.camRgb.preview.link(self.xoutRgb.input)
         self.camLeft.out.link(self.xoutLeft.input)
         self.camRight.out.link(self.xoutRight.input)
+        self.camRgb.video.link(self.videoEnc.input)
+        self.videoEnc.bitstream.link(self.xoutJpeg.input)
 
         self.device = dai.Device(self.pipeline)
 
@@ -77,7 +79,15 @@ class DepthAICamera():
 
         update_res = True
 
-        print('Usb speed: ', self.device.getUsbSpeed().name)
+        speed = self.device.getUsbSpeed().name
+        print('Usb speed: ', speed)
+        try:
+            if speed == 'SUPER' or speed == 'SUPER_PLUS':
+                test_result['usb3_res'] = 'PASS'
+            else:
+                test_result['usb3_res'] = 'FAIL'
+        except RuntimeError:
+            test_result['usb3_res'] = 'FAIL'
         self.start_queue()
         self._rgb_pass = 0
         self._left_pass = 0
@@ -88,6 +98,8 @@ class DepthAICamera():
         self._rgb_timer = 0
         self._left_timer = 0
         self._right_timer = 0
+        self._FRAME_JPEG = 10
+        self.current_jpeg = 0
 
     def start_queue(self):
         global update_res
@@ -95,26 +107,29 @@ class DepthAICamera():
             self.qRgb = self.device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
         except RuntimeError:
             test_result['prew_out_rgb_res'] = 'FAIL'
-            update_res = True
         try:
             self.qLeft = self.device.getOutputQueue(name="left", maxSize=4, blocking=False)
         except RuntimeError:
             test_result['left_strm_res'] = 'FAIL'
-            update_res = True
         try:
             self.qRight = self.device.getOutputQueue(name='right', maxSize=4, blocking=False)
         except RuntimeError:
             test_result['right_strm_res'] = 'FAIL'
-            update_res = True
+        try:
+            self.qJpeg = self.device.getOutputQueue(name="jpeg", maxSize=1, blocking=False)
+        except RuntimeError:
+            test_result['jpeg_enc_res'] = 'FAIL'
+        update_res = True
 
     def get_image(self, cam_type):
         global update_res
+        image = None
         try:
-            image = None
             if cam_type == 'RGB':
                 if test_result['rgb_cam_res'] == 'PASS':
                     in_rgb = self.qRgb.tryGet()
-                    image = in_rgb.getCvFrame()
+                    if in_rgb is not None:
+                        image = in_rgb.getCvFrame()
                     if test_result['prew_out_rgb_res'] == '':
                         if (self._rgb_timer > self._FRAME_WAIT) or (self._rgb_timer > self._FRAME_WAIT and self._rgb_pass == 0):
                             test_result['prew_out_rgb_res'] = 'FAIL'
@@ -128,7 +143,8 @@ class DepthAICamera():
             if cam_type == 'LEFT':
                 if test_result['left_cam_res'] == 'PASS':
                     in_left = self.qLeft.tryGet()
-                    image = in_left.getCvFrame()
+                    if in_left is not None:
+                        image = in_left.getCvFrame()
                     if test_result['left_strm_res'] == '':
                         if (self._left_timer > self._FRAME_WAIT) or (self._left_timer > self._FRAME_WAIT and self._left_pass == 0):
                             test_result['left_strm_res'] = 'FAIL'
@@ -141,7 +157,8 @@ class DepthAICamera():
             if cam_type == 'RIGHT':
                 if test_result['right_cam_res'] == 'PASS':
                     in_right = self.qRight.tryGet()
-                    image = in_right.getCvFrame()
+                    if in_right is not None:
+                        image = in_right.getCvFrame()
                     if test_result['right_strm_res'] == '':
                         if (self._right_timer > self._FRAME_WAIT) or (self._right_timer > self._FRAME_WAIT and self._right_pass == 0):
                             test_result['right_strm_res'] = 'FAIL'
@@ -151,26 +168,47 @@ class DepthAICamera():
                             update_res = True
                         elif image is not None:
                             self._right_pass += 1
-
-            return True, image
+            if cam_type == 'JPEG':
+                if test_result['jpeg_enc_res'] == '' and test_result['rgb_cam_res'] != 'FAIL':
+                    in_jpeg = self.qJpeg.tryGet()
+                    # print(in_jpeg)
+                    if in_jpeg is not None:
+                        image = in_jpeg.getData()
+                        self.current_jpeg += 1
+                        if self.current_jpeg > 10:
+                            test_result['jpeg_enc_res'] = 'PASS'
+                            update_res = True
+                            print(image)
+                            # for encFrame in qJpeg.tryGetAll():
+                            #     with open(f"{dirName}/{int(time.time() * 1000)}.jpeg", "wb") as f:
+                            #         f.write(bytearray(encFrame.getData()))
+                            return True, image
+                    return False, image
+                pass
         except RuntimeError:
             if cam_type == 'RGB' and self._rgb_pass < self._NR_TEST_FRAMES:
                 test_result['prew_out_rgb_res'] = 'FAIL'
-                update_res = True
             if cam_type == 'LEFT' and self._left_pass < self._NR_TEST_FRAMES:
                 test_result['left_strm_res'] == 'FAIL'
-                update_res = True
             if cam_type == 'RIGHT' and self._right_pass < self._NR_TEST_FRAMES:
                 test_result['right_cam_res'] == 'FAIL'
-                update_res = True
+            if cam_type == 'JPEG' and self.current_jpeg > self._FRAME_JPEG:
+                test_result['jpeg_enc_res'] == 'FAIL'
+            update_res = True
             return False, None
+        return True, image
 
 
 class Camera(QtWidgets.QWidget):
-    def __init__(self, get_image, camera_format):
+    def __init__(self, get_image, camera_format, title='Camera', location=(0, 0)):
         super().__init__()
         layout = QtWidgets.QVBoxLayout()
-        self.camera = QtWidgets.QLabel('ana are mere')
+        self.setWindowTitle(title)
+        width, height = location
+        self.move(width, height)
+        self.camera = QtWidgets.QLabel('Camera')
+        self.camera.setFixedSize(prew_width, prew_height)
+        self.camera.resize(prew_width, prew_height)
         layout.addWidget(self.camera)
         self.setLayout(layout)
         self.timer = QtCore.QTimer()
@@ -181,14 +219,20 @@ class Camera(QtWidgets.QWidget):
 
     def update_image(self):
         status, image = self.get_image()
-        if status:
-            q_image = QtGui.QImage(image.data, image.shape[1], image.shape[0], self.camera_format)
-            pixmap = QtGui.QPixmap.fromImage(q_image)
+        if status and image is not None:
+            if len(image.shape) > 1:
+                q_image = QtGui.QImage(image.data, image.shape[1], image.shape[0], self.camera_format)
+                pixmap = QtGui.QPixmap.fromImage(q_image)
+            else:
+                pixmap = QtGui.QPixmap()
+                pixmap.loadFromData(image)
             self.camera.setPixmap(pixmap)
-        else:
-            # print('im hiding')
-            self.hide()
+        # else:
+        #     # print('im hiding')
+        #     self.hide()
 
+WIDTH = 766
+HEIGHT = 717
 
 class UiTests(object):
     def __init__(self):
@@ -202,7 +246,8 @@ class UiTests(object):
 
     def setupUi(self, UI_tests):
         UI_tests.setObjectName("UI_tests")
-        UI_tests.resize(766, 717)
+        UI_tests.resize(WIDTH, HEIGHT)
+        UI_tests.move(0, 0)
         font = QtGui.QFont()
         font.setPointSize(13)
         UI_tests.setFont(font)
@@ -214,10 +259,10 @@ class UiTests(object):
         font.setPointSize(24)
         self.title.setFont(font)
         self.title.setObjectName("title")
-        self.save_but = QtWidgets.QPushButton(self.centralwidget)
-        self.save_but.setGeometry(QtCore.QRect(510, 390, 61, 25))
-        self.save_but.setObjectName("save_but")
-        self.save_but.clicked.connect(self.show_cameras)
+        self.connect_but = QtWidgets.QPushButton(self.centralwidget)
+        self.connect_but.setGeometry(QtCore.QRect(510, 390, 86, 25))
+        self.connect_but.setObjectName("connect_but")
+        self.connect_but.clicked.connect(self.show_cameras)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 341))
         self.automated_tests.setObjectName("automated_tests")
@@ -396,13 +441,16 @@ class UiTests(object):
         self.test_type_label = QtWidgets.QLabel(self.logs)
         self.test_type_label.setGeometry(QtCore.QRect(10, 60, 281, 21))
         self.test_type_label.setObjectName("test_type_label")
-        self.IMU_prog_bar = QtWidgets.QProgressBar(self.logs)
-        self.IMU_prog_bar.setGeometry(QtCore.QRect(540, 40, 118, 23))
-        self.IMU_prog_bar.setProperty("value", 24)
-        self.IMU_prog_bar.setObjectName("IMU_prog_bar")
-        self.FLASH_IMU_LABEL = QtWidgets.QLabel(self.logs)
-        self.FLASH_IMU_LABEL.setGeometry(QtCore.QRect(450, 40, 81, 17))
-        self.FLASH_IMU_LABEL.setObjectName("FLASH_IMU_LABEL")
+        self.prog_bar = QtWidgets.QProgressBar(self.logs)
+        self.prog_bar.setGeometry(QtCore.QRect(540, 40, 118, 23))
+        self.prog_bar.setProperty("value", 24)
+        self.prog_bar.setObjectName("IMU_prog_bar")
+        self.prog_bar.setMinimum(0)
+        self.prog_bar.setMaximum(100)
+        self.prog_bar.setValue(0)
+        self.prog_label = QtWidgets.QLabel(self.logs)
+        self.prog_label.setGeometry(QtCore.QRect(450, 40, 81, 17))
+        self.prog_label.setObjectName("prog_label")
         self.logs_txt_browser = QtWidgets.QTextBrowser(self.logs)
         self.logs_txt_browser.setGeometry(QtCore.QRect(10, 90, 721, 121))
         self.logs_txt_browser.setObjectName("logs_txt_browser")
@@ -433,7 +481,7 @@ class UiTests(object):
         _translate = QtCore.QCoreApplication.translate
         UI_tests.setWindowTitle(_translate("UI_tests", "MainWindow"))
         self.title.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\">UNIT TEST IN PROGRESS</p></body></html>"))
-        self.save_but.setText("SAVE")
+        self.connect_but.setText("CONNECT")
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
         self.automated_tests_labels.setText(_translate("UI_tests", "<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\">USB3</span></p><p align=\"right\"><span style=\" font-size:14pt;\">Left camera connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">Right Camera Connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">RGB Camera connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">JPEG Encoding Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">preview-out-rgb Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">left Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">right Stream</span></p></body></html>"))
         self.operator_tests.setTitle(_translate("UI_tests", "Operator Tests"))
@@ -452,7 +500,7 @@ class UiTests(object):
         self.logs.setTitle(_translate("UI_tests", "Logs"))
         self.date_time_label.setText(_translate("UI_tests", "date_time: "))
         self.test_type_label.setText(_translate("UI_tests", "test_type: "))
-        self.FLASH_IMU_LABEL.setText(_translate("UI_tests", "Flash IMU"))
+        self.prog_label.setText(_translate("UI_tests", "Flash IMU"))
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
 
     def print_logs(self, new_log):
@@ -463,27 +511,46 @@ class UiTests(object):
     def test_connexion(self):
         (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
         if result:
-            self.print_logs('TEST check if device connected: PASS')
             return True
-        self.print_logs('TEST check if device connected: FAILED')
         return False
+
+    def update_prog_bar(self, value):
+        self.prog_bar.setValue(int(value*100))
 
     def show_cameras(self):
         if hasattr(self, 'depth_camera'):
-            self.print_logs('Camera already connected')
-            self.rgb.show()
-            self.left.show()
-            self.right.show()
+            if self.test_connexion():
+                self.print_logs('Camera already connected')
+                self.rgb.show()
+                self.left.show()
+                self.right.show()
+            else:
+                del self.rgb
+                del self.left
+                del self.right
+                del self.jpeg
+                del self.depth_camera
             return
         if self.test_connexion():
             self.print_logs('Camera connected, starting tests...')
-            self.depth_camera = DepthAICamera()
-            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888)
+            # self.test_bootloader_version()
+            try:
+                self.depth_camera = DepthAICamera()
+            except RuntimeError:
+                self.print_logs("Something went wrong, check connexion!")
+                return
+            location = WIDTH, 0
+            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888, 'RGB Preview', location)
             self.rgb.show()
-            self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8)
+            location = WIDTH, prew_height + 80
+            self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8, 'LEFT Preview', location)
             self.left.show()
-            self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8)
+            location = WIDTH + prew_width + 20, prew_height + 80
+            self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8, 'RIGHT Preview', location)
             self.right.show()
+            location = WIDTH + prew_width + 20, 0
+            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), QtGui.QImage.Format_BGR888, 'JPEG Preview', location)
+            self.jpeg.show()
         else:
             print(locals())
             self.print_logs('No camera detected, check the connexion and try again...')
@@ -541,19 +608,53 @@ class UiTests(object):
             self.right_strm_res.setPalette(self.red_pallete)
         self.right_strm_res.setText(test_result['right_strm_res'])
 
-    # def update_bootloader(self):
-    #     (result, device) = depthai.DeviceBootloader.getFirstAvailableDevice()
-    #     if not result:
-    #         self.print_logs('ERROR device was dissconected!')
-    #         return False
-    #     bootloader = depthai.DeviceBootloader(device, allowFlashingBootloader=True)
-    #     # progress = lambda p: self.print_logs(f'Flashing progress: {p * 100:.1f}%')
-    #     # bootloader.flashBootloader(progress)
-    #     return True
+    def update_bootloader(self):
+        self.print_logs('Check bootloader')
+        (result, device) = dai.DeviceBootloader.getFirstAvailableDevice()
+        if result == False:
+            self.print_logs('ERROR device was disconnected')
+            return False
+        try:
+            bootloader = dai.DeviceBootloader(device)
+        except RuntimeError:
+            self.print_logs('Device communication failed, check connexions')
+            raise
+            return False
+        # progress = lambda p: print(f'Flashing progress: {p * 100:.1f}%')
+        self.print_logs('Starting Update')
+        self.prog_label.setText('Bootloader')
+        bootloader.flashBootloader(self.update_prog_bar)
+        return True
+
+    def test_bootloader_version(self, version='0.0.15'):
+        (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
+        if result == False:
+            self.print_logs('ERROR device was dissconected!')
+            return False
+        device = dai.DeviceBootloader(info)
+        current_version = str(device.getVersion())
+        if current_version == version:
+            self.print_logs('Bootloader up to date!')
+            return True
+        self.print_logs('Bootloader version is ' + current_version)
+        self.print_logs('Starting bootloader update!')
+        self.print_logs('Writing version ' + version + '...')
+        result = self.update_bootloader()
+        if result == True:
+            self.print_logs('Bootloader updated!')
+            return True
+        else:
+            self.print_logs('Failed to update bootloader')
+            return False
 
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
+    screen = app.primaryScreen()
+    rect = screen.availableGeometry()
+    prew_width = (rect.width() - WIDTH)/2 - 20
+    prew_height = (rect.height())/2 - 80
+    print(prew_width, prew_height)
     UI_tests = QtWidgets.QMainWindow()
     ui = UiTests()
     ui.setupUi(UI_tests)
