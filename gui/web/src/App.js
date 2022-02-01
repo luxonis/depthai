@@ -15,10 +15,7 @@ import CameraProperties from "./components/CameraProperties";
 import MiscProperties from "./components/MiscProperties";
 
 function App() {
-  const error = useSelector((state) => state.demo.error)
   const dispatch = useDispatch()
-
-  console.log(error)
 
   useEffect(() => {
     dispatch(fetchConfig())

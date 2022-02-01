@@ -40,29 +40,25 @@ function CameraProperties() {
       </div>
       <div className="options-section">
         <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
-        <Row className="input-box">
+        <Row className="input-box" gutter={16}>
           <Col span={12}>
-            <Col className="gutter-row" span={6}>
-              <Input addonBefore="ISO" value={color.iso}/>
-            </Col>
-            <Col className="gutter-row" span={6}>
-              <Input addonBefore="Exposure" value={color.exposure}/>
-            </Col>
+            <Input addonBefore="ISO" value={color.iso}/>
+            <Input addonBefore="Exposure" value={color.exposure}/>
             <div>
               <span>Saturation</span>
-              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.saturation}/>
+              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.saturation || 0}/>
             </div>
             <div>
               <span>Contrast</span>
-              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.contrast}/>
+              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.contrast || 0}/>
             </div>
             <div>
               <span>Brightness</span>
-              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.brightness}/>
+              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.brightness || 0}/>
             </div>
             <div>
               <span>Sharpness</span>
-              <Slider marks={{0: '0', 4: '4'}} min={0} max={4} value={color.sharpness}/>
+              <Slider marks={{0: '0', 4: '4'}} min={0} max={4} value={color.sharpness || 0}/>
             </div>
           </Col>
           <Col span={12}>
@@ -70,19 +66,19 @@ function CameraProperties() {
             <Input addonBefore="Exposure" value={mono.exposure}/>
             <div>
               <span>Saturation</span>
-              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.saturation}/>
+              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.saturation || 0}/>
             </div>
             <div>
               <span>Contrast</span>
-              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.contrast}/>
+              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.contrast || 0}/>
             </div>
             <div>
               <span>Brightness</span>
-              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.brightness}/>
+              <Slider marks={{0: '0', 10: '10'}} min={0} max={10} value={color.brightness || 0}/>
             </div>
             <div>
               <span>Sharpness</span>
-              <Slider marks={{0: '0', 4: '4'}} min={0} max={4} value={color.sharpness}/>
+              <Slider marks={{0: '0', 4: '4'}} min={0} max={4} value={color.sharpness || 0}/>
             </div>
           </Col>
         </Row>

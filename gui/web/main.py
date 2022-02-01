@@ -221,7 +221,10 @@ class CustomHTTPServer(HTTPServer):
 
     def finish_request(self, request, client_address):
         request.settimeout(1) # Really short timeout as there is only 1 thread
-        HTTPServer.finish_request(self, request, client_address)
+        try:
+            HTTPServer.finish_request(self, request, client_address)
+        except OSError:
+            pass
 
 class WebApp:
     def __init__(self, instance, args):

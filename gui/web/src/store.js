@@ -34,9 +34,9 @@ export const sendConfig = createAsyncThunk(
 )
 
 export const updatePreview = createAsyncThunk(
-  'update-preview/send',
+  'preview/send',
   async (act, thunk) => {
-    const preview = thunk.getState().demo.config.previews.current
+    const preview = thunk.getState().demo.config.preview.current
     await request(POST, '/updatePreview', {preview})
   }
 )
@@ -69,6 +69,12 @@ export const demoSlice = createSlice({
     })
     builder.addCase(fetchConfig.pending, (state, action) => {
       state.fetched = false
+    })
+    builder.addCase(updatePreview.pending, (state, action) => {
+      state.fetched = false
+    })
+    builder.addCase(updatePreview.fulfilled, (state, action) => {
+      state.fetched = true
     })
     builder.addCase(fetchConfig.fulfilled, (state, action) => {
       state.config = action.payload
