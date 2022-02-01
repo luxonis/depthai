@@ -24,6 +24,13 @@ prew_width = 0
 prew_height = 0
 
 
+def clear_test_results():
+    global update_res
+    for key in test_result:
+        test_result[key] = ''
+    update_res = True
+
+
 class DepthAICamera():
     def __init__(self):
         global update_res
@@ -62,6 +69,8 @@ class DepthAICamera():
         self.videoEnc.bitstream.link(self.xoutJpeg.input)
 
         self.device = dai.Device(self.pipeline)
+        # self.device_test = dai.DeviceBase(self.pipeline)
+        # print(self.device_test.getSensorNames())
 
         cameras = self.device.getConnectedCameras()
         if dai.CameraBoardSocket.RGB not in cameras:
@@ -270,7 +279,7 @@ class UiTests(object):
         self.save_but = QtWidgets.QPushButton(self.centralwidget)
         self.save_but.setGeometry(QtCore.QRect(550, 390, 86, 25))
         self.save_but.setObjectName("connect_but")
-        self.save_but.clicked.connect(self.save_csv)
+        self.save_but.clicked.connect(self.test_connexion)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 341))
         self.automated_tests.setObjectName("automated_tests")
@@ -534,12 +543,14 @@ class UiTests(object):
                 self.left.show()
                 self.right.show()
             else:
+                clear_test_results()
+                self.set_result()
                 del self.rgb
                 del self.left
                 del self.right
                 del self.jpeg
                 del self.depth_camera
-            return
+            # return
         if self.test_connexion():
             self.print_logs('Camera connected, starting tests...')
             # self.test_bootloader_version()
@@ -620,14 +631,13 @@ class UiTests(object):
     def update_bootloader(self):
         self.print_logs('Check bootloader')
         (result, device) = dai.DeviceBootloader.getFirstAvailableDevice()
-        if result == False:
+        if not result:
             self.print_logs('ERROR device was disconnected')
             return False
         try:
             bootloader = dai.DeviceBootloader(device)
         except RuntimeError:
             self.print_logs('Device communication failed, check connexions')
-            raise
             return False
         self.print_logs('Starting Update')
         self.prog_label.setText('Bootloader')
@@ -636,7 +646,7 @@ class UiTests(object):
 
     def test_bootloader_version(self, version='0.0.15'):
         (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
-        if result == False:
+        if not result:
             self.print_logs('ERROR device was dissconected!')
             return False
         device = dai.DeviceBootloader(info)
@@ -648,7 +658,7 @@ class UiTests(object):
         self.print_logs('Starting bootloader update!')
         self.print_logs('Writing version ' + version + '...')
         result = self.update_bootloader()
-        if result == True:
+        if result:
             self.print_logs('Bootloader updated!')
             return True
         else:
@@ -672,4 +682,3 @@ if __name__ == "__main__":
     UI_tests.show()
     ui.test_connexion()
     sys.exit(app.exec_())
-
