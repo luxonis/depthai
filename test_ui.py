@@ -227,6 +227,7 @@ class Camera(QtWidgets.QWidget):
             else:
                 pixmap = QtGui.QPixmap()
                 pixmap.loadFromData(image)
+            pixmap = pixmap.scaled(prew_width, prew_height, QtCore.Qt.KeepAspectRatio)
             self.camera.setPixmap(pixmap)
         # else:
         #     # print('im hiding')
