@@ -204,6 +204,7 @@ class Camera(QtWidgets.QWidget):
         super().__init__()
         layout = QtWidgets.QVBoxLayout()
         self.setWindowTitle(title)
+        self.setWindowIcon(QtGui.QIcon('Assets/logo.png'))
         width, height = location
         self.move(width, height)
         self.camera = QtWidgets.QLabel('Camera')
@@ -248,6 +249,8 @@ class UiTests(object):
         UI_tests.setObjectName("UI_tests")
         UI_tests.resize(WIDTH, HEIGHT)
         UI_tests.move(0, 0)
+        UI_tests.setWindowTitle("DepthAI UI Tests")
+        UI_tests.setWindowIcon(QtGui.QIcon('Assets/logo.png'))
         font = QtGui.QFont()
         font.setPointSize(13)
         UI_tests.setFont(font)
@@ -260,9 +263,13 @@ class UiTests(object):
         self.title.setFont(font)
         self.title.setObjectName("title")
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
-        self.connect_but.setGeometry(QtCore.QRect(510, 390, 86, 25))
+        self.connect_but.setGeometry(QtCore.QRect(450, 390, 86, 25))
         self.connect_but.setObjectName("connect_but")
         self.connect_but.clicked.connect(self.show_cameras)
+        self.save_but = QtWidgets.QPushButton(self.centralwidget)
+        self.save_but.setGeometry(QtCore.QRect(550, 390, 86, 25))
+        self.save_but.setObjectName("connect_but")
+        self.save_but.clicked.connect(self.save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 341))
         self.automated_tests.setObjectName("automated_tests")
@@ -479,9 +486,10 @@ class UiTests(object):
 
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
-        UI_tests.setWindowTitle(_translate("UI_tests", "MainWindow"))
+        UI_tests.setWindowTitle(_translate("UI_tests", "DepthAI UI Tests"))
         self.title.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\">UNIT TEST IN PROGRESS</p></body></html>"))
         self.connect_but.setText("CONNECT")
+        self.save_but.setText("SAVE")
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
         self.automated_tests_labels.setText(_translate("UI_tests", "<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\">USB3</span></p><p align=\"right\"><span style=\" font-size:14pt;\">Left camera connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">Right Camera Connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">RGB Camera connected</span></p><p align=\"right\"><span style=\" font-size:14pt;\">JPEG Encoding Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">preview-out-rgb Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">left Stream</span></p><p align=\"right\"><span style=\" font-size:14pt;\">right Stream</span></p></body></html>"))
         self.operator_tests.setTitle(_translate("UI_tests", "Operator Tests"))
@@ -620,7 +628,6 @@ class UiTests(object):
             self.print_logs('Device communication failed, check connexions')
             raise
             return False
-        # progress = lambda p: print(f'Flashing progress: {p * 100:.1f}%')
         self.print_logs('Starting Update')
         self.prog_label.setText('Bootloader')
         bootloader.flashBootloader(self.update_prog_bar)
@@ -647,6 +654,9 @@ class UiTests(object):
             self.print_logs('Failed to update bootloader')
             return False
 
+    def save_csv(self):
+        pass
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
@@ -660,6 +670,5 @@ if __name__ == "__main__":
     ui.setupUi(UI_tests)
     UI_tests.show()
     ui.test_connexion()
-    # ui.update_bootloader()
     sys.exit(app.exec_())
 
