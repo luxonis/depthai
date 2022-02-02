@@ -15,30 +15,34 @@ export const fetchConfig = createAsyncThunk(
 )
 
 function difference(object, base) {
-    return _.transform(object, (result, value, key) => {
-        if (!_.isEqual(value, base[key])) {
-            result[key] = (_.isObject(value) && _.isObject(base[key])) ? difference(value, base[key]) : value;
-        }
-    });
+  return _.transform(object, (result, value, key) => {
+    if (!_.isEqual(value, base[key])) {
+      result[key] = (_.isObject(value) && _.isObject(base[key])) ? difference(value, base[key]) : value;
+    }
+  });
 }
 
 export const sendConfig = createAsyncThunk(
   'config/send',
-  async (act = true, thunk) => {
-    const rawUpdates = thunk.getState().demo.updates
-    const rawConfig = thunk.getState().demo.rawConfig
-    const updates = difference(rawUpdates, rawConfig)
-    await request(POST, '/update', updates)
+  async (act, thunk) => {
+    const updates = thunk.getState().demo.updates
+    await request(POST, `/update?restartRequired=true`, updates)
     thunk.dispatch(fetchConfig())
   }
 )
 
-export const updatePreview = createAsyncThunk(
-  'preview/send',
-  async (act, thunk) => {
-    const preview = thunk.getState().demo.config.preview.current
-    await request(POST, '/updatePreview', {preview})
-  }
+async function dynUpdateFun(act, thunk) {
+  thunk.dispatch(toggleFetched(false))
+  const updates = thunk.getState().demo.updatesDynamic
+  await request(POST, `/update?restartRequired=false`, updates)
+  thunk.dispatch(toggleFetched(true))
+}
+
+const debouncedHandler = _.debounce(dynUpdateFun, 400);
+
+export const sendDynamicConfig = createAsyncThunk(
+  'config/send-dynamic',
+  debouncedHandler
 )
 
 export const demoSlice = createSlice({
@@ -48,19 +52,26 @@ export const demoSlice = createSlice({
     restartRequired: false,
     config: {},
     updates: {},
+    updatesDynamic: {},
     rawConfig: {},
     error: null,
   },
   reducers: {
-    updateAIConfig: (state, action) => {
-      state.config.ai = _.merge(state.config.ai || {}, action.payload)
-      state.updates.ai = _.merge(state.updates.ai || {}, action.payload)
+    toggleFetched: (state, action) => {
+      state.fetched = action.payload
+      if(action.payload) {
+        state.updatesDynamic = {}
+      }
+    },
+    updateConfig: (state, action) => {
+      state.config = _.merge(state.config, action.payload)
+      state.updates = _.merge(state.updates, action.payload)
       state.restartRequired = true
     },
-    updatePreviewConfig: (state, action) => {
-      state.config.preview = _.merge(state.config.preview || {}, action.payload)
-      state.updates.preview = _.merge(state.updates.preview || {}, action.payload)
-    }
+    updateDynamicConfig: (state, action) => {
+      state.config = _.merge(state.config, action.payload)
+      state.updatesDynamic = _.merge(state.updatesDynamic, action.payload)
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(sendConfig.pending, (state, action) => {
@@ -70,16 +81,12 @@ export const demoSlice = createSlice({
     builder.addCase(fetchConfig.pending, (state, action) => {
       state.fetched = false
     })
-    builder.addCase(updatePreview.pending, (state, action) => {
-      state.fetched = false
-    })
-    builder.addCase(updatePreview.fulfilled, (state, action) => {
-      state.fetched = true
-    })
     builder.addCase(fetchConfig.fulfilled, (state, action) => {
       state.config = action.payload
       state.rawConfig = action.payload
       state.fetched = true
+      state.updates = {}
+      state.updatesDynamic = {}
     })
     builder.addCase(fetchConfig.rejected, (state, action) => {
       state.error = action.error
@@ -88,7 +95,7 @@ export const demoSlice = createSlice({
   },
 })
 
-export const { updateAIConfig, updatePreviewConfig } = demoSlice.actions;
+export const {updateConfig, updateDynamicConfig, toggleFetched} = demoSlice.actions;
 
 
 export default configureStore({

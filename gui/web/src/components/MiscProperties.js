@@ -1,9 +1,14 @@
 import {Button, Col, Input, Row, Switch, Typography} from "antd";
 import {QuestionCircleOutlined} from "@ant-design/icons";
-import {useSelector} from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
+import {updateConfig} from "../store";
 
 function MiscProperties() {
   const config = useSelector((state) => state.demo.config).misc || {}
+  const dispatch = useDispatch()
+
+  const update = data => dispatch(updateConfig({misc: data}))
+
   return (
     <>
       <Row className="input-box">
@@ -11,21 +16,29 @@ function MiscProperties() {
           <div className="options-section">
             <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
             <Typography.Title level={3}>Recording</Typography.Title>
-            <div className="switchable-option"><Switch checked={!!config.recording.color}/> <span>Color</span> <Input className="switchable-input" addonBefore="FPS" value={config.recording.color}/>
+            <div className="switchable-option">
+              <Switch onChange={enabled => update({recording: {color: {enabled}}})} checked={config.recording.color.enabled}/>
+              <span>Color</span>
+              <Input className="switchable-input" type="number" addonBefore="FPS" value={config.recording.color.fps} onChange={fps => update({recording: {color: {fps}}})}/>
             </div>
-            <div className="switchable-option"><Switch checked={!!config.recording.left}/> <span>Left</span> <Input className="switchable-input" addonBefore="FPS" value={config.recording.left}/>
+            <div className="switchable-option">
+              <Switch onChange={enabled => update({recording: {left: {enabled}}})} checked={!!config.recording.left.enabled}/>
+              <span>Left</span>
+              <Input className="switchable-input" addonBefore="FPS" value={config.recording.left.fps} onChange={fps => update({recording: {left: {fps}}})}/>
             </div>
-            <div className="switchable-option"><Switch checked={!!config.recording.right}/> <span>Right</span> <Input className="switchable-input" addonBefore="FPS" value={config.recording.right}/>
+            <div className="switchable-option">
+              <Switch onChange={enabled => update({recording: {right: {enabled}}})} checked={!!config.recording.right.enabled}/>
+              <span>Right</span>
+              <Input className="switchable-input" addonBefore="FPS" value={config.recording.right.fps} onChange={fps => update({recording: {right: {fps}}})}/>
             </div>
-            <Input addonBefore="Destination" type="file"/>
-            <span>(Current: {config.recording.dest})</span>
+            <Input addonBefore="Destination" value={config.recording.dest} onChange={dest => update({recording: {dest}})}/>
           </div>
         </Col>
         <Col span={24}>
           <div className="options-section">
             <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
             <Typography.Title level={3}>Demo options</Typography.Title>
-            <div className="switchable-option"><Switch checked={config.demo.statistics}/> <span>Send anonymous usage data</span></div>
+            <div className="switchable-option"><Switch onChange={statistics => update({demo: {statistics}})} checked={config.demo.statistics}/> <span>Send anonymous usage data</span></div>
           </div>
         </Col>
       </Row>
@@ -34,11 +47,19 @@ function MiscProperties() {
           <div className="options-section">
             <a href="#" className="info-indicator"><QuestionCircleOutlined/></a>
             <Typography.Title level={3}>Raporting</Typography.Title>
-            <div className="switchable-option"><Switch checked={_.includes(config.reporting.enabled, "temp")}/> <span>Temperature</span></div>
-            <div className="switchable-option"><Switch checked={_.includes(config.reporting.enabled, "cpu")}/> <span>CPU</span></div>
-            <div className="switchable-option"><Switch checked={_.includes(config.reporting.enabled, "memory")}/> <span>Memory</span></div>
-            <Input addonBefore="Destination" type="file"/>
-            <span>(Current: {config.reporting.dest})</span>
+            <div className="switchable-option">
+              <Switch onChange={enabled => update({reporting: {enabled: config.reporting.enabled.filter(item => item !== "temp") + (enabled ? ["temp"] : [])}})} checked={_.includes(config.reporting.enabled, "temp")}/>
+              <span>Temperature</span>
+            </div>
+            <div className="switchable-option">
+              <Switch onChange={enabled => update({reporting: {enabled: config.reporting.enabled.filter(item => item !== "cpu") + (enabled ? ["cpu"] : [])}})} checked={_.includes(config.reporting.enabled, "cpu")}/>
+              <span>CPU</span>
+            </div>
+            <div className="switchable-option">
+              <Switch onChange={enabled => update({reporting: {enabled: config.reporting.enabled.filter(item => item !== "memory") + (enabled ? ["memory"] : [])}})} checked={_.includes(config.reporting.enabled, "memory")}/>
+              <span>Memory</span>
+            </div>
+            <Input addonBefore="Destination" value={config.reporting.dest} onChange={dest => update({reporting: {dest}})}/>
           </div>
         </Col>
         <Col span={24}>
@@ -49,9 +70,6 @@ function MiscProperties() {
           </div>
         </Col>
       </Row>
-      <Button className="restart-button" type="primary" block size="large">
-        Apply and Restart
-      </Button>
     </>
   );
 }

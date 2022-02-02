@@ -83,9 +83,6 @@ function CameraProperties() {
           </Col>
         </Row>
       </div>
-      <Button className="restart-button" type="primary" block size="large">
-        Apply and Restart
-      </Button>
     </>
   );
 }

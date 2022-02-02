@@ -1,14 +1,13 @@
 import {Button, Select, Slider, Switch, Typography} from "antd";
 import {QuestionCircleOutlined} from "@ant-design/icons";
 import {useSelector, useDispatch} from "react-redux";
-import {sendConfig, updateAIConfig} from "../store";
+import {updateConfig} from "../store";
 
 function AIProperties() {
-  const restartRequired = useSelector((state) => state.demo.restartRequired)
   const config = useSelector((state) => state.demo.config).ai || {}
   const dispatch = useDispatch()
 
-  const update = data => dispatch(updateAIConfig(data))
+  const update = data => dispatch(updateConfig({ai: data}))
   return (
     <>
       <div className="title-section">
@@ -70,9 +69,6 @@ function AIProperties() {
           <Slider disabled={!config.enabled} tooltipVisible={false} onChange={sbbFactor => update({sbbFactor})} marks={{0: '0', [config.sbbFactor]: '' + config.sbbFactor, 1: '1'}} step={0.1} min={0} max={1} value={config.sbbFactor}/>
         </div>
       </div>
-      <Button disabled={!restartRequired} onClick={() => dispatch(sendConfig())} className="restart-button" type="primary" block size="large">
-        Apply and Restart
-      </Button>
     </>
   );
 }
