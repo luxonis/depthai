@@ -7,7 +7,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='depthai-sdk',
-    version='1.1.6',
+    version='1.1.7',
     description='This package contains convenience classes and functions that help in most common tasks while using DepthAI API',
     long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
@@ -19,6 +19,9 @@ setup(
     packages=['depthai_sdk'],
     package_dir={"": "src"},  # https://stackoverflow.com/a/67238346/5494277
     install_requires=required,
+    extras_require = {
+        'turbojpeg':  ["PyTurboJPEG"]
+    },
     include_package_data=True,
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",

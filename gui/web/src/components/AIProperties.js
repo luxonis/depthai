@@ -24,7 +24,10 @@ function AIProperties() {
             )
           }
         </Select>
-        <div className="switchable-option"><Switch disabled={!config.enabled} onChange={fullFov => update({fullFov})} checked={config.fullFov}/> <span>Full FOV input</span></div>
+        <div className="switchable-option">
+          <Switch disabled={!config.enabled} onChange={fullFov => update({fullFov})} checked={config.fullFov}/>
+          <span>Full FOV input</span>
+        </div>
         <div>
           <Typography.Title level={3}>SHAVEs</Typography.Title>
           <Slider disabled={!config.enabled} tooltipVisible={false} onChange={shaves => update({shaves})} marks={{0: '0', [config.shaves]: '' + config.shaves, 12: '12'}} min={0} max={12} value={config.shaves}/>

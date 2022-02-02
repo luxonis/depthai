@@ -45,10 +45,10 @@ function DepthProperties() {
         <Typography.Title level={3}>Depth Range (m)</Typography.Title>
         <Row className="input-box">
           <Col flex={2}>
-            <Input addonBefore="min" onChange={min => updateDynamic({range: {min}})} value={config.range.min}/>
+            <Input addonBefore="min" onChange={event => updateDynamic({range: {min: event.target.value}})} value={config.range.min}/>
           </Col>
           <Col flex={2}>
-            <Input addonBefore="max" onChange={max => updateDynamic({range: {max}})} value={config.range.max}/>
+            <Input addonBefore="max" onChange={event => updateDynamic({range: {max: event.target.value}})} value={config.range.max}/>
           </Col>
         </Row>
       </div>

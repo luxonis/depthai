@@ -19,19 +19,19 @@ function MiscProperties() {
             <div className="switchable-option">
               <Switch onChange={enabled => update({recording: {color: {enabled}}})} checked={config.recording.color.enabled}/>
               <span>Color</span>
-              <Input className="switchable-input" type="number" addonBefore="FPS" value={config.recording.color.fps} onChange={fps => update({recording: {color: {fps}}})}/>
+              <Input className="switchable-input" type="number" addonBefore="FPS" value={config.recording.color.fps} onChange={event => update({recording: {color: {fps: event.target.value}}})}/>
             </div>
             <div className="switchable-option">
               <Switch onChange={enabled => update({recording: {left: {enabled}}})} checked={!!config.recording.left.enabled}/>
               <span>Left</span>
-              <Input className="switchable-input" addonBefore="FPS" value={config.recording.left.fps} onChange={fps => update({recording: {left: {fps}}})}/>
+              <Input className="switchable-input" addonBefore="FPS" value={config.recording.left.fps} onChange={event => update({recording: {left: {fps: event.target.value}}})}/>
             </div>
             <div className="switchable-option">
               <Switch onChange={enabled => update({recording: {right: {enabled}}})} checked={!!config.recording.right.enabled}/>
               <span>Right</span>
-              <Input className="switchable-input" addonBefore="FPS" value={config.recording.right.fps} onChange={fps => update({recording: {right: {fps}}})}/>
+              <Input className="switchable-input" addonBefore="FPS" value={config.recording.right.fps} onChange={event => update({recording: {right: {fps: event.target.value}}})}/>
             </div>
-            <Input addonBefore="Destination" value={config.recording.dest} onChange={dest => update({recording: {dest}})}/>
+            <Input addonBefore="Destination" value={config.recording.dest} onChange={event => update({recording: {dest: event.target.value}})}/>
           </div>
         </Col>
         <Col span={24}>
@@ -59,7 +59,7 @@ function MiscProperties() {
               <Switch onChange={enabled => update({reporting: {enabled: config.reporting.enabled.filter(item => item !== "memory") + (enabled ? ["memory"] : [])}})} checked={_.includes(config.reporting.enabled, "memory")}/>
               <span>Memory</span>
             </div>
-            <Input addonBefore="Destination" value={config.reporting.dest} onChange={dest => update({reporting: {dest}})}/>
+            <Input addonBefore="Destination" value={config.reporting.dest} onChange={event => update({reporting: {dest: event.target.value}})}/>
           </div>
         </Col>
         <Col span={24}>

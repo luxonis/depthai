@@ -107,6 +107,38 @@ class HttpHandler(BaseHTTPRequestHandler):
             except:
                 pass
 
+        def updateCam(name, fps=None, resolution=None, exposure=None, iso=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+            if fps is not None:
+                self.server.instance.updateArg("rgbFps" if name == Previews.color.name else "monoFps", int(fps))
+            if resolution is not None and "current" in resolution:
+                self.server.instance.updateArg("rgbResolution" if name == Previews.color.name else "monoResolution", resolution["current"])
+            if exposure is not None:
+                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraExposure or []))) + [(name, int(exposure))]
+                self.server.instance._demoInstance._cameraConfig["exposure"] = newValue
+                self.server.instance.updateArg("cameraExposure", newValue)
+            if iso is not None:
+                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraSensitivity or []))) + [(name, int(iso))]
+                self.server.instance._demoInstance._cameraConfig["sensitivity"] = newValue
+                self.server.instance.updateArg("cameraSensitivity", newValue)
+            if saturation is not None:
+                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraSaturation or []))) + [(name, int(saturation))]
+                self.server.instance._demoInstance._cameraConfig["saturation"] = newValue
+                self.server.instance.updateArg("cameraSaturation", newValue)
+            if contrast is not None:
+                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraContrast or []))) + [(name, int(contrast))]
+                self.server.instance._demoInstance._cameraConfig["contrast"] = newValue
+                self.server.instance.updateArg("cameraContrast", newValue, False)
+            if brightness is not None:
+                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraBrightness or []))) + [(name, int(brightness))]
+                self.server.instance._demoInstance._cameraConfig["brightness"] = newValue
+                self.server.instance.updateArg("cameraBrightness", newValue, False)
+            if sharpness is not None:
+                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraSharpness or []))) + [(name, sharpness)]
+                self.server.instance._demoInstance._cameraConfig["sharpness"] = newValue
+                self.server.instance.updateArg("cameraSharpness", newValue, False)
+
+            self.server.instance._demoInstance._updateCameraConfigs()
+
         mapping = {
             "ai": {
                 "enabled": lambda data: self.server.instance.updateArg("disableNeuralNetwork", not data),
@@ -135,26 +167,8 @@ class HttpHandler(BaseHTTPRequestHandler):
             },
             "camera": {
                 "sync": lambda data: self.server.instance.updateArg("sync", data),
-                "color": {
-                    "fps": lambda data: self.server.instance.updateArg("rgbFps", data),
-                    "resolution": lambda data: self.server.instance.updateArg("rgbResolution", data["current"]) if "current" in data else None,
-                    "iso": lambda data: self.server.instance.updateArg("cameraSensitivity", data),
-                    "exposure": lambda data: self.server.instance.updateArg("cameraExposure", data),
-                    "saturation": lambda data: self.server.instance.updateArg("cameraSaturation", data),
-                    "contrast": lambda data: self.server.instance.updateArg("cameraContrast", data),
-                    "brightness": lambda data: self.server.instance.updateArg("cameraBrightness", data),
-                    "sharpness": lambda data: self.server.instance.updateArg("cameraSharpness", data),
-                },
-                "mono": {
-                    "fps": lambda data: self.server.instance.updateArg("monoFps", data),
-                    "resolution": lambda data: self.server.instance.updateArg("monoResolution", data["current"]) if "current" in data else None,
-                    "iso": lambda data: self.server.instance.updateArg("cameraSensitivity", data),
-                    "exposure": lambda data: self.server.instance.updateArg("cameraExposure", data),
-                    "saturation": lambda data: self.server.instance.updateArg("cameraSaturation", data),
-                    "contrast": lambda data: self.server.instance.updateArg("cameraContrast", data),
-                    "brightness": lambda data: self.server.instance.updateArg("cameraBrightness", data),
-                    "sharpness": lambda data: self.server.instance.updateArg("cameraSharpness", data),
-                }
+                "color": lambda data: updateCam(Previews.color.name, **data),
+                "mono": lambda data: [updateCam(Previews.left.name, **data), updateCam(Previews.right.name, **data)]
             },
             "misc": {
                 "recording": {
@@ -331,22 +345,22 @@ class WebApp:
                 "color": {
                     "fps": self.confManager.args.rgbFps,
                     "resolution": self.confManager.args.rgbResolution,
-                    "iso": self.confManager.args.cameraSensitivity,
-                    "exposure": self.confManager.args.cameraExposure,
-                    "saturation": self.confManager.args.cameraSaturation,
-                    "contrast": self.confManager.args.cameraContrast,
-                    "brightness": self.confManager.args.cameraBrightness,
-                    "sharpness": self.confManager.args.cameraSharpness,
+                    "iso": next(map(lambda data: data[1], filter(lambda data: data[0] == "color", self.confManager.args.cameraSensitivity or [])), None),
+                    "exposure": next(map(lambda data: data[1], filter(lambda data: data[0] == "color", self.confManager.args.cameraExposure or [])), None),
+                    "saturation": next(map(lambda data: data[1], filter(lambda data: data[0] == "color", self.confManager.args.cameraSaturation or [])), None),
+                    "contrast": next(map(lambda data: data[1], filter(lambda data: data[0] == "color", self.confManager.args.cameraContrast or [])), None),
+                    "brightness": next(map(lambda data: data[1], filter(lambda data: data[0] == "color", self.confManager.args.cameraBrightness or [])), None),
+                    "sharpness": next(map(lambda data: data[1], filter(lambda data: data[0] == "color", self.confManager.args.cameraSharpness or [])), None),
                 },
                 "mono": {
                     "fps": self.confManager.args.monoFps,
                     "resolution": self.confManager.args.monoResolution,
-                    "iso": self.confManager.args.cameraSensitivity,
-                    "exposure": self.confManager.args.cameraExposure,
-                    "saturation": self.confManager.args.cameraSaturation,
-                    "contrast": self.confManager.args.cameraContrast,
-                    "brightness": self.confManager.args.cameraBrightness,
-                    "sharpness": self.confManager.args.cameraSharpness,
+                    "iso": next(map(lambda data: data[1], filter(lambda data: data[0] != "color", self.confManager.args.cameraSensitivity or [])), None),
+                    "exposure": next(map(lambda data: data[1], filter(lambda data: data[0] != "color", self.confManager.args.cameraExposure or [])), None),
+                    "saturation": next(map(lambda data: data[1], filter(lambda data: data[0] != "color", self.confManager.args.cameraSaturation or [])), None),
+                    "contrast": next(map(lambda data: data[1], filter(lambda data: data[0] != "color", self.confManager.args.cameraContrast or [])), None),
+                    "brightness": next(map(lambda data: data[1], filter(lambda data: data[0] != "color", self.confManager.args.cameraBrightness or [])), None),
+                    "sharpness": next(map(lambda data: data[1], filter(lambda data: data[0] != "color", self.confManager.args.cameraSharpness or [])), None),
                 }
             },
             "misc": {
