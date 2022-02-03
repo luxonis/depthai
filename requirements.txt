@@ -13,3 +13,4 @@ pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 depthai==2.14.1.0.dev+27fa4519f289498e84768ab5229a1a45efb7e4df
 Pillow>=7.2.0
+aiohttp==3.8.1

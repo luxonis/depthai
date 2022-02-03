@@ -1,4 +1,5 @@
 # This Python file uses the following encoding: utf-8
+import asyncio
 import json
 import mimetypes
 import sys
@@ -11,6 +12,8 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler, BaseHTTPRequestHan
 from io import BytesIO
 from pathlib import Path
 
+import aiohttp
+from aiohttp import web, MultipartWriter
 from PIL import Image
 import cv2
 import depthai as dai
@@ -39,66 +42,57 @@ def merge(source, destination):
     return destination
 
 
-class HttpHandler(BaseHTTPRequestHandler):
+class HttpHandler:
     static_path = Path(__file__).parent / "dist"
+    instance = None
+    runner = None
+    site = None
+    loop = None
+    config = {}
+    frametosend = None
+    app = None
 
-    def setup(self):
-        super().setup()
-        self.routes = {
-            "/stream": self.stream,
-            "/config": self.config,
-            "/update": self.update,
-        }
+    def __init__(self, instance, loop):
+        self.instance = instance
+        self.loop = loop
+        self.app = web.Application(middlewares=[self.static_serve])
+        self.app.add_routes([
+            web.get('/stream', self.stream),
+            web.get('/config', self.getConfig),
+            web.post('/update', self.update),
+        ])
 
-    def do_GET(self):
-        path = urllib.parse.urlparse(self.path).path
-        if path in self.routes.keys():
-            return self.routes[path]()
-        else:
-            filePath = self.static_path / path.lstrip("/")
-            if filePath.is_dir():
-                filePath = filePath / "index.html"
-            elif not filePath.exists():
-                filePath = filePath.with_suffix(".html")
-            print(filePath, self.static_path, path.lstrip("/"), self.static_path / path.lstrip("/"))
+    @web.middleware
+    async def static_serve(self, request, handler):
+        relative_file_path = Path(request.path).relative_to('/')  # remove root '/'
+        file_path = self.static_path / relative_file_path  # rebase into static dir
+        if not file_path.exists():
+            return await handler(request)
+        if file_path.is_dir():
+            file_path /= 'index.html'
+            if not file_path.exists():
+                return web.HTTPNotFound()
+        return web.FileResponse(file_path)
 
-            if filePath.exists():
-                self.send_response(200)
-                mimetype, _ = mimetypes.guess_type(filePath)
-                self.send_header('Content-type', mimetype)
-                self.end_headers()
-                with filePath.open('rb') as f:
-                    self.wfile.write(f.read())
-            else:
-                self.send_response(404)
-                self.end_headers()
+    def run(self):
+        self.runner = web.AppRunner(self.app)
+        self.loop.run_until_complete(self.runner.setup())
+        self.site = aiohttp.web.TCPSite(self.runner, self.instance.confManager.args.host, self.instance.confManager.args.port)
+        self.loop.run_until_complete(self.site.start())
+        self.loop.run_forever()
 
-    def do_POST(self):
-        path = urllib.parse.urlparse(self.path).path
-        if path in self.routes.keys():
-            return self.routes[path]()
-        else:
-            self.send_response(404)
-            self.end_headers()
+    def close(self):
+        self.loop.run_until_complete(self.runner.cleanup())
 
-    def config(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.end_headers()
-        self.wfile.write(json.dumps(self.server.config).encode('UTF-8'))
+    async def getConfig(self, request):
+        return web.json_response(self.config)
 
-    def update(self):
-        if self.server.instance is None:
-            self.send_response(202)
-            self.end_headers()
-            return
-
-        post_body = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-        data = json.loads(post_body)
-        qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+    async def update(self, request):
+        data = await request.json()
+        qs = request.query
 
         def updatePreview(data):
-            self.server.instance.selectedPreview = data
+            self.instance.selectedPreview = data
 
         def updateStatistics(data):
             try:
@@ -109,77 +103,77 @@ class HttpHandler(BaseHTTPRequestHandler):
 
         def updateCam(name, fps=None, resolution=None, exposure=None, iso=None, saturation=None, contrast=None, brightness=None, sharpness=None):
             if fps is not None:
-                self.server.instance.updateArg("rgbFps" if name == Previews.color.name else "monoFps", int(fps))
+                self.instance.updateArg("rgbFps" if name == Previews.color.name else "monoFps", int(fps))
             if resolution is not None and "current" in resolution:
-                self.server.instance.updateArg("rgbResolution" if name == Previews.color.name else "monoResolution", resolution["current"])
+                self.instance.updateArg("rgbResolution" if name == Previews.color.name else "monoResolution", resolution["current"])
             if exposure is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraExposure or []))) + [(name, int(exposure))]
-                self.server.instance._demoInstance._cameraConfig["exposure"] = newValue
-                self.server.instance.updateArg("cameraExposure", newValue)
+                newValue = list(filter(lambda item: item[0] == name, (self.instance.confManager.args.cameraExposure or []))) + [(name, int(exposure))]
+                self.instance._demoInstance._cameraConfig["exposure"] = newValue
+                self.instance.updateArg("cameraExposure", newValue)
             if iso is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraSensitivity or []))) + [(name, int(iso))]
-                self.server.instance._demoInstance._cameraConfig["sensitivity"] = newValue
-                self.server.instance.updateArg("cameraSensitivity", newValue)
+                newValue = list(filter(lambda item: item[0] == name, (self.instance.confManager.args.cameraSensitivity or []))) + [(name, int(iso))]
+                self.instance._demoInstance._cameraConfig["sensitivity"] = newValue
+                self.instance.updateArg("cameraSensitivity", newValue)
             if saturation is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraSaturation or []))) + [(name, int(saturation))]
-                self.server.instance._demoInstance._cameraConfig["saturation"] = newValue
-                self.server.instance.updateArg("cameraSaturation", newValue)
+                newValue = list(filter(lambda item: item[0] == name, (self.instance.confManager.args.cameraSaturation or []))) + [(name, int(saturation))]
+                self.instance._demoInstance._cameraConfig["saturation"] = newValue
+                self.instance.updateArg("cameraSaturation", newValue)
             if contrast is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraContrast or []))) + [(name, int(contrast))]
-                self.server.instance._demoInstance._cameraConfig["contrast"] = newValue
-                self.server.instance.updateArg("cameraContrast", newValue, False)
+                newValue = list(filter(lambda item: item[0] == name, (self.instance.confManager.args.cameraContrast or []))) + [(name, int(contrast))]
+                self.instance._demoInstance._cameraConfig["contrast"] = newValue
+                self.instance.updateArg("cameraContrast", newValue, False)
             if brightness is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraBrightness or []))) + [(name, int(brightness))]
-                self.server.instance._demoInstance._cameraConfig["brightness"] = newValue
-                self.server.instance.updateArg("cameraBrightness", newValue, False)
+                newValue = list(filter(lambda item: item[0] == name, (self.instance.confManager.args.cameraBrightness or []))) + [(name, int(brightness))]
+                self.instance._demoInstance._cameraConfig["brightness"] = newValue
+                self.instance.updateArg("cameraBrightness", newValue, False)
             if sharpness is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.server.instance.confManager.args.cameraSharpness or []))) + [(name, sharpness)]
-                self.server.instance._demoInstance._cameraConfig["sharpness"] = newValue
-                self.server.instance.updateArg("cameraSharpness", newValue, False)
+                newValue = list(filter(lambda item: item[0] == name, (self.instance.confManager.args.cameraSharpness or []))) + [(name, sharpness)]
+                self.instance._demoInstance._cameraConfig["sharpness"] = newValue
+                self.instance.updateArg("cameraSharpness", newValue, False)
 
-            self.server.instance._demoInstance._updateCameraConfigs()
+            self.instance._demoInstance._updateCameraConfigs()
 
         mapping = {
             "ai": {
-                "enabled": lambda data: self.server.instance.updateArg("disableNeuralNetwork", not data),
-                "model": lambda data: self.server.instance.updateArg("cnnModel", data["current"]) if "current" in data else None,
-                "fullFov": lambda data: self.server.instance.updateArg("disableFullFovNn", not data),
-                "source": lambda data: self.server.instance.updateArg("camera", data["current"]),
-                "shaves": lambda data: self.server.instance.updateArg("shaves", data),
-                "ovVersion": lambda data: self.server.instance.updateArg("openvinoVersion", data["current"]) if "current" in data else None,
-                "label": lambda data: self.server.instance.updateArg("countLabel", data["current"]) if "current" in data else None,
-                "sbb": lambda data: self.server.instance.updateArg("spatialBoundingBox", data),
-                "sbbFactor": lambda data: self.server.instance.updateArg("sbbScaleFactor", data),
+                "enabled": lambda data: self.instance.updateArg("disableNeuralNetwork", not data),
+                "model": lambda data: self.instance.updateArg("cnnModel", data["current"]) if "current" in data else None,
+                "fullFov": lambda data: self.instance.updateArg("disableFullFovNn", not data),
+                "source": lambda data: self.instance.updateArg("camera", data["current"]),
+                "shaves": lambda data: self.instance.updateArg("shaves", data),
+                "ovVersion": lambda data: self.instance.updateArg("openvinoVersion", data["current"]) if "current" in data else None,
+                "label": lambda data: self.instance.updateArg("countLabel", data["current"]) if "current" in data else None,
+                "sbb": lambda data: self.instance.updateArg("spatialBoundingBox", data),
+                "sbbFactor": lambda data: self.instance.updateArg("sbbScaleFactor", data),
             },
             "depth": {
-                "enabled": lambda data: self.server.instance.updateArg("disableDepth", not data),
-                "median": lambda data: self.server.instance.updateArg("stereoMedianSize", data["current"]) if "current" in data else None,
-                "subpixel": lambda data: self.server.instance.updateArg("subpixel", data),
-                "lrc": lambda data: self.server.instance.updateArg("disableStereoLrCheck", not data),
-                "extended": lambda data: self.server.instance.updateArg("extendedDisparity", data),
-                "confidence": lambda data: self.server.instance.updateArg("disparityConfidenceThreshold", data),
-                "sigma": lambda data: self.server.instance.updateArg("sigma", data),
-                "lrcThreshold": lambda data: self.server.instance.updateArg("lrcThreshold", data),
+                "enabled": lambda data: self.instance.updateArg("disableDepth", not data),
+                "median": lambda data: self.instance.updateArg("stereoMedianSize", data["current"]) if "current" in data else None,
+                "subpixel": lambda data: self.instance.updateArg("subpixel", data),
+                "lrc": lambda data: self.instance.updateArg("disableStereoLrCheck", not data),
+                "extended": lambda data: self.instance.updateArg("extendedDisparity", data),
+                "confidence": lambda data: self.instance.updateArg("disparityConfidenceThreshold", data),
+                "sigma": lambda data: self.instance.updateArg("sigma", data),
+                "lrcThreshold": lambda data: self.instance.updateArg("lrcThreshold", data),
                 "range": {
-                    "min": lambda data: self.server.instance.updateArg("minDepth", data),
-                    "max": lambda data: self.server.instance.updateArg("maxDepth", data),
+                    "min": lambda data: self.instance.updateArg("minDepth", data),
+                    "max": lambda data: self.instance.updateArg("maxDepth", data),
                 },
             },
             "camera": {
-                "sync": lambda data: self.server.instance.updateArg("sync", data),
+                "sync": lambda data: self.instance.updateArg("sync", data),
                 "color": lambda data: updateCam(Previews.color.name, **data),
                 "mono": lambda data: [updateCam(Previews.left.name, **data), updateCam(Previews.right.name, **data)]
             },
             "misc": {
                 "recording": {
-                    "color": lambda data: self.server.instance.updateArg("encode", {**self.confManager.args.encode, "color": data}),
-                    "left": lambda data: self.server.instance.updateArg("left", {**self.confManager.args.encode, "left": data}),
-                    "right": lambda data: self.server.instance.updateArg("right", {**self.confManager.args.encode, "right": data}),
-                    "dest": lambda data: self.server.instance.updateArg("encodeOutput", data),
+                    "color": lambda data: self.instance.updateArg("encode", {**self.instance.confManager.args.encode, "color": data}),
+                    "left": lambda data: self.instance.updateArg("left", {**self.instance.confManager.args.encode, "left": data}),
+                    "right": lambda data: self.instance.updateArg("right", {**self.instance.confManager.args.encode, "right": data}),
+                    "dest": lambda data: self.instance.updateArg("encodeOutput", data),
                 },
                 "reporting": {
-                    "enabled": lambda data: self.server.instance.updateArg("report", data),
-                    "dest": lambda data: self.server.instance.updateArg("reportFile", data),
+                    "enabled": lambda data: self.instance.updateArg("report", data),
+                    "dest": lambda data: self.instance.updateArg("reportFile", data),
                 },
                 "demo": {
                     "statistics": updateStatistics,
@@ -188,7 +182,7 @@ class HttpHandler(BaseHTTPRequestHandler):
             "preview": {
                 "current": updatePreview,
             },
-            "app": lambda data: self.server.instance.updateArg("app", data)
+            "app": lambda data: self.instance.updateArg("app", data)
         }
 
         def call_mappings(in_dict, map_slice):
@@ -213,55 +207,42 @@ class HttpHandler(BaseHTTPRequestHandler):
                 else:
                     median = dai.MedianFilter.MEDIAN_OFF
 
-            self.server.instance._demoInstance._pm.updateDepthConfig(
-                self.server.instance._demoInstance._device, median=median, dct=data["depth"].get("confidence", None),
+            self.instance._demoInstance._pm.updateDepthConfig(
+                self.instance._demoInstance._device, median=median, dct=data["depth"].get("confidence", None),
                 sigma=data["depth"].get("sigma", None), lrcThreshold=data["depth"].get("lrcThreshold", None)
             )
 
         print(qs)
-        if "restartRequired" in qs and next(iter(qs["restartRequired"]), None) == 'true':
-            self.server.instance.restartDemo()
+        if "restartRequired" in qs and qs["restartRequired"] == 'true':
+            self.instance.restartDemo()
         else:
-            self.server.config = merge(data, self.server.config)
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.end_headers()
+            self.config = merge(data, self.config)
 
-    def stream(self):
+        return web.Response()
+
+    async def stream(self, request):
+        boundary = 'boundarydonotcross'
+        encode_param = (int(cv2.IMWRITE_JPEG_QUALITY), 90)
+        response = web.StreamResponse(status=200, reason='OK', headers={
+            'Content-Type': 'multipart/x-mixed-replace; boundary=--{}'.format(boundary),
+        })
         try:
-            self.send_response(200)
-            self.send_header('Content-type', 'multipart/x-mixed-replace; boundary=--jpgboundary')
-            self.end_headers()
+            await response.prepare(request)
             while True:
-                if self.server.frametosend is not None:
-                    image = Image.fromarray(cv2.cvtColor(self.server.frametosend, cv2.COLOR_BGR2RGB))
-                    stream_file = BytesIO()
-                    image.save(stream_file, 'JPEG')
-                    self.wfile.write("--jpgboundary".encode())
+                if self.frametosend is not None:
+                    with MultipartWriter('image/jpeg', boundary=boundary) as mpwriter:
+                        result, encimg = cv2.imencode('.jpg', self.frametosend, encode_param)
+                        data = encimg.tostring()
+                        mpwriter.append(data, {
+                            'Content-Type': 'image/jpeg'
+                        })
+                        await mpwriter.write(response, close_boundary=False)
+                    await response.drain()
+        except ConnectionResetError:
+            print("Client connection closed")
+        finally:
+            return response
 
-                    self.send_header('Content-type', 'image/jpeg')
-                    self.send_header('Content-length', str(stream_file.getbuffer().nbytes))
-                    self.end_headers()
-                    image.save(self.wfile, 'JPEG')
-        except BrokenPipeError:
-            return
-
-
-class CustomHTTPServer(HTTPServer):
-    instance = None
-    config = {}
-    frametosend = None
-
-    def __init__(self, instance, handler):
-        super().__init__((instance.confManager.args.host, instance.confManager.args.port), handler)
-        self.instance = instance
-
-    def finish_request(self, request, client_address):
-        request.settimeout(0.5) # Really short timeout as there is only 1 thread
-        try:
-            HTTPServer.finish_request(self, request, client_address)
-        except OSError:
-            pass
 
 class WebApp:
     def __init__(self, instance, args):
@@ -449,15 +430,16 @@ class WebApp:
         self.thread.start()
 
         if self.webserver is None:
-            self.webserver = CustomHTTPServer(self, HttpHandler)
+            loop = asyncio.get_event_loop()
+            self.webserver = HttpHandler(self, loop)
             print("Server started http://{}:{}".format(self.confManager.args.host, self.confManager.args.port))
 
             try:
-                self.webserver.serve_forever()
+                self.webserver.run()
             except KeyboardInterrupt:
                 pass
 
-            self.webserver.server_close()
+            self.webserver.close()
         else:
             self.webserver.frametosend = None
             self.webserver.config = {}
