@@ -1,5 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
+from datetime import datetime
 # from PyQt5.QtWidgets import QMessageBox
 # from PyQt5.QtWidgets import QMessageBox
 # import numpy as np
@@ -27,6 +28,7 @@ operator_tests = {
     'right_strm': ''
 }
 
+test_type = 'OAK-D'
 
 def set_operator_test(test):
     global operator_tests
@@ -603,6 +605,7 @@ class UiTests(object):
     def show_cameras(self):
         clear_test_results()
         self.set_result()
+        self.test_type_label.setText('test ' + test_type)
         if hasattr(self, 'depth_camera'):
             if test_connexion():
                 self.print_logs('Camera already connected')
@@ -648,6 +651,8 @@ class UiTests(object):
 
     def set_result(self):
         global update_res
+        time_string = datetime.now().strftime("%Y %m %d %H:%M:%S")
+        self.date_time_label.setText('time: ' + time_string)
         if not update_res:
             return
         update_res = False
