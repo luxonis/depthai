@@ -274,6 +274,7 @@ class PipelineManager:
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
+        self.nodes.stereo.setFocalLengthFromCalibration(True)
 
         # Create mono left/right cameras if we haven't already
         if not hasattr(self.nodes, 'monoLeft'):
