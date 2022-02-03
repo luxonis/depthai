@@ -1,5 +1,6 @@
 #define MyAppName "DepthAI"
-#define MyAppVersion "1.0"
+; Stores version "MyAppVersion" define
+#include "version.txt"
 #define MyAppPublisher "Luxonis"
 #define MyAppURL "https://www.luxonis.com/"
 #define MyAppExeName "DepthAI.lnk"
@@ -63,6 +64,7 @@ SolidCompression=yes
 WizardStyle=modern
 ; Output build location
 OutputDir=build\Output
+SetupLogging=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -101,7 +103,7 @@ Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\prerequisite.ps1"""; WorkingDir: {app}; Flags: runhidden
+Filename: "cmd.exe"; Parameters: "/C"; StatusMsg: "Installing requirements..."; BeforeInstall: InstallPrerequisite
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: shellexec postinstall skipifsilent
 
 ; Creates DepthAI shortcut in installation directory, before installing it as a Desktop Icon
@@ -153,6 +155,10 @@ end;
 {* Handles uninstallation if previous DepthAI version is installed and shortcut creation *}
 procedure CurStepChanged(CurStep: TSetupStep);
 var
+    TmpFileName: string;
+    ExecStdout: AnsiString;
+    UtfStdout: string;
+    ExecParameter: string;
     ResultCode: Integer;
 begin
   if (CurStep=ssInstall) then
@@ -166,9 +172,38 @@ begin
     ExtractTemporaryFile('create_shortcut.ps1');
     ForceDirectories(ExpandConstant('{app}'));
     FileCopy(ExpandConstant('{tmp}\create_shortcut.ps1'), ExpandConstant('{app}\create_shortcut.ps1'), False);
-    Exec('powershell.exe', ExpandConstant('-ExecutionPolicy Bypass -File "{app}\create_shortcut.ps1"'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    
+    TmpFileName := ExpandConstant('{tmp}') + '\exec_stdout_stderr_tmp.txt';
+    ExecParameter := '/C powershell.exe -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\create_shortcut.ps1') + '" > "' + TmpFileName + '" 2>&1';
+    Log('Calling cmd.exe ' + ExecParameter)
+    Exec('cmd.exe', ExecParameter, ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+    if LoadStringFromFile(TmpFileName, ExecStdout) then begin
+      UtfStdout := ExecStdout
+      Log(UtfStdout);
+    end;
+    DeleteFile(TmpFileName);
+
   end;
+end;
+
+procedure InstallPrerequisite;
+var
+    TmpFileName: string;
+    ExecStdout: AnsiString;
+    UtfStdout: string;
+    ExecParameter: string;
+    ResultCode: Integer;
+begin
+  Log('Installing prerequisites');
+  TmpFileName := ExpandConstant('{tmp}') + '\exec_stdout_stderr_tmp.txt';
+  ExecParameter := '/C powershell.exe -ExecutionPolicy Bypass -File "' + ExpandConstant('{app}\prerequisite.ps1') + '" > "' + TmpFileName + '" 2>&1"';
+  Log('Calling cmd.exe ' + ExecParameter)
+  Exec('cmd.exe', ExecParameter, ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  if LoadStringFromFile(TmpFileName, ExecStdout) then begin
+    UtfStdout := ExecStdout
+    Log(UtfStdout);
+  end;
+  DeleteFile(TmpFileName);
+
 end;
 
 

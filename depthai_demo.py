@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import sys
-import threading
 
 if sys.version_info[0] < 3:
     raise Exception("Must be using Python 3")
@@ -11,6 +10,9 @@ import platform
 
 if platform.machine() == 'aarch64':  # Jetson
     os.environ['OPENBLAS_CORETYPE'] = "ARMV8"
+
+sys.path.append(str(Path(__file__).parent.absolute()))
+sys.path.append(str((Path(__file__).parent / "depthai_sdk" / "src").absolute()))
 
 from depthai_helpers.app_manager import App
 if __name__ == "__main__":
@@ -311,7 +313,7 @@ class Demo:
         self.onSetup(self)
 
         try:
-            while self.shouldRun():
+            while not self._device.isClosed() and self.shouldRun():
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
@@ -343,8 +345,14 @@ class Demo:
         self._fps.printStatus()
         self.onTeardown(self)
 
+    timer = time.monotonic()
 
     def loop(self):
+        diff = time.monotonic() - self.timer
+        if diff < 0.02:
+            time.sleep(diff)
+        self.timer = time.monotonic()
+
         if self._conf.useCamera:
             self._pv.prepareFrames(callback=self.onNewFrame)
             if self._encManager is not None:

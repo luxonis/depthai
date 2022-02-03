@@ -204,11 +204,14 @@ class ConfigManager:
         if platform.system() == 'Linux':
             ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if(ret != 0):
-                cliPrint("\nWARNING: Usb rules not found", PrintColors.WARNING)
-                cliPrint("\nSet rules: \n"
-                """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n"""
-                "sudo udevadm control --reload-rules && sudo udevadm trigger \n"
-                "Disconnect/connect usb cable on host! \n", PrintColors.RED)
+                cliPrint("WARNING: Usb rules not found", PrintColors.WARNING)
+                cliPrint("""
+Run the following commands to set USB rules:
+
+$ echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules
+$ sudo udevadm control --reload-rules && sudo udevadm trigger
+
+After executing these commands, disconnect and reconnect USB cable to your OAK device""", PrintColors.RED)
                 os._exit(1)
 
     def getCountLabel(self, nnetManager):
