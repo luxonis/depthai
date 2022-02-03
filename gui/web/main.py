@@ -212,7 +212,6 @@ class HttpHandler:
                 sigma=data["depth"].get("sigma", None), lrcThreshold=data["depth"].get("lrcThreshold", None)
             )
 
-        print(qs)
         if "restartRequired" in qs and qs["restartRequired"] == 'true':
             self.instance.restartDemo()
         else:
