@@ -332,6 +332,7 @@ class UiTests(object):
         self.all_logs = ""
 
     def setupUi(self, UI_tests):
+        UI_tests.closeEvent = self.close_event
         UI_tests.setObjectName("UI_tests")
         UI_tests.resize(WIDTH, HEIGHT)
         UI_tests.move(0, 0)
@@ -681,6 +682,9 @@ class UiTests(object):
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
 
     def print_logs(self, new_log):
+        if new_log == 'clear':
+            self.all_logs = ''
+            return
         self.all_logs += new_log + '<br>'
         self.logs_txt_browser.setHtml(self.MB_INIT + self.all_logs + self.MB_END)
         self.logs_txt_browser.moveCursor(QtGui.QTextCursor.End)
@@ -706,6 +710,7 @@ class UiTests(object):
             self.jpeg_ntes_but.setChecked(True)
             self.connect_but.setText("CONNECT")
             return
+        self.print_logs('clear')
         if test_connexion():
             self.print_logs('Camera connected, starting tests...')
             # self.test_bootloader_version()
@@ -720,10 +725,10 @@ class UiTests(object):
             self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888, 'RGB Preview', location)
             self.rgb.show()
             location = WIDTH, prew_height + 80
-            location = WIDTH + prew_width + 20, 0
             self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), QtGui.QImage.Format_BGR888, 'JPEG Preview', location)
             self.jpeg.show()
             if test_type != 'OAK-1':
+                location = WIDTH + prew_width + 20, 0
                 self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8, 'LEFT Preview', location)
                 self.left.show()
                 location = WIDTH + prew_width + 20, prew_height + 80
@@ -863,7 +868,17 @@ class UiTests(object):
                 file.write(',' + operator_tests[key])
         file.write('\n')
         file.close()
+        self.print_logs('Test results for ' + test_type + ' with id ' + self.depth_camera.id + ' had been saved!')
 
+    def close_event(self, event):
+        if hasattr(self, 'depth_camera'):
+            del self.rgb
+            del self.jpeg
+            if test_type != 'OAK-1':
+                del self.left
+                del self.right
+            del self.depth_camera
+        event.accept()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Arguments for test UI')
