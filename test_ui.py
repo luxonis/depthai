@@ -1,10 +1,10 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
-from PyQt5.QtWidgets import QMessageBox
 # from PyQt5.QtWidgets import QMessageBox
-import numpy as np
+# from PyQt5.QtWidgets import QMessageBox
+# import numpy as np
 import depthai as dai
-import blobconverter
+# import blobconverter
 
 FPS = 10
 
@@ -19,6 +19,22 @@ test_result = {
     'left_strm_res': '',
     'right_strm_res': ''
 }
+
+operator_tests = {
+    'jpeg_enc': '',
+    'prew_out_rgb': '',
+    'left_strm': '',
+    'right_strm': ''
+}
+
+
+def set_operator_test(test):
+    global operator_tests
+    if test.isChecked():
+        operator_tests[test.name] = test.value
+        # print(test.name + ' ' + test.value)
+
+
 update_res = False
 prew_width = 0
 prew_height = 0
@@ -28,6 +44,8 @@ def clear_test_results():
     global update_res
     for key in test_result:
         test_result[key] = ''
+    for key in operator_tests:
+        operator_tests[key] = ''
     update_res = True
 
 
@@ -198,11 +216,11 @@ class DepthAICamera():
             if cam_type == 'RGB' and self._rgb_pass < self._NR_TEST_FRAMES:
                 test_result['prew_out_rgb_res'] = 'FAIL'
             if cam_type == 'LEFT' and self._left_pass < self._NR_TEST_FRAMES:
-                test_result['left_strm_res'] == 'FAIL'
+                test_result['left_strm_res'] = 'FAIL'
             if cam_type == 'RIGHT' and self._right_pass < self._NR_TEST_FRAMES:
-                test_result['right_cam_res'] == 'FAIL'
+                test_result['right_cam_res'] = 'FAIL'
             if cam_type == 'JPEG' and self.current_jpeg > self._FRAME_JPEG:
-                test_result['jpeg_enc_res'] == 'FAIL'
+                test_result['jpeg_enc_res'] = 'FAIL'
             update_res = True
             return False, None
         return True, image
@@ -242,8 +260,25 @@ class Camera(QtWidgets.QWidget):
         #     # print('im hiding')
         #     self.hide()
 
+
 WIDTH = 766
 HEIGHT = 717
+
+
+def test_connexion():
+    (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
+    if result:
+        return True
+    return False
+
+
+def save_csv():
+    with open("test.csv", "w") as file:
+        for key in test_result:
+            file.write(key + ',' + test_result[key] + '\n')
+        for key in operator_tests:
+            file.write(key + ',' + operator_tests[key] + '\n')
+
 
 class UiTests(object):
     def __init__(self):
@@ -279,7 +314,7 @@ class UiTests(object):
         self.save_but = QtWidgets.QPushButton(self.centralwidget)
         self.save_but.setGeometry(QtCore.QRect(550, 390, 86, 25))
         self.save_but.setObjectName("connect_but")
-        self.save_but.clicked.connect(self.test_connexion)
+        self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 341))
         self.automated_tests.setObjectName("automated_tests")
@@ -330,6 +365,9 @@ class UiTests(object):
         self.rgb_fail_but.setFont(font)
         self.rgb_fail_but.setText("")
         self.rgb_fail_but.setObjectName("rgb_fail_but")
+        self.rgb_fail_but.value = 'FAIL'
+        self.rgb_fail_but.name = 'prew_out_rgb'
+        self.rgb_fail_but.toggled.connect(lambda: set_operator_test(self.rgb_fail_but))
         self.rgb_ntes_but = QtWidgets.QRadioButton(self.op_rgb_frame)
         self.rgb_ntes_but.setEnabled(True)
         self.rgb_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
@@ -339,6 +377,9 @@ class UiTests(object):
         self.rgb_ntes_but.setText("")
         self.rgb_ntes_but.setChecked(True)
         self.rgb_ntes_but.setObjectName("rgb_ntes_but")
+        self.rgb_ntes_but.value = ''
+        self.rgb_ntes_but.name = 'prew_out_rgb'
+        self.rgb_ntes_but.toggled.connect(lambda: set_operator_test(self.rgb_ntes_but))
         self.rgb_pass_but = QtWidgets.QRadioButton(self.op_rgb_frame)
         self.rgb_pass_but.setEnabled(True)
         self.rgb_pass_but.setGeometry(QtCore.QRect(10, 10, 16, 16))
@@ -347,6 +388,9 @@ class UiTests(object):
         self.rgb_pass_but.setFont(font)
         self.rgb_pass_but.setText("")
         self.rgb_pass_but.setObjectName("rgb_pass_but")
+        self.rgb_pass_but.value = 'PASS'
+        self.rgb_pass_but.name = 'prew_out_rgb'
+        self.rgb_pass_but.toggled.connect(lambda: set_operator_test(self.rgb_pass_but))
         self.FAIL_LABEL = QtWidgets.QLabel(self.operator_tests)
         self.FAIL_LABEL.setGeometry(QtCore.QRect(270, 50, 41, 21))
         self.FAIL_LABEL.setObjectName("FAIL_LABEL")
@@ -364,6 +408,9 @@ class UiTests(object):
         self.right_fail_but.setFont(font)
         self.right_fail_but.setText("")
         self.right_fail_but.setObjectName("right_fail_but")
+        self.right_fail_but.value = 'FAIL'
+        self.right_fail_but.name = 'right_strm'
+        self.right_fail_but.toggled.connect(lambda: set_operator_test(self.right_fail_but))
         self.right_ntes_but = QtWidgets.QRadioButton(self.op_right_frame)
         self.right_ntes_but.setEnabled(True)
         self.right_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
@@ -373,6 +420,9 @@ class UiTests(object):
         self.right_ntes_but.setText("")
         self.right_ntes_but.setChecked(True)
         self.right_ntes_but.setObjectName("right_ntes_but")
+        self.right_ntes_but.value = ''
+        self.right_ntes_but.name = 'right_strm'
+        self.right_ntes_but.toggled.connect(lambda: set_operator_test(self.right_ntes_but))
         self.right_pass_but = QtWidgets.QRadioButton(self.op_right_frame)
         self.right_pass_but.setEnabled(True)
         self.right_pass_but.setGeometry(QtCore.QRect(10, 10, 16, 16))
@@ -381,6 +431,9 @@ class UiTests(object):
         self.right_pass_but.setFont(font)
         self.right_pass_but.setText("")
         self.right_pass_but.setObjectName("right_pass_but")
+        self.right_pass_but.value = 'PASS'
+        self.right_pass_but.name = 'right_strm'
+        self.right_pass_but.toggled.connect(lambda: set_operator_test(self.right_pass_but))
         self.op_jpeg_frame = QtWidgets.QFrame(self.operator_tests)
         self.op_jpeg_frame.setGeometry(QtCore.QRect(160, 90, 131, 41))
         self.op_jpeg_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
@@ -395,6 +448,9 @@ class UiTests(object):
         self.jpeg_fail_but.setFont(font)
         self.jpeg_fail_but.setText("")
         self.jpeg_fail_but.setObjectName("jpeg_fail_but")
+        self.jpeg_fail_but.value = 'FAIL'
+        self.jpeg_fail_but.name = 'jpeg_enc'
+        self.jpeg_fail_but.toggled.connect(lambda: set_operator_test(self.jpeg_fail_but))
         self.jpeg_ntes_but = QtWidgets.QRadioButton(self.op_jpeg_frame)
         self.jpeg_ntes_but.setEnabled(True)
         self.jpeg_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
@@ -404,6 +460,9 @@ class UiTests(object):
         self.jpeg_ntes_but.setText("")
         self.jpeg_ntes_but.setChecked(True)
         self.jpeg_ntes_but.setObjectName("jpeg_ntes_but")
+        self.jpeg_ntes_but.value = ''
+        self.jpeg_ntes_but.name = 'jpeg_enc'
+        self.jpeg_ntes_but.toggled.connect(lambda: set_operator_test(self.jpeg_ntes_but))
         self.jpeg_pass_but = QtWidgets.QRadioButton(self.op_jpeg_frame)
         self.jpeg_pass_but.setEnabled(True)
         self.jpeg_pass_but.setGeometry(QtCore.QRect(10, 10, 14, 15))
@@ -412,6 +471,9 @@ class UiTests(object):
         self.jpeg_pass_but.setFont(font)
         self.jpeg_pass_but.setText("")
         self.jpeg_pass_but.setObjectName("jpeg_pass_but")
+        self.jpeg_pass_but.value = 'PASS'
+        self.jpeg_pass_but.name = 'jpeg_enc'
+        self.jpeg_pass_but.toggled.connect(lambda: set_operator_test(self.jpeg_pass_but))
         self.operator_tests_label = QtWidgets.QLabel(self.operator_tests)
         self.operator_tests_label.setGeometry(QtCore.QRect(10, 100, 131, 161))
         self.operator_tests_label.setObjectName("operator_tests_label")
@@ -432,6 +494,9 @@ class UiTests(object):
         self.left_fail_but.setFont(font)
         self.left_fail_but.setText("")
         self.left_fail_but.setObjectName("left_fail_but")
+        self.left_fail_but.value = 'FAIL'
+        self.left_fail_but.name = 'left_strm'
+        self.left_fail_but.toggled.connect(lambda: set_operator_test(self.left_fail_but))
         self.left_ntes_but = QtWidgets.QRadioButton(self.op_left_frame)
         self.left_ntes_but.setEnabled(True)
         self.left_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
@@ -441,6 +506,9 @@ class UiTests(object):
         self.left_ntes_but.setText("")
         self.left_ntes_but.setChecked(True)
         self.left_ntes_but.setObjectName("left_ntes_but")
+        self.left_ntes_but.value = ''
+        self.left_ntes_but.name = 'left_strm'
+        self.left_ntes_but.toggled.connect(lambda: set_operator_test(self.left_ntes_but))
         self.left_pass_but = QtWidgets.QRadioButton(self.op_left_frame)
         self.left_pass_but.setEnabled(True)
         self.left_pass_but.setGeometry(QtCore.QRect(10, 10, 16, 16))
@@ -449,6 +517,9 @@ class UiTests(object):
         self.left_pass_but.setFont(font)
         self.left_pass_but.setText("")
         self.left_pass_but.setObjectName("left_pass_but")
+        self.left_pass_but.value = 'PASS'
+        self.left_pass_but.name = 'left_strm'
+        self.left_pass_but.toggled.connect(lambda: set_operator_test(self.left_pass_but))
         self.logs = QtWidgets.QGroupBox(self.centralwidget)
         self.logs.setGeometry(QtCore.QRect(10, 430, 741, 221))
         self.logs.setObjectName("logs")
@@ -526,18 +597,14 @@ class UiTests(object):
         self.logs_txt_browser.setHtml(self.MB_INIT + self.all_logs + self.MB_END)
         self.logs_txt_browser.moveCursor(QtGui.QTextCursor.End)
 
-    def test_connexion(self):
-        (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
-        if result:
-            return True
-        return False
-
     def update_prog_bar(self, value):
         self.prog_bar.setValue(int(value*100))
 
     def show_cameras(self):
+        clear_test_results()
+        self.set_result()
         if hasattr(self, 'depth_camera'):
-            if self.test_connexion():
+            if test_connexion():
                 self.print_logs('Camera already connected')
                 self.rgb.show()
                 self.left.show()
@@ -550,8 +617,12 @@ class UiTests(object):
                 del self.right
                 del self.jpeg
                 del self.depth_camera
+                self.rgb_ntes_but.setChecked(True)
+                self.left_ntes_but.setChecked(True)
+                self.right_ntes_but.setChecked(True)
+                self.jpeg_ntes_but.setChecked(True)
             # return
-        if self.test_connexion():
+        if test_connexion():
             self.print_logs('Camera connected, starting tests...')
             # self.test_bootloader_version()
             try:
@@ -665,20 +736,17 @@ class UiTests(object):
             self.print_logs('Failed to update bootloader')
             return False
 
-    def save_csv(self):
-        pass
-
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     screen = app.primaryScreen()
     rect = screen.availableGeometry()
-    prew_width = (rect.width() - WIDTH)/2 - 20
-    prew_height = (rect.height())/2 - 80
+    prew_width = (rect.width() - WIDTH)//2 - 20
+    prew_height = (rect.height())//2 - 80
     print(prew_width, prew_height)
     UI_tests = QtWidgets.QMainWindow()
     ui = UiTests()
     ui.setupUi(UI_tests)
     UI_tests.show()
-    ui.test_connexion()
+    test_connexion()
     sys.exit(app.exec_())
