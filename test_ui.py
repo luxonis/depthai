@@ -6,6 +6,7 @@ from datetime import datetime
 # import numpy as np
 import depthai as dai
 import argparse
+import os
 # import blobconverter
 
 FPS = 10
@@ -13,14 +14,17 @@ FPS = 10
 
 test_result = {
     'usb3_res': '',
-    'left_cam_res': '',
-    'right_cam_res': '',
     'rgb_cam_res': '',
     'jpeg_enc_res': '',
     'prew_out_rgb_res': '',
+    'left_cam_res': '',
+    'right_cam_res': '',
     'left_strm_res': '',
-    'right_strm_res': '',
-    'ir_ligh_res': ''
+    'right_strm_res': ''
+}
+OAK_KEYS = {
+    'OAK-1': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res'],
+    'OAK-D': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res', 'left_cam_res', 'right_cam_res','left_strm_res', 'right_strm_res']
 }
 
 operator_tests = {
@@ -30,6 +34,12 @@ operator_tests = {
     'right_strm': '',
     'ir_light': ''
 }
+OP_OAK_KEYS = {
+    'OAK-1': ['jpeg_enc', 'prew_out_rgb'],
+    'OAK-D': ['jpeg_enc', 'prew_out_rgb', 'left_strm', 'right_strm'],
+    'OAK-D-PRO': ['jpeg_enc', 'prew_out_rgb', 'left_strm', 'right_strm', 'ir_light']
+}
+
 
 OAK_D_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
         USB3 <br style="font-size:18pt"> \
@@ -46,6 +56,12 @@ OAK_ONE_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size
         RGB Camera connected  <br style="font-size:21pt"> \
         JPEG Encoding Stream <br style="font-size:21pt"> \
         preview-out-rgb Stream <br style="font-size:21pt"> </span></p></body></html>'
+
+CSV_HEADER = {
+    'OAK-1': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","JPEG Encoding Operator","RGB Encoding Operator"',
+    'OAK-D': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator"',
+    'OAK-D-PRO': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator","IR Light"',
+}
 
 
 def set_operator_test(test):
@@ -92,7 +108,6 @@ class DepthAICamera():
         self.videoEnc.setDefaultProfilePreset(self.camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
         self.xoutJpeg.setStreamName("jpeg")
 
-
         if test_type != 'OAK-1':
             self.camLeft = self.pipeline.create(dai.node.MonoCamera)
             self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
@@ -113,8 +128,11 @@ class DepthAICamera():
         self.device = dai.Device(self.pipeline)
 
         if test_type == 'OAK-D-PRO':
-            self.device.setIrLaserDotProjectorBrightness(100)
-            self.device.setIrFloodLightBrightness(250)
+            try:
+                self.device.setIrLaserDotProjectorBrightness(100)
+                self.device.setIrFloodLightBrightness(250)
+            except:
+                print('IR sensor not working!')
 
         cameras = self.device.getConnectedCameras()
         if dai.CameraBoardSocket.RGB not in cameras:
@@ -153,6 +171,11 @@ class DepthAICamera():
         self._right_timer = 0
         self._FRAME_JPEG = 10
         self.current_jpeg = 0
+
+        self.id = self.device.getDeviceInfo().getMxId()
+
+    def __del__(self):
+        self.device.close()
 
     def start_queue(self):
         global update_res
@@ -298,14 +321,6 @@ def test_connexion():
     return False
 
 
-def save_csv():
-    with open("test.csv", "w") as file:
-        for key in test_result:
-            file.write(key + ',' + test_result[key] + '\n')
-        for key in operator_tests:
-            file.write(key + ',' + operator_tests[key] + '\n')
-
-
 class UiTests(object):
     def __init__(self):
         self.MB_INIT = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
@@ -337,10 +352,10 @@ class UiTests(object):
         self.connect_but.setGeometry(QtCore.QRect(450, 390, 86, 25))
         self.connect_but.setObjectName("connect_but")
         self.connect_but.clicked.connect(self.show_cameras)
-        self.save_but = QtWidgets.QPushButton(self.centralwidget)
-        self.save_but.setGeometry(QtCore.QRect(550, 390, 86, 25))
-        self.save_but.setObjectName("connect_but")
-        self.save_but.clicked.connect(save_csv)
+        # self.save_but = QtWidgets.QPushButton(self.centralwidget)
+        # self.save_but.setGeometry(QtCore.QRect(550, 390, 86, 25))
+        # self.save_but.setObjectName("connect_but")
+        # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         if test_type == 'OAK-1':
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 201))
@@ -348,7 +363,7 @@ class UiTests(object):
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 355))
         self.automated_tests.setObjectName("automated_tests")
         self.automated_tests_labels = QtWidgets.QLabel(self.automated_tests)
-        self.automated_tests_labels.setGeometry(QtCore.QRect(10, 30, 221, 351))
+        self.automated_tests_labels.setGeometry(QtCore.QRect(10, 20, 221, 351))
         self.automated_tests_labels.setObjectName("automated_tests_labels")
         # self.automated_tests_labels.setGeometry(QtCore.QRect(10, 30, 221, 150))
 
@@ -641,7 +656,8 @@ class UiTests(object):
         UI_tests.setWindowTitle(_translate("UI_tests", "DepthAI UI Tests"))
         self.title.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\">UNIT TEST IN PROGRESS</p></body></html>"))
         self.connect_but.setText("CONNECT")
-        self.save_but.setText("SAVE")
+        self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
+        # self.save_but.setText("SAVE")
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
         self.automated_tests_labels.setText(_translate("UI_tests", OAK_D_LABELS))
         self.operator_tests.setTitle(_translate("UI_tests", "Operator Tests"))
@@ -673,28 +689,23 @@ class UiTests(object):
         self.prog_bar.setValue(int(value*100))
 
     def show_cameras(self):
-        clear_test_results()
-        self.set_result()
         self.test_type_label.setText('test ' + test_type)
         if hasattr(self, 'depth_camera'):
-            if test_connexion():
-                self.print_logs('Camera already connected')
-                self.rgb.show()
-                self.left.show()
-                self.right.show()
-            else:
-                clear_test_results()
-                self.set_result()
-                del self.rgb
+            self.save_csv()
+            clear_test_results()
+            self.set_result()
+            del self.rgb
+            del self.jpeg
+            if test_type != 'OAK-1':
                 del self.left
                 del self.right
-                del self.jpeg
-                del self.depth_camera
-                self.rgb_ntes_but.setChecked(True)
-                self.left_ntes_but.setChecked(True)
-                self.right_ntes_but.setChecked(True)
-                self.jpeg_ntes_but.setChecked(True)
-            # return
+            del self.depth_camera
+            self.rgb_ntes_but.setChecked(True)
+            self.left_ntes_but.setChecked(True)
+            self.right_ntes_but.setChecked(True)
+            self.jpeg_ntes_but.setChecked(True)
+            self.connect_but.setText("CONNECT")
+            return
         if test_connexion():
             self.print_logs('Camera connected, starting tests...')
             # self.test_bootloader_version()
@@ -703,18 +714,21 @@ class UiTests(object):
             except RuntimeError:
                 self.print_logs("Something went wrong, check connexion!")
                 return
+            self.connect_but.setText("DISCONNECT AND SAVE")
+            self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
             location = WIDTH, 0
             self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888, 'RGB Preview', location)
             self.rgb.show()
             location = WIDTH, prew_height + 80
-            self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8, 'LEFT Preview', location)
-            self.left.show()
-            location = WIDTH + prew_width + 20, prew_height + 80
-            self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8, 'RIGHT Preview', location)
-            self.right.show()
             location = WIDTH + prew_width + 20, 0
             self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), QtGui.QImage.Format_BGR888, 'JPEG Preview', location)
             self.jpeg.show()
+            if test_type != 'OAK-1':
+                self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8, 'LEFT Preview', location)
+                self.left.show()
+                location = WIDTH + prew_width + 20, prew_height + 80
+                self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8, 'RIGHT Preview', location)
+                self.right.show()
         else:
             print(locals())
             self.print_logs('No camera detected, check the connexion and try again...')
@@ -774,12 +788,6 @@ class UiTests(object):
             self.right_strm_res.setPalette(self.red_pallete)
         self.right_strm_res.setText(test_result['right_strm_res'])
 
-        if test_result['ir_ligh_res'] == 'PASS':
-            self.ir_project_res.setPalette(self.green_pallete)
-        else:
-            self.ir_project_res.setPalette(self.red_pallete)
-        self.ir_project_res.setText(test_result['ir_ligh_res'])
-
     def update_bootloader(self):
         self.print_logs('Check bootloader')
         (result, device) = dai.DeviceBootloader.getFirstAvailableDevice()
@@ -816,6 +824,45 @@ class UiTests(object):
         else:
             self.print_logs('Failed to update bootloader')
             return False
+
+    def save_csv(self):
+        path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/tests_result/' + test_type + '.csv'
+        print(path)
+        if os.path.exists(path):
+            file = open(path, 'a')
+        else:
+            file = open(path, 'w')
+            if test_type in CSV_HEADER:
+                file.write(CSV_HEADER[test_type] + '\n')
+            else:
+                file.write(CSV_HEADER['OAK-D'] + '\n')
+
+        file.write(self.depth_camera.id)
+        file.write(',' + test_type)
+        file.write(',' + datetime.now().strftime("%Y %m %d %H:%M:%S"))
+
+        if test_type in OAK_KEYS:
+            auto_keys = OAK_KEYS[test_type]
+        else:
+            auto_keys = OAK_KEYS['OAK-D']
+
+        if test_type in OP_OAK_KEYS:
+            op_keys = OP_OAK_KEYS[test_type]
+        else:
+            op_keys = OP_OAK_KEYS['OAK-D']
+
+        for key in auto_keys:
+            if test_result[key] == '':
+                file.write(',' + 'Not Tested')
+            else:
+                file.write(',' + test_result[key])
+        for key in op_keys:
+            if operator_tests[key] == '':
+                file.write(',' + 'Not Tested')
+            else:
+                file.write(',' + operator_tests[key])
+        file.write('\n')
+        file.close()
 
 
 if __name__ == "__main__":
