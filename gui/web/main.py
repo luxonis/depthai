@@ -92,7 +92,7 @@ class HttpHandler:
         qs = request.query
 
         def updatePreview(data):
-            self.instance.selectedPreview = data
+            self.instance.updatePreview(data)
 
         def updateStatistics(data):
             try:
@@ -194,7 +194,7 @@ class HttpHandler:
                         call_mappings(in_dict[key], map_slice[key])
 
         call_mappings(data, mapping)
-        print(data)
+
         if "depth" in data:
             median = None
             if "median" in data["depth"] and "current" in data["depth"]["median"]:
@@ -252,6 +252,8 @@ class WebApp:
         self.selectedPreview = self.confManager.args.show[0] if len(self.confManager.args.show) > 0 else "color"
         self._demoInstance = instance
         self.thread = None
+        self.previewQueue = None
+        self.configQueue = None
 
     def updateArg(self, arg_name, arg_value):
         setattr(self.confManager.args, arg_name, arg_value)
@@ -259,9 +261,65 @@ class WebApp:
     def shouldRun(self):
         return self.running
 
-    def onShowFrame(self, frame, source):
-        if source == self.selectedPreview:
+    def onIter(self, instance):
+        packet = self.previewQueue.tryGet()
+        if packet is not None:
+            if self.selectedPreview == Previews.depth.name:
+                packet = getattr(Previews, Previews.depthRaw.name).value(packet, instance._pv)
+            elif self.selectedPreview == Previews.disparityColor.name:
+                packet = getattr(Previews, Previews.disparity.name).value(packet, instance._pv)
+            frame = getattr(Previews, self.selectedPreview).value(packet, instance._pv)
+            frame = instance._pv._processFrame(frame, self.selectedPreview)
             self.webserver.frametosend = frame
+
+    def updatePreview(self, selected):
+        self.selectedPreview = selected
+        if self.configQueue is not None:
+            if self.selectedPreview == Previews.depth.name:
+                name = Previews.depthRaw.name
+            elif self.selectedPreview == Previews.disparityColor.name:
+                name = Previews.disparity.name
+            else:
+                name = self.selectedPreview
+            buff = dai.Buffer()
+            buff.setData(list(name.encode('UTF-8')))
+            self.configQueue.send(buff)
+
+    def onPipeline(self, pipeline, nodes):
+        scriptNode = pipeline.create(dai.node.Script)
+        nodes.camRgb.preview.link(scriptNode.inputs[Previews.color.name])
+        nodes.stereo.depth.link(scriptNode.inputs[Previews.depthRaw.name])
+        nodes.stereo.disparity.link(scriptNode.inputs[Previews.disparity.name])
+        nodes.stereo.rectifiedLeft.link(scriptNode.inputs[Previews.rectifiedLeft.name])
+        nodes.stereo.rectifiedRight.link(scriptNode.inputs[Previews.rectifiedRight.name])
+        nodes.monoLeft.out.link(scriptNode.inputs[Previews.left.name])
+        nodes.monoRight.out.link(scriptNode.inputs[Previews.right.name])
+        nodes.nn.passthrough.link(scriptNode.inputs[Previews.nnInput.name])
+        scriptNode.setScript(f"""
+        current = "{Previews.color.name}"
+
+        while True:
+            packet = node.io[current].tryGet()
+            if packet is not None:
+                # node.warn("[SENT] " + current)
+                node.io['out'].send(packet)
+
+            conf_in = node.io['conf_in'].tryGet()
+            if conf_in is not None:
+                payload = bytes(conf_in.getData()).decode('UTF-8')
+                node.warn("[CONF] Changing view to {{}}".format(payload))
+                current = payload
+        """)
+
+        xout = pipeline.createXLinkOut()
+        xout.setStreamName("webPreview")
+        scriptNode.outputs['out'].link(xout.input)
+
+        xin = pipeline.createXLinkIn()
+        xin.setMaxDataSize(1024)
+        xin.setStreamName("webConfig")
+        xin.out.link(scriptNode.inputs['conf_in'])
+
 
     def onSetup(self, instance):
         try:
@@ -269,6 +327,9 @@ class WebApp:
                 statisticsEnabled = json.load(f)["statistics"]
         except:
             statisticsEnabled = True
+
+        self.previewQueue = instance._device.getOutputQueue("webPreview")
+        self.configQueue = instance._device.getInputQueue("webConfig")
         previewChoices = self.confManager.args.show
         devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
         countLabels = instance._nnManager._labels if instance._nnManager is not None else []
@@ -397,8 +458,8 @@ class WebApp:
 
     def runDemo(self):
         self._demoInstance.setCallbacks(
-            shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup,
-            onAppStart=self.onAppStart
+            shouldRun=self.shouldRun, onIter=self.onIter, onSetup=self.onSetup, onAppSetup=self.onAppSetup,
+            onAppStart=self.onAppStart, onPipeline=self.onPipeline,
         )
         self.confManager.args.bandwidth = "auto"
         if self.confManager.args.deviceId is None:

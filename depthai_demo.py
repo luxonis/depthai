@@ -116,9 +116,10 @@ class Demo:
             self.setup(conf)
             self.run()
 
-    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, onAppSetup = noop, onAppStart = noop, shouldRun = lambda: True, showDownloadProgress=None, collectMetrics=False):
+    def __init__(self, displayFrames=True, consumeFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onPipeline = noop, onSetup = noop, onTeardown = noop, onIter = noop, onAppSetup = noop, onAppStart = noop, shouldRun = lambda: True, showDownloadProgress=None, collectMetrics=False):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
+        self._consumeFrames = consumeFrames
         self.toggleMetrics(collectMetrics)
 
         self.onNewFrame = onNewFrame
@@ -126,6 +127,7 @@ class Demo:
         self.onNn = onNn
         self.onReport = onReport
         self.onSetup = onSetup
+        self.onPipeline = onPipeline
         self.onTeardown = onTeardown
         self.onIter = onIter
         self.shouldRun = shouldRun
@@ -133,7 +135,7 @@ class Demo:
         self.onAppSetup = onAppSetup
         self.onAppStart = onAppStart
 
-    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
+    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onPipeline=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
         if onNewFrame is not None:
             self.onNewFrame = onNewFrame
         if onShowFrame is not None:
@@ -142,6 +144,8 @@ class Demo:
             self.onNn = onNn
         if onReport is not None:
             self.onReport = onReport
+        if onPipeline is not None:
+            self.onPipeline = onPipeline
         if onSetup is not None:
             self.onSetup = onSetup
         if onTeardown is not None:
@@ -223,16 +227,16 @@ class Demo:
             if self._conf.leftCameraEnabled:
                 self._pm.createLeftCam(self._monoRes, self._conf.args.monoFps,
                                  orientation=self._conf.args.cameraOrientation.get(Previews.left.name),
-                                 xout=Previews.left.name in self._conf.args.show)
+                                 xout=Previews.left.name in self._conf.args.show and self._consumeFrames)
             if self._conf.rightCameraEnabled:
                 self._pm.createRightCam(self._monoRes, self._conf.args.monoFps,
                                   orientation=self._conf.args.cameraOrientation.get(Previews.right.name),
-                                  xout=Previews.right.name in self._conf.args.show)
+                                  xout=Previews.right.name in self._conf.args.show and self._consumeFrames)
             if self._conf.rgbCameraEnabled:
                 self._pm.createColorCam(previewSize=self._conf.previewSize, res=self._rgbRes, fps=self._conf.args.rgbFps,
                                   orientation=self._conf.args.cameraOrientation.get(Previews.color.name),
                                   fullFov=not self._conf.args.disableFullFovNn,
-                                  xout=Previews.color.name in self._conf.args.show)
+                                  xout=Previews.color.name in self._conf.args.show and self._consumeFrames)
 
             if self._conf.useDepth:
                 self._pm.createDepth(
@@ -243,10 +247,10 @@ class Demo:
                     self._conf.args.lrcThreshold,
                     self._conf.args.extendedDisparity,
                     self._conf.args.subpixel,
-                    useDepth=Previews.depth.name in self._conf.args.show or Previews.depthRaw.name in self._conf.args.show,
-                    useDisparity=Previews.disparity.name in self._conf.args.show or Previews.disparityColor.name in self._conf.args.show,
-                    useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show,
-                    useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show,
+                    useDepth=Previews.depth.name in self._conf.args.show or Previews.depthRaw.name in self._conf.args.show and self._consumeFrames,
+                    useDisparity=Previews.disparity.name in self._conf.args.show or Previews.disparityColor.name in self._conf.args.show and self._consumeFrames,
+                    useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show and self._consumeFrames,
+                    useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show and self._consumeFrames,
                 )
 
             self._encManager = None
@@ -265,10 +269,11 @@ class Demo:
                 sbbScaleFactor=self._conf.args.sbbScaleFactor, fullFov=not self._conf.args.disableFullFovNn,
             )
 
-            self._pm.addNn(nn=self._nn, xoutNnInput=Previews.nnInput.name in self._conf.args.show,
+            self._pm.addNn(nn=self._nn, xoutNnInput=Previews.nnInput.name in self._conf.args.show and self._consumeFrames,
                            xoutSbb=self._conf.args.spatialBoundingBox and self._conf.useDepth)
 
     def run(self):
+        self.onPipeline(self._pm.pipeline, self._pm.nodes)
         self._device.startPipeline(self._pm.pipeline)
         self._pm.createDefaultQueues(self._device)
         if self._conf.useNN:
@@ -303,7 +308,8 @@ class Demo:
             if any(self._cameraConfig.values()):
                 self._updateCameraConfigs()
 
-            self._pv.createQueues(self._device, self._createQueueCallback)
+            if self._consumeFrames:
+                self._pv.createQueues(self._device, self._createQueueCallback)
             if self._encManager is not None:
                 self._encManager.createDefaultQueues(self._device)
 
@@ -355,7 +361,8 @@ class Demo:
         self.timer = time.monotonic()
 
         if self._conf.useCamera:
-            self._pv.prepareFrames(callback=self.onNewFrame)
+            if self._consumeFrames:
+                self._pv.prepareFrames(callback=self.onNewFrame)
             if self._encManager is not None:
                 self._encManager.parseQueues()
 
@@ -561,7 +568,7 @@ if __name__ == "__main__":
                 runQt(args, Demo(displayFrames=False))
             elif args.guiType == "web":
                 from gui.web.main import runWeb
-                runWeb(args, Demo(displayFrames=False))
+                runWeb(args, Demo(displayFrames=False, consumeFrames=False))
             else:
                 args.guiType = "cv"
                 runOpenCv(args, Demo(displayFrames=True))
