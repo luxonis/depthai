@@ -26,6 +26,28 @@ python3 install_requirements.py
 
 `python3 depthai_demo.py -cnn tiny-yolo-v3 -sh 8` - Run `tiny-yolo-v3` model from `resources/nn` directory and compile for 8 shaves
 
+## Supported models
+
+We have added support for a number of different AI models that work (decoding and visualization) out-of-the-box with the the demo. You can specify which model to run with `-cnn` argument, as shown above. Models that are supported:
+
+- deeplabv3p_person
+- face-detection-adas-0001
+- face-detection-retail-0004
+- human-pose-estimation-0001
+- landmarks-regression-retail-0009
+- mobilenet-ssd
+- openpose2
+- pedestrian-detection-adas-0002
+- person-detection-retail-0013
+- person-vehicle-bike-detection-crossroad-1016
+- road-segmentation-adas-0001
+- tiny-yolo-v3 (PINTO model zoo)
+- vehicle-detection-adas-0002
+- vehicle-license-plate-detection-barrier-0106
+- yolo-v3
+
+If you would like to use a custom AI model, see [documentation here](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#using-custom-models).
+
 ## Usage
 
 ```
@@ -39,7 +61,7 @@ usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] 
                        [-s {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...]]
                        [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--reportFile REPORTFILE] [-sync] [-monor {400,720,800}] [-monof MONOFPS] [-cb CALLBACK]
                        [--openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--count COUNTLABEL] [-dev DEVICEID] [-bandw {auto,low,high}] [-usbs {usb2,usb3}]
-                       [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT] [-xls XLINKCHUNKSIZE] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControlls] 
+                       [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT] [-xls XLINKCHUNKSIZE] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControlls]
                        [--cameraExposure CAMERAEXPOSURE] [--cameraSensitivity CAMERASENSITIVITY] [--cameraSaturation CAMERASATURATION] [--cameraContrast CAMERACONTRAST]
                        [--cameraBrightness CAMERABRIGHTNESS] [--cameraSharpness CAMERASHARPNESS]
 
@@ -81,9 +103,9 @@ optional arguments:
   -dff, --disableFullFovNn
                         Disable full RGB FOV for NN, keeping the nn aspect ratio
   -scale SCALE [SCALE ...], --scale SCALE [SCALE ...]
-                        Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5 
-                        Format: preview_name or preview_name,scale_factor 
-                        Example: -scale color 
+                        Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5
+                        Format: preview_name or preview_name,scale_factor
+                        Example: -scale color
                         Example: -scale color,0.7 right,2 left,2
   -cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}, --colorMap {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}
                         Change color map used to apply colors to depth/disparity frames. Default: JET
@@ -114,24 +136,24 @@ optional arguments:
   -dev DEVICEID, --deviceId DEVICEID
                         DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.
   -bandw {auto,low,high}, --bandwidth {auto,low,high}
-                        Force bandwidth mode. 
+                        Force bandwidth mode.
                         If set to "high", the output streams will stay uncompressed
                         If set to "low", the output streams will be MJPEG-encoded
                         If set to "auto" (default), the optimal bandwidth will be selected based on your connection type and speed
   -usbs {usb2,usb3}, --usbSpeed {usb2,usb3}
                         Force USB communication speed. Default: usb3
   -enc ENCODE [ENCODE ...], --encode ENCODE [ENCODE ...]
-                        Define which cameras to encode (record) 
-                        Format: cameraName or cameraName,encFps 
-                        Example: -enc left color 
+                        Define which cameras to encode (record)
+                        Format: cameraName or cameraName,encFps
+                        Example: -enc left color
                         Example: -enc color right,10 left,10
   -encout ENCODEOUTPUT, --encodeOutput ENCODEOUTPUT
                         Path to directory where to store encoded files. Default: <project_root>
   -xls XLINKCHUNKSIZE, --xlinkChunkSize XLINKCHUNKSIZE
                         Specify XLink chunk size
   -camo CAMERAORIENTATION [CAMERAORIENTATION ...], --cameraOrientation CAMERAORIENTATION [CAMERAORIENTATION ...]
-                        Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG) 
-                        Format: camera_name,camera_orientation 
+                        Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG)
+                        Format: camera_name,camera_orientation
                         Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG
   --cameraControlls      Show camera configuration options in GUI and controll them using keyboard
   --cameraExposure CAMERAEXPOSURE
@@ -148,46 +170,19 @@ optional arguments:
                         Specify image sharpness
 ```
 
-
-## Conversion of existing trained models into Intel Movidius binary format
-
-OpenVINO toolkit contains components which allow conversion of existing supported trained `Caffe` and `Tensorflow` models into Intel Movidius binary format through the Intermediate Representation (IR) format.
-
-Example of the conversion:
-1. First the `model_optimizer` tool will convert the model to IR format:  
-
-       cd <path-to-openvino-folder>/deployment_tools/model_optimizer
-       python3 mo.py --model_name ResNet50 --output_dir ResNet50_IR_FP16 --framework tf --data_type FP16 --input_model inference_graph.pb
-
-    - The command will produce the following files in the `ResNet50_IR_FP16` directory:
-        - `ResNet50.bin` - weights file;
-        - `ResNet50.xml` - execution graph for the network;
-        - `ResNet50.mapping` - mapping between layers in original public/custom model and layers within IR.
-2. The weights (`.bin`) and graph (`.xml`) files produced above (or from the Intel Model Zoo) will be required for building a blob file,
-with the help of the `myriad_compile` tool. When producing blobs, the following constraints must be applied:
-
-       CMX-SLICES = 4
-       SHAVES = 4
-       INPUT-FORMATS = 8
-       OUTPUT-FORMATS = FP16/FP32 (host code for meta frame display should be updated accordingly)
-
-    Example of command execution:
-
-       <path-to-openvino-folder>/deployment_tools/inference_engine/lib/intel64/myriad_compile -m ./ResNet50.xml -o ResNet50.blob -ip U8 -VPU_NUMBER_OF_SHAVES 4 -VPU_NUMBER_OF_CMX_SLICES 4
-       
 ## Usage statistics
 
 By default, the demo script will collect anonymous usage statistics during runtime. These include:
 - Device-specific information (like mxid, connected cameras, device state and connection type)
 - Environment-specific information (like OS type, python version, package versions)
 
-We gather this data to better understand what environemnts are our users using, as well as assist better in support questions. 
+We gather this data to better understand what environemnts are our users using, as well as assist better in support questions.
 
 **All of the data we collect is anonymous and you can disable it at any time**. To do so, click on the "Misc" tab and disable sending the statistics.
 
 ## Reporting issues
 
-We are actively developing the DepthAI framework, and it's crucial for us to know what kind of problems you are facing.  
+We are actively developing the DepthAI framework, and it's crucial for us to know what kind of problems you are facing.
 If you run into a problem, please follow the steps below and email support@luxonis.com:
 
 1. Run `log_system_information.sh` and share the output from (`log_system_information.txt`).
