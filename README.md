@@ -28,7 +28,7 @@ python3 install_requirements.py
 
 ## Supported models
 
-We have added support for a number of different AI models that work (decoding and visualization) out-of-the-box with the the demo. You can specify which model to run with `-cnn` argument, as shown above. Currently supported models:
+We have added support for a number of different AI models that work (decoding and visualization) out-of-the-box with the demo. You can specify which model to run with `-cnn` argument, as shown above. Currently supported models:
 
 ```
 - deeplabv3p_person
