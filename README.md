@@ -3,6 +3,7 @@
 This repo contains demo application, which can load different networks, create pipelines, record video, etc.
 
 _Click on the GIF below to see a full example run_
+
 [![depthai demo](https://user-images.githubusercontent.com/5244214/142426845-82f5f8fd-ad1a-4873-97a5-2b3fcdb0ca2e.gif)](https://www.youtube.com/watch?v=sCZpsFQBffk)
 
 
