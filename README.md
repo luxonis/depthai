@@ -191,7 +191,7 @@ We have added support for a number of different AI models that work (decoding an
 - person-detection-retail-0013
 - person-vehicle-bike-detection-crossroad-1016
 - road-segmentation-adas-0001
-- tiny-yolo-v3 (PINTO model zoo)
+- tiny-yolo-v3
 - vehicle-detection-adas-0002
 - vehicle-license-plate-detection-barrier-0106
 - yolo-v3
