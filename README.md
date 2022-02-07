@@ -6,67 +6,63 @@ _Click on the GIF below to see a full example run_
 [![depthai demo](https://user-images.githubusercontent.com/5244214/142426845-82f5f8fd-ad1a-4873-97a5-2b3fcdb0ca2e.gif)](https://www.youtube.com/watch?v=sCZpsFQBffk)
 
 
-__Documentation is available at [https://docs.luxonis.com/](https://docs.luxonis.com/).__
+__Documentation is available at [https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#first-steps-with-depthai).__
 
-## Python modules (Dependencies)
+## Installation
 
-DepthAI Demo requires [numpy](https://numpy.org/), [opencv-python](https://pypi.org/project/opencv-python/) and [depthai](https://github.com/luxonis/depthai-python).
-To get the versions of these packages you need for the program, use pip: (Make sure pip is upgraded: ` python3 -m pip install -U pip`)
-```
-python3 install_requirements.py
-```
+There are two installation steps that need to be performed to make sure the demo works:
+- **One-time installation** that will add all necessary packages to your OS. 
+  ```
+  $ sudo curl -fL https://docs.luxonis.com/install_dependencies.sh | bash
+  ```
+  Please follow [this installation page](https://docs.luxonis.com/projects/api/en/latest/install/) to see instructions for other platforms
 
-## Examples
 
-`python3 depthai_demo.py` - RGB & CNN inference example
-
-`python3 depthai_demo.py -vid <path_to_video_or_yt_link>` - CNN inference on video example
-
-`python3 depthai_demo.py -cnn person-detection-retail-0013` - Run `person-detection-retail-0013` model from `resources/nn` directory
-
-`python3 depthai_demo.py -cnn tiny-yolo-v3 -sh 8` - Run `tiny-yolo-v3` model from `resources/nn` directory and compile for 8 shaves
-
-## Supported models
-
-We have added support for a number of different AI models that work (decoding and visualization) out-of-the-box with the demo. You can specify which model to run with `-cnn` argument, as shown above. Currently supported models:
-
-```
-- deeplabv3p_person
-- face-detection-adas-0001
-- face-detection-retail-0004
-- human-pose-estimation-0001
-- landmarks-regression-retail-0009
-- mobilenet-ssd
-- openpose2
-- pedestrian-detection-adas-0002
-- person-detection-retail-0013
-- person-vehicle-bike-detection-crossroad-1016
-- road-segmentation-adas-0001
-- tiny-yolo-v3 (PINTO model zoo)
-- vehicle-detection-adas-0002
-- vehicle-license-plate-detection-barrier-0106
-- yolo-v3
-```
-
-If you would like to use a custom AI model, see [documentation here](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#using-custom-models).
+- **Python dependencies installation** that makes sure your Python interpreter has all required packages installed. 
+  This script is safe to be run multiple times and should be ran after every demo update
+  ```
+  $ python3 install_requirements.py
+  ```
 
 ## Usage
 
+This repository and the demo script itself can be used in various independent cases:
+- As a tool to try out different DepthAI features, explorable either with command line arguments (with `--guiType cv`) or in clickable QT interface (with `--guiType qt`)
+- As a quick prototyping backbone, either utilising callbacks mechanism or by extending the `Demo` class itself
+- As a way to write code for DepthAI devices faster, using [depthai-sdk](https://pypi.org/project/depthai-sdk/) managers and helper functions, on top of which the demo script is built
+
+### QT GUI usage
+
+See instuctions [here](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#default-run)
+
+![qt demo](https://user-images.githubusercontent.com/5244214/142722740-47e545b7-c7fe-4132-9704-ae3b47d60957.png)
+
+### Command line usage
+
+**Examples**
+
+`python3 depthai_demo.py -gt cv` - RGB & CNN inference example
+
+`python3 depthai_demo.py -gt cv -vid <path_to_video_or_yt_link>` - CNN inference on video example
+
+`python3 depthai_demo.py -gt cv -cnn person-detection-retail-0013` - Run `person-detection-retail-0013` model from `resources/nn` directory
+
+`python3 depthai_demo.py -gt cv -cnn tiny-yolo-v3 -sh 8` - Run `tiny-yolo-v3` model from `resources/nn` directory and compile for 8 shaves
+
+**Demo**
+
+![cv demo](https://user-images.githubusercontent.com/18037362/132068313-e6db90c2-823b-42f2-86fb-148e798f55de.png)
+
+**Full reference**
+
 ```
 $ depthai_demo.py --help
-
-usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] [-cnnp CNNPATH] [-cnn CNNMODEL] [-sh SHAVES] [-cnnsize CNNINPUTSIZE]
-                       [-rgbr {1080,2160,3040}] [-rgbf RGBFPS] [-dct DISPARITYCONFIDENCETHRESHOLD] [-lrct LRCTHRESHOLD] [-sig SIGMA] [-med {0,3,5,7}] [-lrc] [-ext] [-sub]
-                       [-dff] [-scale SCALE [SCALE ...]]
-                       [-cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}]
-                       [-maxd MAXDEPTH] [-mind MINDEPTH] [-sbb] [-sbbsf SBBSCALEFACTOR]
-                       [-s {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...]]
-                       [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--reportFile REPORTFILE] [-sync] [-monor {400,720,800}] [-monof MONOFPS] [-cb CALLBACK]
-                       [--openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--count COUNTLABEL] [-dev DEVICEID] [-bandw {auto,low,high}] [-usbs {usb2,usb3}]
-                       [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT] [-xls XLINKCHUNKSIZE] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControlls]
-                       [--cameraExposure CAMERAEXPOSURE] [--cameraSensitivity CAMERASENSITIVITY] [--cameraSaturation CAMERASATURATION] [--cameraContrast CAMERACONTRAST]
-                       [--cameraBrightness CAMERABRIGHTNESS] [--cameraSharpness CAMERASHARPNESS]
-
+usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] [-cnnp CNNPATH] [-cnn CNNMODEL] [-sh SHAVES] [-cnnsize CNNINPUTSIZE] [-rgbr {1080,2160,3040}] [-rgbf RGBFPS] [-dct DISPARITYCONFIDENCETHRESHOLD] [-lrct LRCTHRESHOLD] [-sig SIGMA] [-med {0,3,5,7}] [-lrc] [-ext] [-sub] [-dff]
+                       [-scale SCALE [SCALE ...]] [-cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}] [-maxd MAXDEPTH] [-mind MINDEPTH] [-sbb] [-sbbsf SBBSCALEFACTOR]
+                       [-s {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...]] [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--reportFile REPORTFILE]
+                       [-monor {400,720,800}] [-monof MONOFPS] [-cb CALLBACK] [--openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--app APP] [--count COUNTLABEL] [-dev DEVICEID] [-bandw {auto,low,high}] [-gt {auto,qt,cv}] [-usbs {usb2,usb3}] [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT]
+                       [-xls XLINKCHUNKSIZE] [-poeq POEQUALITY] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControlls] [--cameraExposure CAMERAEXPOSURE [CAMERAEXPOSURE ...]] [--cameraSensitivity CAMERASENSITIVITY [CAMERASENSITIVITY ...]]
+                       [--cameraSaturation CAMERASATURATION [CAMERASATURATION ...]] [--cameraContrast CAMERACONTRAST [CAMERACONTRAST ...]] [--cameraBrightness CAMERABRIGHTNESS [CAMERABRIGHTNESS ...]] [--cameraSharpness CAMERASHARPNESS [CAMERASHARPNESS ...]] [--skipVersionCheck] [--noSupervisor] [--sync]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -105,9 +101,9 @@ optional arguments:
   -dff, --disableFullFovNn
                         Disable full RGB FOV for NN, keeping the nn aspect ratio
   -scale SCALE [SCALE ...], --scale SCALE [SCALE ...]
-                        Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5
-                        Format: preview_name or preview_name,scale_factor
-                        Example: -scale color
+                        Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5 
+                        Format: preview_name or preview_name,scale_factor 
+                        Example: -scale color 
                         Example: -scale color,0.7 right,2 left,2
   -cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}, --colorMap {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}
                         Change color map used to apply colors to depth/disparity frames. Default: JET
@@ -125,7 +121,6 @@ optional arguments:
                         Display device utilization data
   --reportFile REPORTFILE
                         Save report data to specified target file in CSV format
-  -sync, --sync         Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute
   -monor {400,720,800}, --monoResolution {400,720,800}
                         Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: 400
   -monof MONOFPS, --monoFps MONOFPS
@@ -134,43 +129,74 @@ optional arguments:
                         Path to callbacks file to be used. Default: <project_root>/callbacks.py
   --openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}
                         Specify which OpenVINO version to use in the pipeline
+  --app APP             Specify which app to run instead of the demo
   --count COUNTLABEL    Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).
   -dev DEVICEID, --deviceId DEVICEID
                         DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.
   -bandw {auto,low,high}, --bandwidth {auto,low,high}
-                        Force bandwidth mode.
+                        Force bandwidth mode. 
                         If set to "high", the output streams will stay uncompressed
                         If set to "low", the output streams will be MJPEG-encoded
                         If set to "auto" (default), the optimal bandwidth will be selected based on your connection type and speed
+  -gt {auto,qt,cv}, --guiType {auto,qt,cv}
+                        Specify GUI type of the demo. "cv" uses built-in OpenCV display methods, "qt" uses Qt to display interactive GUI. "auto" will use OpenCV for Raspberry Pi and Qt for other platforms
   -usbs {usb2,usb3}, --usbSpeed {usb2,usb3}
                         Force USB communication speed. Default: usb3
   -enc ENCODE [ENCODE ...], --encode ENCODE [ENCODE ...]
-                        Define which cameras to encode (record)
-                        Format: cameraName or cameraName,encFps
-                        Example: -enc left color
+                        Define which cameras to encode (record) 
+                        Format: cameraName or cameraName,encFps 
+                        Example: -enc left color 
                         Example: -enc color right,10 left,10
   -encout ENCODEOUTPUT, --encodeOutput ENCODEOUTPUT
-                        Path to directory where to store encoded files. Default: <project_root>
+                        Path to directory where to store encoded files. Default: /Users/vandavv/dev/depthai
   -xls XLINKCHUNKSIZE, --xlinkChunkSize XLINKCHUNKSIZE
                         Specify XLink chunk size
+  -poeq POEQUALITY, --poeQuality POEQUALITY
+                        Specify PoE encoding video quality (1-100)
   -camo CAMERAORIENTATION [CAMERAORIENTATION ...], --cameraOrientation CAMERAORIENTATION [CAMERAORIENTATION ...]
-                        Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG)
-                        Format: camera_name,camera_orientation
+                        Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG) 
+                        Format: camera_name,camera_orientation 
                         Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG
-  --cameraControlls      Show camera configuration options in GUI and controll them using keyboard
-  --cameraExposure CAMERAEXPOSURE
+  --cameraControlls     Show camera configuration options in GUI and control them using keyboard
+  --cameraExposure CAMERAEXPOSURE [CAMERAEXPOSURE ...]
                         Specify camera saturation
-  --cameraSensitivity CAMERASENSITIVITY
+  --cameraSensitivity CAMERASENSITIVITY [CAMERASENSITIVITY ...]
                         Specify camera sensitivity
-  --cameraSaturation CAMERASATURATION
+  --cameraSaturation CAMERASATURATION [CAMERASATURATION ...]
                         Specify image saturation
-  --cameraContrast CAMERACONTRAST
+  --cameraContrast CAMERACONTRAST [CAMERACONTRAST ...]
                         Specify image contrast
-  --cameraBrightness CAMERABRIGHTNESS
+  --cameraBrightness CAMERABRIGHTNESS [CAMERABRIGHTNESS ...]
                         Specify image brightness
-  --cameraSharpness CAMERASHARPNESS
+  --cameraSharpness CAMERASHARPNESS [CAMERASHARPNESS ...]
                         Specify image sharpness
+  --skipVersionCheck    Disable libraries version check
+  --noSupervisor        Disable supervisor check
+  --sync                Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)
 ```
+
+## Supported models
+
+We have added support for a number of different AI models that work (decoding and visualization) out-of-the-box with the demo. You can specify which model to run with `-cnn` argument, as shown above. Currently supported models:
+
+```
+- deeplabv3p_person
+- face-detection-adas-0001
+- face-detection-retail-0004
+- human-pose-estimation-0001
+- mobilenet-ssd
+- openpose2
+- pedestrian-detection-adas-0002
+- person-detection-retail-0013
+- person-vehicle-bike-detection-crossroad-1016
+- road-segmentation-adas-0001
+- tiny-yolo-v3 (PINTO model zoo)
+- vehicle-detection-adas-0002
+- vehicle-license-plate-detection-barrier-0106
+- yolo-v3
+```
+
+If you would like to use a custom AI model, see [documentation here](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#using-custom-models).
 
 ## Usage statistics
 
@@ -180,7 +206,11 @@ By default, the demo script will collect anonymous usage statistics during runti
 
 We gather this data to better understand what environemnts are our users using, as well as assist better in support questions.
 
-**All of the data we collect is anonymous and you can disable it at any time**. To do so, click on the "Misc" tab and disable sending the statistics.
+**All of the data we collect is anonymous and you can disable it at any time**. To do so, click on the "Misc" tab and disable sending the statistics or create a `.consent` file in repository root with the following content
+
+```
+{"statistics": false}
+```
 
 ## Reporting issues
 
