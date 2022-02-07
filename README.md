@@ -28,8 +28,9 @@ python3 install_requirements.py
 
 ## Supported models
 
-We have added support for a number of different AI models that work (decoding and visualization) out-of-the-box with the the demo. You can specify which model to run with `-cnn` argument, as shown above. Models that are supported:
+We have added support for a number of different AI models that work (decoding and visualization) out-of-the-box with the the demo. You can specify which model to run with `-cnn` argument, as shown above. Currently supported models:
 
+```
 - deeplabv3p_person
 - face-detection-adas-0001
 - face-detection-retail-0004
@@ -45,6 +46,7 @@ We have added support for a number of different AI models that work (decoding an
 - vehicle-detection-adas-0002
 - vehicle-license-plate-detection-barrier-0106
 - yolo-v3
+```
 
 If you would like to use a custom AI model, see [documentation here](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#using-custom-models).
 
