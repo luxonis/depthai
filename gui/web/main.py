@@ -288,13 +288,21 @@ class WebApp:
     def onPipeline(self, pipeline, nodes):
         scriptNode = pipeline.create(dai.node.Script)
         nodes.camRgb.preview.link(scriptNode.inputs[Previews.color.name])
+        scriptNode.inputs[Previews.color.name].setBlocking(False)
         nodes.stereo.depth.link(scriptNode.inputs[Previews.depthRaw.name])
+        scriptNode.inputs[Previews.depthRaw.name].setBlocking(False)
         nodes.stereo.disparity.link(scriptNode.inputs[Previews.disparity.name])
+        scriptNode.inputs[Previews.disparity.name].setBlocking(False)
         nodes.stereo.rectifiedLeft.link(scriptNode.inputs[Previews.rectifiedLeft.name])
+        scriptNode.inputs[Previews.rectifiedLeft.name].setBlocking(False)
         nodes.stereo.rectifiedRight.link(scriptNode.inputs[Previews.rectifiedRight.name])
+        scriptNode.inputs[Previews.rectifiedRight.name].setBlocking(False)
         nodes.monoLeft.out.link(scriptNode.inputs[Previews.left.name])
+        scriptNode.inputs[Previews.left.name].setBlocking(False)
         nodes.monoRight.out.link(scriptNode.inputs[Previews.right.name])
+        scriptNode.inputs[Previews.right.name].setBlocking(False)
         nodes.nn.passthrough.link(scriptNode.inputs[Previews.nnInput.name])
+        scriptNode.inputs[Previews.nnInput.name].setBlocking(False)
         scriptNode.setScript(f"""
         current = "{Previews.color.name}"
 
