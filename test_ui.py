@@ -15,6 +15,7 @@ FPS = 10
 
 test_result = {
     'usb3_res': '',
+    'eeprom_res': '',
     'rgb_cam_res': '',
     'jpeg_enc_res': '',
     'prew_out_rgb_res': '',
@@ -44,6 +45,7 @@ OP_OAK_KEYS = {
 
 OAK_D_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
         USB3 <br style="font-size:18pt"> \
+        EEPROM write test <br style="font-size:22pt"> \
         RGB Camera connected  <br style="font-size:21pt"> \
         JPEG Encoding Stream <br style="font-size:21pt"> \
         preview-out-rgb Stream <br style="font-size:21pt"> \
@@ -55,13 +57,10 @@ OAK_D_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:1
 
 OAK_ONE_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
         USB3 <br style="font-size:18pt"> \
+        EEPROM write test <br style="font-size:22pt"> \
         RGB Camera connected  <br style="font-size:21pt"> \
         JPEG Encoding Stream <br style="font-size:21pt"> \
-        preview-out-rgb Stream <br style="font-size:21pt"> \
-        <br style="font-size:23pt"> \
-        <br style="font-size:21pt"> \
-        <br style="font-size:22pt"> \
-        <br style="font-size:21pt"> </span></p></body></html>'
+        preview-out-rgb Stream <br style="font-size:21pt"></span></p></body></html>'
 
 CSV_HEADER = {
     'OAK-1': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","JPEG Encoding Operator","RGB Encoding Operator"',
@@ -280,6 +279,19 @@ class DepthAICamera():
             return False, None
         return True, image
 
+    def flash_eeprom(self):
+        device_calib = self.device.readCalibration()
+        device_calib.eepromToJsonFile(CALIB_BACKUP_FILE)
+        print('Calibraton Data on the device is backed up at: ', CALIB_BACKUP_FILE, sep='\n')
+        calib_data = dai.CalibrationHandler(calib_path)
+
+        status = self.device.flashCalibration(calib_data)
+        if status:
+            print('Calibration Flash Successful')
+            return True
+        print('Calibration Flash Failed!!!')
+        return False
+
 
 class Camera(QtWidgets.QWidget):
     def __init__(self, get_image, camera_format, title='Camera', location=(0, 0)):
@@ -365,49 +377,66 @@ class UiTests(object):
         # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         if test_type == 'OAK-1':
-            self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 201))
+            self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 241))
         else:
-            self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 355))
+            self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 395))
         self.automated_tests.setObjectName("automated_tests")
         self.automated_tests_labels = QtWidgets.QLabel(self.automated_tests)
         self.automated_tests_labels.setGeometry(QtCore.QRect(10, 20, 221, 351))
         self.automated_tests_labels.setObjectName("automated_tests_labels")
+        self.automated_tests_labels.setContentsMargins(0,9,9,5)
+        self.automated_tests_labels.setAlignment(QtCore.Qt.AlignRight)
         # self.automated_tests_labels.setGeometry(QtCore.QRect(10, 30, 221, 150))
 
+        px, py, x, y = 240, 37, 51, 21
+        dy = 39
         self.usb3_res = QtWidgets.QLabel(self.automated_tests)
-        self.usb3_res.setGeometry(QtCore.QRect(240, 40, 51, 21))
+        self.usb3_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.usb3_res.setObjectName("usb3_res")
 
+        py += dy
+        self.eeprom_res = QtWidgets.QLabel(self.automated_tests)
+        self.eeprom_res.setGeometry(QtCore.QRect(px, py, x, y))
+        self.eeprom_res.setObjectName("eeprom_res")
+
+        py += dy
         self.rgb_cam_res = QtWidgets.QLabel(self.automated_tests)
-        self.rgb_cam_res.setGeometry(QtCore.QRect(240, 70, 51, 31))
+        self.rgb_cam_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.rgb_cam_res.setObjectName("rgb_cam_res")
 
+        py += dy
         self.jpeg_enc_res = QtWidgets.QLabel(self.automated_tests)
-        self.jpeg_enc_res.setGeometry(QtCore.QRect(240, 150, 51, 31))
+        self.jpeg_enc_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.jpeg_enc_res.setObjectName("jpeg_enc_res")
 
+        py += dy
         self.prew_out_rgb_res = QtWidgets.QLabel(self.automated_tests)
-        self.prew_out_rgb_res.setGeometry(QtCore.QRect(240, 110, 51, 31))
+        self.prew_out_rgb_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.prew_out_rgb_res.setObjectName("prew_out_rgb_res")
 
+        py += dy
         self.left_cam_res = QtWidgets.QLabel(self.automated_tests)
-        self.left_cam_res.setGeometry(QtCore.QRect(240, 190, 51, 31))
+        self.left_cam_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.left_cam_res.setObjectName("left_cam_res")
 
+        py += dy
         self.right_cam_res = QtWidgets.QLabel(self.automated_tests)
-        self.right_cam_res.setGeometry(QtCore.QRect(240, 220, 51, 41))
+        self.right_cam_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.right_cam_res.setObjectName("right_cam_res")
 
+        py += dy
         self.left_strm_res = QtWidgets.QLabel(self.automated_tests)
-        self.left_strm_res.setGeometry(QtCore.QRect(240, 260, 51, 41))
+        self.left_strm_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.left_strm_res.setObjectName("left_strm_res")
 
+        py += dy
         self.right_strm_res = QtWidgets.QLabel(self.automated_tests)
-        self.right_strm_res.setGeometry(QtCore.QRect(240, 300, 51, 31))
+        self.right_strm_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.right_strm_res.setObjectName("right_strm_res")
 
+        py += dy
         self.ir_project_res = QtWidgets.QLabel(self.automated_tests)
-        self.ir_project_res.setGeometry(QtCore.QRect(240, 340, 51, 41))
+        self.ir_project_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.ir_project_res.setObjectName("ir_project_res")
 
         self.operator_tests = QtWidgets.QGroupBox(self.centralwidget)
@@ -743,6 +772,14 @@ class UiTests(object):
                 location = WIDTH + prew_width + 20, prew_height + 80
                 self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8, 'RIGHT Preview', location)
                 self.right.show()
+            self.print_logs('EEPROM backup saved at')
+            self.print_logs(CALIB_BACKUP_FILE)
+            if self.depth_camera.flash_eeprom():
+                self.print_logs('Flash EEPROM sucsesfull!')
+                test_result['eeprom_res'] = 'PASS'
+            else:
+                self.print_logs('Flash EEPROM failed!')
+                test_result['eeprom_res'] = 'FAIL'
         else:
             print(locals())
             self.print_logs('No camera detected, check the connexion and try again...')
@@ -759,6 +796,12 @@ class UiTests(object):
         else:
             self.usb3_res.setPalette(self.red_pallete)
         self.usb3_res.setText(test_result['usb3_res'])
+
+        if test_result['eeprom_res'] == 'PASS':
+            self.eeprom_res.setPalette(self.green_pallete)
+        else:
+            self.eeprom_res.setPalette(self.red_pallete)
+        self.eeprom_res.setText(test_result['usb3_res'])
 
         if test_result['rgb_cam_res'] == 'PASS':
             self.rgb_cam_res.setPalette(self.green_pallete)
@@ -904,8 +947,12 @@ def signal_handler(sig, frame):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Arguments for test UI')
     parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE)', default='OAK-D-PRO')
+    CALIB_JSON_FILE = path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib.json'
+    CALIB_BACKUP_FILE = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib_backup.json'
+    parser.add_argument('--calib_json_file', '-c', dest='calib_json_file', help='Path to V6 calibration file in json', default=CALIB_JSON_FILE)
     args = parser.parse_args()
     test_type = args.camera_type.upper()
+    calib_path = args.calib_json_file
     app = QtWidgets.QApplication(sys.argv)
     screen = app.primaryScreen()
     rect = screen.availableGeometry()
