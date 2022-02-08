@@ -711,9 +711,12 @@ class UiTests(object):
             self.set_result()
             self.disconnect()
             self.rgb_ntes_but.setChecked(True)
-            self.left_ntes_but.setChecked(True)
-            self.right_ntes_but.setChecked(True)
             self.jpeg_ntes_but.setChecked(True)
+            if test_type != 'OAK-1':
+                self.right_ntes_but.setChecked(True)
+                self.left_ntes_but.setChecked(True)
+                if test_type == 'OAK-D-PRO':
+                    self.ir_ntes_but.setChecked(True)
             self.connect_but.setText("CONNECT")
             return
         self.print_logs('clear')
