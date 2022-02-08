@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
 import sys
+import time
 
 if sys.version_info[0] < 3:
     raise Exception("Must be using Python 3")
-import argparse
-import json
 import os
-import time
-import traceback
-from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
 import platform
@@ -42,7 +38,7 @@ except Exception as ex:
 from log_system_information import make_sys_report
 from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.arg_manager import parseArgs
-from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
+from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS, prepareConfManager
 from depthai_helpers.metrics import MetricManager
 from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, createBlankFrame
@@ -120,9 +116,10 @@ class Demo:
             self.setup(conf)
             self.run()
 
-    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, onAppSetup = noop, onAppStart = noop, shouldRun = lambda: True, showDownloadProgress=None, collectMetrics=False):
+    def __init__(self, displayFrames=True, consumeFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onPipeline = noop, onSetup = noop, onTeardown = noop, onIter = noop, onAppSetup = noop, onAppStart = noop, shouldRun = lambda: True, showDownloadProgress=None, collectMetrics=False):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
+        self._consumeFrames = consumeFrames
         self.toggleMetrics(collectMetrics)
 
         self.onNewFrame = onNewFrame
@@ -130,6 +127,7 @@ class Demo:
         self.onNn = onNn
         self.onReport = onReport
         self.onSetup = onSetup
+        self.onPipeline = onPipeline
         self.onTeardown = onTeardown
         self.onIter = onIter
         self.shouldRun = shouldRun
@@ -137,7 +135,7 @@ class Demo:
         self.onAppSetup = onAppSetup
         self.onAppStart = onAppStart
 
-    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
+    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onPipeline=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
         if onNewFrame is not None:
             self.onNewFrame = onNewFrame
         if onShowFrame is not None:
@@ -146,6 +144,8 @@ class Demo:
             self.onNn = onNn
         if onReport is not None:
             self.onReport = onReport
+        if onPipeline is not None:
+            self.onPipeline = onPipeline
         if onSetup is not None:
             self.onSetup = onSetup
         if onTeardown is not None:
@@ -227,16 +227,16 @@ class Demo:
             if self._conf.leftCameraEnabled:
                 self._pm.createLeftCam(self._monoRes, self._conf.args.monoFps,
                                  orientation=self._conf.args.cameraOrientation.get(Previews.left.name),
-                                 xout=Previews.left.name in self._conf.args.show)
+                                 xout=Previews.left.name in self._conf.args.show and self._consumeFrames)
             if self._conf.rightCameraEnabled:
                 self._pm.createRightCam(self._monoRes, self._conf.args.monoFps,
                                   orientation=self._conf.args.cameraOrientation.get(Previews.right.name),
-                                  xout=Previews.right.name in self._conf.args.show)
+                                  xout=Previews.right.name in self._conf.args.show and self._consumeFrames)
             if self._conf.rgbCameraEnabled:
                 self._pm.createColorCam(previewSize=self._conf.previewSize, res=self._rgbRes, fps=self._conf.args.rgbFps,
                                   orientation=self._conf.args.cameraOrientation.get(Previews.color.name),
                                   fullFov=not self._conf.args.disableFullFovNn,
-                                  xout=Previews.color.name in self._conf.args.show)
+                                  xout=Previews.color.name in self._conf.args.show and self._consumeFrames)
 
             if self._conf.useDepth:
                 self._pm.createDepth(
@@ -247,10 +247,10 @@ class Demo:
                     self._conf.args.lrcThreshold,
                     self._conf.args.extendedDisparity,
                     self._conf.args.subpixel,
-                    useDepth=Previews.depth.name in self._conf.args.show or Previews.depthRaw.name in self._conf.args.show,
-                    useDisparity=Previews.disparity.name in self._conf.args.show or Previews.disparityColor.name in self._conf.args.show,
-                    useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show,
-                    useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show,
+                    useDepth=Previews.depth.name in self._conf.args.show or Previews.depthRaw.name in self._conf.args.show and self._consumeFrames,
+                    useDisparity=Previews.disparity.name in self._conf.args.show or Previews.disparityColor.name in self._conf.args.show and self._consumeFrames,
+                    useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show and self._consumeFrames,
+                    useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show and self._consumeFrames,
                 )
 
             self._encManager = None
@@ -269,10 +269,11 @@ class Demo:
                 sbbScaleFactor=self._conf.args.sbbScaleFactor, fullFov=not self._conf.args.disableFullFovNn,
             )
 
-            self._pm.addNn(nn=self._nn, xoutNnInput=Previews.nnInput.name in self._conf.args.show,
+            self._pm.addNn(nn=self._nn, xoutNnInput=Previews.nnInput.name in self._conf.args.show and self._consumeFrames,
                            xoutSbb=self._conf.args.spatialBoundingBox and self._conf.useDepth)
 
     def run(self):
+        self.onPipeline(self._pm.pipeline, self._pm.nodes)
         self._device.startPipeline(self._pm.pipeline)
         self._pm.createDefaultQueues(self._device)
         if self._conf.useNN:
@@ -307,7 +308,8 @@ class Demo:
             if any(self._cameraConfig.values()):
                 self._updateCameraConfigs()
 
-            self._pv.createQueues(self._device, self._createQueueCallback)
+            if self._consumeFrames:
+                self._pv.createQueues(self._device, self._createQueueCallback)
             if self._encManager is not None:
                 self._encManager.createDefaultQueues(self._device)
 
@@ -359,7 +361,8 @@ class Demo:
         self.timer = time.monotonic()
 
         if self._conf.useCamera:
-            self._pv.prepareFrames(callback=self.onNewFrame)
+            if self._consumeFrames:
+                self._pv.prepareFrames(callback=self.onNewFrame)
             if self._encManager is not None:
                 self._encManager.parseQueues()
 
@@ -552,457 +555,37 @@ class Demo:
             print(','.join(map(str, data.values())), file=self._reportFile)
 
 
-def prepareConfManager(in_args):
-    confManager = ConfigManager(in_args)
-    confManager.linuxCheckApplyUsbRules()
-    if not confManager.useCamera:
-        if str(confManager.args.video).startswith('https'):
-            confManager.args.video = downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS)
-            print("Youtube video downloaded.")
-        if not Path(confManager.args.video).exists():
-            raise ValueError("Path {} does not exists!".format(confManager.args.video))
-    return confManager
-
-
-def runQt():
-    from gui.main import DemoQtGui
-    from PyQt5.QtWidgets import QMessageBox
-    from PyQt5.QtCore import QObject, pyqtSignal, QRunnable, QThreadPool
-
-
-    class WorkerSignals(QObject):
-        updateConfSignal = pyqtSignal(list)
-        updateDownloadProgressSignal = pyqtSignal(int, int)
-        updatePreviewSignal = pyqtSignal(np.ndarray)
-        setDataSignal = pyqtSignal(list)
-        exitSignal = pyqtSignal()
-        errorSignal = pyqtSignal(str)
-
-    class Worker(QRunnable):
-        def __init__(self, instance, parent, conf, selectedPreview=None):
-            super(Worker, self).__init__()
-            self.running = False
-            self.selectedPreview = selectedPreview
-            self.instance = instance
-            self.parent = parent
-            self.conf = conf
-            self.callback_module = loadModule(conf.args.callback)
-            self.file_callbacks = {
-                callbackName: getattr(self.callback_module, callbackName)
-                for callbackName in ["shouldRun", "onNewFrame", "onShowFrame", "onNn", "onReport", "onSetup", "onTeardown", "onIter"]
-                if callable(getattr(self.callback_module, callbackName, None))
-            }
-            self.instance.setCallbacks(**self.file_callbacks)
-            self.signals = WorkerSignals()
-            self.signals.exitSignal.connect(self.terminate)
-            self.signals.updateConfSignal.connect(self.updateConf)
-
-
-        def run(self):
-            self.running = True
-            self.signals.setDataSignal.emit(["restartRequired", False])
-            self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
-            self.conf.args.bandwidth = "auto"
-            if self.conf.args.deviceId is None:
-                devices = dai.Device.getAllAvailableDevices()
-                if len(devices) > 0:
-                    defaultDevice = next(map(
-                        lambda info: info.getMxId(),
-                        filter(lambda info: info.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC, devices)
-                    ), None)
-                    if defaultDevice is None:
-                        defaultDevice = devices[0].getMxId()
-                    self.conf.args.deviceId = defaultDevice
-            if Previews.color.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.color.name)
-            if Previews.nnInput.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.nnInput.name)
-            if Previews.depth.name not in self.conf.args.show and Previews.disparityColor.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.depth.name)
-            if Previews.depthRaw.name not in self.conf.args.show and Previews.disparity.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.depthRaw.name)
-            if Previews.left.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.left.name)
-            if Previews.rectifiedLeft.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.rectifiedLeft.name)
-            if Previews.right.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.right.name)
-            if Previews.rectifiedRight.name not in self.conf.args.show:
-                self.conf.args.show.append(Previews.rectifiedRight.name)
-            try:
-                self.instance.run_all(self.conf)
-            except KeyboardInterrupt:
-                sys.exit(0)
-            except Exception as ex:
-                self.onError(ex)
-
-        def terminate(self):
-            self.running = False
-            self.signals.setDataSignal.emit(["restartRequired", False])
-
-
-        def updateConf(self, argsList):
-            self.conf.args = argparse.Namespace(**dict(argsList))
-
-        def onError(self, ex: Exception):
-            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [str(ex)]))
-            self.signals.setDataSignal.emit(["restartRequired", True])
-
-        def shouldRun(self):
-            if "shouldRun" in self.file_callbacks:
-                return self.running and self.file_callbacks["shouldRun"]()
-            return self.running
-
-        def onShowFrame(self, frame, source):
-            if "onShowFrame" in self.file_callbacks:
-                self.file_callbacks["onShowFrame"](frame, source)
-            if source == self.selectedPreview:
-                self.signals.updatePreviewSignal.emit(frame)
-
-        def onAppSetup(self, app):
-            setupFrame = createBlankFrame(500, 500)
-            cv2.putText(setupFrame, "Preparing {} app...".format(app.appName), (150, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
-            cv2.putText(setupFrame, "Preparing {} app...".format(app.appName), (150, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
-            self.signals.updatePreviewSignal.emit(setupFrame)
-
-        def onAppStart(self, app):
-            setupFrame = createBlankFrame(500, 500)
-            cv2.putText(setupFrame, "Running {} app... (check console)".format(app.appName), (100, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
-            cv2.putText(setupFrame, "Running {} app... (check console)".format(app.appName), (100, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
-            self.signals.updatePreviewSignal.emit(setupFrame)
-
-        def showDownloadProgress(self, curr, total):
-            self.signals.updateDownloadProgressSignal.emit(curr, total)
-
-        def onSetup(self, instance):
-            if "onSetup" in self.file_callbacks:
-                self.file_callbacks["onSetup"](instance)
-            self.signals.updateConfSignal.emit(list(vars(self.conf.args).items()))
-            self.signals.setDataSignal.emit(["previewChoices", self.conf.args.show])
-            devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
-            self.signals.setDataSignal.emit(["deviceChoices", devices])
-            if instance._nnManager is not None:
-                self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
-            else:
-                self.signals.setDataSignal.emit(["countLabels", []])
-            self.signals.setDataSignal.emit(["depthEnabled", self.conf.useDepth])
-            self.signals.setDataSignal.emit(["statisticsAccepted", self.instance.metrics is not None])
-            self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
-
-
-    class GuiApp(DemoQtGui):
-        def __init__(self):
-            super().__init__()
-            self.confManager = prepareConfManager(args)
-            self.running = False
-            self.selectedPreview = self.confManager.args.show[0] if len(self.confManager.args.show) > 0 else "color"
-            self.useDisparity = False
-            self.dataInitialized = False
-            self.appInitialized = False
-            self.threadpool = QThreadPool()
-            self._demoInstance = Demo(displayFrames=False)
-
-        def updateArg(self, arg_name, arg_value, shouldUpdate=True):
-            setattr(self.confManager.args, arg_name, arg_value)
-            if shouldUpdate:
-                self.worker.signals.setDataSignal.emit(["restartRequired", True])
-
-
-        def showError(self, error):
-            print(error, file=sys.stderr)
-            msgBox = QMessageBox()
-            msgBox.setIcon(QMessageBox.Critical)
-            msgBox.setText(error)
-            msgBox.setWindowTitle("An error occured")
-            msgBox.setStandardButtons(QMessageBox.Ok)
-            msgBox.exec()
-
-        def setupDataCollection(self):
-            try:
-                with Path(".consent").open() as f:
-                    accepted = json.load(f)["statistics"]
-            except:
-                accepted = True
-
-            self._demoInstance.toggleMetrics(accepted)
-
-        def start(self):
-            self.setupDataCollection()
-            self.running = True
-            self.worker = Worker(self._demoInstance, parent=self, conf=self.confManager, selectedPreview=self.selectedPreview)
-            self.worker.signals.updatePreviewSignal.connect(self.updatePreview)
-            self.worker.signals.updateDownloadProgressSignal.connect(self.updateDownloadProgress)
-            self.worker.signals.setDataSignal.connect(self.setData)
-            self.worker.signals.errorSignal.connect(self.showError)
-            self.threadpool.start(self.worker)
-            if not self.appInitialized:
-                self.appInitialized = True
-                exit_code = self.startGui()
-                self.stop(wait=False)
-                sys.exit(exit_code)
-
-        def stop(self, wait=True):
-            if hasattr(self._demoInstance, "_device"):
-                current_mxid = self._demoInstance._device.getMxId()
-            else:
-                current_mxid = self.confManager.args.deviceId
-            self.worker.signals.exitSignal.emit()
-            self.threadpool.waitForDone(10000)
-
-            if wait and current_mxid is not None:
-                start = time.time()
-                while time.time() - start < 30:
-                    if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
-                        break
-                    else:
-                        time.sleep(0.1)
-                else:
-                    print(f"[Warning] Device not available again after 30 seconds! MXID: {current_mxid}")
-
-        def restartDemo(self):
-            self.stop()
-            self.start()
-
-        def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrc=None, lrcThreshold=None):
-            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrc=lrc, lrcThreshold=lrcThreshold)
-            if median is not None:
-                if median == dai.MedianFilter.MEDIAN_OFF:
-                    self.updateArg("stereoMedianSize", 0, False)
-                elif median == dai.MedianFilter.KERNEL_3x3:
-                    self.updateArg("stereoMedianSize", 3, False)
-                elif median == dai.MedianFilter.KERNEL_5x5:
-                    self.updateArg("stereoMedianSize", 5, False)
-                elif median == dai.MedianFilter.KERNEL_7x7:
-                    self.updateArg("stereoMedianSize", 7, False)
-            if dct is not None:
-                self.updateArg("disparityConfidenceThreshold", dct, False)
-            if sigma is not None:
-                self.updateArg("sigma", sigma, False)
-            if lrc is not None:
-                self.updateArg("stereoLrCheck", lrc, False)
-            if lrcThreshold is not None:
-                self.updateArg("lrcThreshold", lrcThreshold, False)
-
-        def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
-            if exposure is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraExposure or []))) + [(name, exposure)]
-                self._demoInstance._cameraConfig["exposure"] = newValue
-                self.updateArg("cameraExposure", newValue, False)
-            if sensitivity is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraSensitivity or []))) + [(name, sensitivity)]
-                self._demoInstance._cameraConfig["sensitivity"] = newValue
-                self.updateArg("cameraSensitivity", newValue, False)
-            if saturation is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraSaturation or []))) + [(name, saturation)]
-                self._demoInstance._cameraConfig["saturation"] = newValue
-                self.updateArg("cameraSaturation", newValue, False)
-            if contrast is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraContrast or []))) + [(name, contrast)]
-                self._demoInstance._cameraConfig["contrast"] = newValue
-                self.updateArg("cameraContrast", newValue, False)
-            if brightness is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraBrightness or []))) + [(name, brightness)]
-                self._demoInstance._cameraConfig["brightness"] = newValue
-                self.updateArg("cameraBrightness", newValue, False)
-            if sharpness is not None:
-                newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraSharpness or []))) + [(name, sharpness)]
-                self._demoInstance._cameraConfig["sharpness"] = newValue
-                self.updateArg("cameraSharpness", newValue, False)
-
-            self._demoInstance._updateCameraConfigs()
-
-        def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None):
-            if depthFrom is not None:
-                self.updateArg("minDepth", depthFrom)
-            if depthTo is not None:
-                self.updateArg("maxDepth", depthTo)
-            if subpixel is not None:
-                self.updateArg("subpixel", subpixel)
-            if extended is not None:
-                self.updateArg("extendedDisparity", extended)
-
-        def guiOnCameraSetupUpdate(self, name, fps=None, resolution=None):
-            if fps is not None:
-                if name == "color":
-                    self.updateArg("rgbFps", fps)
-                else:
-                    self.updateArg("monoFps", fps)
-            if resolution is not None:
-                if name == "color":
-                    self.updateArg("rgbResolution", resolution)
-                else:
-                    self.updateArg("monoResolution", resolution)
-
-        def guiOnAiSetupUpdate(self, cnn=None, shave=None, source=None, fullFov=None, sbb=None, sbbFactor=None, ov=None, countLabel=None):
-            if cnn is not None:
-                self.updateArg("cnnModel", cnn)
-            if shave is not None:
-                self.updateArg("shaves", shave)
-            if source is not None:
-                self.updateArg("camera", source)
-            if fullFov is not None:
-                self.updateArg("disableFullFovNn", not fullFov)
-            if sbb is not None:
-                self.updateArg("spatialBoundingBox", sbb)
-            if sbbFactor is not None:
-                self.updateArg("sbbScaleFactor", sbbFactor)
-            if ov is not None:
-                self.updateArg("openvinoVersion", ov)
-            if countLabel is not None or cnn is not None:
-                self.updateArg("countLabel", countLabel)
-
-        def guiOnPreviewChangeSelected(self, selected):
-            self.worker.selectedPreview = selected
-            self.selectedPreview = selected
-
-        def guiOnSelectDevice(self, selected):
-            self.updateArg("deviceId", selected)
-
-        def guiOnReloadDevices(self):
-            devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
-            if hasattr(self._demoInstance, "_deviceInfo"):
-                devices.insert(0, self._demoInstance._deviceInfo.getMxId())
-            self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
-            if len(devices) > 0:
-                self.worker.signals.setDataSignal.emit(["restartRequired", True])
-
-        def guiOnStaticticsConsent(self, value):
-            try:
-                with Path('.consent').open('w') as f:
-                    json.dump({"statistics": value}, f)
-            except:
-                pass
-            self.worker.signals.setDataSignal.emit(["restartRequired", True])
-
-        def guiOnToggleSync(self, value):
-            self.updateArg("sync", value)
-
-        def guiOnToggleColorEncoding(self, enabled, fps):
-            oldConfig = self.confManager.args.encode or {}
-            if enabled:
-                oldConfig["color"] = fps
-            elif "color" in self.confManager.args.encode:
-                del oldConfig["color"]
-            self.updateArg("encode", oldConfig)
-
-        def guiOnToggleLeftEncoding(self, enabled, fps):
-            oldConfig = self.confManager.args.encode or {}
-            if enabled:
-                oldConfig["left"] = fps
-            elif "color" in self.confManager.args.encode:
-                del oldConfig["left"]
-            self.updateArg("encode", oldConfig)
-
-        def guiOnToggleRightEncoding(self, enabled, fps):
-            oldConfig = self.confManager.args.encode or {}
-            if enabled:
-                oldConfig["right"] = fps
-            elif "color" in self.confManager.args.encode:
-                del oldConfig["right"]
-            self.updateArg("encode", oldConfig)
-
-        def guiOnSelectReportingOptions(self, temp, cpu, memory):
-            options = []
-            if temp:
-                options.append("temp")
-            if cpu:
-                options.append("cpu")
-            if memory:
-                options.append("memory")
-            self.updateArg("report", options)
-
-        def guiOnSelectReportingPath(self, value):
-            self.updateArg("reportFile", value)
-
-        def guiOnSelectEncodingPath(self, value):
-            self.updateArg("encodeOutput", value)
-
-        def guiOnToggleDepth(self, value):
-            self.updateArg("disableDepth", not value)
-            selectedPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name] + ([Previews.disparity.name, Previews.disparityColor.name] if self.useDisparity else [Previews.depth.name, Previews.depthRaw.name])
-            depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name, Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
-            filtered = list(filter(lambda name: name not in depthPreviews, self.confManager.args.show))
-            if value:
-                updated = filtered + selectedPreviews
-                if self.selectedPreview not in updated:
-                    self.selectedPreview = updated[0]
-                self.updateArg("show", updated)
-            else:
-                updated = filtered + [Previews.left.name, Previews.right.name]
-                if self.selectedPreview not in updated:
-                    self.selectedPreview = updated[0]
-                self.updateArg("show", updated)
-
-        def guiOnToggleNN(self, value):
-            self.updateArg("disableNeuralNetwork", not value)
-            filtered = list(filter(lambda name: name != Previews.nnInput.name, self.confManager.args.show))
-            if value:
-                updated = filtered + [Previews.nnInput.name]
-                if self.selectedPreview not in updated:
-                    self.selectedPreview = updated[0]
-                self.updateArg("show", filtered + [Previews.nnInput.name])
-            else:
-                if self.selectedPreview not in filtered:
-                    self.selectedPreview = filtered[0]
-                self.updateArg("show", filtered)
-
-        def guiOnRunApp(self, appName):
-            self.stop()
-            self.updateArg("app", appName, shouldUpdate=False)
-            self.setData(["runningApp", appName])
-            self.start()
-
-        def guiOnTerminateApp(self, appName):
-            self.stop()
-            self.updateArg("app", None, shouldUpdate=False)
-            self.setData(["runningApp", ""])
-            self.start()
-
-        def guiOnToggleDisparity(self, value):
-            self.useDisparity = value
-            depthPreviews = [Previews.depth.name, Previews.depthRaw.name]
-            disparityPreviews = [Previews.disparity.name, Previews.disparityColor.name]
-            if value:
-                filtered = list(filter(lambda name: name not in depthPreviews, self.confManager.args.show))
-                updated = filtered + disparityPreviews
-                if self.selectedPreview not in updated:
-                    self.selectedPreview = updated[0]
-                self.updateArg("show", updated)
-            else:
-                filtered = list(filter(lambda name: name not in disparityPreviews, self.confManager.args.show))
-                updated = filtered + depthPreviews
-                if self.selectedPreview not in updated:
-                    self.selectedPreview = updated[0]
-                self.updateArg("show", updated)
-    GuiApp().start()
-
-
-def runOpenCv():
-    confManager = prepareConfManager(args)
-    demo = Demo()
-    demo.run_all(confManager)
+def runOpenCv(in_args, instance):
+    confManager = prepareConfManager(in_args)
+    instance.run_all(confManager)
 
 
 if __name__ == "__main__":
     try:
         if args.noSupervisor:
             if args.guiType == "qt":
-                runQt()
+                from gui.qt.main import runQt
+                runQt(args, Demo(displayFrames=False))
+            elif args.guiType == "web":
+                from gui.web.main import runWeb
+                runWeb(args, Demo(displayFrames=False, consumeFrames=False))
             else:
                 args.guiType = "cv"
-                runOpenCv()
+                runOpenCv(args, Demo(displayFrames=True))
         else:
             s = Supervisor()
-            if args.guiType != "cv":
+            if args.guiType in ("auto", "qt"):
                 available = s.checkQtAvailability()
                 if args.guiType == "qt" and not available:
                     raise RuntimeError("QT backend is not available, run the script with --guiType \"cv\" to use OpenCV backend")
+                if available:
+                    args.guiType = "qt"
+            if args.guiType in ("auto", "cv"):
                 if args.guiType == "auto" and platform.machine() == 'aarch64':  # Disable Qt by default on Jetson due to Qt issues
                     args.guiType = "cv"
-                elif available:
-                    args.guiType = "qt"
-                else:
-                    args.guiType = "cv"
+                args.guiType = "cv"
+            if args.guiType in ("auto", "web"):
+                args.guiType = "web"
             s.runDemo(args)
     except KeyboardInterrupt:
         sys.exit(0)

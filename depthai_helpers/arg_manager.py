@@ -47,17 +47,19 @@ def orientationCast(arg):
 
 
 openvinoVersions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
-_streamChoices = ("nnInput", "color", "left", "right", "depth", "depthRaw", "disparity", "disparityColor", "rectifiedLeft", "rectifiedRight")
+streamChoices = ("nnInput", "color", "left", "right", "depth", "depthRaw", "disparity", "disparityColor", "rectifiedLeft", "rectifiedRight")
 try:
     import cv2
     colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
 except:
     colorMaps = None
 projectRoot = Path(__file__).parent.parent
+cameraChoices = ["left", "right", "color"]
+reportingChoices = ["temp", "cpu", "memory"]
 
 def parseArgs():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
+    parser.add_argument('-cam', '--camera', choices=cameraChoices, default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
     parser.add_argument('-dd', '--disableDepth', action="store_true", help="Disable depth information")
     parser.add_argument('-dnn', '--disableNeuralNetwork', action="store_true", help="Disable neural network inference")
@@ -79,7 +81,7 @@ def parseArgs():
                         help="Sigma value for Bilateral Filter applied on depth. Default: %(default)s")
     parser.add_argument("-med", "--stereoMedianSize", default=7, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
-    parser.add_argument('-lrc', '--stereoLrCheck', action="store_true",
+    parser.add_argument('-dlrc', '--disableStereoLrCheck', action="store_false", dest="stereoLrCheck",
                         help="Enable stereo 'Left-Right check' feature.")
     parser.add_argument('-ext', '--extendedDisparity', action="store_true",
                         help="Enable stereo 'Extended Disparity' feature.")
@@ -101,8 +103,8 @@ def parseArgs():
                         help="Display spatial bounding box (ROI) when displaying spatial information. The Z coordinate get's calculated from the ROI (average)")
     parser.add_argument("-sbbsf", "--sbbScaleFactor", default=0.3, type=float,
                         help="Spatial bounding box scale factor. Sometimes lower scale factor can give better depth (Z) result. Default: %(default)s")
-    parser.add_argument('-s', '--show', default=[], nargs="+", choices=_streamChoices, help="Choose which previews to show. Default: %(default)s")
-    parser.add_argument('--report', nargs="+", default=[], choices=["temp", "cpu", "memory"], help="Display device utilization data")
+    parser.add_argument('-s', '--show', default=[], nargs="+", choices=streamChoices, help="Choose which previews to show. Default: %(default)s")
+    parser.add_argument('--report', nargs="+", default=[], choices=reportingChoices, help="Display device utilization data")
     parser.add_argument('--reportFile', help="Save report data to specified target file in CSV format")
     parser.add_argument("-monor", "--monoResolution", default=400, type=int, choices=[400,720,800],
                         help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
@@ -119,7 +121,7 @@ def parseArgs():
                                                                                                                  "If set to \"high\", the output streams will stay uncompressed\n"
                                                                                                                  "If set to \"low\", the output streams will be MJPEG-encoded\n"
                                                                                                                  "If set to \"auto\" (default), the optimal bandwidth will be selected based on your connection type and speed")
-    parser.add_argument('-gt', '--guiType', type=str, default="auto", choices=["auto", "qt", "cv"], help="Specify GUI type of the demo. \"cv\" uses built-in OpenCV display methods, \"qt\" uses Qt to display interactive GUI. \"auto\" will use OpenCV for Raspberry Pi and Qt for other platforms")
+    parser.add_argument('-gt', '--guiType', type=str, default="auto", choices=["auto", "qt", "cv", "web"], help="Specify GUI type of the demo. \"cv\" uses built-in OpenCV display methods, \"qt\" uses Qt to display interactive GUI. \"auto\" will use OpenCV for Raspberry Pi and Qt for other platforms")
     parser.add_argument('-usbs', '--usbSpeed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
     parser.add_argument('-enc', '--encode', type=_comaSeparated(default=30.0, cast=float), nargs="+", default=[],
                         help="Define which cameras to encode (record) \n"
@@ -144,4 +146,6 @@ def parseArgs():
     parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
     parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
     parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")
+    parser.add_argument('--host', default="127.0.0.1", help="Specify host address to which web server will bind (used only with guiType set to `web`)")
+    parser.add_argument('--port', default=8090, type=int, help="Specify port to which web server will bind (used only with guiType set to `web`)")
     return parser.parse_args()

@@ -1,0 +1,120 @@
+.root-container {
+  margin: 0 auto;
+  display: flex;
+  text-align: center;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: black;
+
+  .ant-spin {
+    width: 50vw;
+    font-weight: bold;
+  }
+
+  .tab-indicator {
+    padding: 0 10px;
+
+    span {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+  }
+
+  .preview-container {
+    margin: auto 0;
+    box-shadow: 0 3px 10px rgb(0 0 0 / 0.5);
+    border-radius: 0 0 20px 20px;
+    position: relative;
+
+    .ant-spin {
+      position: absolute;
+      top: calc(50% - 50px);
+    }
+
+
+    /* Safari and also the IE Browser */
+      .stream-preview {
+        width: 100%;
+        min-width: 500px;
+        aspect-ratio: 16 / 9;
+      }
+
+      @media (min-width: 1440px) {
+        .stream-preview {
+          min-width: 45vw;
+          max-width: 1100px;
+        }
+      }
+
+      .preview-controls {
+        padding: 10px 0;
+        background-color: #444444;
+        border-radius: 0 0 20px 20px;
+        display: flex;
+        align-items: center;
+        vertical-align: middle;
+        justify-content: space-evenly;
+
+        .ant-select:first-child {
+          width: 130px;
+        }
+      }
+    }
+
+  .title-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .options-section {
+    margin: 10px 0;
+    position: relative;
+    text-align: left;
+    padding: 10px;
+    border: 1px solid @border-color-base;
+    border-radius: 10px;
+
+    .ant-select-lg {
+      display: block;
+      margin: 20px 0;
+    }
+
+    .info-indicator {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+    }
+
+    .switchable-option {
+      button {
+        width: 60px;
+      }
+
+      span {
+        margin-left: 5px;
+      }
+
+      .switchable-input {
+        width: 200px;
+      }
+    }
+
+    .switchable-option + .switchable-option {
+      margin-top: 5px;
+    }
+
+    .ant-btn-block {
+      margin-top: 20px;
+      margin-bottom: 5px;
+      height: 60px;
+      font-weight: bold;
+    }
+  }
+
+  .restart-button {
+    margin-bottom: 20px;
+  }
+}
