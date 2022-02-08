@@ -8,6 +8,7 @@ import depthai as dai
 import argparse
 import os
 # import blobconverter
+import signal
 
 FPS = 10
 
@@ -51,11 +52,16 @@ OAK_D_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:1
         left Stream <br style="font-size:22pt"> \
         right Stream <br style="font-size:21pt"> </span></p></body></html>'
 
+
 OAK_ONE_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
         USB3 <br style="font-size:18pt"> \
         RGB Camera connected  <br style="font-size:21pt"> \
         JPEG Encoding Stream <br style="font-size:21pt"> \
-        preview-out-rgb Stream <br style="font-size:21pt"> </span></p></body></html>'
+        preview-out-rgb Stream <br style="font-size:21pt"> \
+        <br style="font-size:23pt"> \
+        <br style="font-size:21pt"> \
+        <br style="font-size:22pt"> \
+        <br style="font-size:21pt"> </span></p></body></html>'
 
 CSV_HEADER = {
     'OAK-1': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","JPEG Encoding Operator","RGB Encoding Operator"',
@@ -498,110 +504,112 @@ class UiTests(object):
         self.rgb_fail_but.name = 'prew_out_rgb'
         self.rgb_fail_but.toggled.connect(lambda: set_operator_test(self.rgb_fail_but))
 
-        self.op_left_frame = QtWidgets.QFrame(self.operator_tests)
-        self.op_left_frame.setGeometry(QtCore.QRect(160, 180, 131, 41))
-        self.op_left_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.op_left_frame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.op_left_frame.setLineWidth(0)
-        self.op_left_frame.setObjectName("op_left_frame")
-        self.left_pass_but = QtWidgets.QRadioButton(self.op_left_frame)
-        self.left_pass_but.setEnabled(True)
-        self.left_pass_but.setGeometry(QtCore.QRect(10, 10, 16, 16))
-        self.left_pass_but.setFont(font)
-        self.left_pass_but.setText("")
-        self.left_pass_but.setObjectName("left_pass_but")
-        self.left_pass_but.value = 'PASS'
-        self.left_pass_but.name = 'left_strm'
-        self.left_pass_but.toggled.connect(lambda: set_operator_test(self.left_pass_but))
-        self.left_ntes_but = QtWidgets.QRadioButton(self.op_left_frame)
-        self.left_ntes_but.setEnabled(True)
-        self.left_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
-        self.left_ntes_but.setFont(font)
-        self.left_ntes_but.setText("")
-        self.left_ntes_but.setChecked(True)
-        self.left_ntes_but.setObjectName("left_ntes_but")
-        self.left_ntes_but.value = ''
-        self.left_ntes_but.name = 'left_strm'
-        self.left_ntes_but.toggled.connect(lambda: set_operator_test(self.left_ntes_but))
-        self.left_fail_but = QtWidgets.QRadioButton(self.op_left_frame)
-        self.left_fail_but.setEnabled(True)
-        self.left_fail_but.setGeometry(QtCore.QRect(110, 10, 16, 16))
-        self.left_fail_but.setFont(font)
-        self.left_fail_but.setText("")
-        self.left_fail_but.setObjectName("left_fail_but")
-        self.left_fail_but.value = 'FAIL'
-        self.left_fail_but.name = 'left_strm'
-        self.left_fail_but.toggled.connect(lambda: set_operator_test(self.left_fail_but))
+        if test_type != 'OAK-1':
+            self.op_left_frame = QtWidgets.QFrame(self.operator_tests)
+            self.op_left_frame.setGeometry(QtCore.QRect(160, 180, 131, 41))
+            self.op_left_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+            self.op_left_frame.setFrameShadow(QtWidgets.QFrame.Raised)
+            self.op_left_frame.setLineWidth(0)
+            self.op_left_frame.setObjectName("op_left_frame")
+            self.left_pass_but = QtWidgets.QRadioButton(self.op_left_frame)
+            self.left_pass_but.setEnabled(True)
+            self.left_pass_but.setGeometry(QtCore.QRect(10, 10, 16, 16))
+            self.left_pass_but.setFont(font)
+            self.left_pass_but.setText("")
+            self.left_pass_but.setObjectName("left_pass_but")
+            self.left_pass_but.value = 'PASS'
+            self.left_pass_but.name = 'left_strm'
+            self.left_pass_but.toggled.connect(lambda: set_operator_test(self.left_pass_but))
+            self.left_ntes_but = QtWidgets.QRadioButton(self.op_left_frame)
+            self.left_ntes_but.setEnabled(True)
+            self.left_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
+            self.left_ntes_but.setFont(font)
+            self.left_ntes_but.setText("")
+            self.left_ntes_but.setChecked(True)
+            self.left_ntes_but.setObjectName("left_ntes_but")
+            self.left_ntes_but.value = ''
+            self.left_ntes_but.name = 'left_strm'
+            self.left_ntes_but.toggled.connect(lambda: set_operator_test(self.left_ntes_but))
+            self.left_fail_but = QtWidgets.QRadioButton(self.op_left_frame)
+            self.left_fail_but.setEnabled(True)
+            self.left_fail_but.setGeometry(QtCore.QRect(110, 10, 16, 16))
+            self.left_fail_but.setFont(font)
+            self.left_fail_but.setText("")
+            self.left_fail_but.setObjectName("left_fail_but")
+            self.left_fail_but.value = 'FAIL'
+            self.left_fail_but.name = 'left_strm'
+            self.left_fail_but.toggled.connect(lambda: set_operator_test(self.left_fail_but))
 
-        self.op_right_frame = QtWidgets.QFrame(self.operator_tests)
-        self.op_right_frame.setGeometry(QtCore.QRect(160, 230, 131, 41))
-        self.op_right_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.op_right_frame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.op_right_frame.setLineWidth(0)
-        self.op_right_frame.setObjectName("op_right_frame")
-        self.right_pass_but = QtWidgets.QRadioButton(self.op_right_frame)
-        self.right_pass_but.setEnabled(True)
-        self.right_pass_but.setGeometry(QtCore.QRect(10, 10, 16, 16))
-        self.right_pass_but.setFont(font)
-        self.right_pass_but.setText("")
-        self.right_pass_but.setObjectName("right_pass_but")
-        self.right_pass_but.value = 'PASS'
-        self.right_pass_but.name = 'right_strm'
-        self.right_pass_but.toggled.connect(lambda: set_operator_test(self.right_pass_but))
-        self.right_ntes_but = QtWidgets.QRadioButton(self.op_right_frame)
-        self.right_ntes_but.setEnabled(True)
-        self.right_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
-        self.right_ntes_but.setFont(font)
-        self.right_ntes_but.setText("")
-        self.right_ntes_but.setChecked(True)
-        self.right_ntes_but.setObjectName("right_ntes_but")
-        self.right_ntes_but.value = ''
-        self.right_ntes_but.name = 'right_strm'
-        self.right_ntes_but.toggled.connect(lambda: set_operator_test(self.right_ntes_but))
-        self.right_fail_but = QtWidgets.QRadioButton(self.op_right_frame)
-        self.right_fail_but.setEnabled(True)
-        self.right_fail_but.setGeometry(QtCore.QRect(110, 10, 16, 16))
-        self.right_fail_but.setFont(font)
-        self.right_fail_but.setText("")
-        self.right_fail_but.setObjectName("right_fail_but")
-        self.right_fail_but.value = 'FAIL'
-        self.right_fail_but.name = 'right_strm'
-        self.right_fail_but.toggled.connect(lambda: set_operator_test(self.right_fail_but))
+            self.op_right_frame = QtWidgets.QFrame(self.operator_tests)
+            self.op_right_frame.setGeometry(QtCore.QRect(160, 230, 131, 41))
+            self.op_right_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+            self.op_right_frame.setFrameShadow(QtWidgets.QFrame.Raised)
+            self.op_right_frame.setLineWidth(0)
+            self.op_right_frame.setObjectName("op_right_frame")
+            self.right_pass_but = QtWidgets.QRadioButton(self.op_right_frame)
+            self.right_pass_but.setEnabled(True)
+            self.right_pass_but.setGeometry(QtCore.QRect(10, 10, 16, 16))
+            self.right_pass_but.setFont(font)
+            self.right_pass_but.setText("")
+            self.right_pass_but.setObjectName("right_pass_but")
+            self.right_pass_but.value = 'PASS'
+            self.right_pass_but.name = 'right_strm'
+            self.right_pass_but.toggled.connect(lambda: set_operator_test(self.right_pass_but))
+            self.right_ntes_but = QtWidgets.QRadioButton(self.op_right_frame)
+            self.right_ntes_but.setEnabled(True)
+            self.right_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
+            self.right_ntes_but.setFont(font)
+            self.right_ntes_but.setText("")
+            self.right_ntes_but.setChecked(True)
+            self.right_ntes_but.setObjectName("right_ntes_but")
+            self.right_ntes_but.value = ''
+            self.right_ntes_but.name = 'right_strm'
+            self.right_ntes_but.toggled.connect(lambda: set_operator_test(self.right_ntes_but))
+            self.right_fail_but = QtWidgets.QRadioButton(self.op_right_frame)
+            self.right_fail_but.setEnabled(True)
+            self.right_fail_but.setGeometry(QtCore.QRect(110, 10, 16, 16))
+            self.right_fail_but.setFont(font)
+            self.right_fail_but.setText("")
+            self.right_fail_but.setObjectName("right_fail_but")
+            self.right_fail_but.value = 'FAIL'
+            self.right_fail_but.name = 'right_strm'
+            self.right_fail_but.toggled.connect(lambda: set_operator_test(self.right_fail_but))
 
-        self.op_ir_frame = QtWidgets.QFrame(self.operator_tests)
-        self.op_ir_frame.setGeometry(QtCore.QRect(160, 270, 131, 41))
-        self.op_ir_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.op_ir_frame.setFrameShadow(QtWidgets.QFrame.Raised)
-        self.op_ir_frame.setLineWidth(0)
-        self.op_ir_frame.setObjectName("op_ir_frame")
-        self.ir_pass_but = QtWidgets.QRadioButton(self.op_ir_frame)
-        self.ir_pass_but.setEnabled(True)
-        self.ir_pass_but.setGeometry(QtCore.QRect(10, 10, 16, 16))
-        self.ir_pass_but.setFont(font)
-        self.ir_pass_but.setText("")
-        self.ir_pass_but.setObjectName("right_pass_but")
-        self.ir_pass_but.value = 'PASS'
-        self.ir_pass_but.name = 'ir_light'
-        self.ir_pass_but.toggled.connect(lambda: set_operator_test(self.ir_pass_but))
-        self.ir_ntes_but = QtWidgets.QRadioButton(self.op_ir_frame)
-        self.ir_ntes_but.setEnabled(True)
-        self.ir_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
-        self.ir_ntes_but.setFont(font)
-        self.ir_ntes_but.setText("")
-        self.ir_ntes_but.setChecked(True)
-        self.ir_ntes_but.setObjectName("right_ntes_but")
-        self.ir_ntes_but.value = ''
-        self.ir_ntes_but.name = 'ir_light'
-        self.ir_ntes_but.toggled.connect(lambda: set_operator_test(self.ir_ntes_but))
-        self.ir_fail_but = QtWidgets.QRadioButton(self.op_ir_frame)
-        self.ir_fail_but.setEnabled(True)
-        self.ir_fail_but.setGeometry(QtCore.QRect(110, 10, 16, 16))
-        self.ir_fail_but.setFont(font)
-        self.ir_fail_but.setText("")
-        self.ir_fail_but.setObjectName("ir_fail_but")
-        self.ir_fail_but.value = 'FAIL'
-        self.ir_fail_but.name = 'ir_light'
-        self.ir_fail_but.toggled.connect(lambda: set_operator_test(self.ir_fail_but))
+            if test_type == 'OAK-D-PRO':
+                self.op_ir_frame = QtWidgets.QFrame(self.operator_tests)
+                self.op_ir_frame.setGeometry(QtCore.QRect(160, 270, 131, 41))
+                self.op_ir_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
+                self.op_ir_frame.setFrameShadow(QtWidgets.QFrame.Raised)
+                self.op_ir_frame.setLineWidth(0)
+                self.op_ir_frame.setObjectName("op_ir_frame")
+                self.ir_pass_but = QtWidgets.QRadioButton(self.op_ir_frame)
+                self.ir_pass_but.setEnabled(True)
+                self.ir_pass_but.setGeometry(QtCore.QRect(10, 10, 16, 16))
+                self.ir_pass_but.setFont(font)
+                self.ir_pass_but.setText("")
+                self.ir_pass_but.setObjectName("right_pass_but")
+                self.ir_pass_but.value = 'PASS'
+                self.ir_pass_but.name = 'ir_light'
+                self.ir_pass_but.toggled.connect(lambda: set_operator_test(self.ir_pass_but))
+                self.ir_ntes_but = QtWidgets.QRadioButton(self.op_ir_frame)
+                self.ir_ntes_but.setEnabled(True)
+                self.ir_ntes_but.setGeometry(QtCore.QRect(60, 10, 16, 16))
+                self.ir_ntes_but.setFont(font)
+                self.ir_ntes_but.setText("")
+                self.ir_ntes_but.setChecked(True)
+                self.ir_ntes_but.setObjectName("right_ntes_but")
+                self.ir_ntes_but.value = ''
+                self.ir_ntes_but.name = 'ir_light'
+                self.ir_ntes_but.toggled.connect(lambda: set_operator_test(self.ir_ntes_but))
+                self.ir_fail_but = QtWidgets.QRadioButton(self.op_ir_frame)
+                self.ir_fail_but.setEnabled(True)
+                self.ir_fail_but.setGeometry(QtCore.QRect(110, 10, 16, 16))
+                self.ir_fail_but.setFont(font)
+                self.ir_fail_but.setText("")
+                self.ir_fail_but.setObjectName("ir_fail_but")
+                self.ir_fail_but.value = 'FAIL'
+                self.ir_fail_but.name = 'ir_light'
+                self.ir_fail_but.toggled.connect(lambda: set_operator_test(self.ir_fail_but))
 
         self.logs = QtWidgets.QGroupBox(self.centralwidget)
         self.logs.setGeometry(QtCore.QRect(10, 460, 741, 221))
@@ -660,7 +668,10 @@ class UiTests(object):
         self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
         # self.save_but.setText("SAVE")
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
-        self.automated_tests_labels.setText(_translate("UI_tests", OAK_D_LABELS))
+        if test_type == 'OAK-1':
+            self.automated_tests_labels.setText(_translate("UI_tests", OAK_ONE_LABELS))
+        else:
+            self.automated_tests_labels.setText(_translate("UI_tests", OAK_D_LABELS))
         self.operator_tests.setTitle(_translate("UI_tests", "Operator Tests"))
         self.NOT_TESTED_LABEL.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\"><span style=\" font-size:11pt; color:#aaaa00;\">Not<br>Tested</span></p></body></html>"))
         self.FAIL_LABEL.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:11pt; color:#ff0000;\">FAIL</span></p></body></html>"))
@@ -698,12 +709,7 @@ class UiTests(object):
             self.save_csv()
             clear_test_results()
             self.set_result()
-            del self.rgb
-            del self.jpeg
-            if test_type != 'OAK-1':
-                del self.left
-                del self.right
-            del self.depth_camera
+            self.disconnect()
             self.rgb_ntes_but.setChecked(True)
             self.left_ntes_but.setChecked(True)
             self.right_ntes_but.setChecked(True)
@@ -751,18 +757,6 @@ class UiTests(object):
             self.usb3_res.setPalette(self.red_pallete)
         self.usb3_res.setText(test_result['usb3_res'])
 
-        if test_result['left_cam_res'] == 'PASS':
-            self.left_cam_res.setPalette(self.green_pallete)
-        else:
-            self.left_cam_res.setPalette(self.red_pallete)
-        self.left_cam_res.setText(test_result['left_cam_res'])
-
-        if test_result['right_cam_res'] == 'PASS':
-            self.right_cam_res.setPalette(self.green_pallete)
-        else:
-            self.right_cam_res.setPalette(self.red_pallete)
-        self.right_cam_res.setText(test_result['right_cam_res'])
-
         if test_result['rgb_cam_res'] == 'PASS':
             self.rgb_cam_res.setPalette(self.green_pallete)
         else:
@@ -781,17 +775,30 @@ class UiTests(object):
             self.prew_out_rgb_res.setPalette(self.red_pallete)
         self.prew_out_rgb_res.setText(test_result['prew_out_rgb_res'])
 
-        if test_result['left_strm_res'] == 'PASS':
-            self.left_strm_res.setPalette(self.green_pallete)
-        else:
-            self.left_strm_res.setPalette(self.red_pallete)
-        self.left_strm_res.setText(test_result['left_strm_res'])
+        if test_type != 'OAK-1':
+            if test_result['left_cam_res'] == 'PASS':
+                self.left_cam_res.setPalette(self.green_pallete)
+            else:
+                self.left_cam_res.setPalette(self.red_pallete)
+            self.left_cam_res.setText(test_result['left_cam_res'])
 
-        if test_result['right_strm_res'] == 'PASS':
-            self.right_strm_res.setPalette(self.green_pallete)
-        else:
-            self.right_strm_res.setPalette(self.red_pallete)
-        self.right_strm_res.setText(test_result['right_strm_res'])
+            if test_result['right_cam_res'] == 'PASS':
+                self.right_cam_res.setPalette(self.green_pallete)
+            else:
+                self.right_cam_res.setPalette(self.red_pallete)
+            self.right_cam_res.setText(test_result['right_cam_res'])
+
+            if test_result['left_strm_res'] == 'PASS':
+                self.left_strm_res.setPalette(self.green_pallete)
+            else:
+                self.left_strm_res.setPalette(self.red_pallete)
+            self.left_strm_res.setText(test_result['left_strm_res'])
+
+            if test_result['right_strm_res'] == 'PASS':
+                self.right_strm_res.setPalette(self.green_pallete)
+            else:
+                self.right_strm_res.setPalette(self.red_pallete)
+            self.right_strm_res.setText(test_result['right_strm_res'])
 
     def update_bootloader(self):
         self.print_logs('Check bootloader')
@@ -871,6 +878,11 @@ class UiTests(object):
         self.print_logs('Test results for ' + test_type + ' with id ' + self.depth_camera.id + ' had been saved!')
 
     def close_event(self, event):
+        self.disconnect()
+        event.accept()
+        sys.exit()
+
+    def disconnect(self):
         if hasattr(self, 'depth_camera'):
             del self.rgb
             del self.jpeg
@@ -878,13 +890,19 @@ class UiTests(object):
                 del self.left
                 del self.right
             del self.depth_camera
-        event.accept()
+
+
+def signal_handler(sig, frame):
+    print('Closing app')
+    ui.disconnect()
+    sys.exit(0)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Arguments for test UI')
     parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE)', default='OAK-D-PRO')
     args = parser.parse_args()
-    test_type = args.camera_type
+    test_type = args.camera_type.upper()
     app = QtWidgets.QApplication(sys.argv)
     screen = app.primaryScreen()
     rect = screen.availableGeometry()
@@ -893,6 +911,7 @@ if __name__ == "__main__":
     print(prew_width, prew_height)
     UI_tests = QtWidgets.QMainWindow()
     ui = UiTests()
+    signal.signal(signal.SIGINT, signal_handler)
     ui.setupUi(UI_tests)
     UI_tests.show()
     test_connexion()
