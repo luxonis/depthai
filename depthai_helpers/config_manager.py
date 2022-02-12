@@ -162,9 +162,7 @@ class ConfigManager:
         cams = device.getConnectedCameras()
         depthEnabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
 
-        if depthEnabled:
-            self.args.disableDepth = False
-        else:
+        if not depthEnabled:
             if not self.args.disableDepth:
                 print("Disabling depth...")
                 self.args.disableDepth = True
