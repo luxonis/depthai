@@ -631,7 +631,7 @@ def runQt():
                 self.conf.args.show.append(Previews.rectifiedLeft.name)
             if Previews.right.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.right.name)
-            if Previews.rectifiedRight.name not in self.conf.args.show:
+            if self.conf.useDepth and Previews.rectifiedRight.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.rectifiedRight.name)
             try:
                 self.instance.run_all(self.conf)
@@ -932,7 +932,7 @@ def runQt():
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
             else:
-                updated = filtered + [Previews.left.name, Previews.right.name]
+                updated = filtered
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
