@@ -136,7 +136,7 @@ class ConfigManager:
             depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name,
                              Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
 
-            if len([preview for preview in self.args.show if preview in depthPreviews]) == 0:
+            if len([preview for preview in self.args.show if preview in depthPreviews]) == 0 and not self.useNN:
                 print("No depth-related previews chosen, disabling depth...")
                 self.args.disableDepth = True
             return
