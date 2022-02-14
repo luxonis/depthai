@@ -133,6 +133,12 @@ class ConfigManager:
 
     def adjustPreviewToOptions(self):
         if len(self.args.show) != 0:
+            depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name,
+                             Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
+
+            if len([preview for preview in self.args.show if preview in depthPreviews]) == 0 and not self.useNN:
+                print("No depth-related previews chosen, disabling depth...")
+                self.args.disableDepth = True
             return
 
         self.args.show.append(Previews.color.name)
@@ -162,9 +168,7 @@ class ConfigManager:
         cams = device.getConnectedCameras()
         depthEnabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
 
-        if depthEnabled:
-            self.args.disableDepth = False
-        else:
+        if not depthEnabled:
             if not self.args.disableDepth:
                 print("Disabling depth...")
                 self.args.disableDepth = True
@@ -181,7 +185,7 @@ class ConfigManager:
                 else:
                     print("Disabling {} preview...".format(name))
             if len(updatedShowArg) == 0:
-                print("No previews available, adding color and nnInput...")
+                print("No previews available, adding defaults...")
                 updatedShowArg.append("color")
                 if self.useNN:
                     updatedShowArg.append("nnInput")

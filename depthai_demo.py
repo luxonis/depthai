@@ -615,19 +615,23 @@ def runQt():
                     self.conf.args.deviceId = defaultDevice
             if Previews.color.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.color.name)
-            if Previews.nnInput.name not in self.conf.args.show:
+            if self.conf.useNN and Previews.nnInput.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.nnInput.name)
-            if Previews.depth.name not in self.conf.args.show and Previews.disparityColor.name not in self.conf.args.show:
+            if self.conf.useDepth and not self.parent.useDisparity and Previews.depth.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.depth.name)
-            if Previews.depthRaw.name not in self.conf.args.show and Previews.disparity.name not in self.conf.args.show:
+            if self.conf.useDepth and not self.parent.useDisparity and Previews.depthRaw.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.depthRaw.name)
+            if self.conf.useDepth and self.parent.useDisparity and Previews.disparity.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.disparity.name)
+            if self.conf.useDepth and self.parent.useDisparity and Previews.disparityColor.name not in self.conf.args.show:
+                self.conf.args.show.append(Previews.disparityColor.name)
             if Previews.left.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.left.name)
-            if Previews.rectifiedLeft.name not in self.conf.args.show:
+            if self.conf.useDepth and Previews.rectifiedLeft.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.rectifiedLeft.name)
             if Previews.right.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.right.name)
-            if Previews.rectifiedRight.name not in self.conf.args.show:
+            if self.conf.useDepth and Previews.rectifiedRight.name not in self.conf.args.show:
                 self.conf.args.show.append(Previews.rectifiedRight.name)
             try:
                 self.instance.run_all(self.conf)
@@ -928,7 +932,7 @@ def runQt():
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
             else:
-                updated = filtered + [Previews.left.name, Previews.right.name]
+                updated = filtered
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)

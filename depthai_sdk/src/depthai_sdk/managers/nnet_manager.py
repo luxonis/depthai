@@ -224,6 +224,9 @@ class NNetManager:
             return str(label)
 
     def parse(self, blocking=False):
+        if self.outputQueue is None:
+            return None, None
+
         if blocking:
             inNn = self.outputQueue.get()
         else:
