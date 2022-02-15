@@ -115,6 +115,7 @@ class PipelineManager:
             xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
         """
         self.nodes.camRgb = self.pipeline.createColorCamera()
+        self.nodes.camRgb.setVideoSize(1280, 720)  # TMP for getVideoSize() to work...
         if previewSize is not None:
             self.nodes.camRgb.setPreviewSize(*previewSize)
         self.nodes.camRgb.setInterleaved(False)
