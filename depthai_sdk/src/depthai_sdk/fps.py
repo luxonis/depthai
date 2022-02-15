@@ -10,7 +10,7 @@ class FPSHandler:
     used to feed the video file based on it's FPS property, not app performance (this prevents the video from being sent
     to quickly if we finish processing a frame earlier than the next video frame should be consumed)
     """
-    
+
     _fpsBgColor = (0, 0, 0)
     _fpsColor = (255, 255, 255)
     _fpsType = cv2.FONT_HERSHEY_SIMPLEX
@@ -107,10 +107,17 @@ class FPSHandler:
             name (str): Specifies timestamps' name
         """
         frameFps = f"{name.upper()} FPS: {round(self.tickFps(name), 1)}"
-        # cv2.rectangle(frame, (0, 0), (120, 35), (255, 255, 255), cv2.FILLED)
-        cv2.putText(frame, frameFps, (5, 15), self._fpsType, 0.5, self._fpsBgColor, 4, self._fpsLineType)
-        cv2.putText(frame, frameFps, (5, 15), self._fpsType, 0.5, self._fpsColor, 1, self._fpsLineType)
-
         if "nn" in self._ticks:
-            cv2.putText(frame, f"NN FPS:  {round(self.tickFps('nn'), 1)}", (5, 30), self._fpsType, 0.5, self._fpsBgColor, 4, self._fpsLineType)
-            cv2.putText(frame, f"NN FPS:  {round(self.tickFps('nn'), 1)}", (5, 30), self._fpsType, 0.5, self._fpsColor, 1, self._fpsLineType)
+            frameFps = f"{frameFps}\nNN FPS:  {round(self.tickFps('nn'), 1)}"
+
+        fontScale = (frame.shape[1] / 640) * 0.5
+        lineScaleBg = int(fontScale / 0.5 * 4)
+        lineScale = int(lineScaleBg / 4)
+        textSize, _ = cv2.getTextSize(frameFps, self._fpsType, fontScale, lineScaleBg)
+        lineHeight = int(textSize[1] + 5 + fontScale * 3)
+        position = (int(5 + fontScale * 10), int(fontScale * 10 + lineHeight))
+        x, y0 = position
+        for i, line in enumerate(frameFps.split("\n")):
+            y = int(y0 + i * lineHeight)
+            cv2.putText(frame, line, (x, y), self._fpsType, fontScale, self._fpsBgColor, lineScaleBg, self._fpsLineType)
+            cv2.putText(frame, line, (x, y), self._fpsType, fontScale, self._fpsColor, lineScale, self._fpsLineType)
