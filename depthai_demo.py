@@ -283,7 +283,7 @@ class Demo:
             self._medianFilters = cycle([item for name, item in vars(dai.MedianFilter).items() if name.startswith('KERNEL_') or name.startswith('MEDIAN_')])
             for medFilter in self._medianFilters:
                 # move the cycle to the current median filter
-                if medFilter == self._pm._depthConfig.postProcessing.median:
+                if medFilter == dai.MedianFilter.KERNEL_3x3:
                     break
         else:
             self._medianFilters = []

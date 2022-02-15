@@ -166,11 +166,11 @@ class PreviewDecoder:
         if getattr(manager, "_depthConfig", None) is None:
             raise RuntimeError("Depth config has to be provided before decoding depth data")
 
-        maxDisp = manager._depthConfig.getMaxDisparity()
-        subpixelLevels = pow(2, manager._depthConfig.get().algorithmControl.subpixelFractionalBits)
-        subpixel = manager._depthConfig.get().algorithmControl.enableSubpixel
-        dispIntegerLevels = maxDisp if not subpixel else maxDisp / subpixelLevels
-        dispScaleFactor = getattr(manager, "dispScaleFactor", None)
+        maxDisp = 96# manager._depthConfig.getMaxDisparity()
+        subpixelLevels = 5#pow(2, manager._depthConfig.get().algorithmControl.subpixelFractionalBits)
+        subpixel = False # manager._depthConfig.get().algorithmControl.enableSubpixel
+        dispIntegerLevels = 96 # maxDisp if not subpixel else maxDisp / subpixelLevels
+        dispScaleFactor = None # getattr(manager, "dispScaleFactor", None)
         if dispScaleFactor is None:
             baseline = getattr(manager, 'baseline', 75)  # mm
             fov = getattr(manager, 'fov', 71.86)

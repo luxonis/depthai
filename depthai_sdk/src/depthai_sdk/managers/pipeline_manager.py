@@ -106,19 +106,19 @@ class PipelineManager:
             if node.video == nodeOutput:
                 size = self.__calcEncodeableSize(node.getVideoSize())
                 node.setVideoSize(size)
-                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                videnc.setDefaultProfilePreset(size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             elif node.preview == nodeOutput:
                 size = self.__calcEncodeableSize(node.getPreviewSize())
                 node.setPreviewSize(size)
-                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                videnc.setDefaultProfilePreset(size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             elif node.still == nodeOutput:
                 size = self.__calcEncodeableSize(node.getStillSize())
                 node.setStillSize(size)
-                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+                videnc.setDefaultProfilePreset(size, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
 
             nodeOutput.link(videnc.input)
         elif isinstance(node, dai.node.MonoCamera):
-            videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
+            videnc.setDefaultProfilePreset(640, 400, node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             nodeOutput.link(videnc.input)
         elif isinstance(node, dai.node.StereoDepth):
             cameraNode = getattr(self.nodes, 'monoLeft', getattr(self.nodes, 'monoRight', None))
@@ -131,7 +131,7 @@ class PipelineManager:
             manip = self.pipeline.createImageManip()
             manip.initialConfig.setResize(w, h)
 
-            videnc.setDefaultProfilePreset(30, dai.VideoEncoderProperties.Profile.MJPEG)
+            videnc.setDefaultProfilePreset(w, h, 30, dai.VideoEncoderProperties.Profile.MJPEG)
             nodeOutput.link(manip.inputImage)
             manip.out.link(videnc.input)
         else:
@@ -268,7 +268,7 @@ class PipelineManager:
         self.nodes.stereo.initialConfig.setBilateralFilterSigma(sigma)
         self.nodes.stereo.initialConfig.setLeftRightCheckThreshold(lrcThreshold)
 
-        self._depthConfig = self.nodes.stereo.initialConfig.get()
+        # self._depthConfig = self.nodes.stereo.initialConfig.get()
 
         # self.nodes.stereo.setRuntimeModeSwitch(True)
         self.nodes.stereo.setLeftRightCheck(lr)
