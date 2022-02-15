@@ -602,7 +602,6 @@ def runQt():
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
-            self.conf.args.bandwidth = "auto"
             if self.conf.args.deviceId is None:
                 devices = dai.Device.getAllAvailableDevices()
                 if len(devices) > 0:
