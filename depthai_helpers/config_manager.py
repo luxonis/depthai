@@ -88,6 +88,7 @@ class ConfigManager:
         return getattr(cv2, "COLORMAP_{}".format(self.args.colorMap))
 
     def getRgbResolution(self):
+        return dai.ColorCameraProperties.SensorResolution.THE_720_P
         if self.args.rgbResolution == 2160:
             return dai.ColorCameraProperties.SensorResolution.THE_4_K
         elif self.args.rgbResolution == 3040:
@@ -96,6 +97,7 @@ class ConfigManager:
             return dai.ColorCameraProperties.SensorResolution.THE_1080_P
 
     def getMonoResolution(self):
+        return dai.MonoCameraProperties.SensorResolution.THE_720_P
         if self.args.monoResolution == 720:
             return dai.MonoCameraProperties.SensorResolution.THE_720_P
         elif self.args.monoResolution == 800:
