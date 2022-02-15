@@ -43,6 +43,7 @@ def getVersion(module_name):
     return None
 
 def checkRequirementsVersion():
+    return
     daiVersionRequired = getVersionFromRequirements('depthai', Path(__file__).parent / Path('../requirements.txt'))
     if daiVersionRequired is not None:
         if daiVersionRequired != getVersion('depthai'):
