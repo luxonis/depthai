@@ -303,27 +303,10 @@ class NNetManager:
                     bbox[::2] += self._cropOffsetX(frame)
                 cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), self._bboxColors[detection.label], 2)
                 cv2.rectangle(frame, (bbox[0], (bbox[1] - 28)), ((bbox[0] + 110), bbox[1]), self._bboxColors[detection.label], cv2.FILLED)
-
-                # cv2.putText(frame, self.getLabelText(detection.label), (bbox[0] + 5, bbox[1] - 10),
-                #             self._textType, 0.5, (0, 0, 0), 1, self._lineType)
-                # cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 62, bbox[1] - 10),
-                #             self._textType, 0.5, (0, 0, 0), 1, self._lineType)
-
-                text = f"{self.getLabelText(detection.label)}\n{int(detection.confidence * 100)}%"
-
-                fontScale = (frame.shape[1] / 640) * 0.5
-                lineScaleBg = int(fontScale / 0.5 * 4)
-                lineScale = int(lineScaleBg / 4)
-                textSize, _ = cv2.getTextSize(text, self._textType, fontScale, lineScaleBg)
-                lineHeight = int(textSize[1] + 5 + fontScale * 3)
-                position = (int(bbox[0] + 5 + fontScale * 10), int(bbox[1] - 10 - (fontScale * 10 + lineHeight)))
-                x, y0 = position
-                for i, line in enumerate(text.split("\n")):
-                    y = int(y0 + i * lineHeight)
-                    cv2.putText(frame, line, (x, y), self._textType, fontScale, (0, 0, 0), lineScaleBg, self._lineType)
-                    cv2.putText(frame, line, (x, y), self._textType, fontScale, (0, 0, 0), lineScale, self._lineType)
-
-
+                cv2.putText(frame, self.getLabelText(detection.label), (bbox[0] + 5, bbox[1] - 10),
+                            self._textType, 0.5, (0, 0, 0), 1, self._lineType)
+                cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 62, bbox[1] - 10),
+                            self._textType, 0.5, (0, 0, 0), 1, self._lineType)
 
                 if hasattr(detection, 'spatialCoordinates'):  # Display spatial coordinates as well
                     xMeters = detection.spatialCoordinates.x / 1000
