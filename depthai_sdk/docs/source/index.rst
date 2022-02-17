@@ -1,12 +1,11 @@
-.. Luxonis Docs documentation master file, created by
-   sphinx-quickstart on Tue Nov  3 14:34:56 2020.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 DepthAI SDK documentation
 =========================
 
 DepthAI SDK is a Python package, containing convenience classes and functions that help in most common tasks while using DepthAI API.
+
+.. image:: https://user-images.githubusercontent.com/18037362/142909472-eae7bed1-695b-48ec-8895-76982989de11.png
+
+DepthAI SDK is built on top of the `depthai-python <https://github.com/luxonis/depthai-python>`__ API library (`docs here <https://docs.luxonis.com/projects/api/en/latest/>`__).
 
 Installation
 ------------
@@ -31,5 +30,5 @@ See :ref:`DepthAI SDK API`
    :hidden:
    :caption: Content:
 
-   getting_started.rst
+   getting-started.rst
    api.rst

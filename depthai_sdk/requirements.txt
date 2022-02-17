@@ -1,7 +1,8 @@
-opencv-python==4.5.1.48 ; platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l"
-opencv-contrib-python==4.5.1.48 ; platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l"
-opencv-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machine == "armv7l"
-opencv-contrib-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machine == "armv7l"
-blobconverter==1.0.0
-pytube==11.0.1
-depthai
+numpy>=1.19; python_version < "3.7"
+numpy>=1.21; python_version >= "3.7"
+opencv-python>4
+opencv-contrib-python>4
+blobconverter>=1.2.8
+pytube>=11.0.1
+depthai>2
+PyTurboJPEG==1.6.4
