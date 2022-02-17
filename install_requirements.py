@@ -13,7 +13,7 @@ in_venv = getattr(sys, "real_prefix", getattr(sys, "base_prefix", sys.prefix)) !
 pip_call = [sys.executable, "-m", "pip"]
 pip_installed = True
 pip_install = pip_call + ["install", "-U"]
-pip_package_install = pip_install + ["--prefer-binary"]
+pip_package_install = pip_install + ["--prefer-binary", "--use-deprecated=html5lib"]
 
 try:
     subprocess.check_call(pip_call + ["--version"])
