@@ -602,7 +602,6 @@ def runQt():
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
-            self.conf.args.bandwidth = "auto"
             if self.conf.args.deviceId is None:
                 devices = dai.Device.getAllAvailableDevices()
                 if len(devices) > 0:
@@ -707,6 +706,7 @@ def runQt():
             self._demoInstance = Demo(displayFrames=False)
 
         def updateArg(self, arg_name, arg_value, shouldUpdate=True):
+
             setattr(self.confManager.args, arg_name, arg_value)
             if shouldUpdate:
                 self.worker.signals.setDataSignal.emit(["restartRequired", True])
@@ -861,6 +861,8 @@ def runQt():
 
         def guiOnSelectDevice(self, selected):
             self.updateArg("deviceId", selected)
+            freshArgs = parseArgs()
+            self.updateArg("bandwidth", freshArgs.bandwidth)
 
         def guiOnReloadDevices(self):
             devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
