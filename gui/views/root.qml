@@ -73,6 +73,7 @@ ApplicationWindow {
     property var monoResolutionChoices
     property var restartRequired
     property var deviceChoices
+    property var irEnabled: false
     property var depthEnabled: true
     property var statisticsAccepted: true
     property var runningApp

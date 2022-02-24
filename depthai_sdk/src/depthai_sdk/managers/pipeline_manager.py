@@ -386,7 +386,7 @@ class PipelineManager:
         self._updateCamConfig(self._rightConfig, Previews.right.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
         self._rightConfigInputQueue.send(self._rightConfig)
 
-    def updateDepthConfig(self, device, dct=None, sigma=None, median=None, lrc=None, lrcThreshold=None):
+    def updateDepthConfig(self, device, dct=None, sigma=None, median=None, lrcThreshold=None, irLaser=None, irFlood=None):
         """
         Updates :obj:`depthai.node.StereoDepth` node config
 
@@ -398,18 +398,23 @@ class PipelineManager:
             sigma (int, Optional): Sigma value for bilateral filter (0..65535). If set to :code:`0`, the filter will be disabled.
             lrc (bool, Optional): Enables or disables Left-Right Check mode
             lrcThreshold (int, Optional): Sets the Left-Right Check threshold value (0..10)
+            irLaser (int, Optional): Sets the IR laser dot projector brightness (0..1200)
+            irFlood (int, Optional): Sets the IR flood illuminator light brightness (0..1500)
         """
-        if dct is not None:
-            self._depthConfig.costMatching.confidenceThreshold = dct
-        if sigma is not None:
-            self._depthConfig.postProcessing.bilateralSigmaValue = sigma
-        if median is not None:
-            self._depthConfig.postProcessing.median = median
-        if lrcThreshold is not None:
-            self._depthConfig.algorithmControl.leftRightCheckThreshold = lrcThreshold
-        if lrc is not None:
-            self._depthConfig.algorithmControl.enableLeftRightCheck = lrc
-        self._depthConfigInputQueue.send(self._depthConfig)
+        if any([dct, sigma, median, lrcThreshold]):
+            if dct is not None:
+                self._depthConfig.costMatching.confidenceThreshold = dct
+            if sigma is not None:
+                self._depthConfig.postProcessing.bilateralSigmaValue = sigma
+            if median is not None:
+                self._depthConfig.postProcessing.median = median
+            if lrcThreshold is not None:
+                self._depthConfig.algorithmControl.leftRightCheckThreshold = lrcThreshold
+            self._depthConfigInputQueue.send(self._depthConfig)
+        if irLaser is not None:
+            device.setIrLaserDotProjectorBrightness(irLaser)
+        if irFlood is not None:
+            device.setIrFloodLightBrightness(irFlood)
 
     def addNn(self, nn, xoutNnInput=False, xoutSbb=False):
         """

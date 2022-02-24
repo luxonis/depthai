@@ -70,6 +70,10 @@ class ConfigManager:
         if self.args.camera == "color":
             return "color"
 
+    def irEnabled(self, device):
+        drivers = device.getIrDrivers()
+        return len(drivers) > 0
+
     def getModelName(self):
         if self.args.cnnModel:
             return self.args.cnnModel

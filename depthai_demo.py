@@ -697,6 +697,7 @@ def runQt():
             else:
                 self.signals.setDataSignal.emit(["countLabels", []])
             self.signals.setDataSignal.emit(["depthEnabled", self.conf.useDepth])
+            self.signals.setDataSignal.emit(["irEnabled", self.conf.irEnabled(instance._device)])
             self.signals.setDataSignal.emit(["statisticsAccepted", self.instance.metrics is not None])
             self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
@@ -774,8 +775,8 @@ def runQt():
             self.stop()
             self.start()
 
-        def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrc=None, lrcThreshold=None):
-            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrc=lrc, lrcThreshold=lrcThreshold)
+        def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None, irLaser=None, irFlood=None):
+            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold, irLaser=irLaser, irFlood=irFlood)
             if median is not None:
                 if median == dai.MedianFilter.MEDIAN_OFF:
                     self.updateArg("stereoMedianSize", 0, False)
@@ -789,8 +790,6 @@ def runQt():
                 self.updateArg("disparityConfidenceThreshold", dct, False)
             if sigma is not None:
                 self.updateArg("sigma", sigma, False)
-            if lrc is not None:
-                self.updateArg("stereoLrCheck", lrc, False)
             if lrcThreshold is not None:
                 self.updateArg("lrcThreshold", lrcThreshold, False)
 
@@ -822,7 +821,7 @@ def runQt():
 
             self._demoInstance._updateCameraConfigs()
 
-        def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None):
+        def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None, lrc=None):
             if depthFrom is not None:
                 self.updateArg("minDepth", depthFrom)
             if depthTo is not None:
@@ -831,6 +830,8 @@ def runQt():
                 self.updateArg("subpixel", subpixel)
             if extended is not None:
                 self.updateArg("extendedDisparity", extended)
+            if lrc is not None:
+                self.updateArg("stereoLrCheck", lrc)
 
         def guiOnCameraSetupUpdate(self, name, fps=None, resolution=None):
             if fps is not None:
