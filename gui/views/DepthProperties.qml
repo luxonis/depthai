@@ -357,11 +357,23 @@ ListView {
             height: 27
             stepSize: 1
             to: 1200
-            value: 10
+            value: 0
             from: 0
             onValueChanged: {
                 depthBridge.setIrLaserDotProjector(value)
             }
+        }
+
+        Text {
+            id: irlaserdotslidervalue
+            x: 566
+            y: 315
+            width: 17
+            height: 20
+            color: "#ffffff"
+            text: irlaserdotslider.value
+            font.pixelSize: 12
+            rotation: 0
         }
 
         Text {
@@ -388,11 +400,23 @@ ListView {
             height: 27
             stepSize: 1
             to: 1500
-            value: 10
+            value: 0
             from: 0
             onValueChanged: {
                 depthBridge.setIrFloodIlluminator(value)
             }
+        }
+
+        Text {
+            id: irfloodslidervalue
+            x: 566
+            y: 375
+            width: 17
+            height: 20
+            color: "#ffffff"
+            text: irfloodslider.value
+            font.pixelSize: 12
+            rotation: 0
         }
     }
 }
