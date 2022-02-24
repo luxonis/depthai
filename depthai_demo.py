@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import atexit
+import signal
 import sys
 
 if sys.version_info[0] < 3:
@@ -318,7 +320,7 @@ class Demo:
         self.onSetup(self)
 
         try:
-            while not self._device.isClosed() and self.shouldRun():
+            while self.shouldRun() and hasattr(self, "_device") and not self._device.isClosed():
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
@@ -332,10 +334,13 @@ class Demo:
         finally:
             self.stop()
 
-    def stop(self):
-        print("Stopping demo...")
-        self._device.close()
-        del self._device
+    def stop(self, *args, **kwargs):
+
+        if hasattr(self, "_device"):
+            print("Stopping demo...")
+            self._device.close()
+            del self._device
+            self._fps.printStatus()
         self._pm.closeDefaultQueues()
         if self._conf.useCamera:
             self._pv.closeQueues()
@@ -347,7 +352,6 @@ class Demo:
             self._sbbOut.close()
         if self._logOut is not None:
             self._logOut.close()
-        self._fps.printStatus()
         self.onTeardown(self)
 
     timer = time.monotonic()
@@ -759,6 +763,7 @@ def runQt():
                 current_mxid = self._demoInstance._device.getMxId()
             else:
                 current_mxid = self.confManager.args.deviceId
+            self.worker.running = False
             self.worker.signals.exitSignal.emit()
             self.threadpool.waitForDone(10000)
 
@@ -775,6 +780,10 @@ def runQt():
         def restartDemo(self):
             self.stop()
             self.start()
+
+        def stopGui(self, *args, **kwargs):
+            self.stop(wait=False)
+            self.app.quit()
 
         def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None, irLaser=None, irFlood=None):
             self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold, irLaser=irLaser, irFlood=irFlood)
@@ -987,12 +996,19 @@ def runQt():
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
-    GuiApp().start()
+    app = GuiApp()
+    signal.signal(signal.SIGINT, app.stopGui)
+    signal.signal(signal.SIGTERM, app.stopGui)
+    atexit.register(app.stopGui)
+    app.start()
 
 
 def runOpenCv():
     confManager = prepareConfManager(args)
     demo = Demo()
+    signal.signal(signal.SIGINT, demo.stop)
+    signal.signal(signal.SIGTERM, demo.stop)
+    atexit.register(demo.stop)
     demo.run_all(confManager)
 
 
