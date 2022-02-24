@@ -268,12 +268,12 @@ class PipelineManager:
         self.nodes.stereo.initialConfig.setBilateralFilterSigma(sigma)
         self.nodes.stereo.initialConfig.setLeftRightCheckThreshold(lrcThreshold)
 
-        self._depthConfig = self.nodes.stereo.initialConfig.get()
-
         # self.nodes.stereo.setRuntimeModeSwitch(True)
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
         self.nodes.stereo.setSubpixel(subpixel)
+
+        self._depthConfig = self.nodes.stereo.initialConfig.get()
 
         # Create mono left/right cameras if we haven't already
         if not hasattr(self.nodes, 'monoLeft'):

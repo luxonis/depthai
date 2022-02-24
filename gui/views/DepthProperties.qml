@@ -65,6 +65,7 @@ ListView {
             id: switch1
             x: 0
             y: 187
+            checked: lrc
             text: qsTr("<font color=\"white\">Left Right Check</font>")
             transformOrigin: Item.Center
             font.family: "Courier"

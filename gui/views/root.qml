@@ -78,6 +78,8 @@ ApplicationWindow {
     property var statisticsAccepted: true
     property var runningApp
 
+    property bool lrc: false
+
     AppBridge {
         id: appBridge
     }
