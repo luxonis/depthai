@@ -4,9 +4,27 @@ from functools import partial
 
 import cv2
 import numpy as np
+try:
+    from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT, TJPF_GRAY
+    turbo = TurboJPEG()
+except:
+    turbo = None
 
 
 class PreviewDecoder:
+
+    @staticmethod
+    def __jpegDecode(data, type):
+        if turbo is not None:
+            if type == cv2.IMREAD_GRAYSCALE:
+                return turbo.decode(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT, pixel_format=TJPF_GRAY)
+            if type == cv2.IMREAD_UNCHANGED:
+                return turbo.decode_to_yuv(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT)
+            else:
+                return turbo.decode(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT)
+        else:
+            return cv2.imdecode(data, type)
+
     @staticmethod
     def nnInput(packet, manager=None):
         """
@@ -19,9 +37,9 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        # if manager is not None and manager.lowBandwidth: TODO change once passthrough frame type (8) is supported by VideoEncoder
+        # if manager is not None and manager.decode: TODO change once passthrough frame type (8) is supported by VideoEncoder
         if False:
-            frame = cv2.imdecode(packet.getData(), cv2.IMREAD_COLOR)
+            frame = PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_COLOR)
         else:
             frame = packet.getCvFrame()
         if hasattr(manager, "nnSource") and manager.nnSource in (Previews.rectifiedLeft.name, Previews.rectifiedRight.name):
@@ -40,8 +58,8 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
-            return cv2.imdecode(packet.getData(), cv2.IMREAD_COLOR)
+        if manager is not None and manager.decode:
+            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_COLOR)
         else:
             return packet.getCvFrame()
 
@@ -57,8 +75,8 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
-            return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+        if manager is not None and manager.decode:
+            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
 
@@ -74,8 +92,8 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
-            return cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+        if manager is not None and manager.decode:
+            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
 
@@ -91,10 +109,11 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth and not manager.sync:  # TODO remove sync check once passthrough is supported for MJPEG encoding
-            return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
+        # if manager is not None and manager.decode:  # disabled to limit the memory usage
+        if False:
+            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
-            return cv2.flip(packet.getCvFrame(), 1)
+            return packet.getCvFrame()
 
     @staticmethod
     def rectifiedRight(packet, manager=None):
@@ -108,10 +127,11 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth:  # TODO remove sync check once passthrough is supported for MJPEG encoding
-            return cv2.flip(cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE), 1)
+        # if manager is not None and manager.decode:  # disabled to limit the memory usage
+        if False:
+            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
-            return cv2.flip(packet.getCvFrame(), 1)
+            return packet.getCvFrame()
 
     @staticmethod
     def depthRaw(packet, manager=None):
@@ -125,9 +145,9 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        # if manager is not None and manager.lowBandwidth:  TODO change once depth frame type (14) is supported by VideoEncoder
+        # if manager is not None and manager.decode:  TODO change once depth frame type (14) is supported by VideoEncoder
         if False:
-            return cv2.imdecode(packet.getData(), cv2.IMREAD_UNCHANGED)
+            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_UNCHANGED)
         else:
             return packet.getFrame()
 
@@ -143,6 +163,13 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
+        if getattr(manager, "_depthConfig", None) is None:
+            raise RuntimeError("Depth config has to be provided before decoding depth data")
+
+        maxDisp = manager._depthConfig.getMaxDisparity()
+        subpixelLevels = pow(2, manager._depthConfig.get().algorithmControl.subpixelFractionalBits)
+        subpixel = manager._depthConfig.get().algorithmControl.enableSubpixel
+        dispIntegerLevels = maxDisp if not subpixel else maxDisp / subpixelLevels
         dispScaleFactor = getattr(manager, "dispScaleFactor", None)
         if dispScaleFactor is None:
             baseline = getattr(manager, 'baseline', 75)  # mm
@@ -151,10 +178,11 @@ class PreviewDecoder:
             dispScaleFactor = baseline * focal
             if manager is not None:
                 setattr(manager, "dispScaleFactor", dispScaleFactor)
-
-        with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
+        with np.errstate(divide='ignore'):
             dispFrame = dispScaleFactor / depthRaw
-        dispFrame = (dispFrame * manager.dispMultiplier).astype(np.uint8)
+
+        dispFrame = (dispFrame * 255. / dispIntegerLevels).astype(np.uint8)
+
         return PreviewDecoder.disparityColor(dispFrame, manager)
 
     @staticmethod
@@ -169,8 +197,8 @@ class PreviewDecoder:
         Returns:
             numpy.ndarray: Ready to use OpenCV frame
         """
-        if manager is not None and manager.lowBandwidth:
-            rawFrame = cv2.imdecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+        if False:
+            rawFrame = PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             rawFrame = packet.getFrame()
         return (rawFrame*(manager.dispMultiplier if manager is not None else 255/96)).astype(np.uint8)
@@ -260,7 +288,7 @@ class MouseClickTracker:
             name (str): Name of the frame
         """
         point = self.points.get(name, None)
-        if point is not None:
+        if point is not None and frame is not None:
             if name in (Previews.depthRaw.name, Previews.depth.name):
                 self.values[name] = "{}mm".format(frame[point[1]][point[0]])
             elif name in (Previews.disparityColor.name, Previews.disparity.name):

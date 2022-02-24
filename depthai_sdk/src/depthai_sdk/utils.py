@@ -6,6 +6,9 @@ import urllib.request
 import cv2
 import numpy as np
 import depthai as dai
+import datetime as dt
+from heapq import heappop, heappush
+import threading
 
 
 def cosDist(a, b):
@@ -225,7 +228,9 @@ def cropToAspectRatio(frame, size):
     Crop the frame to desired aspect ratio and then scales it down to desired size
     Args:
         frame (numpy.ndarray): Source frame that will be cropped
-        size (tuple): Desired frame size (width, heigth)
+        size (tuple): Desired frame size (width, height)
+    Returns:
+         numpy.ndarray: Cropped frame
     """
     shape = frame.shape
     h = shape[0]
@@ -233,7 +238,7 @@ def cropToAspectRatio(frame, size):
     currentRatio = w / h
     newRatio = size[0] / size[1]
 
-    # Crop width/heigth to match the aspect ratio needed by the NN
+    # Crop width/height to match the aspect ratio needed by the NN
     if newRatio < currentRatio:  # Crop width
         # Use full height, crop width
         newW = (newRatio/currentRatio) * w
@@ -244,3 +249,45 @@ def cropToAspectRatio(frame, size):
         newH = (currentRatio/newRatio) * h
         crop = int((h - newH) / 2)
         return frame[crop:h-crop, :]
+
+
+def resizeLetterbox(frame, size):
+    """
+    Transforms the frame to meet the desired size, preserving the aspect ratio and adding black borders (letterboxing)
+    Args:
+        frame (numpy.ndarray): Source frame that will be resized
+        size (tuple): Desired frame size (width, height)
+    Returns:
+         numpy.ndarray: Resized frame
+    """
+    border_v = 0
+    border_h = 0
+    if (size[1] / size[0]) >= (frame.shape[0] / frame.shape[1]):
+        border_v = int((((size[1] / size[0]) * frame.shape[1]) - frame.shape[0]) / 2)
+    else:
+        border_h = int((((size[0] / size[1]) * frame.shape[0]) - frame.shape[1]) / 2)
+    frame = cv2.copyMakeBorder(frame, border_v, border_v, border_h, border_h, cv2.BORDER_CONSTANT, 0)
+    return cv2.resize(frame, size)
+
+
+def createBlankFrame(width, height, rgb_color=(0, 0, 0)):
+    """
+    Create new image(numpy array) filled with certain color in RGB
+
+    Args:
+        width (int): New frame width
+        height (int): New frame height
+        rgb_color (tuple, Optional): Specify frame fill color in RGB format (default (0,0,0) - black)
+
+    Returns:
+         numpy.ndarray: New frame filled with specified color
+    """
+    # Create black blank image
+    image = np.zeros((height, width, 3), np.uint8)
+
+    # Since OpenCV uses BGR, convert the color first
+    color = tuple(reversed(rgb_color))
+    # Fill image with color
+    image[:] = color
+
+    return image

@@ -4,24 +4,25 @@ import depthai as dai
 import cv2
 import numpy as np
 
-from .preview_manager import PreviewManager
+from .preview_manager import PreviewManager, SyncedPreviewManager
 from ..previews import Previews
 from ..utils import loadModule, toTensorResult, frameNorm, toPlanar
 
 
 class NNetManager:
     """
-    Manager class handling all NN-related functionalities. It's capable of creating appropreate nodes and connections,
+    Manager class handling all NN-related functionalities. It's capable of creating appropriate nodes and connections,
     decoding neural network output automatically or by using external handler file.
     """
 
-    def __init__(self, inputSize, nnFamily=None, labels=[], confidence=0.5):
+    def __init__(self, inputSize, nnFamily=None, labels=[], confidence=0.5, sync=False):
         """
         Args:
             inputSize (tuple): Desired NN input size, should match the input size defined in the network itself (width, height)
             nnFamily (str, Optional): type of NeuralNetwork to be processed. Supported: :code:`"YOLO"` and :code:`mobilenet`
             labels (list, Optional): Allows to display class label instead of ID when drawing nn detections.
             confidence (float, Optional): Specify detection nn's confidence threshold
+            sync (bool, Optional): Store NN results for preview syncing (to be used with SyncedPreviewManager
         """
         self.inputSize = inputSize
         self._nnFamily = nnFamily
@@ -29,6 +30,7 @@ class NNetManager:
             self._outputFormat = "detection"
         self._labels = labels
         self._confidence = confidence
+        self._sync = sync
 
     #: list: List of available neural network inputs
     sourceChoices = ("color", "left", "right", "rectifiedLeft", "rectifiedRight", "host")
@@ -42,6 +44,8 @@ class NNetManager:
     inputQueue = None
     #: depthai.DataOutputQueue: DepthAI output queue object that allows to receive NN results from the device.
     outputQueue = None
+    #: dict: nn data buffer, disabled by default. Stores parsed nn data with packet sequence number as dict key
+    buffer = {}
 
 
     _bboxColors = np.random.random(size=(256, 3)) * 256  # Random Colors for bounding boxes
@@ -52,7 +56,6 @@ class NNetManager:
     _textType = cv2.FONT_HERSHEY_SIMPLEX
     _outputFormat = "raw"
     _metadata = None
-    _flipDetection = False
     _fullFov = True
     _config = None
     _nnFamily = None
@@ -109,7 +112,7 @@ class NNetManager:
         else:
             return 0
 
-    def createNN(self, pipeline, nodes, blobPath, source="color", flipDetection=False, useDepth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, fullFov=True):
+    def createNN(self, pipeline, nodes, blobPath, source="color", useDepth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, fullFov=True):
         """
         Creates nodes and connections in provided pipeline that will allow to run NN model and consume it's results.
 
@@ -128,8 +131,6 @@ class NNetManager:
             fullFov (bool, Optional): If set to False, manager will include crop offset when scaling the detections.
                 Usually should be set to True (if you don't perform aspect ratio crop or when `keepAspectRatio` flag
                 on camera/manip node is set to False
-            flipDetection (bool, Optional): Whether the bounding box coordinates should be flipped horizontally. Useful when
-                using rectified images as input.
 
         Returns:
             depthai.node.NeuralNetwork: Configured NN node that was added to the pipeline
@@ -143,7 +144,6 @@ class NNetManager:
             raise RuntimeError("Unable to determine the nn input size. Please use --cnnInputSize flag to specify it in WxH format: -nnSize <width>x<height>")
 
         self.source = source
-        self._flipDetection = flipDetection
         self._fullFov = fullFov
         if self._nnFamily == "mobilenet":
             nodes.nn = pipeline.createMobileNetSpatialDetectionNetwork() if useDepth else pipeline.createMobileNetDetectionNetwork()
@@ -169,13 +169,12 @@ class NNetManager:
         nodes.xoutNn.setStreamName("nnOut")
         nodes.nn.out.link(nodes.xoutNn.input)
 
-        if self.source == "color":
-            nodes.camRgb.preview.link(nodes.nn.input)
-        elif self.source == "host":
+        if self.source == "host":
             nodes.xinNn = pipeline.createXLinkIn()
+            nodes.xinNn.setMaxDataSize(self.inputSize[0] * self.inputSize[1] * 3)
             nodes.xinNn.setStreamName("nnIn")
             nodes.xinNn.out.link(nodes.nn.input)
-        elif self.source in ("left", "right", "rectifiedLeft", "rectifiedRight"):
+        else:
             nodes.manipNn = pipeline.createImageManip()
             nodes.manipNn.initialConfig.setResize(*self.inputSize)
             # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
@@ -184,6 +183,8 @@ class NNetManager:
             nodes.manipNn.out.link(nodes.nn.input)
             nodes.manipNn.setKeepAspectRatio(not self._fullFov)
 
+            if self.source == "color":
+                nodes.camRgb.preview.link(nodes.manipNn.inputImage)
             if self.source == "left":
                 nodes.monoLeft.out.link(nodes.manipNn.inputImage)
             elif self.source == "right":
@@ -222,6 +223,22 @@ class NNetManager:
             print(f"Label of ouf bounds (label index: {label}, available labels: {len(self._labels)}")
             return str(label)
 
+    def parse(self, blocking=False):
+        if self.outputQueue is None:
+            return None, None
+
+        if blocking:
+            inNn = self.outputQueue.get()
+        else:
+            inNn = self.outputQueue.tryGet()
+        if inNn is not None:
+            data = self.decode(inNn)
+            if self._sync:
+                self.buffer[inNn.getSequenceNum()] = data
+            return data, inNn
+        else:
+            return None, None
+
     def decode(self, inNn):
         """
         Decodes NN output. Performs generic handling for supported detection networks or calls custom handler methods
@@ -236,12 +253,7 @@ class NNetManager:
             RuntimeError: if outputFormat specified in model config file is not recognized
         """
         if self._outputFormat == "detection":
-            detections = inNn.detections
-            if self._flipDetection:
-                for detection in detections:
-                    # Since rectified frames are horizontally flipped by default
-                    detection.xmin, detection.xmax = 1 - detection.xmax, 1 - detection.xmin
-            return detections
+            return inNn.detections
         elif self._outputFormat == "raw":
             if self._handler is not None:
                 return self._handler.decode(self, inNn)
@@ -312,12 +324,21 @@ class NNetManager:
                                 self._textType, 0.5, self._textBgColor, 4, self._lineType)
                     cv2.putText(frame, "Z: {:.2f} m".format(zMeters), (bbox[0] + 10, bbox[1] + 90),
                                 self._textType, 0.5, self._textColor, 1, self._lineType)
-            for detection in decodedData:
-                if isinstance(source, PreviewManager):
-                    for name, frame in source.frames.items():
-                        drawDetection(frame, detection)
-                else:
-                    drawDetection(source, detection)
+            if isinstance(source, SyncedPreviewManager):
+                if len(self.buffer) > 0 and source.nnSyncSeq is not None:
+                    data = self.buffer.get(source.nnSyncSeq, self.buffer[max(self.buffer.keys())])
+                    for old_key in list(filter(lambda key: key < source.nnSyncSeq, self.buffer.keys())):
+                        del self.buffer[old_key]
+                    for detection in data:
+                        for name, frame in source.frames.items():
+                            drawDetection(frame, detection)
+            else:
+                for detection in decodedData:
+                    if isinstance(source, PreviewManager):
+                        for name, frame in source.frames.items():
+                            drawDetection(frame, detection)
+                    else:
+                        drawDetection(source, detection)
 
             if self._countLabel is not None:
                 self._drawCount(source, decodedData)
@@ -341,6 +362,15 @@ class NNetManager:
             self.inputQueue = device.getInputQueue("nnIn", maxSize=1, blocking=False)
         self.outputQueue = device.getOutputQueue("nnOut", maxSize=1, blocking=False)
 
+    def closeQueues(self):
+        """
+        Closes output queues created by :func:`createQueues`
+        """
+        if self.source == "host" and self.inputQueue is not None:
+            self.inputQueue.close()
+        if self.outputQueue is not None:
+            self.outputQueue.close()
+
     def sendInputFrame(self, frame, seqNum=None):
         """
         Sends a frame into :attr:`inputQueue` object. Handles scaling down the frame, creating a proper :obj:`depthai.ImgFrame`
@@ -349,7 +379,7 @@ class NNetManager:
 
         Args:
             frame (numpy.ndarray): Frame to be sent to the device
-            seqNum (int, Optional): Sequence number set on ImgFrame. Useful in syncronization scenarios
+            seqNum (int, Optional): Sequence number set on ImgFrame. Useful in synchronization scenarios
 
         Returns:
             numpy.ndarray: scaled frame that was sent to the NN (same width/height as NN input)

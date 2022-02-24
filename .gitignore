@@ -55,3 +55,6 @@ resources/*.json
 *.whl
 
 *.orig
+
+# Virtual environment
+virtualenv/

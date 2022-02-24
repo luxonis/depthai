@@ -1,0 +1,12 @@
+{
+    "board_config":
+    {
+        "name": "OAK-D-LITE",
+        "revision": "R0M0E0",
+        "left_fov_deg": 72.9,
+        "rgb_fov_deg": 68.7938,
+        "left_to_right_distance_cm": 7.5,
+        "left_to_rgb_distance_cm": 3.75
+    }
+}
+

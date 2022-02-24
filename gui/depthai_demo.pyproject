@@ -1,0 +1,4 @@
+{
+    "files": ["main.py", "views/DepthProperties.qml", "views/root.qml", "views/CameraProperties.qml",
+    "views/CameraPreview.qml", "views/AIProperties.qml", "views/MiscProperties.qml"]
+}

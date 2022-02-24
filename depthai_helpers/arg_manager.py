@@ -1,13 +1,6 @@
-import os
 import argparse
 from pathlib import Path
-import cv2
 import depthai as dai
-try:
-    import argcomplete
-except ImportError:
-    raise ImportError('\033[1;5;31m argcomplete module not found, run: python3 install_requirements.py \033[0m')
-from depthai_sdk.previews import Previews
 
 
 def checkRange(minVal, maxVal):
@@ -55,12 +48,16 @@ def orientationCast(arg):
 
 openvinoVersions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
 _streamChoices = ("nnInput", "color", "left", "right", "depth", "depthRaw", "disparity", "disparityColor", "rectifiedLeft", "rectifiedRight")
-colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
+try:
+    import cv2
+    colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
+except:
+    colorMaps = None
 projectRoot = Path(__file__).parent.parent
 
 def parseArgs():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-cam', '--camera', choices=[Previews.left.name, Previews.right.name, Previews.color.name], default=Previews.color.name, help="Use one of DepthAI cameras for inference (conflicts with -vid)")
+    parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
     parser.add_argument('-dd', '--disableDepth', action="store_true", help="Disable depth information")
     parser.add_argument('-dnn', '--disableNeuralNetwork', action="store_true", help="Disable neural network inference")
@@ -107,14 +104,13 @@ def parseArgs():
     parser.add_argument('-s', '--show', default=[], nargs="+", choices=_streamChoices, help="Choose which previews to show. Default: %(default)s")
     parser.add_argument('--report', nargs="+", default=[], choices=["temp", "cpu", "memory"], help="Display device utilization data")
     parser.add_argument('--reportFile', help="Save report data to specified target file in CSV format")
-    parser.add_argument('-sync', '--sync', action="store_true",
-                        help="Enable NN/camera synchronization. If enabled, camera source will be from the NN's passthrough attribute")
     parser.add_argument("-monor", "--monoResolution", default=400, type=int, choices=[400,720,800],
                         help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
     parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
                         help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
     parser.add_argument('-cb', '--callback', type=Path, default=projectRoot / 'callbacks.py', help="Path to callbacks file to be used. Default: %(default)s")
     parser.add_argument("--openvinoVersion", type=str, choices=openvinoVersions, help="Specify which OpenVINO version to use in the pipeline")
+    parser.add_argument("--app", type=str, help="Specify which app to run instead of the demo")
     parser.add_argument("--count", type=str, dest='countLabel',
                         help="Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).")
     parser.add_argument("-dev", "--deviceId", type=str,
@@ -123,6 +119,7 @@ def parseArgs():
                                                                                                                  "If set to \"high\", the output streams will stay uncompressed\n"
                                                                                                                  "If set to \"low\", the output streams will be MJPEG-encoded\n"
                                                                                                                  "If set to \"auto\" (default), the optimal bandwidth will be selected based on your connection type and speed")
+    parser.add_argument('-gt', '--guiType', type=str, default="auto", choices=["auto", "qt", "cv"], help="Specify GUI type of the demo. \"cv\" uses built-in OpenCV display methods, \"qt\" uses Qt to display interactive GUI. \"auto\" will use OpenCV for Raspberry Pi and Qt for other platforms")
     parser.add_argument('-usbs', '--usbSpeed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
     parser.add_argument('-enc', '--encode', type=_comaSeparated(default=30.0, cast=float), nargs="+", default=[],
                         help="Define which cameras to encode (record) \n"
@@ -130,10 +127,21 @@ def parseArgs():
                              "Example: -enc left color \n"
                              "Example: -enc color right,10 left,10")
     parser.add_argument('-encout', '--encodeOutput', type=Path, default=projectRoot, help="Path to directory where to store encoded files. Default: %(default)s")
-    parser.add_argument('-xls', '--xlinkChunkSize', type=int, default = None, help="Specify XLink chunk size")
+    parser.add_argument('-xls', '--xlinkChunkSize', type=int, help="Specify XLink chunk size")
+    parser.add_argument('-poeq', '--poeQuality', type=checkRange(1, 100), default=100, help="Specify PoE encoding video quality (1-100)")
     parser.add_argument('-camo', '--cameraOrientation', type=_comaSeparated(default="AUTO", cast=orientationCast), nargs="+", default=[],
                         help=("Define cameras orientation (available: {}) \n"
                              "Format: camera_name,camera_orientation \n"
                              "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(orientationChoices))
                         )
+    parser.add_argument("--cameraControlls", action="store_true", help="Show camera configuration options in GUI and control them using keyboard")
+    parser.add_argument("--cameraExposure", type=_comaSeparated("all", int), nargs="+", help="Specify camera saturation")
+    parser.add_argument("--cameraSensitivity", type=_comaSeparated("all", int), nargs="+", help="Specify camera sensitivity")
+    parser.add_argument("--cameraSaturation", type=_comaSeparated("all", int), nargs="+", help="Specify image saturation")
+    parser.add_argument("--cameraContrast", type=_comaSeparated("all", int), nargs="+", help="Specify image contrast")
+    parser.add_argument("--cameraBrightness", type=_comaSeparated("all", int), nargs="+", help="Specify image brightness")
+    parser.add_argument("--cameraSharpness", type=_comaSeparated("all", int), nargs="+", help="Specify image sharpness")
+    parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
+    parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
+    parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")
     return parser.parse_args()

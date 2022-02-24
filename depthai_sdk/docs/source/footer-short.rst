@@ -8,7 +8,7 @@ We're always happy to help with code or other questions you might have.
 
      <div class="cta-row cta-row-short">
          <div class="cta-box">
-            <a href="https://discord.gg/EPsZHkg9Nx">
+            <a href="https://discord.gg/4hGT3AFPMZ">
                <img src="https://docs.luxonis.com/en/latest/_images/discord.png" alt="Discord"/>
                <h5 class="cta-title">Community Discord</h5>
             </a>
