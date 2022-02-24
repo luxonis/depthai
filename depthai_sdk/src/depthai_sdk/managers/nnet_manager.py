@@ -174,6 +174,9 @@ class NNetManager:
             nodes.xinNn.setMaxDataSize(self.inputSize[0] * self.inputSize[1] * 3)
             nodes.xinNn.setStreamName("nnIn")
             nodes.xinNn.out.link(nodes.nn.input)
+        elif self.source == "color":
+            nodes.camRgb.setPreviewSize(*self.inputSize)
+            nodes.camRgb.preview.link(nodes.nn.input)
         else:
             nodes.manipNn = pipeline.createImageManip()
             nodes.manipNn.initialConfig.setResize(*self.inputSize)
@@ -183,8 +186,6 @@ class NNetManager:
             nodes.manipNn.out.link(nodes.nn.input)
             nodes.manipNn.setKeepAspectRatio(not self._fullFov)
 
-            if self.source == "color":
-                nodes.camRgb.preview.link(nodes.manipNn.inputImage)
             if self.source == "left":
                 nodes.monoLeft.out.link(nodes.manipNn.inputImage)
             elif self.source == "right":
