@@ -79,8 +79,8 @@ def parseArgs():
                         help="Sigma value for Bilateral Filter applied on depth. Default: %(default)s")
     parser.add_argument("-med", "--stereoMedianSize", default=7, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
-    parser.add_argument('-lrc', '--stereoLrCheck', action="store_true",
-                        help="Enable stereo 'Left-Right check' feature.")
+    parser.add_argument('-dlrc', '--disableStereoLrCheck', action="store_false", dest="stereoLrCheck",
+                        help="Disable stereo 'Left-Right check' feature.")
     parser.add_argument('-ext', '--extendedDisparity', action="store_true",
                         help="Enable stereo 'Extended Disparity' feature.")
     parser.add_argument('-sub', '--subpixel', action="store_true",
