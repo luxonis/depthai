@@ -472,6 +472,13 @@ class Demo:
             if self._conf.args.stereoLrCheck:
                 Trackbars.createTrackbar('LR-check threshold', queueName, self.LRCT_MIN, self.LRCT_MAX, self._conf.args.lrcThreshold,
                          lambda value: self._pm.updateDepthConfig(self._device, lrcThreshold=value))
+            irDrivers = self._device.getIrDrivers()
+            if irDrivers:
+                print('IR drivers detected on OAK-D Pro:', [f'{d[0]} on bus {d[1]}' for d in irDrivers])
+                Trackbars.createTrackbar('IR Laser Dot Projector [mA]', queueName, 0, 1200, 0,
+                         lambda value: self._device.setIrLaserDotProjectorBrightness(value))
+                Trackbars.createTrackbar('IR Flood Illuminator [mA]', queueName, 0, 1500, 0,
+                         lambda value: self._device.setIrFloodLightBrightness(value))
 
     def _updateCameraConfigs(self):
         parsedConfig = {}
