@@ -704,6 +704,8 @@ def runQt():
                 self.signals.setDataSignal.emit(["countLabels", []])
             self.signals.setDataSignal.emit(["depthEnabled", self.conf.useDepth])
             self.signals.setDataSignal.emit(["irEnabled", self.conf.irEnabled(instance._device)])
+            self.signals.setDataSignal.emit(["irDotBrightness", self.conf.args.irDotBrightness])
+            self.signals.setDataSignal.emit(["irFloodBrightness", self.conf.args.irFloodBrightness])
             self.signals.setDataSignal.emit(["lrc", self.conf.args.stereoLrCheck])
             self.signals.setDataSignal.emit(["statisticsAccepted", self.instance.metrics is not None])
             self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])

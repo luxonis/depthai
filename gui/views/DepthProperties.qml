@@ -358,7 +358,7 @@ ListView {
             height: 27
             stepSize: 1
             to: 1200
-            value: 0
+            value: irDotBrightness
             from: 0
             onValueChanged: {
                 depthBridge.setIrLaserDotProjector(value)
@@ -401,7 +401,7 @@ ListView {
             height: 27
             stepSize: 1
             to: 1500
-            value: 0
+            value: irFloodBrightness
             from: 0
             onValueChanged: {
                 depthBridge.setIrFloodIlluminator(value)
