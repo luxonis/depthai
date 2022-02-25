@@ -481,9 +481,9 @@ class Demo:
             irDrivers = self._device.getIrDrivers()
             if irDrivers:
                 print('IR drivers detected on OAK-D Pro:', [f'{d[0]} on bus {d[1]}' for d in irDrivers])
-                Trackbars.createTrackbar('IR Laser Dot Projector [mA]', queueName, 0, 1200, 0,
+                Trackbars.createTrackbar('IR Laser Dot Projector [mA]', queueName, 0, 1200, self._conf.args.irDotBrightness,
                          lambda value: self._device.setIrLaserDotProjectorBrightness(value))
-                Trackbars.createTrackbar('IR Flood Illuminator [mA]', queueName, 0, 1500, 0,
+                Trackbars.createTrackbar('IR Flood Illuminator [mA]', queueName, 0, 1500, self._conf.args.irFloodBrightness,
                          lambda value: self._device.setIrFloodLightBrightness(value))
 
     def _updateCameraConfigs(self):
