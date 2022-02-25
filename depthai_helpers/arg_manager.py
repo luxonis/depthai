@@ -79,8 +79,8 @@ def parseArgs():
                         help="Sigma value for Bilateral Filter applied on depth. Default: %(default)s")
     parser.add_argument("-med", "--stereoMedianSize", default=7, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
-    parser.add_argument('-lrc', '--stereoLrCheck', action="store_true",
-                        help="Enable stereo 'Left-Right check' feature.")
+    parser.add_argument('-dlrc', '--disableStereoLrCheck', action="store_false", dest="stereoLrCheck",
+                        help="Disable stereo 'Left-Right check' feature.")
     parser.add_argument('-ext', '--extendedDisparity', action="store_true",
                         help="Enable stereo 'Extended Disparity' feature.")
     parser.add_argument('-sub', '--subpixel', action="store_true",
@@ -141,6 +141,8 @@ def parseArgs():
     parser.add_argument("--cameraContrast", type=_comaSeparated("all", int), nargs="+", help="Specify image contrast")
     parser.add_argument("--cameraBrightness", type=_comaSeparated("all", int), nargs="+", help="Specify image brightness")
     parser.add_argument("--cameraSharpness", type=_comaSeparated("all", int), nargs="+", help="Specify image sharpness")
+    parser.add_argument("--irDotBrightness", type=checkRange(0, 1200), default=0, help="For OAK-D Pro: specify IR dot projector brightness, range: 0..1200 [mA], default 0 (turned off)")
+    parser.add_argument("--irFloodBrightness", type=checkRange(0, 1500), default=0, help="For OAK-D Pro: specify IR flood illumination brightness, range: 0..1500 [mA], default 0 (turned off)")
     parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
     parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
     parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")

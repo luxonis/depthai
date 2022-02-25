@@ -65,6 +65,7 @@ ListView {
             id: switch1
             x: 0
             y: 187
+            checked: lrc
             text: qsTr("<font color=\"white\">Left Right Check</font>")
             transformOrigin: Item.Center
             font.family: "Courier"
@@ -333,7 +334,91 @@ ListView {
             font.family: "Courier"
         }
 
+        Text {
+            id: textirlaserdot
+            x: 360
+            y: 290
+            width: 200
+            height: 25
+            color: "#ffffff"
+            text: qsTr("IR Laser Dot Projector [mA]")
+            font.pixelSize: 18
+            horizontalAlignment: Text.AlignHCenter
+            font.styleName: "Regular"
+            font.weight: Font.Medium
+            font.family: "Courier"
+        }
 
+        Slider {
+            id: irlaserdotslider
+            enabled: irEnabled
+            x: 361
+            y: 310
+            width: 198
+            height: 27
+            stepSize: 1
+            to: 1200
+            value: irDotBrightness
+            from: 0
+            onValueChanged: {
+                depthBridge.setIrLaserDotProjector(value)
+            }
+        }
+
+        Text {
+            id: irlaserdotslidervalue
+            x: 566
+            y: 315
+            width: 17
+            height: 20
+            color: "#ffffff"
+            text: irlaserdotslider.value
+            font.pixelSize: 12
+            rotation: 0
+        }
+
+        Text {
+            id: textirfloodilluminator
+            x: 360
+            y: 350
+            width: 200
+            height: 25
+            color: "#ffffff"
+            text: qsTr("IR Flood Illuminator [mA]")
+            font.pixelSize: 18
+            horizontalAlignment: Text.AlignHCenter
+            font.styleName: "Regular"
+            font.weight: Font.Medium
+            font.family: "Courier"
+        }
+
+        Slider {
+            id: irfloodslider
+            enabled: irEnabled
+            x: 361
+            y: 370
+            width: 198
+            height: 27
+            stepSize: 1
+            to: 1500
+            value: irFloodBrightness
+            from: 0
+            onValueChanged: {
+                depthBridge.setIrFloodIlluminator(value)
+            }
+        }
+
+        Text {
+            id: irfloodslidervalue
+            x: 566
+            y: 375
+            width: 17
+            height: 20
+            color: "#ffffff"
+            text: irfloodslider.value
+            font.pixelSize: 12
+            rotation: 0
+        }
     }
 }
 /*##^##

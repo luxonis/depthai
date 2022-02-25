@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import atexit
+import signal
 import sys
 
 if sys.version_info[0] < 3:
@@ -217,6 +219,13 @@ class Demo:
             self._pm.enableLowBandwidth(poeQuality=self._conf.args.poeQuality)
         self._cap = cv2.VideoCapture(self._conf.args.video) if not self._conf.useCamera else None
         self._fps = FPSHandler() if self._conf.useCamera else FPSHandler(self._cap)
+        irDrivers = self._device.getIrDrivers()
+        irSetFromCmdLine = any([self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness])
+        if irDrivers:
+            print('IR drivers found on OAK-D Pro:', [f'{d[0]} on bus {d[1]}' for d in irDrivers])
+            if not irSetFromCmdLine: print(' --> Go to the `Depth` tab to enable!')
+        elif irSetFromCmdLine:
+            print('[ERROR] IR drivers not detected on device!')
 
         if self._conf.useCamera:
             pvClass = SyncedPreviewManager if self._conf.args.sync else PreviewManager
@@ -252,6 +261,9 @@ class Demo:
                     useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show,
                     useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show,
                 )
+
+            if self._conf.irEnabled(self._device):
+                self._pm.updateIrConfig(self._device, self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness)
 
             self._encManager = None
             if len(self._conf.args.encode) > 0:
@@ -318,7 +330,7 @@ class Demo:
         self.onSetup(self)
 
         try:
-            while not self._device.isClosed() and self.shouldRun():
+            while self.shouldRun() and hasattr(self, "_device") and not self._device.isClosed():
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
@@ -332,10 +344,12 @@ class Demo:
         finally:
             self.stop()
 
-    def stop(self):
-        print("Stopping demo...")
-        self._device.close()
-        del self._device
+    def stop(self, *args, **kwargs):
+        if hasattr(self, "_device"):
+            print("Stopping demo...")
+            self._device.close()
+            del self._device
+            self._fps.printStatus()
         self._pm.closeDefaultQueues()
         if self._conf.useCamera:
             self._pv.closeQueues()
@@ -347,7 +361,6 @@ class Demo:
             self._sbbOut.close()
         if self._logOut is not None:
             self._logOut.close()
-        self._fps.printStatus()
         self.onTeardown(self)
 
     timer = time.monotonic()
@@ -472,6 +485,11 @@ class Demo:
             if self._conf.args.stereoLrCheck:
                 Trackbars.createTrackbar('LR-check threshold', queueName, self.LRCT_MIN, self.LRCT_MAX, self._conf.args.lrcThreshold,
                          lambda value: self._pm.updateDepthConfig(self._device, lrcThreshold=value))
+            if self._device.getIrDrivers():
+                Trackbars.createTrackbar('IR Laser Dot Projector [mA]', queueName, 0, 1200, self._conf.args.irDotBrightness,
+                         lambda value: self._device.setIrLaserDotProjectorBrightness(value))
+                Trackbars.createTrackbar('IR Flood Illuminator [mA]', queueName, 0, 1500, self._conf.args.irFloodBrightness,
+                         lambda value: self._device.setIrFloodLightBrightness(value))
 
     def _updateCameraConfigs(self):
         parsedConfig = {}
@@ -690,6 +708,10 @@ def runQt():
             else:
                 self.signals.setDataSignal.emit(["countLabels", []])
             self.signals.setDataSignal.emit(["depthEnabled", self.conf.useDepth])
+            self.signals.setDataSignal.emit(["irEnabled", self.conf.irEnabled(instance._device)])
+            self.signals.setDataSignal.emit(["irDotBrightness", self.conf.args.irDotBrightness if self.conf.irEnabled(instance._device) else 0])
+            self.signals.setDataSignal.emit(["irFloodBrightness", self.conf.args.irFloodBrightness if self.conf.irEnabled(instance._device) else 0])
+            self.signals.setDataSignal.emit(["lrc", self.conf.args.stereoLrCheck])
             self.signals.setDataSignal.emit(["statisticsAccepted", self.instance.metrics is not None])
             self.signals.setDataSignal.emit(["modelChoices", sorted(self.conf.getAvailableZooModels(), key=cmp_to_key(lambda a, b: -1 if a == "mobilenet-ssd" else 1 if b == "mobilenet-ssd" else -1 if a < b else 1))])
 
@@ -750,6 +772,7 @@ def runQt():
                 current_mxid = self._demoInstance._device.getMxId()
             else:
                 current_mxid = self.confManager.args.deviceId
+            self.worker.running = False
             self.worker.signals.exitSignal.emit()
             self.threadpool.waitForDone(10000)
 
@@ -767,8 +790,12 @@ def runQt():
             self.stop()
             self.start()
 
-        def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrc=None, lrcThreshold=None):
-            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrc=lrc, lrcThreshold=lrcThreshold)
+        def stopGui(self, *args, **kwargs):
+            self.stop(wait=False)
+            self.app.quit()
+
+        def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None, irLaser=None, irFlood=None):
+            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
             if median is not None:
                 if median == dai.MedianFilter.MEDIAN_OFF:
                     self.updateArg("stereoMedianSize", 0, False)
@@ -782,10 +809,14 @@ def runQt():
                 self.updateArg("disparityConfidenceThreshold", dct, False)
             if sigma is not None:
                 self.updateArg("sigma", sigma, False)
-            if lrc is not None:
-                self.updateArg("stereoLrCheck", lrc, False)
             if lrcThreshold is not None:
                 self.updateArg("lrcThreshold", lrcThreshold, False)
+            if any([irLaser, irFlood]):
+                self._demoInstance._pm.updateIrConfig(self._demoInstance._device, irLaser, irFlood)
+                if irLaser is not None:
+                    self.updateArg("irDotBrightness", irLaser, False)
+                if irFlood is not None:
+                    self.updateArg("irFloodBrightness", irFlood, False)
 
         def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
             if exposure is not None:
@@ -815,7 +846,7 @@ def runQt():
 
             self._demoInstance._updateCameraConfigs()
 
-        def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None):
+        def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None, lrc=None):
             if depthFrom is not None:
                 self.updateArg("minDepth", depthFrom)
             if depthTo is not None:
@@ -824,6 +855,8 @@ def runQt():
                 self.updateArg("subpixel", subpixel)
             if extended is not None:
                 self.updateArg("extendedDisparity", extended)
+            if lrc is not None:
+                self.updateArg("stereoLrCheck", lrc)
 
         def guiOnCameraSetupUpdate(self, name, fps=None, resolution=None):
             if fps is not None:
@@ -978,12 +1011,19 @@ def runQt():
                 if self.selectedPreview not in updated:
                     self.selectedPreview = updated[0]
                 self.updateArg("show", updated)
-    GuiApp().start()
+    app = GuiApp()
+    signal.signal(signal.SIGINT, app.stopGui)
+    signal.signal(signal.SIGTERM, app.stopGui)
+    atexit.register(app.stopGui)
+    app.start()
 
 
 def runOpenCv():
     confManager = prepareConfManager(args)
     demo = Demo()
+    signal.signal(signal.SIGINT, demo.stop)
+    signal.signal(signal.SIGTERM, demo.stop)
+    atexit.register(demo.stop)
     demo.run_all(confManager)
 
 
