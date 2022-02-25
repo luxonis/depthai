@@ -255,6 +255,9 @@ class Demo:
                     useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show,
                 )
 
+            if self._conf.irEnabled(self._device):
+                self._pm.updateIrConfig(self._device, self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness)
+
             self._encManager = None
             if len(self._conf.args.encode) > 0:
                 self._encManager = EncodingManager(self._conf.args.encode, self._conf.args.encodeOutput)
@@ -335,7 +338,6 @@ class Demo:
             self.stop()
 
     def stop(self, *args, **kwargs):
-
         if hasattr(self, "_device"):
             print("Stopping demo...")
             self._device.close()
@@ -786,7 +788,7 @@ def runQt():
             self.app.quit()
 
         def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None, irLaser=None, irFlood=None):
-            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold, irLaser=irLaser, irFlood=irFlood)
+            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
             if median is not None:
                 if median == dai.MedianFilter.MEDIAN_OFF:
                     self.updateArg("stereoMedianSize", 0, False)
@@ -802,6 +804,12 @@ def runQt():
                 self.updateArg("sigma", sigma, False)
             if lrcThreshold is not None:
                 self.updateArg("lrcThreshold", lrcThreshold, False)
+            if any([irLaser, irFlood]):
+                self._demoInstance._pm.updateIrConfig(self._demoInstance._device, irLaser, irFlood)
+                if irLaser is not None:
+                    self.updateArg("irDotBrightness", irLaser, False)
+                if irFlood is not None:
+                    self.updateArg("irFloodBrightness", irFlood, False)
 
         def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
             if exposure is not None:

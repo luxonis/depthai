@@ -141,6 +141,8 @@ def parseArgs():
     parser.add_argument("--cameraContrast", type=_comaSeparated("all", int), nargs="+", help="Specify image contrast")
     parser.add_argument("--cameraBrightness", type=_comaSeparated("all", int), nargs="+", help="Specify image brightness")
     parser.add_argument("--cameraSharpness", type=_comaSeparated("all", int), nargs="+", help="Specify image sharpness")
+    parser.add_argument("--irDotBrightness", type=int, help="Specify IR dot projector brightness")
+    parser.add_argument("--irFloodBrightness", type=int, help="Specify IR flood illumination brightness")
     parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
     parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
     parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")
