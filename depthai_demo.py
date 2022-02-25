@@ -219,6 +219,11 @@ class Demo:
             self._pm.enableLowBandwidth(poeQuality=self._conf.args.poeQuality)
         self._cap = cv2.VideoCapture(self._conf.args.video) if not self._conf.useCamera else None
         self._fps = FPSHandler() if self._conf.useCamera else FPSHandler(self._cap)
+        irDrivers = self._device.getIrDrivers()
+        if irDrivers:
+            print('IR drivers found on OAK-D Pro:', [f'{d[0]} on bus {d[1]}' for d in irDrivers])
+        elif any([self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness]):
+            print('[ERROR] IR drivers not detected on device!')
 
         if self._conf.useCamera:
             pvClass = SyncedPreviewManager if self._conf.args.sync else PreviewManager
@@ -478,9 +483,7 @@ class Demo:
             if self._conf.args.stereoLrCheck:
                 Trackbars.createTrackbar('LR-check threshold', queueName, self.LRCT_MIN, self.LRCT_MAX, self._conf.args.lrcThreshold,
                          lambda value: self._pm.updateDepthConfig(self._device, lrcThreshold=value))
-            irDrivers = self._device.getIrDrivers()
-            if irDrivers:
-                print('IR drivers detected on OAK-D Pro:', [f'{d[0]} on bus {d[1]}' for d in irDrivers])
+            if self._device.getIrDrivers():
                 Trackbars.createTrackbar('IR Laser Dot Projector [mA]', queueName, 0, 1200, self._conf.args.irDotBrightness,
                          lambda value: self._device.setIrLaserDotProjectorBrightness(value))
                 Trackbars.createTrackbar('IR Flood Illuminator [mA]', queueName, 0, 1500, self._conf.args.irFloodBrightness,
