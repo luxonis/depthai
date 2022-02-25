@@ -220,9 +220,11 @@ class Demo:
         self._cap = cv2.VideoCapture(self._conf.args.video) if not self._conf.useCamera else None
         self._fps = FPSHandler() if self._conf.useCamera else FPSHandler(self._cap)
         irDrivers = self._device.getIrDrivers()
+        irSetFromCmdLine = any([self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness])
         if irDrivers:
             print('IR drivers found on OAK-D Pro:', [f'{d[0]} on bus {d[1]}' for d in irDrivers])
-        elif any([self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness]):
+            if not irSetFromCmdLine: print(' --> Go to the `Depth` tab to enable!')
+        elif irSetFromCmdLine:
             print('[ERROR] IR drivers not detected on device!')
 
         if self._conf.useCamera:
