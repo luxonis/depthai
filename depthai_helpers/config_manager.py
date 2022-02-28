@@ -71,8 +71,11 @@ class ConfigManager:
             return "color"
 
     def irEnabled(self, device):
-        drivers = device.getIrDrivers()
-        return len(drivers) > 0
+        try:
+            drivers = device.getIrDrivers()
+            return len(drivers) > 0
+        except RuntimeError:
+            return False
 
     def getModelName(self):
         if self.args.cnnModel:

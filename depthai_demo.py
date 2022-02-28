@@ -307,17 +307,14 @@ class Demo:
             if dai.CameraBoardSocket.LEFT in cameras and dai.CameraBoardSocket.RIGHT in cameras:
                 self._pv.collectCalibData(self._device)
 
-            self._cameraConfig = {
+            self._updateCameraConfigs({
                 "exposure": self._conf.args.cameraExposure,
                 "sensitivity": self._conf.args.cameraSensitivity,
                 "saturation": self._conf.args.cameraSaturation,
                 "contrast": self._conf.args.cameraContrast,
                 "brightness": self._conf.args.cameraBrightness,
                 "sharpness": self._conf.args.cameraSharpness
-            }
-
-            if any(self._cameraConfig.values()):
-                self._updateCameraConfigs()
+            })
 
             self._pv.createQueues(self._device, self._createQueueCallback)
             if self._encManager is not None:
@@ -478,22 +475,22 @@ class Demo:
     def _createQueueCallback(self, queueName):
         if self._displayFrames and queueName in [Previews.disparityColor.name, Previews.disparity.name, Previews.depth.name, Previews.depthRaw.name]:
             Trackbars.createTrackbar('Disparity confidence', queueName, self.DISP_CONF_MIN, self.DISP_CONF_MAX, self._conf.args.disparityConfidenceThreshold,
-                     lambda value: self._pm.updateDepthConfig(self._device, dct=value))
+                     lambda value: self._pm.updateDepthConfig(dct=value))
             if queueName in [Previews.depthRaw.name, Previews.depth.name]:
                 Trackbars.createTrackbar('Bilateral sigma', queueName, self.SIGMA_MIN, self.SIGMA_MAX, self._conf.args.sigma,
-                         lambda value: self._pm.updateDepthConfig(self._device, sigma=value))
+                         lambda value: self._pm.updateDepthConfig(sigma=value))
             if self._conf.args.stereoLrCheck:
                 Trackbars.createTrackbar('LR-check threshold', queueName, self.LRCT_MIN, self.LRCT_MAX, self._conf.args.lrcThreshold,
-                         lambda value: self._pm.updateDepthConfig(self._device, lrcThreshold=value))
+                         lambda value: self._pm.updateDepthConfig(lrcThreshold=value))
             if self._device.getIrDrivers():
                 Trackbars.createTrackbar('IR Laser Dot Projector [mA]', queueName, 0, 1200, self._conf.args.irDotBrightness,
                          lambda value: self._device.setIrLaserDotProjectorBrightness(value))
                 Trackbars.createTrackbar('IR Flood Illuminator [mA]', queueName, 0, 1500, self._conf.args.irFloodBrightness,
                          lambda value: self._device.setIrFloodLightBrightness(value))
 
-    def _updateCameraConfigs(self):
+    def _updateCameraConfigs(self, config):
         parsedConfig = {}
-        for configOption, values in self._cameraConfig.items():
+        for configOption, values in config.items():
             if values is not None:
                 for cameraName, value in values:
                     newConfig = {
@@ -507,13 +504,12 @@ class Demo:
                     else:
                         parsedConfig[cameraName] = newConfig
 
-        if hasattr(self, "_device"):
-            if self._conf.leftCameraEnabled and Previews.left.name in parsedConfig:
-                self._pm.updateLeftCamConfig(self._device, **parsedConfig[Previews.left.name])
-            if self._conf.rightCameraEnabled and Previews.right.name in parsedConfig:
-                self._pm.updateRightCamConfig(self._device, **parsedConfig[Previews.right.name])
-            if self._conf.rgbCameraEnabled and Previews.color.name in parsedConfig:
-                self._pm.updateColorCamConfig(self._device, **parsedConfig[Previews.color.name])
+        if self._conf.leftCameraEnabled and Previews.left.name in parsedConfig:
+            self._pm.updateLeftCamConfig(**parsedConfig[Previews.left.name])
+        if self._conf.rightCameraEnabled and Previews.right.name in parsedConfig:
+            self._pm.updateRightCamConfig(**parsedConfig[Previews.right.name])
+        if self._conf.rgbCameraEnabled and Previews.color.name in parsedConfig:
+            self._pm.updateColorCamConfig(**parsedConfig[Previews.color.name])
 
     def _showFramesCallback(self, frame, name):
         returnFrame = self.onShowFrame(frame, name)
@@ -795,7 +791,7 @@ def runQt():
             self.app.quit()
 
         def guiOnDepthConfigUpdate(self, median=None, dct=None, sigma=None, lrcThreshold=None, irLaser=None, irFlood=None):
-            self._demoInstance._pm.updateDepthConfig(self._demoInstance._device, median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
+            self._demoInstance._pm.updateDepthConfig(median=median, dct=dct, sigma=sigma, lrcThreshold=lrcThreshold)
             if median is not None:
                 if median == dai.MedianFilter.MEDIAN_OFF:
                     self.updateArg("stereoMedianSize", 0, False)
@@ -819,32 +815,34 @@ def runQt():
                     self.updateArg("irFloodBrightness", irFlood, False)
 
         def guiOnCameraConfigUpdate(self, name, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+            print(name)
+            config = {}
             if exposure is not None:
                 newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraExposure or []))) + [(name, exposure)]
-                self._demoInstance._cameraConfig["exposure"] = newValue
+                config["exposure"] = newValue
                 self.updateArg("cameraExposure", newValue, False)
             if sensitivity is not None:
                 newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraSensitivity or []))) + [(name, sensitivity)]
-                self._demoInstance._cameraConfig["sensitivity"] = newValue
+                config["sensitivity"] = newValue
                 self.updateArg("cameraSensitivity", newValue, False)
             if saturation is not None:
                 newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraSaturation or []))) + [(name, saturation)]
-                self._demoInstance._cameraConfig["saturation"] = newValue
+                config["saturation"] = newValue
                 self.updateArg("cameraSaturation", newValue, False)
             if contrast is not None:
                 newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraContrast or []))) + [(name, contrast)]
-                self._demoInstance._cameraConfig["contrast"] = newValue
+                config["contrast"] = newValue
                 self.updateArg("cameraContrast", newValue, False)
             if brightness is not None:
                 newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraBrightness or []))) + [(name, brightness)]
-                self._demoInstance._cameraConfig["brightness"] = newValue
+                config["brightness"] = newValue
                 self.updateArg("cameraBrightness", newValue, False)
             if sharpness is not None:
                 newValue = list(filter(lambda item: item[0] == name, (self.confManager.args.cameraSharpness or []))) + [(name, sharpness)]
-                self._demoInstance._cameraConfig["sharpness"] = newValue
+                config["sharpness"] = newValue
                 self.updateArg("cameraSharpness", newValue, False)
 
-            self._demoInstance._updateCameraConfigs()
+            self._demoInstance._updateCameraConfigs(config)
 
         def guiOnDepthSetupUpdate(self, depthFrom=None, depthTo=None, subpixel=None, extended=None, lrc=None):
             if depthFrom is not None:
