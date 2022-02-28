@@ -166,7 +166,7 @@ class DepthBridge(QObject):
 
     @pyqtSlot(bool)
     def toggleLeftRightCheck(self, state):
-        instance.guiOnDepthConfigUpdate(lrc=state)
+        instance.guiOnDepthSetupUpdate(lrc=state)
 
     @pyqtSlot(int)
     def setDisparityConfidenceThreshold(self, value):
@@ -188,6 +188,14 @@ class DepthBridge(QObject):
     def setMedianFilter(self, state):
         value = getattr(dai.MedianFilter, state)
         instance.guiOnDepthConfigUpdate(median=value)
+
+    @pyqtSlot(int)
+    def setIrLaserDotProjector(self, value):
+        instance.guiOnDepthConfigUpdate(irLaser=value)
+
+    @pyqtSlot(int)
+    def setIrFloodIlluminator(self, value):
+        instance.guiOnDepthConfigUpdate(irFlood=value)
 
 
 # @QmlElement

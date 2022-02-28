@@ -182,6 +182,7 @@ class NNetManager:
             # NN inputs
             nodes.manipNn.out.link(nodes.nn.input)
             nodes.manipNn.setKeepAspectRatio(not self._fullFov)
+            nodes.manipNn.setMaxOutputFrameSize(self.inputSize[0] * self.inputSize[1] * 3)
 
             if self.source == "color":
                 nodes.camRgb.preview.link(nodes.manipNn.inputImage)
@@ -224,6 +225,9 @@ class NNetManager:
             return str(label)
 
     def parse(self, blocking=False):
+        if self.outputQueue is None:
+            return None, None
+
         if blocking:
             inNn = self.outputQueue.get()
         else:
