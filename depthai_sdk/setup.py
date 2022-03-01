@@ -11,7 +11,7 @@ setup(
     description='This package contains convenience classes and functions that help in most common tasks while using DepthAI API',
     long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
-    url='https://github.com/luxonis/depthai/sdk',
+    url='https://github.com/luxonis/depthai/tree/main/depthai_sdk',
     keywords="depthai sdk utils managers previews helpers",
     author='Luxonis',
     author_email='support@luxonis.com',
@@ -22,7 +22,7 @@ setup(
     include_package_data=True,
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
-        "Source Code": "https://github.com/luxonis/depthai/tree/main/sdk",
+        "Source Code": "https://github.com/luxonis/depthai/tree/main/depthai_sdk",
     },
     classifiers=[
         'License :: OSI Approved :: MIT License',
