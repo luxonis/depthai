@@ -102,7 +102,7 @@ class DepthAICamera():
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
         self.camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-        self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
         self.camRgb.preview.link(self.xoutRgb.input)
         self.camRgb.setFps(FPS)
 
@@ -118,7 +118,7 @@ class DepthAICamera():
             self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
             self.xoutLeft.setStreamName("left")
             self.camLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-            self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+            self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
             self.camLeft.out.link(self.xoutLeft.input)
             self.camLeft.setFps(FPS)
 
@@ -126,7 +126,7 @@ class DepthAICamera():
             self.xoutRight = self.pipeline.create(dai.node.XLinkOut)
             self.xoutRight.setStreamName("right")
             self.camRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-            self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+            self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
             self.camRight.out.link(self.xoutRight.input)
             self.camRight.setFps(10)
 
@@ -286,11 +286,14 @@ class DepthAICamera():
         calib_data = dai.CalibrationHandler(calib_path)
 
         status = self.device.flashCalibration(calib_data)
-        if status:
-            print('Calibration Flash Successful')
-            return True
-        print('Calibration Flash Failed!!!')
-        return False
+        if not status:
+            print('Calibration Flash Failed!!!')
+            return False
+        print('Calibration Flash Successful')
+
+        device_calib.doFirmwareUpdate()
+        return True
+
 
 
 class Camera(QtWidgets.QWidget):
