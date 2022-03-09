@@ -19,14 +19,14 @@ class Ui_MainWindow(object):
     def setup_ui(self, MainWindow):
         # Main Window
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(906, 704)
+        MainWindow.resize(937, 740)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("Assets/logo.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         MainWindow.setWindowIcon(icon)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 906, 20))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 923, 20))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
@@ -34,14 +34,14 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
         # Title
         self.title = QtWidgets.QLabel(self.centralwidget)
-        self.title.setGeometry(QtCore.QRect(10, 20, 221, 51))
+        self.title.setGeometry(QtCore.QRect(10, 10, 221, 31))
         font = QtGui.QFont()
         font.setPointSize(16)
         self.title.setFont(font)
         self.title.setObjectName("title")
         # Select Model
         self.select_box = QtWidgets.QGroupBox(self.centralwidget)
-        self.select_box.setGeometry(QtCore.QRect(10, 80, 261, 251))
+        self.select_box.setGeometry(QtCore.QRect(10, 50, 261, 251))
         font.setPointSize(11)
         self.select_box.setFont(font)
         self.select_box.setObjectName("select_box")
@@ -74,27 +74,70 @@ class Ui_MainWindow(object):
         self.oak_d_pro.setObjectName("oak_d_pro")
         self.oak_d_pro.value = 'oak-d-pro'
         self.oak_d_pro.toggled.connect(lambda: self.camera_select(self.oak_d_pro))
+        # RaspberryPi Compute Module option
+        self.rpi = QtWidgets.QRadioButton(self.select_box)
+        self.rpi.setGeometry(QtCore.QRect(10, 160, 241, 21))
+        self.rpi.setObjectName("rpi")
+        self.rpi.value = 'rpi-module'
+        self.rpi.toggled.connect(lambda: self.camera_select(self.rpi))
+        # RaspberryPi Hat
+        self.rpi_hat = QtWidgets.QRadioButton(self.select_box)
+        self.rpi_hat.setGeometry(QtCore.QRect(10, 190, 151, 21))
+        self.rpi_hat.setObjectName("radioButton_3")
+        self.rpi_hat.value = 'rpi-hat'
+        self.rpi_hat.toggled.connect(lambda: self.camera_select(self.rpi_hat))
+        # USB3 with Modular Cameras
+        self.usb3 = QtWidgets.QRadioButton(self.select_box)
+        self.usb3.setGeometry(QtCore.QRect(10, 220, 241, 21))
+        self.usb3.setObjectName("radioButton_2")
+        self.usb3.value = 'usb3-module'
+        self.usb3.toggled.connect(lambda: self.camera_select(self.usb3))
         # Buttons
         self.calibrate_but = QtWidgets.QPushButton(self.centralwidget)
-        self.calibrate_but.setGeometry(QtCore.QRect(10, 400, 91, 31))
+        self.calibrate_but.setGeometry(QtCore.QRect(20, 370, 91, 31))
         self.calibrate_but.setFont(font)
         self.calibrate_but.setObjectName("calibrate_but")
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
-        self.connect_but.setGeometry(QtCore.QRect(120, 400, 81, 31))
+        self.connect_but.setGeometry(QtCore.QRect(130, 370, 81, 31))
         self.connect_but.setFont(font)
         self.connect_but.setObjectName("connect_but")
+        # Square size
+        self.square_size_in = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.square_size_in.setGeometry(QtCore.QRect(20, 330, 62, 24))
+        self.square_size_in.setSingleStep(0.1)
+        self.square_size_in.setProperty("value", 2.0)
+        self.square_size_in.setObjectName("square_size_in")
+        self.sq_size_label = QtWidgets.QLabel(self.centralwidget)
+        self.sq_size_label.setGeometry(QtCore.QRect(20, 310, 131, 16))
+        font.setPointSize(12)
+        self.sq_size_label.setFont(font)
+        self.sq_size_label.setObjectName("sq_size_label")
+        # Charuco check
+        self.charuco_check = QtWidgets.QCheckBox(self.centralwidget)
+        self.charuco_check.setGeometry(QtCore.QRect(20, 410, 191, 21))
+        font.setPointSize(11)
+        self.charuco_check.setFont(font)
+        self.charuco_check.setObjectName("charuco_check")
+        # Mirror check
+        self.mirror_check = QtWidgets.QCheckBox(self.centralwidget)
+        self.mirror_check.setGeometry(QtCore.QRect(20, 440, 121, 21))
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        self.mirror_check.setFont(font)
+        self.mirror_check.setChecked(True)
+        self.mirror_check.setObjectName("mirror_check")
         # Logs
         self.logs_box = QtWidgets.QGroupBox(self.centralwidget)
-        self.logs_box.setGeometry(QtCore.QRect(20, 470, 871, 191))
+        self.logs_box.setGeometry(QtCore.QRect(20, 500, 901, 191))
         self.logs_box.setFont(font)
         self.logs_box.setObjectName("logs_box")
         self.logs = QtWidgets.QTextBrowser(self.logs_box)
-        self.logs.setGeometry(QtCore.QRect(10, 30, 851, 151))
+        self.logs.setGeometry(QtCore.QRect(10, 30, 881, 151))
         self.logs.setObjectName("logs")
         MainWindow.setCentralWidget(self.centralwidget)
         # Image
         self.image = QtWidgets.QLabel(self.centralwidget)
-        self.image.setGeometry(QtCore.QRect(260, 0, 640, 480))
+        self.image.setGeometry(QtCore.QRect(280, 10, 640, 480))
         self.image.setText("")
         self.image.setPixmap(QtGui.QPixmap("Assets/oak-d.jpg"))
         self.image.setObjectName("image")
@@ -112,8 +155,14 @@ class Ui_MainWindow(object):
         self.oak_d_lite.setText(_translate("MainWindow", "OAK-D-Lite"))
         self.oak_d.setText(_translate("MainWindow", "OAK-D"))
         self.oak_d_pro.setText(_translate("MainWindow", "OAK-D-Pro"))
+        self.rpi.setText(_translate("MainWindow", "RaspberryPi Compute Module"))
+        self.rpi_hat.setText(_translate("MainWindow", "RaspberryPi Hat"))
+        self.usb3.setText(_translate("MainWindow", "USB3 with Modular Cameras"))
         self.connect_but.setText(_translate("MainWindow", "Connect"))
         self.calibrate_but.setText(_translate("MainWindow", "Calibrate"))
+        self.sq_size_label.setText(_translate("MainWindow", "Square Size(cm)"))
+        self.charuco_check.setText(_translate("MainWindow", "Show charuco board"))
+        self.mirror_check.setText(_translate("MainWindow", "Mirror image"))
         self.logs_box.setTitle(_translate("MainWindow", "Logs"))
 
     def camera_select(self, model):
@@ -129,6 +178,15 @@ class Ui_MainWindow(object):
         elif model.value == "oak-1":
             self.image.setPixmap(QtGui.QPixmap("Assets/oak-1.jpg"))
             self.camera_type = 'oak-1'
+        elif model.value == 'rpi-module':
+            self.image.setPixmap(QtGui.QPixmap("Assets/rpi-compute-mod.jpg"))
+            self.camera_type = 'rpi-module'
+        elif model.value == 'rpi-hat':
+            self.image.setPixmap(QtGui.QPixmap("Assets/rpi-hat.jpg"))
+            self.camera_type = 'rpi-hat'
+        elif model.value == 'usb3-module':
+            self.image.setPixmap(QtGui.QPixmap("Assets/usb3.jpg"))
+            self.camera_type = 'usb3-module'
 
 
 if __name__ == "__main__":
