@@ -9,12 +9,35 @@
 
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
 import cv2
-
+import calibrate
 
 class Ui_MainWindow(object):
     def __init__(self):
         self.camera_type = 'oak-d'
+        self.options = {
+            'count': 1,
+            'squareSizeCm': 2.35,
+            'markerSizeCm': 1.7625000000000002,
+            'defaultBoard': True,
+            'squaresX': 11,
+            'squaresY': 8,
+            'rectifiedDisp': True,
+            'disableRgb': False,
+            'swapLR': False,
+            'mode': ['capture', 'process'],
+            'board': 'bw1098obc',
+            'invert_v': False,
+            'invert_h': True,
+            'maxEpiploarError': 1.0,
+            'cameraMode': 'perspective',
+            'rgbLensPosition': 135,
+            'fps': 30}
+        self.disply_width = 640
+        self.display_height = 480
 
     def setup_ui(self, MainWindow):
         # Main Window
@@ -97,6 +120,7 @@ class Ui_MainWindow(object):
         self.calibrate_but.setGeometry(QtCore.QRect(20, 370, 91, 31))
         self.calibrate_but.setFont(font)
         self.calibrate_but.setObjectName("calibrate_but")
+        self.calibrate_but.clicked.connect(self.start_calibration)
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
         self.connect_but.setGeometry(QtCore.QRect(130, 370, 81, 31))
         self.connect_but.setFont(font)
@@ -187,6 +211,22 @@ class Ui_MainWindow(object):
         elif model.value == 'usb3-module':
             self.image.setPixmap(QtGui.QPixmap("Assets/usb3.jpg"))
             self.camera_type = 'usb3-module'
+
+    def convert_cv_qt(self, cv_img):
+        """Convert from an opencv image to QPixmap"""
+        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb_image.shape
+        bytes_per_line = ch * w
+        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
+        p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
+        return QPixmap.fromImage(p)
+
+    def update_image(self, *args):
+        cv_img = args[-1]
+        self.image.setPixmap(self.convert_cv_qt(cv_img))
+
+    def start_calibration(self):
+        calibrate.Main(self.options, self.update_image).run()
 
 
 if __name__ == "__main__":

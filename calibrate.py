@@ -108,6 +108,9 @@ def parse_args():
         
     return options
 
+class Bunch(object):
+  def __init__(self, adict):
+    self.__dict__.update(adict)
 
 class Main:
     output_scale_factor = 0.5
@@ -118,9 +121,9 @@ class Main:
     images_captured_polygon = 0
     images_captured = 0
 
-    def __init__(self):
-        self.args = parse_args()
-
+    def __init__(self, options, show_img=cv2.imshow):
+        self.args = Bunch(options)
+        self.show_img = show_img
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
@@ -254,7 +257,7 @@ class Main:
             self.total_images, self.args.count))
         show((25, 550), "To continue, press [spacebar]...")
 
-        cv2.imshow("info", info_frame)
+        self.show_img("info", info_frame)
         while True:
             key = cv2.waitKey(1)
             if key == ord(" "):
@@ -280,7 +283,7 @@ class Main:
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + rgb + right", info_frame)
+        self.show_img("left + rgb + right", info_frame)
         cv2.waitKey(2000)
 
     def show_failed_orientation(self):
@@ -301,7 +304,7 @@ class Main:
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + right", info_frame)
+        self.show_img("left + right", info_frame)
         cv2.waitKey(0)
         raise Exception(
             "Calibration failed, Camera Might be held upside down. start again!!")
@@ -472,7 +475,7 @@ class Main:
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
-            cv2.imshow("left + rgb + right", combine_img)
+            self.show_img("left + rgb + right", combine_img)
             frame_list.clear()
 
     def calibrate(self):
@@ -490,7 +493,7 @@ class Main:
                 text = "Requires Recalibration "
                 cv2.putText(image, text, (10, 300), font, 2, (0, 0, 0), 2)
 
-                cv2.imshow("Result Image", image)
+                self.show_img("Result Image", image)
                 cv2.waitKey(0)
                 print("Requires Recalibration.....!!")
                 raise SystemExit(1)
@@ -501,7 +504,7 @@ class Main:
                 text = "Requires Recalibration "
                 cv2.putText(image, text, (10, 300), font, 2, (0, 0, 0), 2)
 
-                cv2.imshow("Result Image", image)
+                self.show_img("Result Image", image)
                 cv2.waitKey(0)
                 print("Requires Recalibration.....!!")
                 raise SystemExit(1)
@@ -585,7 +588,7 @@ class Main:
                 # cv2.putText(resImage, text, (10, 300), font, 2, (0, 0, 0), 2)
 
             if resImage is not None:
-                cv2.imshow("Result Image", resImage)
+                self.show_img("Result Image", resImage)
                 cv2.waitKey(0)
         except AssertionError as e:
             print("[ERROR] " + str(e))
@@ -613,4 +616,6 @@ class Main:
 
 
 if __name__ == "__main__":
-    Main().run()
+    args = parse_args()
+    print(vars(args))
+    Main(vars(args)).run()
