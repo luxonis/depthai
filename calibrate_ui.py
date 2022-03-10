@@ -10,10 +10,29 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QThread
+from PyQt5.QtCore import Qt, QTimer,QDateTime
 import cv2
+# !/usr/bin/env python3
+import argparse
+import json
+import shutil
+import time
+import traceback
+from argparse import ArgumentParser
+from pathlib import Path
+
+import cv2
+import depthai as dai
+import numpy as np
+
+import depthai_helpers.calibration_utils as calibUtils
 import calibrate
+from multiprocessing import Process, Pipe
+
+# wrapper to run the camera in another process
+def run_main_camera(options, show_img=cv2.imshow, waitKey=cv2.waitKey):
+    main = calibrate.Main(options, show_img, waitKey)
+    main.run()
 
 class Ui_MainWindow(object):
     def __init__(self):
@@ -38,6 +57,9 @@ class Ui_MainWindow(object):
             'fps': 30}
         self.disply_width = 640
         self.display_height = 480
+        self.key = 0
+        self.key_out, self.key_in = Pipe()
+        self.image_in, self.image_out = Pipe()
 
     def setup_ui(self, MainWindow):
         # Main Window
@@ -120,11 +142,12 @@ class Ui_MainWindow(object):
         self.calibrate_but.setGeometry(QtCore.QRect(20, 370, 91, 31))
         self.calibrate_but.setFont(font)
         self.calibrate_but.setObjectName("calibrate_but")
-        self.calibrate_but.clicked.connect(self.start_calibration)
+        self.calibrate_but.clicked.connect(self.capture)
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
         self.connect_but.setGeometry(QtCore.QRect(130, 370, 81, 31))
         self.connect_but.setFont(font)
         self.connect_but.setObjectName("connect_but")
+        self.connect_but.clicked.connect(self.start_calibration)
         # Square size
         self.square_size_in = QtWidgets.QDoubleSpinBox(self.centralwidget)
         self.square_size_in.setGeometry(QtCore.QRect(20, 330, 62, 24))
@@ -165,10 +188,13 @@ class Ui_MainWindow(object):
         self.image.setText("")
         self.image.setPixmap(QtGui.QPixmap("Assets/oak-d.jpg"))
         self.image.setObjectName("image")
+        # Timer
+        self.a = 0
+        self.timer = QTimer(self.centralwidget)
+        self.timer.timeout.connect(self.update_image)
 
         self.retranslate_ui(MainWindow)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
-
 
     def retranslate_ui(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
@@ -221,12 +247,32 @@ class Ui_MainWindow(object):
         p = convert_to_Qt_format.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
 
-    def update_image(self, *args):
-        cv_img = args[-1]
-        self.image.setPixmap(self.convert_cv_qt(cv_img))
+    def update_image(self):
+        result = self.image_in.poll(0.5/self.options['fps'])
+        if result:
+            print('image received!')
+            image = self.image_in.recv()
+            image = self.convert_cv_qt(image)
+            self.image.setPixmap(image)
+
+    def send_image(self, *args):
+        pass
 
     def start_calibration(self):
-        calibrate.Main(self.options, self.update_image).run()
+        if not hasattr(self, 'p'):
+            self.p = Process(target=run_main_camera, args=(self.options,self.image_out,self.key_in,))
+            self.p.start()
+            self.timer.start(1000//self.options['fps'])
+        else:
+            self.key_out.send('q')
+            self.p.join()
+            self.p.terminate()
+            print("Process terminated")
+            del self.p
+
+
+    def capture(self):
+        self.key_out.send(' ')
 
 
 if __name__ == "__main__":

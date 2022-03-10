@@ -2,6 +2,7 @@
 import argparse
 import json
 import shutil
+import time
 import traceback
 from argparse import ArgumentParser
 from pathlib import Path
@@ -109,8 +110,30 @@ def parse_args():
     return options
 
 class Bunch(object):
-  def __init__(self, adict):
-    self.__dict__.update(adict)
+    def __init__(self, adict):
+        self.__dict__.update(adict)
+
+
+class MyPipe():
+    def __init__(self, out, key):
+        self.out = out
+        self.key = key
+
+    def send_image(self, *args):
+        self.out.send(args[-1])
+
+    def wait_key(self, wait):
+        if wait == 0:
+            wait = None
+        else:
+            wait = wait / 1000
+        result = self.key.poll(wait)
+        if result:
+            result = ord(self.key.recv())
+            print(result)
+            return result
+        return None
+
 
 class Main:
     output_scale_factor = 0.5
@@ -121,16 +144,26 @@ class Main:
     images_captured_polygon = 0
     images_captured = 0
 
-    def __init__(self, options, show_img=cv2.imshow):
+    def __init__(self, options, show_img=cv2.imshow, waitKey=cv2.waitKey):
         self.args = Bunch(options)
-        self.show_img = show_img
+        self.test = 0
+        self.img_pipe = show_img
+        print(self.img_pipe)
+        if show_img != cv2.imshow:
+            pipe = MyPipe(show_img, waitKey)
+            self.show_img = pipe.send_image
+            self.waitKey = pipe.wait_key
+        else:
+            self.show_img = cv2.imshow
+            self.waitKey = cv2.waitKey
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
         if self.args.board:
             board_path = Path(self.args.board)
             if not board_path.exists():
-                board_path = (Path(__file__).parent / 'resources/boards' / self.args.board.upper()).with_suffix('.json').resolve()
+                board_path = (Path(__file__).parent / 'resources/boards' / self.args.board.upper()).with_suffix(
+                    '.json').resolve()
                 if not board_path.exists():
                     raise ValueError(
                         'Board config not found: {}'.format(board_path))
@@ -139,13 +172,13 @@ class Main:
         # TODO: set the total images
         # random polygons for count
         self.total_images = self.args.count * \
-            len(calibUtils.setPolygonCoordinates(1000, 600))
+                            len(calibUtils.setPolygonCoordinates(1000, 600))
         if debug:
             print("Using Arguments=", self.args)
 
         if self.args.board.upper() == 'OAK-D-LITE':
             raise Exception(
-            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
+                "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         pipeline = self.create_pipeline()
         self.device = dai.Device(pipeline)
         """ cameraProperties = self.device.getConnectedCameraProperties()
@@ -164,7 +197,7 @@ class Main:
         marker_corners, _, _ = cv2.aruco.detectMarkers(
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
-        return not (len(marker_corners) < self.args.squaresX*self.args.squaresY / 4)
+        return not (len(marker_corners) < self.args.squaresX * self.args.squaresY / 4)
 
     def test_camera_orientation(self, frame_l, frame_r):
         marker_corners_l, id_l, _ = cv2.aruco.detectMarkers(
@@ -197,7 +230,7 @@ class Main:
         else:
             cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
             cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-                
+
         cam_left.setResolution(
             dai.MonoCameraProperties.SensorResolution.THE_800_P)
         cam_left.setFps(self.args.fps)
@@ -224,7 +257,7 @@ class Main:
 
             xout_rgb_isp = pipeline.createXLinkOut()
             xout_rgb_isp.setStreamName("rgb")
-            rgb_cam.isp.link(xout_rgb_isp.input)        
+            rgb_cam.isp.link(xout_rgb_isp.input)
 
         return pipeline
 
@@ -259,7 +292,7 @@ class Main:
 
         self.show_img("info", info_frame)
         while True:
-            key = cv2.waitKey(1)
+            key = self.waitKey(1)
             if key == ord(" "):
                 cv2.destroyAllWindows()
                 return
@@ -284,7 +317,7 @@ class Main:
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
         self.show_img("left + rgb + right", info_frame)
-        cv2.waitKey(2000)
+        self.waitKey(2000)
 
     def show_failed_orientation(self):
         width, height = int(
@@ -305,7 +338,7 @@ class Main:
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
         self.show_img("left + right", info_frame)
-        cv2.waitKey(0)
+        self.waitKey(0)
         raise Exception(
             "Calibration failed, Camera Might be held upside down. start again!!")
 
@@ -323,7 +356,7 @@ class Main:
         recent_color = None
         # with self.get_pipeline() as pipeline:
         while not finished:
-            current_left  = self.left_camera_queue.tryGet()
+            current_left = self.left_camera_queue.tryGet()
             current_right = self.right_camera_queue.tryGet()
             if not self.args.disableRgb:
                 current_color = self.rgb_camera_queue.tryGet()
@@ -338,15 +371,11 @@ class Main:
             if not current_color is None:
                 recent_color = current_color
 
-            if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
-                print("Continuing...")
-                continue
-
             recent_frames = [('left', recent_left), ('right', recent_right)]
             if not self.args.disableRgb:
                 recent_frames.append(('rgb', recent_color))
 
-            key = cv2.waitKey(1)
+            key = self.waitKey(1)
             if key == 27 or key == ord("q"):
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
@@ -354,6 +383,10 @@ class Main:
                 if debug:
                     print("setting capture true------------------------")
                 capturing = True
+
+            if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
+                print('continuing...')
+                continue
 
             frame_list = []
             # left_frame = recent_left.getCvFrame()
@@ -376,8 +409,10 @@ class Main:
                     print("Timestamp difference ---> l & rgb")
                 lrgb_time = 0
                 if not self.args.disableRgb:
-                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
-                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds),
+                                     abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds),
+                               abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
 
                 if debug:
                     print(lrgb_time)
@@ -398,9 +433,8 @@ class Main:
                         tried_right = True
                         captured_right_frame = frame.copy()
 
-
-                has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
-                    (packet[0] == "rgb" and captured_color)
+                has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right) or \
+                              (packet[0] == "rgb" and captured_color)
 
                 if self.args.invert_v and self.args.invert_h:
                     frame = cv2.flip(frame, -1)
@@ -448,7 +482,7 @@ class Main:
                     captured_right = False
                     captured_color = False
                 elif tried_left and tried_right and tried_color:
-                     #TODO(Sachin): add condition for RGB too and when break happens and if RGB 
+                    # TODO(Sachin): add condition for RGB too and when break happens and if RGB
                     # is not received it will throw an error. add an exception to it
                     self.show_failed_capture_frame()
                     capturing = False
@@ -468,24 +502,33 @@ class Main:
                         finished = True
                         cv2.destroyAllWindows()
                         break
-            
+
             combine_img = None
             if not self.args.disableRgb:
-                frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
+                frame_list[2] = np.pad(frame_list[2], ((40, 0), (0, 0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
             self.show_img("left + rgb + right", combine_img)
             frame_list.clear()
 
+    def __del__(self):
+        print('Closing camera...')
+        self.device.close()
+
     def calibrate(self):
         print("Starting image processing")
         cal_data = calibUtils.StereoCalibration()
         dest_path = str(Path('resources').absolute())
-        self.args.cameraMode = 'perspective' # hardcoded for now
+        self.args.cameraMode = 'perspective'  # hardcoded for now
         try:
-            epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args.squareSizeCm,
-                 self.args.markerSizeCm, self.args.squaresX, self.args.squaresY, self.args.cameraMode, not self.args.disableRgb, self.args.rectifiedDisp)
+            epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path,
+                                                                                self.args.squareSizeCm,
+                                                                                self.args.markerSizeCm,
+                                                                                self.args.squaresX, self.args.squaresY,
+                                                                                self.args.cameraMode,
+                                                                                not self.args.disableRgb,
+                                                                                self.args.rectifiedDisp)
             if epiploar_error > self.args.maxEpiploarError:
                 image = create_blank(900, 512, rgb_color=red)
                 text = "High L-r epiploar_error: " + str(epiploar_error)
@@ -494,7 +537,7 @@ class Main:
                 cv2.putText(image, text, (10, 300), font, 2, (0, 0, 0), 2)
 
                 self.show_img("Result Image", image)
-                cv2.waitKey(0)
+                self.waitKey(0)
                 print("Requires Recalibration.....!!")
                 raise SystemExit(1)
             elif epiploar_error_rRgb is not None and epiploar_error_rRgb > self.args.maxEpiploarError:
@@ -505,7 +548,7 @@ class Main:
                 cv2.putText(image, text, (10, 300), font, 2, (0, 0, 0), 2)
 
                 self.show_img("Result Image", image)
-                cv2.waitKey(0)
+                self.waitKey(0)
                 print("Requires Recalibration.....!!")
                 raise SystemExit(1)
 
@@ -516,7 +559,8 @@ class Main:
                 right = dai.CameraBoardSocket.LEFT
 
             calibration_handler = dai.CalibrationHandler()
-            calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+            calibration_handler.setBoardInfo(self.board_config['board_config']['name'],
+                                             self.board_config['board_config']['revision'])
 
             calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
             calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
@@ -525,7 +569,7 @@ class Main:
             calibration_handler.setCameraExtrinsics(
                 left, right, calibData[5], calibData[6], measuredTranslation)
 
-            calibration_handler.setDistortionCoefficients(left, calibData[9] )
+            calibration_handler.setDistortionCoefficients(left, calibData[9])
             calibration_handler.setDistortionCoefficients(right, calibData[10])
 
             calibration_handler.setFov(left, self.board_config['board_config']['left_fov_deg'])
@@ -546,7 +590,7 @@ class Main:
                     self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
                 calibration_handler.setCameraExtrinsics(
                     right, dai.CameraBoardSocket.RGB, calibData[7], calibData[8], measuredTranslation)
-            
+
             resImage = None
             if not self.device.isClosed():
                 dev_info = self.device.getDeviceInfo()
@@ -554,7 +598,7 @@ class Main:
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
                 is_write_succesful = False
-                
+
                 try:
                     is_write_succesful = self.device.flashCalibration(
                         calibration_handler)
@@ -589,7 +633,7 @@ class Main:
 
             if resImage is not None:
                 self.show_img("Result Image", resImage)
-                cv2.waitKey(0)
+                self.waitKey(0)
         except AssertionError as e:
             print("[ERROR] " + str(e))
             raise SystemExit(1)
@@ -607,7 +651,8 @@ class Main:
                 traceback.print_exc()
                 print("An error occurred trying to create image dataset directories!")
                 raise SystemExit(1)
-            self.show_info_frame()
+            if __name__ == "__main__":
+                self.show_info_frame()
             self.capture_images()
         self.dataset_path = str(Path("dataset").absolute())
         if 'process' in self.args.mode:
