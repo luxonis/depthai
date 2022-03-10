@@ -7,6 +7,6 @@
         "left_fov_deg": 71.86,
         "rgb_fov_deg": 68.7938,
         "left_to_right_distance_cm": 4.0,
-        "left_to_rgb_distance_cm": 1.0
+        "left_to_rgb_distance_cm": 3.0
     }
 }
