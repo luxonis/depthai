@@ -10,7 +10,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QTimer,QDateTime
+from PyQt5.QtCore import Qt, QTimer, QDateTime
 import cv2
 # !/usr/bin/env python3
 import argparse
@@ -29,10 +29,61 @@ import depthai_helpers.calibration_utils as calibUtils
 import calibrate
 from multiprocessing import Process, Pipe
 
+
 # wrapper to run the camera in another process
 def run_main_camera(options, show_img=cv2.imshow, waitKey=cv2.waitKey):
     main = calibrate.Main(options, show_img, waitKey)
     main.run()
+
+
+class MyImage(QtWidgets.QWidget):
+    def __init__(self, title='Charuco', location=(0, 0), fps=30, prew_width=1280, prew_height=800):
+        super().__init__()
+        border = 52
+        layout = QtWidgets.QVBoxLayout()
+        self.setWindowTitle(title)
+        self.setWindowIcon(QtGui.QIcon('Assets/logo.png'))
+        width, height = location
+        self.move(width, height)
+        self.image = QtWidgets.QLabel('Camera')
+        # self.image.setBaseSize(prew_width, prew_height)
+        self.image.resize(prew_width - border, prew_height - border)
+        layout.addWidget(self.image)
+        self.setLayout(layout)
+        # self.timer = QtCore.QTimer()
+        # self.timer.timeout.connect(self.update_image)
+        # self.timer.start(1000//fps)
+        # self.get_image = get_image
+        # self.camera_format = camera_format
+        self.pixmap = QtGui.QPixmap("Assets/charuco.png")
+        self.pixmap = self.pixmap.scaled(prew_width-border, prew_height-border,
+                                         QtCore.Qt.KeepAspectRatio)
+        self.image.setPixmap(self.pixmap)
+
+    def resizeEvent(self, a0: QtGui.QResizeEvent) -> None:
+        border = 52
+        print(self.geometry())
+        self.pixmap = QtGui.QPixmap("Assets/charuco.png")
+        self.pixmap = self.pixmap.scaled(self.frameGeometry().width()-border, self.frameGeometry().height()-border,
+                                         QtCore.Qt.KeepAspectRatio)
+        self.image.setPixmap(self.pixmap)
+        self.image.resize(self.geometry().width()-border, self.geometry().height()-border)
+
+    # def update_image(self):
+    #     status, image = self.get_image()
+    #     if status and image is not None:
+    #         if len(image.shape) > 1:
+    #             q_image = QtGui.QImage(image.data, image.shape[1], image.shape[0], self.camera_format)
+    #             pixmap = QtGui.QPixmap.fromImage(q_image)
+    #         else:
+    #             pixmap = QtGui.QPixmap()
+    #             pixmap.loadFromData(image)
+    #         pixmap = pixmap.scaled(prew_width, prew_height, QtCore.Qt.KeepAspectRatio)
+    #         self.camera.setPixmap(pixmap)
+    # else:
+    #     # print('im hiding')
+    #     self.hide()
+
 
 class Ui_MainWindow(object):
     def __init__(self):
@@ -57,26 +108,32 @@ class Ui_MainWindow(object):
             'fps': 30}
         self.disply_width = 640
         self.display_height = 480
+        self.old_display_width = 640
+        self.old_display_height = 480
         self.key = 0
         self.key_out, self.key_in = Pipe()
         self.image_in, self.image_out = Pipe()
+        self.camera_pixmap = QtGui.QPixmap("Assets/oak-d.jpg")
+        # self.setup_ui(self)
 
     def setup_ui(self, MainWindow):
         # Main Window
-        MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(937, 740)
+        self.mainWindow = MainWindow
+        self.mainWindow.setObjectName("MainWindow")
+        self.mainWindow.resize(937, 740)
         icon = QtGui.QIcon()
         icon.addPixmap(QtGui.QPixmap("Assets/logo.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        MainWindow.setWindowIcon(icon)
-        self.centralwidget = QtWidgets.QWidget(MainWindow)
+        self.mainWindow.setWindowIcon(icon)
+        self.centralwidget = QtWidgets.QWidget(self.mainWindow)
         self.centralwidget.setObjectName("centralwidget")
-        self.menubar = QtWidgets.QMenuBar(MainWindow)
+        self.menubar = QtWidgets.QMenuBar(self.mainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 923, 20))
         self.menubar.setObjectName("menubar")
-        MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
+        self.mainWindow.setMenuBar(self.menubar)
+        self.statusbar = QtWidgets.QStatusBar(self.mainWindow)
         self.statusbar.setObjectName("statusbar")
-        MainWindow.setStatusBar(self.statusbar)
+        self.mainWindow.setStatusBar(self.statusbar)
+        self.mainWindow.resizeEvent = self.resize_call
         # Title
         self.title = QtWidgets.QLabel(self.centralwidget)
         self.title.setGeometry(QtCore.QRect(10, 10, 221, 31))
@@ -103,7 +160,6 @@ class Ui_MainWindow(object):
         self.oak_d_lite.setFont(font)
         self.oak_d_lite.setObjectName("oak_d_lite")
         self.oak_d_lite.value = 'oak-d-lite'
-        self.oak_d_lite.toggled.connect(lambda: self.camera_select(self.oak_d_lite))
         # Oak-D option
         self.oak_d = QtWidgets.QRadioButton(self.select_box)
         self.oak_d.setGeometry(QtCore.QRect(10, 100, 99, 21))
@@ -144,15 +200,16 @@ class Ui_MainWindow(object):
         self.calibrate_but.setObjectName("calibrate_but")
         self.calibrate_but.clicked.connect(self.capture)
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
-        self.connect_but.setGeometry(QtCore.QRect(130, 370, 81, 31))
+        self.connect_but.setGeometry(QtCore.QRect(130, 370, 91, 31))
         self.connect_but.setFont(font)
         self.connect_but.setObjectName("connect_but")
         self.connect_but.clicked.connect(self.start_calibration)
         # Square size
         self.square_size_in = QtWidgets.QDoubleSpinBox(self.centralwidget)
         self.square_size_in.setGeometry(QtCore.QRect(20, 330, 62, 24))
-        self.square_size_in.setSingleStep(0.1)
-        self.square_size_in.setProperty("value", 2.0)
+        self.square_size_in.setSingleStep(0.05)
+        self.square_size_in.setMinimum(2.2)
+        self.square_size_in.setProperty("value", 2.35)
         self.square_size_in.setObjectName("square_size_in")
         self.sq_size_label = QtWidgets.QLabel(self.centralwidget)
         self.sq_size_label.setGeometry(QtCore.QRect(20, 310, 131, 16))
@@ -165,6 +222,7 @@ class Ui_MainWindow(object):
         font.setPointSize(11)
         self.charuco_check.setFont(font)
         self.charuco_check.setObjectName("charuco_check")
+        self.charuco_check.stateChanged.connect(self.show_charuco)
         # Mirror check
         self.mirror_check = QtWidgets.QCheckBox(self.centralwidget)
         self.mirror_check.setGeometry(QtCore.QRect(20, 440, 121, 21))
@@ -186,19 +244,21 @@ class Ui_MainWindow(object):
         self.image = QtWidgets.QLabel(self.centralwidget)
         self.image.setGeometry(QtCore.QRect(280, 10, 640, 480))
         self.image.setText("")
-        self.image.setPixmap(QtGui.QPixmap("Assets/oak-d.jpg"))
+        self.image.setPixmap(self.camera_pixmap)
         self.image.setObjectName("image")
+        self.image.setScaledContents(False)
         # Timer
         self.a = 0
         self.timer = QTimer(self.centralwidget)
         self.timer.timeout.connect(self.update_image)
 
-        self.retranslate_ui(MainWindow)
+        self.retranslate_ui()
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
+        self.mainWindow = MainWindow
 
-    def retranslate_ui(self, MainWindow):
+    def retranslate_ui(self):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "Calibration"))
+        self.mainWindow.setWindowTitle(_translate("MainWindow", "Calibration"))
         self.title.setText(_translate("MainWindow", "DepthAI Calibration"))
         self.select_box.setTitle(_translate("MainWindow", "Select Model"))
         self.oak_1.setText(_translate("MainWindow", "OAK-1"))
@@ -217,26 +277,36 @@ class Ui_MainWindow(object):
 
     def camera_select(self, model):
         if model.value == "oak-d":
-            self.image.setPixmap(QtGui.QPixmap("Assets/oak-d.jpg"))
-            self.camera_type = 'oak-d'
+            self.camera_pixmap = QtGui.QPixmap("Assets/oak-d.jpg")
+            self.options['board'] = 'bw1098obc'
         elif model.value == "oak-d-lite":
-            self.image.setPixmap(QtGui.QPixmap("Assets/oak-d-lite.jpg"))
-            self.camera_type = 'oak-d-lite'
+            self.camera_pixmap = QtGui.QPixmap("Assets/oak-d-lite.jpg")
+            self.options['board'] = 'OAK-D-LITE'
         elif model.value == "oak-d-pro":
-            self.image.setPixmap(QtGui.QPixmap("Assets/oak-d-pro.jpg"))
-            self.camera_type = 'oak-d-pro'
+            self.camera_pixmap = QtGui.QPixmap("Assets/oak-d-pro.jpg")
+            self.options['board'] = 'OAK-D-PRO'
         elif model.value == "oak-1":
-            self.image.setPixmap(QtGui.QPixmap("Assets/oak-1.jpg"))
+            self.camera_pixmap = QtGui.QPixmap("Assets/oak-1.jpg")
             self.camera_type = 'oak-1'
         elif model.value == 'rpi-module':
-            self.image.setPixmap(QtGui.QPixmap("Assets/rpi-compute-mod.jpg"))
+            self.camera_pixmap = QtGui.QPixmap("Assets/rpi-compute-mod.jpg")
             self.camera_type = 'rpi-module'
         elif model.value == 'rpi-hat':
-            self.image.setPixmap(QtGui.QPixmap("Assets/rpi-hat.jpg"))
+            self.camera_pixmap = QtGui.QPixmap("Assets/rpi-hat.jpg")
             self.camera_type = 'rpi-hat'
         elif model.value == 'usb3-module':
-            self.image.setPixmap(QtGui.QPixmap("Assets/usb3.jpg"))
+            self.camera_pixmap = QtGui.QPixmap("Assets/usb3.jpg")
             self.camera_type = 'usb3-module'
+        self.image.setPixmap(self.camera_pixmap)
+
+    def show_charuco(self):
+        if self.charuco_check.isChecked():
+            if not hasattr(self, 'charuco'):
+                self.charuco = MyImage()
+            self.charuco.show()
+        else:
+            if hasattr(self, 'charuco'):
+                self.charuco.hide()
 
     def convert_cv_qt(self, cv_img):
         """Convert from an opencv image to QPixmap"""
@@ -248,28 +318,63 @@ class Ui_MainWindow(object):
         return QPixmap.fromImage(p)
 
     def update_image(self):
-        result = self.image_in.poll(0.5/self.options['fps'])
+        self.image.setScaledContents(True)
+        result = self.image_in.poll(2 / self.options['fps'])
         if result:
-            print('image received!')
-            image = self.image_in.recv()
-            image = self.convert_cv_qt(image)
-            self.image.setPixmap(image)
+            if not hasattr(self, 'p'):
+                self.image.setPixmap(self.camera_pixmap)
+                return
+            if not self.connect_but.isEnabled():
+                self.connect_but.setEnabled(True)
+                self.connect_but.setText("Disconnect")
+            capture = self.image_in.recv()
+            capture = self.convert_cv_qt(capture)
+            # image.scaled(self.disply_width, self.display_height, Qt.KeepAspectRatio)
+            self.image.setPixmap(capture)
+            if self.old_display_width != capture.width() or self.old_display_height != capture.height():
+                self.image.resize(capture.width(), capture.height())
+                self.old_display_width = capture.width()
+                self.old_display_height = capture.height()
+                print("recalculating...")
+            # self.image.resize(capture.width(), capture.height())
+
+    # def self.mainWindow.resizeEvent(self, a0: QtGui.QResizeEvent) -> None:
+    #     pass
+
+    def resize_call(self, a0: QtGui.QResizeEvent) -> None:
+        border = 52
+        self.logs_box.setGeometry(QtCore.QRect(20, self.mainWindow.geometry().height()-border-191, 901, 191))
+        self.disply_width = self.mainWindow.geometry().width() - border - 280
+        self.display_height = self.mainWindow.geometry().height() - border - 191
+        # self.image.setScaledContents(True)
+        # self.image.resize(self.disply_width, self.display_height)
+        # self.image.setGeometry(QtCore.QRect(280, 10, self.disply_width, self.display_height))
 
     def send_image(self, *args):
         pass
 
     def start_calibration(self):
+        print("start_calibration...................................................")
+        self.connect_but.setDisabled(True)
         if not hasattr(self, 'p'):
-            self.p = Process(target=run_main_camera, args=(self.options,self.image_out,self.key_in,))
+            self.options['squareSizeCm'] = self.square_size_in.value()
+            self.options['invert_h'] = self.mirror_check.isChecked()
+            self.p = Process(target=run_main_camera, args=(self.options, self.image_out, self.key_in,))
             self.p.start()
-            self.timer.start(1000//self.options['fps'])
+            self.timer.start(1000 // self.options['fps'])
         else:
+            self.connect_but.setDisabled(True)
+            TIMEOUT = 3
+            start = time.time()
             self.key_out.send('q')
-            self.p.join()
-            self.p.terminate()
-            print("Process terminated")
+            while time.time() - start < TIMEOUT:
+                if not self.p.is_alive():
+                    break
+                time.sleep(0.1)
             del self.p
-
+            self.image.setPixmap(self.camera_pixmap)
+            self.connect_but.setText("Connect")
+            self.connect_but.setEnabled(True)
 
     def capture(self):
         self.key_out.send(' ')

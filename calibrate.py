@@ -2,6 +2,8 @@
 import argparse
 import json
 import shutil
+import signal
+import sys
 import time
 import traceback
 from argparse import ArgumentParser
@@ -145,6 +147,8 @@ class Main:
     images_captured = 0
 
     def __init__(self, options, show_img=cv2.imshow, waitKey=cv2.waitKey):
+        signal.signal(signal.SIGINT, self.__del__)
+        signal.signal(signal.SIGTERM, self.__del__)
         self.args = Bunch(options)
         self.test = 0
         self.img_pipe = show_img
@@ -503,10 +507,12 @@ class Main:
                         cv2.destroyAllWindows()
                         break
 
-            combine_img = None
             if not self.args.disableRgb:
                 frame_list[2] = np.pad(frame_list[2], ((40, 0), (0, 0)), 'constant', constant_values=0)
-                combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
+                combine_img = cv2.hconcat([frame_list[0], frame_list[1]])
+                color = np.zeros(combine_img.shape, dtype=np.uint8)
+                color[:, frame_list[2].shape[1]//2:color.shape[1]-frame_list[2].shape[1]//2] = frame_list[2]
+                combine_img = cv2.vconcat([combine_img, color])
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
             self.show_img("left + rgb + right", combine_img)
@@ -514,7 +520,10 @@ class Main:
 
     def __del__(self):
         print('Closing camera...')
-        self.device.close()
+        try:
+            self.device.close()
+        finally:
+            raise SystemExit(0)
 
     def calibrate(self):
         print("Starting image processing")
