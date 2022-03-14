@@ -301,6 +301,7 @@ class Main:
                 cv2.destroyAllWindows()
                 return
             elif key == 27 or key == ord("q"):  # 27 - ESC
+                print("q pressed")
                 cv2.destroyAllWindows()
                 raise SystemExit(0)
 
@@ -381,7 +382,8 @@ class Main:
 
             key = self.waitKey(1)
             if key == 27 or key == ord("q"):
-                print("py: Calibration has been interrupted!")
+                print("q pressed")
+                # print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
             elif key == ord(" "):
                 if debug:
@@ -518,12 +520,12 @@ class Main:
             self.show_img("left + rgb + right", combine_img)
             frame_list.clear()
 
-    def __del__(self):
-        print('Closing camera...')
+    def __del__(self, *args):
         try:
             self.device.close()
+            print('Closing camera...')
         finally:
-            raise SystemExit(0)
+            raise RuntimeError
 
     def calibrate(self):
         print("Starting image processing")
@@ -659,10 +661,14 @@ class Main:
             except OSError:
                 traceback.print_exc()
                 print("An error occurred trying to create image dataset directories!")
-                raise SystemExit(1)
+                return 1
             if __name__ == "__main__":
                 self.show_info_frame()
-            self.capture_images()
+            try:
+                self.capture_images()
+            except RuntimeError:
+                print("Ending process")
+                return 0
         self.dataset_path = str(Path("dataset").absolute())
         if 'process' in self.args.mode:
             self.calibrate()
