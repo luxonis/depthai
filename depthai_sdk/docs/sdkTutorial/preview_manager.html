@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Preview manager &mdash; DepthAI SDK Docs 1.0.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/index.css" type="text/css" />
+      <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+    <link rel="shortcut icon" href="_static/favicon.png"/>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Encoding manager" href="encoding_manager.html" />
+    <link rel="prev" title="Pipeline manager" href="pipeline_manager.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> DepthAI SDK Docs
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Home:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Getting started with DepthAI SDK</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Managers:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="pipeline_manager.html">Pipeline manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pipeline_manager.html#getting-started">Getting started</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Preview manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-of-use">Example of use</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="encoding_manager.html">Encoding manager</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="encoding_manager.html#getting-started">Getting started</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="blob_nnet_manager.html">Blob and Nnet managers</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="blob_nnet_manager.html#blob-manager">Blob manager</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="blob_nnet_manager.html#getting-started">Getting started</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="blob_nnet_manager.html#nnet-manager">Nnet manager</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="blob_nnet_manager.html#id1">Getting started</a></li>
+<li class="toctree-l3"><a class="reference internal" href="blob_nnet_manager.html#face-detection">Face detection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="blob_nnet_manager.html#mobile-net">Mobile net</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Api:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">DepthAI SDK API</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#managers">Managers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-depthai_sdk.previews">Previews</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-depthai_sdk.fps">FPS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api.html#module-depthai_sdk.utils">Utils</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DepthAI SDK Docs</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Preview manager</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/preview_manager.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="preview-manager">
+<h1>Preview manager<a class="headerlink" href="#preview-manager" title="Permalink to this headline"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">Preview</span> <span class="pre">manager</span></code> is a class that is made to help you with displaying previews / streams from OAK cameras.</p>
+<section id="getting-started">
+<h2>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this headline"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">Preview</span> <span class="pre">manager</span></code> works hand in hand with the <code class="docutils literal notranslate"><span class="pre">Pipeline</span> <span class="pre">manager</span></code>, so before you can use Preview, you will first have to declare and initialize the <code class="docutils literal notranslate"><span class="pre">Pipeline</span> <span class="pre">manager</span></code>.
+But of course you will also have to import bot names to use them.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">Previews</span>
+<span class="linenos"> 2</span><span class="kn">from</span> <span class="nn">depthai_sdk.managers</span> <span class="kn">import</span> <span class="n">PipelineManager</span><span class="p">,</span> <span class="n">PreviewManager</span>
+<span class="linenos"> 3</span><span class="kn">import</span> <span class="nn">depthai</span> <span class="k">as</span> <span class="nn">dai</span>
+<span class="linenos"> 4</span>
+<span class="linenos"> 5</span><span class="c1"># create pipeline</span>
+<span class="linenos"> 6</span><span class="n">pm</span> <span class="o">=</span> <span class="n">PipelineManager</span><span class="p">()</span>
+<span class="linenos"> 7</span>
+<span class="linenos"> 8</span><span class="c1"># creating color source</span>
+<span class="linenos"> 9</span><span class="n">pm</span><span class="o">.</span><span class="n">createColorCam</span><span class="p">(</span><span class="n">xout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos">10</span>
+<span class="linenos">11</span><span class="c1"># connecting to the device</span>
+<span class="linenos">12</span><span class="k">with</span> <span class="n">dai</span><span class="o">.</span><span class="n">Device</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">pipeline</span><span class="p">)</span> <span class="k">as</span> <span class="n">device</span><span class="p">:</span>
+<span class="linenos">13</span>    <span class="c1"># define configs for above sources</span>
+<span class="linenos">14</span>    <span class="n">pv</span> <span class="o">=</span> <span class="n">PreviewManager</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="p">[</span><span class="n">Previews</span><span class="o">.</span><span class="n">color</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+<span class="linenos">15</span>
+<span class="linenos">16</span>    <span class="c1"># create stream queues</span>
+<span class="linenos">17</span>    <span class="n">pv</span><span class="o">.</span><span class="n">createQueues</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+<span class="linenos">18</span>
+<span class="linenos">19</span>    <span class="c1"># prepare and show streams</span>
+<span class="linenos">20</span>    <span class="n">pv</span><span class="o">.</span><span class="n">prepareFrames</span><span class="p">()</span>
+<span class="linenos">21</span>    <span class="n">pv</span><span class="o">.</span><span class="n">showFrames</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>As you can see from the above code, we first initialized the pipeline, after that we defined sources from where the pipeline will stream and after that we connected to the device. When the device is connected,
+we can declare and initialize the <code class="docutils literal notranslate"><span class="pre">Preview</span> <span class="pre">manager</span></code> and after that we can see the frames as outputs. This tutorial will only show the first frame and after that it will disconnect from the device.
+If you wish to have a non-stop stream you will have to include a stoppable loop.</p>
+</section>
+<section id="example-of-use">
+<h2>Example of use<a class="headerlink" href="#example-of-use" title="Permalink to this headline"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">Previews</span>
+<span class="linenos"> 2</span><span class="kn">from</span> <span class="nn">depthai_sdk.managers</span> <span class="kn">import</span> <span class="n">PipelineManager</span><span class="p">,</span> <span class="n">PreviewManager</span>
+<span class="linenos"> 3</span><span class="kn">import</span> <span class="nn">depthai</span> <span class="k">as</span> <span class="nn">dai</span>
+<span class="linenos"> 4</span><span class="kn">import</span> <span class="nn">cv2</span>
+<span class="linenos"> 5</span>
+<span class="linenos"> 6</span>
+<span class="linenos"> 7</span><span class="c1"># create pipeline</span>
+<span class="linenos"> 8</span><span class="n">pm</span> <span class="o">=</span> <span class="n">PipelineManager</span><span class="p">()</span>
+<span class="linenos"> 9</span>
+<span class="linenos">10</span><span class="c1"># define sources (color, left, right, depth)</span>
+<span class="linenos">11</span>
+<span class="linenos">12</span><span class="c1"># creating color source</span>
+<span class="linenos">13</span><span class="n">pm</span><span class="o">.</span><span class="n">createColorCam</span><span class="p">(</span><span class="n">xout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos">14</span><span class="n">pm</span><span class="o">.</span><span class="n">createLeftCam</span><span class="p">(</span><span class="n">xout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos">15</span><span class="n">pm</span><span class="o">.</span><span class="n">createRightCam</span><span class="p">(</span><span class="n">xout</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos">16</span><span class="n">pm</span><span class="o">.</span><span class="n">createDepth</span><span class="p">(</span><span class="n">useDepth</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="linenos">17</span>
+<span class="linenos">18</span><span class="c1"># connecting to the device</span>
+<span class="linenos">19</span><span class="k">with</span> <span class="n">dai</span><span class="o">.</span><span class="n">Device</span><span class="p">(</span><span class="n">pm</span><span class="o">.</span><span class="n">pipeline</span><span class="p">)</span> <span class="k">as</span> <span class="n">device</span><span class="p">:</span>
+<span class="linenos">20</span>    <span class="c1"># define configs for above sources</span>
+<span class="linenos">21</span>    <span class="n">pv</span> <span class="o">=</span> <span class="n">PreviewManager</span><span class="p">(</span><span class="n">display</span><span class="o">=</span><span class="p">[</span><span class="n">Previews</span><span class="o">.</span><span class="n">color</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">Previews</span><span class="o">.</span><span class="n">left</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">Previews</span><span class="o">.</span><span class="n">right</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">Previews</span><span class="o">.</span><span class="n">depthRaw</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+<span class="linenos">22</span>
+<span class="linenos">23</span>    <span class="c1"># create stream queues</span>
+<span class="linenos">24</span>    <span class="n">pv</span><span class="o">.</span><span class="n">createQueues</span><span class="p">(</span><span class="n">device</span><span class="p">)</span>
+<span class="linenos">25</span>
+<span class="linenos">26</span>    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+<span class="linenos">27</span>        <span class="c1"># prepare and show streams</span>
+<span class="linenos">28</span>        <span class="n">pv</span><span class="o">.</span><span class="n">prepareFrames</span><span class="p">()</span>
+<span class="linenos">29</span>        <span class="n">pv</span><span class="o">.</span><span class="n">showFrames</span><span class="p">()</span>
+<span class="linenos">30</span>
+<span class="linenos">31</span>        <span class="c1"># end program with &#39;q&#39;</span>
+<span class="linenos">32</span>        <span class="k">if</span> <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;q&#39;</span><span class="p">):</span>
+<span class="linenos">33</span>            <span class="k">break</span>
+</pre></div>
+</div>
+<p>In the above example we added a stoppable loop (while stops when ‘q’ is pressed) and we also defined a few more sources.
+Output of the above code should look something like this:</p>
+<img alt="_images/camera_previews.png" src="_images/camera_previews.png" />
+<p>We get frames from all defined sources.
+To see more about the <code class="docutils literal notranslate"><span class="pre">Preview</span> <span class="pre">manager</span></code> check <code class="docutils literal notranslate"><span class="pre">API</span></code>.</p>
+<h2>Got questions?</h2><p>We’re always happy to help with code or other questions you might have.</p>
+<div class="cta-row cta-row-short">
+    <div class="cta-box">
+       <a href="https://discord.gg/luxonis">
+          <img src="https://docs.luxonis.com/en/latest/_images/discord.png" alt="Discord"/>
+          <h5 class="cta-title">Community Discord</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="https://discuss.luxonis.com/">
+          <img src="https://docs.luxonis.com/en/latest/_images/forum.png" alt="forum"/>
+          <h5 class="cta-title">Discussion Forum</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="mailto:support@luxonis.com">
+          <img src="https://docs.luxonis.com/en/latest/_images/email.png" alt="forum"/>
+          <h5 class="cta-title">Email Support</h5>
+       </a>
+    </div>
+ </div></section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pipeline_manager.html" class="btn btn-neutral float-left" title="Pipeline manager" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="encoding_manager.html" class="btn btn-neutral float-right" title="Encoding manager" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Luxonis.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
