@@ -120,7 +120,7 @@ def loadModule(path: Path):
     return module
 
 
-def getDeviceInfo(deviceId=None):
+def getDeviceInfo(deviceId=None, debug=False):
     """
     Find a correct :obj:`depthai.DeviceInfo` object, either matching provided :code:`deviceId` or selected by the user (if multiple devices available)
     Useful for almost every app where there is a possibility of multiple devices being connected simultaneously
@@ -135,7 +135,12 @@ def getDeviceInfo(deviceId=None):
         RuntimeError: if no DepthAI device was found or, if :code:`deviceId` was specified, no device with matching MX ID was found
         ValueError: if value supplied by the user when choosing the DepthAI device was incorrect
     """
-    deviceInfos = dai.Device.getAllAvailableDevices()
+    deviceInfos = []
+    if debug:
+        deviceInfos = dai.XLinkConnection.getAllConnectedDevices()
+    else:
+        deviceInfos = dai.Device.getAllAvailableDevices()
+
     if len(deviceInfos) == 0:
         raise RuntimeError("No DepthAI device found!")
     else:
