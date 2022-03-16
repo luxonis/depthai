@@ -275,16 +275,9 @@ After executing these commands, disconnect and reconnect USB cable to your OAK d
             return self.args.shaves
         if not self.useCamera:
             return 8
-        else:
-            shaves_available = 6
-
-            if self.args.rgbResolution > 1080:
-                shaves_available -= 1
-
-            if self.args.rgbDepthAlign:
-                shaves_available -= 1
-
-            return shaves_available
+        if self.args.rgbResolution > 1080:
+            return 5
+        return 6
 
     @property
     def dispMultiplier(self):

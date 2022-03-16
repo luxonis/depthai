@@ -146,5 +146,5 @@ def parseArgs():
     parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
     parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
     parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")
-    parser.add_argument('--rgbDepthAlign', action="store_true", help="Enable RGB-Depth align (depth frame will be aligned with the RGB frame)")
+    parser.add_argument('--noRgbDepthAlign', action="store_true", help="Disable RGB-Depth align (depth frame will be aligned with the RGB frame)")
     return parser.parse_args()

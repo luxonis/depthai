@@ -260,7 +260,7 @@ class Demo:
                     useDisparity=Previews.disparity.name in self._conf.args.show or Previews.disparityColor.name in self._conf.args.show,
                     useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show,
                     useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show,
-                    alignment=dai.CameraBoardSocket.RGB if self._conf.args.stereoLrCheck and self._conf.args.rgbDepthAlign else None
+                    alignment=dai.CameraBoardSocket.RGB if self._conf.args.stereoLrCheck and not self._conf.args.noRgbDepthAlign else None
                 )
 
             if self._conf.irEnabled(self._device):
@@ -911,7 +911,7 @@ def runQt():
             self.updateArg("sync", value)
 
         def guiOnToggleRgbDepthAlignment(self, value):
-            self.updateArg("rgbDepthAlign", value)
+            self.updateArg("noRgbDepthAlign", value)
 
         def guiOnToggleColorEncoding(self, enabled, fps):
             oldConfig = self.confManager.args.encode or {}
