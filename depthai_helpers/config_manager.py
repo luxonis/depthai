@@ -70,6 +70,13 @@ class ConfigManager:
         if self.args.camera == "color":
             return "color"
 
+    def irEnabled(self, device):
+        try:
+            drivers = device.getIrDrivers()
+            return len(drivers) > 0
+        except RuntimeError:
+            return False
+
     def getModelName(self):
         if self.args.cnnModel:
             return self.args.cnnModel
@@ -133,6 +140,12 @@ class ConfigManager:
 
     def adjustPreviewToOptions(self):
         if len(self.args.show) != 0:
+            depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name,
+                             Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
+
+            if len([preview for preview in self.args.show if preview in depthPreviews]) == 0 and not self.useNN:
+                print("No depth-related previews chosen, disabling depth...")
+                self.args.disableDepth = True
             return
 
         self.args.show.append(Previews.color.name)
@@ -162,9 +175,7 @@ class ConfigManager:
         cams = device.getConnectedCameras()
         depthEnabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
 
-        if depthEnabled:
-            self.args.disableDepth = False
-        else:
+        if not depthEnabled:
             if not self.args.disableDepth:
                 print("Disabling depth...")
                 self.args.disableDepth = True
@@ -181,7 +192,7 @@ class ConfigManager:
                 else:
                     print("Disabling {} preview...".format(name))
             if len(updatedShowArg) == 0:
-                print("No previews available, adding color and nnInput...")
+                print("No previews available, adding defaults...")
                 updatedShowArg.append("color")
                 if self.useNN:
                     updatedShowArg.append("nnInput")
@@ -203,11 +214,14 @@ class ConfigManager:
         if platform.system() == 'Linux':
             ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if(ret != 0):
-                cliPrint("\nWARNING: Usb rules not found", PrintColors.WARNING)
-                cliPrint("\nSet rules: \n"
-                """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n"""
-                "sudo udevadm control --reload-rules && sudo udevadm trigger \n"
-                "Disconnect/connect usb cable on host! \n", PrintColors.RED)
+                cliPrint("WARNING: Usb rules not found", PrintColors.WARNING)
+                cliPrint("""
+Run the following commands to set USB rules:
+
+$ echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules
+$ sudo udevadm control --reload-rules && sudo udevadm trigger
+
+After executing these commands, disconnect and reconnect USB cable to your OAK device""", PrintColors.RED)
                 os._exit(1)
 
     def getCountLabel(self, nnetManager):

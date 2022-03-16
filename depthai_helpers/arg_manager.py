@@ -1,13 +1,6 @@
-import os
 import argparse
 from pathlib import Path
-import cv2
 import depthai as dai
-try:
-    import argcomplete
-except ImportError:
-    raise ImportError('\033[1;5;31m argcomplete module not found, run: python3 install_requirements.py \033[0m')
-from depthai_sdk.previews import Previews
 
 
 def checkRange(minVal, maxVal):
@@ -55,12 +48,16 @@ def orientationCast(arg):
 
 openvinoVersions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
 _streamChoices = ("nnInput", "color", "left", "right", "depth", "depthRaw", "disparity", "disparityColor", "rectifiedLeft", "rectifiedRight")
-colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
+try:
+    import cv2
+    colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
+except:
+    colorMaps = None
 projectRoot = Path(__file__).parent.parent
 
 def parseArgs():
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-cam', '--camera', choices=[Previews.left.name, Previews.right.name, Previews.color.name], default=Previews.color.name, help="Use one of DepthAI cameras for inference (conflicts with -vid)")
+    parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
     parser.add_argument('-dd', '--disableDepth', action="store_true", help="Disable depth information")
     parser.add_argument('-dnn', '--disableNeuralNetwork', action="store_true", help="Disable neural network inference")
@@ -83,7 +80,7 @@ def parseArgs():
     parser.add_argument("-med", "--stereoMedianSize", default=7, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
     parser.add_argument('-dlrc', '--disableStereoLrCheck', action="store_false", dest="stereoLrCheck",
-                        help="Enable stereo 'Left-Right check' feature.")
+                        help="Disable stereo 'Left-Right check' feature.")
     parser.add_argument('-ext', '--extendedDisparity', action="store_true",
                         help="Enable stereo 'Extended Disparity' feature.")
     parser.add_argument('-sub', '--subpixel', action="store_true",
@@ -144,6 +141,8 @@ def parseArgs():
     parser.add_argument("--cameraContrast", type=_comaSeparated("all", int), nargs="+", help="Specify image contrast")
     parser.add_argument("--cameraBrightness", type=_comaSeparated("all", int), nargs="+", help="Specify image brightness")
     parser.add_argument("--cameraSharpness", type=_comaSeparated("all", int), nargs="+", help="Specify image sharpness")
+    parser.add_argument("--irDotBrightness", type=checkRange(0, 1200), default=0, help="For OAK-D Pro: specify IR dot projector brightness, range: 0..1200 [mA], default 0 (turned off)")
+    parser.add_argument("--irFloodBrightness", type=checkRange(0, 1500), default=0, help="For OAK-D Pro: specify IR flood illumination brightness, range: 0..1500 [mA], default 0 (turned off)")
     parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
     parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
     parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")

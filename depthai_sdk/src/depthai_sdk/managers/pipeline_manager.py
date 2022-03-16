@@ -10,10 +10,11 @@ class PipelineManager:
     and connection logic onto a set of convenience functions.
     """
 
-    def __init__(self, openvinoVersion=None, poeQuality=100, lowCapabilities=False):
+    def __init__(self, openvinoVersion=None, poeQuality=100, lowCapabilities=False, lowBandwidth=False):
         self.openvinoVersion=openvinoVersion
         self.poeQuality = poeQuality
         self.lowCapabilities = lowCapabilities
+        self.lowBandwidth = lowBandwidth
 
         #: depthai.Pipeline: Ready to use requested pipeline. Can be passed to :obj:`depthai.Device` to start execution
         self.pipeline = dai.Pipeline()
@@ -66,11 +67,11 @@ class PipelineManager:
         if hasattr(self.nodes, "stereo"):
             self._depthConfigInputQueue = device.getInputQueue("stereoConfig")
         if hasattr(self.nodes, "camRgb"):
-            self._rgbConfigInputQueue = device.getInputQueue("color_control")
+            self._rgbConfigInputQueue = device.getInputQueue(Previews.color.name + "_control")
         if hasattr(self.nodes, "monoLeft"):
-            self._leftConfigInputQueue = device.getInputQueue("left_control")
+            self._leftConfigInputQueue = device.getInputQueue(Previews.left.name + "_control")
         if hasattr(self.nodes, "monoRight"):
-            self._rightConfigInputQueue = device.getInputQueue("right_control")
+            self._rightConfigInputQueue = device.getInputQueue(Previews.right.name + "_control")
 
     def closeDefaultQueues(self):
         """
@@ -139,7 +140,7 @@ class PipelineManager:
         videnc.setQuality(self.poeQuality)
         videnc.bitstream.link(xout.input)
 
-    def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, colorOrder=dai.ColorCameraProperties.ColorOrder.BGR, xout=False, frameSize=None):
+    def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, colorOrder=dai.ColorCameraProperties.ColorOrder.BGR, xout=False, xoutVideo=False, xoutStill=False):
         """
         Creates :obj:`depthai.node.ColorCamera` node based on specified attributes
 
@@ -152,6 +153,8 @@ class PipelineManager:
             orientation (depthai.CameraImageOrientation, Optional): Custom camera orientation to be set on the device
             colorOrder (depthai.ColorCameraProperties, Optional): Color order to be used
             xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
+            xoutVideo (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for `video` output of this node
+            xoutStill (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for `still` output of this node
         """
         self.nodes.camRgb = self.pipeline.createColorCamera()
         if previewSize is not None:
@@ -163,13 +166,22 @@ class PipelineManager:
         if orientation is not None:
             self.nodes.camRgb.setImageOrientation(orientation)
         self.nodes.camRgb.setPreviewKeepAspectRatio(not fullFov)
-        self.nodes.xoutRgb = self.pipeline.createXLinkOut()
-        self.nodes.xoutRgb.setStreamName(Previews.color.name)
+
         if xout:
+            self.nodes.xoutRgb = self.pipeline.createXLinkOut()
+            self.nodes.xoutRgb.setStreamName(Previews.color.name)
             if self.lowBandwidth and not self.lowCapabilities:
                 self._mjpegLink(self.nodes.camRgb, self.nodes.xoutRgb, self.nodes.camRgb.video)
             else:
                 self.nodes.camRgb.preview.link(self.nodes.xoutRgb.input)
+        if xoutVideo:
+            self.nodes.xoutRgbVideo = self.pipeline.createXLinkOut()
+            self.nodes.xoutRgbVideo.setStreamName(Previews.color.name + "_video")
+            self.nodes.camRgb.video.link(self.nodes.xoutRgbVideo.input)
+        if xoutStill:
+            self.nodes.xoutRgbStill = self.pipeline.createXLinkOut()
+            self.nodes.xoutRgbStill.setStreamName(Previews.color.name + "_still")
+            self.nodes.camRgb.still.link(self.nodes.xoutRgbStill.input)
         self.nodes.xinRgbControl = self.pipeline.createXLinkIn()
         self.nodes.xinRgbControl.setMaxDataSize(1024)
         self.nodes.xinRgbControl.setStreamName(Previews.color.name + "_control")
@@ -240,6 +252,19 @@ class PipelineManager:
         self.nodes.xinRightControl.setStreamName(Previews.right.name + "_control")
         self.nodes.xinRightControl.out.link(self.nodes.monoRight.inputControl)
 
+    def updateIrConfig(self, device, irLaser=None, irFlood=None):
+        """
+        Updates IR configuration
+
+        Args:
+            irLaser (int, Optional): Sets the IR laser dot projector brightness (0..1200)
+            irFlood (int, Optional): Sets the IR flood illuminator light brightness (0..1500)
+        """
+        if irLaser is not None:
+            device.setIrLaserDotProjectorBrightness(irLaser)
+        if irFlood is not None:
+            device.setIrFloodLightBrightness(irFlood)
+
     def createDepth(self, dct=245, median=dai.MedianFilter.KERNEL_7x7, sigma=0, lr=False, lrcThreshold=4, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False, runtimeSwitch=False, alignment=None):
         """
         Creates :obj:`depthai.node.StereoDepth` node based on specified attributes
@@ -270,8 +295,6 @@ class PipelineManager:
         self.nodes.stereo.initialConfig.setBilateralFilterSigma(sigma)
         self.nodes.stereo.initialConfig.setLeftRightCheckThreshold(lrcThreshold)
 
-        self._depthConfig = self.nodes.stereo.initialConfig.get()
-
         self.nodes.stereo.setRuntimeModeSwitch(runtimeSwitch)
         self.nodes.stereo.setLeftRightCheck(lr)
         self.nodes.stereo.setExtendedDisparity(extended)
@@ -284,6 +307,8 @@ class PipelineManager:
                 self.nodes.stereo.setOutputSize(*self.nodes.monoLeft.getResolutionSize())
             elif alignment == dai.CameraBoardSocket.RIGHT:
                 self.nodes.stereo.setOutputSize(*self.nodes.monoRight.getResolutionSize())
+
+        self._depthConfig = self.nodes.stereo.initialConfig.get()
 
         # Create mono left/right cameras if we haven't already
         if not hasattr(self.nodes, 'monoLeft'):
@@ -334,7 +359,7 @@ class PipelineManager:
             else:
                 self.nodes.stereo.rectifiedRight.link(self.nodes.xoutRectRight.input)
 
-    def _updateCamConfig(self, configRef: dai.CameraControl, cameraName, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+    def _updateCamConfig(self, configRef: dai.CameraControl, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         if any([exposure, sensitivity]):
             if not all([exposure, sensitivity]):
                 raise RuntimeError("Both \"exposure\" and \"sensitivity\" arguments must be provided")
@@ -348,28 +373,61 @@ class PipelineManager:
         if brightness is not None:
             configRef.setBrightness(brightness)
 
-    def updateColorCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+    def captureStill(self):
+        ctrl = dai.CameraControl()
+        ctrl.setCaptureStill(True)
+        self._rgbConfigInputQueue.send(ctrl)
+
+    def triggerAutoFocus(self):
+        ctrl = dai.CameraControl()
+        ctrl.setAutoFocusMode(dai.CameraControl.AutoFocusMode.AUTO)
+        ctrl.setAutoFocusTrigger()
+        self._rgbConfigInputQueue.send(ctrl)
+
+    def triggerAutoExposure(self):
+        ctrl = dai.CameraControl()
+        ctrl.setAutoExposureEnable()
+        self._rgbConfigInputQueue.send(ctrl)
+
+    def triggerAutoWhiteBalance(self):
+        ctrl = dai.CameraControl()
+        ctrl.setAutoWhiteBalanceMode(dai.CameraControl.AutoWhiteBalanceMode.AUTO)
+        self._rgbConfigInputQueue.send(ctrl)
+
+    def updateColorCamConfig(self, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None, autofocus=None, autowhitebalance=None, focus=None, whitebalance=None):
         """
         Updates :obj:`depthai.node.ColorCamera` node config
 
         Args:
-            device (depthai.Device): Running device instance
             exposure (int, Optional): Exposure time in microseconds. Has to be set together with :obj:`sensitivity` (Usual range: 1..33000)
             sensitivity (int, Optional): Sensivity as ISO value. Has to be set together with :obj:`exposure` (Usual range: 100..1600)
             saturation (int, Optional): Image saturation (Allowed range: -10..10)
             contrast (int, Optional): Image contrast (Allowed range: -10..10)
             brightness (int, Optional): Image brightness (Allowed range: -10..10)
             sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
+            autofocus (dai.CameraControl.AutoFocusMode, Optional): Set the autofocus mode
+            autowhitebalance (dai.CameraControl.AutoFocusMode, Optional): Set the autowhitebalance mode
+            focus (int, Optional): Set the manual focus (lens position)
+            whitebalance (int, Optional): Set the manual white balance
         """
-        self._updateCamConfig(self._rgbConfig, Previews.color.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
-        self._rgbConfigInputQueue.send(self._rgbConfig)
+        self._updateCamConfig(self._rgbConfig, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+        if autofocus is not None:
+            self._rgbConfig.setAutoFocusMode(autofocus)
+        if autowhitebalance is not None:
+            self._rgbConfig.setAutoWhiteBalanceMode(autowhitebalance)
+        if focus is not None:
+            self._rgbConfig.setManualFocus(focus)
+        if whitebalance is not None:
+            self._rgbConfig.setManualWhiteBalance(whitebalance)
 
-    def updateLeftCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+        if any([exposure, sensitivity, saturation, contrast, brightness, sharpness, autofocus, autowhitebalance, focus, whitebalance]):
+            self._rgbConfigInputQueue.send(self._rgbConfig)
+
+    def updateLeftCamConfig(self, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         """
         Updates left :obj:`depthai.node.MonoCamera` node config
 
         Args:
-            device (depthai.Device): Running device instance
             exposure (int, Optional): Exposure time in microseconds. Has to be set together with :obj:`sensitivity` (Usual range: 1..33000)
             sensitivity (int, Optional): Sensivity as ISO value. Has to be set together with :obj:`exposure` (Usual range: 100..1600)
             saturation (int, Optional): Image saturation (Allowed range: -10..10)
@@ -377,15 +435,14 @@ class PipelineManager:
             brightness (int, Optional): Image brightness (Allowed range: -10..10)
             sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
         """
-        self._updateCamConfig(self._leftConfig, Previews.left.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+        self._updateCamConfig(self._leftConfig, exposure, sensitivity, saturation, contrast, brightness, sharpness)
         self._leftConfigInputQueue.send(self._leftConfig)
 
-    def updateRightCamConfig(self, device, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
+    def updateRightCamConfig(self, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         """
         Updates right :obj:`depthai.node.MonoCamera` node config
 
         Args:
-            device (depthai.Device): Running device instance
             exposure (int, Optional): Exposure time in microseconds. Has to be set together with :obj:`sensitivity` (Usual range: 1..33000)
             sensitivity (int, Optional): Sensivity as ISO value. Has to be set together with :obj:`exposure` (Usual range: 100..1600)
             saturation (int, Optional): Image saturation (Allowed range: -10..10)
@@ -393,15 +450,14 @@ class PipelineManager:
             brightness (int, Optional): Image brightness (Allowed range: -10..10)
             sharpness (int, Optional): Image sharpness (Allowed range: 0..4)
         """
-        self._updateCamConfig(self._rightConfig, Previews.right.name, device, exposure, sensitivity, saturation, contrast, brightness, sharpness)
+        self._updateCamConfig(self._rightConfig, exposure, sensitivity, saturation, contrast, brightness, sharpness)
         self._rightConfigInputQueue.send(self._rightConfig)
 
-    def updateDepthConfig(self, device, dct=None, sigma=None, median=None, lrc=None, lrcThreshold=None):
+    def updateDepthConfig(self, dct=None, sigma=None, median=None, lrcThreshold=None):
         """
         Updates :obj:`depthai.node.StereoDepth` node config
 
         Args:
-            device (depthai.Device): Running device instance
             dct (int, Optional): Disparity Confidence Threshold (0..255). The less confident the network is, the more empty values
                 are present in the depth map.
             median (depthai.MedianFilter, Optional): Median filter to be applied on the depth, use with :obj:`depthai.MedianFilter.MEDIANOFF` to disable median filtering
@@ -409,17 +465,16 @@ class PipelineManager:
             lrc (bool, Optional): Enables or disables Left-Right Check mode
             lrcThreshold (int, Optional): Sets the Left-Right Check threshold value (0..10)
         """
-        if dct is not None:
-            self._depthConfig.costMatching.confidenceThreshold = dct
-        if sigma is not None:
-            self._depthConfig.postProcessing.bilateralSigmaValue = sigma
-        if median is not None:
-            self._depthConfig.postProcessing.median = median
-        if lrcThreshold is not None:
-            self._depthConfig.algorithmControl.leftRightCheckThreshold = lrcThreshold
-        if lrc is not None:
-            self._depthConfig.algorithmControl.enableLeftRightCheck = lrc
-        self._depthConfigInputQueue.send(self._depthConfig)
+        if any([dct, sigma, median, lrcThreshold]):
+            if dct is not None:
+                self._depthConfig.costMatching.confidenceThreshold = dct
+            if sigma is not None:
+                self._depthConfig.postProcessing.bilateralSigmaValue = sigma
+            if median is not None:
+                self._depthConfig.postProcessing.median = median
+            if lrcThreshold is not None:
+                self._depthConfig.algorithmControl.leftRightCheckThreshold = lrcThreshold
+            self._depthConfigInputQueue.send(self._depthConfig)
 
     def addNn(self, nn, xoutNnInput=False, xoutSbb=False):
         """
@@ -450,7 +505,7 @@ class PipelineManager:
             rate (int, Optional): Specify logging rate (in Hz)
         """
         self.nodes.systemLogger = self.pipeline.createSystemLogger()
-        self.nodes.systemLogger.setRate(1)
+        self.nodes.systemLogger.setRate(rate)
         self.nodes.xoutSystemLogger = self.pipeline.createXLinkOut()
         self.nodes.xoutSystemLogger.setStreamName("systemLogger")
         self.nodes.systemLogger.out.link(self.nodes.xoutSystemLogger.input)

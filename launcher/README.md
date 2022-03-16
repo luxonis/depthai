@@ -7,6 +7,16 @@ DepthAI Launcher is a small utility that provides installation and updates for D
 DepthAI Launcher includes installation setup for Windows (64bit only).
 Installation carries an embedded Python distribution WinPython, DepthAI Launcher and `depthai` repository.
 
+### Troubleshooting
+
+See the logging file by navigating to `%temp%` directory and searching for `Setup Log` files.
+(Example log path: `C:\Users\[username]\AppData\Local\Temp\Setup Log 2022-01-28 #001.txt`)
+
+Or run the setup by manually providing the log file location:
+```
+.\depthai_setup.exe /LOG=C:\Users\[username]\Desktop\depthai_setup.log
+```
+
 ### Installer
 
 In the following steps, building the Windows installer from source is presented.
