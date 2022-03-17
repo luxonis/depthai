@@ -1,7 +1,7 @@
 {
     "board_config":
     {
-        "name": "BW1098OBC",
+        "name": "OAK-D",
         "revision": "R0M0E0",
         "swap_left_and_right_cameras": true,
         "left_fov_deg": 71.86,
