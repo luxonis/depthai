@@ -2,7 +2,7 @@
     "board_config":
     {
         "name": "OAK-D",
-        "revision": "R0M0E0",
+        "revision": "R1M0E1",
         "swap_left_and_right_cameras": true,
         "left_fov_deg": 71.86,
         "rgb_fov_deg": 68.7938,
