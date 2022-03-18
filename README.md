@@ -12,14 +12,14 @@ __Documentation is available at [https://docs.luxonis.com/en/latest/pages/tutori
 ## Installation
 
 There are two installation steps that need to be performed to make sure the demo works:
-- **One-time installation** that will add all necessary packages to your OS. 
+- **One-time installation** that will add all necessary packages to your OS.
   ```
   $ sudo curl -fL https://docs.luxonis.com/install_dependencies.sh | bash
   ```
   Please follow [this installation page](https://docs.luxonis.com/projects/api/en/latest/install/) to see instructions for other platforms
 
 
-- **Python dependencies installation** that makes sure your Python interpreter has all required packages installed. 
+- **Python dependencies installation** that makes sure your Python interpreter has all required packages installed.
   This script is safe to be run multiple times and should be ran after every demo update
   ```
   $ python3 install_requirements.py
@@ -63,7 +63,7 @@ usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] 
                        [-s {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...]] [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--reportFile REPORTFILE]
                        [-monor {400,720,800}] [-monof MONOFPS] [-cb CALLBACK] [--openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--app APP] [--count COUNTLABEL] [-dev DEVICEID] [-bandw {auto,low,high}] [-gt {auto,qt,cv}] [-usbs {usb2,usb3}] [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT]
                        [-xls XLINKCHUNKSIZE] [-poeq POEQUALITY] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControlls] [--cameraExposure CAMERAEXPOSURE [CAMERAEXPOSURE ...]] [--cameraSensitivity CAMERASENSITIVITY [CAMERASENSITIVITY ...]]
-                       [--cameraSaturation CAMERASATURATION [CAMERASATURATION ...]] [--cameraContrast CAMERACONTRAST [CAMERACONTRAST ...]] [--cameraBrightness CAMERABRIGHTNESS [CAMERABRIGHTNESS ...]] [--cameraSharpness CAMERASHARPNESS [CAMERASHARPNESS ...]] [--skipVersionCheck] [--noSupervisor] [--sync]
+                       [--cameraSaturation CAMERASATURATION [CAMERASATURATION ...]] [--cameraContrast CAMERACONTRAST [CAMERACONTRAST ...]] [--cameraBrightness CAMERABRIGHTNESS [CAMERABRIGHTNESS ...]] [--cameraSharpness CAMERASHARPNESS [CAMERASHARPNESS ...]] [--skipVersionCheck] [--noSupervisor] [--sync] [--debug]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -102,9 +102,9 @@ optional arguments:
   -dff, --disableFullFovNn
                         Disable full RGB FOV for NN, keeping the nn aspect ratio
   -scale SCALE [SCALE ...], --scale SCALE [SCALE ...]
-                        Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5 
-                        Format: preview_name or preview_name,scale_factor 
-                        Example: -scale color 
+                        Define which preview windows to scale (grow/shrink). If scale_factor is not provided, it will default to 0.5
+                        Format: preview_name or preview_name,scale_factor
+                        Example: -scale color
                         Example: -scale color,0.7 right,2 left,2
   -cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}, --colorMap {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}
                         Change color map used to apply colors to depth/disparity frames. Default: JET
@@ -135,7 +135,7 @@ optional arguments:
   -dev DEVICEID, --deviceId DEVICEID
                         DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.
   -bandw {auto,low,high}, --bandwidth {auto,low,high}
-                        Force bandwidth mode. 
+                        Force bandwidth mode.
                         If set to "high", the output streams will stay uncompressed
                         If set to "low", the output streams will be MJPEG-encoded
                         If set to "auto" (default), the optimal bandwidth will be selected based on your connection type and speed
@@ -144,9 +144,9 @@ optional arguments:
   -usbs {usb2,usb3}, --usbSpeed {usb2,usb3}
                         Force USB communication speed. Default: usb3
   -enc ENCODE [ENCODE ...], --encode ENCODE [ENCODE ...]
-                        Define which cameras to encode (record) 
-                        Format: cameraName or cameraName,encFps 
-                        Example: -enc left color 
+                        Define which cameras to encode (record)
+                        Format: cameraName or cameraName,encFps
+                        Example: -enc left color
                         Example: -enc color right,10 left,10
   -encout ENCODEOUTPUT, --encodeOutput ENCODEOUTPUT
                         Path to directory where to store encoded files. Default: /Users/vandavv/dev/depthai
@@ -155,8 +155,8 @@ optional arguments:
   -poeq POEQUALITY, --poeQuality POEQUALITY
                         Specify PoE encoding video quality (1-100)
   -camo CAMERAORIENTATION [CAMERAORIENTATION ...], --cameraOrientation CAMERAORIENTATION [CAMERAORIENTATION ...]
-                        Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG) 
-                        Format: camera_name,camera_orientation 
+                        Define cameras orientation (available: AUTO, NORMAL, HORIZONTAL_MIRROR, VERTICAL_FLIP, ROTATE_180_DEG)
+                        Format: camera_name,camera_orientation
                         Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG
   --cameraControlls     Show camera configuration options in GUI and control them using keyboard
   --cameraExposure CAMERAEXPOSURE [CAMERAEXPOSURE ...]
@@ -174,6 +174,7 @@ optional arguments:
   --skipVersionCheck    Disable libraries version check
   --noSupervisor        Disable supervisor check
   --sync                Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)
+  --debug                 Enables debug mode. Capability to connect to already BOOTED devices and also implicitly disables version check
 ```
 
 ## Supported models
