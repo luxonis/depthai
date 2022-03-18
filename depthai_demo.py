@@ -203,6 +203,7 @@ class Demo:
             self._pm.setNnManager(self._nnManager)
 
         self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        self._device.addLogCallback(self._tempeartureMonitorCallback)
         if sentryEnabled:
             try:
                 from sentry_sdk import set_user
@@ -327,7 +328,7 @@ class Demo:
         self.onSetup(self)
 
         try:
-            while self.shouldRun() and hasattr(self, "_device") and not self._device.isClosed():
+            while self.shouldRun() and self.canRun():
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
@@ -359,6 +360,12 @@ class Demo:
         if self._logOut is not None:
             self._logOut.close()
         self.onTeardown(self)
+
+    def canRun(self):
+        return hasattr(self, "_device") and not self._device.isClosed()
+
+    def _tempeartureMonitorCallback(self, msg):
+        print("TEST", msg)
 
     timer = time.monotonic()
 
