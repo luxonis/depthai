@@ -62,7 +62,7 @@ if not args.noSupervisor:
     print('Using depthai module from: ', dai.__file__)
     print('Depthai version installed: ', dai.__version__)
 
-if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
+if not args.debug and not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
     checkRequirementsVersion()
 
 sentryEnabled = False
@@ -176,7 +176,7 @@ class Demo:
         self._monoRes = conf.getMonoResolution()
         if self._conf.args.openvinoVersion:
             self._openvinoVersion = getattr(dai.OpenVINO.Version, 'VERSION_' + self._conf.args.openvinoVersion)
-        self._deviceInfo = getDeviceInfo(self._conf.args.deviceId)
+        self._deviceInfo = getDeviceInfo(self._conf.args.deviceId, args.debug)
         if self._conf.args.reportFile:
             reportFileP = Path(self._conf.args.reportFile).with_suffix('.csv')
             reportFileP.parent.mkdir(parents=True, exist_ok=True)
@@ -618,7 +618,11 @@ def runQt():
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
             self.conf.args.bandwidth = "auto"
             if self.conf.args.deviceId is None:
-                devices = dai.Device.getAllAvailableDevices()
+                devices = []
+                if args.debug:
+                    devices = dai.XLinkConnection.getAllConnectedDevices()
+                else:
+                    devices = dai.Device.getAllAvailableDevices()
                 if len(devices) > 0:
                     defaultDevice = next(map(
                         lambda info: info.getMxId(),
@@ -697,7 +701,11 @@ def runQt():
                 self.file_callbacks["onSetup"](instance)
             self.signals.updateConfSignal.emit(list(vars(self.conf.args).items()))
             self.signals.setDataSignal.emit(["previewChoices", self.conf.args.show])
-            devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+            devices = []
+            if args.debug:
+                devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices()))
+            else:
+                devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
             self.signals.setDataSignal.emit(["deviceChoices", devices])
             if instance._nnManager is not None:
                 self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
@@ -775,7 +783,13 @@ def runQt():
             if wait and current_mxid is not None:
                 start = time.time()
                 while time.time() - start < 30:
-                    if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
+                    localDevices = []
+                    if args.debug:
+                        localDevices = list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices()))
+                    else:
+                        localDevices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+
+                    if current_mxid in localDevices:
                         break
                     else:
                         time.sleep(0.1)
@@ -894,7 +908,11 @@ def runQt():
             self.updateArg("deviceId", selected)
 
         def guiOnReloadDevices(self):
-            devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+            devices = []
+            if args.debug:
+                devices = list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices()))
+            else:
+                devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
             if hasattr(self._demoInstance, "_deviceInfo"):
                 devices.insert(0, self._demoInstance._deviceInfo.getMxId())
             self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
