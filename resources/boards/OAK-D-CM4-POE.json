@@ -2,7 +2,7 @@
     "board_config":
     {
         "name": "OAK-D-CM4-POE",
-        "revision": "R0M0E0",
+        "revision": "R2M1E2",
         "swap_left_and_right_cameras": false,
         "left_fov_deg": 71.86,
         "rgb_fov_deg": 68.7938,
