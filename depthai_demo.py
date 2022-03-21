@@ -374,7 +374,11 @@ class Demo:
         if msg.level == dai.LogLevel.CRITICAL:
             print(f"[CRITICAL] [{msg.time.get()}] {msg.payload}", file=sys.stderr)
             sys.stderr.flush()
-            self.error = OverheatError(msg.payload)
+            temperature = self._device.getChipTemperature()
+            if temperature.average > 100:
+                self.error = OverheatError(msg.payload)
+            else:
+                self.error = RuntimeError(msg.payload)
 
     timer = time.monotonic()
 
