@@ -107,16 +107,14 @@ class PipelineManager:
             if node.video == nodeOutput:
                 size = self.__calcEncodeableSize(node.getVideoSize())
                 node.setVideoSize(size)
-                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             elif node.preview == nodeOutput:
                 size = self.__calcEncodeableSize(node.getPreviewSize())
                 node.setPreviewSize(size)
-                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             elif node.still == nodeOutput:
                 size = self.__calcEncodeableSize(node.getStillSize())
                 node.setStillSize(size)
-                videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
 
+            videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
             nodeOutput.link(videnc.input)
         elif isinstance(node, dai.node.MonoCamera):
             videnc.setDefaultProfilePreset(node.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
@@ -157,8 +155,6 @@ class PipelineManager:
             xoutStill (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for `still` output of this node
         """
         self.nodes.camRgb = self.pipeline.createColorCamera()
-        if previewSize is not None:
-            self.nodes.camRgb.setPreviewSize(*previewSize)
         self.nodes.camRgb.setInterleaved(False)
         self.nodes.camRgb.setResolution(res)
         self.nodes.camRgb.setColorOrder(colorOrder)
@@ -166,14 +162,17 @@ class PipelineManager:
         if orientation is not None:
             self.nodes.camRgb.setImageOrientation(orientation)
         self.nodes.camRgb.setPreviewKeepAspectRatio(not fullFov)
-
         if xout:
             self.nodes.xoutRgb = self.pipeline.createXLinkOut()
             self.nodes.xoutRgb.setStreamName(Previews.color.name)
+            manip = self.pipeline.createImageManip()
+            manip.initialConfig.setResize(*self.__calcEncodeableSize(previewSize))
+            manip.initialConfig.setFrameType(dai.RawImgFrame.Type.NV12)
+            self.nodes.camRgb.video.link(manip.inputImage)
             if self.lowBandwidth and not self.lowCapabilities:
-                self._mjpegLink(self.nodes.camRgb, self.nodes.xoutRgb, self.nodes.camRgb.video)
+                self._mjpegLink(self.nodes.camRgb, self.nodes.xoutRgb, manip.out)
             else:
-                self.nodes.camRgb.preview.link(self.nodes.xoutRgb.input)
+                manip.out.link(self.nodes.xoutRgb.input)
         if xoutVideo:
             self.nodes.xoutRgbVideo = self.pipeline.createXLinkOut()
             self.nodes.xoutRgbVideo.setStreamName(Previews.color.name + "_video")
