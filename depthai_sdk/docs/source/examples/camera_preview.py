@@ -18,7 +18,7 @@ pm.createDepth(useDepth=True)
 # connecting to the device
 with dai.Device(pm.pipeline) as device:
     # define configs for above sources
-    pv = PreviewManager(display=[Previews.color.name, Previews.left.name, Previews.right.name, Previews.depthRaw.name])
+    pv = PreviewManager(display=[Previews.color.name, Previews.left.name, Previews.right.name, Previews.depth.name])
 
     # create stream queues
     pv.createQueues(device)

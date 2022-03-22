@@ -15,7 +15,7 @@ with dai.Device(pm.pipeline) as device:
 
     # create stream queues
     pv.createQueues(device)
-
-    # prepare and show streams
-    pv.prepareFrames()
-    pv.showFrames()
+    while True:
+        # prepare and show streams
+        pv.prepareFrames()
+        pv.showFrames()

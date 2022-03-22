@@ -23,5 +23,6 @@ with dai.Device(pm.pipeline) as device:
     # create stream queues
     em.createDefaultQueues(device)
 
-    # save frames to .h files
-    em.parseQueues()
+    while True:
+        # save frames to .h256 files
+        em.parseQueues()

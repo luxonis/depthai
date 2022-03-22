@@ -27,7 +27,13 @@ But the above code currently one has one source as it's stream. We can initializ
 
 We now declared more then one source in the pipeline. To fully use the pipeline, you can use it with ``Preview manager`` to see the streams or ``Encoding manager`` to save streams to files.
 As you can see above we also added another argument to the color camera stream, called ``previewSize`` which will resize the stream to wanted ratio (height x width). All sources have many more arguments,
-``xout`` will help us in the next tutorial where we will learn about the ``Preview manager``. To see all arguments that the streams can contain and everything else about the ``Pipeline manager``
-check ``API``.
+``xout`` will help us in the next tutorial where we will learn about the ``Preview manager``.
+In the above example we also declared a ``Depth`` source. We gave it ``useDepth`` as an argument which will create a queue for depth frames. If we wish to use a different queue for depth,
+we can change this argument to:
+- ``useDisparity`` to use disparity frames,
+- ``useRectifiedLeft`` for rectified left frames,
+- and ``useRectifiedRigh`` for rectified right frames.
+Of course these are not the only arguments that you can use in the ``Pipeline manager``.
+To see all functions and arguments that the manager can contain check ``API``.
 
 .. include::  footer-short.rst

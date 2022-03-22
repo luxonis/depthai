@@ -38,7 +38,8 @@ Installation
    pipeline_manager.rst
    preview_manager.rst
    encoding_manager.rst
-   blob_nnet_manager.rst
+   blob_manager.rst
+   nnet_manager.rst
 
 .. toctree::
    :maxdepth: 2
