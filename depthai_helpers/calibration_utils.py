@@ -586,14 +586,14 @@ class StereoCalibration(object):
         images_rgb.sort()
 
         allCorners_rgb_scaled, allIds_rgb_scaled, _, _, imsize_rgb_scaled, _ = self.analyze_charuco(
-            images_rgb, scale_req=True, req_resolution=rgb_res)
+            images_rgb, scale_req=True, req_resolution=self.rgb_res)
         self.img_shape_rgb_scaled = imsize_rgb_scaled[::-1]
 
         ret_rgb_scaled, self.M3_scaled, self.d3_scaled, rvecs, tvecs = self.calibrate_camera_charuco(
             allCorners_rgb_scaled, allIds_rgb_scaled, imsize_rgb_scaled[::-1])
 
         allCorners_r_rgb, allIds_r_rgb, _, _, _, _ = self.analyze_charuco(
-            images_right, scale_req=True, req_resolution=rgb_res)
+            images_right, scale_req=True, req_resolution=self.rgb_res)
 
         print("RGB called RMS at 800")
         print(ret_rgb_scaled)
