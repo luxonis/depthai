@@ -375,7 +375,7 @@ class Demo:
             print(f"[CRITICAL] [{msg.time.get()}] {msg.payload}", file=sys.stderr)
             sys.stderr.flush()
             temperature = self._device.getChipTemperature()
-            if temperature.average > 100:
+            if temperature.average > 105:
                 self.error = OverheatError(msg.payload)
             else:
                 self.error = RuntimeError(msg.payload)
