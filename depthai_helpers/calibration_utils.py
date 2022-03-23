@@ -37,7 +37,7 @@ def setPolygonCoordinates(height, width):
 
             [[0,height-margin], [width, height-margin], [width-slope, height//2], [slope, height//2]],
             [[0,height-vertical_shift], [width, height-vertical_shift], [width-slope, height//2-vertical_shift], [slope, height//2-vertical_shift]],
-            [[0,height-vertical_shift*2+margin], [width, height-vertical_shift*2+margin], [width-slope, height//2-vertical_shift*2+margin], [slope, height//2-vertical_shift*2+margin]]
+            [[0,height-vertical_shift*2+margin], [width, height-vertical_shift*2+margin], [width-slope, height//2-vertical_shift*2+margin], [slope, height//2-vertical_shift*2+margin]],
             [[margin,margin], [margin, height-margin], [width-margin, height-margin], [width-margin, margin]],
 
             [[margin,0], [margin,height], [width//2, height-slope], [width//2, slope]],
