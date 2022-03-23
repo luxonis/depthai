@@ -99,6 +99,8 @@ def parse_args():
                         help="RGB cam res height: (1280x)800, (1920x)1200. Default: %(default)s")
     parser.add_argument("-monor", "--monoResolution", default=800, type=int, choices=[800, 1200],
                         help="Stereo cam res height: (1280x)800, (1920x)1200. Default: %(default)s")
+    parser.add_argument("-disp", "--displayFull", default=False, action="store_true",
+                        help="Display streams in full resolution as well, each in its own window")
     
     options = parser.parse_args()
 
@@ -364,6 +366,7 @@ class Main:
 
             for packet in recent_frames:
                 frame = packet[1].getCvFrame()
+                if self.args.displayFull: cv2.imshow(packet[0], frame)
                 # print(packet[0])
                 # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 #if packet[0] == 'rgb':
