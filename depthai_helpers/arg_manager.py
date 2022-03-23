@@ -146,4 +146,5 @@ def parseArgs():
     parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")
     parser.add_argument('--noSupervisor', action="store_true", help="Disable supervisor check")
     parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")
+    parser.add_argument('--debug', action="store_true", help="Enables debug mode. Capability to connect to already BOOTED devices and also implicitly disables version check")
     return parser.parse_args()
