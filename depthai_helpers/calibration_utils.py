@@ -452,14 +452,14 @@ class StereoCalibration(object):
         """
         print("CAMERA CALIBRATION")
         print(imsize)
-        if imsize[1] < 1100:
-            cameraMatrixInit = np.array([[857.1668,    0.0,      643.9126],
-                                         [0.0,     856.0823,  387.56018],
-                                         [0.0,        0.0,        1.0]])
-        else:
-            cameraMatrixInit = np.array([[3819.8801,    0.0,     1912.8375],
-                                         [0.0,     3819.8801, 1135.3433],
-                                         [0.0,        0.0,        1.]])
+        # if imsize[1] < 1100:
+        cameraMatrixInit = np.array([[3500.1668,    0.0,      643.9126],
+                                        [0.0,     3500.0823,  387.56018],
+                                        [0.0,        0.0,        1.0]])
+        # else:
+        #     cameraMatrixInit = np.array([[3819.8801,    0.0,     1912.8375],
+        #                                  [0.0,     3819.8801, 1135.3433],
+        #                                  [0.0,        0.0,        1.]])
         
         print("Camera Matrix initialization.............")
         print(cameraMatrixInit)
