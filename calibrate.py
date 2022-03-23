@@ -101,6 +101,12 @@ def parse_args():
                         help="Stereo cam res height: (1280x)800, (1920x)1200. Default: %(default)s")
     parser.add_argument("-disp", "--displayFull", default=False, action="store_true",
                         help="Display streams in full resolution as well, each in its own window")
+    parser.add_argument("-lden", "--lumaDenoise", type=int, default=1, choices=range(0,5),
+                        help="Set luma denoise amount. Lowering could improve sharpness in good lighting. Default: %(default)s")
+    parser.add_argument("-cden", "--chromaDenoise", type=int, default=1, choices=range(0,5),
+                        help="Set chroma denoise amount. Increasing to max could reduce color noise. Default: %(default)s")
+    parser.add_argument("-sharp", "--sharpness", type=int, default=1, choices=range(0,5),
+                        help="Set how much to sharpen the image. Default: %(default)s")
     
     options = parser.parse_args()
 
@@ -220,6 +226,9 @@ class Main:
                 cam[c].setResolution(self.mono_cam_res)
                 cam[c].setIspScale(self.mono_scale)
 
+            cam[c].initialControl.setLumaDenoise(self.args.lumaDenoise)
+            cam[c].initialControl.setChromaDenoise(self.args.chromaDenoise)
+            cam[c].initialControl.setSharpness(self.args.sharpness)
             cam[c].setFps(self.args.fps)
 
             cam[c].isp.link(xout[c].input)
