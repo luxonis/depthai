@@ -140,9 +140,18 @@ class Main:
         if debug:
             print("Using Arguments=", self.args)
 
+        if self.args.board.upper() == 'OAK-D-LITE':
+            raise Exception(
+            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         pipeline = self.create_pipeline()
         self.device = dai.Device(pipeline)
+        """ cameraProperties = self.device.getConnectedCameraProperties()
+        for properties in cameraProperties:
+            if properties.sensorName == 'OV7251':
+                raise Exception(
+            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!") 
 
+        self.device.startPipeline(pipeline)"""
         self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
         self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
         if not self.args.disableRgb:
@@ -162,7 +171,7 @@ class Main:
 
         for i, left_id in enumerate(id_l):
             idx = np.where(id_r == left_id)
-            print(idx)
+            # print(idx)
             if idx[0].size == 0:
                 continue
             for left_corner, right_corner in zip(marker_corners_l[i], marker_corners_r[idx[0][0]]):
@@ -417,8 +426,9 @@ class Main:
 
                 if self.args.disableRgb:
                     captured_color = True
+                    tried_color = True
                 if captured_left and captured_right and captured_color:
-                    print(f"Images captured --> {self.images_captured}")
+                    print("Images captured --> {}".format(self.images_captured))
                     if not self.images_captured:
                         if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
                             self.show_failed_orientation()
@@ -434,7 +444,9 @@ class Main:
                     captured_left = False
                     captured_right = False
                     captured_color = False
-                elif tried_left and tried_color:
+                elif tried_left and tried_right and tried_color:
+                     #TODO(Sachin): add condition for RGB too and when break happens and if RGB 
+                    # is not received it will throw an error. add an exception to it
                     self.show_failed_capture_frame()
                     capturing = False
                     tried_left = False
@@ -506,7 +518,7 @@ class Main:
             calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
             calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
             measuredTranslation = [
-                -self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
+                - self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
             calibration_handler.setCameraExtrinsics(
                 left, right, calibData[5], calibData[6], measuredTranslation)
 
@@ -528,7 +540,7 @@ class Main:
                 calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, self.focus_value)
 
                 measuredTranslation = [
-                    self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
+                    self.board_config['board_config']['left_to_right_distance_cm'] - self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
                 calibration_handler.setCameraExtrinsics(
                     right, dai.CameraBoardSocket.RGB, calibData[7], calibData[8], measuredTranslation)
             

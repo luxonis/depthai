@@ -19,14 +19,18 @@ class BlobManager:
     _useBlob = False
     _zooModels = []
 
-    def __init__(self, blobPath:Path=None, configPath:Path=None, zooName:str=None, zooDir:Path=None):
+    def __init__(self, blobPath:Path=None, configPath:Path=None, zooName:str=None, zooDir:Path=None, progressFunc=None):
         """
         Args:
             blobPath (pathlib.Path, Optional): Path to the compiled MyriadX blob file
             configPath (pathlib.Path, Optional): Path to model config file that is used to download the model
             zooName (str, Optional): Model name to be taken from model zoo
             zooDir (pathlib.Path, Optional): Path to model zoo directory
+            progressFunc (func, Optional): Custom method to show download progress, should accept two arguments - current bytes and max bytes.
         """
+        if progressFunc is not None:
+            blobconverter.set_defaults(progress_func=progressFunc)
+
         if blobPath is not None:
             self._blobPath = blobPath
             self._useBlob = True
@@ -54,7 +58,7 @@ class BlobManager:
             self._configPath = configPath
 
 
-    def getBlob(self, shaves:int, openvinoVersion: dai.OpenVINO.Version):
+    def getBlob(self, shaves:int, openvinoVersion: dai.OpenVINO.Version, zooType:str = None):
         """
         This function is responsible for returning a ready to use MyriadX blob once requested.
         It will compile the model automatically using our online blobconverter tool. The compilation process will be
@@ -63,12 +67,13 @@ class BlobManager:
         Args:
             shaves (int): Specify how many shaves the model will use. Range 1-16
             openvinoVersion (depthai.OpenVINO.Version): OpenVINO version which will be used to compile the MyriadX blob
+            zooType (str, Optional): Specifies model zoo type to download blob from
 
         Returns:
             pathlib.Path: Path to compiled MyriadX blob
 
         Raises:
-            SystemExit: If model name is not found in the zoo, this method will print all available onces and terminate
+            SystemExit: If model name is not found in the zoo, this method will print all available ones and terminate
             RuntimeError: If conversion failed with unknown status
             Exception: If some unknown error will occur (reraise)
         """
@@ -80,7 +85,8 @@ class BlobManager:
                 self._blobPath = blobconverter.from_zoo(
                     name=self._zooName,
                     shaves=shaves,
-                    version=version
+                    version=version,
+                    zoo_type=zooType
                 )
                 self._useBlob = True
                 return self._blobPath

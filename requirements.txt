@@ -1,6 +1,6 @@
-PySimpleGUI
-requests==2.24.0
-argcomplete==1.12.1
+requests==2.26.0
+pyrebase4==4.5
+--extra-index-url https://www.piwheels.org/simple
 opencv-python==4.5.4.58 ; platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l" and python_version == "3.10"
 opencv-python==4.5.1.48 ; platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l" and python_version != "3.10"
 opencv-contrib-python==4.5.4.58 ; platform_machine != "aarch64" and platform_machine != "armv6l" and platform_machine != "armv7l" and python_version == "3.10"
@@ -8,5 +8,7 @@ opencv-contrib-python==4.5.1.48 ; platform_machine != "aarch64" and platform_mac
 opencv-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machine == "armv7l"
 opencv-contrib-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machine == "armv7l"
 -e ./depthai_sdk
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-depthai-data-local/wheels/
+pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" and platform_machine != "aarch64"
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.14.1.0.dev+42f597b9760ca39e41722d429ab9d11e302e6f11
+depthai==2.15.1.0.dev+39da981db8b886cf6c88b55a044724a82619a794
