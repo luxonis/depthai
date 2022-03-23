@@ -95,6 +95,10 @@ def parse_args():
                         required=False, help="Set the manual lens position of the camera for calibration")
     parser.add_argument("-fps", "--fps", default=30, type=int,
                         required=False, help="Set capture FPS for all cameras. Default: %(default)s")
+    parser.add_argument("-rgbr", "--rgbResolution", default=800, type=int, choices=[800, 1200],
+                        help="RGB cam res height: (1280x)800, (1920x)1200. Default: %(default)s")
+    parser.add_argument("-monor", "--monoResolution", default=800, type=int, choices=[800, 1200],
+                        help="Stereo cam res height: (1280x)800, (1920x)1200. Default: %(default)s")
     
     options = parser.parse_args()
 
@@ -121,6 +125,18 @@ class Main:
 
     def __init__(self):
         self.args = parse_args()
+
+        self.rgb_cam_res = dai.ColorCameraProperties.SensorResolution.THE_1200_P
+        if self.args.rgbResolution == 800:
+            self.rgb_w, self.rgb_h, self.rgb_scale = 1280, 800, (2, 3)
+        elif self.args.rgbResolution == 1200:
+            self.rgb_w, self.rgb_h, self.rgb_scale = 1920, 1200, (1, 1)
+
+        self.mono_cam_res = dai.ColorCameraProperties.SensorResolution.THE_1200_P
+        if self.args.monoResolution == 800:
+            self.mono_w, self.mono_h, self.mono_scale = 1280, 800, (2, 3)
+        elif self.args.monoResolution == 1200:
+            self.mono_w, self.mono_h, self.mono_scale = 1920, 1200, (1, 1)
 
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
@@ -183,51 +199,35 @@ class Main:
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
-        cam_left = pipeline.createColorCamera()
-        cam_right = pipeline.createColorCamera()
+        cam_list = ['left', 'right']
+        if not self.args.disableRgb: cam_list.append['rgb']
+        cam = {}
+        xout = {}
 
-        xout_left = pipeline.createXLinkOut()
-        xout_right = pipeline.createXLinkOut()
+        for c in cam_list:
+            cam[c] = pipeline.createColorCamera()
+            xout[c] = pipeline.createXLinkOut()
+            xout[c].setStreamName(c)
+
+            if c == 'rgb':
+                # cam[c].initialControl.setManualFocus(self.focus_value)
+                cam[c].setBoardSocket(dai.CameraBoardSocket.RGB)
+                cam[c].setResolution(self.rgb_cam_res)
+                cam[c].setIspScale(self.rgb_scale)
+            else:
+                cam[c].setResolution(self.mono_cam_res)
+                cam[c].setIspScale(self.mono_scale)
+
+            cam[c].setFps(self.args.fps)
+
+            cam[c].isp.link(xout[c].input)
 
         if self.args.swapLR:
-            cam_left.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-            cam_right.setBoardSocket(dai.CameraBoardSocket.LEFT)
+            cam['left'].setBoardSocket(dai.CameraBoardSocket.RIGHT)
+            cam['right'].setBoardSocket(dai.CameraBoardSocket.LEFT)
         else:
-            cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
-            cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-                
-        #res = dai.ColorCameraProperties.SensorResolution.THE_800_P  # For OV9782 on L/R
-        res = dai.ColorCameraProperties.SensorResolution.THE_1080_P # For AR0234/etc
-
-        cam_left.setResolution(res)
-        if res == dai.ColorCameraProperties.SensorResolution.THE_1080_P:
-            cam_left.setIspScale(2, 3)
-        cam_left.setFps(self.args.fps)
-
-        cam_right.setResolution(res)
-        if res == dai.ColorCameraProperties.SensorResolution.THE_1080_P:
-            cam_right.setIspScale(2, 3)
-        cam_right.setFps(self.args.fps)
-
-        xout_left.setStreamName("left")
-        cam_left.isp.link(xout_left.input)
-
-        xout_right.setStreamName("right")
-        cam_right.isp.link(xout_right.input)
-
-        if not self.args.disableRgb:
-            rgb_cam = pipeline.createColorCamera()
-            rgb_cam.setResolution(
-                dai.ColorCameraProperties.SensorResolution.THE_800_P)
-            rgb_cam.setInterleaved(False)
-            rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
-            rgb_cam.setIspScale(2, 3)
-            # rgb_cam.initialControl.setManualFocus(self.focus_value)
-            rgb_cam.setFps(self.args.fps)
-
-            xout_rgb_isp = pipeline.createXLinkOut()
-            xout_rgb_isp.setStreamName("rgb")
-            rgb_cam.isp.link(xout_rgb_isp.input)        
+            cam['left'].setBoardSocket(dai.CameraBoardSocket.LEFT)
+            cam['right'].setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
         return pipeline
 
@@ -487,8 +487,12 @@ class Main:
         dest_path = str(Path('resources').absolute())
         self.args.cameraMode = 'perspective' # hardcoded for now
         try:
+            # (H, W) format
+            mono_res = (self.mono_h, self.mono_w)
+            rgb_res = (self.rgb_h, self.rgb_w)
             epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args.squareSizeCm,
-                 self.args.markerSizeCm, self.args.squaresX, self.args.squaresY, self.args.cameraMode, not self.args.disableRgb, self.args.rectifiedDisp)
+                 self.args.markerSizeCm, self.args.squaresX, self.args.squaresY, self.args.cameraMode, not self.args.disableRgb, self.args.rectifiedDisp,
+                 rgb_res, mono_res)
             if epiploar_error > self.args.maxEpiploarError:
                 image = create_blank(900, 512, rgb_color=red)
                 text = "High L-r epiploar_error: " + str(epiploar_error)
@@ -521,8 +525,8 @@ class Main:
             calibration_handler = dai.CalibrationHandler()
             calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
-            calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
-            calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
+            calibration_handler.setCameraIntrinsics(left, calibData[2], self.mono_w, self.mono_h)
+            calibration_handler.setCameraIntrinsics(right, calibData[3], self.mono_w, self.mono_h)
             measuredTranslation = [
                 -self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
             calibration_handler.setCameraExtrinsics(
@@ -540,7 +544,7 @@ class Main:
                 right, calibData[1])
 
             if not self.args.disableRgb:
-                calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.RGB, calibData[4], 1280, 800)
+                calibration_handler.setCameraIntrinsics(dai.CameraBoardSocket.RGB, calibData[4], self.rgb_w, self.rgb_h)
                 calibration_handler.setDistortionCoefficients(dai.CameraBoardSocket.RGB, calibData[11])
                 calibration_handler.setFov(dai.CameraBoardSocket.RGB, self.board_config['board_config']['rgb_fov_deg'])
                 calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, self.focus_value)

@@ -93,11 +93,13 @@ class StereoCalibration(object):
     def __init__(self):
         """Class to Calculate Calibration and Rectify a Stereo Camera."""
 
-    def calibrate(self, filepath, square_size, mrk_size, squaresX, squaresY, camera_model, calibrate_rgb, enable_disp_rectify):
+    def calibrate(self, filepath, square_size, mrk_size, squaresX, squaresY, camera_model, calibrate_rgb, enable_disp_rectify, rgb_res, mono_res):
         """Function to calculate calibration for stereo camera."""
         start_time = time.time()
         # init object data
         self.calibrate_rgb = calibrate_rgb
+        self.rgb_res = rgb_res
+        self.mono_res = mono_res
         self.enable_rectification_disp = enable_disp_rectify
         self.cameraModel  = camera_model
         self.data_path = filepath
@@ -329,9 +331,9 @@ class StereoCalibration(object):
 
         print("~~~~~~~~~~~ POSE ESTIMATION LEFT CAMERA ~~~~~~~~~~~~~")
         allCorners_l, allIds_l, _, _, imsize, _ = self.analyze_charuco(
-            images_left)
+            images_left, req_resolution=self.mono_res)
         allCorners_r, allIds_r, _, _, imsize, _ = self.analyze_charuco(
-            images_right)
+            images_right, req_resolution=self.mono_res)
         self.img_shape = imsize[::-1]
 
         # self.img_shape_rgb = imsize_rgb[::-1]
@@ -584,14 +586,14 @@ class StereoCalibration(object):
         images_rgb.sort()
 
         allCorners_rgb_scaled, allIds_rgb_scaled, _, _, imsize_rgb_scaled, _ = self.analyze_charuco(
-            images_rgb, scale_req=True, req_resolution=(800, 1280))
+            images_rgb, scale_req=True, req_resolution=rgb_res)
         self.img_shape_rgb_scaled = imsize_rgb_scaled[::-1]
 
         ret_rgb_scaled, self.M3_scaled, self.d3_scaled, rvecs, tvecs = self.calibrate_camera_charuco(
             allCorners_rgb_scaled, allIds_rgb_scaled, imsize_rgb_scaled[::-1])
 
         allCorners_r_rgb, allIds_r_rgb, _, _, _, _ = self.analyze_charuco(
-            images_right, scale_req=True, req_resolution=(800, 1280))
+            images_right, scale_req=True, req_resolution=rgb_res)
 
         print("RGB called RMS at 800")
         print(ret_rgb_scaled)
@@ -650,7 +652,7 @@ class StereoCalibration(object):
         # print(M_RGB)
         print('vs. intrinisics computed after scaling the image --->')
         # self.M3, self.d3
-        scale = 1920/1280
+        scale = 1 #1920/1280
         # print(scale)
         # scale_mat = np.array([[scale, 0, 0], [0, scale, 0], [0, 0, 1]])
         # self.M3 = np.matmul(scale_mat, self.M3_scaled)
