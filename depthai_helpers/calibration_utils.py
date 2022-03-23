@@ -690,16 +690,6 @@ class StereoCalibration(object):
         assert len(images_right) != 0, "ERROR: Images not read correctly"
         criteria = (cv2.TERM_CRITERIA_EPS +
                     cv2.TERM_CRITERIA_MAX_ITER, 100, 0.00001)
-        from scipy.spatial.transform import Rotation as Rot
-        r = Rot.from_matrix(self.R1)
-        print('Printing RPY....')
-        print(r.as_euler('xyz', degrees=True))
-        r = Rot.from_matrix(self.R2)
-        print('Printing RPY....')
-        print(r.as_euler('xyz', degrees=True))
-        r = Rot.from_matrix(self.R)
-        print('Printing RPY....')
-        print(r.as_euler('xyz', degrees=True))
         # if not use_homo:
         self.R1[0, :] = 0 
         self.R1[1, :] = 0

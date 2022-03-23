@@ -53,6 +53,7 @@ resources/*.json
 *.img
 .aux_wheels
 *.whl
+*.zip
 
 *.orig
 
