@@ -93,7 +93,7 @@ def parse_args():
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
-    parser.add_argument("-fps", "--fps", default=30, type=int,
+    parser.add_argument("-fps", "--fps", default=10, type=int,
                         required=False, help="Set capture FPS for all cameras. Default: %(default)s")
     parser.add_argument("-rgbr", "--rgbResolution", default=800, type=int, choices=[800, 1200],
                         help="RGB cam res height: (1280x)800, (1920x)1200. Default: %(default)s")
@@ -208,7 +208,7 @@ class Main:
         pipeline = dai.Pipeline()
 
         cam_list = ['left', 'right']
-        if not self.args.disableRgb: cam_list.append['rgb']
+        if not self.args.disableRgb: cam_list.append('rgb')
         cam = {}
         xout = {}
 
