@@ -370,12 +370,12 @@ class Demo:
     def canRun(self):
         return hasattr(self, "_device") and not self._device.isClosed()
 
-    def _logMonitorCallback(self, msg: dai.LogMessage):
+    def _logMonitorCallback(self, msg):
         if msg.level == dai.LogLevel.CRITICAL:
             print(f"[CRITICAL] [{msg.time.get()}] {msg.payload}", file=sys.stderr)
             sys.stderr.flush()
             temperature = self._device.getChipTemperature()
-            if temperature.average > 105:
+            if any(map(lambda field: getattr(temperature, field) > 100, ["average", "css", "dss", "mss", "upa"])):
                 self.error = OverheatError(msg.payload)
             else:
                 self.error = RuntimeError(msg.payload)
@@ -691,7 +691,7 @@ def runQt():
             self.conf.args = argparse.Namespace(**dict(argsList))
 
         def onError(self, ex: Exception):
-            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [str(ex)]))
+            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [f"{type(ex).__name__}: {ex}"]))
             self.signals.setDataSignal.emit(["restartRequired", True])
 
         def shouldRun(self):
