@@ -50,6 +50,11 @@ from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, createBlankFrame
 from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
+
+class OverheatError(RuntimeError):
+    pass
+
+
 args = parseArgs()
 
 if args.noSupervisor and args.guiType == "qt":
@@ -110,6 +115,7 @@ class Demo:
     SIGMA_MAX = int(os.getenv("SIGMA_MAX", 250))
     LRCT_MIN = int(os.getenv("LRCT_MIN", 0))
     LRCT_MAX = int(os.getenv("LRCT_MAX", 10))
+    error = None
 
     def run_all(self, conf):
         if conf.args.app is not None:
@@ -203,6 +209,7 @@ class Demo:
             self._pm.setNnManager(self._nnManager)
 
         self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        self._device.addLogCallback(self._logMonitorCallback)
         if sentryEnabled:
             try:
                 from sentry_sdk import set_user
@@ -327,7 +334,7 @@ class Demo:
         self.onSetup(self)
 
         try:
-            while self.shouldRun() and hasattr(self, "_device") and not self._device.isClosed():
+            while self.shouldRun() and self.canRun():
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
@@ -360,6 +367,19 @@ class Demo:
             self._logOut.close()
         self.onTeardown(self)
 
+    def canRun(self):
+        return hasattr(self, "_device") and not self._device.isClosed()
+
+    def _logMonitorCallback(self, msg):
+        if msg.level == dai.LogLevel.CRITICAL:
+            print(f"[CRITICAL] [{msg.time.get()}] {msg.payload}", file=sys.stderr)
+            sys.stderr.flush()
+            temperature = self._device.getChipTemperature()
+            if any(map(lambda field: getattr(temperature, field) > 100, ["average", "css", "dss", "mss", "upa"])):
+                self.error = OverheatError(msg.payload)
+            else:
+                self.error = RuntimeError(msg.payload)
+
     timer = time.monotonic()
 
     def loop(self):
@@ -367,6 +387,10 @@ class Demo:
         if diff < 0.02:
             time.sleep(diff)
         self.timer = time.monotonic()
+
+        if self.error is not None:
+            self.stop()
+            raise self.error
 
         if self._conf.useCamera:
             self._pv.prepareFrames(callback=self.onNewFrame)
@@ -667,7 +691,7 @@ def runQt():
             self.conf.args = argparse.Namespace(**dict(argsList))
 
         def onError(self, ex: Exception):
-            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [str(ex)]))
+            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [f"{type(ex).__name__}: {ex}"]))
             self.signals.setDataSignal.emit(["restartRequired", True])
 
         def shouldRun(self):
