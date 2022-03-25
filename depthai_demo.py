@@ -797,7 +797,11 @@ def runQt():
 
         def stop(self, wait=True):
             if hasattr(self._demoInstance, "_device"):
-                current_mxid = self._demoInstance._device.getMxId()
+                try:
+                    current_mxid = self._demoInstance._device.getMxId()
+                except:
+                    current_mxid = self.confManager.args.deviceId
+                    del self._demoInstance._device
             else:
                 current_mxid = self.confManager.args.deviceId
             self.worker.running = False
