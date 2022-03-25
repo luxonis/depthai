@@ -399,37 +399,33 @@ ListView {
                 }
 
                 TextField {
-                    enabled: depthEnabled
-                    id: textField4
+                    id: isomono1
                     x: 288
                     y: 80
                     width: 106
                     height: 25
-                    color: "#ddffffff"
                     text: ""
                     bottomPadding: 5
                     placeholderText: "ISO"
                     font.family: "Courier"
                     validator: IntValidator {}
                     onEditingFinished: {
-                        monoCamBridge.setIsoExposure(text, textField5.text)
+                        monoCamBridge.setIsoExposure(text, expomono1.text)
                     }
                 }
 
                 TextField {
-                    enabled: depthEnabled
-                    id: textField5
+                    id: expomono1
                     x: 288
                     y: 111
                     width: 106
                     height: 25
-                    color: "#ddffffff"
                     text: ""
                     bottomPadding: 5
                     placeholderText: qsTr("Exposure")
                     validator: IntValidator {}
                     onEditingFinished: {
-                        monoCamBridge.setIsoExposure(textField4.text, text)
+                        monoCamBridge.setIsoExposure(isomono1.text, text)
                     }
                 }
 

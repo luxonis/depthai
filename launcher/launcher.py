@@ -142,18 +142,41 @@ class Worker(QtCore.QThread):
                     lastCall = subprocess.run([gitExecutable, 'fetch'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
                     lastCall.check_returncode()
 
-                    # Get all available versions
+                    # Get current commit
+                    ret = subprocess.run([gitExecutable, 'rev-parse', 'HEAD'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE, check=True)
+                    currentCommit = ret.stdout.decode().strip()
+                    print(f'Current commit: {currentCommit}')
+
+                    # Tags associated with current commit
+                    currentTag = None
+
+                    # Get all available tags/versions
                     availableDepthAIVersions = []
-                    proc = subprocess.Popen([gitExecutable, 'tag', '-l'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE)
+                    proc = subprocess.Popen([gitExecutable, 'show-ref', '--tags', '-d'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE)
                     while True:
                         line = proc.stdout.readline()
                         if not line:
                             break
-                        # Check that the tag refers to DepthAI demo and not SDK
-                        tag = line.rstrip().decode()
+                        # Parse commit and corresponding tags
+                        commitTag = line.rstrip().decode()
+                        tag = ''
+                        commit = ''
+                        try:
+                            commit = commitTag.split(' ')[0].strip()
+                            tag = commitTag.split(' ')[1].split('refs/tags/')[1].strip()
+                        except Exception as ex:
+                            print(f"Couldn't parse commit&tag line: {ex}")
+
                         # Check that tag is actually a version
-                        if type(version.parse(tag)) is version.Version:
+                        # Check that the tag belongs to depthai demo and not SDK or others and is valid
+                        if len(tag.split('-')) == 1 and type(version.parse(tag)) is version.Version:
                             availableDepthAIVersions.append(tag)
+                            # Also note down the current depthai demo tag
+                            if currentCommit == commit:
+                                currentTag = tag
+
+                    # Print available tags/versions
+                    print(f'Current tag: {currentTag}')
                     print(f'Available DepthAI versions: {availableDepthAIVersions}')
 
                     # If any available versions
@@ -169,18 +192,15 @@ class Worker(QtCore.QThread):
                             newVersionTag = ver
                             newVersion = str(version.parse(ver))
 
-                    # Check current tag
-                    ret = subprocess.run([gitExecutable, 'describe', '--tags'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE, check=True)
-                    tag = ret.stdout.decode()
                     # See if its DepthAI version tag (if not, then suggest to update)
-                    if len(tag.split('-')) == 1:
+                    if currentTag is not None:
                         currentVersion = 'Unknown'
-                        if type(version.parse(tag)) is version.Version:
-                            print(f'Current tag: {tag}, ver: {str(version.parse(tag))}')
-                            currentVersion = str(version.parse(tag))
+                        if type(version.parse(currentTag)) is version.Version:
+                            print(f'Current tag: {currentTag}, ver: {str(version.parse(currentTag))}')
+                            currentVersion = str(version.parse(currentTag))
 
                             # Check if latest version is newer than current
-                            if version.parse(newVersionTag) > version.parse(tag):
+                            if version.parse(newVersionTag) > version.parse(currentTag):
                                 newVersionAvailable = True
                             else:
                                 newVersionAvailable = False
@@ -320,7 +340,7 @@ class Worker(QtCore.QThread):
                         print(f'Install dependencies call failed with return code: {installReqCall.returncode}, message: {installReqCall.stderr.decode()}')
                         self.sigCritical.emit(title, message)
                         raise Exception(title)
-                    
+
                     # Remove message and animation
                     splashScreen.updateSplashMessage('')
                     splashScreen.enableHeartbeat(False)

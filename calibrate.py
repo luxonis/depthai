@@ -540,7 +540,7 @@ class Main:
             calibration_handler.setCameraIntrinsics(left, calibData[2], self.mono_w, self.mono_h)
             calibration_handler.setCameraIntrinsics(right, calibData[3], self.mono_w, self.mono_h)
             measuredTranslation = [
-                -self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
+                - self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
             calibration_handler.setCameraExtrinsics(
                 left, right, calibData[5], calibData[6], measuredTranslation)
 
@@ -562,7 +562,7 @@ class Main:
                 calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, self.focus_value)
 
                 measuredTranslation = [
-                    self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
+                    self.board_config['board_config']['left_to_right_distance_cm'] - self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
                 calibration_handler.setCameraExtrinsics(
                     right, dai.CameraBoardSocket.RGB, calibData[7], calibData[8], measuredTranslation)
             
