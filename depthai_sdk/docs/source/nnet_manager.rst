@@ -8,7 +8,7 @@ Nnet manager
 Getting started
 ---------------
 
-To get started we first have to know everything that the manager offers. Firstly the manager is responsible for running our NN, which means
+To get started we first have to know some things that the manager offers. Firstly the manager is responsible for running our NN, which means
 that our manager will need a blob to work with. We can pass the blob to our ``Nnet manager`` either with our ``Blob manager`` or we can pass the blob directly from the  ``blobconverter`` module.
 We now have our blob, now we need to declare our pipeline through which our NN will be receiving data. This step is best done with the help of
 ``Pipeline manager``, as the manager already contains methods for NN nodes (``addNN`` and ``setNnManager`` methods). After initializing all of that we are almost done.
@@ -44,9 +44,9 @@ Mobile net
    :language: python
    :linenos:
 
-This example shows how to use the ``mobile net`` project. The code should be almost the same as the one that we used in the above example, with the only difference being
+This example shows how to use the ``MobileNetSSD`` project. The code should be almost the same as the one that we used in the above example, with the only difference being
 the blob. In this example we load the ``mobilenet-ssd`` blob and pass it to our neural network.
 
-If you wish to learn more about ``Nnet manager`` check ``API``.
+If you wish to learn more about ``Nnet manager`` check :ref:`DepthAI SDK API`.
 
 .. include::  footer-short.rst

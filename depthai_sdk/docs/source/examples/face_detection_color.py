@@ -7,7 +7,7 @@ import cv2
 pm = PipelineManager()
 
 # define camera source (in this case color and change winow size to 600 x 500)
-pm.createColorCam(xout=True, previewSize=(600, 500))
+pm.createColorCam(xout=True)
 
 # define project that you wish to run
 bm = BlobManager(zooName="face-detection-retail-0004")

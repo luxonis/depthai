@@ -1,15 +1,15 @@
 from pathlib import Path
-from depthai_sdk import EncodingManager
+from depthai_sdk import EncodingManager, Previews
 from depthai_sdk.managers import PipelineManager
 import depthai as dai
 
 
 # first create a dictionary with wanted streams as keys and fps number with their values
 encodeConfig = dict()
-encodeConfig["color"] = 30
+encodeConfig[Previews.color.name] = 30
 
 # create encoder with above declared dictionary and path to save the file ("" will save it next to the program file)
-em = EncodingManager(encodeConfig, Path(""))
+em = EncodingManager(encodeConfig, Path(__file__))
 
 # create pipeline with above mentioned streams
 pm = PipelineManager()

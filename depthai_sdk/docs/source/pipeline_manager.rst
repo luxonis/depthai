@@ -2,7 +2,7 @@
 Pipeline manager
 ================
 
-Pipeline is the first class that we will learn how to use as it is the one that is goes hand in hand with every other class.
+``Pipeline manager`` is the first class that we will learn how to use as it is the one that is goes hand in hand with every other class.
 It is created with the purpose to help you with creating and setting up processing pipelines. In this tutorial bellow we will see and learn how to declare and use them.
 
 
@@ -34,6 +34,6 @@ we can change this argument to:
 - ``useRectifiedLeft`` for rectified left frames,
 - and ``useRectifiedRigh`` for rectified right frames.
 Of course these are not the only arguments that you can use in the ``Pipeline manager``.
-To see all functions and arguments that the manager can contain check ``API``.
+To see all functions and arguments that the manager can contain check :ref:`DepthAI SDK API`.
 
 .. include::  footer-short.rst

@@ -8,7 +8,7 @@ Getting started
 ---------------
 
 ``Preview manager`` works hand in hand with the ``Pipeline manager``, so before you can use Preview, you will first have to declare and initialize the ``Pipeline manager``.
-But of course you will also have to import bot names to use them.
+But of course you will also have to import both names to use them.
 If you do not wish to use the ``Pipeline manager`` you can also create and initialize the pipeline without the help of the manager. ``Preview manager`` is created so that you can use only it seperatly.
 
 .. literalinclude:: ./examples/code_fractions/previews.py
@@ -31,6 +31,6 @@ Output of the above code should look something like this:
 .. image:: /_static/images/camera_previews.png
 
 We get frames from all defined sources.
-To see more about the ``Preview manager`` check ``API``.
+To see more about the ``Preview manager`` check :ref:`DepthAI SDK API`.
 
 .. include::  footer-short.rst

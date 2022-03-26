@@ -8,7 +8,7 @@ pm = PipelineManager()
 # after the declaration, we define it's sources
 
 # color camera
-pm.createColorCam(xout=True, previewSize=(500, 500))
+pm.createColorCam(xout=True)
 
 # left camera
 pm.createLeftCam(xout=True)

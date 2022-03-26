@@ -19,6 +19,6 @@ which will compile a new blob or read an existing blob.
 
 After that, the ``blob`` is stored in our variable and we can then pass it to our ``Nnet manager``, as we will see in the next tutorial, or use it in any other project that we wish.
 
-If you wish to learn more about ``Blob manager`` check ``API``.
+If you wish to learn more about ``Blob manager`` check :ref:`DepthAI SDK API`.
 
 .. include::  footer-short.rst
