@@ -282,7 +282,7 @@ class Main:
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + rgb + right", info_frame)
+        cv2.imshow(self.display_name, info_frame)
         cv2.waitKey(2000)
 
     def show_failed_orientation(self):
@@ -321,7 +321,11 @@ class Main:
         recent_right = None
         recent_color = None
         combine_img = None
-        disp_name = "left + right + rgb "
+        start_timer = False
+        timer = self.args.captureDelay
+        prev_time = None
+        curr_time = None
+        self.display_name = "left + right + rgb"
         # with self.get_pipeline() as pipeline:
         while not finished:
             current_left  = self.left_camera_queue.tryGet()
@@ -352,28 +356,28 @@ class Main:
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
             elif key == ord(" "):
-                TIMER = self.args.captureDelay
-                prev = time.time()
-                while TIMER >= 0:
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    local_img = combine_img.copy()
-                    local_image_shape = local_img.shape
-                    cv2.putText(local_img, str(TIMER),
-                        (local_image_shape[1]//2, local_image_shape[0]//2), font,
-                        7, (0, 255, 255),
-                        4, cv2.LINE_AA)
-                    cv2.imshow(disp_name, local_img)
-                    cv2.waitKey(125)
+                # TIMER = self.args.captureDelay
+                # prev = time.time()
+                # while TIMER >= 0:
+                #     font = cv2.FONT_HERSHEY_SIMPLEX
+                #     local_img = combine_img.copy()
+                #     local_image_shape = local_img.shape
+                #     cv2.putText(local_img, str(TIMER),
+                #         (local_image_shape[1]//2, local_image_shape[0]//2), font,
+                #         7, (0, 255, 255),
+                #         4, cv2.LINE_AA)
+                #     cv2.imshow(self.display_name, local_img)
+                #     cv2.waitKey(125)
 
-                    cur = time.time()
-                    if cur-prev >= 1:
-                        prev = cur
-                        TIMER = TIMER-1
-                    print("Printing shape {}".format(local_img.shape))
-
+                #     cur = time.time()
+                #     if cur-prev >= 1:
+                #         prev = cur
+                #         TIMER = TIMER-1
                 if debug:
                     print("setting capture true------------------------")
-                capturing = True
+                start_timer = True
+                prev_time = time.time()
+                timer = self.args.captureDelay
 
             frame_list = []
             # left_frame = recent_left.getCvFrame()
@@ -403,7 +407,7 @@ class Main:
                     print(lrgb_time)
                     print(lr_time)
 
-                if capturing and lrgb_time < 30000 and lr_time < 30000:
+                if capturing and lrgb_time < 40000 and lr_time < 30000:
                     print("Capturing  ------------------------")
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
@@ -417,7 +421,8 @@ class Main:
                         captured_right = self.parse_frame(frame, packet[0])
                         tried_right = True
                         captured_right_frame = frame.copy()
-
+                elif capturing:
+                    print("Time not match")
 
                 has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
                     (packet[0] == "rgb" and captured_color)
@@ -494,8 +499,24 @@ class Main:
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
-                disp_name = "left + right"
-            cv2.imshow(disp_name, combine_img)
+                self.display_name = "left + right"
+
+            if start_timer == True:
+                curr_time = time.time()
+                if curr_time - prev_time >= 1:
+                    prev_time = curr_time
+                    timer = timer-1
+                if timer <= 0 and start_timer == True:
+                    start_timer = False
+                    capturing = True
+                    print('Statrt capturing...')
+                
+                image_shape = combine_img.shape
+                cv2.putText(combine_img, str(timer),
+                        (image_shape[1]//2, image_shape[0]//2), font,
+                        7, (0, 255, 255),
+                        4, cv2.LINE_AA)
+            cv2.imshow(self.display_name, combine_img)
             frame_list.clear()
 
     def calibrate(self):
