@@ -5,6 +5,7 @@ import shutil
 import traceback
 from argparse import ArgumentParser
 from pathlib import Path
+import time
 
 import cv2
 import depthai as dai
@@ -92,9 +93,10 @@ def parse_args():
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
-    parser.add_argument("-fps", "--fps", default=30, type=int,
+    parser.add_argument("-fps", "--fps", default=10, type=int,
                         required=False, help="Set capture FPS for all cameras. Default: %(default)s")
-    
+    parser.add_argument("-cd", "--captureDelay", default=5, type=int,
+                        required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -318,6 +320,8 @@ class Main:
         recent_left = None
         recent_right = None
         recent_color = None
+        combine_img = None
+        disp_name = "left + right + rgb "
         # with self.get_pipeline() as pipeline:
         while not finished:
             current_left  = self.left_camera_queue.tryGet()
@@ -348,6 +352,25 @@ class Main:
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
             elif key == ord(" "):
+                TIMER = self.args.captureDelay
+                prev = time.time()
+                while TIMER >= 0:
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    local_img = combine_img.copy()
+                    local_image_shape = local_img.shape
+                    cv2.putText(local_img, str(TIMER),
+                        (local_image_shape[1]//2, local_image_shape[0]//2), font,
+                        7, (0, 255, 255),
+                        4, cv2.LINE_AA)
+                    cv2.imshow(disp_name, local_img)
+                    cv2.waitKey(125)
+
+                    cur = time.time()
+                    if cur-prev >= 1:
+                        prev = cur
+                        TIMER = TIMER-1
+                    print("Printing shape {}".format(local_img.shape))
+
                 if debug:
                     print("setting capture true------------------------")
                 capturing = True
@@ -466,13 +489,13 @@ class Main:
                         cv2.destroyAllWindows()
                         break
             
-            combine_img = None
             if not self.args.disableRgb:
                 frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
-            cv2.imshow("left + rgb + right", combine_img)
+                disp_name = "left + right"
+            cv2.imshow(disp_name, combine_img)
             frame_list.clear()
 
     def calibrate(self):
