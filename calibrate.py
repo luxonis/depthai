@@ -356,25 +356,8 @@ class Main:
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
             elif key == ord(" "):
-                # TIMER = self.args.captureDelay
-                # prev = time.time()
-                # while TIMER >= 0:
-                #     font = cv2.FONT_HERSHEY_SIMPLEX
-                #     local_img = combine_img.copy()
-                #     local_image_shape = local_img.shape
-                #     cv2.putText(local_img, str(TIMER),
-                #         (local_image_shape[1]//2, local_image_shape[0]//2), font,
-                #         7, (0, 255, 255),
-                #         4, cv2.LINE_AA)
-                #     cv2.imshow(self.display_name, local_img)
-                #     cv2.waitKey(125)
-
-                #     cur = time.time()
-                #     if cur-prev >= 1:
-                #         prev = cur
-                #         TIMER = TIMER-1
                 if debug:
-                    print("setting capture true------------------------")
+                    print("setting timer true------------------------")
                 start_timer = True
                 prev_time = time.time()
                 timer = self.args.captureDelay
