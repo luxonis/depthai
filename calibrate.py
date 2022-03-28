@@ -122,6 +122,7 @@ class Main:
     images_captured = 0
 
     def __init__(self):
+        global debug
         self.args = parse_args()
         debug = self.args.debug
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
