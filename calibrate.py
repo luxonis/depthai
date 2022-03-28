@@ -97,6 +97,7 @@ def parse_args():
                         required=False, help="Set capture FPS for all cameras. Default: %(default)s")
     parser.add_argument("-cd", "--captureDelay", default=5, type=int,
                         required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
+    parser.add_argument("-d", "--debug", default=False, action="store_true", help="Enable debug logs.")
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -122,7 +123,7 @@ class Main:
 
     def __init__(self):
         self.args = parse_args()
-
+        debug = self.args.debug
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
@@ -404,8 +405,7 @@ class Main:
                         captured_right = self.parse_frame(frame, packet[0])
                         tried_right = True
                         captured_right_frame = frame.copy()
-                elif capturing:
-                    print("Time not match")
+
 
                 has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
                     (packet[0] == "rgb" and captured_color)
