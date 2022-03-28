@@ -50,6 +50,11 @@ from depthai_helpers.version_check import checkRequirementsVersion
 from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, createBlankFrame
 from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
+
+class OverheatError(RuntimeError):
+    pass
+
+
 args = parseArgs()
 
 if args.noSupervisor and args.guiType == "qt":
@@ -62,7 +67,7 @@ if not args.noSupervisor:
     print('Using depthai module from: ', dai.__file__)
     print('Depthai version installed: ', dai.__version__)
 
-if not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
+if not args.debug and not args.skipVersionCheck and platform.machine() not in ['armv6l', 'aarch64']:
     checkRequirementsVersion()
 
 sentryEnabled = False
@@ -110,6 +115,7 @@ class Demo:
     SIGMA_MAX = int(os.getenv("SIGMA_MAX", 250))
     LRCT_MIN = int(os.getenv("LRCT_MIN", 0))
     LRCT_MAX = int(os.getenv("LRCT_MAX", 10))
+    error = None
 
     def run_all(self, conf):
         if conf.args.app is not None:
@@ -176,7 +182,7 @@ class Demo:
         self._monoRes = conf.getMonoResolution()
         if self._conf.args.openvinoVersion:
             self._openvinoVersion = getattr(dai.OpenVINO.Version, 'VERSION_' + self._conf.args.openvinoVersion)
-        self._deviceInfo = getDeviceInfo(self._conf.args.deviceId)
+        self._deviceInfo = getDeviceInfo(self._conf.args.deviceId, args.debug)
         if self._conf.args.reportFile:
             reportFileP = Path(self._conf.args.reportFile).with_suffix('.csv')
             reportFileP.parent.mkdir(parents=True, exist_ok=True)
@@ -203,6 +209,7 @@ class Demo:
             self._pm.setNnManager(self._nnManager)
 
         self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        self._device.addLogCallback(self._logMonitorCallback)
         if sentryEnabled:
             try:
                 from sentry_sdk import set_user
@@ -327,7 +334,7 @@ class Demo:
         self.onSetup(self)
 
         try:
-            while self.shouldRun() and hasattr(self, "_device") and not self._device.isClosed():
+            while self.shouldRun() and self.canRun():
                 self._fps.nextIter()
                 self.onIter(self)
                 self.loop()
@@ -360,6 +367,19 @@ class Demo:
             self._logOut.close()
         self.onTeardown(self)
 
+    def canRun(self):
+        return hasattr(self, "_device") and not self._device.isClosed()
+
+    def _logMonitorCallback(self, msg):
+        if msg.level == dai.LogLevel.CRITICAL:
+            print(f"[CRITICAL] [{msg.time.get()}] {msg.payload}", file=sys.stderr)
+            sys.stderr.flush()
+            temperature = self._device.getChipTemperature()
+            if any(map(lambda field: getattr(temperature, field) > 100, ["average", "css", "dss", "mss", "upa"])):
+                self.error = OverheatError(msg.payload)
+            else:
+                self.error = RuntimeError(msg.payload)
+
     timer = time.monotonic()
 
     def loop(self):
@@ -367,6 +387,10 @@ class Demo:
         if diff < 0.02:
             time.sleep(diff)
         self.timer = time.monotonic()
+
+        if self.error is not None:
+            self.stop()
+            raise self.error
 
         if self._conf.useCamera:
             self._pv.prepareFrames(callback=self.onNewFrame)
@@ -616,7 +640,11 @@ def runQt():
             self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
             self.conf.args.bandwidth = "auto"
             if self.conf.args.deviceId is None:
-                devices = dai.Device.getAllAvailableDevices()
+                devices = []
+                if args.debug:
+                    devices = dai.XLinkConnection.getAllConnectedDevices()
+                else:
+                    devices = dai.Device.getAllAvailableDevices()
                 if len(devices) > 0:
                     defaultDevice = next(map(
                         lambda info: info.getMxId(),
@@ -661,7 +689,7 @@ def runQt():
             self.conf.args = argparse.Namespace(**dict(argsList))
 
         def onError(self, ex: Exception):
-            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [str(ex)]))
+            self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [f"{type(ex).__name__}: {ex}"]))
             self.signals.setDataSignal.emit(["restartRequired", True])
 
         def shouldRun(self):
@@ -695,7 +723,11 @@ def runQt():
                 self.file_callbacks["onSetup"](instance)
             self.signals.updateConfSignal.emit(list(vars(self.conf.args).items()))
             self.signals.setDataSignal.emit(["previewChoices", self.conf.args.show])
-            devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+            devices = []
+            if args.debug:
+                devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices()))
+            else:
+                devices = [self.instance._deviceInfo.getMxId()] + list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
             self.signals.setDataSignal.emit(["deviceChoices", devices])
             if instance._nnManager is not None:
                 self.signals.setDataSignal.emit(["countLabels", instance._nnManager._labels])
@@ -763,7 +795,11 @@ def runQt():
 
         def stop(self, wait=True):
             if hasattr(self._demoInstance, "_device"):
-                current_mxid = self._demoInstance._device.getMxId()
+                try:
+                    current_mxid = self._demoInstance._device.getMxId()
+                except:
+                    current_mxid = self.confManager.args.deviceId
+                    del self._demoInstance._device
             else:
                 current_mxid = self.confManager.args.deviceId
             self.worker.running = False
@@ -773,7 +809,13 @@ def runQt():
             if wait and current_mxid is not None:
                 start = time.time()
                 while time.time() - start < 30:
-                    if current_mxid in list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices())):
+                    localDevices = []
+                    if args.debug:
+                        localDevices = list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices()))
+                    else:
+                        localDevices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+
+                    if current_mxid in localDevices:
                         break
                     else:
                         time.sleep(0.1)
@@ -892,7 +934,11 @@ def runQt():
             self.updateArg("deviceId", selected)
 
         def guiOnReloadDevices(self):
-            devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
+            devices = []
+            if args.debug:
+                devices = list(map(lambda info: info.getMxId(), dai.XLinkConnection.getAllConnectedDevices()))
+            else:
+                devices = list(map(lambda info: info.getMxId(), dai.Device.getAllAvailableDevices()))
             if hasattr(self._demoInstance, "_deviceInfo"):
                 devices.insert(0, self._demoInstance._deviceInfo.getMxId())
             self.worker.signals.setDataSignal.emit(["deviceChoices", devices])
