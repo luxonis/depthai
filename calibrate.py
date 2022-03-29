@@ -95,10 +95,10 @@ def parse_args():
                         required=False, help="Set the manual lens position of the camera for calibration")
     parser.add_argument("-fps", "--fps", default=10, type=int,
                         required=False, help="Set capture FPS for all cameras. Default: %(default)s")
-    parser.add_argument("-rgbr", "--rgbResolution", default=800, type=int, choices=[800, 1200],
-                        help="RGB cam res height: (1280x)800, (1920x)1200. Default: %(default)s")
-    parser.add_argument("-monor", "--monoResolution", default=800, type=int, choices=[800, 1200],
-                        help="Stereo cam res height: (1280x)800, (1920x)1200. Default: %(default)s")
+    parser.add_argument("-rgbr", "--rgbResolution", default=800, type=int, choices=[800, 1200, 720, 1080],
+                        help="RGB cam res height: (1280x)800 or 720, (1920x)1200 or 1080. Default: %(default)s")
+    parser.add_argument("-monor", "--monoResolution", default=800, type=int, choices=[800, 1200, 720, 1080],
+                        help="Stereo cam res height: (1280x)800 or 720, (1920x)1200 or 1080. Default: %(default)s")
     parser.add_argument("-disp", "--displayFull", default=False, action="store_true",
                         help="Display streams in full resolution as well, each in its own window")
     parser.add_argument("-lden", "--lumaDenoise", type=int, default=1, choices=range(0,5),
@@ -134,17 +134,31 @@ class Main:
     def __init__(self):
         self.args = parse_args()
 
-        self.rgb_cam_res = dai.ColorCameraProperties.SensorResolution.THE_1200_P
-        if self.args.rgbResolution == 800:
-            self.rgb_w, self.rgb_h, self.rgb_scale = 1280, 800, (2, 3)
-        elif self.args.rgbResolution == 1200:
-            self.rgb_w, self.rgb_h, self.rgb_scale = 1920, 1200, (1, 1)
+        if self.args.rgbResolution in [800, 1200]:
+            self.rgb_cam_res = dai.ColorCameraProperties.SensorResolution.THE_1200_P
+            if self.args.rgbResolution == 800:
+                self.rgb_w, self.rgb_h, self.rgb_scale = 1280, 800, (2, 3)
+            elif self.args.rgbResolution == 1200:
+                self.rgb_w, self.rgb_h, self.rgb_scale = 1920, 1200, (1, 1)
+        else:
+            self.rgb_cam_res = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+            if self.args.rgbResolution == 720:
+                self.rgb_w, self.rgb_h, self.rgb_scale = 1280, 720, (2, 3)
+            elif self.args.rgbResolution == 1080:
+                self.rgb_w, self.rgb_h, self.rgb_scale = 1920, 1080, (1, 1)
 
-        self.mono_cam_res = dai.ColorCameraProperties.SensorResolution.THE_1200_P
-        if self.args.monoResolution == 800:
-            self.mono_w, self.mono_h, self.mono_scale = 1280, 800, (2, 3)
-        elif self.args.monoResolution == 1200:
-            self.mono_w, self.mono_h, self.mono_scale = 1920, 1200, (1, 1)
+        if self.args.monoResolution in [800, 1200]:
+            self.mono_cam_res = dai.ColorCameraProperties.SensorResolution.THE_1200_P
+            if self.args.monoResolution == 800:
+                self.mono_w, self.mono_h, self.mono_scale = 1280, 800, (2, 3)
+            elif self.args.monoResolution == 1200:
+                self.mono_w, self.mono_h, self.mono_scale = 1920, 1200, (1, 1)
+        else:
+            self.mono_cam_res = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+            if self.args.monoResolution == 720:
+                self.mono_w, self.mono_h, self.mono_scale = 1280, 720, (2, 3)
+            elif self.args.monoResolution == 1080:
+                self.mono_w, self.mono_h, self.mono_scale = 1920, 1080, (1, 1)
 
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
