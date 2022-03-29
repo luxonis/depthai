@@ -1,25 +1,32 @@
-================================
-Getting started with DepthAI SDK
-================================
-In this tutorial, we’ll show you how to use DepthAI SDK for a couple of basic use cases, that can give you an overall idea how to use it and in which cases it might be useful.
+===========
+DepthAI SDK
+===========
 
-What is DepthAI SDK?
---------------------
 .. image:: https://user-images.githubusercontent.com/18037362/142909472-eae7bed1-695b-48ec-8895-76982989de11.png
 
 
 DepthAI SDK is a Python package, containing convenience classes and functions that help in most common tasks while using DepthAI API.
 It is created on top of the regular DepthAI API.
-
-Package is mainly made of managers, which handle different aspects of development:
+The package was created to make your use of DepthAI easier. It consists of managers, which handle different aspects of development:
 
 .. include::  modules-list.rst
 
+Before we take a look at how to use DepthAI SDK, we first have to install it.
 
 Installation
 ------------
 .. include::  install.rst
 
+To help you understand and learn how the package works, we created a few simple tutorials, which will teach you how to use our manager.
+We prepared the next tutorials:
+
+- :ref:`Pipeline manager`,
+- :ref:`Preview manager`,
+- :ref:`Encoding manager`,
+- :ref:`Blob manager` and
+- :ref:`Nnet manager`.
+
+We recommend that you start with the ``Pipeline manager``, but it is not necessary.
 
 .. include::  footer-short.rst
 
