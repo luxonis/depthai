@@ -4,16 +4,12 @@ documentation: https://github.com/PINTO0309/PINTO_model_zoo/blob/master/026_mobi
 task_type: semantic_segmentation
 files:
   - name: FP16/deeplabv3p_person.xml
-    size: 138536
-    sha256: bd03684c902e99df3156d331167d94d965ad12193f2a8e26903be27ac17414fd
-    source:
-      $type: google_drive
-      id: 1DvYCLYNeEB8Q74IEZdLb4-iY23k3Usnd
+    size: 136099
+    sha256: e31a35d0ef915dd946410f937d5871083f340bad9f4d412228e5a4242e827b9f
+    source: https://blobconverter.s3.us-west-2.amazonaws.com/deeplab_v3_plus_mnv2_decoder_256.xml
   - name: FP16/deeplabv3p_person.bin
-    size: 4481868
-    sha256: f0a667920462ed264cf7c2fc0654c2c0c3e311c763abfe99cc15232adf6bcff4
-    source:
-      $type: google_drive
-      id: 1vUfUCLM9ABvN2tdF7g-IARi9xU63uBFj
+    size: 4481856
+    sha256: 48f9b05e3db722138bd4174c205d978b97b1a88450036aecaf841cb4969fcec9
+    source: https://blobconverter.s3.us-west-2.amazonaws.com/deeplab_v3_plus_mnv2_decoder_256.bin
 framework: dldt
 license: https://raw.githubusercontent.com/PINTO0309/PINTO_model_zoo/master/LICENSE
