@@ -18,15 +18,15 @@ Installation
 .. include::  install.rst
 
 To help you understand and learn how the package works, we created a few simple tutorials, which will teach you how to use our manager.
-We prepared the next tutorials:
+We prepared the following tutorials:
 
-- :ref:`Pipeline manager`,
-- :ref:`Preview manager`,
-- :ref:`Encoding manager`,
-- :ref:`Blob manager` and
-- :ref:`Nnet manager`.
+- :ref:`Pipeline manager`
+- :ref:`Preview manager`
+- :ref:`Encoding manager`
+- :ref:`Blob manager`
+- :ref:`Nnet manager`
 
-We recommend that you start with the ``Pipeline manager``, but it is not necessary.
+We recommend that you start with the :ref:`Pipeline manager`
 
 .. include::  footer-short.rst
 
