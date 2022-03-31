@@ -15,16 +15,16 @@ Installation
 ------------
 .. include::  install.rst
 
-To help you understand and learn how the package works, we created a few simple tutorials, which will teach you how to use our manager.
-We prepared the following tutorials:
+To help you understand and learn how to use the package and how the manager classes work, we created a few simple tutorials:
 
+- :ref:`Getting started with DepthAI SDK`
 - :ref:`Pipeline manager`
 - :ref:`Preview manager`
 - :ref:`Encoding manager`
 - :ref:`Blob manager`
 - :ref:`Nnet manager`
 
-We recommend that you start with the :ref:`Pipeline manager`
+We recommend that you start with the :ref:`Getting started with DepthAI SDK`
 
 .. include::  footer-short.rst
 
@@ -34,17 +34,18 @@ We recommend that you start with the :ref:`Pipeline manager`
    :caption: Home:
 
    self
+   getting-started.rst
 
 .. toctree::
    :maxdepth: 2
    :hidden:
    :caption: Managers:
 
-   pipeline_manager.rst
-   preview_manager.rst
-   encoding_manager.rst
-   blob_manager.rst
-   nnet_manager.rst
+   managers/pipeline_manager.rst
+   managers/preview_manager.rst
+   managers/encoding_manager.rst
+   managers/blob_manager.rst
+   managers/nnet_manager.rst
 
 .. toctree::
    :maxdepth: 2
