@@ -11,8 +11,6 @@ The package was created to make your use of DepthAI easier. It consists of manag
 
 .. include::  modules-list.rst
 
-Before we take a look at how to use DepthAI SDK, we first have to install it.
-
 Installation
 ------------
 .. include::  install.rst
