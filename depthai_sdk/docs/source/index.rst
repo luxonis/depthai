@@ -1,34 +1,67 @@
-DepthAI SDK documentation
-=========================
-
-DepthAI SDK is a Python package, containing convenience classes and functions that help in most common tasks while using DepthAI API.
+===========
+DepthAI SDK
+===========
 
 .. image:: https://user-images.githubusercontent.com/18037362/142909472-eae7bed1-695b-48ec-8895-76982989de11.png
 
-DepthAI SDK is built on top of the `depthai-python <https://github.com/luxonis/depthai-python>`__ API library (`docs here <https://docs.luxonis.com/projects/api/en/latest/>`__).
+
+DepthAI SDK is a Python package, containing convenience classes and functions that help in most common tasks while using DepthAI API.
+It is created on top of the regular DepthAI API.
+The package was created to make your use of DepthAI easier. It consists of managers, which handle different aspects of development:
+
+.. include::  modules-list.rst
 
 Installation
 ------------
-
 .. include::  install.rst
 
-Usage
------
+To help you understand and learn how to use the package and how the manager classes work, we created a few simple tutorials:
 
-Please visit :ref:`Getting started with DepthAI SDK` for basic usage examples
+- :ref:`Getting started with DepthAI SDK`
+- :ref:`Pipeline manager`
+- :ref:`Preview manager`
+- :ref:`Encoding manager`
+- :ref:`Blob manager`
+- :ref:`Nnet manager`
 
-
-API
----
-
-See :ref:`DepthAI SDK API`
+We recommend that you start with the :ref:`Getting started with DepthAI SDK`
 
 .. include::  footer-short.rst
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :hidden:
-   :caption: Content:
+   :caption: Home:
 
+   self
    getting-started.rst
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: Managers:
+
+   managers/pipeline_manager.rst
+   managers/preview_manager.rst
+   managers/encoding_manager.rst
+   managers/blob_manager.rst
+   managers/nnet_manager.rst
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: Api:
+
    api.rst
+
+
+
+
+
+
+
+
+
+
+
+
