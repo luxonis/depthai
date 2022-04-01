@@ -12,6 +12,17 @@ import csv
 print('Using depthai module from: ', depthai.__file__)
 print('Depthai version installed: ', depthai.__version__)
 
+import sys
+from depthai_helpers.app_manager import App
+if '--app' in sys.argv:
+    try:
+        app = App(appName=sys.argv[sys.argv.index('--app') + 1])
+        app.createVenv()
+        app.runApp()
+        sys.exit(0)
+    except KeyboardInterrupt:
+        sys.exit(0)
+
 from depthai_helpers.version_check import check_depthai_version, get_version_from_requirements
 from depthai_helpers.object_tracker_handler import show_tracklets
 from depthai_helpers.config_manager import DepthConfigManager
