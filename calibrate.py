@@ -114,6 +114,7 @@ def parse_args():
     if options.markerSizeCm is None:
         if options.defaultBoard:
             options.markerSizeCm = options.squareSizeCm * 0.75
+            print("setting marker size  -> {}".format(options.markerSizeCm))
         else:
             raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
