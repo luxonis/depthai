@@ -349,19 +349,24 @@ class StereoCalibration(object):
         # self.fisheye_undistort_visualizaation(images_right, self.M2, self.d2, self.img_shape)
 
 
-        print("~~~~~~~~~~~~~RMS error of left~~~~~~~~~~~~~~")
+        print("~~~~~~~~~~~~~RMS error of left and right ~~~~~~~~~~~~~~")
         print(ret_l)
         print(ret_r)
         print(self.M1)
         print(self.M2)
-        print(self.d1)
-        print(self.d2)
+        # print(self.d1)
+        # print(self.d2)
         # if self.cameraModel == 'perspective':
         ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T, E, F = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
         # else:
             # ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
         print("~~~~~~~~~~~~~RMS error of L-R~~~~~~~~~~~~~~")
         print(ret)
+        print(self.M1)
+        print(self.M2)
+        # print(self.d1)
+        # print(self.d2)
+
         """         
         left_corners_sampled = []
         right_corners_sampled = []
@@ -511,12 +516,12 @@ class StereoCalibration(object):
         right_corners_sampled = []
         obj_pts = []
         one_pts = self.board.chessboardCorners
-        print('allIds_l')
-        print(len(allIds_l))
-        print(len(allIds_r))
-        print('allIds_l')
+        # print('allIds_l')
+        # print(len(allIds_l))
+        # print(len(allIds_r))
+        # print('allIds_l')
         # print(allIds_l)
-        print('allIds_r')
+        # print('allIds_r')
         # print(allIds_r)
 
         for i in range(len(allIds_l)):
@@ -544,7 +549,7 @@ class StereoCalibration(object):
 
         if self.cameraModel == 'perspective':
             flags = 0
-            flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
+            flags |= cv2.CALIB_FIX_INTRINSIC # TODO(sACHIN): Try without intrinsic guess
             flags |= cv2.CALIB_RATIONAL_MODEL
 
             return cv2.stereoCalibrate(
@@ -643,6 +648,7 @@ class StereoCalibration(object):
         
         flags = 0
         flags |= cv2.CALIB_FIX_INTRINSIC
+        # flags |= cv2.CALIB_FIX_GUESS
         flags |= cv2.CALIB_RATIONAL_MODEL
 
 
@@ -693,16 +699,21 @@ class StereoCalibration(object):
         criteria = (cv2.TERM_CRITERIA_EPS +
                     cv2.TERM_CRITERIA_MAX_ITER, 100, 0.00001)
         # if not use_homo:
-        self.R1[0, :] = 0 
-        self.R1[1, :] = 0
-        self.R1[2, :] = 0
-        self.R1[0, 0] = 1 
-        self.R1[1, 1] = 1 
-        self.R1[2, 2] = 1 
+        # self.R1[0, :] = 0 
+        # self.R1[1, :] = 0
+        # self.R1[2, :] = 0
+        # self.R1[0, 0] = 1 
+        # self.R1[1, 1] = 1 
+        # self.R1[2, 2] = 1 
+        # mapx_l, mapy_l = cv2.initUndistortRectifyMap(
+        #     self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
+        # mapx_r, mapy_r = cv2.initUndistortRectifyMap(
+        #     self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
+
         mapx_l, mapy_l = cv2.initUndistortRectifyMap(
-            self.M1, self.d1, self.R1, self.M1, self.img_shape, cv2.CV_32FC1)
+            self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
-            self.M2, self.d2, self.R2, self.P1, self.img_shape, cv2.CV_32FC1)
+            self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
         print("Printing p1 and p2")
         print(self.P1)
         print(self.P2)
