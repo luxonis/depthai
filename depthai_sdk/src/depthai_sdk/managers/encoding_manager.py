@@ -2,6 +2,7 @@ import traceback
 from pathlib import Path
 from ..previews import Previews
 import depthai as dai
+from ..mcap_writer import DepthAiMcap
 
 
 class EncodingManager:
@@ -12,8 +13,9 @@ class EncodingManager:
     _encodingQueues = {}
     _encodingNodes = {}
     _encodingFiles = {}
+    _sufix = ""
 
-    def __init__(self, encodeConfig: dict, encodeOutput=None):
+    def __init__(self, sufix, encodeConfig: dict, encodeOutput=None):
         """
         Args:
             encodeConfig (dict): Encoding config consisting of keys as preview names and values being the encoding FPS
@@ -21,6 +23,7 @@ class EncodingManager:
         """
         self.encodeConfig = encodeConfig
         self.encodeOutput = Path(encodeOutput) or Path(__file__).parent
+        self._sufix = sufix
 
     def createEncoders(self, pm):
         """
@@ -46,10 +49,17 @@ class EncodingManager:
         self._encodingQueues.clear()
         self._encodingFiles.clear()
 
+        if self._sufix == ".mcap":
+            self.mcap = DepthAiMcap(str(self.encodeOutput / f"recordings"))
+
         for cameraName, node in self._encodingNodes.items():
             self._encodingQueues[cameraName] = device.getOutputQueue(cameraName + "EncXout", maxSize=30, blocking=True)
-            suffix = ".h265" if node.getProfile() == dai.VideoEncoderProperties.Profile.H265_MAIN else ".h264"
-            self._encodingFiles[cameraName] = (self.encodeOutput / cameraName).with_suffix(suffix).open('wb')
+            # suffix = ".h265" if node.getProfile() == dai.VideoEncoderProperties.Profile.H265_MAIN else ".h264"
+            if self._sufix == ".mcap":
+                if cameraName not in self.mcap.channels:
+                    self.mcap.imageInit(cameraName)
+            else:
+                self._encodingFiles[cameraName] = (self.encodeOutput / cameraName).with_suffix(self._sufix).open('wb')
 
     def parseQueues(self):
         """
@@ -57,7 +67,10 @@ class EncodingManager:
         """
         for name, queue in self._encodingQueues.items():
             while queue.has():
-                queue.get().getData().tofile(self._encodingFiles[name])
+                if self._sufix == ".mcap":
+                    self.mcap.imageSave(queue.get().getData(), name)
+                else:
+                    queue.get().getData().tofile(self._encodingFiles[name])
 
     def close(self):
         """
@@ -81,6 +94,9 @@ class EncodingManager:
 
         for name, file in self._encodingFiles.items():
             file.close()
+
+        if self._sufix == ".mcap":
+            self.mcap.close()
         try:
             import ffmpy3
             for name, file in self._encodingFiles.items():
