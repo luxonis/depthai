@@ -145,6 +145,7 @@ class DepthAiMcap:
             ).encode("utf8"),
             publish_time=tmpTime,
         )
+        self.writer.finish()
 
     # send in point cloud object read with
     # "o3d.io.read_point_cloud" or
@@ -201,5 +202,5 @@ class DepthAiMcap:
 
     def close(self):
         # end writer and close opened file
-        self.writer.finish()
+        # self.writer.finish()
         self.stream.close()
