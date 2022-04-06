@@ -500,7 +500,7 @@ class PipelineManager:
         self.nodes.xoutSystemLogger.setStreamName("systemLogger")
         self.nodes.systemLogger.out.link(self.nodes.xoutSystemLogger.input)
 
-    def createEncoder(self, cameraName, encFps=30, encQuality=100):
+    def createEncoder(self, cameraName, encFps=30, encQuality=100, preferredProfile=None):
         """
         Creates H.264 / H.265 video encoder (:obj:`depthai.node.VideoEncoder` instance)
 
@@ -535,6 +535,15 @@ class PipelineManager:
             if not hasattr(self.nodes, 'monoRight'):
                 raise RuntimeError("Right mono camera not initialized. Call createRightCam(res, fps) first!")
             encIn = self.nodes.monoRight.out
+
+        # set preferred profile for camera if set
+        if preferredProfile:
+            if preferredProfile == ".h264":
+                encProfile = dai.VideoEncoderProperties.Profile.H264_MAIN
+            elif preferredProfile == ".h265":
+                encProfile = dai.VideoEncoderProperties.Profile.H265_MAIN
+            elif preferredProfile == ".mjpeg" or preferredProfile == ".mcap":
+                encProfile = dai.VideoEncoderProperties.Profile.MJPEG
 
         enc = self.pipeline.createVideoEncoder()
         enc.setDefaultProfilePreset(encFps, encProfile)

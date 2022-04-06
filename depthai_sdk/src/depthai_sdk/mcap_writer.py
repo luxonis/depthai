@@ -1,13 +1,10 @@
-'''
-This is a helper class that let's you save frames into mcap (.mcap), which can be replayed using Foxglove studio app.
-'''
-
 import base64
 import math
 import struct
 import time
-import cv2
 import json
+
+import cv2
 import numpy as np
 from mcap.mcap0.writer import Writer
 
@@ -122,12 +119,12 @@ class DepthAiMcap:
     def imageSave(self, img, name):
         # convert cv2 image to .jpg format
         # is_success, im_buf_arr = cv2.imencode(".jpg", img)
-        #print(type(img[0]))
 
         # read from .jpeg format to buffer of bytes
-        #byte_im = img.tobytes()
+        byte_im = img.tobytes()
+
         # data must be encoded in base64
-        data = base64.b64encode(img).decode("ascii")
+        data = base64.b64encode(byte_im).decode("ascii")
 
         tmpTime = time.time_ns()
         sec = math.trunc(tmpTime / 1e9)
@@ -202,5 +199,5 @@ class DepthAiMcap:
 
     def close(self):
         # end writer and close opened file
-        # self.writer.finish()
+        self.writer.finish()
         self.stream.close()

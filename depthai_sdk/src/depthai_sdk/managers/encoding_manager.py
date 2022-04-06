@@ -34,7 +34,7 @@ class EncodingManager:
 
         self._encodingNodes.clear()
         for cameraName, encFpsSufix in self.encodeConfig.items():
-            pm.createEncoder(cameraName, encFpsSufix[0])
+            pm.createEncoder(cameraName, encFpsSufix[0], preferredProfile=encFpsSufix[1])
             self._encodingNodes[cameraName] = getattr(pm.nodes, cameraName + "Enc")
 
     def createDefaultQueues(self, device):
@@ -48,13 +48,11 @@ class EncodingManager:
         self._encodingQueues.clear()
         self._encodingFiles.clear()
 
-
         for cameraName, node in self._encodingNodes.items():
             self._encodingQueues[cameraName] = device.getOutputQueue(cameraName + "EncXout", maxSize=30, blocking=True)
             # suffix = ".h265" if node.getProfile() == dai.VideoEncoderProperties.Profile.H265_MAIN else ".h264"
             if self.encodeConfig[cameraName][1] == ".mcap":
-                print(cameraName)
-                self._mcap[cameraName] = DepthAiMcap(str(self.encodeOutput / f"{cameraName}"))
+                self._mcap[cameraName] = DepthAiMcap(cameraName)
                 self._mcap[cameraName].imageInit(cameraName)
             else:
                 self._encodingFiles[cameraName] = (self.encodeOutput / cameraName).with_suffix(self.encodeConfig[cameraName][1]).open('wb')
@@ -67,6 +65,7 @@ class EncodingManager:
             while queue.has():
                 if self.encodeConfig[name][1] == ".mcap":
                     self._mcap[name].imageSave(queue.get().getData(), name)
+
                 else:
                     queue.get().getData().tofile(self._encodingFiles[name])
 
@@ -90,10 +89,13 @@ class EncodingManager:
         for queue in self._encodingQueues.values():
             queue.close()
 
-        for name, file in self._encodingFiles.items():
-            file.close()
         for name, file in self._mcap.items():
             file.close()
+
+        for name, file in self._encodingFiles.items():
+            file.close()
+
+        '''
         try:
             import ffmpy3
             for name, file in self._encodingFiles.items():
@@ -125,6 +127,7 @@ class EncodingManager:
             print("Unknown error!")
             traceback.print_exc()
             printManual()
+        '''
 
 
 class EncodingType:
