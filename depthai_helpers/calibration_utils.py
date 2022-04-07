@@ -37,25 +37,8 @@ def setPolygonCoordinates(height, width):
 
             [[0,height-margin], [width, height-margin], [width-slope, height//2], [slope, height//2]],
             [[0,height-vertical_shift], [width, height-vertical_shift], [width-slope, height//2-vertical_shift], [slope, height//2-vertical_shift]],
-            [[0,height-vertical_shift*2+margin], [width, height-vertical_shift*2+margin], [width-slope, height//2-vertical_shift*2+margin], [slope, height//2-vertical_shift*2+margin]],
-            [[margin,margin], [margin, height-margin], [width-margin, height-margin], [width-margin, margin]],
-
-            [[margin,0], [margin,height], [width//2, height-slope], [width//2, slope]],
-            [[horizontal_shift, 0], [horizontal_shift, height], [width//2 + horizontal_shift, height-slope], [width//2 + horizontal_shift, slope]],
-            [[horizontal_shift*2-margin, 0], [horizontal_shift*2-margin, height], [width//2 + horizontal_shift*2-margin, height-slope], [width//2 + horizontal_shift*2-margin, slope]],
-
-            [[width-margin, 0], [width-margin, height], [width//2, height-slope], [width//2, slope]],
-            [[width-horizontal_shift, 0], [width-horizontal_shift, height], [width//2-horizontal_shift, height-slope], [width//2-horizontal_shift, slope]],
-            [[width-horizontal_shift*2+margin, 0], [width-horizontal_shift*2+margin, height], [width//2-horizontal_shift*2+margin, height-slope], [width//2-horizontal_shift*2+margin, slope]],
-
-            [[0,margin], [width, margin], [width-slope, height//2], [slope, height//2]],
-            [[0,vertical_shift], [width, vertical_shift], [width-slope, height//2+vertical_shift], [slope, height//2+vertical_shift]],
-            [[0,vertical_shift*2-margin], [width, vertical_shift*2-margin], [width-slope, height//2+vertical_shift*2-margin], [slope, height//2+vertical_shift*2-margin]],
-
-            [[0,height-margin], [width, height-margin], [width-slope, height//2], [slope, height//2]],
-            [[0,height-vertical_shift], [width, height-vertical_shift], [width-slope, height//2-vertical_shift], [slope, height//2-vertical_shift]],
             [[0,height-vertical_shift*2+margin], [width, height-vertical_shift*2+margin], [width-slope, height//2-vertical_shift*2+margin], [slope, height//2-vertical_shift*2+margin]]
-        ]
+         ]
     return p_coordinates
 
 
@@ -458,8 +441,8 @@ class StereoCalibration(object):
         print("CAMERA CALIBRATION")
         print(imsize)
         # if imsize[1] < 1100:
-        cameraMatrixInit = np.array([[3500.1668,    0.0,      643.9126],
-                                        [0.0,     3500.0823,  387.56018],
+        cameraMatrixInit = np.array([[853.0,    0.0,      643.9126],
+                                        [0.0,     853.0,  387.56018],
                                         [0.0,        0.0,        1.0]])
         # else:
         #     cameraMatrixInit = np.array([[3819.8801,    0.0,     1912.8375],
