@@ -121,8 +121,9 @@ class TestUtils(unittest.TestCase):
 
     def test_downloadYTVideo1(self):
         """Testing with a valid url"""
-        utils.downloadYTVideo("https://www.youtube.com/watch?v=UImAcR7Ke_c", "./test_data/")
+        utils.downloadYTVideo("https://www.youtube.com/watch?v=UImAcR7Ke_c", "")
         self.assertTrue(os.path.exists("OAK-D PoE unboxing.mp4"))
+        os.remove("OAK-D PoE unboxing.mp4")
 
     def test_downloadYTVideo2(self):
         """Testing with an invalid url"""
