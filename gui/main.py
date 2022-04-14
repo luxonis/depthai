@@ -58,6 +58,18 @@ class AppBridge(QObject):
     def toggleStatisticsConsent(self, value):
         instance.guiOnStaticticsConsent(value)
 
+    @pyqtSlot(bool)
+    def toggleSync(self, value):
+        instance.guiOnToggleSync(value)
+
+    @pyqtSlot(str)
+    def runApp(self, appName):
+        instance.guiOnRunApp(appName)
+
+    @pyqtSlot(str)
+    def terminateApp(self, appName):
+        instance.guiOnTerminateApp(appName)
+
     @pyqtSlot(str)
     def selectDevice(self, value):
         instance.guiOnSelectDevice(value)
@@ -154,7 +166,7 @@ class DepthBridge(QObject):
 
     @pyqtSlot(bool)
     def toggleLeftRightCheck(self, state):
-        instance.guiOnDepthConfigUpdate(lrc=state)
+        instance.guiOnDepthSetupUpdate(lrc=state)
 
     @pyqtSlot(int)
     def setDisparityConfidenceThreshold(self, value):
@@ -176,6 +188,14 @@ class DepthBridge(QObject):
     def setMedianFilter(self, state):
         value = getattr(dai.MedianFilter, state)
         instance.guiOnDepthConfigUpdate(median=value)
+
+    @pyqtSlot(int)
+    def setIrLaserDotProjector(self, value):
+        instance.guiOnDepthConfigUpdate(irLaser=value)
+
+    @pyqtSlot(int)
+    def setIrFloodIlluminator(self, value):
+        instance.guiOnDepthConfigUpdate(irFlood=value)
 
 
 # @QmlElement
@@ -312,10 +332,7 @@ class DemoQtGui:
         w, h = int(self.writer.width()), int(self.writer.height())
         if self.progressFrame is None:
             self.progressFrame = createBlankFrame(w, h)
-            if confManager is None:
-                downloadText = "Downloading model blob..."
-            else:
-                downloadText = f"Downloading {confManager.getModelName()} blob..."
+            downloadText = "Downloading model blob..."
             textsize = cv2.getTextSize(downloadText, cv2.FONT_HERSHEY_TRIPLEX, 0.5, 4)[0][0]
             offset = int((w - textsize) / 2)
             cv2.putText(self.progressFrame, downloadText, (offset, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)

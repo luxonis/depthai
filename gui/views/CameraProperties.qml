@@ -1,5 +1,5 @@
 import QtQuick 2.0
-import QtQuick.Layouts 1.11
+import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
@@ -399,37 +399,33 @@ ListView {
                 }
 
                 TextField {
-                    enabled: depthEnabled
-                    id: textField4
+                    id: isomono1
                     x: 288
                     y: 80
                     width: 106
                     height: 25
-                    color: "#ddffffff"
                     text: ""
                     bottomPadding: 5
                     placeholderText: "ISO"
                     font.family: "Courier"
                     validator: IntValidator {}
                     onEditingFinished: {
-                        monoCamBridge.setIsoExposure(text, textField5.text)
+                        monoCamBridge.setIsoExposure(text, expomono1.text)
                     }
                 }
 
                 TextField {
-                    enabled: depthEnabled
-                    id: textField5
+                    id: expomono1
                     x: 288
                     y: 111
                     width: 106
                     height: 25
-                    color: "#ddffffff"
                     text: ""
                     bottomPadding: 5
                     placeholderText: qsTr("Exposure")
                     validator: IntValidator {}
                     onEditingFinished: {
-                        monoCamBridge.setIsoExposure(textField4.text, text)
+                        monoCamBridge.setIsoExposure(isomono1.text, text)
                     }
                 }
 
@@ -578,9 +574,19 @@ ListView {
             transformOrigin: Item.Center
             autoExclusive: false
             font.family: "Courier"
-            font.kerning: false
             checked: false
-            font.preferShaping: false
+        }
+
+        Switch {
+            id: syncSwitch
+            x: 203
+            y: 158
+            width: 164
+            height: 28
+            text: qsTr("<font color=\"white\">Enable sync</font>")
+            onToggled: {
+                appBridge.toggleSync(syncSwitch.checked)
+            }
         }
     }
 }

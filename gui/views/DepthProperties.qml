@@ -1,5 +1,5 @@
 import QtQuick 2.0
-import QtQuick.Layouts 1.11
+import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
@@ -65,10 +65,9 @@ ListView {
             id: switch1
             x: 0
             y: 187
+            checked: lrc
             text: qsTr("<font color=\"white\">Left Right Check</font>")
             transformOrigin: Item.Center
-            font.preferShaping: false
-            font.kerning: false
             font.family: "Courier"
             autoExclusive: false
             onToggled: {
@@ -86,24 +85,19 @@ ListView {
             autoExclusive: false
             font.family: "Courier"
             checked: true
-            font.kerning: false
             transformOrigin: Item.Center
-            font.preferShaping: false
             onToggled: {
                 appBridge.toggleDepth(switch5.checked)
             }
         }
 
         Switch {
-            enabled: false
             id: switch2
             x: 0
             y: 233
             text: qsTr("<font color=\"white\">Extended Disparity</font>")
             autoExclusive: false
-            font.kerning: false
             font.family: "Courier"
-            font.preferShaping: false
             transformOrigin: Item.Center
             onToggled: {
                 depthBridge.toggleExtendedDisparity(switch2.checked)
@@ -116,9 +110,7 @@ ListView {
             y: 141
             text: qsTr("<font color=\"white\">Subpixel</font>")
             autoExclusive: false
-            font.kerning: false
             transformOrigin: Item.Center
-            font.preferShaping: false
             font.family: "Courier"
             onToggled: {
                 depthBridge.toggleSubpixel(switch3.checked)
@@ -273,9 +265,7 @@ ListView {
             text: qsTr("<font color=\"white\">Use Disparity</font>")
             autoExclusive: false
             font.family: "Courier"
-            font.kerning: false
             transformOrigin: Item.Center
-            font.preferShaping: false
             onToggled: {
                 appBridge.toggleDisparity(switch6.checked)
             }
@@ -343,7 +333,91 @@ ListView {
             font.family: "Courier"
         }
 
+        Text {
+            id: textirlaserdot
+            x: 360
+            y: 290
+            width: 200
+            height: 25
+            color: "#ffffff"
+            text: qsTr("IR Laser Dot Projector [mA]")
+            font.pixelSize: 18
+            horizontalAlignment: Text.AlignHCenter
+            font.styleName: "Regular"
+            font.weight: Font.Medium
+            font.family: "Courier"
+        }
 
+        Slider {
+            id: irlaserdotslider
+            enabled: irEnabled
+            x: 361
+            y: 310
+            width: 198
+            height: 27
+            stepSize: 1
+            to: 1200
+            value: irDotBrightness
+            from: 0
+            onValueChanged: {
+                depthBridge.setIrLaserDotProjector(value)
+            }
+        }
+
+        Text {
+            id: irlaserdotslidervalue
+            x: 566
+            y: 315
+            width: 17
+            height: 20
+            color: "#ffffff"
+            text: irlaserdotslider.value
+            font.pixelSize: 12
+            rotation: 0
+        }
+
+        Text {
+            id: textirfloodilluminator
+            x: 360
+            y: 350
+            width: 200
+            height: 25
+            color: "#ffffff"
+            text: qsTr("IR Flood Illuminator [mA]")
+            font.pixelSize: 18
+            horizontalAlignment: Text.AlignHCenter
+            font.styleName: "Regular"
+            font.weight: Font.Medium
+            font.family: "Courier"
+        }
+
+        Slider {
+            id: irfloodslider
+            enabled: irEnabled
+            x: 361
+            y: 370
+            width: 198
+            height: 27
+            stepSize: 1
+            to: 1500
+            value: irFloodBrightness
+            from: 0
+            onValueChanged: {
+                depthBridge.setIrFloodIlluminator(value)
+            }
+        }
+
+        Text {
+            id: irfloodslidervalue
+            x: 566
+            y: 375
+            width: 17
+            height: 20
+            color: "#ffffff"
+            text: irfloodslider.value
+            font.pixelSize: 12
+            rotation: 0
+        }
     }
 }
 /*##^##

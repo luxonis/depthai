@@ -1,5 +1,7 @@
+import atexit
 import importlib.util
 import os
+import signal
 import subprocess
 import sys
 import time
@@ -17,10 +19,17 @@ def createNewArgs(args):
     removeArg("-gt")
     removeArg("--guiType")
     removeArg("--noSupervisor")
-    return sys.argv[2:] + ["--noSupervisor", "--guiType", args.guiType]
+    return sys.argv[1:] + ["--noSupervisor", "--guiType", args.guiType]
 
 
 class Supervisor:
+    child = None
+
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.cleanup)
+        signal.signal(signal.SIGTERM, self.cleanup)
+        atexit.register(self.cleanup)
+
     def runDemo(self, args):
         repo_root = Path(__file__).parent.parent
         args.noSupervisor = True
@@ -33,7 +42,11 @@ class Supervisor:
             new_env["LD_LIBRARY_PATH"] = str(Path(importlib.util.find_spec("PyQt5").origin).parent / "Qt5/lib")
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
             try:
-                subprocess.check_call(' '.join([sys.executable, "depthai_demo.py"] + new_args), env=new_env, shell=True, cwd=repo_root)
+                cmd = ' '.join([f'"{sys.executable}"', "depthai_demo.py"] + new_args)
+                self.child = subprocess.Popen(cmd, shell=True, env=new_env, cwd=repo_root)
+                self.child.communicate()
+                if self.child.returncode != 0:
+                    raise subprocess.CalledProcessError(self.child.returncode, cmd)
             except subprocess.CalledProcessError as ex:
                 print("Error while running demo script... {}".format(ex))
                 print("Waiting 5s for the device to be discoverable again...")
@@ -43,7 +56,20 @@ class Supervisor:
             new_env = env.copy()
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
             new_args = createNewArgs(args)
-            subprocess.check_call(' '.join([sys.executable, "depthai_demo.py"] + new_args), env=new_env, shell=True, cwd=repo_root)
+            cmd = ' '.join([f'"{sys.executable}"', "depthai_demo.py"] + new_args)
+            self.child = subprocess.Popen(cmd, shell=True, env=new_env, cwd=repo_root)
+            self.child.communicate()
 
     def checkQtAvailability(self):
         return importlib.util.find_spec("PyQt5") is not None
+
+    def cleanup(self, *args, **kwargs):
+        if self.child is not None and self.child.poll() is None:
+            self.child.terminate()
+            try:
+                self.child.wait(1)
+            except subprocess.TimeoutExpired:
+                pass
+
+
+

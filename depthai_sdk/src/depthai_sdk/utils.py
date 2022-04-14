@@ -6,6 +6,9 @@ import urllib.request
 import cv2
 import numpy as np
 import depthai as dai
+import datetime as dt
+from heapq import heappop, heappush
+import threading
 
 
 def cosDist(a, b):
@@ -117,7 +120,7 @@ def loadModule(path: Path):
     return module
 
 
-def getDeviceInfo(deviceId=None):
+def getDeviceInfo(deviceId=None, debug=False):
     """
     Find a correct :obj:`depthai.DeviceInfo` object, either matching provided :code:`deviceId` or selected by the user (if multiple devices available)
     Useful for almost every app where there is a possibility of multiple devices being connected simultaneously
@@ -132,7 +135,12 @@ def getDeviceInfo(deviceId=None):
         RuntimeError: if no DepthAI device was found or, if :code:`deviceId` was specified, no device with matching MX ID was found
         ValueError: if value supplied by the user when choosing the DepthAI device was incorrect
     """
-    deviceInfos = dai.Device.getAllAvailableDevices()
+    deviceInfos = []
+    if debug:
+        deviceInfos = dai.XLinkConnection.getAllConnectedDevices()
+    else:
+        deviceInfos = dai.Device.getAllAvailableDevices()
+
     if len(deviceInfos) == 0:
         raise RuntimeError("No DepthAI device found!")
     else:
@@ -225,7 +233,7 @@ def cropToAspectRatio(frame, size):
     Crop the frame to desired aspect ratio and then scales it down to desired size
     Args:
         frame (numpy.ndarray): Source frame that will be cropped
-        size (tuple): Desired frame size (width, heigth)
+        size (tuple): Desired frame size (width, height)
     Returns:
          numpy.ndarray: Cropped frame
     """
@@ -235,7 +243,7 @@ def cropToAspectRatio(frame, size):
     currentRatio = w / h
     newRatio = size[0] / size[1]
 
-    # Crop width/heigth to match the aspect ratio needed by the NN
+    # Crop width/height to match the aspect ratio needed by the NN
     if newRatio < currentRatio:  # Crop width
         # Use full height, crop width
         newW = (newRatio/currentRatio) * w
@@ -253,7 +261,7 @@ def resizeLetterbox(frame, size):
     Transforms the frame to meet the desired size, preserving the aspect ratio and adding black borders (letterboxing)
     Args:
         frame (numpy.ndarray): Source frame that will be resized
-        size (tuple): Desired frame size (width, heigth)
+        size (tuple): Desired frame size (width, height)
     Returns:
          numpy.ndarray: Resized frame
     """

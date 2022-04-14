@@ -5,3 +5,4 @@ opencv-contrib-python>4
 blobconverter>=1.2.8
 pytube>=11.0.1
 depthai>2
+PyTurboJPEG==1.6.4

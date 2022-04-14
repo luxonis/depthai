@@ -32,11 +32,22 @@ Installation
 
 .. include::  install.rst
 
+Learn more
+----------
+
+To see more details and examples on how the manager classes works specifically, we created a few simple tutorials:
+
+- :ref:`Pipeline manager`
+- :ref:`Preview manager`
+- :ref:`Encoding manager`
+- :ref:`Blob manager`
+- :ref:`Nnet manager`
+
+For more in-depth informations about the classes and methods, please visit :ref:`DepthAI SDK API`
+
 Cookbook
 --------
-
-Below you can find various basic usages of DepthAI SDK that can be used as a starting point. For more in-depth informations
-about the classes, please visit :ref:`DepthAI SDK API`
+Below you can find various basic usages of DepthAI SDK that can be used as a starting point.
 
 Preview color camera
 ********************

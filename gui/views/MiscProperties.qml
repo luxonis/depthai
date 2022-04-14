@@ -1,5 +1,5 @@
 import QtQuick 2.0
-import QtQuick.Layouts 1.11
+import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
@@ -253,10 +253,48 @@ ListView {
                 appBridge.toggleStatisticsConsent(consentSwitch.checked)
             }
         }
+
+        Text {
+            id: textOptions1
+            x: 350
+            y: 203
+            width: 185
+            height: 30
+            color: "#ffffff"
+            text: qsTr("<font color=\"white\">Applications</font>")
+            font.pixelSize: 26
+            horizontalAlignment: Text.AlignHCenter
+            font.styleName: "Regular"
+            font.family: "Courier"
+        }
+
+        Text {
+            id: uvcLabel
+            x: 330
+            y: 250
+            width: 141
+            height: 27
+            color: "#ffffff"
+            text: qsTr("<font color=\"white\">UVC Mode (Webcam)</font>")
+            font.pixelSize: 12
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font.family: "Courier"
+        }
+
+        Button {
+            id: uvcButton
+            x: 477
+            y: 250
+            width: 100
+            height: 27
+            text: runningApp === "uvc" ? qsTr("Terminate") : qsTr("Run")
+            onClicked: runningApp === "uvc" ? appBridge.terminateApp("uvc") : appBridge.runApp("uvc")
+        }
     }
 }
 /*##^##
 Designer {
-    D{i:0;autoSize:true;height:480;width:640}D{i:11}D{i:12}D{i:13}D{i:14}
+    D{i:0;autoSize:true;formeditorZoom:2;height:480;width:640}
 }
 ##^##*/

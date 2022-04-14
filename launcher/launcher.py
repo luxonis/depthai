@@ -3,7 +3,8 @@
 # Launcher for depthai_demo.py which provides updating capabilities
 
 # Standard imports
-import os, sys, subprocess, time, threading, argparse
+import os, sys, subprocess, time, threading, argparse, datetime
+import re
 from pathlib import Path
 # Import splash screen
 from splash_screen import SplashScreen
@@ -37,7 +38,7 @@ if args.disable_git:
 class Logger(object):
     def __init__(self):
         self.terminal = sys.stdout
-        self.log = open(LOG_FILE_PATH, 'w')
+        self.log = open(LOG_FILE_PATH, 'a')
     def write(self, message):
         self.terminal.write(message)
         self.log.write(message)
@@ -50,6 +51,8 @@ class Logger(object):
 logger = Logger()
 sys.stdout = logger
 sys.stderr = logger
+
+print(f'========= Starting: Launcher ({datetime.datetime.now()}) =========')
 
 qApp = QtWidgets.QApplication(['DepthAI Launcher'])
 # Set style
@@ -139,18 +142,41 @@ class Worker(QtCore.QThread):
                     lastCall = subprocess.run([gitExecutable, 'fetch'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
                     lastCall.check_returncode()
 
-                    # Get all available versions
+                    # Get current commit
+                    ret = subprocess.run([gitExecutable, 'rev-parse', 'HEAD'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE, check=True)
+                    currentCommit = ret.stdout.decode().strip()
+                    print(f'Current commit: {currentCommit}')
+
+                    # Tags associated with current commit
+                    currentTag = None
+
+                    # Get all available tags/versions
                     availableDepthAIVersions = []
-                    proc = subprocess.Popen([gitExecutable, 'tag', '-l'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE)
+                    proc = subprocess.Popen([gitExecutable, 'show-ref', '--tags', '-d'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE)
                     while True:
                         line = proc.stdout.readline()
                         if not line:
                             break
-                        # Check that the tag refers to DepthAI demo and not SDK
-                        tag = line.rstrip().decode()
+                        # Parse commit and corresponding tags
+                        commitTag = line.rstrip().decode()
+                        tag = ''
+                        commit = ''
+                        try:
+                            commit = commitTag.split(' ')[0].strip()
+                            tag = commitTag.split(' ')[1].split('refs/tags/')[1].strip()
+                        except Exception as ex:
+                            print(f"Couldn't parse commit&tag line: {ex}")
+
                         # Check that tag is actually a version
-                        if type(version.parse(tag)) is version.Version:
+                        # Check that the tag belongs to depthai demo and not SDK or others and is valid
+                        if len(tag.split('-')) == 1 and type(version.parse(tag)) is version.Version:
                             availableDepthAIVersions.append(tag)
+                            # Also note down the current depthai demo tag
+                            if currentCommit == commit:
+                                currentTag = tag
+
+                    # Print available tags/versions
+                    print(f'Current tag: {currentTag}')
                     print(f'Available DepthAI versions: {availableDepthAIVersions}')
 
                     # If any available versions
@@ -166,18 +192,15 @@ class Worker(QtCore.QThread):
                             newVersionTag = ver
                             newVersion = str(version.parse(ver))
 
-                    # Check current tag
-                    ret = subprocess.run([gitExecutable, 'describe', '--tags'], cwd=pathToDepthaiRepository, stdout=subprocess.PIPE, check=True)
-                    tag = ret.stdout.decode()
                     # See if its DepthAI version tag (if not, then suggest to update)
-                    if len(tag.split('-')) == 1:
+                    if currentTag is not None:
                         currentVersion = 'Unknown'
-                        if type(version.parse(tag)) is version.Version:
-                            print(f'Current tag: {tag}, ver: {str(version.parse(tag))}')
-                            currentVersion = str(version.parse(tag))
+                        if type(version.parse(currentTag)) is version.Version:
+                            print(f'Current tag: {currentTag}, ver: {str(version.parse(currentTag))}')
+                            currentVersion = str(version.parse(currentTag))
 
                             # Check if latest version is newer than current
-                            if version.parse(newVersionTag) > version.parse(tag):
+                            if version.parse(newVersionTag) > version.parse(currentTag):
                                 newVersionAvailable = True
                             else:
                                 newVersionAvailable = False
@@ -239,13 +262,15 @@ class Worker(QtCore.QThread):
                                 didUpdate = True
 
                         if didUpdate:
-                            # present message of installing dependencies
-                            splashScreen.updateSplashMessage('Installing DepthAI Requirements ...')
-                            splashScreen.enableHeartbeat(True)
-
-                            # Install requirements for depthai_demo.py
-                            subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository)
-
+                            currentArgs = []
+                            if len(sys.argv) >= 1:
+                                currentArgs = sys.argv[1:]
+                            arguments = [sys.executable, f'{pathToDepthaiRepository}/launcher/launcher.py'] + currentArgs
+                            # Run updated launcher
+                            print('Updated, running new launcher - command: ' + str(arguments))
+                            subprocess.Popen(arguments, cwd=pathToDepthaiRepository)
+                            # Exit current launcher
+                            raise Exception('Shutting down and starting updated launcher')
 
             except subprocess.CalledProcessError as ex:
                 errMessage = lastCall.stderr.decode()
@@ -290,8 +315,9 @@ class Worker(QtCore.QThread):
                 # Print out stderr first
                 sys.stderr.write(ret.stderr.decode())
 
-                # Retry if failed by an ModuleNotFoundError, by installing the requirements
-                if ret.returncode != 0 and ('ModuleNotFoundError' in str(ret.stderr) or 'Version mismatch' in str(ret.stderr)):
+                print(f'DepthAI Demo ret code: {ret.returncode}')
+                # Install dependencies if demo signaled missing dependencies
+                if ret.returncode == 42:
                     skipSplashQuitFirstTime = True
                     print(f'Dependency issue raised. Retrying by installing requirements and restarting demo.')
 
@@ -300,12 +326,18 @@ class Worker(QtCore.QThread):
                     splashScreen.enableHeartbeat(True)
 
                     # Install requirements for depthai_demo.py
-                    installReqCall = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                    MAX_RETRY_COUNT = 3
+                    installReqCall = None
+                    for retry in range(0, MAX_RETRY_COUNT):
+                        installReqCall = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                        if installReqCall.returncode == 0:
+                            break
                     if installReqCall.returncode != 0:
                         # Some error happened. Notify user
                         title = 'Error Installing DepthAI Requirements'
                         message = f"Couldn't install DepthAI requirements. Check internet connection and try again. Log available at: {LOG_FILE_PATH}"
                         print(f'Message Box ({title}): {message}')
+                        print(f'Install dependencies call failed with return code: {installReqCall.returncode}, message: {installReqCall.stderr.decode()}')
                         self.sigCritical.emit(title, message)
                         raise Exception(title)
 

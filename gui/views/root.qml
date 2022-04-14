@@ -49,7 +49,7 @@
 ****************************************************************************/
 
 import QtQuick 2.0
-import QtQuick.Layouts 1.11
+import QtQuick.Layouts 1.3
 import QtQuick.Controls 2.1
 import QtQuick.Window 2.1
 import QtQuick.Controls.Material 2.1
@@ -73,8 +73,14 @@ ApplicationWindow {
     property var monoResolutionChoices
     property var restartRequired
     property var deviceChoices
+    property var irEnabled: false
+    property var irDotBrightness: 0
+    property var irFloodBrightness: 0
     property var depthEnabled: true
     property var statisticsAccepted: true
+    property var runningApp
+
+    property bool lrc: false
 
     AppBridge {
         id: appBridge

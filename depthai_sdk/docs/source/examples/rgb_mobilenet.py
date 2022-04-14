@@ -4,7 +4,7 @@ import depthai as dai
 import cv2
 
 pm = PipelineManager()
-pm.createColorCam(previewSize=(300, 300), xout=True)
+pm.createColorCam(xout=True)
 
 bm = BlobManager(zooName="mobilenet-ssd")
 nm = NNetManager(inputSize=(300, 300), nnFamily="mobilenet")
