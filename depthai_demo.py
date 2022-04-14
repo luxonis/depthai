@@ -217,6 +217,9 @@ class Demo:
             self._pm.setNnManager(self._nnManager)
 
         self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        if self._deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
+            print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
+            self._ensureUsbSpeedMode()
         self._device.addLogCallback(self._logMonitorCallback)
         if sentryEnabled:
             try:
@@ -226,10 +229,6 @@ class Demo:
                 pass
         if self.metrics is not None:
             self.metrics.reportDevice(self._device)
-        if self._deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
-            print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
-            if self._device.getUsbSpeed() == dai.UsbSpeed.HIGH:
-                self.onWarning("Low USB speed detected! \nPerformance will suffer, consider using a different cable or USB port")
         self._conf.adjustParamsToDevice(self._device)
         self._conf.adjustPreviewToOptions()
         if self._conf.lowBandwidth:
@@ -379,6 +378,32 @@ class Demo:
 
     def canRun(self):
         return hasattr(self, "_device") and not self._device.isClosed()
+
+    def _ensureUsbSpeedMode(self):
+        if self._device is None:
+            raise RuntimeError("Cannot determine USB speed without a device object!")
+
+        if self._device.getUsbSpeed() == dai.UsbSpeed.HIGH:
+            self.onWarning("Low USB speed detected! \nPerformance will suffer, consider using a different cable or USB port")
+
+            if self._conf.args.usbSpeed != "usb2":
+                print("Enabling USB2 mode for USB2 connection...")
+                mxid = self._device.getMxId()
+                self._device.close()
+                del self._device
+                for i in range(5):
+                    found, self._deviceInfo = dai.Device.getDeviceByMxId(mxid)
+                    if found:
+                        self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=True)
+                        self._conf.args.usbSpeed = "usb2"
+                        break
+                    else:
+                        print(f"Device rediscovery failed... (Attempt: {i + 1})")
+                        time.sleep(1)
+                if not hasattr(self, "_device") or self._device is None:
+                    raise RuntimeError("Enabling USB2 mode failed, please try again with -usbs usb2 flag enabled!")
+                else:
+                    print("Enabling USB2 mode was successful.")
 
     def _logMonitorCallback(self, msg):
         if msg.level == dai.LogLevel.CRITICAL:
