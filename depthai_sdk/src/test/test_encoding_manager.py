@@ -14,10 +14,10 @@ class TestEncodingManager(unittest.TestCase):
         test = EncodingManager(encodeConfig={}, encodeOutput=Path(""))
         self.assertIsNotNone(test)
 
-    def test_Init2(self):
+    def  test_Init2(self):
         """Testing init with an empty dict and a false path"""
         with self.assertRaises(RuntimeError):
-            test = EncodingManager(encodeConfig={}, encodeOutput=Path("/NotARealPath"))
+            EncodingManager(encodeConfig={}, encodeOutput=Path("/NotARealPath"))
 
     def test_Init3(self):
         """Testing if everything in init is stored correctly if used with every attribute"""

@@ -33,10 +33,14 @@ class BlobManager:
 
         if blobPath is not None:
             self._blobPath = blobPath
+            if not Path(blobPath).exists():
+                raise RuntimeError(f"Specified blob path does not exist: {blobPath}")
             self._useBlob = True
 
         if zooDir is not None:
             self._zooDir = zooDir
+            if not Path(zooDir).exists():
+                raise RuntimeError(f"Specified zoo directory path does not exist: {zooDir}")
             self._zooModels = [f.stem for f in zooDir.iterdir() if f.is_dir()]
 
         if zooName is not None:
@@ -56,17 +60,19 @@ class BlobManager:
 
         if configPath is not None:
             self._configPath = configPath
+            if not Path(configPath).exists():
+                raise RuntimeError(f"Specified config path does not exist: {configPath}")
 
 
-    def getBlob(self, shaves:int, openvinoVersion: dai.OpenVINO.Version, zooType:str = None):
+    def getBlob(self, shaves:int = 6, openvinoVersion: dai.OpenVINO.Version = None, zooType:str = None):
         """
         This function is responsible for returning a ready to use MyriadX blob once requested.
         It will compile the model automatically using our online blobconverter tool. The compilation process will be
         ran only once, each subsequent call will return a path to previously compiled blob
 
         Args:
-            shaves (int): Specify how many shaves the model will use. Range 1-16
-            openvinoVersion (depthai.OpenVINO.Version): OpenVINO version which will be used to compile the MyriadX blob
+            shaves (int, Optional): Specify how many shaves the model will use. Range 1-16
+            openvinoVersion (depthai.OpenVINO.Version, Optional): OpenVINO version which will be used to compile the MyriadX blob
             zooType (str, Optional): Specifies model zoo type to download blob from
 
         Returns:
@@ -77,10 +83,10 @@ class BlobManager:
             RuntimeError: If conversion failed with unknown status
             Exception: If some unknown error will occur (reraise)
         """
-        version = openvinoVersion.name.replace("VERSION_", "").replace("_", ".")
         if self._useBlob:
             return self._blobPath
-        elif self._useZoo:
+        version = openvinoVersion.name.replace("VERSION_", "").replace("_", ".")
+        if self._useZoo:
             try:
                 self._blobPath = blobconverter.from_zoo(
                     name=self._zooName,

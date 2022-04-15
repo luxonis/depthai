@@ -1,4 +1,5 @@
 import os
+import tempfile
 from pathlib import Path
 import cv2
 import numpy as np
@@ -36,7 +37,7 @@ class TestUtils(unittest.TestCase):
 
     def test_frameNorm1(self):
         """Testing if function returns correct number of values"""
-        frame = cv2.imread("./test_data/logo.png")
+        frame = cv2.imread("./data/logo.png")
         self.assertEqual(len(utils.frameNorm(frame, [100, 200, 100, 200])), 4)
 
     ###############################################
@@ -45,12 +46,12 @@ class TestUtils(unittest.TestCase):
 
     def test_toPlanar1(self):
         """Testing with no arguments"""
-        frame = cv2.imread("./test_data/logo.png")
+        frame = cv2.imread("./data/logo.png")
         self.assertEqual(utils.toPlanar(frame).shape, (3, 515, 510))
 
     def test_toPlanar2(self):
         """Testing with arguments"""
-        frame = cv2.imread("./test_data/logo.png")
+        frame = cv2.imread("./data/logo.png")
         self.assertEqual(utils.toPlanar(frame, (200, 200)).shape, (3, 200, 200))
 
     ##########################################
@@ -84,51 +85,21 @@ class TestUtils(unittest.TestCase):
         """Testing a valid file"""
         self.assertNotEqual(utils.loadModule(Path("../depthai_sdk/utils.py")), None)
 
-    #########################
-    # Test if getDeviceInfo #
-    #########################
-
-    def test_getDeviceInfo1(self):
-        """All devices disconnected no arguments"""
-        with self.assertRaises(RuntimeError):
-            utils.getDeviceInfo()
-
-    def test_getDeviceInfo2(self):
-        """Device connected no arguments"""
-        self.assertIsNotNone(utils.getDeviceInfo())
-
-    def test_getDeviceInfo3(self):
-        """Device connected with deviceId as argument"""
-        self.assertIsNotNone(utils.getDeviceInfo(deviceId="18443010A12BE40F00"))
-
-    def test_getDeviceInfo4(self):
-        """Device connected with deviceId as an invalid argument"""
-        with self.assertRaises(RuntimeError):
-            utils.getDeviceInfo(deviceId="DoesNotExist")
-
-    def test_getDeviceInfo5(self):
-        """Device connected with debug on True"""
-        self.assertIsNotNone(utils.getDeviceInfo(debug=True))
-
-    def test_getDeviceInfo6(self):
-        """All devices disconnected with debug on True"""
-        with self.assertRaises(RuntimeError):
-            utils.getDeviceInfo(debug=True)
-
     ###########################################
     # Test if downloadYTVideo works correctly #
     ###########################################
 
     def test_downloadYTVideo1(self):
         """Testing with a valid url"""
-        utils.downloadYTVideo("https://www.youtube.com/watch?v=UImAcR7Ke_c", "")
-        self.assertTrue(os.path.exists("OAK-D PoE unboxing.mp4"))
-        os.remove("OAK-D PoE unboxing.mp4")
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            tmp_path = Path(tmpdirname)
+            utils.downloadYTVideo("https://www.youtube.com/watch?v=UImAcR7Ke_c", tmp_path)
+            self.assertTrue((tmp_path / "OAK-D PoE unboxing.mp4").exists())
 
     def test_downloadYTVideo2(self):
         """Testing with an invalid url"""
         with self.assertRaisesRegex(pytube.exceptions.RegexMatchError, "regex_search"):
-            utils.downloadYTVideo("https://www.youtube.com/watch?v=_", "./test_data/")
+            utils.downloadYTVideo("https://www.youtube.com/watch?v=_", "./data/")
 
     #############################
     # Test if cropToAspectRatio #
@@ -160,7 +131,7 @@ class TestUtils(unittest.TestCase):
     ##############################################
 
     def test_resizeLetterbox1(self):
-        frame = cv2.imread("./test_data/logo.png")
+        frame = cv2.imread("./data/logo.png")
         self.assertEqual(utils.resizeLetterbox(frame, (1000, 1000)).shape, (1000, 1000, 3))
 
     ############################################

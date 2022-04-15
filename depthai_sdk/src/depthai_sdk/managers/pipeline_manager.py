@@ -208,9 +208,9 @@ class PipelineManager:
             self.nodes.monoLeft.setResolution(res)
         self.nodes.monoLeft.setFps(fps)
 
-        self.nodes.xoutLeft = self.pipeline.createXLinkOut()
-        self.nodes.xoutLeft.setStreamName(Previews.left.name)
         if xout:
+            self.nodes.xoutLeft = self.pipeline.createXLinkOut()
+            self.nodes.xoutLeft.setStreamName(Previews.left.name)
             if self.lowBandwidth and not self.lowCapabilities:
                 self._mjpegLink(self.nodes.monoLeft, self.nodes.xoutLeft, self.nodes.monoLeft.out)
             else:
@@ -240,9 +240,9 @@ class PipelineManager:
             self.nodes.monoRight.setResolution(res)
         self.nodes.monoRight.setFps(fps)
 
-        self.nodes.xoutRight = self.pipeline.createXLinkOut()
-        self.nodes.xoutRight.setStreamName(Previews.right.name)
         if xout:
+            self.nodes.xoutRight = self.pipeline.createXLinkOut()
+            self.nodes.xoutRight.setStreamName(Previews.right.name)
             if self.lowBandwidth and not self.lowCapabilities:
                 self._mjpegLink(self.nodes.monoRight, self.nodes.xoutRight, self.nodes.monoRight.out)
             else:

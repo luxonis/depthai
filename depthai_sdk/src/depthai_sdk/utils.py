@@ -187,13 +187,13 @@ def showProgress(curr, max):
 
 
 
-def downloadYTVideo(video, outputDir=None):
+def downloadYTVideo(video, outputDir):
     """
     Downloads a video from YouTube and returns the path to video. Will choose the best resolutuion if possible.
 
     Args:
         video (str): URL to YouTube video
-        outputDir (pathlib.Path, optional): Path to directory where youtube video should be downloaded.
+        outputDir (pathlib.Path): Path to directory where youtube video should be downloaded.
 
     Returns:
          pathlib.Path: Path to downloaded video file
@@ -216,7 +216,7 @@ def downloadYTVideo(video, outputDir=None):
                 .order_by('resolution')\
                 .desc()\
                 .first()\
-                .download(output_path=outputDir)
+                .download(output_path=str(outputDir))
         except urllib.error.HTTPError:
             # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
             # Often, downloading YT video will fail with 404 exception, but sometimes it's successful

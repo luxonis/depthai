@@ -1,5 +1,8 @@
 import unittest
 from pathlib import Path
+
+import blobconverter
+
 from depthai_sdk.managers import BlobManager
 
 
@@ -12,8 +15,9 @@ class TestBlobManager(unittest.TestCase):
 
     def test_Init2(self):
         """Testing init with a valid blobPath as argument"""
-        test = BlobManager(blobPath=Path("./test_data/face-detection-retail-0004_openvino_2021.2_4shave.blob"))
-        self.assertIsNotNone(test)
+        blob_path = blobconverter.from_zoo("mobilenet-ssd")
+        test = BlobManager(blobPath=blob_path)
+        self.assertEqual(test.getBlob(), blob_path)
 
     def test_Init3(self):
         """Testing init with an invalid blobPath as argument"""
@@ -22,7 +26,7 @@ class TestBlobManager(unittest.TestCase):
 
     def test_Init4(self):
         """Testing init with a valid configPath as argument"""
-        test = BlobManager(configPath=Path("./test_data/custom_model.json"))
+        test = BlobManager(configPath=Path("./data/custom_model.json"))
         self.assertIsNotNone(test)
 
     def test_Init5(self):
@@ -42,7 +46,7 @@ class TestBlobManager(unittest.TestCase):
 
     def test_Init8(self):
         """Testing with a valid zooDir as argument"""
-        test = BlobManager(zooDir=Path("./test_data/zooDir"))
+        test = BlobManager(zooDir=Path("./data"))
         self.assertIsNotNone(test)
 
     def test_Init9(self):

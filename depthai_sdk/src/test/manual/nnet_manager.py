@@ -11,7 +11,7 @@ pm.createColorCam(xout=True)
 
 bm = BlobManager(zooName="face-detection-retail-0004")
 
-nm = NNetManager(inputSize=(300, 300), nnFamily="mobilenet")
+nm = NNetManager(inputSize=(300, 300), nnFamily="mobilenet", labels=["bg", "face"])
 nn = nm.createNN(pipeline=pm.pipeline, nodes=pm.nodes, source=Previews.color.name,
                  blobPath=bm.getBlob(shaves=6, openvinoVersion=pm.pipeline.getOpenVINOVersion()))
 pm.addNn(nn)
