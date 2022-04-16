@@ -384,7 +384,7 @@ class Demo:
             raise RuntimeError("Cannot determine USB speed without a device object!")
 
         if self._device.getUsbSpeed() == dai.UsbSpeed.HIGH:
-            self.onWarning("Low USB speed detected! \nPerformance will suffer, consider using a different cable or USB port")
+            self.onWarning("Low USB speed detected. Expect reduced performance\nConsider using USB3 port or different cable")
 
             if self._conf.args.usbSpeed != "usb2":
                 print("Enabling USB2 mode for USB2 connection...")
