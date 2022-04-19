@@ -321,8 +321,11 @@ class StereoCalibration(object):
         if self.cameraModel == 'perspective':
             ret_l, self.M1, self.d1, rvecs, tvecs = self.calibrate_camera_charuco(
                 allCorners_l, allIds_l, self.img_shape)
+            self.vis_images(images_left, self.M1, self.d1)
             ret_r, self.M2, self.d2, rvecs, tvecs = self.calibrate_camera_charuco(
                 allCorners_r, allIds_r, self.img_shape)
+            self.vis_images(images_right, self.M2, self.d2)
+
         else:
             ret_l, self.M1, self.d1, rvecs, tvecs = self.calibrate_fisheye(allCorners_l, allIds_l, self.img_shape)
             ret_r, self.M2, self.d2, rvecs, tvecs = self.calibrate_fisheye(allCorners_r, allIds_r, self.img_shape)
@@ -341,6 +344,11 @@ class StereoCalibration(object):
         ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T, E, F = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
         # else:
             # ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
+        print(self.M1)
+        print(self.M2)
+        print(self.d1)
+        print(self.d2)
+
         print("~~~~~~~~~~~~~RMS error of L-R~~~~~~~~~~~~~~")
         print(ret)
         """         
@@ -442,14 +450,11 @@ class StereoCalibration(object):
         print("Camera Matrix initialization.............")
         print(cameraMatrixInit)
 
-        distCoeffsInit = np.zeros((5, 1))
-        flags = (cv2.CALIB_USE_INTRINSIC_GUESS + 
-                 cv2.CALIB_RATIONAL_MODEL + cv2.CALIB_FIX_ASPECT_RATIO)
+        distCoeffsInit = np.zeros((14, 1))
+        flags = (cv2.CALIB_USE_INTRINSIC_GUESS + cv2.CALIB_RATIONAL_MODEL )
     #     flags = (cv2.CALIB_RATIONAL_MODEL)
         (ret, camera_matrix, distortion_coefficients,
-         rotation_vectors, translation_vectors,
-         stdDeviationsIntrinsics, stdDeviationsExtrinsics,
-         perViewErrors) = cv2.aruco.calibrateCameraCharucoExtended(
+         rotation_vectors, translation_vectors) = cv2.aruco.calibrateCameraCharuco(
             charucoCorners=allCorners,
             charucoIds=allIds,
             board=self.board,
@@ -457,7 +462,9 @@ class StereoCalibration(object):
             cameraMatrix=cameraMatrixInit,
             distCoeffs=distCoeffsInit,
             flags=flags,
-            criteria=(cv2.TERM_CRITERIA_EPS & cv2.TERM_CRITERIA_COUNT, 10000, 1e-9))
+            criteria=(cv2.TERM_CRITERIA_EPS & cv2.TERM_CRITERIA_COUNT, 100000, 1e-15))
+
+
 
         return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors
 
@@ -522,8 +529,16 @@ class StereoCalibration(object):
 
         if self.cameraModel == 'perspective':
             flags = 0
-            flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
+            flags |= cv2.CALIB_FIX_INTRINSIC # TODO(sACHIN): Try without intrinsic guess
             flags |= cv2.CALIB_RATIONAL_MODEL
+            flags |= cv2.CALIB_FIX_K1
+            flags |= cv2.CALIB_FIX_K2
+            flags |= cv2.CALIB_FIX_K3
+            flags |= cv2.CALIB_FIX_K4
+            flags |= cv2.CALIB_FIX_K5
+            flags |= cv2.CALIB_FIX_K6
+
+
 
             return cv2.stereoCalibrate(
                 obj_pts, left_corners_sampled, right_corners_sampled,
@@ -657,6 +672,24 @@ class StereoCalibration(object):
             self.d2_rgb,
             self.img_shape_rgb_scaled, self.R_rgb, self.T_rgb)
 
+    def vis_images(self, image_list, m, d):
+        r = np.array([[1,0,0], [0,1,0], [0,0,1]])
+        mapx_l, mapy_l = cv2.initUndistortRectifyMap(m, d, r, m, self.img_shape, cv2.CV_32FC1)
+        for image_file in image_list :
+            # read images
+            img_l = cv2.imread(image_file, 0)
+            img_l = cv2.remap(img_l, mapx_l, mapy_l, cv2.INTER_LINEAR)
+
+            cv2.imshow('rec_image', img_l)
+            k = cv2.waitKey(0)
+            if k == 27:  # Esc key to stop
+                break
+            
+                # os._exit(0)
+                # raise SystemExit()
+
+        cv2.destroyWindow('rec_image')
+        
     def test_epipolar_charuco_lr(self, dataset_dir):
         print("<-----------------Epipolar error of LEFT-right camera---------------->")
         images_left = glob.glob(dataset_dir + '/left/*.png')
@@ -670,6 +703,8 @@ class StereoCalibration(object):
                     cv2.TERM_CRITERIA_MAX_ITER, 100, 0.00001)
 
         # if not use_homo:
+        print(self.d1)
+        print(self.d2)
         mapx_l, mapy_l = cv2.initUndistortRectifyMap(
             self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
@@ -1018,3 +1053,5 @@ class StereoCalibration(object):
         right_mesh_fpath = str(curr_path) + '/../resources/right_mesh.calib'
         mesh_left.tofile(left_mesh_fpath)
         mesh_right.tofile(right_mesh_fpath)
+
+
