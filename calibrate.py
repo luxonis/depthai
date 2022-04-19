@@ -360,8 +360,8 @@ class Main:
                 frame = packet[1].getCvFrame()
                 # print(packet[0])
                 # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                if packet[0] == 'rgb':
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                # if packet[0] == 'rgb':
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 # print(frame.shape)
                 if self.polygons is None:
                     self.height, self.width = frame.shape
