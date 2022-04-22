@@ -114,7 +114,7 @@ class NNetManager:
         else:
             return 0
 
-    def createNN(self, pipeline, nodes, blobPath, source="color", useDepth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, fullFov=True):
+    def createNN(self, pipeline, nodes, blobPath, source="color", useDepth=False, minDepth=100, maxDepth=10000, sbbScaleFactor=0.3, fullFov=True, useImageManip=True):
         """
         Creates nodes and connections in provided pipeline that will allow to run NN model and consume it's results.
 
@@ -133,6 +133,9 @@ class NNetManager:
             fullFov (bool, Optional): If set to False, manager will include crop offset when scaling the detections.
                 Usually should be set to True (if you don't perform aspect ratio crop or when `keepAspectRatio` flag
                 on camera/manip node is set to False
+            useImageManip (bool, Optional): If set to False, manager will not create an image manip node for input image
+                scaling - which may result in an input image being not adjusted for the NeuralNetwork node. Can be useful
+                when we want to limit the amount of nodes running simultaneously on device
 
         Returns:
             depthai.node.NeuralNetwork: Configured NN node that was added to the pipeline
@@ -177,25 +180,30 @@ class NNetManager:
             nodes.xinNn.setStreamName("nnIn")
             nodes.xinNn.out.link(nodes.nn.input)
         else:
-            nodes.manipNn = pipeline.createImageManip()
-            nodes.manipNn.initialConfig.setResize(*self.inputSize)
-            # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
-            nodes.manipNn.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
-            # NN inputs
-            nodes.manipNn.out.link(nodes.nn.input)
-            nodes.manipNn.setKeepAspectRatio(not self._fullFov)
-            nodes.manipNn.setMaxOutputFrameSize(self.inputSize[0] * self.inputSize[1] * 3)
+            if useImageManip:
+                nodes.manipNn = pipeline.createImageManip()
+                nodes.manipNn.initialConfig.setResize(*self.inputSize)
+                # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
+                nodes.manipNn.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+                # NN inputs
+                nodes.manipNn.out.link(nodes.nn.input)
+                nodes.manipNn.setKeepAspectRatio(not self._fullFov)
+                nodes.manipNn.setMaxOutputFrameSize(self.inputSize[0] * self.inputSize[1] * 3)
+
+                link_input = nodes.manipNn.inputImage
+            else:
+                link_input = nodes.nn.input
 
             if self.source == "color":
-                nodes.camRgb.preview.link(nodes.manipNn.inputImage)
+                nodes.camRgb.preview.link(link_input)
             if self.source == "left":
-                nodes.monoLeft.out.link(nodes.manipNn.inputImage)
+                nodes.monoLeft.out.link(link_input)
             elif self.source == "right":
-                nodes.monoRight.out.link(nodes.manipNn.inputImage)
+                nodes.monoRight.out.link(link_input)
             elif self.source == "rectifiedLeft":
-                nodes.stereo.rectifiedLeft.link(nodes.manipNn.inputImage)
+                nodes.stereo.rectifiedLeft.link(link_input)
             elif self.source == "rectifiedRight":
-                nodes.stereo.rectifiedRight.link(nodes.manipNn.inputImage)
+                nodes.stereo.rectifiedRight.link(link_input)
 
         if self._nnFamily in ("YOLO", "mobilenet") and useDepth:
             nodes.stereo.depth.link(nodes.nn.inputDepth)

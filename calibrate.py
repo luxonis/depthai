@@ -5,6 +5,7 @@ import shutil
 import traceback
 from argparse import ArgumentParser
 from pathlib import Path
+import time
 
 import cv2
 import depthai as dai
@@ -92,9 +93,11 @@ def parse_args():
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
-    parser.add_argument("-fps", "--fps", default=30, type=int,
+    parser.add_argument("-fps", "--fps", default=10, type=int,
                         required=False, help="Set capture FPS for all cameras. Default: %(default)s")
-    
+    parser.add_argument("-cd", "--captureDelay", default=5, type=int,
+                        required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
+    parser.add_argument("-d", "--debug", default=False, action="store_true", help="Enable debug logs.")
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -119,8 +122,9 @@ class Main:
     images_captured = 0
 
     def __init__(self):
+        global debug
         self.args = parse_args()
-
+        debug = self.args.debug
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
@@ -280,7 +284,7 @@ class Main:
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + rgb + right", info_frame)
+        cv2.imshow(self.display_name, info_frame)
         cv2.waitKey(2000)
 
     def show_failed_orientation(self):
@@ -318,6 +322,12 @@ class Main:
         recent_left = None
         recent_right = None
         recent_color = None
+        combine_img = None
+        start_timer = False
+        timer = self.args.captureDelay
+        prev_time = None
+        curr_time = None
+        self.display_name = "left + right + rgb"
         # with self.get_pipeline() as pipeline:
         while not finished:
             current_left  = self.left_camera_queue.tryGet()
@@ -349,8 +359,10 @@ class Main:
                 raise SystemExit(0)
             elif key == ord(" "):
                 if debug:
-                    print("setting capture true------------------------")
-                capturing = True
+                    print("setting timer true------------------------")
+                start_timer = True
+                prev_time = time.time()
+                timer = self.args.captureDelay
 
             frame_list = []
             # left_frame = recent_left.getCvFrame()
@@ -380,7 +392,7 @@ class Main:
                     print(lrgb_time)
                     print(lr_time)
 
-                if capturing and lrgb_time < 30000 and lr_time < 30000:
+                if capturing and lrgb_time < 40000 and lr_time < 30000:
                     print("Capturing  ------------------------")
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
@@ -466,13 +478,29 @@ class Main:
                         cv2.destroyAllWindows()
                         break
             
-            combine_img = None
             if not self.args.disableRgb:
                 frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
-            cv2.imshow("left + rgb + right", combine_img)
+                self.display_name = "left + right"
+
+            if start_timer == True:
+                curr_time = time.time()
+                if curr_time - prev_time >= 1:
+                    prev_time = curr_time
+                    timer = timer-1
+                if timer <= 0 and start_timer == True:
+                    start_timer = False
+                    capturing = True
+                    print('Statrt capturing...')
+                
+                image_shape = combine_img.shape
+                cv2.putText(combine_img, str(timer),
+                        (image_shape[1]//2, image_shape[0]//2), font,
+                        7, (0, 255, 255),
+                        4, cv2.LINE_AA)
+            cv2.imshow(self.display_name, combine_img)
             frame_list.clear()
 
     def calibrate(self):

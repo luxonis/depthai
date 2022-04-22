@@ -17,10 +17,12 @@ class EncodingManager:
         """
         Args:
             encodeConfig (dict): Encoding config consisting of keys as preview names and values being the encoding FPS
-            encodeOutput (pathlib.Path): Output directory for the recorded videos
+            encodeOutput (pathlib.Path, Optional): Output directory for the recorded videos
         """
         self.encodeConfig = encodeConfig
-        self.encodeOutput = Path(encodeOutput) or Path(__file__).parent
+        self.encodeOutput = Path(encodeOutput) if encodeOutput is not None else None
+        if self.encodeOutput is not None and not self.encodeOutput.exists():
+            raise RuntimeError(f"Specified path does not exist: {encodeOutput}")
 
     def createEncoders(self, pm):
         """
