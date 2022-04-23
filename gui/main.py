@@ -62,6 +62,10 @@ class AppBridge(QObject):
     def toggleSync(self, value):
         instance.guiOnToggleSync(value)
 
+    @pyqtSlot(bool)
+    def toggleRgbDepthAlignment(self, value):
+        instance.guiOnToggleRgbDepthAlignment(not value)
+
     @pyqtSlot(str)
     def runApp(self, appName):
         instance.guiOnRunApp(appName)

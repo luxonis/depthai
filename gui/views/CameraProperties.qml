@@ -588,6 +588,19 @@ ListView {
                 appBridge.toggleSync(syncSwitch.checked)
             }
         }
+
+        Switch {
+            id: rgbDepthAlignmentSwitch
+            x: 203
+            y: 190
+            checked: true
+            width: 250
+            height: 28
+            text: qsTr("<font color=\"white\">RGB-Depth Alignment</font>")
+            onToggled: {
+                appBridge.toggleRgbDepthAlignment(rgbDepthAlignmentSwitch.checked)
+            }
+        }
     }
 }
 /*##^##
