@@ -136,7 +136,11 @@ class DepthAICamera():
             self.camRight.out.link(self.xoutRight.input)
             self.camRight.setFps(10)
 
-        self.device = dai.Device(self.pipeline)
+        usb_speed = dai.UsbSpeed.SUPER
+        if test_type == 'OAK-D-PRO-POE':
+            usb_speed = dai.UsbSpeed.HIGH
+
+        self.device = dai.Device(self.pipeline, usb_speed)
 
         if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
             try:
@@ -807,8 +811,8 @@ class UiTests(object):
                 #         time.sleep(1)
 
                 self.depth_camera = DepthAICamera()
-            except RuntimeError:
-                self.print_logs("Something went wrong, check connexion!")
+            except RuntimeError as ex:
+                self.print_logs(f"Something went wrong, check connexion! - {ex}")
                 return
             self.connect_but.setText("DISCONNECT AND SAVE")
             self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
