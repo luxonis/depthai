@@ -297,7 +297,7 @@ class DepthAICamera():
             return False, None
         return True, image
 
-    def flash_eeprom(self, calib_path):
+    def flash_eeprom(self):
         eepromDataJson = None
         try:
             device_calib = self.device.readCalibration()
@@ -324,6 +324,73 @@ class DepthAICamera():
 
         print('Calibration Flash Successful')
         return (True, '', eepromDataJson)
+
+
+calib_path = BATCH_DIR
+class Ui_CalibrateSelect(QtWidgets.QDialog):
+    def __init__(self):
+        global calib_path
+        super().__init__()
+        x = os.walk(BATCH_DIR)
+        print(x)
+        self.batches = []
+        self.jsons = {}
+        i = 0
+        for x in os.walk(BATCH_DIR):
+            if i == 0:
+                self.batches = x[1]
+            else:
+                self.jsons[self.batches[i - 1]] = x[2]
+            i = i + 1
+        self.batch_combo = QtWidgets.QComboBox(self)
+        self.batch_combo.setGeometry(QtCore.QRect(100, 20, 141, 32))
+        self.batch_combo.addItems(self.batches)
+        self.batch_combo.currentTextChanged.connect(self.batches_changed)
+        self.json_combo = QtWidgets.QComboBox(self)
+        self.json_combo.setGeometry(QtCore.QRect(100, 70, 261, 32))
+        self.json_combo.addItems(self.jsons[self.batches[0]])
+        self.json_combo.currentTextChanged.connect(self.json_changed)
+
+        self.setObjectName("CalibrateSelect")
+        self.resize(386, 192)
+        self.buttonBox = QtWidgets.QDialogButtonBox(self)
+        self.buttonBox.setGeometry(QtCore.QRect(70, 130, 191, 32))
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        self.batch_label = QtWidgets.QLabel(self)
+        self.batch_label.setGeometry(QtCore.QRect(10, 20, 51, 27))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.batch_label.setFont(font)
+        self.batch_label.setObjectName("batch_label")
+        self.json_label = QtWidgets.QLabel(self)
+        self.json_label.setGeometry(QtCore.QRect(10, 70, 77, 27))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.json_label.setFont(font)
+        self.json_label.setObjectName("json_label")
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        QtCore.QMetaObject.connectSlotsByName(self)
+
+        _translate = QtCore.QCoreApplication.translate
+        self.batch_label.setText(_translate("CalibrateSelect", "Batch"))
+        self.json_label.setText(_translate("CalibrateSelect", "JSON file"))
+        self.setWindowTitle(_translate("CalibrateSelect", "Dialog"))
+        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
+
+    def batches_changed(self):
+        global calib_path
+        print("Batches changed!")
+        self.json_combo.clear()
+        self.json_combo.addItems(self.jsons[self.batch_combo.currentText()])
+        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
+
+    def json_changed(self):
+        global calib_path
+        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
+
 
 class Camera(QtWidgets.QWidget):
     def __init__(self, get_image, camera_format, title='Camera', location=(0, 0)):
@@ -392,6 +459,9 @@ class UiTests(object):
             else:
                 self.jsons[self.batches[i - 1]] = x[2]
             i = i + 1
+        dialog = Ui_CalibrateSelect()
+        if not dialog.exec_():
+            sys.exit()
 
     def setupUi(self, UI_tests):
         UI_tests.closeEvent = self.close_event
@@ -415,13 +485,6 @@ class UiTests(object):
         self.connect_but.setGeometry(QtCore.QRect(460, 390, 86, 25))
         self.connect_but.setObjectName("connect_but")
         self.connect_but.clicked.connect(self.show_cameras)
-        self.batches_combo = QtWidgets.QComboBox(self.centralwidget)
-        self.batches_combo.setGeometry(QtCore.QRect(360, 390, 86, 25))
-        self.batches_combo.addItems(self.batches)
-        self.batches_combo.currentTextChanged.connect(self.batches_changed)
-        self.json_combo = QtWidgets.QComboBox(self.centralwidget)
-        self.json_combo.setGeometry(QtCore.QRect(360, 420, 322, 25))
-        self.json_combo.addItems(self.jsons[self.batches[0]])
         # self.save_but = QtWidgets.QPushButton(self.centralwidget)
         # self.save_but.setGeometry(QtCore.QRect(550, 390, 86, 25))
         # self.save_but.setObjectName("connect_but")
@@ -773,6 +836,7 @@ class UiTests(object):
         self.test_type_label.setText(_translate("UI_tests", "test_type: " + test_type))
         self.prog_label.setText(_translate("UI_tests", "Flash IMU"))
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
+        self.print_logs(f'{calib_path=}')
 
     def print_logs(self, new_log):
         if new_log == 'clear':
@@ -856,9 +920,7 @@ class UiTests(object):
                 self.right.show()
             self.print_logs('EEPROM backup saved at')
             self.print_logs(CALIB_BACKUP_FILE)
-
-            calib_path = BATCH_DIR / self.batches_combo.currentText() / self.json_combo.currentText()
-            eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom(calib_path)
+            eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
             if eeprom_success:
                 self.print_logs('Flash EEPROM successful!')
                 test_result['eeprom_res'] = 'PASS'
