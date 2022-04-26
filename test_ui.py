@@ -1,3 +1,5 @@
+import pathlib
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
 from datetime import datetime
@@ -10,9 +12,11 @@ import os
 # import blobconverter
 import signal
 import json, time
+from pathlib import Path
 
 FPS = 10
 
+BATCH_DIR = Path(__file__).resolve().parent / 'batch'
 
 test_result = {
     'usb3_res': '',
@@ -293,7 +297,7 @@ class DepthAICamera():
             return False, None
         return True, image
 
-    def flash_eeprom(self):
+    def flash_eeprom(self, calib_path):
         eepromDataJson = None
         try:
             device_calib = self.device.readCalibration()
@@ -377,6 +381,18 @@ class UiTests(object):
         self.MB_END = "</p></body></html>"
         self.all_logs = ""
 
+        x = os.walk(BATCH_DIR)
+        print(x)
+        self.batches = []
+        self.jsons = {}
+        i = 0
+        for x in os.walk(BATCH_DIR):
+            if i == 0:
+                self.batches = x[1]
+            else:
+                self.jsons[self.batches[i - 1]] = x[2]
+            i = i + 1
+
     def setupUi(self, UI_tests):
         UI_tests.closeEvent = self.close_event
         UI_tests.setObjectName("UI_tests")
@@ -396,9 +412,16 @@ class UiTests(object):
         self.title.setFont(font)
         self.title.setObjectName("title")
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
-        self.connect_but.setGeometry(QtCore.QRect(450, 390, 86, 25))
+        self.connect_but.setGeometry(QtCore.QRect(460, 390, 86, 25))
         self.connect_but.setObjectName("connect_but")
         self.connect_but.clicked.connect(self.show_cameras)
+        self.batches_combo = QtWidgets.QComboBox(self.centralwidget)
+        self.batches_combo.setGeometry(QtCore.QRect(360, 390, 86, 25))
+        self.batches_combo.addItems(self.batches)
+        self.batches_combo.currentTextChanged.connect(self.batches_changed)
+        self.json_combo = QtWidgets.QComboBox(self.centralwidget)
+        self.json_combo.setGeometry(QtCore.QRect(360, 420, 322, 25))
+        self.json_combo.addItems(self.jsons[self.batches[0]])
         # self.save_but = QtWidgets.QPushButton(self.centralwidget)
         # self.save_but.setGeometry(QtCore.QRect(550, 390, 86, 25))
         # self.save_but.setObjectName("connect_but")
@@ -724,8 +747,8 @@ class UiTests(object):
         UI_tests.setWindowTitle(_translate("UI_tests", "DepthAI UI Tests"))
         self.title.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\">UNIT TEST IN PROGRESS</p></body></html>"))
         self.connect_but.setText("CONNECT")
-        self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
-        # self.save_but.setText("SAVE")
+        self.connect_but.adjustSize()
+
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
         if test_type == 'OAK-1':
             self.automated_tests_labels.setText(_translate("UI_tests", OAK_ONE_LABELS))
@@ -777,6 +800,7 @@ class UiTests(object):
                 if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
                     self.ir_ntes_but.setChecked(True)
             self.connect_but.setText("CONNECT")
+            self.connect_but.adjustSize()
             return
         self.print_logs('clear')
         if test_connexion():
@@ -815,7 +839,8 @@ class UiTests(object):
                 self.print_logs(f"Something went wrong, check connexion! - {ex}")
                 return
             self.connect_but.setText("DISCONNECT AND SAVE")
-            self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
+            self.connect_but.adjustSize()
+            # self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
             location = WIDTH, 0
             self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888, 'RGB Preview', location)
             self.rgb.show()
@@ -832,7 +857,8 @@ class UiTests(object):
             self.print_logs('EEPROM backup saved at')
             self.print_logs(CALIB_BACKUP_FILE)
 
-            eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
+            calib_path = BATCH_DIR / self.batches_combo.currentText() / self.json_combo.currentText()
+            eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom(calib_path)
             if eeprom_success:
                 self.print_logs('Flash EEPROM successful!')
                 test_result['eeprom_res'] = 'PASS'
@@ -1023,6 +1049,10 @@ class UiTests(object):
                 del self.right
             del self.depth_camera
 
+    def batches_changed(self):
+        print("Batches changed!")
+        self.json_combo.clear()
+        self.json_combo.addItems(self.jsons[self.batches_combo.currentText()])
 
 def signal_handler(sig, frame):
     print('Closing app')
@@ -1033,14 +1063,15 @@ def signal_handler(sig, frame):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Arguments for test UI')
     parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)', default='OAK-D-PRO')
-    parser.add_argument('-b', '--batch', dest='batch', help='enter the path to batch file', required=True)
+    # parser.add_argument('-b', '--batch', dest='batch', help='enter the path to batch file', required=True)
     # CALIB_JSON_FILE = path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib.json'
     CALIB_BACKUP_FILE = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib_backup.json'
     # parser.add_argument('--calib_json_file', '-c', dest='calib_json_file', help='Path to V6 calibration file in json', default=CALIB_JSON_FILE)
     args = parser.parse_args()
     test_type = args.camera_type.upper()
     # calib_path = args.calib_json_file
-    calib_path = args.batch
+    # calib_path = args.batch
+    # calib_path = None
     app = QtWidgets.QApplication(sys.argv)
     screen = app.primaryScreen()
     rect = screen.availableGeometry()
