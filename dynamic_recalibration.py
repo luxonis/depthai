@@ -66,7 +66,7 @@ def calculate_Rt_from_frames(frame1,frame2,k1,k2,d1,d2):
 
     pts1 = np.float32(pts1)
     pts2 = np.float32(pts2)
-    E, mask = cv2.findEssentialMat(pts1,pts2,k1,d1,k2,d2)
+    E, mask = cv2.findEssentialMat(pts1,pts2,k1,d1,k2,d2, method=cv2.USAC_MAGSAC)
     # print(f"essential_matrix: {E}")
 
     points, R_est, t_est, mask_pose = cv2.recoverPose(E, pts1,pts2, mask=mask)
@@ -97,7 +97,7 @@ def calculate_epipolar_error(frame1, frame2):
     pts1 = np.float32(pts1)
     pts2 = np.float32(pts2)
     # this is just to get inliers
-    M, mask = cv2.findHomography(pts1, pts2, cv2.RANSAC,5.0) #TODO try and compare findHomography against recoverPose and extract rotation from obtained homography
+    M, mask = cv2.findHomography(pts1, pts2, method = cv2.USAC_MAGSAC, ransacReprojThreshold = 5.0) #TODO try and compare findHomography against recoverPose and extract rotation from obtained homography
     matchesMask = mask.ravel().tolist()
 
     epi_error_sum = 0
