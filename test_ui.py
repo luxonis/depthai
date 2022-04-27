@@ -478,7 +478,7 @@ class UiTests(object):
         self.title = QtWidgets.QLabel(self.centralwidget)
         self.title.setGeometry(QtCore.QRect(10, 10, 751, 51))
         font = QtGui.QFont()
-        font.setPointSize(24)
+        font.setPointSize(18)
         self.title.setFont(font)
         self.title.setObjectName("title")
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
@@ -808,7 +808,7 @@ class UiTests(object):
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
         UI_tests.setWindowTitle(_translate("UI_tests", "DepthAI UI Tests"))
-        self.title.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\">UNIT TEST IN PROGRESS</p></body></html>"))
+        self.title.setText(_translate("UI_tests", f"<html><head/><body><p align=\"center\">Batch: {calib_path.parent.name} <br> Device: {calib_path.name}</p></body></html>"))
         self.connect_but.setText("CONNECT")
         self.connect_but.adjustSize()
 
