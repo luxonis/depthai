@@ -836,7 +836,7 @@ class UiTests(object):
         self.test_type_label.setText(_translate("UI_tests", "test_type: " + test_type))
         self.prog_label.setText(_translate("UI_tests", "Flash IMU"))
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
-        self.print_logs(f'{calib_path=}')
+        self.print_logs(f'calib_path={calib_path}')
 
     def print_logs(self, new_log):
         if new_log == 'clear':
