@@ -1,13 +1,9 @@
 from argparse import ArgumentParser
-from http.client import CONTINUE
-from pathlib import Path
-import numpy as np
 
 import cv2
 import depthai as dai
 
 print('DepthAI version:', dai.__version__)
-import numpy as np
 
 """   
     exposure time:     I   O      15..33000 [us]
@@ -116,66 +112,49 @@ def createPipeline():
     rgb_cam.setInterleaved(False)
     rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
     rgb_cam.setIspScale(1, 3)
-    # rgb_cam.initialControl.setManualFocus(self.focus_value)
     rgb_cam.setFps(FPS)
 
     xout_rgb_isp = pipeline.createXLinkOut()
     xout_rgb_isp.setStreamName("rgb")
 
     rgb_cam.isp.link(xout_rgb_isp.input)
-    # controlIn = pipeline.createXLinkIn()
-    # xout = pipeline.createXLinkOut()
-    # xout.setStreamName('img')
-    # controlIn.setStreamName('control')
-    #
-    # cam = pipeline.createColorCamera()
-    # cam.setBoardSocket(camSocketDict[args.CameraSocket])
-    # cam.setFps(10)
-    # cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
-    # cam.setIspScale(1, 1)
-    # cam.isp.link(xout.input)
-    # controlIn.out.link(cam.inputControl)
-
     return pipeline
 
 
 def cameraFocusAdjuster(image):
     dstLaplace = cv2.Laplacian(image, cv2.CV_64F)
     mu, sigma = cv2.meanStdDev(dstLaplace)
-    # sigma = np.max(cv2.convertScaleAbs(dstLaplace))
     return mu, sigma
 
 
 cv2.namedWindow('img')
 pipeline = createPipeline()
 device = dai.Device(pipeline)
-# with dai.Device(createPipeline()) as device:
-imgQueue = device.getOutputQueue(name=camera, maxSize=30, blocking=True)
-# controlQueue = device.getInputQueue('control')
+leftQueue = device.getOutputQueue(name="left", maxSize=30, blocking=True)
+rgbQueue = device.getOutputQueue(name="rgb", maxSize=30, blocking=True)
+rightQueue = device.getOutputQueue(name="right", maxSize=30, blocking=True)
+imgQueue = rgbQueue
 cv2.setMouseCallback('img', on_mouse)
-im_no = 0
+im_no = 1
+camera_index = 1
 while True:
-    imgFrame = imgQueue.tryGet()
+    if camera_index == 0:
+        imgFrame = leftQueue.tryGet()
+    elif camera_index == 1:
+        imgFrame = rgbQueue.tryGet()
+    elif camera_index == 2:
+        imgFrame = rightQueue.tryGet()
     if imgFrame is not None:
-        colorImg = imgFrame.getCvFrame()
+        imgGray = imgFrame.getCvFrame()
     else:
         continue
-    imgGray = cv2.cvtColor(colorImg, cv2.COLOR_BGR2GRAY)
+    if camera_index == 1:
+        imgGray = cv2.cvtColor(imgGray, cv2.COLOR_BGR2GRAY)
 
+    height, width = imgGray.shape
     if isBoxCompleted:
         sbox = localSbox
         ebox = localEbox
-
-        # print(f'{localSbox=} {localSbox=}')
-        # print(f'{sbox=} {ebox=}')
-
-        # sbox = (0, 0)
-        # ebox = (1280//2, 720//2)
-        # if (ebox[0] - sbox[0]) < 200  or (ebox[1] - sbox[1]) < 200:
-        #     print("Requires the ROI to be of shapa greater than 200x200")
-        #     isBoxCompleted = False
-        #     continue
-        print(imgGray.shape)
         if sbox is not None and ebox is not None:
             cv2.rectangle(imgGray, sbox, ebox, color, 2)
 
@@ -184,11 +163,12 @@ while True:
 
             mu, sigma = cameraFocusAdjuster(roiGray)
             text = f'Focus = {sigma[0][0]}'
-            image = cv2.putText(imgGray, text, (720//2, 1280//2), font, 1, (0, 0, 0), 6, cv2.LINE_AA)
-            image = cv2.putText(imgGray, text, (720//2, 1280//2), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            image = cv2.putText(imgGray, text, (height//2, width//2), font, 1, (0, 0, 0), 6, cv2.LINE_AA)
+            image = cv2.putText(imgGray, text, (height//2, width//2), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
             cv2.imshow('img', image)
 
     else:
+        print(imgGray.shape)
         cv2.imshow('img', imgGray)
 
     key = cv2.waitKey(1)
@@ -196,23 +176,5 @@ while True:
         cv2.destroyAllWindows()
         raise SystemExit(0)
     elif key == ord("n"):
-        pass
-    # elif key in [ord('i'), ord('o'), ord('k'), ord('l'), ord('c'), ord('x')]:
-    #     if key == ord('i'): expTime -= EXP_STEP
-    #     if key == ord('o'): expTime += EXP_STEP
-    #     if key == ord('k'): sensIso -= ISO_STEP
-    #     if key == ord('l'): sensIso += ISO_STEP
-    #     if key == ord('c'):
-    #         print("saved image")
-    #         name = "/home/dani/" + str(im_no) + '.jpg'
-    #         cv2.imwrite(name, image)
-    #         im_no += 1
-    #     if key == ord('x'): im_no -= 1
-    #
-    #     expTime = clamp(expTime, expMin, expMax)
-    #     sensIso = clamp(sensIso, sensMin, sensMax)
-    #     print("Setting manual exposure, time: ", expTime, "iso: ", sensIso)
-
-        ctrl = dai.CameraControl()
-        ctrl.setManualExposure(expTime, sensIso)
-        controlQueue.send(ctrl)
+        camera_index = (camera_index + 1) % 3
+        imgQueue = device.getOutputQueue(name=camera, maxSize=30, blocking=True)
