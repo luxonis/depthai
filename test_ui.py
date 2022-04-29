@@ -478,7 +478,7 @@ class UiTests(object):
         self.title = QtWidgets.QLabel(self.centralwidget)
         self.title.setGeometry(QtCore.QRect(10, 10, 751, 51))
         font = QtGui.QFont()
-        font.setPointSize(18)
+        font.setPointSize(16)
         self.title.setFont(font)
         self.title.setObjectName("title")
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
