@@ -335,13 +335,14 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         print(x)
         self.batches = []
         self.jsons = {}
-        i = 0
         for x in os.walk(BATCH_DIR):
-            if i == 0:
-                self.batches = sorted(x[1])
-            else:
-                self.jsons[self.batches[i - 1]] = sorted(x[2])
-            i = i + 1
+            self.batches = sorted(x[1])
+            break
+        for batch in self.batches:
+            for json in os.walk(BATCH_DIR/batch):
+                self.jsons[batch] = sorted(json[2])
+                print(json)
+
         self.batch_combo = QtWidgets.QComboBox(self)
         self.batch_combo.setGeometry(QtCore.QRect(100, 20, 141, 32))
         self.batch_combo.addItems(self.batches)
@@ -1093,6 +1094,8 @@ class UiTests(object):
                 file.write(',' + 'Not Tested')
             else:
                 file.write(',' + operator_tests[key])
+        file.write(',' + calib_path.parent.name)
+        file.write(',' + calib_path.name)
         file.write('\n')
         file.close()
         self.print_logs('Test results for ' + test_type + ' with id ' + self.depth_camera.id + ' had been saved!')
