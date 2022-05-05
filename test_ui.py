@@ -906,10 +906,10 @@ class UiTests(object):
             self.connect_but.adjustSize()
             # self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
             location = WIDTH, 0
-            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888, 'RGB Preview', location)
+            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), 29, 'RGB Preview', location) # 29 - QImage.Format_BGR888
             self.rgb.show()
             location = WIDTH, prew_height + 80
-            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), QtGui.QImage.Format_BGR888, 'JPEG Preview', location)
+            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), 29, 'JPEG Preview', location) # 29 - QImage.Format_BGR888
             self.jpeg.show()
             if test_type != 'OAK-1':
                 location = WIDTH + prew_width + 20, 0
