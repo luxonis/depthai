@@ -338,9 +338,9 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         i = 0
         for x in os.walk(BATCH_DIR):
             if i == 0:
-                self.batches = x[1]
+                self.batches = sorted(x[1])
             else:
-                self.jsons[self.batches[i - 1]] = x[2]
+                self.jsons[self.batches[i - 1]] = sorted(x[2])
             i = i + 1
         self.batch_combo = QtWidgets.QComboBox(self)
         self.batch_combo.setGeometry(QtCore.QRect(100, 20, 141, 32))
@@ -1124,7 +1124,7 @@ def signal_handler(sig, frame):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Arguments for test UI')
-    parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)', default='OAK-D-PRO')
+    parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)', default='OAK-D-PRO-POE')
     # parser.add_argument('-b', '--batch', dest='batch', help='enter the path to batch file', required=True)
     # CALIB_JSON_FILE = path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib.json'
     CALIB_BACKUP_FILE = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib_backup.json'
