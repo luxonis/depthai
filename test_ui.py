@@ -13,6 +13,14 @@ import os
 import signal
 import json, time
 from pathlib import Path
+import cv2
+
+# Try setting native cv2 image format, otherwise RGB888
+colorMode = QtGui.QImage.Format_RGB888
+try:
+    colorMode = QtGui.QImage.Format_BGR888
+except:
+    colorMode = QtGui.QImage.Format_RGB888
 
 FPS = 10
 
@@ -110,7 +118,7 @@ class DepthAICamera():
         self.camRgb.setPreviewSize(1920, 1080)
         self.camRgb.setPreviewKeepAspectRatio(True)
         self.camRgb.setInterleaved(False)
-        self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+        self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         self.camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
         self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         self.camRgb.preview.link(self.xoutRgb.input)
@@ -229,6 +237,8 @@ class DepthAICamera():
                     in_rgb = self.qRgb.tryGet()
                     if in_rgb is not None:
                         image = in_rgb.getCvFrame()
+                        if colorMode == QtGui.QImage.Format_RGB888:
+                            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     if test_result['prew_out_rgb_res'] == '':
                         if (self._rgb_timer > self._FRAME_WAIT) or (self._rgb_timer > self._FRAME_WAIT and self._rgb_pass == 0):
                             test_result['prew_out_rgb_res'] = 'FAIL'
@@ -907,10 +917,10 @@ class UiTests(object):
             self.connect_but.adjustSize()
             # self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
             location = WIDTH, 0
-            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), 29, 'RGB Preview', location) # 29 - QImage.Format_BGR888
+            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
             self.rgb.show()
             location = WIDTH, prew_height + 80
-            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), 29, 'JPEG Preview', location) # 29 - QImage.Format_BGR888
+            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
             self.jpeg.show()
             if test_type != 'OAK-1':
                 location = WIDTH + prew_width + 20, 0
