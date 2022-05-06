@@ -15,6 +15,12 @@ import depthai as dai
 from PyQt5.QtWidgets import QApplication
 from depthai_sdk import Previews, resizeLetterbox, createBlankFrame
 
+# If BGR format is available
+colorMode = QImage.Format_RGB888
+try:
+    colorMode = QImage.Format_BGR888
+except:
+    colorMode = QImage.Format_RGB888
 
 class Singleton(type(QQuickPaintedItem)):
     _instances = {}
@@ -321,14 +327,18 @@ class DemoQtGui:
         w, h = int(self.writer.width()), int(self.writer.height())
         scaledFrame = resizeLetterbox(frame, (w, h))
         if len(frame.shape) == 3:
-            img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, 29)  # 29 - QImage.Format_BGR888
+            if colorMode == QImage.Format_RGB888:
+                scaledFrame = cv2.cvtColor(scaledFrame, cv2.COLOR_RGB2BGR)
+            img = QImage(scaledFrame.data, w, h, frame.shape[2] * w, colorMode)
         else:
-            img = QImage(scaledFrame.data, w, h, w, 24)  # 24 - QImage.Format_Grayscale8
+            img = QImage(scaledFrame.data, w, h, w, QImage.Format_Grayscale8)
         self.writer.update_frame(img)
 
     def updateDownloadProgress(self, curr, total):
         frame = self.createProgressFrame(curr / total)
-        img = QImage(frame.data, frame.shape[1], frame.shape[0], frame.shape[2] * frame.shape[1], 29)  # 29 - QImage.Format_BGR888
+        if colorMode == QImage.Format_RGB888:
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        img = QImage(frame.data, frame.shape[1], frame.shape[0], frame.shape[2] * frame.shape[1], colorMode)
         self.writer.update_frame(img)
 
     def createProgressFrame(self, donePercentage=None):
@@ -353,7 +363,9 @@ class DemoQtGui:
         setupFrame = createBlankFrame(w, h)
         cv2.putText(setupFrame, text, (200, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255, 255, 255), 4, cv2.LINE_AA)
         cv2.putText(setupFrame, text, (200, 250), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
-        img = QImage(setupFrame.data, w, h, setupFrame.shape[2] * w, 29)  # 29 - QImage.Format_BGR888
+        if colorMode == QImage.Format_RGB888:
+                setupFrame = cv2.cvtColor(setupFrame, cv2.COLOR_RGB2BGR)
+        img = QImage(setupFrame.data, w, h, setupFrame.shape[2] * w, colorMode)
         self.writer.update_frame(img)
 
     def startGui(self):
