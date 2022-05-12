@@ -156,8 +156,11 @@ class DepthAICamera():
 
         if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
             try:
-                self.device.setIrLaserDotProjectorBrightness(100)
-                self.device.setIrFloodLightBrightness(250)
+                success = True
+                success = success and self.device.setIrLaserDotProjectorBrightness(100)
+                success = success and self.device.setIrFloodLightBrightness(250)
+                if not success:
+                    raise Exception
             except:
                 print('IR sensor not working!')
 
@@ -945,6 +948,9 @@ class UiTests(object):
                 test_result['eeprom_res'] = 'FAIL'
                 test_result['eeprom_data'] = ''
 
+            # Add IMU update cb
+            self.depth_camera.device.addLogCallback(self.logMonitorImuFwUpdateCallback)
+
         else:
             print(locals())
             self.print_logs('No camera detected, check the connexion and try again...')
@@ -1045,6 +1051,20 @@ class UiTests(object):
             self.print_logs(f'Failed to update bootloader: {message}')
             test_result['nor_flash_res'] = 'FAIL'
             return False
+
+    def logMonitorImuFwUpdateCallback(self, msg):
+        if msg.level >= dai.LogLevel.WARN:
+            print(f"TEST = [{msg.level.name}] [{msg.time.get()}] {msg.payload}")
+            # TODO, mark successful flash
+            # if 'IMU' in msg.payload and 'firmware' in msg.payload and 'update' in msg.payload and 'succesful' in msg.payload:
+            #     test_result['rgb_cam_res'] = 'FAIL'
+            if 'IMU firmware update status' in msg.payload:
+                try:
+                    percentage = int(msg.payload.split(":")[1].split["%"][0])
+                    self.prog_label.setText('Flash IMU')
+                    self.update_prog_bar(percentage)
+                except:
+                    print('Could not parse fw update status')
 
     def test_bootloader_version(self, version='0.0.15'):
         (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
