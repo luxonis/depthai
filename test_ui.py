@@ -145,6 +145,10 @@ class DepthAICamera():
         #         time.sleep(5)
         # """)
 
+        # Add IMU to force FW update
+        self.imu = self.pipeline.create(dai.node.IMU)
+        self.imu.enableFirmwareUpdate(True);
+
         self.videoEnc = self.pipeline.create(dai.node.VideoEncoder)
         self.camRgb.video.link(self.videoEnc.input)
         self.xoutJpeg = self.pipeline.create(dai.node.XLinkOut)
