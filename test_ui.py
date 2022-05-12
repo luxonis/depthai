@@ -124,6 +124,17 @@ class DepthAICamera():
         self.camRgb.preview.link(self.xoutRgb.input)
         self.camRgb.setFps(FPS)
 
+
+        # TMP TMP TMP
+        script = self.pipeline.create(dai.node.Script)
+        script.setScript("""
+            progress = 0
+            while progress <= 100:
+                node.warn(f'IMU firmware update status: {percentage}%')
+                progress += 1.5
+                time.sleep(0.06)
+        """)
+
         self.videoEnc = self.pipeline.create(dai.node.VideoEncoder)
         self.camRgb.video.link(self.videoEnc.input)
         self.xoutJpeg = self.pipeline.create(dai.node.XLinkOut)
