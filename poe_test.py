@@ -12,8 +12,11 @@ if 'SUDO_COMMAND' not in os.environ:
     exit(1)
 
 # Setup secondary ip
-subprocess.check_call(['ifconfig', 'eth0:1', '169.254.1.150', 'netmask', '255.255.0.0', 'up'])
-subprocess.check_call(['arping', '169.254.1.222', '-W2', '-C1', '-c1'])
+try:
+    subprocess.check_call(['ifconfig', 'eth0:1', '169.254.1.150', 'netmask', '255.255.0.0', 'up'])
+except Exception as ex:
+    print(f'\n\n ==== ERROR - could not set additional "LL" IP on interface "eth0". ==== \n\n Error message: {ex} \n\n')
+subprocess.call(['arping', '169.254.1.222', '-W2', '-C1', '-c1'])
 
 # command to send to device
 DEVICE_COMMAND = 2
