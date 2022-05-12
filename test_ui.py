@@ -124,16 +124,26 @@ class DepthAICamera():
         self.camRgb.preview.link(self.xoutRgb.input)
         self.camRgb.setFps(FPS)
 
+        # # TMP TMP TMP - IMU update simulation
+        # script = self.pipeline.create(dai.node.Script)
+        # script.setScript("""
+        #     import time
 
-        # TMP TMP TMP
-        script = self.pipeline.create(dai.node.Script)
-        script.setScript("""
-            progress = 0
-            while progress <= 100:
-                node.warn(f'IMU firmware update status: {percentage}%')
-                progress += 1.5
-                time.sleep(0.06)
-        """)
+        #     status = False
+
+        #     if status:
+        #         progress = 3
+        #         while progress <= 100:
+        #             node.warn(f'IMU firmware update status: {progress}%')
+        #             progress += 1.5
+        #             time.sleep(0.06)
+        #         time.sleep(1)
+        #         node.info("IMU firmware update succesful!");
+        #     else:
+        #         time.sleep(2)
+        #         node.error("IMU firmware update failed. Your board likely doesn't have IMU!")
+        #         time.sleep(5)
+        # """)
 
         self.videoEnc = self.pipeline.create(dai.node.VideoEncoder)
         self.camRgb.video.link(self.videoEnc.input)
@@ -463,8 +473,13 @@ def test_connexion():
     return False
 
 
-class UiTests(object):
+# BW compat...
+UI_tests = None
+class UiTests(QtWidgets.QMainWindow):
+    print_logs_trigger = QtCore.pyqtSignal(str)
+
     def __init__(self):
+        super().__init__()
         self.MB_INIT = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
         "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
         "p, li { white-space: pre-wrap; }\n"
@@ -488,7 +503,12 @@ class UiTests(object):
         if not dialog.exec_():
             sys.exit()
 
-    def setupUi(self, UI_tests):
+        self.print_logs_trigger.connect(self.print_logs)
+
+    def setupUi(self):
+        global UI_tests
+        UI_tests = self
+
         UI_tests.closeEvent = self.close_event
         UI_tests.setObjectName("UI_tests")
         UI_tests.resize(WIDTH, HEIGHT)
@@ -863,6 +883,7 @@ class UiTests(object):
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
         self.print_logs(f'calib_path={calib_path}')
 
+    @QtCore.pyqtSlot(str)
     def print_logs(self, new_log):
         if new_log == 'clear':
             self.all_logs = ''
@@ -960,6 +981,7 @@ class UiTests(object):
                 test_result['eeprom_data'] = ''
 
             # Add IMU update cb
+            self.depth_camera.device.setLogLevel(dai.LogLevel.INFO)
             self.depth_camera.device.addLogCallback(self.logMonitorImuFwUpdateCallback)
 
         else:
@@ -1064,18 +1086,24 @@ class UiTests(object):
             return False
 
     def logMonitorImuFwUpdateCallback(self, msg):
-        if msg.level >= dai.LogLevel.WARN:
-            print(f"TEST = [{msg.level.name}] [{msg.time.get()}] {msg.payload}")
-            # TODO, mark successful flash
-            # if 'IMU' in msg.payload and 'firmware' in msg.payload and 'update' in msg.payload and 'succesful' in msg.payload:
-            #     test_result['rgb_cam_res'] = 'FAIL'
-            if 'IMU firmware update status' in msg.payload:
-                try:
-                    percentage = int(msg.payload.split(":")[1].split["%"][0])
-                    self.prog_label.setText('Flash IMU')
-                    self.update_prog_bar(percentage)
-                except:
-                    print('Could not parse fw update status')
+        if 'IMU firmware update status' in msg.payload:
+            try:
+                percentage_float = float(msg.payload.split(":")[1].split("%")[0]) / 100.0
+                self.prog_label.setText('Flash IMU')
+                self.update_prog_bar(percentage_float)
+            except Exception as ex:
+                print(f'Could not parse fw update status: {ex}')
+        if 'IMU firmware update succesful' in msg.payload:
+            self.prog_label.setText('IMU PASS')
+            self.update_prog_bar(1.0)
+            # self.print_logs(f'Sucessfully updated IMU!')
+            self.print_logs_trigger.emit(f'Sucessfully updated IMU!')
+
+        if 'IMU firmware update failed' in msg.payload:
+            self.prog_label.setText('IMU FAIL')
+            self.update_prog_bar(0.0)
+            # self.print_logs(f'FAILED updating IMU!')
+            self.print_logs_trigger.emit(f'FAILED updating IMU!')
 
     def test_bootloader_version(self, version='0.0.15'):
         (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
@@ -1184,10 +1212,9 @@ if __name__ == "__main__":
     prew_width = (rect.width() - WIDTH)//2 - 20
     prew_height = (rect.height())//2 - 80
     print(prew_width, prew_height)
-    UI_tests = QtWidgets.QMainWindow()
     ui = UiTests()
     signal.signal(signal.SIGINT, signal_handler)
-    ui.setupUi(UI_tests)
+    ui.setupUi()
     UI_tests.show()
     test_connexion()
     sys.exit(app.exec_())
