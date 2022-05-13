@@ -150,6 +150,7 @@ class DepthAICamera():
         self.imu.enableFirmwareUpdate(True);
         self.imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
 
+
         self.videoEnc = self.pipeline.create(dai.node.VideoEncoder)
         self.camRgb.video.link(self.videoEnc.input)
         self.xoutJpeg = self.pipeline.create(dai.node.XLinkOut)
@@ -178,13 +179,37 @@ class DepthAICamera():
         if test_type == 'OAK-D-PRO-POE':
             usb_speed = dai.UsbSpeed.HIGH
 
-        self.device = dai.Device(self.pipeline, usb_speed)
+        self.device = dai.Device(dai.OpenVINO.VERSION_2021_4, usb_speed)
+
+        # Check cameras, if center is smaller, modify all to be same (all cams OV case)
+        cams = self.device.getConnectedCameraProperties()
+        for cam in cams:
+            if cam.socket == dai.CameraBoardSocket.CENTER:
+                print(f'Center camera w/h: ({cam.width}, {cam.height})')
+                if cam.height == 800:
+                    self.camRgb.setPreviewSize(cam.width, cam.height)
+                    self.camRgb.setVideoSize(cam.width, cam.height)
+                    self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+                    if test_type != 'OAK-1':
+                        self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+                        self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+                elif cam.height == 720:
+                    self.camRgb.setPreviewSize(cam.width, cam.height)
+                    self.camRgb.setVideoSize(cam.width, cam.height)
+                    self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_720_P)
+                    if test_type != 'OAK-1':
+                        self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+                        self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+
+        self.device.startPipeline(self.pipeline)
 
         if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
             try:
                 success = True
                 success = success and self.device.setIrLaserDotProjectorBrightness(100)
+                print(f'set laser dot, result {success}')
                 success = success and self.device.setIrFloodLightBrightness(250)
+                print(f'set flood light, result {success}')
                 if not success:
                     raise Exception
             except:
@@ -1101,13 +1126,11 @@ class UiTests(QtWidgets.QMainWindow):
         if 'IMU firmware update succesful' in msg.payload:
             self.prog_label.setText('IMU PASS')
             self.update_prog_bar(1.0)
-            # self.print_logs(f'Sucessfully updated IMU!')
-            self.print_logs_trigger.emit(f'Sucessfully updated IMU!')
+            self.print_logs_trigger.emit(f'Successfully updated IMU!')
 
         if 'IMU firmware update failed' in msg.payload:
             self.prog_label.setText('IMU FAIL')
             self.update_prog_bar(0.0)
-            # self.print_logs(f'FAILED updating IMU!')
             self.print_logs_trigger.emit(f'FAILED updating IMU!')
 
     def test_bootloader_version(self, version='0.0.15'):
