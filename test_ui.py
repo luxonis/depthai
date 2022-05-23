@@ -1,19 +1,20 @@
-import pathlib
+import threading
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-import sys
+from PyQt5.QtCore import QObject, QRunnable, pyqtSlot, pyqtSignal, QThreadPool
+
+import sys, traceback
 from datetime import datetime
-# from PyQt5.QtWidgets import QMessageBox
-# from PyQt5.QtWidgets import QMessageBox
-# import numpy as np
+
 import depthai as dai
 import argparse
 import os
-# import blobconverter
+
 import signal
 import json, time
 from pathlib import Path
 import cv2
+
 
 # Try setting native cv2 image format, otherwise RGB888
 colorMode = QtGui.QImage.Format_RGB888
@@ -41,8 +42,10 @@ test_result = {
 }
 OAK_KEYS = {
     'OAK-1': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res'],
-    'OAK-D': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res', 'left_cam_res', 'right_cam_res','left_strm_res', 'right_strm_res'],
-    'OAK-D-PRO-POE': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res', 'left_cam_res', 'right_cam_res','left_strm_res', 'right_strm_res', 'eeprom_data', 'nor_flash_res'],
+    'OAK-D': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res', 'left_cam_res', 'right_cam_res',
+              'left_strm_res', 'right_strm_res'],
+    'OAK-D-PRO-POE': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res', 'left_cam_res', 'right_cam_res',
+                      'left_strm_res', 'right_strm_res', 'eeprom_data', 'nor_flash_res'],
 }
 
 operator_tests = {
@@ -59,7 +62,6 @@ OP_OAK_KEYS = {
     'OAK-D-PRO-POE': ['jpeg_enc', 'prew_out_rgb', 'left_strm', 'right_strm', 'ir_light'],
 }
 
-
 OAK_D_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
         USB3 <br style="font-size:18pt"> \
         EEPROM write test <br style="font-size:22pt"> \
@@ -71,7 +73,6 @@ OAK_D_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:1
         left Stream <br style="font-size:22pt"> \
         right Stream <br style="font-size:21pt"> </span></p></body></html>'
 
-
 OAK_ONE_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
         USB3 <br style="font-size:18pt"> \
         EEPROM write test <br style="font-size:22pt"> \
@@ -80,10 +81,10 @@ OAK_ONE_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size
         preview-out-rgb Stream <br style="font-size:21pt"></span></p></body></html>'
 
 CSV_HEADER = {
-    'OAK-1': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","JPEG Encoding Operator","RGB Encoding Operator"',
-    'OAK-D': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator"',
-    'OAK-D-PRO': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator","IR Light"',
-    'OAK-D-PRO-POE': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","EEPROM DATA","NOR FLASH","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator","IR Light"',
+    'OAK-1': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","JPEG Encoding Operator","RGB Encoding Operator,"Batch","Json"',
+    'OAK-D': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator","Batch","Json"',
+    'OAK-D-PRO': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator","IR Light","Batch","Json"',
+    'OAK-D-PRO-POE': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","EEPROM DATA","NOR FLASH","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator","IR Light","Batch","Json"',
 }
 
 
@@ -108,7 +109,7 @@ def clear_test_results():
     update_res = True
 
 
-class DepthAICamera():
+class DepthAICamera:
     def __init__(self):
         global update_res
         self.pipeline = dai.Pipeline()
@@ -158,7 +159,7 @@ class DepthAICamera():
             try:
                 self.device.setIrLaserDotProjectorBrightness(100)
                 self.device.setIrFloodLightBrightness(250)
-            except:
+            except RuntimeError:
                 print('IR sensor not working!')
 
         cameras = self.device.getConnectedCameras()
@@ -195,8 +196,8 @@ class DepthAICamera():
         self._left_pass = 0
         self._right_pass = 0
         self._NR_TEST_FRAMES = 40
-        self._FRAME_WAIT = FPS*8
-        self._FRAMES_WAIT = FPS*3
+        self._FRAME_WAIT = FPS * 8
+        self._FRAMES_WAIT = FPS * 3
         self._rgb_timer = 0
         self._left_timer = 0
         self._right_timer = 0
@@ -240,7 +241,8 @@ class DepthAICamera():
                         if colorMode == QtGui.QImage.Format_RGB888:
                             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     if test_result['prew_out_rgb_res'] == '':
-                        if (self._rgb_timer > self._FRAME_WAIT) or (self._rgb_timer > self._FRAME_WAIT and self._rgb_pass == 0):
+                        if (self._rgb_timer > self._FRAME_WAIT) or (
+                                self._rgb_timer > self._FRAME_WAIT and self._rgb_pass == 0):
                             test_result['prew_out_rgb_res'] = 'FAIL'
                             update_res = True
                         elif self._rgb_pass == self._NR_TEST_FRAMES:
@@ -255,7 +257,8 @@ class DepthAICamera():
                     if in_left is not None:
                         image = in_left.getCvFrame()
                     if test_result['left_strm_res'] == '':
-                        if (self._left_timer > self._FRAME_WAIT) or (self._left_timer > self._FRAME_WAIT and self._left_pass == 0):
+                        if (self._left_timer > self._FRAME_WAIT) or (
+                                self._left_timer > self._FRAME_WAIT and self._left_pass == 0):
                             test_result['left_strm_res'] = 'FAIL'
                             update_res = True
                         elif self._left_pass == self._NR_TEST_FRAMES:
@@ -269,7 +272,8 @@ class DepthAICamera():
                     if in_right is not None:
                         image = in_right.getCvFrame()
                     if test_result['right_strm_res'] == '':
-                        if (self._right_timer > self._FRAME_WAIT) or (self._right_timer > self._FRAME_WAIT and self._right_pass == 0):
+                        if (self._right_timer > self._FRAME_WAIT) or (
+                                self._right_timer > self._FRAME_WAIT and self._right_pass == 0):
                             test_result['right_strm_res'] = 'FAIL'
                             update_res = True
                         elif self._right_pass == self._NR_TEST_FRAMES:
@@ -308,7 +312,7 @@ class DepthAICamera():
         return True, image
 
     def flash_eeprom(self):
-        eepromDataJson = None
+        eeprom_data_json = None
         try:
             device_calib = self.device.readCalibration()
             device_calib.eepromToJsonFile(CALIB_BACKUP_FILE)
@@ -316,28 +320,30 @@ class DepthAICamera():
 
             # Opening JSON file
             with open(calib_path) as jfile:
-                eepromDataJson = json.load(jfile)
-            if eepromDataJson is None:
+                eeprom_data_json = json.load(jfile)
+            if eeprom_data_json is None:
                 return False
 
-            eepromDataJson['batchTime'] = int(time.time())
+            eeprom_data_json['batchTime'] = int(time.time())
 
-            calib_data = dai.CalibrationHandler.fromJson(eepromDataJson)
+            calib_data = dai.CalibrationHandler.fromJson(eeprom_data_json)
 
             # Flash both factory & user areas
             self.device.flashFactoryCalibration(calib_data)
             self.device.flashCalibration2(calib_data)
         except Exception as ex:
-            errorMsg = f'Calibration Flash Failed: {ex}'
-            print(errorMsg)
-            return (False, errorMsg, eepromDataJson)
+            error_msg = f'Calibration Flash Failed: {ex}'
+            print(error_msg)
+            return False, error_msg, eeprom_data_json
 
         print('Calibration Flash Successful')
-        return (True, '', eepromDataJson)
+        return True, '', eeprom_data_json
 
 
 calib_path = BATCH_DIR
-class Ui_CalibrateSelect(QtWidgets.QDialog):
+
+
+class UiCalibrateSelect(QtWidgets.QDialog):
     def __init__(self):
         global calib_path
         super().__init__()
@@ -349,7 +355,7 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
             self.batches = sorted(x[1])
             break
         for batch in self.batches:
-            for json in os.walk(BATCH_DIR/batch):
+            for json in os.walk(BATCH_DIR / batch):
                 self.jsons[batch] = sorted(json[2])
                 print(json)
 
@@ -367,7 +373,7 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         self.buttonBox = QtWidgets.QDialogButtonBox(self)
         self.buttonBox.setGeometry(QtCore.QRect(70, 130, 191, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel | QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
         self.batch_label = QtWidgets.QLabel(self)
         self.batch_label.setGeometry(QtCore.QRect(10, 20, 51, 27))
@@ -418,7 +424,7 @@ class Camera(QtWidgets.QWidget):
         self.setLayout(layout)
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_image)
-        self.timer.start(1000//FPS)
+        self.timer.start(1000 // FPS)
         self.get_image = get_image
         self.camera_format = camera_format
 
@@ -443,10 +449,63 @@ HEIGHT = 717
 
 
 def test_connexion():
-    (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
-    if result:
-        return True
-    return False
+    result = False
+    try:
+        while not result:
+            (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
+    finally:
+        return result
+
+class WorkerSignals(QObject):
+    '''
+    Defines the signals available from a running worker thread.
+    Supported signals are:
+    - finished: No data
+    - error:`tuple` (exctype, value, traceback.format_exc() )
+    - result: `object` data returned from processing, anything
+    - progress: `tuple` indicating progress metadata
+    '''
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+    progress = pyqtSignal(tuple)
+
+
+class Worker(QRunnable):
+    '''
+    Worker thread
+    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
+    '''
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        # Store constructor arguments (re-used for processing)
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
+
+        # Add the callback to our kwargs
+        # self.kwargs['progress_callback'] = self.signals.progress
+
+    @pyqtSlot()
+    def run(self):
+        '''
+        Initialise the runner function with passed args, kwargs.
+        '''
+        # Retrieve args/kwargs here; and fire processing using them
+        try:
+            result = self.fn(*self.args, **self.kwargs)
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        else:
+            self.signals.result.emit(result)  # Return the result of the processing
+        finally:
+            self.signals.finished.emit()  # Done
+
+    def stop(self):
+        pass
 
 
 class UiTests(object):
@@ -470,21 +529,21 @@ class UiTests(object):
             else:
                 self.jsons[self.batches[i - 1]] = x[2]
             i = i + 1
-        dialog = Ui_CalibrateSelect()
+        dialog = UiCalibrateSelect()
         if not dialog.exec_():
             sys.exit()
 
-    def setupUi(self, UI_tests):
-        UI_tests.closeEvent = self.close_event
-        UI_tests.setObjectName("UI_tests")
-        UI_tests.resize(WIDTH, HEIGHT)
-        UI_tests.move(0, 0)
-        UI_tests.setWindowTitle("DepthAI UI Tests")
-        UI_tests.setWindowIcon(QtGui.QIcon('Assets/logo.png'))
+    def setup_ui(self, ui_tests):
+        ui_tests.closeEvent = self.close_event
+        ui_tests.setObjectName("UI_tests")
+        ui_tests.resize(WIDTH, HEIGHT)
+        ui_tests.move(0, 0)
+        ui_tests.setWindowTitle("DepthAI UI Tests")
+        ui_tests.setWindowIcon(QtGui.QIcon('Assets/logo.png'))
         font = QtGui.QFont()
         font.setPointSize(13)
-        UI_tests.setFont(font)
-        self.centralwidget = QtWidgets.QWidget(UI_tests)
+        ui_tests.setFont(font)
+        self.centralwidget = QtWidgets.QWidget(ui_tests)
         self.centralwidget.setObjectName("centralwidget")
         self.title = QtWidgets.QLabel(self.centralwidget)
         self.title.setGeometry(QtCore.QRect(10, 10, 751, 51))
@@ -495,11 +554,8 @@ class UiTests(object):
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
         self.connect_but.setGeometry(QtCore.QRect(460, 390, 86, 25))
         self.connect_but.setObjectName("connect_but")
+        # self.connect_but.clicked.connect(lambda: _thread.start_new_thread(self.show_cameras, ()))
         self.connect_but.clicked.connect(self.show_cameras)
-        # self.save_but = QtWidgets.QPushButton(self.centralwidget)
-        # self.save_but.setGeometry(QtCore.QRect(550, 390, 86, 25))
-        # self.save_but.setObjectName("connect_but")
-        # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         if test_type == 'OAK-1':
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 241))
@@ -509,7 +565,7 @@ class UiTests(object):
         self.automated_tests_labels = QtWidgets.QLabel(self.automated_tests)
         self.automated_tests_labels.setGeometry(QtCore.QRect(10, 20, 221, 351))
         self.automated_tests_labels.setObjectName("automated_tests_labels")
-        self.automated_tests_labels.setContentsMargins(0,9,9,5)
+        self.automated_tests_labels.setContentsMargins(0, 9, 9, 5)
         self.automated_tests_labels.setAlignment(QtCore.Qt.AlignRight)
         # self.automated_tests_labels.setGeometry(QtCore.QRect(10, 30, 221, 150))
 
@@ -791,17 +847,17 @@ class UiTests(object):
         self.logs_txt_browser = QtWidgets.QTextBrowser(self.logs)
         self.logs_txt_browser.setGeometry(QtCore.QRect(10, 90, 721, 121))
         self.logs_txt_browser.setObjectName("logs_txt_browser")
-        UI_tests.setCentralWidget(self.centralwidget)
-        self.menubar = QtWidgets.QMenuBar(UI_tests)
+        ui_tests.setCentralWidget(self.centralwidget)
+        self.menubar = QtWidgets.QMenuBar(ui_tests)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 766, 29))
         self.menubar.setObjectName("menubar")
-        UI_tests.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(UI_tests)
+        ui_tests.setMenuBar(self.menubar)
+        self.statusbar = QtWidgets.QStatusBar(ui_tests)
         self.statusbar.setObjectName("statusbar")
-        UI_tests.setStatusBar(self.statusbar)
+        ui_tests.setStatusBar(self.statusbar)
 
-        self.retranslateUi(UI_tests)
-        QtCore.QMetaObject.connectSlotsByName(UI_tests)
+        self.retranslate_ui(ui_tests)
+        QtCore.QMetaObject.connectSlotsByName(ui_tests)
         self.red_pallete = QtGui.QPalette()
         self.green_pallete = QtGui.QPalette()
         self.inactive_pallete = QtGui.QPalette()
@@ -814,12 +870,20 @@ class UiTests(object):
 
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.set_result)
-        self.timer.start(1000//FPS)
+        self.timer.start(1000 // FPS)
 
-    def retranslateUi(self, UI_tests):
+        # self.connect_timer = QtCore.QTimer()
+        # self.connect_timer.connect(test_connexion)
+        # self.timer.stop()
+
+        self.threadpool = QThreadPool()
+        self.scanning = False
+
+    def retranslate_ui(self, ui_tests):
         _translate = QtCore.QCoreApplication.translate
-        UI_tests.setWindowTitle(_translate("UI_tests", "DepthAI UI Tests"))
-        self.title.setText(_translate("UI_tests", f"<html><head/><body><p align=\"center\">Batch: {calib_path.parent.name} <br> Device: {calib_path.name}</p></body></html>"))
+        ui_tests.setWindowTitle(_translate("UI_tests", "DepthAI UI Tests"))
+        self.title.setText(_translate("UI_tests",
+                                      f"<html><head/><body><p align=\"center\">Batch: {calib_path.parent.name} <br> Device: {calib_path.name}</p></body></html>"))
         self.connect_but.setText("CONNECT")
         self.connect_but.adjustSize()
 
@@ -829,19 +893,23 @@ class UiTests(object):
         else:
             self.automated_tests_labels.setText(_translate("UI_tests", OAK_D_LABELS))
         self.operator_tests.setTitle(_translate("UI_tests", "Operator Tests"))
-        self.NOT_TESTED_LABEL.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\"><span style=\" font-size:11pt; color:#aaaa00;\">Not<br>Tested</span></p></body></html>"))
-        self.FAIL_LABEL.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:11pt; color:#ff0000;\">FAIL</span></p></body></html>"))
-        self.operator_tests_label.setText(_translate("UI_tests", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
-"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
-"p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'Sans Serif\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
-"<p align=\"right\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt;\">\n"
-"JPEG Encoding <br><br>\n"
-"preview-out-rgb <br><br>\n"
-"Stream Left <br><br>\n"
-"Stream Right <br><br>\n"
-"IR Light</span></p></body></html>"))
-        self.PASS_LABEL.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:11pt; color:#00aa7f;\">PASS</span></p></body></html>"))
+        self.NOT_TESTED_LABEL.setText(_translate("UI_tests",
+                                                 "<html><head/><body><p align=\"center\"><span style=\" font-size:11pt; color:#aaaa00;\">Not<br>Tested</span></p></body></html>"))
+        self.FAIL_LABEL.setText(_translate("UI_tests",
+                                           "<html><head/><body><p><span style=\" font-size:11pt; color:#ff0000;\">FAIL</span></p></body></html>"))
+        self.operator_tests_label.setText(_translate("UI_tests",
+                                                     "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+                                                     "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+                                                     "p, li { white-space: pre-wrap; }\n"
+                                                     "</style></head><body style=\" font-family:\'Sans Serif\'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
+                                                     "<p align=\"right\" style=\" margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:12pt;\">\n"
+                                                     "JPEG Encoding <br><br>\n"
+                                                     "preview-out-rgb <br><br>\n"
+                                                     "Stream Left <br><br>\n"
+                                                     "Stream Right <br><br>\n"
+                                                     "IR Light</span></p></body></html>"))
+        self.PASS_LABEL.setText(_translate("UI_tests",
+                                           "<html><head/><body><p><span style=\" font-size:11pt; color:#00aa7f;\">PASS</span></p></body></html>"))
         self.logs.setTitle(_translate("UI_tests", ""))
         self.date_time_label.setText(_translate("UI_tests", "date_time: "))
         self.test_type_label.setText(_translate("UI_tests", "test_type: " + test_type))
@@ -849,16 +917,37 @@ class UiTests(object):
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
         self.print_logs(f'calib_path={calib_path}')
 
-    def print_logs(self, new_log):
+    def connect(self, f):
+        class ConnectThread(QtCore.QThread):
+            def __init__(self, func):
+                super().__init__()
+                self.func = func
+
+            def run(self):
+                self.func()
+
+        self.connectThread = ConnectThread(f)
+        self.connectThread.start()
+
+    def print_logs(self, new_log, log_level='INFO'):
         if new_log == 'clear':
             self.all_logs = ''
             return
-        self.all_logs += new_log + '<br>'
+        if log_level == 'ERROR':
+            self.all_logs += '<p style="color:red">' + new_log + '</p>'
+        elif log_level == 'WARNING':
+            self.all_logs += '<p style="color:orange">' + new_log + '</p>'
+        else:
+            self.all_logs += new_log + '<br>'
         self.logs_txt_browser.setHtml(self.MB_INIT + self.all_logs + self.MB_END)
         self.logs_txt_browser.moveCursor(QtGui.QTextCursor.End)
 
     def update_prog_bar(self, value):
-        self.prog_bar.setValue(int(value*100))
+        self.prog_bar.setValue(int(value * 100))
+
+    def show_cameras_thread(self):
+        t1 = threading.Thread(target=self.show_cameras)
+        t1.start()
 
     def show_cameras(self):
         self.test_type_label.setText('test ' + test_type)
@@ -877,8 +966,28 @@ class UiTests(object):
             self.connect_but.setText("CONNECT")
             self.connect_but.adjustSize()
             return
-        self.print_logs('clear')
-        if test_connexion():
+        # self.print_logs('clear')
+        if not self.scanning:
+            self.connexion_result = Worker(test_connexion)
+            self.connexion_result.signals.result.connect(self.connexion_slot)
+            self.connexion_result.signals.finished.connect(self.end_conn)
+            self.threadpool.start(self.connexion_result)
+            self.scanning = True
+        else:
+            self.threadpool.t
+
+    def end_conn(self):
+        # print(s)
+        print("end signal received")
+        self.scanning = False
+
+    def connexion_slot(self, signal):
+        if not signal:
+            print("Connection Fail!")
+            return
+        elif signal:
+            print("received false signal")
+            # return
             self.print_logs('Camera connected, starting tests...')
 
             # Update BL if PoE
@@ -924,10 +1033,12 @@ class UiTests(object):
             self.jpeg.show()
             if test_type != 'OAK-1':
                 location = WIDTH + prew_width + 20, 0
-                self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8, 'LEFT Preview', location)
+                self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
+                                   'LEFT Preview', location)
                 self.left.show()
                 location = WIDTH + prew_width + 20, prew_height + 80
-                self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8, 'RIGHT Preview', location)
+                self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8,
+                                    'RIGHT Preview', location)
                 self.right.show()
             self.print_logs('EEPROM backup saved at')
             self.print_logs(CALIB_BACKUP_FILE)
@@ -947,7 +1058,7 @@ class UiTests(object):
 
         else:
             print(locals())
-            self.print_logs('No camera detected, check the connexion and try again...')
+            self.print_logs('No camera detected, check the connexion and try again...', 'ERROR')
 
     def set_result(self):
         global update_res
@@ -1015,23 +1126,24 @@ class UiTests(object):
 
     def update_bootloader_impl(self):
         self.print_logs('Check bootloader')
-        deviceInfos = dai.DeviceBootloader.getAllAvailableDevices()
-        if len(deviceInfos) <= 0:
-            return (False, 'ERROR device was disconnected')
+        device_infos = dai.DeviceBootloader.getAllAvailableDevices()
+        if len(device_infos) <= 0:
+            return False, 'ERROR device was disconnected'
 
         try:
-            with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
+            with dai.DeviceBootloader(device_infos[0], allowFlashingBootloader=True) as bl:
                 self.print_logs('Starting Update')
                 self.prog_label.setText('Bootloader')
                 if test_type == 'OAK-D-PRO-POE':
                     self.print_logs('Flashing NETWORK bootloader...')
-                    return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, self.update_prog_bar)
+                    return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK,
+                                              self.update_prog_bar)
                 else:
                     return bl.flashBootloader(self.update_prog_bar)
 
         except RuntimeError as ex:
             # self.print_logs('Device communication failed, check connexions')
-            return (False, f"Device communication failed, check connexions: {ex}")
+            return False, f"Device communication failed, check connexions: {ex}"
 
     def update_bootloader(self):
         (result, message) = self.update_bootloader_impl()
@@ -1081,7 +1193,8 @@ class UiTests(object):
                 file.write(CSV_HEADER['OAK-D'] + '\n')
 
         file.write(self.depth_camera.id)
-        file.write(',' + test_type)
+        with open(calib_path) as jfile:
+            file.write(',' + jfile['productName'])
         file.write(',' + datetime.now().strftime("%Y %m %d %H:%M:%S"))
 
         if test_type in OAK_KEYS:
@@ -1129,6 +1242,7 @@ class UiTests(object):
         self.json_combo.clear()
         self.json_combo.addItems(self.jsons[self.batches_combo.currentText()])
 
+
 def signal_handler(sig, frame):
     print('Closing app')
     ui.disconnect()
@@ -1137,7 +1251,9 @@ def signal_handler(sig, frame):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Arguments for test UI')
-    parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)', default='OAK-D-PRO-POE')
+    parser.add_argument('-t', '--type', dest='camera_type',
+                        help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)',
+                        default='OAK-D-PRO-POE')
     # parser.add_argument('-b', '--batch', dest='batch', help='enter the path to batch file', required=True)
     # CALIB_JSON_FILE = path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib.json'
     CALIB_BACKUP_FILE = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib_backup.json'
@@ -1150,13 +1266,12 @@ if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
     screen = app.primaryScreen()
     rect = screen.availableGeometry()
-    prew_width = (rect.width() - WIDTH)//2 - 20
-    prew_height = (rect.height())//2 - 80
+    prew_width = (rect.width() - WIDTH) // 2 - 20
+    prew_height = (rect.height()) // 2 - 80
     print(prew_width, prew_height)
     UI_tests = QtWidgets.QMainWindow()
     ui = UiTests()
     signal.signal(signal.SIGINT, signal_handler)
-    ui.setupUi(UI_tests)
+    ui.setup_ui(UI_tests)
     UI_tests.show()
-    test_connexion()
     sys.exit(app.exec_())
