@@ -948,7 +948,8 @@ class UiTests(QtWidgets.QMainWindow):
 
             # Update BL if PoE
             if test_type == 'OAK-D-PRO-POE':
-                self.update_bootloader()
+                # self.update_bootloader()
+                pass
 
             try:
                 # # Try flashing BL for PoE
