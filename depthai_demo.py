@@ -22,10 +22,13 @@ sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str((Path(__file__).parent / "depthai_sdk" / "src").absolute()))
 
 from depthai_helpers.app_manager import App
+from depthai_helpers.arg_manager import parseArgs
+args = parseArgs()
 if __name__ == "__main__":
-    if '--app' in sys.argv:
+    # Instead of the depthai_demo, run the specified App
+    if args.app is not None:
         try:
-            app = App(appName=sys.argv[sys.argv.index('--app') + 1])
+            app = App(appName=args.app)
             app.createVenv()
             app.runApp()
             sys.exit(0)
@@ -43,7 +46,6 @@ except Exception as ex:
 
 from log_system_information import make_sys_report
 from depthai_helpers.supervisor import Supervisor
-from depthai_helpers.arg_manager import parseArgs
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.metrics import MetricManager
 from depthai_helpers.version_check import checkRequirementsVersion
@@ -53,9 +55,6 @@ from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManag
 
 class OverheatError(RuntimeError):
     pass
-
-
-args = parseArgs()
 
 if args.noSupervisor and args.guiType == "qt":
     if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
