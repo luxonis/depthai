@@ -23,7 +23,10 @@ with the file name beeing the source name (so in the above example we will creat
 As you can also see after we declare the pipeline and initialize it's sources, we must set ``xoutVideo`` to ``True`` instead of ``xout``.
 And after connecting to the device we parse through the queues and save frames to files.
 
-
-To see more about the :obj:`EncodingManager` check ``API``.
+.. autoclass:: depthai_sdk.managers.EncodingManager
+   :members:
+   :inherited-members:
+   :noindex:
+   :undoc-members:
 
 .. include::  footer-short.rst

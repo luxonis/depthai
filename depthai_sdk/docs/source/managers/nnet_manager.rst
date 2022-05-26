@@ -47,6 +47,10 @@ Mobile net
 This example shows how to use the ``MobileNetSSD`` project. The code should be almost the same as the one that we used in the above example, with the only difference being
 the blob. In this example we load the ``mobilenet-ssd`` blob and pass it to our neural network.
 
-If you wish to learn more about :obj:`NNetManager` check :ref:`DepthAI SDK API`.
+.. autoclass:: depthai_sdk.managers.NNetManager
+   :members:
+   :inherited-members:
+   :noindex:
+   :undoc-members:
 
 .. include::  footer-short.rst
