@@ -66,7 +66,7 @@ $ depthai_demo.py --help
 usage: depthai_demo.py [-h] [-cam {left,right,color}] [-vid VIDEO] [-dd] [-dnn] [-cnnp CNNPATH] [-cnn CNNMODEL] [-sh SHAVES] [-cnnsize CNNINPUTSIZE] [-rgbr {1080,2160,3040}] [-rgbf RGBFPS] [-dct DISPARITYCONFIDENCETHRESHOLD] [-lrct LRCTHRESHOLD] [-sig SIGMA] [-med {0,3,5,7}] [-lrc] [-ext] [-sub] [-dff]
                        [-scale SCALE [SCALE ...]] [-cm {AUTUMN,BONE,CIVIDIS,COOL,DEEPGREEN,HOT,HSV,INFERNO,JET,MAGMA,OCEAN,PARULA,PINK,PLASMA,RAINBOW,SPRING,SUMMER,TURBO,TWILIGHT,TWILIGHT_SHIFTED,VIRIDIS,WINTER}] [-maxd MAXDEPTH] [-mind MINDEPTH] [-sbb] [-sbbsf SBBSCALEFACTOR]
                        [-s {nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} [{nnInput,color,left,right,depth,depthRaw,disparity,disparityColor,rectifiedLeft,rectifiedRight} ...]] [--report {temp,cpu,memory} [{temp,cpu,memory} ...]] [--reportFile REPORTFILE]
-                       [-monor {400,720,800}] [-monof MONOFPS] [-cb CALLBACK] [--openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [--app APP] [--count COUNTLABEL] [-dev DEVICEID] [-bandw {auto,low,high}] [-gt {auto,qt,cv}] [-usbs {usb2,usb3}] [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT]
+                       [-monor {400,720,800}] [-monof MONOFPS] [-cb CALLBACK] [--openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}] [-app APP] [--count COUNTLABEL] [-dev DEVICEID] [-bandw {auto,low,high}] [-gt {auto,qt,cv}] [-usbs {usb2,usb3}] [-enc ENCODE [ENCODE ...]] [-encout ENCODEOUTPUT]
                        [-xls XLINKCHUNKSIZE] [-poeq POEQUALITY] [-camo CAMERAORIENTATION [CAMERAORIENTATION ...]] [--cameraControlls] [--cameraExposure CAMERAEXPOSURE [CAMERAEXPOSURE ...]] [--cameraSensitivity CAMERASENSITIVITY [CAMERASENSITIVITY ...]]
                        [--cameraSaturation CAMERASATURATION [CAMERASATURATION ...]] [--cameraContrast CAMERACONTRAST [CAMERACONTRAST ...]] [--cameraBrightness CAMERABRIGHTNESS [CAMERABRIGHTNESS ...]] [--cameraSharpness CAMERASHARPNESS [CAMERASHARPNESS ...]] [--skipVersionCheck] [--noSupervisor] [--sync] [--debug]
 
@@ -135,7 +135,7 @@ optional arguments:
                         Path to callbacks file to be used. Default: <project_root>/callbacks.py
   --openvinoVersion {2020_3,2020_4,2021_1,2021_2,2021_3,2021_4}
                         Specify which OpenVINO version to use in the pipeline
-  --app APP             Specify which app to run instead of the demo
+  -app APP, --app APP   Specify which app to run instead of the demo
   --count COUNTLABEL    Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).
   -dev DEVICEID, --deviceId DEVICEID
                         DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.
