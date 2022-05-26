@@ -31,6 +31,11 @@ Output of the above code should look something like this:
 .. image:: /_static/images/camera_previews.png
 
 We get frames from all defined sources.
-To see more about the :obj:`PreviewManager` check :ref:`DepthAI SDK API`.
+
+.. autoclass:: depthai_sdk.managers.PreviewManager
+   :members:
+   :inherited-members:
+   :noindex:
+   :undoc-members:
 
 .. include::  footer-short.rst

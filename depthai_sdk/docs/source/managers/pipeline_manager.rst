@@ -30,10 +30,18 @@ As you can see above we also added another argument to the color camera stream, 
 ``xout`` will help us in the next tutorial where we will learn about the :obj:`PreviewManager`.
 In the above example we also declared a ``Depth`` source. We gave it ``useDepth`` as an argument which will create a queue for depth frames. If we wish to use a different queue for depth,
 we can change this argument to:
+
 - ``useDisparity`` to use disparity frames,
 - ``useRectifiedLeft`` for rectified left frames,
 - and ``useRectifiedRigh`` for rectified right frames.
+
 Of course these are not the only arguments that you can use in the :obj:`PipelineManager`.
-To see all functions and arguments that the manager can contain check :ref:`DepthAI SDK API`.
+
+
+.. autoclass:: depthai_sdk.managers.PipelineManager
+   :members:
+   :inherited-members:
+   :noindex:
+   :undoc-members:
 
 .. include::  footer-short.rst
