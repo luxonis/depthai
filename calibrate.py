@@ -54,7 +54,7 @@ def parse_args():
 
     Only run image processing only with same board setup. Requires a set of saved capture images:
     python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM -m process
-    
+
     Delete all existing images before starting image capture:
     python3 calibrate.py -i delete
     '''
@@ -540,7 +540,7 @@ class Main:
                 left = dai.CameraBoardSocket.RIGHT
                 right = dai.CameraBoardSocket.LEFT
 
-            calibration_handler = dai.CalibrationHandler()
+            calibration_handler = self.device.readCalibration()
             calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
             calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
@@ -571,7 +571,7 @@ class Main:
                     self.board_config['board_config']['left_to_right_distance_cm'] - self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
                 calibration_handler.setCameraExtrinsics(
                     right, dai.CameraBoardSocket.RGB, calibData[7], calibData[8], measuredTranslation)
-            
+
             resImage = None
             if not self.device.isClosed():
                 dev_info = self.device.getDeviceInfo()
@@ -579,7 +579,7 @@ class Main:
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
                 is_write_succesful = False
-                
+
                 try:
                     is_write_succesful = self.device.flashCalibration(
                         calibration_handler)
