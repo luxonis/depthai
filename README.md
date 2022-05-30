@@ -98,7 +98,7 @@ optional arguments:
   -sig SIGMA, --sigma SIGMA
                         Sigma value for Bilateral Filter applied on depth. Default: 0
   -med {0,3,5,7}, --stereoMedianSize {0,3,5,7}
-                        Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: 7
+                        Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: 5
   -lrc, --stereoLrCheck
                         Enable stereo 'Left-Right check' feature.
   -ext, --extendedDisparity

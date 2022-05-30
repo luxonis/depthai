@@ -265,14 +265,14 @@ class PipelineManager:
         if irFlood is not None:
             device.setIrFloodLightBrightness(irFlood)
 
-    def createDepth(self, dct=245, median=dai.MedianFilter.KERNEL_7x7, sigma=0, lr=False, lrcThreshold=4, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False, runtimeSwitch=False, alignment=None):
+    def createDepth(self, dct=245, median=None, sigma=0, lr=True, lrcThreshold=5, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False, runtimeSwitch=False, alignment=None):
         """
         Creates :obj:`depthai.node.StereoDepth` node based on specified attributes
 
         Args:
             dct (int, Optional): Disparity Confidence Threshold (0..255). The less confident the network is, the more empty values
                 are present in the depth map.
-            median (depthai.MedianFilter, Optional): Median filter to be applied on the depth, use with :obj:`depthai.MedianFilter.MEDIANOFF` to disable median filtering
+            median (depthai.MedianFilter, Optional): Median filter to be applied on the depth, use with :obj:`depthai.MedianFilter.MEDIAN_OFF` to disable median filtering
             sigma (int, Optional): Sigma value for bilateral filter (0..65535). If set to :code:`0`, the filter will be disabled.
             lr (bool, Optional): Set to :code:`True` to enable Left-Right Check
             lrcThreshold (int, Optional): Sets the Left-Right Check threshold value (0..10)
@@ -291,7 +291,8 @@ class PipelineManager:
         self.nodes.stereo = self.pipeline.createStereoDepth()
 
         self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
-        self.nodes.stereo.initialConfig.setMedianFilter(median)
+        if median is not None:
+            self.nodes.stereo.initialConfig.setMedianFilter(median)
         self.nodes.stereo.initialConfig.setBilateralFilterSigma(sigma)
         self.nodes.stereo.initialConfig.setLeftRightCheckThreshold(lrcThreshold)
 
