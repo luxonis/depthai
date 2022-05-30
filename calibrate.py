@@ -310,6 +310,13 @@ class Main:
         raise Exception(
             "Calibration failed, Camera Might be held upside down. start again!!")
 
+    # Check if the calibration on the device is empty
+    def empty_calibration(self, calib: dai.CalibrationHandler):
+        data = calib.getEepromData()
+        for attr in ["boardName", "boardRev"]:
+            if getattr(data, attr): return False
+        return True
+
     def capture_images(self):
         finished = False
         capturing = False
@@ -477,7 +484,7 @@ class Main:
                         finished = True
                         cv2.destroyAllWindows()
                         break
-            
+
             if not self.args.disableRgb:
                 frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
@@ -494,7 +501,7 @@ class Main:
                     start_timer = False
                     capturing = True
                     print('Statrt capturing...')
-                
+
                 image_shape = combine_img.shape
                 cv2.putText(combine_img, str(timer),
                         (image_shape[1]//2, image_shape[0]//2), font,
@@ -541,7 +548,10 @@ class Main:
                 right = dai.CameraBoardSocket.LEFT
 
             calibration_handler = self.device.readCalibration()
-            calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+
+            # Set board name / revision only if calibration is empty
+            if self.empty_calibration(calibration_handler):
+                calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
             calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
             calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
@@ -574,8 +584,7 @@ class Main:
 
             resImage = None
             if not self.device.isClosed():
-                dev_info = self.device.getDeviceInfo()
-                mx_serial_id = dev_info.getMxId()
+                mx_serial_id = self.device.getDeviceInfo().getMxId()
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
                 is_write_succesful = False
@@ -604,7 +613,7 @@ class Main:
                     cv2.putText(resImage, text, (10, 300),
                                 font, 2, (0, 0, 0), 2)
             else:
-                calib_dest_path = dest_path + '/depthai_calib.json'
+                # calib_dest_path = dest_path + '/depthai_calib.json'
                 # calibration_handler.eepromToJsonFile(calib_dest_path)
                 resImage = create_blank(900, 512, rgb_color=red)
                 text = "Calibratin succesful. " + str(epiploar_error)
