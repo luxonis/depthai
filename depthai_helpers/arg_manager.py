@@ -77,7 +77,7 @@ def parseArgs():
                         help="Left right check threshold, used for depth measurement. Default: %(default)s")
     parser.add_argument("-sig", "--sigma", default=0, type=checkRange(0, 250),
                         help="Sigma value for Bilateral Filter applied on depth. Default: %(default)s")
-    parser.add_argument("-med", "--stereoMedianSize", default=7, type=int, choices=[0, 3, 5, 7],
+    parser.add_argument("-med", "--stereoMedianSize", default=5, type=int, choices=[0, 3, 5, 7],
                         help="Disparity / depth median filter kernel size (N x N) . 0 = filtering disabled. Default: %(default)s")
     parser.add_argument('-dlrc', '--disableStereoLrCheck', action="store_false", dest="stereoLrCheck",
                         help="Disable stereo 'Left-Right check' feature.")
