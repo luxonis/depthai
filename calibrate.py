@@ -582,11 +582,11 @@ class Main:
                 is_write_succesful = False
                 
                 try:
-                    is_write_succesful = self.device.flashCalibration(
+                    is_write_succesful = self.device.flashCalibration2(
                         calibration_handler)
                 except:
                     print("Writing in except...")
-                    is_write_succesful = self.device.flashCalibration(
+                    is_write_succesful = self.device.flashCalibration2(
                         calibration_handler)
                 if is_write_succesful:
                     resImage = create_blank(900, 512, rgb_color=green)
