@@ -540,8 +540,9 @@ class Main:
                 left = dai.CameraBoardSocket.RIGHT
                 right = dai.CameraBoardSocket.LEFT
 
-            calibration_handler = dai.CalibrationHandler()
-            calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+            calibration_handler = self.device.readCalibration2()
+
+            # calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
             calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
             calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
