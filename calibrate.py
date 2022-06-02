@@ -429,16 +429,20 @@ class Main:
         self.display_name = "left + right + rgb"
         syncModule = None 
         if not self.args.disableRgb:
-            syncModule = HostSync(3, 500)
+            syncModule = HostSync(3, 20)
         else:
-            syncModule = HostSync(2, 500)
+            syncModule = HostSync(2, 20)
 
         # with self.get_pipeline() as pipeline:
         while not finished:
             current_left  = self.left_camera_queue.get()
             current_right = self.right_camera_queue.get()
+            syncModule.add_msg('left', current_left, current_left.getTimestamp())
+            syncModule.add_msg('right', current_right, current_right.getTimestamp())
+
             if not self.args.disableRgb:
                 current_color = self.rgb_camera_queue.get()
+                syncModule.add_msg('left', current_color, current_color.getTimestamp())
             else:
                 current_color = None
             # recent_left = left_frame.getCvFrame()
