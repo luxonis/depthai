@@ -1,8 +1,8 @@
 {
     "board_config":
     {
-        "name": "OAK-D-PRO-W",
-        "revision": "R3M1E3",
+        "name": "OAK-D Pro-W PoE",
+        "revision": "R3M2E2",
         "swap_left_and_right_cameras": true,
         "left_fov_deg": 127.0,
         "rgb_fov_deg": 108.0,

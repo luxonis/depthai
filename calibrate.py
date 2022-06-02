@@ -340,10 +340,10 @@ class Main:
         self.display_name = "left + right + rgb"
         # with self.get_pipeline() as pipeline:
         while not finished:
-            current_left  = self.left_camera_queue.tryGet()
-            current_right = self.right_camera_queue.tryGet()
+            current_left  = self.left_camera_queue.getAll()[-1]
+            current_right = self.right_camera_queue.getAll()[-1]
             if not self.args.disableRgb:
-                current_color = self.rgb_camera_queue.tryGet()
+                current_color = self.rgb_camera_queue.getAll()[-1]
             else:
                 current_color = None
             # recent_left = left_frame.getCvFrame()
@@ -402,7 +402,7 @@ class Main:
                     print(lrgb_time)
                     print(lr_time)
 
-                if capturing and lrgb_time < 40000 and lr_time < 30000:
+                if capturing and lrgb_time < 506202 and lr_time < 500000:
                     print("Capturing  ------------------------")
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
@@ -416,6 +416,8 @@ class Main:
                         captured_right = self.parse_frame(frame, packet[0])
                         tried_right = True
                         captured_right_frame = frame.copy()
+                # else:
+
 
 
                 has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
