@@ -12,6 +12,7 @@ import queue
 import cv2
 import depthai as dai
 import numpy as np
+from sympy import false
 
 import depthai_helpers.calibration_utils as calibUtils
 
@@ -241,10 +242,10 @@ class Main:
             "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!") 
 
         self.device.startPipeline(pipeline)"""
-        self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
-        self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
+        self.left_camera_queue = self.device.getOutputQueue("left", 10, False)
+        self.right_camera_queue = self.device.getOutputQueue("right", 10, False)
         if not self.args.disableRgb:
-            self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
+            self.rgb_camera_queue = self.device.getOutputQueue("rgb", 10, False)
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
@@ -270,7 +271,7 @@ class Main:
 
     def create_pipeline(self):
         pipeline = dai.Pipeline()
-
+        pipeline.setXLinkChunkSize(0)
         cam_left = pipeline.createMonoCamera()
         cam_right = pipeline.createMonoCamera()
 
@@ -294,10 +295,14 @@ class Main:
 
         xout_left.setStreamName("left")
         cam_left.out.link(xout_left.input)
-
+        xout_left.input.setBlocking(False)
+        xout_left.input.setQueueSize(1)
+        
         xout_right.setStreamName("right")
         cam_right.out.link(xout_right.input)
-
+        xout_right.input.setBlocking(False)
+        xout_right.input.setQueueSize(1)
+        
         if not self.args.disableRgb:
             rgb_cam = pipeline.createColorCamera()
             rgb_cam.setResolution(
@@ -311,6 +316,8 @@ class Main:
             xout_rgb_isp = pipeline.createXLinkOut()
             xout_rgb_isp.setStreamName("rgb")
             rgb_cam.isp.link(xout_rgb_isp.input)        
+            xout_rgb_isp.input.setBlocking(False)
+            xout_rgb_isp.input.setQueueSize(1)
 
         return pipeline
 
