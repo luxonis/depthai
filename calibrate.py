@@ -6,6 +6,8 @@ import traceback
 from argparse import ArgumentParser
 from pathlib import Path
 import time
+from datetime import datetime, timedelta
+import queue
 
 import cv2
 import depthai as dai
@@ -18,6 +20,86 @@ debug = False
 red = (255, 0, 0)
 green = (0, 255, 0)
 
+def get_seq(packet):
+    return packet.getSequenceNum()
+
+""" class PairingSystem:
+    allowed_instances = [0, 1, 2]  # Center (0) & Left (1) & Right (2)
+
+    def __init__(self):
+        self.seq_packets = {}
+        self.last_paired_seq = None
+
+    def add_packet(self, packet):
+        if packet is not None and packet.getInstanceNum() in self.allowed_instances:
+            seq_key = get_seq(packet)
+            self.seq_packets[seq_key] = {
+                **self.seq_packets.get(seq_key, {}),
+                packet.getInstanceNum(): packet
+            }
+
+    def get_pairs(self):
+        results = []
+        for key in list(self.seq_packets.keys()):
+            if has_keys(self.seq_packets[key], self.allowed_instances):
+                results.append(self.seq_packets[key])
+                self.last_paired_seq = key
+        if len(results) > 0:
+            self.collect_garbage()
+        return results
+
+    def collect_garbage(self):
+        for key in list(self.seq_packets.keys()):
+            if key <= self.last_paired_seq:
+                del self.seq_packets[key] """
+
+class HostSync:
+    def __init__(self, arraySize, deltaMilliSec):
+        self.arrays = {}
+        self.arraySize = arraySize
+        self.recentFrameTs = None
+        self.deltaMilliSec = timedelta(milliseconds=deltaMilliSec)
+        # self.synced = queue.Queue()
+
+    def remove(self, t1):
+            return timedelta(milliseconds=500) < (self.recentFrameTs - t1)
+
+    def add_msg(self, name, data, ts):
+        if name not in self.arrays:
+            self.arrays[name] = []
+        # Add msg to array
+        self.arrays[name].append({'data': data, 'timestamp': ts})
+        if self.recentFrameTs == None or self.recentFrameTs < ts:
+            self.recentFrameTs = ts
+
+        for name, arr in self.arrays.items():
+            for i, obj in enumerate(arr):
+                if self.remove(obj['timestamp']):
+                    arr.remove(obj)
+                else: break
+    
+        
+    def get_synced(self):
+        synced = {}
+    
+        for name, arr in self.arrays.items():
+            for i, obj in enumerate(arr):
+                time_diff = abs(obj['timestamp'] - self.recentFrameTs)
+                # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
+                # time difference is below 20ms, it's considered as synced
+                if time_diff < self.deltaMilliSec:
+                    synced[name] = obj['data']
+                    # print(f"{name}: {i}/{len(arr)}")
+                    break
+
+        if len(synced) == self.arraySize:
+            for name, arr in self.arrays.items():
+                for i, obj in enumerate(arr):
+                    if self.remove(obj['timestamp']):
+                        arr.remove(obj)
+                    else: break
+            return synced
+        return False
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
@@ -338,12 +420,18 @@ class Main:
         prev_time = None
         curr_time = None
         self.display_name = "left + right + rgb"
+        syncModule = None 
+        if not self.args.disableRgb:
+            syncModule = HostSync(3, 500)
+        else:
+            syncModule = HostSync(2, 500)
+
         # with self.get_pipeline() as pipeline:
         while not finished:
-            current_left  = self.left_camera_queue.getAll()[-1]
-            current_right = self.right_camera_queue.getAll()[-1]
+            current_left  = self.left_camera_queue.get()
+            current_right = self.right_camera_queue.get()
             if not self.args.disableRgb:
-                current_color = self.rgb_camera_queue.getAll()[-1]
+                current_color = self.rgb_camera_queue.get()
             else:
                 current_color = None
             # recent_left = left_frame.getCvFrame()
