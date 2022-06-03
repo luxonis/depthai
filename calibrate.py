@@ -86,6 +86,7 @@ class HostSync:
         for name, arr in self.arrays.items():
             for i, obj in enumerate(arr):
                 time_diff = abs(obj['timestamp'] - self.recentFrameTs)
+                print("Time diff for {0} is {1} milliseconds".format(name ,time_diff.total_seconds() * 1000))
                 # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
                 # time difference is below 20ms, it's considered as synced
                 if time_diff < self.deltaMilliSec:
@@ -442,25 +443,30 @@ class Main:
 
             if not self.args.disableRgb:
                 current_color = self.rgb_camera_queue.get()
-                syncModule.add_msg('left', current_color, current_color.getTimestamp())
+                syncModule.add_msg('rgb', current_color, current_color.getTimestamp())
             else:
                 current_color = None
             # recent_left = left_frame.getCvFrame()
             # recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
-            if not current_left is None:
-                recent_left = current_left
-            if not current_right is None:
-                recent_right = current_right
-            if not current_color is None:
-                recent_color = current_color
-
-            if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
+            messagesReceived = False
+            messagesReceived = syncModule.get_synced()
+            if messagesReceived:
+                recent_frames = messagesReceived
+            else:
                 print("Continuing...")
                 continue
 
-            recent_frames = [('left', recent_left), ('right', recent_right)]
+            recent_left = recent_frames['left']
+            recent_right = recent_frames['right']
             if not self.args.disableRgb:
-                recent_frames.append(('rgb', recent_color))
+                recent_color = recent_frames['rgb']
+
+            # if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
+            #     print("Continuing...")
+            #     continue
+
+            # if not self.args.disableRgb:
+            #     recent_frames.append(('rgb', recent_color))
 
             key = cv2.waitKey(1)
             if key == 27 or key == ord("q"):
@@ -477,11 +483,12 @@ class Main:
             # left_frame = recent_left.getCvFrame()
             # rgb_frame = recent_color.getCvFrame()
 
-            for packet in recent_frames:
-                frame = packet[1].getCvFrame()
+            for key, packet in recent_frames.items():
+
+                frame = packet.getCvFrame()
                 # print(packet[0])
                 # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                if packet[0] == 'rgb':
+                if key == 'rgb':
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 # print(frame.shape)
                 if self.polygons is None:
@@ -503,15 +510,15 @@ class Main:
 
                 if capturing and lrgb_time < 506202 and lr_time < 500000:
                     print("Capturing  ------------------------")
-                    if packet[0] == 'left' and not tried_left:
+                    if key == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
                         tried_left = True
                         captured_left_frame = frame.copy()
-                    elif packet[0] == 'rgb' and not tried_color and not self.args.disableRgb:
+                    elif key == 'rgb' and not tried_color and not self.args.disableRgb:
                         captured_color = self.parse_frame(frame, packet[0])
                         tried_color = True
                         captured_color_frame = frame.copy()
-                    elif packet[0] == 'right' and not tried_right:
+                    elif c == 'right' and not tried_right:
                         captured_right = self.parse_frame(frame, packet[0])
                         tried_right = True
                         captured_right_frame = frame.copy()
@@ -519,8 +526,8 @@ class Main:
 
 
 
-                has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
-                    (packet[0] == "rgb" and captured_color)
+                # has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
+                #     (packet[0] == "rgb" and captured_color)
 
                 if self.args.invert_v and self.args.invert_h:
                     frame = cv2.flip(frame, -1)
@@ -532,7 +539,7 @@ class Main:
                 cv2.putText(
                     frame,
                     "Polygon Position: {}. Captured {} of {} {} images".format(
-                        self.current_polygon + 1, self.images_captured, self.total_images, packet[0]
+                        self.current_polygon + 1, self.images_captured, self.total_images, key
                     ),
                     (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0)
                 )
