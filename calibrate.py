@@ -391,18 +391,18 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
 
-                if debug:
-                    print("Timestamp difference ---> l & rgb")
+                # if debug:
+                #     print("Timestamp difference ---> l & rgb")
                 lrgb_time = 0
                 if not self.args.disableRgb:
-                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
-                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
+                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
 
                 if debug:
-                    print(lrgb_time)
-                    print(lr_time)
+                    print(f'Timestamp difference between l & RGB ---> {lrgb_time} in microseconds')
+                    print(f'Timestamp difference between l & r ---> {lr_time} in microseconds')
 
-                if capturing and lrgb_time < 40000 and lr_time < 30000:
+                if capturing and lrgb_time < 50 and lr_time < 30:
                     print("Capturing  ------------------------")
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
@@ -467,8 +467,6 @@ class Main:
                     captured_right = False
                     captured_color = False
                 elif tried_left and tried_right and tried_color:
-                     #TODO(Sachin): add condition for RGB too and when break happens and if RGB 
-                    # is not received it will throw an error. add an exception to it
                     self.show_failed_capture_frame()
                     capturing = False
                     tried_left = False
