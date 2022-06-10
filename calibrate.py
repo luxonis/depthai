@@ -98,6 +98,9 @@ def parse_args():
     parser.add_argument("-cd", "--captureDelay", default=5, type=int,
                         required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
     parser.add_argument("-d", "--debug", default=False, action="store_true", help="Enable debug logs.")
+    parser.add_argument("-fac", "--factoryCalibration", default=False, action="store_true",
+                        help="Enable writing to Factory Calibration.")
+    
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -310,6 +313,13 @@ class Main:
         raise Exception(
             "Calibration failed, Camera Might be held upside down. start again!!")
 
+
+    def empty_calibration(self, calib: dai.CalibrationHandler):
+        data = calib.getEepromData()
+        for attr in ["boardName", "boardRev"]:
+            if getattr(data, attr): return False
+        return True
+
     def capture_images(self):
         finished = False
         capturing = False
@@ -381,18 +391,18 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
 
-                if debug:
-                    print("Timestamp difference ---> l & rgb")
+                # if debug:
+                #     print("Timestamp difference ---> l & rgb")
                 lrgb_time = 0
                 if not self.args.disableRgb:
-                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
-                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
+                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
 
                 if debug:
-                    print(lrgb_time)
-                    print(lr_time)
+                    print(f'Timestamp difference between l & RGB ---> {lrgb_time} in microseconds')
+                    print(f'Timestamp difference between l & r ---> {lr_time} in microseconds')
 
-                if capturing and lrgb_time < 40000 and lr_time < 30000:
+                if capturing and lrgb_time < 50 and lr_time < 30:
                     print("Capturing  ------------------------")
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
@@ -457,8 +467,6 @@ class Main:
                     captured_right = False
                     captured_color = False
                 elif tried_left and tried_right and tried_color:
-                     #TODO(Sachin): add condition for RGB too and when break happens and if RGB 
-                    # is not received it will throw an error. add an exception to it
                     self.show_failed_capture_frame()
                     capturing = False
                     tried_left = False
@@ -540,8 +548,12 @@ class Main:
                 left = dai.CameraBoardSocket.RIGHT
                 right = dai.CameraBoardSocket.LEFT
 
-            calibration_handler = dai.CalibrationHandler()
-            calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+            calibration_handler = self.device.readCalibration()
+
+            # calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+               # Set board name / revision only if calibration is empty
+            if self.empty_calibration(calibration_handler):
+                calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
             calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
             calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
@@ -574,19 +586,24 @@ class Main:
             
             resImage = None
             if not self.device.isClosed():
-                dev_info = self.device.getDeviceInfo()
-                mx_serial_id = dev_info.getMxId()
+                mx_serial_id = self.device.getDeviceInfo().getMxId()
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
                 is_write_succesful = False
                 
                 try:
+                    if self.args.factoryCalibration:
+                        self.device.flashFactoryCalibration(calibration_handler)
                     is_write_succesful = self.device.flashCalibration(
                         calibration_handler)
                 except:
                     print("Writing in except...")
+
+                    if self.args.factoryCalibration:
+                        self.device.flashFactoryCalibration(calibration_handler)
                     is_write_succesful = self.device.flashCalibration(
                         calibration_handler)
+
                 if is_write_succesful:
                     resImage = create_blank(900, 512, rgb_color=green)
                     text = "Calibration Succesful with"
@@ -603,8 +620,10 @@ class Main:
                     text = "Try recalibrating !!"
                     cv2.putText(resImage, text, (10, 300),
                                 font, 2, (0, 0, 0), 2)
+
+
             else:
-                calib_dest_path = dest_path + '/depthai_calib.json'
+                # calib_dest_path = dest_path + '/depthai_calib.json'
                 # calibration_handler.eepromToJsonFile(calib_dest_path)
                 resImage = create_blank(900, 512, rgb_color=red)
                 text = "Calibratin succesful. " + str(epiploar_error)
