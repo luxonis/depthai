@@ -58,3 +58,4 @@ resources/*.json
 
 # Virtual environment
 virtualenv/
+venv/

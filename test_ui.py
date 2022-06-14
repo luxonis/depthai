@@ -1,3 +1,5 @@
+import pathlib
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 import sys
 from datetime import datetime
@@ -9,9 +11,20 @@ import argparse
 import os
 # import blobconverter
 import signal
+import json, time
+from pathlib import Path
+import cv2
+
+# Try setting native cv2 image format, otherwise RGB888
+colorMode = QtGui.QImage.Format_RGB888
+try:
+    colorMode = QtGui.QImage.Format_BGR888
+except:
+    colorMode = QtGui.QImage.Format_RGB888
 
 FPS = 10
 
+BATCH_DIR = Path(__file__).resolve().parent / 'batch'
 
 test_result = {
     'usb3_res': '',
@@ -22,11 +35,14 @@ test_result = {
     'left_cam_res': '',
     'right_cam_res': '',
     'left_strm_res': '',
-    'right_strm_res': ''
+    'right_strm_res': '',
+    'eeprom_data': '',
+    'nor_flash_res': '',
 }
 OAK_KEYS = {
     'OAK-1': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res'],
-    'OAK-D': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res', 'left_cam_res', 'right_cam_res','left_strm_res', 'right_strm_res']
+    'OAK-D': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res', 'left_cam_res', 'right_cam_res','left_strm_res', 'right_strm_res'],
+    'OAK-D-PRO-POE': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res', 'left_cam_res', 'right_cam_res','left_strm_res', 'right_strm_res', 'eeprom_data', 'nor_flash_res'],
 }
 
 operator_tests = {
@@ -39,7 +55,8 @@ operator_tests = {
 OP_OAK_KEYS = {
     'OAK-1': ['jpeg_enc', 'prew_out_rgb'],
     'OAK-D': ['jpeg_enc', 'prew_out_rgb', 'left_strm', 'right_strm'],
-    'OAK-D-PRO': ['jpeg_enc', 'prew_out_rgb', 'left_strm', 'right_strm', 'ir_light']
+    'OAK-D-PRO': ['jpeg_enc', 'prew_out_rgb', 'left_strm', 'right_strm', 'ir_light'],
+    'OAK-D-PRO-POE': ['jpeg_enc', 'prew_out_rgb', 'left_strm', 'right_strm', 'ir_light'],
 }
 
 
@@ -66,6 +83,7 @@ CSV_HEADER = {
     'OAK-1': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","JPEG Encoding Operator","RGB Encoding Operator"',
     'OAK-D': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator"',
     'OAK-D-PRO': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator","IR Light"',
+    'OAK-D-PRO-POE': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","Left camera connect","Right camera connect","Left Stream","Right Stream","EEPROM DATA","NOR FLASH","RGB Stream Operator","JPEG Encoding Operator","Left Stream Operator","Right Stream Operator","IR Light"',
 }
 
 
@@ -100,11 +118,38 @@ class DepthAICamera():
         self.camRgb.setPreviewSize(1920, 1080)
         self.camRgb.setPreviewKeepAspectRatio(True)
         self.camRgb.setInterleaved(False)
-        self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
+        self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         self.camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
         self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         self.camRgb.preview.link(self.xoutRgb.input)
         self.camRgb.setFps(FPS)
+
+        # # TMP TMP TMP - IMU update simulation
+        # script = self.pipeline.create(dai.node.Script)
+        # script.setScript("""
+        #     import time
+
+        #     status = False
+
+        #     if status:
+        #         progress = 3
+        #         while progress <= 100:
+        #             node.warn(f'IMU firmware update status: {progress}%')
+        #             progress += 1.5
+        #             time.sleep(0.06)
+        #         time.sleep(1)
+        #         node.info("IMU firmware update succesful!");
+        #     else:
+        #         time.sleep(2)
+        #         node.error("IMU firmware update failed. Your board likely doesn't have IMU!")
+        #         time.sleep(5)
+        # """)
+
+        # Add IMU to force FW update
+        self.imu = self.pipeline.create(dai.node.IMU)
+        self.imu.enableFirmwareUpdate(True);
+        self.imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
+
 
         self.videoEnc = self.pipeline.create(dai.node.VideoEncoder)
         self.camRgb.video.link(self.videoEnc.input)
@@ -130,12 +175,43 @@ class DepthAICamera():
             self.camRight.out.link(self.xoutRight.input)
             self.camRight.setFps(10)
 
-        self.device = dai.Device(self.pipeline)
+        usb_speed = dai.UsbSpeed.SUPER
+        if test_type == 'OAK-D-PRO-POE':
+            usb_speed = dai.UsbSpeed.HIGH
 
-        if test_type == 'OAK-D-PRO':
+        self.device = dai.Device(dai.OpenVINO.VERSION_2021_4, usb_speed)
+
+        # Check cameras, if center is smaller, modify all to be same (all cams OV case)
+        cams = self.device.getConnectedCameraProperties()
+        for cam in cams:
+            if cam.socket == dai.CameraBoardSocket.CENTER:
+                print(f'Center camera w/h: ({cam.width}, {cam.height})')
+                if cam.height == 800:
+                    self.camRgb.setPreviewSize(cam.width, cam.height)
+                    self.camRgb.setVideoSize(cam.width, cam.height)
+                    self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+                    if test_type != 'OAK-1':
+                        self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+                        self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+                elif cam.height == 720:
+                    self.camRgb.setPreviewSize(cam.width, cam.height)
+                    self.camRgb.setVideoSize(cam.width, cam.height)
+                    self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_720_P)
+                    if test_type != 'OAK-1':
+                        self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+                        self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
+
+        self.device.startPipeline(self.pipeline)
+
+        if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
             try:
-                self.device.setIrLaserDotProjectorBrightness(100)
-                self.device.setIrFloodLightBrightness(250)
+                success = True
+                success = success and self.device.setIrLaserDotProjectorBrightness(100)
+                print(f'set laser dot, result {success}')
+                success = success and self.device.setIrFloodLightBrightness(250)
+                print(f'set flood light, result {success}')
+                if not success:
+                    raise Exception
             except:
                 print('IR sensor not working!')
 
@@ -164,6 +240,10 @@ class DepthAICamera():
                 test_result['usb3_res'] = 'FAIL'
         except RuntimeError:
             test_result['usb3_res'] = 'FAIL'
+
+        if test_type == 'OAK-D-PRO-POE':
+            test_result['usb3_res'] = 'SKIP'
+
         self.start_queue()
         self._rgb_pass = 0
         self._left_pass = 0
@@ -211,6 +291,8 @@ class DepthAICamera():
                     in_rgb = self.qRgb.tryGet()
                     if in_rgb is not None:
                         image = in_rgb.getCvFrame()
+                        if colorMode == QtGui.QImage.Format_RGB888:
+                            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     if test_result['prew_out_rgb_res'] == '':
                         if (self._rgb_timer > self._FRAME_WAIT) or (self._rgb_timer > self._FRAME_WAIT and self._rgb_pass == 0):
                             test_result['prew_out_rgb_res'] = 'FAIL'
@@ -280,17 +362,99 @@ class DepthAICamera():
         return True, image
 
     def flash_eeprom(self):
-        device_calib = self.device.readCalibration()
-        device_calib.eepromToJsonFile(CALIB_BACKUP_FILE)
-        print('Calibraton Data on the device is backed up at: ', CALIB_BACKUP_FILE, sep='\n')
-        calib_data = dai.CalibrationHandler(calib_path)
+        eepromDataJson = None
+        try:
+            device_calib = self.device.readCalibration()
+            device_calib.eepromToJsonFile(CALIB_BACKUP_FILE)
+            print('Calibraton Data on the device is backed up at: ', CALIB_BACKUP_FILE, sep='\n')
 
-        status = self.device.flashCalibration(calib_data)
-        if status:
-            print('Calibration Flash Successful')
-            return True
-        print('Calibration Flash Failed!!!')
-        return False
+            # Opening JSON file
+            with open(calib_path) as jfile:
+                eepromDataJson = json.load(jfile)
+            if eepromDataJson is None:
+                return False
+
+            eepromDataJson['batchTime'] = int(time.time())
+
+            calib_data = dai.CalibrationHandler.fromJson(eepromDataJson)
+
+            # Flash both factory & user areas
+            self.device.flashFactoryCalibration(calib_data)
+            self.device.flashCalibration2(calib_data)
+        except Exception as ex:
+            errorMsg = f'Calibration Flash Failed: {ex}'
+            print(errorMsg)
+            return (False, errorMsg, eepromDataJson)
+
+        print('Calibration Flash Successful')
+        return (True, '', eepromDataJson)
+
+
+calib_path = BATCH_DIR
+class Ui_CalibrateSelect(QtWidgets.QDialog):
+    def __init__(self):
+        global calib_path
+        super().__init__()
+        x = os.walk(BATCH_DIR)
+        print(x)
+        self.batches = []
+        self.jsons = {}
+        for x in os.walk(BATCH_DIR):
+            self.batches = sorted(x[1])
+            break
+        for batch in self.batches:
+            for json in os.walk(BATCH_DIR/batch):
+                self.jsons[batch] = sorted(json[2])
+                print(json)
+
+        self.batch_combo = QtWidgets.QComboBox(self)
+        self.batch_combo.setGeometry(QtCore.QRect(100, 20, 141, 32))
+        self.batch_combo.addItems(self.batches)
+        self.batch_combo.currentTextChanged.connect(self.batches_changed)
+        self.json_combo = QtWidgets.QComboBox(self)
+        self.json_combo.setGeometry(QtCore.QRect(100, 70, 261, 32))
+        self.json_combo.addItems(self.jsons[self.batches[0]])
+        self.json_combo.currentTextChanged.connect(self.json_changed)
+
+        self.setObjectName("CalibrateSelect")
+        self.resize(386, 192)
+        self.buttonBox = QtWidgets.QDialogButtonBox(self)
+        self.buttonBox.setGeometry(QtCore.QRect(70, 130, 191, 32))
+        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
+        self.buttonBox.setObjectName("buttonBox")
+        self.batch_label = QtWidgets.QLabel(self)
+        self.batch_label.setGeometry(QtCore.QRect(10, 20, 51, 27))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.batch_label.setFont(font)
+        self.batch_label.setObjectName("batch_label")
+        self.json_label = QtWidgets.QLabel(self)
+        self.json_label.setGeometry(QtCore.QRect(10, 70, 77, 27))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        self.json_label.setFont(font)
+        self.json_label.setObjectName("json_label")
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+        QtCore.QMetaObject.connectSlotsByName(self)
+
+        _translate = QtCore.QCoreApplication.translate
+        self.batch_label.setText(_translate("CalibrateSelect", "Batch"))
+        self.json_label.setText(_translate("CalibrateSelect", "JSON file"))
+        self.setWindowTitle(_translate("CalibrateSelect", "Dialog"))
+        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
+
+    def batches_changed(self):
+        global calib_path
+        print("Batches changed!")
+        self.json_combo.clear()
+        self.json_combo.addItems(self.jsons[self.batch_combo.currentText()])
+        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
+
+    def json_changed(self):
+        global calib_path
+        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
 
 
 class Camera(QtWidgets.QWidget):
@@ -339,8 +503,13 @@ def test_connexion():
     return False
 
 
-class UiTests(object):
+# BW compat...
+UI_tests = None
+class UiTests(QtWidgets.QMainWindow):
+    print_logs_trigger = QtCore.pyqtSignal(str)
+
     def __init__(self):
+        super().__init__()
         self.MB_INIT = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
         "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
         "p, li { white-space: pre-wrap; }\n"
@@ -349,7 +518,27 @@ class UiTests(object):
         self.MB_END = "</p></body></html>"
         self.all_logs = ""
 
-    def setupUi(self, UI_tests):
+        x = os.walk(BATCH_DIR)
+        print(x)
+        self.batches = []
+        self.jsons = {}
+        i = 0
+        for x in os.walk(BATCH_DIR):
+            if i == 0:
+                self.batches = x[1]
+            else:
+                self.jsons[self.batches[i - 1]] = x[2]
+            i = i + 1
+        dialog = Ui_CalibrateSelect()
+        if not dialog.exec_():
+            sys.exit()
+
+        self.print_logs_trigger.connect(self.print_logs)
+
+    def setupUi(self):
+        global UI_tests
+        UI_tests = self
+
         UI_tests.closeEvent = self.close_event
         UI_tests.setObjectName("UI_tests")
         UI_tests.resize(WIDTH, HEIGHT)
@@ -364,11 +553,11 @@ class UiTests(object):
         self.title = QtWidgets.QLabel(self.centralwidget)
         self.title.setGeometry(QtCore.QRect(10, 10, 751, 51))
         font = QtGui.QFont()
-        font.setPointSize(24)
+        font.setPointSize(16)
         self.title.setFont(font)
         self.title.setObjectName("title")
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
-        self.connect_but.setGeometry(QtCore.QRect(450, 390, 86, 25))
+        self.connect_but.setGeometry(QtCore.QRect(460, 390, 86, 25))
         self.connect_but.setObjectName("connect_but")
         self.connect_but.clicked.connect(self.show_cameras)
         # self.save_but = QtWidgets.QPushButton(self.centralwidget)
@@ -441,7 +630,7 @@ class UiTests(object):
 
         self.operator_tests = QtWidgets.QGroupBox(self.centralwidget)
         # self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 321))
-        if test_type == 'OAK-D-PRO':
+        if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 311))
         elif test_type == 'OAK-1':
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 190))
@@ -604,7 +793,7 @@ class UiTests(object):
             self.right_fail_but.name = 'right_strm'
             self.right_fail_but.toggled.connect(lambda: set_operator_test(self.right_fail_but))
 
-            if test_type == 'OAK-D-PRO':
+            if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
                 self.op_ir_frame = QtWidgets.QFrame(self.operator_tests)
                 self.op_ir_frame.setGeometry(QtCore.QRect(160, 270, 131, 41))
                 self.op_ir_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
@@ -679,9 +868,11 @@ class UiTests(object):
         QtCore.QMetaObject.connectSlotsByName(UI_tests)
         self.red_pallete = QtGui.QPalette()
         self.green_pallete = QtGui.QPalette()
+        self.inactive_pallete = QtGui.QPalette()
 
         self.red_pallete.setColor(QtGui.QPalette.WindowText, QtCore.Qt.red)
         self.green_pallete.setColor(QtGui.QPalette.WindowText, QtCore.Qt.darkGreen)
+        self.inactive_pallete.setColor(QtGui.QPalette.WindowText, QtCore.Qt.darkGray)
         # self.prew_out_rgb_res.setPalette(self.green_pallete)
         # self.save_but.clicked.connect(self.show_cameras)
 
@@ -692,10 +883,10 @@ class UiTests(object):
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
         UI_tests.setWindowTitle(_translate("UI_tests", "DepthAI UI Tests"))
-        self.title.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\">UNIT TEST IN PROGRESS</p></body></html>"))
+        self.title.setText(_translate("UI_tests", f"<html><head/><body><p align=\"center\">Batch: {calib_path.parent.name} <br> Device: {calib_path.name}</p></body></html>"))
         self.connect_but.setText("CONNECT")
-        self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
-        # self.save_but.setText("SAVE")
+        self.connect_but.adjustSize()
+
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
         if test_type == 'OAK-1':
             self.automated_tests_labels.setText(_translate("UI_tests", OAK_ONE_LABELS))
@@ -720,7 +911,9 @@ class UiTests(object):
         self.test_type_label.setText(_translate("UI_tests", "test_type: " + test_type))
         self.prog_label.setText(_translate("UI_tests", "Flash IMU"))
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
+        self.print_logs(f'calib_path={calib_path}')
 
+    @QtCore.pyqtSlot(str)
     def print_logs(self, new_log):
         if new_log == 'clear':
             self.all_logs = ''
@@ -744,26 +937,55 @@ class UiTests(object):
             if test_type != 'OAK-1':
                 self.right_ntes_but.setChecked(True)
                 self.left_ntes_but.setChecked(True)
-                if test_type == 'OAK-D-PRO':
+                if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
                     self.ir_ntes_but.setChecked(True)
             self.connect_but.setText("CONNECT")
+            self.connect_but.adjustSize()
             return
         self.print_logs('clear')
         if test_connexion():
             self.print_logs('Camera connected, starting tests...')
-            # self.test_bootloader_version()
+
+            # Update BL if PoE
+            if test_type == 'OAK-D-PRO-POE':
+                self.update_bootloader()
+
             try:
+                # # Try flashing BL for PoE
+                # if test_type == 'OAK-D-PRO-POE':
+                #     deviceInfos = dai.DeviceBootloader.getAllAvailableDevices()
+                #     if len(deviceInfos) <= 0:
+                #         self.print_logs("No device found..., check connection")
+                #         return
+
+                #     with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
+                #         # Create a progress callback lambda
+                #         progress = lambda p : self.print_logs(f'Bootloader flashing progress: {p*100:.1f}%')
+
+                #         (res, message) = bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, progress)
+                #         if res:
+                #             self.print_logs(f'Flash Bootloader Success!')
+                #             test_result['nor_flash_res'] = 'PASS'
+                #         else:
+                #             self.print_logs(f'Flash bootloader fail: {message}')
+                #             test_result['FAIL'] = 'PASS'
+                #             return
+
+                #         # Wait a tad for Bootloader to reset back to USB ROM BL
+                #         time.sleep(1)
+
                 self.depth_camera = DepthAICamera()
-            except RuntimeError:
-                self.print_logs("Something went wrong, check connexion!")
+            except RuntimeError as ex:
+                self.print_logs(f"Something went wrong, check connexion! - {ex}")
                 return
             self.connect_but.setText("DISCONNECT AND SAVE")
-            self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
+            self.connect_but.adjustSize()
+            # self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
             location = WIDTH, 0
-            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), QtGui.QImage.Format_BGR888, 'RGB Preview', location)
+            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
             self.rgb.show()
             location = WIDTH, prew_height + 80
-            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), QtGui.QImage.Format_BGR888, 'JPEG Preview', location)
+            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
             self.jpeg.show()
             if test_type != 'OAK-1':
                 location = WIDTH + prew_width + 20, 0
@@ -774,12 +996,24 @@ class UiTests(object):
                 self.right.show()
             self.print_logs('EEPROM backup saved at')
             self.print_logs(CALIB_BACKUP_FILE)
-            if self.depth_camera.flash_eeprom():
-                self.print_logs('Flash EEPROM sucsesfull!')
+            eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
+            if eeprom_success:
+                self.print_logs('Flash EEPROM successful!')
                 test_result['eeprom_res'] = 'PASS'
+
+                # Don't save full EEPROM json as it won't play well with regular csv.
+                # Just save batchTime for now
+                test_result['eeprom_data'] = str(eeprom_data['batchTime'])
+                # test_result['eeprom_data'] = json.dumps(eeprom_data)
             else:
-                self.print_logs('Flash EEPROM failed!')
+                self.print_logs(f'Flash EEPROM failed! - {eeprom_msg}')
                 test_result['eeprom_res'] = 'FAIL'
+                test_result['eeprom_data'] = ''
+
+            # Add IMU update cb
+            self.depth_camera.device.setLogLevel(dai.LogLevel.INFO)
+            self.depth_camera.device.addLogCallback(self.logMonitorImuFwUpdateCallback)
+
         else:
             print(locals())
             self.print_logs('No camera detected, check the connexion and try again...')
@@ -793,6 +1027,8 @@ class UiTests(object):
         update_res = False
         if test_result['usb3_res'] == 'PASS':
             self.usb3_res.setPalette(self.green_pallete)
+        elif test_result['usb3_res'] == 'SKIP':
+            self.usb3_res.setPalette(self.inactive_pallete)
         else:
             self.usb3_res.setPalette(self.red_pallete)
         self.usb3_res.setText(test_result['usb3_res'])
@@ -801,7 +1037,7 @@ class UiTests(object):
             self.eeprom_res.setPalette(self.green_pallete)
         else:
             self.eeprom_res.setPalette(self.red_pallete)
-        self.eeprom_res.setText(test_result['usb3_res'])
+        self.eeprom_res.setText(test_result['eeprom_res'])
 
         if test_result['rgb_cam_res'] == 'PASS':
             self.rgb_cam_res.setPalette(self.green_pallete)
@@ -846,41 +1082,77 @@ class UiTests(object):
                 self.right_strm_res.setPalette(self.red_pallete)
             self.right_strm_res.setText(test_result['right_strm_res'])
 
-    def update_bootloader(self):
+    def update_bootloader_impl(self):
         self.print_logs('Check bootloader')
-        (result, device) = dai.DeviceBootloader.getFirstAvailableDevice()
-        if not result:
-            self.print_logs('ERROR device was disconnected')
-            return False
+        deviceInfos = dai.DeviceBootloader.getAllAvailableDevices()
+        if len(deviceInfos) <= 0:
+            return (False, 'ERROR device was disconnected')
+
         try:
-            bootloader = dai.DeviceBootloader(device)
-        except RuntimeError:
-            self.print_logs('Device communication failed, check connexions')
+            with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
+                self.print_logs('Starting Update')
+                self.prog_label.setText('Bootloader')
+                if test_type == 'OAK-D-PRO-POE':
+                    self.print_logs('Flashing NETWORK bootloader...')
+                    return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, self.update_prog_bar)
+                else:
+                    return bl.flashBootloader(self.update_prog_bar)
+
+        except RuntimeError as ex:
+            # self.print_logs('Device communication failed, check connexions')
+            return (False, f"Device communication failed, check connexions: {ex}")
+
+    def update_bootloader(self):
+        (result, message) = self.update_bootloader_impl()
+        self.prog_label.setText('Flash IMU')
+        self.update_prog_bar(0)
+        if result:
+            self.print_logs('Bootloader updated!')
+            test_result['nor_flash_res'] = 'PASS'
+            return True
+        else:
+            self.print_logs(f'Failed to update bootloader: {message}')
+            test_result['nor_flash_res'] = 'FAIL'
             return False
-        self.print_logs('Starting Update')
-        self.prog_label.setText('Bootloader')
-        bootloader.flashBootloader(self.update_prog_bar)
-        return True
+
+    def logMonitorImuFwUpdateCallback(self, msg):
+        if 'IMU firmware update status' in msg.payload:
+            try:
+                percentage_float = float(msg.payload.split(":")[1].split("%")[0]) / 100.0
+                self.prog_label.setText('Flash IMU')
+                self.update_prog_bar(percentage_float)
+            except Exception as ex:
+                print(f'Could not parse fw update status: {ex}')
+        if 'IMU firmware update succesful' in msg.payload:
+            self.prog_label.setText('IMU PASS')
+            self.update_prog_bar(1.0)
+            self.print_logs_trigger.emit(f'Successfully updated IMU!')
+
+        if 'IMU firmware update failed' in msg.payload:
+            self.prog_label.setText('IMU FAIL')
+            self.update_prog_bar(0.0)
+            self.print_logs_trigger.emit(f'FAILED updating IMU!')
 
     def test_bootloader_version(self, version='0.0.15'):
         (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
         if not result:
-            self.print_logs('ERROR device was dissconected!')
+            self.print_logs('ERROR device was disconnected!')
             return False
         device = dai.DeviceBootloader(info)
         current_version = str(device.getVersion())
-        if current_version == version:
-            self.print_logs('Bootloader up to date!')
-            return True
+        # Skip version check for now
+        # if current_version == version:
+        #     self.print_logs('Bootloader up to date!')
+        #     return True
         self.print_logs('Bootloader version is ' + current_version)
         self.print_logs('Starting bootloader update!')
         self.print_logs('Writing version ' + version + '...')
-        result = self.update_bootloader()
+        (result, message) = self.update_bootloader()
         if result:
             self.print_logs('Bootloader updated!')
             return True
         else:
-            self.print_logs('Failed to update bootloader')
+            self.print_logs(f'Failed to update bootloader: {message}')
             return False
 
     def save_csv(self):
@@ -919,6 +1191,8 @@ class UiTests(object):
                 file.write(',' + 'Not Tested')
             else:
                 file.write(',' + operator_tests[key])
+        file.write(',' + calib_path.parent.name)
+        file.write(',' + calib_path.name)
         file.write('\n')
         file.close()
         self.print_logs('Test results for ' + test_type + ' with id ' + self.depth_camera.id + ' had been saved!')
@@ -937,6 +1211,10 @@ class UiTests(object):
                 del self.right
             del self.depth_camera
 
+    def batches_changed(self):
+        print("Batches changed!")
+        self.json_combo.clear()
+        self.json_combo.addItems(self.jsons[self.batches_combo.currentText()])
 
 def signal_handler(sig, frame):
     print('Closing app')
@@ -946,23 +1224,25 @@ def signal_handler(sig, frame):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Arguments for test UI')
-    parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE)', default='OAK-D-PRO')
-    CALIB_JSON_FILE = path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib.json'
+    parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)', default='OAK-D-PRO-POE')
+    # parser.add_argument('-b', '--batch', dest='batch', help='enter the path to batch file', required=True)
+    # CALIB_JSON_FILE = path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib.json'
     CALIB_BACKUP_FILE = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib_backup.json'
-    parser.add_argument('--calib_json_file', '-c', dest='calib_json_file', help='Path to V6 calibration file in json', default=CALIB_JSON_FILE)
+    # parser.add_argument('--calib_json_file', '-c', dest='calib_json_file', help='Path to V6 calibration file in json', default=CALIB_JSON_FILE)
     args = parser.parse_args()
     test_type = args.camera_type.upper()
-    calib_path = args.calib_json_file
+    # calib_path = args.calib_json_file
+    # calib_path = args.batch
+    # calib_path = None
     app = QtWidgets.QApplication(sys.argv)
     screen = app.primaryScreen()
     rect = screen.availableGeometry()
     prew_width = (rect.width() - WIDTH)//2 - 20
     prew_height = (rect.height())//2 - 80
     print(prew_width, prew_height)
-    UI_tests = QtWidgets.QMainWindow()
     ui = UiTests()
     signal.signal(signal.SIGINT, signal_handler)
-    ui.setupUi(UI_tests)
+    ui.setupUi()
     UI_tests.show()
     test_connexion()
     sys.exit(app.exec_())
