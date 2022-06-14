@@ -7,6 +7,6 @@
     "productName": "OAK-D Pro W Dev",
     "boardCustom": "",
     "hardwareConf": "F1-FV01-BC000",
-    "boardOptions": 2,
+    "boardOptions": 0,
     "version": 7
 }
