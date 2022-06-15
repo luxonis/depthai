@@ -323,11 +323,12 @@ class StereoCalibration(object):
                 allCorners_l, allIds_l, self.img_shape)
             ret_r, self.M2, self.d2, rvecs, tvecs = self.calibrate_camera_charuco(
                 allCorners_r, allIds_r, self.img_shape)
+        
         else:
             ret_l, self.M1, self.d1, rvecs, tvecs = self.calibrate_fisheye(allCorners_l, allIds_l, self.img_shape)
             ret_r, self.M2, self.d2, rvecs, tvecs = self.calibrate_fisheye(allCorners_r, allIds_r, self.img_shape)
             print("~~~~~~~~~~~ Fisheye undistorting..... ~~~~~~~~~~~~~")
-            self.fisheye_undistort_visualizaation(images_left, images_right, self.M1, self.d1, self.M2, self.d2, self.img_shape)
+        self.fisheye_undistort_visualizaation(images_left, images_right, self.M1, self.d1, self.M2, self.d2, self.img_shape)
             # self.fisheye_undistort_visualizaation(images_right, self.M2, self.d2, self.img_shape)
 
 
@@ -339,10 +340,10 @@ class StereoCalibration(object):
         print(self.M2)
         print(self.d1)
         print(self.d2)
-        # if self.cameraModel == 'perspective':
-        ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T, E, F = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
-        # else:
-            # ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
+        if self.cameraModel == 'perspective':
+            ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T, E, F = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
+        else:
+            ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
         print("~~~~~~~~~~~~~RMS error of L-R~~~~~~~~~~~~~~")
         print(ret)
         """         
@@ -553,38 +554,38 @@ class StereoCalibration(object):
         stereocalib_criteria = (cv2.TERM_CRITERIA_COUNT +
                                 cv2.TERM_CRITERIA_EPS, 100, 1e-5)
 
-        # if self.cameraModel == 'perspective':
-        flags = 0
-        flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
-        flags |= cv2.CALIB_RATIONAL_MODEL
+        if self.cameraModel == 'perspective':
+            flags = 0
+            flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
+            flags |= cv2.CALIB_RATIONAL_MODEL
 
-        return cv2.stereoCalibrate(
-            obj_pts, left_corners_sampled, right_corners_sampled,
-            cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
-            criteria=stereocalib_criteria, flags=flags)
-        # elif self.cameraModel == 'fisheye':
-        #     # print(len(obj_pts))
-        #     print(f'obj_pts -> Length is {len(obj_pts)} ')
-        #     # print(obj_pts) 
-        #     # print(len(left_corners_sampled))
-        #     print(f'left_corners_sampled -> size is {len(left_corners_sampled)}')
-        #     # print(left_corners_sampled) 
-        #     # print(len(right_corners_sampled))
-        #     print(f'right_corners_sampled -> size is {len(right_corners_sampled)}')
-        #     # print(right_corners_sampled)
-        #     for i in range(len(obj_pts)):
-        #         print('---------------------')
-        #         print( f' obj_pts              size in id {i} is {len(obj_pts[i])}')
-        #         print( f' left_corners_sampled size in id {i} is {len(left_corners_sampled[i])}')
-        #         print( f'right_corners_sampled size in id {i} is {len(right_corners_sampled[i])}')
+            return cv2.stereoCalibrate(
+                obj_pts, left_corners_sampled, right_corners_sampled,
+                cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
+                criteria=stereocalib_criteria, flags=flags)
+        elif self.cameraModel == 'fisheye':
+            # print(len(obj_pts))
+            print(f'obj_pts -> Length is {len(obj_pts)} ')
+            # print(obj_pts) 
+            # print(len(left_corners_sampled))
+            print(f'left_corners_sampled -> size is {len(left_corners_sampled)}')
+            # print(left_corners_sampled) 
+            # print(len(right_corners_sampled))
+            print(f'right_corners_sampled -> size is {len(right_corners_sampled)}')
+            # print(right_corners_sampled)
+            for i in range(len(obj_pts)):
+                print('---------------------')
+                print( f' obj_pts              size in id {i} is {len(obj_pts[i])}')
+                print( f' left_corners_sampled size in id {i} is {len(left_corners_sampled[i])}')
+                print( f'right_corners_sampled size in id {i} is {len(right_corners_sampled[i])}')
 
-        #     flags = 0
-        #     flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
-        #     flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC # TODO(sACHIN): Try without intrinsic guess
-        #     return cv2.fisheye.stereoCalibrate(
-        #         obj_pts, left_corners_sampled, right_corners_sampled,
-        #         cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
-        #         flags=flags, criteria=stereocalib_criteria), None, None
+            flags = 0
+            flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
+            flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC # TODO(sACHIN): Try without intrinsic guess
+            return cv2.fisheye.stereoCalibrate(
+                obj_pts, left_corners_sampled, right_corners_sampled,
+                cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
+                flags=flags, criteria=stereocalib_criteria), None, None
         
     def rgb_calibrate(self, filepath):
         images_right = glob.glob(filepath + "/right/*")
@@ -707,14 +708,14 @@ class StereoCalibration(object):
 
         if self.cameraModel == 'perspective':
             mapx_l, mapy_l = cv2.initUndistortRectifyMap(
-                self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
+                self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
             mapx_r, mapy_r = cv2.initUndistortRectifyMap(
-                self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+                self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
         elif self.cameraModel == 'fisheye':
             mapx_l, mapy_l = cv2.fisheye.initUndistortRectifyMap(
-                self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
+                self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
             mapx_r, mapy_r = cv2.fisheye.initUndistortRectifyMap(
-                self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+                self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
 
         print("Printing p1 and p2")
         print(self.P1)
