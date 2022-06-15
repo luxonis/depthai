@@ -109,7 +109,7 @@ def parse_args():
             options.markerSizeCm = options.squareSizeCm * 0.75
         else:
             raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
-    if options.squareSizeCm < 2.2:
+    if options.squareSizeCm < 2.0:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
         
     return options
@@ -189,8 +189,8 @@ class Main:
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
-        cam_left = pipeline.createMonoCamera()
-        cam_right = pipeline.createMonoCamera()
+        cam_left = pipeline.createColorCamera()
+        cam_right = pipeline.createColorCamera()
 
         xout_left = pipeline.createXLinkOut()
         xout_right = pipeline.createXLinkOut()
@@ -203,18 +203,23 @@ class Main:
             cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
                 
         cam_left.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+            dai.ColorCameraProperties.SensorResolution.THE_4_K)
         cam_left.setFps(self.args.fps)
+        cam_left.setIspScale(1, 3)
+
+        cam_left.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
+        cam_right.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 
         cam_right.setResolution(
-            dai.MonoCameraProperties.SensorResolution.THE_800_P)
+            dai.ColorCameraProperties.SensorResolution.THE_4_K)
         cam_right.setFps(self.args.fps)
+        cam_right.setIspScale(1, 3)
 
         xout_left.setStreamName("left")
-        cam_left.out.link(xout_left.input)
+        cam_left.isp.link(xout_left.input)
 
         xout_right.setStreamName("right")
-        cam_right.out.link(xout_right.input)
+        cam_right.isp.link(xout_right.input)
 
         if not self.args.disableRgb:
             rgb_cam = pipeline.createColorCamera()
@@ -340,8 +345,8 @@ class Main:
         self.display_name = "left + right + rgb"
         # with self.get_pipeline() as pipeline:
         while not finished:
-            current_left  = self.left_camera_queue.tryGet()
-            current_right = self.right_camera_queue.tryGet()
+            current_left  = self.left_camera_queue.get()
+            current_right = self.right_camera_queue.get()
             if not self.args.disableRgb:
                 current_color = self.rgb_camera_queue.tryGet()
             else:
@@ -375,11 +380,10 @@ class Main:
                 timer = self.args.captureDelay
 
             frame_list = []
-            # left_frame = recent_left.getCvFrame()
-            # rgb_frame = recent_color.getCvFrame()
 
             for packet in recent_frames:
                 frame = packet[1].getCvFrame()
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 # print(packet[0])
                 # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
                 if packet[0] == 'rgb':
@@ -453,7 +457,8 @@ class Main:
                     print("Images captured --> {}".format(self.images_captured))
                     if not self.images_captured:
                         if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
-                            self.show_failed_orientation()
+                            # self.show_failed_orientation()
+                            pass
                         # if not self.test_camera_orientation(captured_left_frame, captured_color_frame):
                         #     self.show_failed_orientation()
 
@@ -515,7 +520,7 @@ class Main:
         print("Starting image processing")
         cal_data = calibUtils.StereoCalibration()
         dest_path = str(Path('resources').absolute())
-        self.args.cameraMode = 'perspective' # hardcoded for now
+        # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
             epiploar_error, epiploar_error_rRgb, calibData = cal_data.calibrate(self.dataset_path, self.args.squareSizeCm,
                  self.args.markerSizeCm, self.args.squaresX, self.args.squaresY, self.args.cameraMode, not self.args.disableRgb, self.args.rectifiedDisp)

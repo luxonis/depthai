@@ -312,9 +312,9 @@ class StereoCalibration(object):
 
         print("~~~~~~~~~~~ POSE ESTIMATION LEFT CAMERA ~~~~~~~~~~~~~")
         allCorners_l, allIds_l, _, _, imsize, _ = self.analyze_charuco(
-            images_left)
+            images_left, req_resolution=(720, 1280))
         allCorners_r, allIds_r, _, _, imsize, _ = self.analyze_charuco(
-            images_right)
+            images_right, req_resolution=(720, 1280))
         self.img_shape = imsize[::-1]
 
         # self.img_shape_rgb = imsize_rgb[::-1]
@@ -326,12 +326,14 @@ class StereoCalibration(object):
         else:
             ret_l, self.M1, self.d1, rvecs, tvecs = self.calibrate_fisheye(allCorners_l, allIds_l, self.img_shape)
             ret_r, self.M2, self.d2, rvecs, tvecs = self.calibrate_fisheye(allCorners_r, allIds_r, self.img_shape)
-        # self.fisheye_undistort_visualizaation(images_left, self.M1, self.d1, self.img_shape)
-        # self.fisheye_undistort_visualizaation(images_right, self.M2, self.d2, self.img_shape)
+            print("~~~~~~~~~~~ Fisheye undistorting..... ~~~~~~~~~~~~~")
+            self.fisheye_undistort_visualizaation(images_left, images_right, self.M1, self.d1, self.M2, self.d2, self.img_shape)
+            # self.fisheye_undistort_visualizaation(images_right, self.M2, self.d2, self.img_shape)
 
 
         print("~~~~~~~~~~~~~RMS error of left~~~~~~~~~~~~~~")
         print(ret_l)
+        print("~~~~~~~~~~~~~RMS error of right~~~~~~~~~~~~~~")
         print(ret_r)
         print(self.M1)
         print(self.M2)
@@ -396,32 +398,58 @@ class StereoCalibration(object):
                                                                                         self.d2,
                                                                                         self.img_shape, self.R, self.T)
         else:
-            self.R1, self.R2, self.P1, self.P2, self.Q = cv2.fisheye.stereoRectify(self.M1,
-                self.d1,
-                self.M2,
-                self.d2,
-                self.img_shape, self.R, self.T)	
+            self.R1, self.R2, self.P1, self.P2, self.Q = cv2.fisheye.stereoRectify(
+                                                                        self.M1,
+                                                                        self.d1,
+                                                                        self.M2,
+                                                                        self.d2,
+                                                                        self.img_shape, self.R, self.T, 0)	
 
         self.H1 = np.matmul(np.matmul(self.M2, self.R1),
                             np.linalg.inv(self.M1))
         self.H2 = np.matmul(np.matmul(self.M2, self.R2),
                             np.linalg.inv(self.M2))
 
-    def fisheye_undistort_visualizaation(self, img_list, K, D, img_size):
-        for im in img_list:
-            # print(im)
-            img = cv2.imread(im)
-            # h, w = img.shape[:2]
-            if self.cameraModel == 'perspective':
-                map1, map2 = cv2.initUndistortRectifyMap(
-                                K, D, np.eye(3), K, img_size, cv2.CV_32FC1)
-            else:
-                map1, map2 = cv2.fisheye.initUndistortRectifyMap(K, D, np.eye(3), K, img_size, cv2.CV_32FC1)
-    
-            undistorted_img = cv2.remap(img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
-            cv2.imshow("undistorted", undistorted_img)
-            cv2.waitKey(0)
-            # cv2.destroyAllWindows()        
+    def fisheye_undistort_visualizaation(self, imgLeft_list, imgRight_list, K_left, D_left, K_right, D_right, img_size):
+        
+        mapx_l = None
+        mapy_l = None
+        mapx_r = None 
+        mapy_r = None
+
+        if self.cameraModel == 'perspective':
+            mapx_l, mapy_l = cv2.initUndistortRectifyMap(
+                            K_left, D_left, np.eye(3), K_left, img_size, cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.initUndistortRectifyMap(
+                            K_right, D_right, np.eye(3), K_right, img_size, cv2.CV_32FC1)
+        else:
+            mapx_l, mapy_l = cv2.fisheye.initUndistortRectifyMap(K_left, D_left, np.eye(3), K_left, img_size, cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.fisheye.initUndistortRectifyMap(K_right, D_right, np.eye(3), K_right, img_size, cv2.CV_32FC1)
+
+        for image_left, image_right in zip(imgLeft_list, imgRight_list):
+            imgLeft = cv2.imread(image_left)
+            imgRight = cv2.imread(image_right)
+            left_path = Path(image_left)
+            right_path = Path(image_right)
+            imgLeft = cv2.remap(imgLeft, mapx_l, mapy_l, cv2.INTER_LINEAR)
+            imgRight = cv2.remap(imgRight, mapx_r, mapy_r, cv2.INTER_LINEAR)
+
+            img_concat = cv2.hconcat([imgLeft, imgRight])
+            # img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
+            line_row = 0
+            while line_row < img_concat.shape[0]:
+                cv2.line(img_concat,
+                         (0, line_row), (img_concat.shape[1], line_row),
+                         (0, 255, 0), 1)
+                line_row += 30
+
+            print(f"Left ID: {left_path.name}  <->  Right ID: {right_path.name}")
+            cv2.imshow('Fisheye-undistort', img_concat)
+            k = cv2.waitKey(0)
+            if k == 27:  # Esc key to stop
+                break
+
+        cv2.destroyWindow('Fisheye-undistort')
 
 
     def calibrate_camera_charuco(self, allCorners, allIds, imsize):
@@ -439,6 +467,10 @@ class StereoCalibration(object):
                                          [0.0,     3819.8801, 1135.3433],
                                          [0.0,        0.0,        1.]])
         
+
+        """ cameraMatrixInit = np.array([[407.828581,    0.0       ,  2005.10025 ],
+                                [   0.0    ,    407.828581,  577.377899 ],
+                                [   0.0    ,    0.0       ,   1.0       ]]) """
         print("Camera Matrix initialization.............")
         print(cameraMatrixInit)
 
@@ -450,15 +482,16 @@ class StereoCalibration(object):
          rotation_vectors, translation_vectors,
          stdDeviationsIntrinsics, stdDeviationsExtrinsics,
          perViewErrors) = cv2.aruco.calibrateCameraCharucoExtended(
-            charucoCorners=allCorners,
-            charucoIds=allIds,
-            board=self.board,
-            imageSize=imsize,
-            cameraMatrix=cameraMatrixInit,
-            distCoeffs=distCoeffsInit,
-            flags=flags,
-            criteria=(cv2.TERM_CRITERIA_EPS & cv2.TERM_CRITERIA_COUNT, 10000, 1e-9))
+                                                    charucoCorners=allCorners,
+                                                    charucoIds=allIds,
+                                                    board=self.board,
+                                                    imageSize=imsize,
+                                                    cameraMatrix=cameraMatrixInit,
+                                                    distCoeffs=distCoeffsInit,
+                                                    flags=flags,
+                                                    criteria=(cv2.TERM_CRITERIA_EPS & cv2.TERM_CRITERIA_COUNT, 10000, 1e-9))
 
+        # print('Per')
         return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors
 
     def calibrate_fisheye(self, allCorners, allIds, imsize):
@@ -520,37 +553,38 @@ class StereoCalibration(object):
         stereocalib_criteria = (cv2.TERM_CRITERIA_COUNT +
                                 cv2.TERM_CRITERIA_EPS, 100, 1e-5)
 
-        if self.cameraModel == 'perspective':
-            flags = 0
-            flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
-            flags |= cv2.CALIB_RATIONAL_MODEL
+        # if self.cameraModel == 'perspective':
+        flags = 0
+        flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
+        flags |= cv2.CALIB_RATIONAL_MODEL
 
-            return cv2.stereoCalibrate(
-                obj_pts, left_corners_sampled, right_corners_sampled,
-                cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
-                criteria=stereocalib_criteria, flags=flags)
-        elif self.cameraModel == 'fisheye':
-            print(len(obj_pts))
-            print('obj_pts')
-            # print(obj_pts) 
-            print(len(left_corners_sampled))
-            print('left_corners_sampled')
-            # print(left_corners_sampled) 
-            print(len(right_corners_sampled))
-            print('right_corners_sampled')
-            # print(right_corners_sampled)
-            for i in range(len(obj_pts)):
-                print('---------------------')
-                print(i)
-                print(len(obj_pts[i]))
-                print(len(left_corners_sampled[i]))
-                print(len(right_corners_sampled[i]))
-            flags = 0
-            # flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC # TODO(sACHIN): Try without intrinsic guess
-            return cv2.fisheye.stereoCalibrate(
-                obj_pts, left_corners_sampled, right_corners_sampled,
-                cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
-                flags=flags, criteria=stereocalib_criteria), None, None
+        return cv2.stereoCalibrate(
+            obj_pts, left_corners_sampled, right_corners_sampled,
+            cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
+            criteria=stereocalib_criteria, flags=flags)
+        # elif self.cameraModel == 'fisheye':
+        #     # print(len(obj_pts))
+        #     print(f'obj_pts -> Length is {len(obj_pts)} ')
+        #     # print(obj_pts) 
+        #     # print(len(left_corners_sampled))
+        #     print(f'left_corners_sampled -> size is {len(left_corners_sampled)}')
+        #     # print(left_corners_sampled) 
+        #     # print(len(right_corners_sampled))
+        #     print(f'right_corners_sampled -> size is {len(right_corners_sampled)}')
+        #     # print(right_corners_sampled)
+        #     for i in range(len(obj_pts)):
+        #         print('---------------------')
+        #         print( f' obj_pts              size in id {i} is {len(obj_pts[i])}')
+        #         print( f' left_corners_sampled size in id {i} is {len(left_corners_sampled[i])}')
+        #         print( f'right_corners_sampled size in id {i} is {len(right_corners_sampled[i])}')
+
+        #     flags = 0
+        #     flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
+        #     flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC # TODO(sACHIN): Try without intrinsic guess
+        #     return cv2.fisheye.stereoCalibrate(
+        #         obj_pts, left_corners_sampled, right_corners_sampled,
+        #         cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
+        #         flags=flags, criteria=stereocalib_criteria), None, None
         
     def rgb_calibrate(self, filepath):
         images_right = glob.glob(filepath + "/right/*")
@@ -658,7 +692,7 @@ class StereoCalibration(object):
             self.img_shape_rgb_scaled, self.R_rgb, self.T_rgb)
 
     def test_epipolar_charuco_lr(self, dataset_dir):
-        print("<-----------------Epipolar error of LEFT-right camera---------------->")
+        print("<-----------------Epipolar error of LEFT-RIGHT camera---------------->")
         images_left = glob.glob(dataset_dir + '/left/*.png')
         images_right = glob.glob(dataset_dir + '/right/*.png')
         images_left.sort()
@@ -667,13 +701,21 @@ class StereoCalibration(object):
         assert len(images_left) != 0, "ERROR: Images not read correctly"
         assert len(images_right) != 0, "ERROR: Images not read correctly"
         criteria = (cv2.TERM_CRITERIA_EPS +
-                    cv2.TERM_CRITERIA_MAX_ITER, 100, 0.00001)
+                    cv2.TERM_CRITERIA_MAX_ITER, 10000, 0.00001)
 
         # if not use_homo:
-        mapx_l, mapy_l = cv2.initUndistortRectifyMap(
-            self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
-        mapx_r, mapy_r = cv2.initUndistortRectifyMap(
-            self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+
+        if self.cameraModel == 'perspective':
+            mapx_l, mapy_l = cv2.initUndistortRectifyMap(
+                self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.initUndistortRectifyMap(
+                self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+        elif self.cameraModel == 'fisheye':
+            mapx_l, mapy_l = cv2.fisheye.initUndistortRectifyMap(
+                self.M1, self.d1, self.R1, self.P1, self.img_shape, cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.fisheye.initUndistortRectifyMap(
+                self.M2, self.d2, self.R2, self.P2, self.img_shape, cv2.CV_32FC1)
+
         print("Printing p1 and p2")
         print(self.P1)
         print(self.P2)
@@ -743,11 +785,6 @@ class StereoCalibration(object):
                     continue
                 corners_l.append(res2_l[1][j])
                 corners_r.append(res2_r[1][idx])
-#                 obj_pts_sub.append(one_pts[allIds_l[i][j]])
-
-#             obj_pts.append(np.array(obj_pts_sub, dtype=np.float32))
-#             left_sub_corners_sampled.append(np.array(left_sub_corners, dtype=np.float32))
-#             right_sub_corners_sampled.append(np.array(right_sub_corners, dtype=np.float32))
 
             imgpoints_l.extend(corners_l)
             imgpoints_r.extend(corners_r)
