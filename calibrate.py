@@ -316,10 +316,8 @@ class Main:
 
     def empty_calibration(self, calib: dai.CalibrationHandler):
         data = calib.getEepromData()
-        if not data.boardName or not data.boardRev:
-            return False  
-        # for attr in ["boardName", "boardRev"]:
-            # if getattr(data, attr): return False
+        for attr in ["boardName", "boardRev"]:
+            if getattr(data, attr): return False
         return True
 
     def capture_images(self):
