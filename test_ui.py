@@ -451,8 +451,8 @@ HEIGHT = 717
 def test_connexion():
     result = False
     try:
-        while not result:
-            (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
+        # while not result:
+        (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
     finally:
         return result
 
@@ -483,6 +483,7 @@ class Worker(QRunnable):
         self.args = args
         self.kwargs = kwargs
         self.signals = WorkerSignals()
+        self._run = True
 
         # Add the callback to our kwargs
         # self.kwargs['progress_callback'] = self.signals.progress
@@ -494,7 +495,12 @@ class Worker(QRunnable):
         '''
         # Retrieve args/kwargs here; and fire processing using them
         try:
-            result = self.fn(*self.args, **self.kwargs)
+            result = False
+            while self._run and not result:
+                result = self.fn(*self.args, **self.kwargs)
+                time.sleep(0.1)
+            else:
+                self.signals.result.emit(result)
         except:
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
@@ -505,7 +511,7 @@ class Worker(QRunnable):
             self.signals.finished.emit()  # Done
 
     def stop(self):
-        pass
+        self._run = False
 
 
 class UiTests(object):
@@ -937,6 +943,8 @@ class UiTests(object):
             self.all_logs += '<p style="color:red">' + new_log + '</p>'
         elif log_level == 'WARNING':
             self.all_logs += '<p style="color:orange">' + new_log + '</p>'
+        elif log_level == 'GREEN':
+            self.all_logs += '<p style="color:green">' + new_log + '</p>'
         else:
             self.all_logs += new_log + '<br>'
         self.logs_txt_browser.setHtml(self.MB_INIT + self.all_logs + self.MB_END)
@@ -973,8 +981,13 @@ class UiTests(object):
             self.connexion_result.signals.finished.connect(self.end_conn)
             self.threadpool.start(self.connexion_result)
             self.scanning = True
+            self.connect_but.setText('CANCEL')
         else:
-            self.threadpool.t
+            self.connexion_result.stop()
+            print('Canceling')
+            self.connect_but.setText('CONNECT')
+            self.scanning = False
+            self.threadpool.cancel(self.connexion_result)
 
     def end_conn(self):
         # print(s)
@@ -982,83 +995,77 @@ class UiTests(object):
         self.scanning = False
 
     def connexion_slot(self, signal):
-        if signal:
-            print("Received true signal!")
-            return
-        elif not signal:
-            print("received false signal")
-            return
-            self.print_logs('Camera connected, starting tests...')
-
-            # Update BL if PoE
-            if test_type == 'OAK-D-PRO-POE':
-                self.update_bootloader()
-
-            try:
-                # # Try flashing BL for PoE
-                # if test_type == 'OAK-D-PRO-POE':
-                #     deviceInfos = dai.DeviceBootloader.getAllAvailableDevices()
-                #     if len(deviceInfos) <= 0:
-                #         self.print_logs("No device found..., check connection")
-                #         return
-
-                #     with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
-                #         # Create a progress callback lambda
-                #         progress = lambda p : self.print_logs(f'Bootloader flashing progress: {p*100:.1f}%')
-
-                #         (res, message) = bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, progress)
-                #         if res:
-                #             self.print_logs(f'Flash Bootloader Success!')
-                #             test_result['nor_flash_res'] = 'PASS'
-                #         else:
-                #             self.print_logs(f'Flash bootloader fail: {message}')
-                #             test_result['FAIL'] = 'PASS'
-                #             return
-
-                #         # Wait a tad for Bootloader to reset back to USB ROM BL
-                #         time.sleep(1)
-
-                self.depth_camera = DepthAICamera()
-            except RuntimeError as ex:
-                self.print_logs(f"Something went wrong, check connexion! - {ex}")
-                return
-            self.connect_but.setText("DISCONNECT AND SAVE")
-            self.connect_but.adjustSize()
-            # self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
-            location = WIDTH, 0
-            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
-            self.rgb.show()
-            location = WIDTH, prew_height + 80
-            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
-            self.jpeg.show()
-            if test_type != 'OAK-1':
-                location = WIDTH + prew_width + 20, 0
-                self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
-                                   'LEFT Preview', location)
-                self.left.show()
-                location = WIDTH + prew_width + 20, prew_height + 80
-                self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8,
-                                    'RIGHT Preview', location)
-                self.right.show()
-            self.print_logs('EEPROM backup saved at')
-            self.print_logs(CALIB_BACKUP_FILE)
-            eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
-            if eeprom_success:
-                self.print_logs('Flash EEPROM successful!')
-                test_result['eeprom_res'] = 'PASS'
-
-                # Don't save full EEPROM json as it won't play well with regular csv.
-                # Just save batchTime for now
-                test_result['eeprom_data'] = str(eeprom_data['batchTime'])
-                # test_result['eeprom_data'] = json.dumps(eeprom_data)
-            else:
-                self.print_logs(f'Flash EEPROM failed! - {eeprom_msg}')
-                test_result['eeprom_res'] = 'FAIL'
-                test_result['eeprom_data'] = ''
-
-        else:
-            print(locals())
+        if not signal:
             self.print_logs('No camera detected, check the connexion and try again...', 'ERROR')
+            return
+        self.print_logs('Camera connected, starting tests...', 'GREEN')
+
+        # Update BL if PoE
+        if test_type == 'OAK-D-PRO-POE':
+            self.update_bootloader()
+
+        try:
+            # # Try flashing BL for PoE
+            # if test_type == 'OAK-D-PRO-POE':
+            #     deviceInfos = dai.DeviceBootloader.getAllAvailableDevices()
+            #     if len(deviceInfos) <= 0:
+            #         self.print_logs("No device found..., check connection")
+            #         return
+
+            #     with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
+            #         # Create a progress callback lambda
+            #         progress = lambda p : self.print_logs(f'Bootloader flashing progress: {p*100:.1f}%')
+
+            #         (res, message) = bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, progress)
+            #         if res:
+            #             self.print_logs(f'Flash Bootloader Success!')
+            #             test_result['nor_flash_res'] = 'PASS'
+            #         else:
+            #             self.print_logs(f'Flash bootloader fail: {message}')
+            #             test_result['FAIL'] = 'PASS'
+            #             return
+
+            #         # Wait a tad for Bootloader to reset back to USB ROM BL
+            #         time.sleep(1)
+
+            self.depth_camera = DepthAICamera()
+        except RuntimeError as ex:
+            self.print_logs(f"Something went wrong, check connexion! - {ex}", log_level='ERROR')
+            return
+        self.connect_but.setText("DISCONNECT AND SAVE")
+        self.connect_but.adjustSize()
+        # self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
+        location = WIDTH, 0
+        self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
+        self.rgb.show()
+        location = WIDTH, prew_height + 80
+        self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
+        self.jpeg.show()
+        if test_type != 'OAK-1':
+            location = WIDTH + prew_width + 20, 0
+            self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
+                               'LEFT Preview', location)
+            self.left.show()
+            location = WIDTH + prew_width + 20, prew_height + 80
+            self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8,
+                                'RIGHT Preview', location)
+            self.right.show()
+        self.print_logs('EEPROM backup saved at')
+        self.print_logs(CALIB_BACKUP_FILE)
+        eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
+        if eeprom_success:
+            self.print_logs('Flash EEPROM successful!', 'GREEN')
+            test_result['eeprom_res'] = 'PASS'
+
+            # Don't save full EEPROM json as it won't play well with regular csv.
+            # Just save batchTime for now
+            test_result['eeprom_data'] = str(eeprom_data['batchTime'])
+            # test_result['eeprom_data'] = json.dumps(eeprom_data)
+        else:
+            self.print_logs(f'Flash EEPROM failed! - {eeprom_msg}', 'ERROR')
+            test_result['eeprom_res'] = 'FAIL'
+            test_result['eeprom_data'] = ''
+
 
     def set_result(self):
         global update_res
@@ -1150,18 +1157,19 @@ class UiTests(object):
         self.prog_label.setText('Flash IMU')
         self.update_prog_bar(0)
         if result:
-            self.print_logs('Bootloader updated!')
+            self.print_logs(f'Update bootloader: {message}')
+            self.print_logs('Bootloader updated!', 'GREEN')
             test_result['nor_flash_res'] = 'PASS'
             return True
         else:
-            self.print_logs(f'Failed to update bootloader: {message}')
+            self.print_logs(f'Failed to update bootloader: {message}', 'ERROR')
             test_result['nor_flash_res'] = 'FAIL'
             return False
 
     def test_bootloader_version(self, version='0.0.15'):
         (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
         if not result:
-            self.print_logs('ERROR device was disconnected!')
+            self.print_logs('ERROR device was disconnected!', 'ERROR')
             return False
         device = dai.DeviceBootloader(info)
         current_version = str(device.getVersion())
@@ -1174,10 +1182,10 @@ class UiTests(object):
         self.print_logs('Writing version ' + version + '...')
         (result, message) = self.update_bootloader()
         if result:
-            self.print_logs('Bootloader updated!')
+            self.print_logs('Bootloader updated!', 'GREEN')
             return True
         else:
-            self.print_logs(f'Failed to update bootloader: {message}')
+            self.print_logs(f'Failed to update bootloader: {message}', 'ERROR')
             return False
 
     def save_csv(self):
@@ -1221,7 +1229,7 @@ class UiTests(object):
         file.write(',' + calib_path.name)
         file.write('\n')
         file.close()
-        self.print_logs('Test results for ' + test_type + ' with id ' + self.depth_camera.id + ' had been saved!')
+        self.print_logs('Test results for ' + test_type + ' with id ' + self.depth_camera.id + ' had been saved!', 'GREEN')
 
     def close_event(self, event):
         self.disconnect()
