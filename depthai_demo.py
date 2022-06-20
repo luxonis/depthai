@@ -127,7 +127,7 @@ class Demo:
             self.setup(conf)
             self.run()
 
-    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, onAppSetup = noop, onAppStart = noop, shouldRun = lambda: True, showDownloadProgress=None, collectMetrics=False):
+    def __init__(self, displayFrames=True, onNewFrame = noop, onShowFrame = noop, onNn = noop, onReport = noop, onSetup = noop, onTeardown = noop, onIter = noop, onWarning = noop, onAppSetup = noop, onAppStart = noop, shouldRun = lambda: True, showDownloadProgress=None, collectMetrics=False):
         self._openvinoVersion = None
         self._displayFrames = displayFrames
         self.toggleMetrics(collectMetrics)
@@ -139,12 +139,16 @@ class Demo:
         self.onSetup = onSetup
         self.onTeardown = onTeardown
         self.onIter = onIter
+        self.onWarning = onWarning
         self.shouldRun = shouldRun
         self.showDownloadProgress = showDownloadProgress
         self.onAppSetup = onAppSetup
         self.onAppStart = onAppStart
 
-    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
+    def onError(self, error):
+        raise error  # default behavior
+
+    def setCallbacks(self, onNewFrame=None, onShowFrame=None, onNn=None, onReport=None, onSetup=None, onTeardown=None, onIter=None, onWarning=None, onError=None, onAppSetup=None, onAppStart=None, shouldRun=None, showDownloadProgress=None):
         if onNewFrame is not None:
             self.onNewFrame = onNewFrame
         if onShowFrame is not None:
@@ -159,6 +163,10 @@ class Demo:
             self.onTeardown = onTeardown
         if onIter is not None:
             self.onIter = onIter
+        if onWarning is not None:
+            self.onWarning = onWarning
+        if onError is not None:
+            self.onWarning = onError
         if shouldRun is not None:
             self.shouldRun = shouldRun
         if showDownloadProgress is not None:
@@ -208,6 +216,9 @@ class Demo:
             self._pm.setNnManager(self._nnManager)
 
         self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        if self._deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
+            print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
+            self._ensureUsbSpeedMode()
         self._device.addLogCallback(self._logMonitorCallback)
         if sentryEnabled:
             try:
@@ -217,8 +228,6 @@ class Demo:
                 pass
         if self.metrics is not None:
             self.metrics.reportDevice(self._device)
-        if self._deviceInfo.desc.protocol == dai.XLinkProtocol.X_LINK_USB_VSC:
-            print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
         self._conf.adjustParamsToDevice(self._device)
         self._conf.adjustPreviewToOptions()
         if self._conf.lowBandwidth:
@@ -343,7 +352,7 @@ class Demo:
             if sentryEnabled:
                 from sentry_sdk import capture_exception
                 capture_exception(ex)
-            raise
+            self.onError(ex)
         finally:
             self.stop()
 
@@ -368,6 +377,32 @@ class Demo:
 
     def canRun(self):
         return hasattr(self, "_device") and not self._device.isClosed()
+
+    def _ensureUsbSpeedMode(self):
+        if self._device is None:
+            raise RuntimeError("Cannot determine USB speed without a device object!")
+
+        if self._device.getUsbSpeed() == dai.UsbSpeed.HIGH:
+            self.onWarning("Low USB speed detected. Expect reduced performance\nConsider using USB3 port or different cable")
+
+            if self._conf.args.usbSpeed != "usb2":
+                print("Enabling USB2 mode for USB2 connection...")
+                mxid = self._device.getMxId()
+                self._device.close()
+                del self._device
+                for i in range(5):
+                    found, self._deviceInfo = dai.Device.getDeviceByMxId(mxid)
+                    if found:
+                        self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=True)
+                        self._conf.args.usbSpeed = "usb2"
+                        break
+                    else:
+                        print(f"Device rediscovery failed... (Attempt: {i + 1})")
+                        time.sleep(1)
+                if not hasattr(self, "_device") or self._device is None:
+                    raise RuntimeError("Enabling USB2 mode failed, please try again with -usbs usb2 flag enabled!")
+                else:
+                    print("Enabling USB2 mode was successful.")
 
     def _logMonitorCallback(self, msg):
         if msg.level == dai.LogLevel.CRITICAL:
@@ -612,6 +647,7 @@ def runQt():
         setDataSignal = pyqtSignal(list)
         exitSignal = pyqtSignal()
         errorSignal = pyqtSignal(str)
+        warningSignal = pyqtSignal(str)
 
     class Worker(QRunnable):
         def __init__(self, instance, parent, conf, selectedPreview=None):
@@ -636,7 +672,7 @@ def runQt():
         def run(self):
             self.running = True
             self.signals.setDataSignal.emit(["restartRequired", False])
-            self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
+            self.instance.setCallbacks(shouldRun=self.shouldRun, onShowFrame=self.onShowFrame, onSetup=self.onSetup, onWarning=self.onWarning, onAppSetup=self.onAppSetup, onAppStart=self.onAppStart, showDownloadProgress=self.showDownloadProgress)
             self.conf.args.bandwidth = "auto"
             if self.conf.args.deviceId is None:
                 devices = []
@@ -690,6 +726,9 @@ def runQt():
         def onError(self, ex: Exception):
             self.signals.errorSignal.emit(''.join(traceback.format_tb(ex.__traceback__) + [f"{type(ex).__name__}: {ex}"]))
             self.signals.setDataSignal.emit(["restartRequired", True])
+
+        def onWarning(self, text):
+            self.signals.warningSignal.emit(text)
 
         def shouldRun(self):
             if "shouldRun" in self.file_callbacks:
@@ -768,6 +807,16 @@ def runQt():
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
 
+
+        def showWarning(self, text):
+            print(f"[WARNING] {text}")
+            msgBox = QMessageBox()
+            msgBox.setIcon(QMessageBox.Warning)
+            msgBox.setText(text)
+            msgBox.setWindowTitle("Warning!")
+            msgBox.setStandardButtons(QMessageBox.Ok)
+            msgBox.exec()
+
         def setupDataCollection(self):
             try:
                 with Path(".consent").open() as f:
@@ -785,6 +834,7 @@ def runQt():
             self.worker.signals.updateDownloadProgressSignal.connect(self.updateDownloadProgress)
             self.worker.signals.setDataSignal.connect(self.setData)
             self.worker.signals.errorSignal.connect(self.showError)
+            self.worker.signals.warningSignal.connect(self.showWarning)
             self.threadpool.start(self.worker)
             if not self.appInitialized:
                 self.appInitialized = True
