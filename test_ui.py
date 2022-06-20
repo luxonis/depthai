@@ -1,7 +1,9 @@
-import pathlib
+import threading
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-import sys
+from PyQt5.QtCore import QObject, QRunnable, pyqtSlot, pyqtSignal, QThreadPool
+
+import sys, traceback
 from datetime import datetime
 # from PyQt5.QtWidgets import QMessageBox
 # from PyQt5.QtWidgets import QMessageBox
@@ -107,7 +109,7 @@ def clear_test_results():
         operator_tests[key] = ''
     update_res = True
 
-
+imu_upgrade = True
 class DepthAICamera():
     def __init__(self):
         global update_res
@@ -146,9 +148,10 @@ class DepthAICamera():
         # """)
 
         # Add IMU to force FW update
-        self.imu = self.pipeline.create(dai.node.IMU)
-        self.imu.enableFirmwareUpdate(True);
-        self.imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
+        if imu_upgrade:
+            self.imu = self.pipeline.create(dai.node.IMU)
+            self.imu.enableFirmwareUpdate(True)
+            self.imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
 
 
         self.videoEnc = self.pipeline.create(dai.node.VideoEncoder)
@@ -497,10 +500,66 @@ HEIGHT = 717
 
 
 def test_connexion():
-    (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
-    if result:
-        return True
-    return False
+    result = False
+    try:
+        # while not result:
+        (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
+    finally:
+        return result
+
+class WorkerSignals(QObject):
+    '''
+    Defines the signals available from a running worker thread.
+    Supported signals are:
+    - finished: No data
+    - error:`tuple` (exctype, value, traceback.format_exc() )
+    - result: `object` data returned from processing, anything
+    - progress: `tuple` indicating progress metadata
+    '''
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+    progress = pyqtSignal(tuple)
+
+
+class Worker(QRunnable):
+    '''
+    Worker thread
+    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
+    '''
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        # Store constructor arguments (re-used for processing)
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
+        self._run = True
+
+        # Add the callback to our kwargs
+        # self.kwargs['progress_callback'] = self.signals.progress
+
+    @pyqtSlot()
+    def run(self):
+        '''
+        Initialise the runner function with passed args, kwargs.
+        '''
+        # Retrieve args/kwargs here; and fire processing using them
+        try:
+            result = False
+            while self._run and not result:
+                result = self.fn(*self.args, **self.kwargs)
+                time.sleep(0.1)
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        finally:
+            self.signals.result.emit(result)  # Return the result of the processing
+            self.signals.finished.emit()  # Done
+
+    def stop(self):
+        self._run = False
 
 
 # BW compat...
@@ -875,10 +934,17 @@ class UiTests(QtWidgets.QMainWindow):
         self.inactive_pallete.setColor(QtGui.QPalette.WindowText, QtCore.Qt.darkGray)
         # self.prew_out_rgb_res.setPalette(self.green_pallete)
         # self.save_but.clicked.connect(self.show_cameras)
-
+        self.update_imu = True
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.set_result)
         self.timer.start(1000//FPS)
+
+        # self.connect_timer = QtCore.QTimer()
+        # self.connect_timer.connect(test_connexion)
+        # self.timer.stop()
+
+        self.threadpool = QThreadPool()
+        self.scanning = False
 
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
@@ -913,12 +979,31 @@ class UiTests(QtWidgets.QMainWindow):
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
         self.print_logs(f'calib_path={calib_path}')
 
+    def connect(self, f):
+        class ConnectThread(QtCore.QThread):
+            def __init__(self, func):
+                super().__init__()
+                self.func = func
+
+            def run(self):
+                self.func()
+
+        self.connectThread = ConnectThread(f)
+        self.connectThread.start()
+
     @QtCore.pyqtSlot(str)
-    def print_logs(self, new_log):
+    def print_logs(self, new_log, log_level='INFO'):
         if new_log == 'clear':
             self.all_logs = ''
             return
-        self.all_logs += new_log + '<br>'
+        if log_level == 'ERROR':
+            self.all_logs += '<p style="color:red">' + new_log + '</p>'
+        elif log_level == 'WARNING':
+            self.all_logs += '<p style="color:orange">' + new_log + '</p>'
+        elif log_level == 'GREEN':
+            self.all_logs += '<p style="color:green">' + new_log + '</p>'
+        else:
+            self.all_logs += new_log + '<br>'
         self.logs_txt_browser.setHtml(self.MB_INIT + self.all_logs + self.MB_END)
         self.logs_txt_browser.moveCursor(QtGui.QTextCursor.End)
 
@@ -942,84 +1027,117 @@ class UiTests(QtWidgets.QMainWindow):
             self.connect_but.setText("CONNECT")
             self.connect_but.adjustSize()
             return
-        self.print_logs('clear')
-        if test_connexion():
-            self.print_logs('Camera connected, starting tests...')
-
-            # Update BL if PoE
-            if test_type == 'OAK-D-PRO-POE':
-                self.update_bootloader()
-
-            try:
-                # # Try flashing BL for PoE
-                # if test_type == 'OAK-D-PRO-POE':
-                #     deviceInfos = dai.DeviceBootloader.getAllAvailableDevices()
-                #     if len(deviceInfos) <= 0:
-                #         self.print_logs("No device found..., check connection")
-                #         return
-
-                #     with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
-                #         # Create a progress callback lambda
-                #         progress = lambda p : self.print_logs(f'Bootloader flashing progress: {p*100:.1f}%')
-
-                #         (res, message) = bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, progress)
-                #         if res:
-                #             self.print_logs(f'Flash Bootloader Success!')
-                #             test_result['nor_flash_res'] = 'PASS'
-                #         else:
-                #             self.print_logs(f'Flash bootloader fail: {message}')
-                #             test_result['FAIL'] = 'PASS'
-                #             return
-
-                #         # Wait a tad for Bootloader to reset back to USB ROM BL
-                #         time.sleep(1)
-
-                self.depth_camera = DepthAICamera()
-            except RuntimeError as ex:
-                self.print_logs(f"Something went wrong, check connexion! - {ex}")
-                return
-            self.connect_but.setText("DISCONNECT AND SAVE")
+        # self.print_logs('clear')
+        if not self.scanning:
+            self.connexion_result = Worker(test_connexion)
+            self.connexion_result.signals.result.connect(self.connexion_slot)
+            self.connexion_result.signals.finished.connect(self.end_conn)
+            self.threadpool.start(self.connexion_result)
+            self.scanning = True
+            self.connect_but.setText('CANCEL')
             self.connect_but.adjustSize()
-            # self.connect_but.resize(self.connect_but.sizeHint().width(), self.connect_but.size().height())
-            location = WIDTH, 0
-            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
-            self.rgb.show()
-            location = WIDTH, prew_height + 80
-            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
-            self.jpeg.show()
-            if test_type != 'OAK-1':
-                location = WIDTH + prew_width + 20, 0
-                self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8, 'LEFT Preview', location)
-                self.left.show()
-                location = WIDTH + prew_width + 20, prew_height + 80
-                self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8, 'RIGHT Preview', location)
-                self.right.show()
-            self.print_logs('EEPROM backup saved at')
-            self.print_logs(CALIB_BACKUP_FILE)
-            eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
-            if eeprom_success:
-                self.print_logs('Flash EEPROM successful!')
-                test_result['eeprom_res'] = 'PASS'
+        else:
+            self.connexion_result.stop()
+            print('Canceling')
+            self.connect_but.setText('CONNECT')
+            self.connect_but.adjustSize()
+            self.scanning = False
+            self.threadpool.cancel(self.connexion_result)
 
-                # Don't save full EEPROM json as it won't play well with regular csv.
-                # Just save batchTime for now
-                test_result['eeprom_data'] = str(eeprom_data['batchTime'])
-                # test_result['eeprom_data'] = json.dumps(eeprom_data)
-            else:
-                self.print_logs(f'Flash EEPROM failed! - {eeprom_msg}')
-                test_result['eeprom_res'] = 'FAIL'
-                test_result['eeprom_data'] = ''
+    def end_conn(self):
+        # print(s)
+        print("end signal received")
+        self.scanning = False
 
+    def connexion_slot(self, signal):
+        # self.threadpool.cancel(self.connexion_result)
+        if not signal:
+            self.print_logs('No camera detected, check the connexion and try again...', 'ERROR')
+            return
+        self.print_logs('Camera connected, starting tests...', 'GREEN')
+        self.connect_but.setText("FLASHING")
+        self.connect_but.adjustSize()
+        self.connect_but.setChecked(False)
+        self.connect_but.setCheckable(False)
+        self.connect_but.setEnabled(False)
+        # Update BL if PoE
+        if test_type == 'OAK-D-PRO-POE':
+            self.update_bootloader()
+
+        try:
+            self.depth_camera = DepthAICamera()
             # Add IMU update cb
+
+        except RuntimeError as ex:
+            self.print_logs(f"Something went wrong, check connexion! - {ex}", log_level='ERROR')
+            return
+        # self.update_imu = True
+        if imu_upgrade:
             self.depth_camera.device.setLogLevel(dai.LogLevel.INFO)
             self.depth_camera.device.addLogCallback(self.logMonitorImuFwUpdateCallback)
-
         else:
-            print(locals())
-            self.print_logs('No camera detected, check the connexion and try again...')
+            self.connect_but.setChecked(False)
+            self.connect_but.setCheckable(True)
+            self.connect_but.setEnabled(True)
+            self.connect_but.setText('DISCONNECT AND SAVE')
+            self.connect_but.adjustSize()
+            self.update_imu = True
+        location = WIDTH, 0
+        self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
+        self.rgb.show()
+        location = WIDTH, prew_height + 80
+        self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
+        self.jpeg.show()
+        if test_type != 'OAK-1':
+            location = WIDTH + prew_width + 20, 0
+            self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
+                               'LEFT Preview', location)
+            self.left.show()
+            location = WIDTH + prew_width + 20, prew_height + 80
+            self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8,
+                                'RIGHT Preview', location)
+            self.right.show()
+        self.print_logs('EEPROM backup saved at')
+        self.print_logs(CALIB_BACKUP_FILE)
+        eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
+        if eeprom_success:
+            self.print_logs('Flash EEPROM successful!', 'GREEN')
+            test_result['eeprom_res'] = 'PASS'
+
+            # Don't save full EEPROM json as it won't play well with regular csv.
+            # Just save batchTime for now
+            test_result['eeprom_data'] = str(eeprom_data['batchTime'])
+            # test_result['eeprom_data'] = json.dumps(eeprom_data)
+        else:
+            self.print_logs(f'Flash EEPROM failed! - {eeprom_msg}', 'ERROR')
+            test_result['eeprom_res'] = 'FAIL'
+            test_result['eeprom_data'] = ''
 
     def set_result(self):
         global update_res
+        if not self.update_imu:
+            self.connect_but.setChecked(False)
+            self.connect_but.setCheckable(True)
+            self.connect_but.setEnabled(True)
+            self.connect_but.setText('DISCONNECT AND SAVE')
+            self.connect_but.adjustSize()
+            self.update_imu = True
+
+            if test_type == 'OAK-D-PRO-POE':
+                if test_result['nor_flash_res'] != 'PASS':
+                    self.print_logs('BOOTLOADER UPDATE FAIL, RETRYING...')
+                    global imu_upgrade
+                    imu_upgrade = False
+                    self.disconnect()
+                    self.connexion_slot(True)
+                    imu_upgrade = True
+                    # self.update_bootloader()
+                if test_result['nor_flash_res'] != 'PASS':
+                    self.print_logs('BOOTLOADER UPDATE FAIL!!!', log_level='ERROR')
+                else:
+                    self.print_logs('BOOTLOADER UPDATED SUCCESSFULLY', log_level='GREEN')
+
+
         time_string = datetime.now().strftime("%Y %m %d %H:%M:%S")
         self.date_time_label.setText('time: ' + time_string)
         if not update_res:
@@ -1107,15 +1225,17 @@ class UiTests(QtWidgets.QMainWindow):
         self.prog_label.setText('Flash IMU')
         self.update_prog_bar(0)
         if result:
-            self.print_logs('Bootloader updated!')
+            self.print_logs(f'Update bootloader: {message}')
+            self.print_logs('Bootloader updated!', 'GREEN')
             test_result['nor_flash_res'] = 'PASS'
             return True
         else:
-            self.print_logs(f'Failed to update bootloader: {message}')
+            self.print_logs(f'Failed to update bootloader: {message}', 'ERROR')
             test_result['nor_flash_res'] = 'FAIL'
             return False
 
     def logMonitorImuFwUpdateCallback(self, msg):
+        # print('logMonitorIMuFwUpdateCallback')
         if 'IMU firmware update status' in msg.payload:
             try:
                 percentage_float = float(msg.payload.split(":")[1].split("%")[0]) / 100.0
@@ -1127,16 +1247,24 @@ class UiTests(QtWidgets.QMainWindow):
             self.prog_label.setText('IMU PASS')
             self.update_prog_bar(1.0)
             self.print_logs_trigger.emit(f'Successfully updated IMU!')
+            self.update_imu = False
 
         if 'IMU firmware update failed' in msg.payload:
             self.prog_label.setText('IMU FAIL')
             self.update_prog_bar(0.0)
             self.print_logs_trigger.emit(f'FAILED updating IMU!')
+            self.update_imu = False
+        # print(percentage_float)
+        # print(percentage_float == 1, flush=True)
+        # if percentage_float == 1:
+        #     self.update_imu = False
+        # print('END')
+
 
     def test_bootloader_version(self, version='0.0.15'):
         (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
         if not result:
-            self.print_logs('ERROR device was disconnected!')
+            self.print_logs('ERROR device was disconnected!', 'ERROR')
             return False
         device = dai.DeviceBootloader(info)
         current_version = str(device.getVersion())
@@ -1149,10 +1277,10 @@ class UiTests(QtWidgets.QMainWindow):
         self.print_logs('Writing version ' + version + '...')
         (result, message) = self.update_bootloader()
         if result:
-            self.print_logs('Bootloader updated!')
+            self.print_logs('Bootloader updated!', 'GREEN')
             return True
         else:
-            self.print_logs(f'Failed to update bootloader: {message}')
+            self.print_logs(f'Failed to update bootloader: {message}', 'ERROR')
             return False
 
     def save_csv(self):
@@ -1195,7 +1323,7 @@ class UiTests(QtWidgets.QMainWindow):
         file.write(',' + calib_path.name)
         file.write('\n')
         file.close()
-        self.print_logs('Test results for ' + test_type + ' with id ' + self.depth_camera.id + ' had been saved!')
+        self.print_logs('Test results for ' + test_type + ' with id ' + self.depth_camera.id + ' had been saved!', 'GREEN')
 
     def close_event(self, event):
         self.disconnect()
@@ -1244,5 +1372,4 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     ui.setupUi()
     UI_tests.show()
-    test_connexion()
     sys.exit(app.exec_())
