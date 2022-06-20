@@ -323,12 +323,16 @@ class StereoCalibration(object):
                 allCorners_l, allIds_l, self.img_shape)
             ret_r, self.M2, self.d2, rvecs, tvecs = self.calibrate_camera_charuco(
                 allCorners_r, allIds_r, self.img_shape)
-        
-        else:
-            ret_l, self.M1, self.d1, rvecs, tvecs = self.calibrate_fisheye(allCorners_l, allIds_l, self.img_shape)
-            ret_r, self.M2, self.d2, rvecs, tvecs = self.calibrate_fisheye(allCorners_r, allIds_r, self.img_shape)
+            print("~~~~~~~~~~~~~RMS error of left~~~~~~~~~~~~~~")
+            print(ret_l)
+            print("~~~~~~~~~~~~~RMS error of right~~~~~~~~~~~~~~")
+            print(ret_r)        
+        # else:
+            ret_l, self.M3, self.d3, rvecs, tvecs = self.calibrate_fisheye(allCorners_l, allIds_l, self.img_shape)
+            ret_r, self.M4, self.d4, rvecs, tvecs = self.calibrate_fisheye(allCorners_r, allIds_r, self.img_shape)
             print("~~~~~~~~~~~ Fisheye undistorting..... ~~~~~~~~~~~~~")
-        self.fisheye_undistort_visualizaation(images_left, images_right, self.M1, self.d1, self.M2, self.d2, self.img_shape)
+        self.fisheye_undistort_visualizaation2(images_left, images_right, self.M1, self.d1, self.M2, self.d2, self.M3, self.d3, self.M4, self.d4, self.img_shape)
+        # self.fisheye_undistort_visualizaation(images_left, images_right, self.M1, self.d1, self.M2, self.d2, self.img_shape)
             # self.fisheye_undistort_visualizaation(images_right, self.M2, self.d2, self.img_shape)
 
 
@@ -336,10 +340,24 @@ class StereoCalibration(object):
         print(ret_l)
         print("~~~~~~~~~~~~~RMS error of right~~~~~~~~~~~~~~")
         print(ret_r)
+        print("self.M1 -------")
         print(self.M1)
+        print("self.M2 -------")
         print(self.M2)
+        print("self.d1 -------")
         print(self.d1)
+        print("self.d2 -------")
         print(self.d2)
+        print("self.M3 -------")
+        print(self.M3)
+        print("self.M4 -------")
+        print(self.M4)
+        print("self.d3 -------")
+        print(self.d3)
+        print("self.d4 -------")
+        print(self.d4)
+
+
         if self.cameraModel == 'perspective':
             ret, self.M1, self.d1, self.M2, self.d2, self.R, self.T, E, F = self.calibrate_stereo(allCorners_l, allIds_l, allCorners_r, allIds_r, self.img_shape, self.M1, self.d1, self.M2, self.d2)
         else:
@@ -452,6 +470,56 @@ class StereoCalibration(object):
 
         cv2.destroyWindow('Fisheye-undistort')
 
+    def fisheye_undistort_visualizaation2(self, imgLeft_list, imgRight_list, K_left, D_left, K_right, D_right, K_leftF, D_leftF, K_rightF, D_rightF, img_size):
+        
+        mapx_l = None
+        mapy_l = None
+        mapx_r = None 
+        mapy_r = None
+
+        # if self.cameraModel == 'perspective':
+        mapx_l, mapy_l = cv2.initUndistortRectifyMap(
+                        K_left, D_left, np.eye(3), K_left, img_size, cv2.CV_32FC1)
+        mapx_r, mapy_r = cv2.initUndistortRectifyMap(
+                        K_right, D_right, np.eye(3), K_right, img_size, cv2.CV_32FC1)
+        # else:
+        mapx_lF, mapy_lF = cv2.fisheye.initUndistortRectifyMap(K_leftF, D_leftF, np.eye(3), K_left, img_size, cv2.CV_32FC1)
+        mapx_rF, mapy_rF = cv2.fisheye.initUndistortRectifyMap(K_rightF, D_rightF, np.eye(3), K_right, img_size, cv2.CV_32FC1)
+
+        for image_left, image_right in zip(imgLeft_list, imgRight_list):
+            imgLeft = cv2.imread(image_left)
+            imgRight = cv2.imread(image_right)
+            left_path = Path(image_left)
+            right_path = Path(image_right)
+            imgLeftN = cv2.remap(imgLeft, mapx_l, mapy_l, cv2.INTER_LINEAR)
+            imgRightN = cv2.remap(imgRight, mapx_r, mapy_r, cv2.INTER_LINEAR)
+
+
+            imgLeftF = cv2.remap(imgLeft, mapx_l, mapy_l, cv2.INTER_LINEAR)
+            imgRightF = cv2.remap(imgRight, mapx_r, mapy_r, cv2.INTER_LINEAR)
+
+            img_concat = cv2.hconcat([imgLeftN, imgRightN])
+            img_concatF = cv2.hconcat([imgLeftF, imgRightF])
+            # img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
+            line_row = 0
+            while line_row < img_concat.shape[0]:
+                cv2.line(img_concat,
+                         (0, line_row), (img_concat.shape[1], line_row),
+                         (0, 255, 0), 1)
+                cv2.line(img_concatF,
+                         (0, line_row), (img_concatF.shape[1], line_row),
+                         (0, 255, 0), 1)
+                line_row += 30
+
+            print(f"Left ID: {left_path.name}  <->  Right ID: {right_path.name}")
+            cv2.imshow('Normal-undistort', img_concat)
+            cv2.imshow('Fisheye-undistort', img_concatF)
+            k = cv2.waitKey(0)
+            if k == 27:  # Esc key to stop
+                break
+
+        cv2.destroyWindow('Fisheye-undistort')
+        cv2.destroyWindow('Normal-undistort')
 
     def calibrate_camera_charuco(self, allCorners, allIds, imsize):
         """
@@ -511,7 +579,7 @@ class StereoCalibration(object):
         
         print("Camera Matrix initialization.............")
         print(cameraMatrixInit)
-        flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
+        flags = 0
         distCoeffsInit = np.zeros((4, 1))
         term_criteria = (cv2.TERM_CRITERIA_COUNT +
                                     cv2.TERM_CRITERIA_EPS, 100, 1e-5)
