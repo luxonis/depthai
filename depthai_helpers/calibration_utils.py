@@ -331,14 +331,13 @@ class StereoCalibration(object):
             ret_l, self.M3, self.d3, rvecs, tvecs = self.calibrate_fisheye(allCorners_l, allIds_l, self.img_shape)
             ret_r, self.M4, self.d4, rvecs, tvecs = self.calibrate_fisheye(allCorners_r, allIds_r, self.img_shape)
             print("~~~~~~~~~~~ Fisheye undistorting..... ~~~~~~~~~~~~~")
-        self.fisheye_undistort_visualizaation2(images_left, images_right, self.M1, self.d1, self.M2, self.d2, self.M3, self.d3, self.M4, self.d4, self.img_shape)
         # self.fisheye_undistort_visualizaation(images_left, images_right, self.M1, self.d1, self.M2, self.d2, self.img_shape)
             # self.fisheye_undistort_visualizaation(images_right, self.M2, self.d2, self.img_shape)
 
 
-        print("~~~~~~~~~~~~~RMS error of left~~~~~~~~~~~~~~")
+        print("~~~~~~~~~~~~~RMS fisheye error of left~~~~~~~~~~~~~~")
         print(ret_l)
-        print("~~~~~~~~~~~~~RMS error of right~~~~~~~~~~~~~~")
+        print("~~~~~~~~~~~~~RMS fisheye error of right~~~~~~~~~~~~~~")
         print(ret_r)
         print("self.M1 -------")
         print(self.M1)
@@ -356,6 +355,7 @@ class StereoCalibration(object):
         print(self.d3)
         print("self.d4 -------")
         print(self.d4)
+        self.fisheye_undistort_visualizaation2(images_left, images_right, self.M1, self.d1, self.M2, self.d2, self.M3, self.d3, self.M4, self.d4, self.img_shape)
 
 
         if self.cameraModel == 'perspective':
@@ -483,8 +483,10 @@ class StereoCalibration(object):
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
                         K_right, D_right, np.eye(3), K_right, img_size, cv2.CV_32FC1)
         # else:
-        mapx_lF, mapy_lF = cv2.fisheye.initUndistortRectifyMap(K_leftF, D_leftF, np.eye(3), K_left, img_size, cv2.CV_32FC1)
-        mapx_rF, mapy_rF = cv2.fisheye.initUndistortRectifyMap(K_rightF, D_rightF, np.eye(3), K_right, img_size, cv2.CV_32FC1)
+        mapx_lF, mapy_lF = cv2.fisheye.initUndistortRectifyMap(K_leftF, D_leftF, np.eye(3), K_leftF, img_size, cv2.CV_32FC1)
+
+        mapx_rF, mapy_rF = cv2.fisheye.initUndistortRectifyMap(K_rightF, D_rightF, np.eye(3), K_rightF, img_size, cv2.CV_32FC1)
+        print(img_size)
 
         for image_left, image_right in zip(imgLeft_list, imgRight_list):
             imgLeft = cv2.imread(image_left)
@@ -495,8 +497,8 @@ class StereoCalibration(object):
             imgRightN = cv2.remap(imgRight, mapx_r, mapy_r, cv2.INTER_LINEAR)
 
 
-            imgLeftF = cv2.remap(imgLeft, mapx_l, mapy_l, cv2.INTER_LINEAR)
-            imgRightF = cv2.remap(imgRight, mapx_r, mapy_r, cv2.INTER_LINEAR)
+            imgLeftF = cv2.remap(imgLeft, mapx_lF, mapy_lF, cv2.INTER_LINEAR)
+            imgRightF = cv2.remap(imgRight, mapx_rF, mapy_rF, cv2.INTER_LINEAR)
 
             img_concat = cv2.hconcat([imgLeftN, imgRightN])
             img_concatF = cv2.hconcat([imgLeftF, imgRightF])
@@ -580,9 +582,11 @@ class StereoCalibration(object):
         print("Camera Matrix initialization.............")
         print(cameraMatrixInit)
         flags = 0
+        flags = cv2.fisheye.CALIB_CHECK_COND
+        # flags = cv2.fisheye.CALIB_CHECK_COND+cv2.fisheye.CALIB_FIX_SKEW
         distCoeffsInit = np.zeros((4, 1))
         term_criteria = (cv2.TERM_CRITERIA_COUNT +
-                                    cv2.TERM_CRITERIA_EPS, 100, 1e-5)
+                                    cv2.TERM_CRITERIA_EPS, 1000, 1e-5)
         
         return cv2.fisheye.calibrate(obj_points, allCorners, imsize, cameraMatrixInit, distCoeffsInit, flags = flags, criteria = term_criteria)
     

@@ -53,7 +53,8 @@ resources/*.json
 *.img
 .aux_wheels
 *.whl
-
+*.zip
+*.7z
 *.orig
 
 # Virtual environment
