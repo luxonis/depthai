@@ -122,7 +122,7 @@ class DepthAICamera():
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         self.camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-        self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_400_P)
+        self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
         self.camRgb.preview.link(self.xoutRgb.input)
         self.camRgb.setFps(FPS)
 
@@ -166,7 +166,7 @@ class DepthAICamera():
             self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
             self.xoutLeft.setStreamName("left")
             self.camLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-            self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+            self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
             self.camLeft.out.link(self.xoutLeft.input)
             self.camLeft.setFps(FPS)
 
@@ -174,7 +174,7 @@ class DepthAICamera():
             self.xoutRight = self.pipeline.create(dai.node.XLinkOut)
             self.xoutRight.setStreamName("right")
             self.camRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-            self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_400_P)
+            self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
             self.camRight.out.link(self.xoutRight.input)
             self.camRight.setFps(10)
 
