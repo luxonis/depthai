@@ -552,8 +552,13 @@ class Main:
 
             # calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
                # Set board name / revision only if calibration is empty
-            if self.empty_calibration(calibration_handler):
+            try:
+                if self.empty_calibration(calibration_handler):
+                    calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+            except:
+                print("Writing in except...")
                 calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+            
 
             calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
             calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
