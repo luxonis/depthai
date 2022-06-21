@@ -117,7 +117,7 @@ class DepthAICamera():
         self.camRgb = self.pipeline.create(dai.node.ColorCamera)
         self.xoutRgb = self.pipeline.create(dai.node.XLinkOut)
         self.xoutRgb.setStreamName("rgb")
-        self.camRgb.setPreviewSize(1920, 1080)
+        self.camRgb.setPreviewSize(300, 300)
         self.camRgb.setPreviewKeepAspectRatio(True)
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
