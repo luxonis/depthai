@@ -150,8 +150,15 @@ class DepthAICamera():
         # Add IMU to force FW update
         if imu_upgrade:
             self.imu = self.pipeline.create(dai.node.IMU)
-            self.imu.enableFirmwareUpdate(True)
+            self.xoutIMU = self.pipeline.create(dai.node.XLinkOut)
+            self.xoutIMU.setStreamName("IMU")
+            if 'lite' in test_type:
+                self.imu.enableFirmwareUpdate(True)
             self.imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
+            self.imu.setBatchReportThreshold(1)
+            self.imu.setMaxBatchReports(10)
+            self.imu.out.link(self.xoutIMU.input)
+
 
 
         self.videoEnc = self.pipeline.create(dai.node.VideoEncoder)
