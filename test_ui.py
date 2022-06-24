@@ -122,7 +122,7 @@ class DepthAICamera():
         self.camRgb.setInterleaved(False)
         self.camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         self.camRgb.setBoardSocket(dai.CameraBoardSocket.RGB)
-        self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+        self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         self.camRgb.preview.link(self.xoutRgb.input)
         self.camRgb.setFps(FPS)
 
