@@ -954,7 +954,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.inactive_pallete.setColor(QtGui.QPalette.WindowText, QtCore.Qt.darkGray)
         # self.prew_out_rgb_res.setPalette(self.green_pallete)
         # self.save_but.clicked.connect(self.show_cameras)
-        self.update_imu = False
+        self.update_imu = True
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.set_result)
         self.timer.start(1000//FPS)
@@ -1076,11 +1076,11 @@ class UiTests(QtWidgets.QMainWindow):
             self.print_logs('No camera detected, check the connexion and try again...', 'ERROR')
             return
         self.print_logs('Camera connected, starting tests...', 'GREEN')
-        self.connect_but.setText("FLASHING")
-        self.connect_but.adjustSize()
-        self.connect_but.setChecked(False)
-        self.connect_but.setCheckable(False)
-        self.connect_but.setEnabled(False)
+        # self.connect_but.setText("FLASHING")
+        # self.connect_but.adjustSize()
+        # self.connect_but.setChecked(False)
+        # self.connect_but.setCheckable(False)
+        # self.connect_but.setEnabled(False)
         # Update BL if PoE
         # if test_type == 'OAK-D-PRO-POE':
         if 'poe' in eepromDataJson['productName'].lower():
@@ -1094,16 +1094,16 @@ class UiTests(QtWidgets.QMainWindow):
             self.print_logs(f"Something went wrong, check connexion! - {ex}", log_level='ERROR')
             return
         # self.update_imu = True
-        if imu_upgrade:
-            self.depth_camera.device.setLogLevel(dai.LogLevel.INFO)
-            self.depth_camera.device.addLogCallback(self.logMonitorImuFwUpdateCallback)
-        else:
-            self.connect_but.setChecked(False)
-            self.connect_but.setCheckable(True)
-            self.connect_but.setEnabled(True)
-            self.connect_but.setText('DISCONNECT AND SAVE')
-            self.connect_but.adjustSize()
-            self.update_imu = False
+        # if imu_upgrade:
+        #     self.depth_camera.device.setLogLevel(dai.LogLevel.INFO)
+        #     self.depth_camera.device.addLogCallback(self.logMonitorImuFwUpdateCallback)
+        # else:
+        self.connect_but.setChecked(False)
+        self.connect_but.setCheckable(True)
+        self.connect_but.setEnabled(True)
+        self.connect_but.setText('DISCONNECT AND SAVE')
+        self.connect_but.adjustSize()
+        self.update_imu = True
         location = WIDTH, 0
         self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
         self.rgb.show()
@@ -1143,7 +1143,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.connect_but.setEnabled(True)
             self.connect_but.setText('DISCONNECT AND SAVE')
             self.connect_but.adjustSize()
-            self.update_imu = False
+            self.update_imu = True
 
             # if test_type == 'OAK-D-PRO-POE':
             print(eepromDataJson['productName'].lower())
