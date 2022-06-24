@@ -184,8 +184,9 @@ class Replay:
         imgFrame.setData(cvFrame)
         imgFrame.setTimestamp(self._now - self._start)
         imgFrame.setSequenceNum(self._seqNum)
-        imgFrame.setWidth(cvFrame.shape[1])
-        imgFrame.setHeight(cvFrame.shape[0])
+        shape = cvFrame.shape[::-1]
+        imgFrame.setWidth(shape[0])
+        imgFrame.setHeight(shape[1])
         return imgFrame
 
     def _createImgFrame(self, name: str, cvFrame: cv2.Mat) -> dai.ImgFrame:
