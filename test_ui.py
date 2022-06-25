@@ -1083,8 +1083,23 @@ class UiTests(QtWidgets.QMainWindow):
         # self.connect_but.setEnabled(False)
         # Update BL if PoE
         # if test_type == 'OAK-D-PRO-POE':
-        if 'poe' in eepromDataJson['productName'].lower():
+        eeprom_written = False
+        name = eepromDataJson['productName'].lower()
+        if 'poe' in name:
             self.update_bootloader()
+        elif not ('lite' in name):
+            # Flash EEPROM and boot header, then reboot for boot header to take effect
+            with dai.Device() as device:
+                usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
+                                  0, 0, 0, 0, 0, 58, 32, 95, 6, 0, 0, 0, 0]
+                self.print_logs('NOR flash: writing USB boot header...')
+                device.flashWrite(usbBootHeader)
+                self.print_logs('Programmed, data: '+ str(device.flashRead(len(usbBootHeader))))
+
+                if not eeprom_written:
+                    self.print_logs('Writing EEPROM...')
+                    eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
+                    eeprom_written = True
 
         try:
             self.depth_camera = DepthAICamera()
@@ -1121,7 +1136,8 @@ class UiTests(QtWidgets.QMainWindow):
             self.right.show()
         self.print_logs('EEPROM backup saved at')
         self.print_logs(CALIB_BACKUP_FILE)
-        eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
+        if not eeprom_written:
+            eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
         if eeprom_success:
             self.print_logs('Flash EEPROM successful!', 'GREEN')
             test_result['eeprom_res'] = 'PASS'
@@ -1259,6 +1275,33 @@ class UiTests(QtWidgets.QMainWindow):
             self.print_logs(f'Failed to update bootloader: {message}', 'ERROR')
             test_result['nor_flash_res'] = 'FAIL'
             return False
+
+    # Copy-pasted, to not be under device. FIXME
+    def flash_eeprom(self, device):
+        global eepromDataJson
+        try:
+            device_calib = device.readCalibration()
+            device_calib.eepromToJsonFile(CALIB_BACKUP_FILE)
+            print('Calibraton Data on the device is backed up at: ', CALIB_BACKUP_FILE, sep='\n')
+
+            # Opening JSON file
+            if eepromDataJson is None:
+                return False
+
+            eepromDataJson['batchTime'] = int(time.time())
+
+            calib_data = dai.CalibrationHandler.fromJson(eepromDataJson)
+
+            # Flash both factory & user areas
+            device.flashFactoryCalibration(calib_data)
+            device.flashCalibration2(calib_data)
+        except Exception as ex:
+            errorMsg = f'Calibration Flash Failed: {ex}'
+            print(errorMsg)
+            return (False, errorMsg, eepromDataJson)
+
+        print('Calibration Flash Successful')
+        return (True, '', eepromDataJson)
 
     def logMonitorImuFwUpdateCallback(self, msg):
         # print('logMonitorIMuFwUpdateCallback')
