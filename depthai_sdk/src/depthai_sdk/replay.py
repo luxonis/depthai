@@ -10,7 +10,7 @@ class Replay:
     disabledStreams = []
     _streamTypes = ['color', 'left', 'right', 'depth'] # Available types to stream back to the camera
     _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
-    _supportedExtensions = ['mjpeg', 'avi', 'mp4', 'h265', 'h264', 'bag']
+    _supportedExtensions = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap']
     _inputQueues = dict() # dai.InputQueue dictionary for each stream
     _seqNum = 0 # Frame sequence number, added to each imgFrame
     _start = datetime.datetime.now() # For frame timestamp
@@ -33,24 +33,36 @@ class Replay:
         self.imgFrames = dict() # Last frame sent to the device
 
         self.readers = dict()
-        for file in os.listdir(path):
-            if not '.' in file: continue # Folder
-            name, extension = file.split('.')
-            if name in self._fileTypes and extension in self._supportedExtensions:
-                if extension == 'bag':
-                    # For .bag files
-                    from .video_readers.rosbag_reader import RosbagReader
-                    self.readers[name] = RosbagReader(str(self.path / file))
-                else:
+        def readFile(filePath: Path) -> None:
+            file = os.path.basename(filePath)
+            (name, extension) = os.path.splitext(file)
+            if extension in self._supportedExtensions:
+                if extension == '.bag':
+                    from .readers.rosbag_reader import RosbagReader
+                    self.readers[name] = RosbagReader(filePath)
+                elif extension == '.mcap':
+                    from .readers.mcap_reader import McapReader
+                    self.readers[name] = McapReader(filePath)
+                elif name in self._fileTypes:
                     # For .mjpeg / .h265 / .mp4 files
-                    from .video_readers.videocap_reader import VideoCapReader
-                    self.readers[name] = VideoCapReader(str(self.path / file))
+                    from .readers.videocap_reader import VideoCapReader
+                    self.readers[name] = VideoCapReader(filePath)
+                else:
+                    print(f"Found and skipped an unsupported file name: '{file}'.")    
+            elif file == 'calib.json':
+                self._calibData = dai.CalibrationHandler(filePath)
+            else:
+                print(f"Found and skipped an unknown file, extension: '{extension}'.")
+
+        if self.path.is_dir(): # Provided path is a folder
+            for fileName in os.listdir(path):
+                filePath = self.path / fileName
+                if filePath.is_file(): readFile(filePath)
+        else: # Provided path is a file
+            readFile(self.path)
 
         if len(self.readers) == 0:
-            raise RuntimeError("There are no recordings in the folder specified.")
-
-        # Load calibration data from the recording folder
-        self._calibData = dai.CalibrationHandler(str(self.path / "calib.json"))
+            raise RuntimeError("Path invalid - no recordings found.")
 
     def setResizeColor(self, size: tuple):
         """
@@ -103,7 +115,6 @@ class Replay:
 
             # Don't send these frames to the OAK camera
             if name in self.disabledStreams: continue
-            print(f"sending frame {name} seq {imgFrame.getSequenceNum()} ts {imgFrame.getTimestamp()}")
 
             # Send an imgFrame to the OAK camera
             self._inputQueues[name].send(imgFrame)
@@ -160,24 +171,8 @@ class Replay:
             # No need to keep aspect ratio, image will be squished
             return cv2.resize(frame, self._colorSize)
 
-        h = frame.shape[0]
-        w = frame.shape[1]
-        desired_ratio = self._colorSize[0] / self._colorSize[1]
-        current_ratio = w / h
-
-        # Crop width/heigth to match the aspect ratio needed by the NN
-        if desired_ratio < current_ratio: # Crop width
-            # Use full height, crop width
-            new_w = (desired_ratio/current_ratio) * w
-            crop = int((w - new_w) / 2)
-            preview = frame[:, crop:w-crop]
-        else: # Crop height
-            # Use full width, crop height
-            new_h = (current_ratio/desired_ratio) * h
-            crop = int((h - new_h) / 2)
-            preview = frame[crop:h-crop,:]
-
-        return cv2.resize(preview, self._colorSize)
+        cropped = cropToAspectRatio(frame, self._colorSize)
+        return cv2.resize(cropped, self._colorSize)
 
     def _createNewFrame(self, cvFrame) -> dai.ImgFrame:
         imgFrame = dai.ImgFrame()

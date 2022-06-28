@@ -74,7 +74,7 @@ class Record():
         if self.mcap:
             if self.quality == EncodingQuality.LOW or self.quality == EncodingQuality.BEST:
                 raise Exception("MCAP only supports MEDIUM and HIGH quality!")
-            from .video_recorders.mcap_recorder import McapRecorder
+            from .recorders.mcap_recorder import McapRecorder
             rec = McapRecorder(self.path, self.device)
             for name in save:
                 print('setting mcap for', name)
@@ -82,7 +82,7 @@ class Record():
             return recorders
 
         if 'depth' in save:
-            from .video_recorders.rosbag_recorder import RosbagRecorder
+            from .recorders.rosbag_recorder import RosbagRecorder
             recorders['depth'] = RosbagRecorder(self.path, self.device, self.get_sizes())
             save.remove('depth')
 
@@ -91,11 +91,11 @@ class Record():
         else:
             try:
                 # Try importing av
-                from .video_recorders.pyav_mp4_recorder import PyAvRecorder
+                from .recorders.pyav_mp4_recorder import PyAvRecorder
                 rec = PyAvRecorder(self.path, self.quality, self.fps)
             except:
                 print("'av' library is not installed, depthai-record will save raw encoded streams.")
-                from .video_recorders.raw_recorder import RawRecorder
+                from .recorders.raw_recorder import RawRecorder
                 rec = RawRecorder(self.path, self.quality)
         # All other streams ("color", "left", "right", "disparity") will use
         # the same Raw/PyAv recorder
