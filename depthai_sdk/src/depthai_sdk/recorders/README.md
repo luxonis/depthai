@@ -1,4 +1,4 @@
-# Video recorder classes
+# Recorder classes
 
 Here we have multiple recorder classes:
 

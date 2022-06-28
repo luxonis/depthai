@@ -13,6 +13,8 @@ from .abstract_recorder import Recorder
 from pathlib import Path
 import depthai as dai
 
+import depthai as dai
+
 class McapRecorder(Recorder):
     pclSeq = 0
     def __init__(self, path: Path, device: dai.Device):
@@ -49,31 +51,6 @@ class McapRecorder(Recorder):
         # create schema for the type of message that will be sent over to foxglove
         # for more details on how the schema must look like visit:
         # http://docs.ros.org/en/noetic/api/sensor_msgs/html/index-msg.html
-        schema_id = self.writer.register_schema(
-            name="ros.sensor_msgs.CompressedImage",
-            encoding="jsonschema",
-            data=json.dumps(
-                {
-                    "type": "object",
-                    "properties": {
-                        "header": {
-                            "type": "object",
-                            "properties": {
-                                "stamp": {
-                                    "type": "object",
-                                    "properties": {
-                                        "sec": {"type": "integer"},
-                                        "nsec": {"type": "integer"},
-                                    },
-                                },
-                            },
-                        },
-                        "format": {"type": "string"},
-                        "data": {"type": "string", "contentEncoding": "base64"},
-                    },
-                },
-            ).encode()
-        )
 
         # create and register channel
         channel_id = self.writer.register_channel(
@@ -141,14 +118,7 @@ class McapRecorder(Recorder):
 
         self.channels["pointClouds"] = channel_id
 
-    def imageSave(self, name: str, img):
-
-        # read from .jpeg format to buffer of bytes
-        byte_im = img.tobytes()
-
-        # data must be encoded in base64
-        data = base64.b64encode(byte_im).decode("ascii")
-
+    def imageSave(self, name: str, imgFrame: dai.ImgFrame):
         tmpTime = time.time_ns()
         sec = math.trunc(tmpTime / 1e9)
         nsec = tmpTime - sec
@@ -160,7 +130,7 @@ class McapRecorder(Recorder):
                 {
                     "header": {"stamp": {"sec": sec, "nsec": nsec}},
                     "format": "jpeg",
-                    "data": data,
+                    "data": np.array(imgFrame.getData()).tobytes(),
                 }
             ).encode("utf8"),
             publish_time=tmpTime,
@@ -183,6 +153,8 @@ class McapRecorder(Recorder):
         tmpTime = time.time_ns()
         sec = math.trunc(tmpTime / 1e9)
         nsec = tmpTime - sec
+
+        self.writer.add_message()
 
         self.writer.add_message(
             channel_id=self.channels['pointClouds'],

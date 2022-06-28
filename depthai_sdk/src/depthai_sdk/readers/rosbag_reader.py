@@ -5,6 +5,9 @@ import numpy as np
 from .abstract_reader import AbstractReader
 
 class RosbagReader(AbstractReader):
+    """
+    TODO: make the stream selectable, add function that returns all available streams
+    """
     def __init__(self, source: str) -> None:
         self.reader = Reader(source)
         self.reader.open()
