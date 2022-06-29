@@ -152,14 +152,11 @@ class DepthAICamera():
             self.imu = self.pipeline.create(dai.node.IMU)
             self.xoutIMU = self.pipeline.create(dai.node.XLinkOut)
             self.xoutIMU.setStreamName("IMU")
-            if 'lite' in test_type:
-                self.imu.enableFirmwareUpdate(True)
+            self.imu.enableFirmwareUpdate(True)
             self.imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
             self.imu.setBatchReportThreshold(1)
             self.imu.setMaxBatchReports(10)
             self.imu.out.link(self.xoutIMU.input)
-
-
 
         self.videoEnc = self.pipeline.create(dai.node.VideoEncoder)
         self.camRgb.video.link(self.videoEnc.input)
@@ -957,7 +954,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.update_imu = True
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.set_result)
-        self.timer.start(1000//FPS)
+        self.timer.start(100)
 
         # self.connect_timer = QtCore.QTimer()
         # self.connect_timer.connect(test_connexion)
@@ -965,6 +962,8 @@ class UiTests(QtWidgets.QMainWindow):
 
         self.threadpool = QThreadPool()
         self.scanning = False
+        self.last_progress_val = 0.0
+        self.cycle = 0
 
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
@@ -1076,11 +1075,11 @@ class UiTests(QtWidgets.QMainWindow):
             self.print_logs('No camera detected, check the connexion and try again...', 'ERROR')
             return
         self.print_logs('Camera connected, starting tests...', 'GREEN')
-        # self.connect_but.setText("FLASHING")
-        # self.connect_but.adjustSize()
-        # self.connect_but.setChecked(False)
-        # self.connect_but.setCheckable(False)
-        # self.connect_but.setEnabled(False)
+        self.connect_but.setText("FLASHING")
+        self.connect_but.adjustSize()
+        self.connect_but.setChecked(False)
+        self.connect_but.setCheckable(False)
+        self.connect_but.setEnabled(False)
         # Update BL if PoE
         # if test_type == 'OAK-D-PRO-POE':
         eeprom_written = False
@@ -1093,7 +1092,12 @@ class UiTests(QtWidgets.QMainWindow):
                 usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
                                   0, 0, 0, 0, 0, 58, 32, 95, 6, 0, 0, 0, 0]
                 self.print_logs('NOR flash: writing USB boot header...')
-                device.flashWrite(usbBootHeader)
+                try:
+                    device.flashWrite(usbBootHeader)
+                except RuntimeError as ex:
+                    self.print_logs(f'SPI Flash failed! - {ex}', log_level='ERROR')
+                    self.update_imu = False
+                    return
                 self.print_logs('Programmed, data: '+ str(device.flashRead(len(usbBootHeader))))
 
                 if not eeprom_written:
@@ -1107,18 +1111,19 @@ class UiTests(QtWidgets.QMainWindow):
 
         except RuntimeError as ex:
             self.print_logs(f"Something went wrong, check connexion! - {ex}", log_level='ERROR')
+            self.update_imu = False
             return
         # self.update_imu = True
-        # if imu_upgrade:
-        #     self.depth_camera.device.setLogLevel(dai.LogLevel.INFO)
-        #     self.depth_camera.device.addLogCallback(self.logMonitorImuFwUpdateCallback)
-        # else:
-        self.connect_but.setChecked(False)
-        self.connect_but.setCheckable(True)
-        self.connect_but.setEnabled(True)
-        self.connect_but.setText('DISCONNECT AND SAVE')
-        self.connect_but.adjustSize()
-        self.update_imu = True
+        if imu_upgrade:
+            self.depth_camera.device.setLogLevel(dai.LogLevel.INFO)
+            self.depth_camera.device.addLogCallback(self.logMonitorImuFwUpdateCallback)
+        else:
+            self.connect_but.setChecked(False)
+            self.connect_but.setCheckable(True)
+            self.connect_but.setEnabled(True)
+            self.connect_but.setText('DISCONNECT AND SAVE')
+            self.connect_but.adjustSize()
+            self.update_imu = True
         location = WIDTH, 0
         self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
         self.rgb.show()
@@ -1153,6 +1158,13 @@ class UiTests(QtWidgets.QMainWindow):
 
     def set_result(self):
         global update_res
+        if not self.connect_but.isCheckable() and self.prog_bar.value() == self.last_progress_val:
+            self.cycle += 1
+        else:
+            self.cycle = 0
+            self.last_progress_val = self.prog_bar.value()
+        if self.cycle >= 100:
+            self.update_imu = False
         if not self.update_imu:
             self.connect_but.setChecked(False)
             self.connect_but.setCheckable(True)
@@ -1319,6 +1331,11 @@ class UiTests(QtWidgets.QMainWindow):
             self.update_imu = False
 
         if 'IMU firmware update failed' in msg.payload:
+            if "Your board likely doesn't have IMU!" in msg.payload:
+                self.print_logs_trigger.emit('IMU Upgrade not supported')
+                self.prog_label.setText('SKIP IMU')
+                self.update_imu = False
+                return
             self.prog_label.setText('IMU FAIL')
             self.update_prog_bar(0.0)
             self.print_logs_trigger.emit(f'FAILED updating IMU!')
