@@ -329,6 +329,7 @@ class Demo:
 
         self._seqNum = 0
         self._hostFrame = None
+        self._nnData = []
         self._sbbRois = []
         self.onSetup(self)
 
@@ -422,19 +423,21 @@ class Demo:
             self._fps.tick('host')
 
         if self._nnManager is not None:
-            inNn = self._nnManager.parse()
+            newData, inNn = self._nnManager.parse()
             if inNn is not None:
-                self.onNn(inNn)
+                self.onNn(inNn, newData)
                 self._fps.tick('nn')
+            if newData is not None:
+                self._nnData = newData
 
         if self._conf.useCamera:
             if self._nnManager is not None:
-                self._nnManager.draw(self._pv)
+                self._nnManager.draw(self._pv, self._nnData)
             self._pv.showFrames(callback=self._showFramesCallback)
         elif self._hostFrame is not None:
             debugHostFrame = self._hostFrame.copy()
             if self._nnManager is not None:
-                self._nnManager.draw(debugHostFrame)
+                self._nnManager.draw(debugHostFrame, self._nnData)
             self._fps.drawFps(debugHostFrame, "host")
             if self._displayFrames:
                 cv2.imshow("host", debugHostFrame)
