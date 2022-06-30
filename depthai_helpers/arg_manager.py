@@ -104,7 +104,7 @@ def parseArgs():
     parser.add_argument('-s', '--show', default=[], nargs="+", choices=_streamChoices, help="Choose which previews to show. Default: %(default)s")
     parser.add_argument('--report', nargs="+", default=[], choices=["temp", "cpu", "memory"], help="Display device utilization data")
     parser.add_argument('--reportFile', help="Save report data to specified target file in CSV format")
-    parser.add_argument("-monor", "--monoResolution", default=400, type=int, choices=[400,720,800],
+    parser.add_argument("-monor", "--monoResolution", default=800, type=int, choices=[400,720,800],
                         help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
     parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
                         help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
