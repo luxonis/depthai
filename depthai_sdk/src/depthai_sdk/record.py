@@ -49,6 +49,7 @@ class Record():
     rotate = -1
     _preview: bool = False
     _mcap: bool = False
+    _pointcloud: bool = False
 
     def __init__(self, path: Path, device: dai.Device):
         """
@@ -74,9 +75,10 @@ class Record():
 
         if self._mcap:
             if self.quality == EncodingQuality.LOW or self.quality == EncodingQuality.BEST:
-                raise Exception("MCAP only supports MEDIUM and HIGH quality!")
+                raise Exception("MCAP only supports MEDIUM and HIGH quality!") # Foxglove Studio doesn't support Lossless MJPEG
             from .recorders.mcap_recorder import McapRecorder
             rec = McapRecorder(self.path, self.device)
+            rec.setPointcloud(self._pointcloud)
             for name in save:
                 recorders[name] = rec
             return recorders
@@ -172,6 +174,14 @@ class Record():
         Specify which streams to record to the disk on the host.
         """
         self.save = save_streams
+        if "pointcloud" in self.save:
+            self.save.remove("pointcloud")
+            self._pointcloud = True
+            # Only MCAP Pointcloud is supported
+            self.setMcap(True)
+            if "depth" not in self.save:
+                # Depth is needed for Pointcloud
+                self.save.append("depth")
 
     # def set_rotate(self, angle):
     #     """

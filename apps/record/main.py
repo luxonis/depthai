@@ -12,7 +12,7 @@ import threading
 from depthai_sdk import Record, EncodingQuality
 from depthai_helpers.arg_manager import parseArgs
 
-_save_choices = ("color", "left", "right", "disparity", "depth") # TODO: IMU/ToF...
+_save_choices = ("color", "left", "right", "disparity", "depth", "pointcloud") # TODO: IMU/ToF...
 _quality_choices = tuple(str(q).split('.')[1] for q in EncodingQuality)
 
 parser = parseArgs(parse=False) # Add additional arguments to be parsed
@@ -27,7 +27,7 @@ parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
                     help='Number of frames to record. Record until stopped by default.')
 parser.add_argument('-tl', '--timelapse', type=int, default=-1,
                     help='Number of seconds between frames for timelapse recording. Default: timelapse disabled')
-parser.add_argument('-mcap', '--mcap', action="store_true", help="Mcap file format")
+parser.add_argument('-mcap', '--mcap', action="store_true", help="MCAP file format")
 
 # TODO: make camera resolutions configrable
 args = parser.parse_args()
