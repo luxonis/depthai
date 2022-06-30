@@ -59,3 +59,6 @@ resources/*.json
 # Virtual environment
 virtualenv/
 venv/
+
+# DepthAI recordings
+recordings/

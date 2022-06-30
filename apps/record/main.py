@@ -5,8 +5,8 @@ import math
 import time
 from datetime import timedelta
 from pathlib import Path
-import cv2
 import signal
+import threading
 
 # DepthAI Record library
 from depthai_sdk import Record, EncodingQuality
@@ -88,13 +88,10 @@ def run():
         timelapse = 0
 
         # Terminate app handler
-        runFlag = True
-        def signal_handler(sig, frame):
-            global runFlag
-            runFlag = False
-        signal.signal(signal.SIGTERM, signal_handler)
+        quitEvent = threading.Event()
+        signal.signal(signal.SIGTERM, lambda *_args: quitEvent.set())
 
-        while runFlag:
+        while not quitEvent.is_set():
             try:
                 for q in queues:
                     if 0 < args.timelapse and time.time() - timelapse < args.timelapse:
@@ -108,7 +105,7 @@ def run():
                             # Timelapse
                             if 0 < args.timelapse: timelapse = time.time()
                             if args.frame_cnt == frame_counter:
-                                runFlag = False
+                                quitEvent.set()
                                 break
                             frame_counter += 1
 
@@ -123,12 +120,10 @@ def run():
             except KeyboardInterrupt:
                 break
 
-
         for recording in recordings:
             recording.frame_q.put(None)
             recording.process.join()  # Terminate the process
         print("All recordings have stopped. Exiting program")
-
 
 if __name__ == '__main__':
     run()

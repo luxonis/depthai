@@ -78,7 +78,6 @@ class Record():
             from .recorders.mcap_recorder import McapRecorder
             rec = McapRecorder(self.path, self.device)
             for name in save:
-                print('setting mcap for', name)
                 recorders[name] = rec
             return recorders
 
