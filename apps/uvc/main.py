@@ -3,6 +3,7 @@ import platform
 import depthai as dai
 import time
 import sys
+import signal
 from depthai_helpers.arg_manager import parseArgs
 
 args = parseArgs()
@@ -32,6 +33,12 @@ else:
 uvc = pipeline.createUVC()
 cam_rgb.video.link(uvc.input)
 
+# Terminate app handler
+run = True
+def signal_handler(sig, frame):
+    global run
+    run = False
+signal.signal(signal.SIGTERM, signal_handler)
 
 # Pipeline defined, now the device is connected to
 with dai.Device(pipeline, usb2Mode=args.usbSpeed == "usb2") as device:
@@ -44,7 +51,7 @@ with dai.Device(pipeline, usb2Mode=args.usbSpeed == "usb2") as device:
     print("\nTo close: Ctrl+C")
 
     # Doing nothing here, just keeping the host feeding the watchdog
-    while True:
+    while run:
         try:
             time.sleep(0.1)
         except KeyboardInterrupt:

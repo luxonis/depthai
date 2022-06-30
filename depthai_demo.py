@@ -20,15 +20,15 @@ if platform.machine() == 'aarch64':  # Jetson
 
 sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str((Path(__file__).parent / "depthai_sdk" / "src").absolute()))
+from depthai_helpers.arg_manager import parseArgs, parseApp
 
-from depthai_helpers.app_manager import App
-from depthai_helpers.arg_manager import parseArgs
-args = parseArgs()
+app = parseApp()
+print(app)
 if __name__ == "__main__":
-    # Instead of the depthai_demo, run the specified App
-    if args.app is not None:
+    if app is not None:
+        from depthai_helpers.app_manager import App
         try:
-            app = App(appName=args.app)
+            app = App(appName=app)
             app.createVenv()
             app.runApp()
             sys.exit(0)
@@ -55,6 +55,9 @@ from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManag
 
 class OverheatError(RuntimeError):
     pass
+
+
+args = parseArgs()
 
 if args.noSupervisor and args.guiType == "qt":
     if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:

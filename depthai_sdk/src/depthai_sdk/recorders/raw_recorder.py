@@ -1,9 +1,10 @@
 
 from pathlib import Path
 from .abstract_recorder import Recorder
+import depthai as dai
 
 class RawRecorder(Recorder):
-    closed = False
+    _closed = False
     def __init__(self, folder: Path, quality):
         self.folder = folder
         # Could also be "h264", but we don't support that
@@ -11,11 +12,11 @@ class RawRecorder(Recorder):
 
         self.files = {}
 
-    def write(self, name, frame):
+    def write(self, name: str, frame: dai.ImgFrame):
         if name not in self.files:
             self.__create_file(name)
 
-        self.files[name].write(frame)
+        self.files[name].write(frame.getCvFrame())
 
     def __create_file(self, name):
         self.files[name] = open(str(self.folder / f"{name}.{self.ext}"), 'wb')
@@ -25,8 +26,8 @@ class RawRecorder(Recorder):
         # files[name] = VideoWriter(str(path / f"{name}.avi"), VideoWriter_fourcc(*fourcc), fps, sizes[name], isColor=name=="color")
 
     def close(self):
-        if self.closed: return
-        self.closed = True
+        if self._closed: return
+        self._closed = True
         # Close opened files
         for name in self.files:
             self.files[name].close()

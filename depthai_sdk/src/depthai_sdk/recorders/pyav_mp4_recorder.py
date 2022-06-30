@@ -3,9 +3,10 @@ from fractions import Fraction
 import time
 from pathlib import Path
 from .abstract_recorder import Recorder
+import depthai as dai
 
 class PyAvRecorder(Recorder):
-    closed = False
+    _closed = False
     def __init__(self, folder: Path, quality, fps: int):
         print('quality',quality)
         self.folder = folder
@@ -16,13 +17,15 @@ class PyAvRecorder(Recorder):
 
         self.files = {}
 
-    def write(self, name, frame):
+    def write(self, name: str, frame: dai.ImgFrame):
         if name not in self.files:
             self.__create_file(name)
 
-        packet = av.Packet(frame) # Create new packet with byte array
+        packet = av.Packet(frame.getData()) # Create new packet with byte array
         # Set frame timestamp
-        packet.pts = int((time.time() - self.start) * 1000 * 1000)
+        ts = int((time.time() - self.start) * 1000 * 1000)
+        packet.pts = ts
+        packet.dts = ts
 
         self.files[name].mux_one(packet) # Mux the Packet into container
 
@@ -39,8 +42,8 @@ class PyAvRecorder(Recorder):
             self.start = time.time()
 
     def close(self):
-        if self.closed: return
-        self.closed = True
+        if self._closed: return
+        self._closed = True
         # Close the containers
         for name in self.files:
             self.files[name].close()

@@ -1,9 +1,10 @@
 import depthai as dai
 
-from sensor_msgs.msg import CompressedImage, CameraInfo, Image, Imu
+from sensor_msgs.msg import CompressedImage, Image
 from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point
 from std_msgs.msg import Header, ColorRGBA, String
-from visualization_msgs.msg import ImageMarker
+from visualization_msgs.msg import ImageMarker, ImageMarkerArray
+from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point
 
 import rospy
 import numpy as np
@@ -36,15 +37,6 @@ class DepthAi2Ros1:
         msg.data = np.array(imgFrame.getData()).tobytes()
         return msg
 
-    # def Imu(self, imuPacket: dai.IMUPacket) -> Imu:
-    #     msg = Imu()
-    #     msg.accelerometer=Vector3(x=accel.x, y=accel.y, z=accel.z),
-    #     msg.accelerometer_metadata=self.create_imu_metadata(accel),
-    #     msg.gyroscope=Vector3(x=gyro.x, y=gyro.y, z=gyro.z),
-    #     msg.gyroscope_metadata=self.create_imu_metadata(gyro),
-    #     msg.magnetometer=Vector3(x=mag.x, y=mag.y, z=mag.z),
-    #     msg.magnetometer_metadata=self.create_imu_metadata(mag),
-    #     msg.rotation_vector=Quaternion(x=rotation.i, y=rotation.j, z=rotation.k, w=rotation.real),
-    #     msg.rotation_vector_accuracy=rotation.rotationVectorAccuracy,
-    #     msg.rotation_vector_metadata=self.create_imu_metadata(rotation),
+    
+
 

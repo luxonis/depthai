@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
+import array
 from pathlib import Path
-from multiprocessing import Queue
+from queue import Queue
 from threading import Thread
 import depthai as dai
 from enum import IntEnum
@@ -10,6 +11,25 @@ class EncodingQuality(IntEnum):
     HIGH = 2 # MJPEG Quality=97 (default)
     MEDIUM = 3 # MJPEG Quality=93
     LOW = 4 # H265 BitrateKbps=10000
+
+def _run(recorders, frameQ):
+    """
+    Start recording infinite loop
+    """
+    while True:
+        try:
+            frames = frameQ.get()
+            if frames is None: # Terminate app
+                break
+            for name in frames:
+                # Save all synced frames into files
+                recorders[name].write(name, frames[name])
+        except KeyboardInterrupt:
+            break
+    # Close all recorders - Can't use ExitStack with VideoWriter
+    for n in recorders:
+        recorders[n].close()
+    print('Exiting store frame thread')
 
 # class Recorder(IntEnum):
 #     RAW = 1 # Save raw bitstream
@@ -23,14 +43,14 @@ class Record():
     """
 
     save = ['color', 'left', 'right']
-    fps = 30
-    timelapse = -1
+    _fps: int = 30
+    _timelapse: int = -1
     quality = EncodingQuality.HIGH
     rotate = -1
-    preview = False
-    mcap = False
+    _preview: bool = False
+    _mcap: bool = False
 
-    def __init__(self, path: Path, device):
+    def __init__(self, path: Path, device: dai.Device):
         """
         Args:
             path (Path): Path to the recording folder
@@ -44,25 +64,6 @@ class Record():
         calibData = device.readCalibration()
         calibData.eepromToJsonFile(str(self.path / "calib.json"))
 
-    def _run(self):
-        """
-        Start recording infinite loop
-        """
-        recorders = self._getRecorders()
-        while True:
-            try:
-                frames = self.frame_q.get()
-                if frames is None: # Terminate app
-                    break
-                for name in frames:
-                    # Save all synced frames into files
-                    recorders[name].write(name, frames[name])
-            except KeyboardInterrupt:
-                break
-        # Close all recorders - Can't use ExitStack with VideoWriter
-        for n in recorders:
-            recorders[n].close()
-        print('Exiting store frame thread')
 
     def _getRecorders(self) -> dict:
         """
@@ -71,7 +72,7 @@ class Record():
         recorders = dict()
         save = self.save.copy()
 
-        if self.mcap:
+        if self._mcap:
             if self.quality == EncodingQuality.LOW or self.quality == EncodingQuality.BEST:
                 raise Exception("MCAP only supports MEDIUM and HIGH quality!")
             from .recorders.mcap_recorder import McapRecorder
@@ -83,7 +84,7 @@ class Record():
 
         if 'depth' in save:
             from .recorders.rosbag_recorder import RosbagRecorder
-            recorders['depth'] = RosbagRecorder(self.path, self.device, self.get_sizes())
+            recorders['depth'] = RosbagRecorder(self.path, self.device, self.getSizes())
             save.remove('depth')
 
         if len(save) == 0: return recorders
@@ -92,7 +93,7 @@ class Record():
             try:
                 # Try importing av
                 from .recorders.pyav_mp4_recorder import PyAvRecorder
-                rec = PyAvRecorder(self.path, self.quality, self.fps)
+                rec = PyAvRecorder(self.path, self.quality, self._fps)
             except:
                 print("'av' library is not installed, depthai-record will save raw encoded streams.")
                 from .recorders.raw_recorder import RawRecorder
@@ -114,21 +115,21 @@ class Record():
             if "disparity" in self.save: self.save.remove("disparity")
             if "depth" in self.save: self.save.remove("depth")
 
-        if self.preview: self.save.append('preview')
+        if self._preview: self.save.append('preview')
 
-        if 0 < self.timelapse:
-            self.fps = 5
+        if 0 < self._timelapse:
+            self._fps = 5
 
-        self.pipeline, self.nodes = self.create_pipeline()
+        self.pipeline, self.nodes = self._createPipeline()
 
-        self.frame_q = Queue(20)
-        self.process = Thread(target=self._run)
+        self.frame_q = Queue(maxsize=20)
+        self.process = Thread(target=_run, args=(self._getRecorders(), self.frame_q))
         self.process.start()
 
         self.device.startPipeline(self.pipeline)
 
         self.queues = []
-        maxSize = 1 if 0 < self.timelapse else 10
+        maxSize = 1 if 0 < self._timelapse else 10
         for stream in self.save:
             self.queues.append({
                 'q': self.device.getOutputQueue(name=stream, maxSize=maxSize, blocking=False),
@@ -137,14 +138,41 @@ class Record():
                 'mxid': self.mxid
             })
 
-    def set_fps(self, fps): self.fps = fps
-    def set_timelapse(self, timelapse): self.timelapse = timelapse
-    def set_quality(self, quality: EncodingQuality): self.quality = quality
-    # def set_recorder(self, recorder: Recorder): self.recorder = recorder
-    def set_preview(self, preview: bool): self.preview = preview
-    def set_mcap(self, enable: bool): self.mcap = enable
-    # Which streams to save to the disk (on the host)
-    def set_save_streams(self, save_streams): self.save = save_streams
+    def setFps(self, fps):
+        """
+        Sets FPS of all cameras. TODO: use SDK and its parser
+        """
+        self._fps = fps
+
+    def setTimelapse(self, timelapseSec: int):
+        """
+        Sets number of seconds between each frame for the timelapse mode.
+        """
+        self._timelapse = timelapseSec
+        
+    def setQuality(self, quality: EncodingQuality):
+        """
+        Sets recording quality. Better recording quality consumes more disk space.
+        """
+        self.quality = quality
+
+    def setPreview(self, preview: bool):
+        """
+        Whether we want to preview a color frame. TODO: use SDK and its parser to show streams that are specified by `-s`
+        """
+        self._preview = preview
+
+    def setMcap(self, enable: bool):
+        """
+        Whether we want to record into MCAP file.
+        """
+        self._mcap = enable
+
+    def setRecordStreams(self, save_streams: array):
+        """
+        Specify which streams to record to the disk on the host.
+        """
+        self.save = save_streams
 
     # def set_rotate(self, angle):
     #     """
@@ -157,7 +185,7 @@ class Record():
     #     # Currently RealSense Viewer throws error "memory access violation". Debug.
     #     self.rotate = angle
 
-    def get_sizes(self):
+    def getSizes(self):
         dict = {}
         if "color" in self.save: dict['color'] = self.nodes['color'].getVideoSize()
         if "right" in self.save: dict['right'] = self.nodes['right'].getResolutionSize()
@@ -191,7 +219,7 @@ class Record():
             nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
             socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
             nodes[name].setBoardSocket(socket)
-            nodes[name].setFps(self.fps)
+            nodes[name].setFps(self._fps)
 
         def stream_out(name, fps, out, noEnc=False):
             # Create XLinkOutputs for the stream
@@ -224,9 +252,9 @@ class Record():
             nodes['color'].setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
             nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
             nodes['color'].setIspScale(1,2) # 1080P
-            nodes['color'].setFps(self.fps)
+            nodes['color'].setFps(self._fps)
 
-            if self.preview:
+            if self._preview:
                 nodes['color'].setPreviewSize(640, 360)
                 stream_out("preview", None, nodes['color'].preview, noEnc=True)
 

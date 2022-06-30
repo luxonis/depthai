@@ -7,12 +7,12 @@ from pathlib import Path
 
 from .abstract_recorder import Recorder
 from mcap_ros1.writer import Writer as Ros1Writer
-from std_msgs.msg import String
+from .depthai2ros import DepthAi2Ros1
 
 import depthai as dai
 
 class McapRecorder(Recorder):
-    pclSeq = 0
+    
     def __init__(self, path: Path, device: dai.Device):
         self.stream = open(str(path / "recordings.mcap"), "w+b")
         
