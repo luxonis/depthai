@@ -41,7 +41,7 @@ def getDeviceInfo():
         show(info_frame, (25, 100), "Choose DepthAI Device:")
         i = -1
         for i, device_info in enumerate(device_infos):
-            text = f"[{i}] {device_info.getMxId()} {device_info.state.name} {device_info.desc.protocol}"
+            text = f"[{i}] {device_info.getMxId()} {device_info.state.name} {device_info.protocol}"
             cv2.putText(info_frame, text, (25, 160 + i * 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
         cv2.putText(info_frame, "[ESC] Exit", (25, 220 + i * 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
         cv2.imshow("info", info_frame)

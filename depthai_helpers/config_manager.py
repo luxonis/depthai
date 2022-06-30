@@ -199,8 +199,8 @@ class ConfigManager:
             self.args.show = updatedShowArg
 
         if self.args.bandwidth == "auto":
-            if deviceInfo.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
-                print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(deviceInfo.desc.protocol))
+            if deviceInfo.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
+                print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(deviceInfo.protocol))
                 self.args.bandwidth = "low"
                 print("Setting PoE video quality to 50 to reduce latency...")
                 self.args.poeQuality = 50
