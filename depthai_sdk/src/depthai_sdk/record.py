@@ -50,6 +50,7 @@ class Record():
     _preview: bool = False
     _mcap: bool = False
     _pointcloud: bool = False
+    _mjpegQuality: int = None
 
     def __init__(self, path: Path, device: dai.Device):
         """
@@ -151,11 +152,16 @@ class Record():
         """
         self._timelapse = timelapseSec
         
-    def setQuality(self, quality: EncodingQuality):
+    def setQuality(self, quality):
         """
         Sets recording quality. Better recording quality consumes more disk space.
         """
-        self.quality = quality
+        if type(quality) == str:
+            self.quality = EncodingQuality[quality]
+        elif type(quality) == int:
+            self._mjpegQuality = quality
+        else:
+            raise Exception("Quality has to be either int or string!")
 
     def setPreview(self, preview: bool):
         """
@@ -245,7 +251,8 @@ class Record():
             if self.quality == EncodingQuality.BEST:
                 encoder.setLossless(True)
             elif self.quality == EncodingQuality.HIGH:
-                encoder.setQuality(97)
+                quality = 97 if self._mjpegQuality is None else self._mjpegQuality
+                encoder.setQuality(quality)
             elif self.quality == EncodingQuality.MEDIUM:
                 encoder.setQuality(93)
             elif self.quality == EncodingQuality.LOW:

@@ -11,9 +11,19 @@ import threading
 # DepthAI Record library
 from depthai_sdk import Record, EncodingQuality
 from depthai_helpers.arg_manager import parseArgs
+import argparse
 
 _save_choices = ("color", "left", "right", "disparity", "depth", "pointcloud") # TODO: IMU/ToF...
 _quality_choices = tuple(str(q).split('.')[1] for q in EncodingQuality)
+
+def checkQuality(value: str):
+    if value.upper() in _quality_choices:
+        return value
+    elif value.isdigit():
+        num = int(value)
+        if 0 <= num <= 100:
+            return num
+    raise argparse.ArgumentTypeError(f"{value} is not a valid quality. Either use number 0-100 or {'/'.join(_quality_choices)}.")
 
 parser = parseArgs(parse=False) # Add additional arguments to be parsed
 parser.add_argument('-p', '--path', default="recordings", type=str, help="Path where to store the captured data")
@@ -21,7 +31,7 @@ parser.add_argument('-save', '--save', default=["color", "left", "right"], nargs
                     help="Choose which streams to save. Default: %(default)s")
 parser.add_argument('-f', '--fps', type=float, default=30,
                     help='Camera sensor FPS, applied to all cams')
-parser.add_argument('-q', '--quality', default="HIGH", type=str, choices=_quality_choices,
+parser.add_argument('-q', '--quality', default="HIGH", type=checkQuality,
                     help='Selects the quality of the recording. Default: %(default)s')
 parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
                     help='Number of frames to record. Record until stopped by default.')
@@ -76,7 +86,7 @@ def run():
             recording.setFps(args.fps)
             recording.setTimelapse(args.timelapse)
             recording.setRecordStreams(args.save)
-            recording.setQuality(EncodingQuality[args.quality])
+            recording.setQuality(args.quality)
             recording.setMcap(args.mcap)
             recording.start()
 
