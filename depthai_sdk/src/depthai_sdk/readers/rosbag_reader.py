@@ -1,3 +1,4 @@
+import array
 from rosbags.rosbag1 import Reader
 from rosbags.serde import deserialize_cdr, ros1_to_cdr
 import numpy as np
@@ -20,7 +21,10 @@ class RosbagReader(AbstractReader):
         msg = deserialize_cdr(ros1_to_cdr(rawdata, connection.msgtype), connection.msgtype)
         return msg.data.view(np.int16).reshape((msg.height, msg.width))
 
-    def getShape(self) -> tuple:
+    def getStreams(self) -> array:
+        return ["depth"] # Only depth recording is supported
+
+    def getShape(self, name: str) -> tuple:
         connection, _, rawdata = next(self.reader.messages('/device_0/sensor_0/Depth_0/image/data'))
         msg = deserialize_cdr(ros1_to_cdr(rawdata, connection.msgtype), connection.msgtype)
         return (msg.width,msg.height)

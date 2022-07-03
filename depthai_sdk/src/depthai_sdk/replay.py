@@ -1,3 +1,4 @@
+import array
 from pathlib import Path
 import os
 import cv2
@@ -17,6 +18,7 @@ class Replay:
     _now = datetime.datetime.now()
     _colorSize = None
     _keepAR = True # By default crop image as needed to keep the aspect ratio
+    _xins = [] # XLinkIn stream names
 
     def __init__(self, path: str):
         """
@@ -88,9 +90,9 @@ class Replay:
             streamName(str): Name of the stream to disable (eg. 'left', 'color', 'depth', etc.)
             disableReading (bool, Optional): Also disable reading frames from the file
         """
-        if streamName not in self.readers:
-            print(f"There's no stream '{streamName}' available!")
-            return
+        # if streamName not in self.readers:
+        #     print(f"There's no stream '{streamName}' available!")
+        #     return
         if disableReading:
             self.readers[streamName].close()
             # Remove the stream from the dict
@@ -136,15 +138,19 @@ class Replay:
             xin = p.create(dai.node.XLinkIn)
             xin.setMaxDataSize(self._getMaxSize(name))
             xin.setStreamName(name + '_in')
+            self._xins.append(name)
+            print()
             return xin
 
-        for name in self.readers:
-            if name not in self.disabledStreams:
-                setattr(nodes, name, createXIn(pipeline, name))
+        for _, reader in self.readers.items():
+            for name in reader.getStreams():
+                if name not in self.disabledStreams:
+                    setattr(nodes, name, createXIn(pipeline, name))
 
-        if hasattr(nodes, 'left') and hasattr(nodes, 'right'): # Create StereoDepth node
+        # Create StereoDepth node
+        if hasattr(nodes, 'left') and hasattr(nodes, 'right'):
             nodes.stereo = pipeline.create(dai.node.StereoDepth)
-            nodes.stereo.setInputResolution(self.readers['left'].getShape())
+            nodes.stereo.setInputResolution(self._getShape('left'))
 
             nodes.left.out.link(nodes.stereo.left)
             nodes.right.out.link(nodes.stereo.right)
@@ -158,9 +164,15 @@ class Replay:
         Args:
             device (dai.Device): Device to which we will stream frames
         """
-        for name in self.readers:
-            if name in self._streamTypes and name not in self.disabledStreams:
-                self._inputQueues[name] = device.getInputQueue(name+'_in')
+        for name in self._xins:
+            print('creating out queue for ', name)
+            self._inputQueues[name] = device.getInputQueue(name + '_in')
+
+    def getStreams(self) -> array:
+        streams = []
+        for _, reader in self.readers.items():
+            [streams.append(name) for name in reader.getStreams()]
+        return streams
 
     def _resizeColor(self, frame: cv2.Mat) -> cv2.Mat:
         if self._colorSize is None:
@@ -206,14 +218,19 @@ class Replay:
 
     def _readFrames(self) -> bool:
         """
-        Reads one frame from each Reader.
+        Reads frames from all Readers.
         
         Returns:
             bool: True if successful, otherwise False.
         """
         self.frames = dict()
         for name in self.readers:
-            self.frames[name] = self.readers[name].read() # Read the frame
+            if 1 < len(self.readers[name].getStreams()): # Read all frames (one of each)
+                frames = self.readers[name].read()
+                for name, frame in frames.items():
+                    self.frames[name] = frame
+            else:
+                self.frames[name] = self.readers[name].read() # Read a frame
             
             if self.frames[name] is False:
                 return False # No more frames!
@@ -227,11 +244,20 @@ class Replay:
         """
         Used when setting XLinkIn nodes, so they consume the least amount of memory needed.
         """
-        size = self.readers[name].getShape()
+        size = self._getShape(name)
         bytes_per_pixel = 1
         if name == 'color': bytes_per_pixel = 3
         elif name == 'depth': bytes_per_pixel = 2 # 16bit
         return size[0] * size[1] * bytes_per_pixel
+
+    def _getShape(self, name: str) -> tuple:
+        """
+        Get shape of a stream
+        """
+        for _, reader in self.readers.items():
+            if name in reader.getStreams():
+                return reader.getShape(name)
+
 
     def close(self):
         """

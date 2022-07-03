@@ -50,7 +50,7 @@ class DepthAi2Ros1:
 
         heigth = str(imgFrame.getHeight())
         if heigth not in self.xyz:
-            self.create_xyz(imgFrame.getWidth(), imgFrame.getHeight())
+            self._create_xyz(imgFrame.getWidth(), imgFrame.getHeight())
         
         frame = imgFrame.getCvFrame()
         frame = np.expand_dims(np.array(frame), axis=-1)
@@ -70,7 +70,7 @@ class DepthAi2Ros1:
         msg.is_dense = True
         return msg
 
-    def create_xyz(self, width, height):
+    def _create_xyz(self, width, height):
         calibData = self.device.readCalibration()
         M_right = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, dai.Size2f(width, height))
         camera_matrix = np.array(M_right).reshape(3, 3)
