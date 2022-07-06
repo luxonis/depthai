@@ -6,10 +6,6 @@ import urllib.request
 import cv2
 import numpy as np
 import depthai as dai
-import datetime as dt
-from heapq import heappop, heappush
-import threading
-
 
 def cosDist(a, b):
     """

@@ -14,7 +14,7 @@ except:
 class PreviewDecoder:
 
     @staticmethod
-    def __jpegDecode(data, type):
+    def jpegDecode(data, type):
         if turbo is not None:
             if type == cv2.IMREAD_GRAYSCALE:
                 return turbo.decode(data, flags=TJFLAG_FASTUPSAMPLE | TJFLAG_FASTDCT, pixel_format=TJPF_GRAY)
@@ -39,7 +39,7 @@ class PreviewDecoder:
         """
         # if manager is not None and manager.decode: TODO change once passthrough frame type (8) is supported by VideoEncoder
         if False:
-            frame = PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_COLOR)
+            frame = PreviewDecoder.jpegDecode(packet.getData(), cv2.IMREAD_COLOR)
         else:
             frame = packet.getCvFrame()
         if hasattr(manager, "nnSource") and manager.nnSource in (Previews.rectifiedLeft.name, Previews.rectifiedRight.name):
@@ -59,7 +59,7 @@ class PreviewDecoder:
             numpy.ndarray: Ready to use OpenCV frame
         """
         if manager is not None and manager.decode:
-            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_COLOR)
+            return PreviewDecoder.jpegDecode(packet.getData(), cv2.IMREAD_COLOR)
         else:
             return packet.getCvFrame()
 
@@ -76,7 +76,7 @@ class PreviewDecoder:
             numpy.ndarray: Ready to use OpenCV frame
         """
         if manager is not None and manager.decode:
-            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+            return PreviewDecoder.jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
 
@@ -93,7 +93,7 @@ class PreviewDecoder:
             numpy.ndarray: Ready to use OpenCV frame
         """
         if manager is not None and manager.decode:
-            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+            return PreviewDecoder.jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
 
@@ -111,7 +111,7 @@ class PreviewDecoder:
         """
         # if manager is not None and manager.decode:  # disabled to limit the memory usage
         if False:
-            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+            return PreviewDecoder.jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
 
@@ -129,7 +129,7 @@ class PreviewDecoder:
         """
         # if manager is not None and manager.decode:  # disabled to limit the memory usage
         if False:
-            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+            return PreviewDecoder.jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             return packet.getCvFrame()
 
@@ -147,7 +147,7 @@ class PreviewDecoder:
         """
         # if manager is not None and manager.decode:  TODO change once depth frame type (14) is supported by VideoEncoder
         if False:
-            return PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_UNCHANGED)
+            return PreviewDecoder.jpegDecode(packet.getData(), cv2.IMREAD_UNCHANGED)
         else:
             return packet.getFrame()
 
@@ -198,7 +198,7 @@ class PreviewDecoder:
             numpy.ndarray: Ready to use OpenCV frame
         """
         if False:
-            rawFrame = PreviewDecoder.__jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
+            rawFrame = PreviewDecoder.jpegDecode(packet.getData(), cv2.IMREAD_GRAYSCALE)
         else:
             rawFrame = packet.getFrame()
         return (rawFrame*(manager.dispMultiplier if manager is not None else 255/96)).astype(np.uint8)

@@ -20,15 +20,14 @@ if platform.machine() == 'aarch64':  # Jetson
 
 sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str((Path(__file__).parent / "depthai_sdk" / "src").absolute()))
+from depthai_sdk.managers import arg_manager
 
-from depthai_helpers.app_manager import App
-from depthai_helpers.arg_manager import parseArgs
-args = parseArgs()
+app = arg_manager.parseApp()
 if __name__ == "__main__":
-    # Instead of the depthai_demo, run the specified App
-    if args.app is not None:
+    if app is not None:
+        from depthai_helpers.app_manager import App
         try:
-            app = App(appName=args.app)
+            app = App(appName=app)
             app.createVenv()
             app.runApp()
             sys.exit(0)
@@ -55,6 +54,9 @@ from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManag
 
 class OverheatError(RuntimeError):
     pass
+
+
+args = arg_manager.parseArgs()
 
 if args.noSupervisor and args.guiType == "qt":
     if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
@@ -254,20 +256,7 @@ class Demo:
                                   xout=Previews.color.name in self._conf.args.show)
 
             if self._conf.useDepth:
-                self._pm.createDepth(
-                    self._conf.args.disparityConfidenceThreshold,
-                    self._conf.getMedianFilter(),
-                    self._conf.args.sigma,
-                    self._conf.args.stereoLrCheck,
-                    self._conf.args.lrcThreshold,
-                    self._conf.args.extendedDisparity,
-                    self._conf.args.subpixel,
-                    useDepth=Previews.depth.name in self._conf.args.show or Previews.depthRaw.name in self._conf.args.show,
-                    useDisparity=Previews.disparity.name in self._conf.args.show or Previews.disparityColor.name in self._conf.args.show,
-                    useRectifiedLeft=Previews.rectifiedLeft.name in self._conf.args.show,
-                    useRectifiedRight=Previews.rectifiedRight.name in self._conf.args.show,
-                    alignment=dai.CameraBoardSocket.RGB if self._conf.args.stereoLrCheck and not self._conf.args.noRgbDepthAlign else None
-                )
+                self._pm.createDepth(args = self._conf.args)
 
             if self._conf.irEnabled(self._device):
                 self._pm.updateIrConfig(self._device, self._conf.args.irDotBrightness, self._conf.args.irFloodBrightness)

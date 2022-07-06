@@ -55,7 +55,13 @@ except:
     colorMaps = None
 projectRoot = Path(__file__).parent.parent
 
-def parseArgs():
+def parseArgs(parse: bool = True):
+    """
+    Creates Argument parser for common device configuration
+
+    Args:
+        parse (bool): Whether we also want to parse arguments, True by default. Setting it to false can be useful when adding additional arguments to parse.
+    """
     parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
     parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
@@ -110,7 +116,6 @@ def parseArgs():
                         help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
     parser.add_argument('-cb', '--callback', type=Path, default=projectRoot / 'callbacks.py', help="Path to callbacks file to be used. Default: %(default)s")
     parser.add_argument("--openvinoVersion", type=str, choices=openvinoVersions, help="Specify which OpenVINO version to use in the pipeline")
-    parser.add_argument("-app","--app", type=str, choices=["uvc"], help="Specify which app to run instead of the demo")
     parser.add_argument("--count", type=str, dest='countLabel',
                         help="Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).")
     parser.add_argument("-dev", "--deviceId", type=str,
@@ -148,4 +153,18 @@ def parseArgs():
     parser.add_argument('--sync', action="store_true", help="Enable frame and NN synchronization. If enabled, all frames and NN results will be synced before preview (same sequence number)")
     parser.add_argument('--noRgbDepthAlign', action="store_true", help="Disable RGB-Depth align (depth frame will be aligned with the RGB frame)")
     parser.add_argument('--debug', action="store_true", help="Enables debug mode. Capability to connect to already BOOTED devices and also implicitly disables version check")
-    return parser.parse_args()
+    parser.add_argument("-app","--app", type=str, choices=["uvc", "record"], help="Specify which app to run instead of the demo")
+    
+    if parse:
+        return parser.parse_args()
+    else:
+        return parser
+
+def parseApp() -> str:
+    """
+    Returns app name specified in the arguments, or None, if no app was specified.
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-app","--app", type=str, choices=["uvc", "record"], help="Specify which app to run instead of the demo")
+    known, unknown = parser.parse_known_args()
+    return known.app
