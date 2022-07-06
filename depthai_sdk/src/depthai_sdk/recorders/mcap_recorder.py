@@ -13,6 +13,7 @@ import depthai as dai
 
 
 class McapRecorder(Recorder):
+    _closed = False
     _pcl = False
     def __init__(self, path: Path, device: dai.Device):
         """
@@ -22,8 +23,8 @@ class McapRecorder(Recorder):
             device (dai.Device): OAK Device
         """
         self.converter = DepthAi2Ros1(device)
-        p = str(path / "recordings.mcap")
-        self.stream = open(p, "w+b")
+        self.path = str(path / "recordings.mcap")
+        self.stream = open(self.path, "w+b")
         self.ros_writer = Ros1Writer(output=self.stream)
     
     def setPointcloud(self, enable: bool):
@@ -45,5 +46,8 @@ class McapRecorder(Recorder):
             self.ros_writer.write_message(f"{name}/compressed", msg)
         
     def close(self) -> None:
+        if self._closed: return
+        self._closed = True
         self.ros_writer.finish()
         self.stream.close()
+        print(".MCAP recording saved at", self.path)

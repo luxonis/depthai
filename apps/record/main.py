@@ -10,7 +10,7 @@ import threading
 
 # DepthAI Record library
 from depthai_sdk import Record, EncodingQuality
-from depthai_helpers.arg_manager import parseArgs
+from depthai_sdk.managers import arg_manager
 import argparse
 
 _save_choices = ("color", "left", "right", "disparity", "depth", "pointcloud") # TODO: IMU/ToF...
@@ -25,7 +25,7 @@ def checkQuality(value: str):
             return num
     raise argparse.ArgumentTypeError(f"{value} is not a valid quality. Either use number 0-100 or {'/'.join(_quality_choices)}.")
 
-parser = parseArgs(parse=False) # Add additional arguments to be parsed
+parser = arg_manager.parseArgs(parse=False) # Add additional arguments to be parsed
 parser.add_argument('-p', '--path', default="recordings", type=str, help="Path where to store the captured data")
 parser.add_argument('-save', '--save', default=["color", "left", "right"], nargs="+", choices=_save_choices,
                     help="Choose which streams to save. Default: %(default)s")
@@ -100,6 +100,7 @@ def run():
         # Terminate app handler
         quitEvent = threading.Event()
         signal.signal(signal.SIGTERM, lambda *_args: quitEvent.set())
+        print("\nRecording started. Press 'Ctrl+C' to stop.")
 
         while not quitEvent.is_set():
             try:
@@ -130,10 +131,11 @@ def run():
             except KeyboardInterrupt:
                 break
 
+        print('') # For new line in terminal
         for recording in recordings:
             recording.frame_q.put(None)
             recording.process.join()  # Terminate the process
-        print("All recordings have stopped. Exiting program")
+        print("All recordings have stopped successfuly. Exiting the app.")
 
 if __name__ == '__main__':
     run()

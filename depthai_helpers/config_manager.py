@@ -120,16 +120,6 @@ class ConfigManager:
         else:
             return dai.MonoCameraProperties.SensorResolution.THE_400_P
 
-    def getMedianFilter(self):
-        if self.args.stereoMedianSize == 3:
-            return dai.MedianFilter.KERNEL_3x3
-        elif self.args.stereoMedianSize == 5:
-            return dai.MedianFilter.KERNEL_5x5
-        elif self.args.stereoMedianSize == 7:
-            return dai.MedianFilter.KERNEL_7x7
-        else:
-            return dai.MedianFilter.MEDIAN_OFF
-
     def getUsb2Mode(self):
         if self.args['forceUsb2']:
             cliPrint("FORCE USB2 MODE", PrintColors.WARNING)

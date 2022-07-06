@@ -8,7 +8,6 @@ import depthai as dai
 class PyAvRecorder(Recorder):
     _closed = False
     def __init__(self, folder: Path, quality, fps: int):
-        print('quality',quality)
         self.folder = folder
         # codec could also be "h264", but it's not (yet) supported
         self.codec = "hevc" if int(quality) == 4 else "mjpeg"
@@ -44,6 +43,7 @@ class PyAvRecorder(Recorder):
     def close(self):
         if self._closed: return
         self._closed = True
+        print(".mp4 container(s) saved at:", str(self.folder))
         # Close the containers
         for name in self.files:
             self.files[name].close()

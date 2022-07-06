@@ -28,6 +28,7 @@ class RawRecorder(Recorder):
     def close(self):
         if self._closed: return
         self._closed = True
+        print("raw encoded stream(s) saved at:", str(self.folder))
         # Close opened files
         for name in self.files:
             self.files[name].close()

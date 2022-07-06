@@ -41,9 +41,9 @@ class RosbagRecorder(Recorder):
                 os.remove(str(path))
             else:
                 raise Exception('Specified path already exists. Set argument overwrite=True to delete the bag at that path')
-
+        self.path = path
         self.start_nanos = 0
-        self.writer = Writer(path)
+        self.writer = Writer(self.path)
         # Compression will cause error in RealSense
         # self.writer.set_compression(Writer.CompressionFormat.LZ4)
         self.writer.open()
@@ -141,6 +141,7 @@ class RosbagRecorder(Recorder):
     def close(self):
         if self.closed: return
         self.closed = True
+        print("ROS .bag saved at: ", str(self.path))
         self.writer.close()
 
     def _write(self, connection, type, data):
