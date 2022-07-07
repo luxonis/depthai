@@ -2,7 +2,6 @@
 This is a helper class that let's you save frames into mcap (.mcap), which can be replayed using Foxglove studio app.
 '''
 
-import numpy as np
 from pathlib import Path
 
 from mcap_ros1.writer import Writer as Ros1Writer
