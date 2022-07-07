@@ -1,2 +1,2 @@
 depthai==2.16.0.0
-depthai-sdk==1.2.1
+depthai-sdk==1.2.1.1

@@ -43,14 +43,12 @@ parser.add_argument('-mcap', '--mcap', action="store_true", help="MCAP file form
 args = parser.parse_args()
 save_path = Path.cwd() / args.path
 
-# Host side timestamp frame sync across multiple devices
-def check_sync(queues, timestamp):
+# Host side sequence number syncing
+def checkSync(queues, sequenceNum: int):
     matching_frames = []
     for q in queues:
         for i, msg in enumerate(q['msgs']):
-            time_diff = abs(msg.getTimestamp() - timestamp)
-            # So below 17ms @ 30 FPS => frames are in sync
-            if time_diff <= timedelta(milliseconds=math.ceil(500 / args.fps)):
+            if msg.getSequenceNum() == sequenceNum:
                 matching_frames.append(i)
                 break
 
@@ -62,7 +60,6 @@ def check_sync(queues, timestamp):
     else:
         return False
 
-
 def run():
     with contextlib.ExitStack() as stack:
         # Record from all available devices
@@ -73,7 +70,7 @@ def run():
         else:
             print("Found", len(device_infos), "devices")
 
-        recordings = []
+        devices = []
         # TODO: allow users to specify which available devices should record
         for device_info in device_infos:
             openvino_version = dai.OpenVINO.Version.VERSION_2021_4
@@ -88,14 +85,18 @@ def run():
             recording.setRecordStreams(args.save)
             recording.setQuality(args.quality)
             recording.setMcap(args.mcap)
-            recording.start()
 
-            recordings.append(recording)
+            devices.append(recording)
 
-        queues = [q for recording in recordings for q in recording.queues]
-        frame_counter = 0
-        start_time = time.time()
+        for recording in devices:
+            recording.start() # Start recording
+
         timelapse = 0
+        def roundUp(value, divisibleBy: float):
+            return int(divisibleBy * math.ceil(value / divisibleBy))
+        # If H265, we want to start recording with the keyframe (default keyframe freq is 30 frames)
+        SKIP_FRAMES = roundUp(1.5 * args.fps, 30 if args.quality == "LOW" else 1) 
+        args.frame_cnt += SKIP_FRAMES
 
         # Terminate app handler
         quitEvent = threading.Event()
@@ -104,35 +105,38 @@ def run():
 
         while not quitEvent.is_set():
             try:
-                for q in queues:
+                for recording in devices:
                     if 0 < args.timelapse and time.time() - timelapse < args.timelapse:
                         continue
-                    new_msg = q['q'].tryGet()
-                    if new_msg is not None:
-                        q['msgs'].append(new_msg)
-                        if check_sync(queues, new_msg.getTimestamp()):
-                            # Wait for Auto focus/exposure/white-balance
-                            if time.time() - start_time < 1.5: continue
-                            # Timelapse
-                            if 0 < args.timelapse: timelapse = time.time()
-                            if args.frame_cnt == frame_counter:
-                                quitEvent.set()
-                                break
-                            frame_counter += 1
+                    # Loop through device streams
+                    for q in recording.queues:
+                        new_msg = q['q'].tryGet()
+                        if new_msg is not None:
+                            q['msgs'].append(new_msg)
+                            if checkSync(recording.queues, new_msg.getSequenceNum()):
+                                # Wait for Auto focus/exposure/white-balance
+                                recording.frameCntr += 1
+                                if recording.frameCntr <= SKIP_FRAMES: # 1.5 sec
+                                    continue
+                                # Timelapse
+                                if 0 < args.timelapse: timelapse = time.time()
+                                if args.frame_cnt == recording.frameCntr:
+                                    quitEvent.set()
+                                    break
 
-                            for recording in recordings:
                                 frames = dict()
                                 for stream in recording.queues:
                                     frames[stream['name']] = stream['msgs'].pop(0)
-
+                                    print("Synced frames found! SEQ: ", frames[stream['name']].getSequenceNum())
+                                print("----------")
                                 recording.frame_q.put(frames)
-                # Avoid lazy looping
-                time.sleep(0.001)
+
+                time.sleep(0.001) # 1ms, avoid lazy looping
             except KeyboardInterrupt:
                 break
 
         print('') # For new line in terminal
-        for recording in recordings:
+        for recording in devices:
             recording.frame_q.put(None)
             recording.process.join()  # Terminate the process
         print("All recordings have stopped successfuly. Exiting the app.")
