@@ -122,7 +122,6 @@ def run():
                                 if 0 < args.timelapse: timelapse = time.time()
                                 if args.frame_cnt == recording.frameCntr:
                                     quitEvent.set()
-                                    break
 
                                 frames = dict()
                                 for stream in recording.queues:
