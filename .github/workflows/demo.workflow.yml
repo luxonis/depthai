@@ -7,8 +7,7 @@ on:
       - main
     tags:
       - 'v*'
-    tags-ignore:
-      - 'v*-sdk'
+      - '!v*-sdk'
   pull_request:
     branches:
       - main
