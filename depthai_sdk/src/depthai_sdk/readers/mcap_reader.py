@@ -1,5 +1,6 @@
 import array
 from mcap.mcap0.stream_reader import StreamReader
+from mcap.mcap0.reader import make_reader
 from mcap_ros1.decoder import Decoder
 from depthai_sdk import PreviewDecoder
 import cv2
@@ -14,12 +15,21 @@ class McapReader(AbstractReader):
     """
     _readFrames = dict()
     def __init__(self, source: str) -> None:
-        self._topics = self._getAvailableTopics(str(source))
+        # Get available topics
+        with open(source, "rb") as file:
+            reader = make_reader(file)
+            channels = reader.get_summary().channels
+            self._topics = [c.topic.split('/')[0] for _, c in channels.items()]
+
+        # Init msg array
         for topic in self._topics:
-            self._readFrames[topic] = [] # Init msg array
+            self._readFrames[topic] = []
+
+        # Create MCAP decoder
         decoder = Decoder(StreamReader(str(source)))
         self.msgs = decoder.messages
-        self._prepareFrames() # Prepare initial frames so we can get frame size
+        # Prepare initial frames so we can get frame size
+        self._prepareFrames()
 
     def read(self):
         """
@@ -74,19 +84,6 @@ class McapReader(AbstractReader):
         for name, arr in self._readFrames.items():
             ret[name] = arr.pop(0)
         return ret
-
-    def _getAvailableTopics(self, source: str) -> dict:
-        """
-        Get available topics in the mcap recording.
-        TODO: Refactor once indexing is available for MCAP Python API
-        """
-        topics = dict()
-        decoder =  Decoder(StreamReader(str(source)))
-        for topic, _, _ in decoder.messages:
-            if topic not in topics:
-                txt = topic.split('/')
-                topics[txt[0]] = txt[1]
-        return topics
         
     def getStreams(self) -> array:
         """

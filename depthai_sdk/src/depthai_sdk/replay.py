@@ -11,7 +11,8 @@ class Replay:
     disabledStreams = []
     _streamTypes = ['color', 'left', 'right', 'depth'] # Available types to stream back to the camera
     _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
-    _supportedExtensions = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap']
+    _supportedExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap']
+    _imageExt = ['.bmp','.dib','.jpeg','.jpg','.jpe','.jp2','.png','.webp','.pbm','.pgm','.ppm','.pxm','.pnm','.pfm','.sr','.ras','.tiff','.tif','.exr','.hdr','.pic']
     _inputQueues = dict() # dai.InputQueue dictionary for each stream
     _seqNum = 0 # Frame sequence number, added to each imgFrame
     _start = datetime.datetime.now() # For frame timestamp
@@ -19,6 +20,8 @@ class Replay:
     _colorSize = None
     _keepAR = True # By default crop image as needed to keep the aspect ratio
     _xins = [] # XLinkIn stream names
+    _pause = False
+    _calibData = None
 
     def __init__(self, path: str):
         """
@@ -35,24 +38,30 @@ class Replay:
         self.imgFrames = dict() # Last frame sent to the device
 
         self.readers = dict()
+        self._supportedExt.extend(self._imageExt)
+
         def readFile(filePath: Path) -> None:
+            strPath = str(filePath)
             file = os.path.basename(filePath)
             (name, extension) = os.path.splitext(file)
-            if extension in self._supportedExtensions:
+            if extension in self._supportedExt:
                 if extension == '.bag':
                     from .readers.rosbag_reader import RosbagReader
-                    self.readers[name] = RosbagReader(filePath)
+                    self.readers[name] = RosbagReader(strPath)
                 elif extension == '.mcap':
                     from .readers.mcap_reader import McapReader
-                    self.readers[name] = McapReader(filePath)
+                    self.readers[name] = McapReader(strPath)
+                elif extension in self._imageExt:
+                    from .readers.image_reader import ImageReader
+                    self.readers[name] = ImageReader(strPath)
                 elif name in self._fileTypes:
                     # For .mjpeg / .h265 / .mp4 files
                     from .readers.videocap_reader import VideoCapReader
-                    self.readers[name] = VideoCapReader(filePath)
+                    self.readers[name] = VideoCapReader(strPath)
                 else:
                     print(f"Found and skipped an unsupported file name: '{file}'.")    
             elif file == 'calib.json':
-                self._calibData = dai.CalibrationHandler(filePath)
+                self._calibData = dai.CalibrationHandler(strPath)
             else:
                 print(f"Found and skipped an unknown file, extension: '{extension}'.")
 
@@ -65,6 +74,13 @@ class Replay:
 
         if len(self.readers) == 0:
             raise RuntimeError("Path invalid - no recordings found.")
+
+    def togglePause(self):
+        """
+        Toggle pausing of sending frames to the OAK camera.
+        """
+        self._pause = not self._pause
+        print("PAUSE", self._pause)
 
     def setResizeColor(self, size: tuple):
         """
@@ -107,8 +123,10 @@ class Replay:
         Returns:
             bool: True if successful, otherwise False.
         """
-        if not self._readFrames():
-            return False # End of the recording
+        if not self._pause: # If replaying is paused, don't read new frames        
+            if not self._readFrames():
+                return False # End of the recording
+
         self._now = datetime.datetime.now()
         for name in self.frames:
             imgFrame = self._createImgFrame(name, self.frames[name])
@@ -131,7 +149,8 @@ class Replay:
             pipeline, nodes
         """
         pipeline = dai.Pipeline()
-        pipeline.setCalibrationData(self._calibData)
+        if self._calibData is not None:
+            pipeline.setCalibrationData(self._calibData)
         nodes = types.SimpleNamespace()
 
         def createXIn(p: dai.Pipeline, name: str):
@@ -139,7 +158,6 @@ class Replay:
             xin.setMaxDataSize(self._getMaxSize(name))
             xin.setStreamName(name + '_in')
             self._xins.append(name)
-            print()
             return xin
 
         for _, reader in self.readers.items():
@@ -151,6 +169,13 @@ class Replay:
         if hasattr(nodes, 'left') and hasattr(nodes, 'right'):
             nodes.stereo = pipeline.create(dai.node.StereoDepth)
             nodes.stereo.setInputResolution(self._getShape('left'))
+
+            if hasattr(nodes, 'color'): # Enable RGB-depth alignment
+                nodes.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+                if self._colorSize is not None:
+                    nodes.stereo.setOutputSize(*self._colorSize)
+                else:
+                    nodes.stereo.setOutputSize(*self._getShape('color'))
 
             nodes.left.out.link(nodes.stereo.left)
             nodes.right.out.link(nodes.stereo.right)
@@ -165,7 +190,6 @@ class Replay:
             device (dai.Device): Device to which we will stream frames
         """
         for name in self._xins:
-            print('creating out queue for ', name)
             self._inputQueues[name] = device.getInputQueue(name + '_in')
 
     def getStreams(self) -> array:
@@ -174,7 +198,7 @@ class Replay:
             [streams.append(name) for name in reader.getStreams()]
         return streams
 
-    def _resizeColor(self, frame: cv2.Mat) -> cv2.Mat:
+    def _resizeColor(self, frame):
         if self._colorSize is None:
             # No resizing needed
             return frame
@@ -196,7 +220,7 @@ class Replay:
         imgFrame.setHeight(shape[1])
         return imgFrame
 
-    def _createImgFrame(self, name: str, cvFrame: cv2.Mat) -> dai.ImgFrame:
+    def _createImgFrame(self, name: str, cvFrame) -> dai.ImgFrame:
         imgFrame: dai.ImgFrame = None
         if name == 'color':
             # Resize/crop color frame as specified by the user

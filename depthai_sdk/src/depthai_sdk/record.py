@@ -51,6 +51,7 @@ class Record():
     _mcap: bool = False
     _pointcloud: bool = False
     _mjpegQuality: int = None
+    frameCntr = 0 # Used by recording app
 
     def __init__(self, path: Path, device: dai.Device):
         """
@@ -137,7 +138,6 @@ class Record():
                 'q': self.device.getOutputQueue(name=stream, maxSize=maxSize, blocking=False),
                 'msgs': [],
                 'name': stream,
-                'mxid': self.mxid
             })
 
     def setFps(self, fps):
