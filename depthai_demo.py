@@ -14,15 +14,18 @@ from functools import cmp_to_key
 from itertools import cycle
 from pathlib import Path
 import platform
+from pathlib import Path
 
 if platform.machine() == 'aarch64':  # Jetson
     os.environ['OPENBLAS_CORETYPE'] = "ARMV8"
 
 sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str((Path(__file__).parent / "depthai_sdk" / "src").absolute()))
-from depthai_sdk.managers import arg_manager
+from depthai_sdk.managers import ArgsManager
 
-app = arg_manager.parseApp()
+argsMngr = ArgsManager(Path(__file__))
+app = argsMngr.parseApp()
+
 if __name__ == "__main__":
     if app is not None:
         from depthai_helpers.app_manager import App
@@ -55,8 +58,7 @@ from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManag
 class OverheatError(RuntimeError):
     pass
 
-
-args = arg_manager.parseArgs()
+args = argsMngr.parseArgs()
 
 if args.noSupervisor and args.guiType == "qt":
     if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:

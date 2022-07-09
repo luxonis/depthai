@@ -265,7 +265,7 @@ class PipelineManager:
         if irFlood is not None:
             device.setIrFloodLightBrightness(irFlood)
 
-    def createDepth(self, dct=245, median=None, sigma=0, lr=True, lrcThreshold=5, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False, runtimeSwitch=False, alignment=None):
+    def createDepth(self, dct=245, median=None, sigma=0, lr=True, lrcThreshold=5, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False, runtimeSwitch=False, alignment=None, args=None):
         """
         Creates :obj:`depthai.node.StereoDepth` node based on specified attributes
 
@@ -284,10 +284,28 @@ class PipelineManager:
             useRectifiedRigh (bool, Optional): Set to :code:`True` to create output queue for rectified right frames
             runtimeSwitch (bool, Optional): Allows to change the depth configuration during the runtime but allocates resources for worst-case scenario (disabled by default)
             alignment (depthai.CameraBoardSocket, Optional): Aligns the depth map to the specified camera socket
+            args (Object, Optional): Arguments from the ArgsManager
 
         Raises:
             RuntimeError: if left of right mono cameras were not initialized
         """
+
+        if args is not None:
+            return self.createDepth(
+                args.disparityConfidenceThreshold,
+                self._getMedianFilter(args.stereoMedianSize),
+                args.sigma,
+                args.stereoLrCheck,
+                args.lrcThreshold,
+                args.extendedDisparity,
+                args.subpixel,
+                useDepth=Previews.depth.name in args.show or Previews.depthRaw.name in args.show,
+                useDisparity=Previews.disparity.name in args.show or Previews.disparityColor.name in args.show,
+                useRectifiedLeft=Previews.rectifiedLeft.name in args.show,
+                useRectifiedRight=Previews.rectifiedRight.name in args.show,
+                alignment=dai.CameraBoardSocket.RGB if args.stereoLrCheck and not args.noRgbDepthAlign else None
+            )
+
         self.nodes.stereo = self.pipeline.createStereoDepth()
 
         self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
@@ -570,3 +588,13 @@ class PipelineManager:
 
     def setXlinkChunkSize(self, chunkSize):
         self.pipeline.setXLinkChunkSize(chunkSize)
+
+    def _getMedianFilter(self, size: int) -> dai.MedianFilter:
+        if size == 3:
+            return dai.MedianFilter.KERNEL_3x3
+        elif size == 5:
+            return dai.MedianFilter.KERNEL_5x5
+        elif size == 7:
+            return dai.MedianFilter.KERNEL_7x7
+        else:
+            return dai.MedianFilter.MEDIAN_OFF
