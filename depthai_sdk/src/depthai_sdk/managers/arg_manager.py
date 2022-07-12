@@ -33,8 +33,8 @@ class ArgsManager:
         parser.add_argument('-sh', '--shaves', type=int, help="Number of MyriadX SHAVEs to use for neural network blob compilation")
         parser.add_argument('-cnnsize', '--cnnInputSize', default=None, type=str,
                             help="Neural network input dimensions, in \"WxH\" format, e.g. \"544x320\"")
-        parser.add_argument("-rgbr", "--rgbResolution", default=1080, type=int, choices=[1080, 2160, 3040],
-                            help="RGB cam res height: (1920x)1080, (3840x)2160 or (4056x)3040. Default: %(default)s")
+        parser.add_argument("-rgbr", "--rgbResolution", default=1080, type=int, choices=[1080, 2160, 3040, 720, 800],
+                            help="RGB cam res height: (1920x)1080, (3840x)2160, (4056x)3040, (1280x)720, (1280x)800. Default: %(default)s")
         parser.add_argument("-rgbf", "--rgbFps", default=30.0, type=float,
                             help="RGB cam fps: max 118.0 for H:1080, max 42.0 for H:2160. Default: %(default)s")
         parser.add_argument("-dct", "--disparityConfidenceThreshold", default=245, type=self._checkRange(0, 255),
