@@ -169,7 +169,8 @@ class DepthAICamera():
         self.videoEnc.setDefaultProfilePreset(self.camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
         self.xoutJpeg.setStreamName("jpeg")
 
-        if test_type != 'OAK-1':
+        # if test_type != 'OAK-1':
+        if 'oak-1' not in eepromDataJson['productName'].lower():
             self.camLeft = self.pipeline.create(dai.node.MonoCamera)
             self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
             self.xoutLeft.setStreamName("left")
@@ -692,7 +693,8 @@ class UiTests(QtWidgets.QMainWindow):
         # self.save_but.setObjectName("connect_but")
         # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
-        if test_type == 'OAK-1':
+        # if test_type == 'OAK-1':
+        if 'oak-1' in eepromDataJson['productName'].lower():
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 241))
         else:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 395))
@@ -760,7 +762,8 @@ class UiTests(QtWidgets.QMainWindow):
         # if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
         if 'oak-d pro' in eepromDataJson['productName'].lower():
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 311))
-        elif test_type == 'OAK-1':
+        # elif test_type == 'OAK-1':
+        elif 'oak-1' in eepromDataJson['productName'].lower():
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 190))
         else:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 281))
@@ -1089,7 +1092,8 @@ class UiTests(QtWidgets.QMainWindow):
             self.disconnect()
             self.rgb_ntes_but.setChecked(True)
             self.jpeg_ntes_but.setChecked(True)
-            if test_type != 'OAK-1':
+            # if test_type != 'OAK-1':
+            if 'oak-1' not in eepromDataJson['productName'].lower():
                 self.right_ntes_but.setChecked(True)
                 self.left_ntes_but.setChecked(True)
                 # if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
@@ -1175,7 +1179,8 @@ class UiTests(QtWidgets.QMainWindow):
         location = WIDTH, prew_height + 80
         self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
         self.jpeg.show()
-        if test_type != 'OAK-1':
+        # if test_type != 'OAK-1':
+        if 'oak-1' not in eepromDataJson['productName'].lower():
             location = WIDTH + prew_width + 20, 0
             self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
                                'LEFT Preview', location)
@@ -1265,7 +1270,8 @@ class UiTests(QtWidgets.QMainWindow):
             self.prew_out_rgb_res.setPalette(self.red_pallete)
         self.prew_out_rgb_res.setText(test_result['prew_out_rgb_res'])
 
-        if test_type != 'OAK-1':
+        # if test_type != 'OAK-1':
+        if 'oak-1' not in eepromDataJson['productName'].lower():
             if test_result['left_cam_res'] == 'PASS':
                 self.left_cam_res.setPalette(self.green_pallete)
             else:
@@ -1453,7 +1459,8 @@ class UiTests(QtWidgets.QMainWindow):
         if hasattr(self, 'depth_camera'):
             del self.rgb
             del self.jpeg
-            if test_type != 'OAK-1':
+            # if test_type != 'OAK-1':
+            if 'oak-1' not in eepromDataJson['productName'].lower():
                 del self.left
                 del self.right
             del self.depth_camera
