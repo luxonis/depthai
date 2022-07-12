@@ -109,6 +109,10 @@ class ConfigManager:
             return dai.ColorCameraProperties.SensorResolution.THE_4_K
         elif self.args.rgbResolution == 3040:
             return dai.ColorCameraProperties.SensorResolution.THE_12_MP
+        elif self.args.rgbResolution == 720:
+            return dai.ColorCameraProperties.SensorResolution.THE_720_P
+        elif self.args.rgbResolution == 800:
+            return dai.ColorCameraProperties.SensorResolution.THE_800_P
         else:
             return dai.ColorCameraProperties.SensorResolution.THE_1080_P
 
@@ -164,6 +168,20 @@ class ConfigManager:
         deviceInfo = device.getDeviceInfo()
         cams = device.getConnectedCameras()
         depthEnabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
+
+        sensorNames = device.getCameraSensorNames()
+        if dai.CameraBoardSocket.RGB in cams:
+            name = sensorNames[dai.CameraBoardSocket.RGB]
+            if name == 'OV9782':
+                if self.args.rgbResolution not in [720, 800]:
+                    self.args.rgbResolution = 800
+                    cliPrint(f'{name} requires 720 or 800 resolution, defaulting to {self.args.rgbResolution}', 
+                             PrintColors.RED)
+            else:
+                if self.args.rgbResolution in [720, 800]:
+                    self.args.rgbResolution = 1080
+                    cliPrint(f'{name} doesn\'t support 720 / 800 resolutions, defaulting to {self.args.rgbResolution}', 
+                             PrintColors.RED)
 
         if not depthEnabled:
             if not self.args.disableDepth:
