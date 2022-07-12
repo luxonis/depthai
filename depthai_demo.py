@@ -181,8 +181,6 @@ class Demo:
     def setup(self, conf: ConfigManager):
         print("Setting up demo...")
         self._conf = conf
-        self._rgbRes = conf.getRgbResolution()
-        self._monoRes = conf.getMonoResolution()
         if self._conf.args.openvinoVersion:
             self._openvinoVersion = getattr(dai.OpenVINO.Version, 'VERSION_' + self._conf.args.openvinoVersion)
         self._deviceInfo = getDeviceInfo(self._conf.args.deviceId, args.debug)
@@ -225,6 +223,8 @@ class Demo:
             print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
         self._conf.adjustParamsToDevice(self._device)
         self._conf.adjustPreviewToOptions()
+        self._rgbRes = conf.getRgbResolution()
+        self._monoRes = conf.getMonoResolution()
         if self._conf.lowBandwidth:
             self._pm.enableLowBandwidth(poeQuality=self._conf.args.poeQuality)
         self._cap = cv2.VideoCapture(self._conf.args.video) if not self._conf.useCamera else None
