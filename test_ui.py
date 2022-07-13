@@ -432,12 +432,12 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         self.json_combo.currentTextChanged.connect(self.variant_changed)
 
         self.setObjectName("CalibrateSelect")
-        self.resize(386, 192)
         self.buttonBox = QtWidgets.QDialogButtonBox(self)
-        self.buttonBox.setGeometry(QtCore.QRect(70, 130, 191, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName("buttonBox")
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
         self.batch_label = QtWidgets.QLabel(self)
         font = QtGui.QFont()
         font.setPointSize(12)
@@ -456,8 +456,6 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
 
         self.variant_desc_label = QtWidgets.QLabel(self)
 
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
         QtCore.QMetaObject.connectSlotsByName(self)
 
         _translate = QtCore.QCoreApplication.translate
@@ -471,6 +469,8 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         layout.addRow(QtWidgets.QLabel("Description"), self.device_desc_label)
         layout.addRow(self.json_label, self.json_combo)
         layout.addRow(QtWidgets.QLabel("Description"), self.variant_desc_label)
+        layout.addRow(QtWidgets.QLabel("Description"), self.variant_desc_label)
+        layout.addRow(self.buttonBox)
         layout.setRowWrapPolicy(layout.RowWrapPolicy.WrapLongRows)
         self.setLayout(layout)
 
