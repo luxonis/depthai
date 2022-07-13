@@ -16,6 +16,7 @@ import signal
 import json, time
 from pathlib import Path
 import cv2
+import glob
 
 # Try setting native cv2 image format, otherwise RGB888
 colorMode = QtGui.QImage.Format_RGB888
@@ -26,7 +27,7 @@ except:
 
 FPS = 10
 
-BATCH_DIR = Path(__file__).resolve().parent / 'batch'
+DEVICE_DIR = Path(__file__).resolve().parent / 'batch'
 
 test_result = {
     'usb3_res': '',
@@ -408,26 +409,26 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         global eepromDataJson
         global calib_path
         super().__init__()
-        x = os.walk(BATCH_DIR)
-        print(x)
-        self.batches = []
-        self.jsons = {}
-        for x in os.walk(BATCH_DIR):
-            self.batches = sorted(x[1])
-            break
-        for batch in self.batches:
-            for js in os.walk(BATCH_DIR/batch):
-                self.jsons[batch] = sorted(js[2])
-                print(js)
 
-        self.batch_combo = QtWidgets.QComboBox(self)
-        self.batch_combo.setGeometry(QtCore.QRect(100, 20, 141, 32))
-        self.batch_combo.addItems(self.batches)
-        self.batch_combo.currentTextChanged.connect(self.batches_changed)
+        # Create list of devices data
+        self.device_jsons = []
+        # Create "representational (title)" data
+        self.device_titles = []
+
+        # Get all devices
+        devices = glob.glob(f'{DEVICE_DIR}/*.json')
+        # Retrieve all information
+        for dev in devices:
+            with open(dev, 'r') as f:
+                j = json.load(f)
+                self.device_jsons.append(j)
+                self.device_titles.append(j["title"])
+
+        self.device_dropdown = QtWidgets.QComboBox(self)
+        self.device_dropdown.addItems(self.device_titles)
+        self.device_dropdown.currentTextChanged.connect(self.device_changed)
         self.json_combo = QtWidgets.QComboBox(self)
-        self.json_combo.setGeometry(QtCore.QRect(100, 70, 261, 32))
-        self.json_combo.addItems(self.jsons[self.batches[0]])
-        self.json_combo.currentTextChanged.connect(self.json_changed)
+        self.json_combo.currentTextChanged.connect(self.variant_changed)
 
         self.setObjectName("CalibrateSelect")
         self.resize(386, 192)
@@ -437,45 +438,86 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
         self.buttonBox.setObjectName("buttonBox")
         self.batch_label = QtWidgets.QLabel(self)
-        self.batch_label.setGeometry(QtCore.QRect(10, 20, 51, 27))
         font = QtGui.QFont()
         font.setPointSize(12)
         self.batch_label.setFont(font)
-        self.batch_label.setObjectName("batch_label")
+        self.batch_label.setObjectName("device_label")
+
+        self.device_desc_label = QtWidgets.QLabel(self)
+        self.device_desc_label.setObjectName("device_desc_label")
+
         self.json_label = QtWidgets.QLabel(self)
-        self.json_label.setGeometry(QtCore.QRect(10, 70, 77, 27))
+        self.json_label.setGeometry(QtCore.QRect(10, 150, 77, 27))
         font = QtGui.QFont()
         font.setPointSize(12)
         self.json_label.setFont(font)
         self.json_label.setObjectName("json_label")
+
+        self.variant_desc_label = QtWidgets.QLabel(self)
+
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
         QtCore.QMetaObject.connectSlotsByName(self)
 
         _translate = QtCore.QCoreApplication.translate
-        self.batch_label.setText(_translate("CalibrateSelect", "Batch"))
-        self.json_label.setText(_translate("CalibrateSelect", "JSON file"))
+        self.batch_label.setText(_translate("CalibrateSelect", "Device"))
+        self.json_label.setText(_translate("CalibrateSelect", "Variant"))
         self.setWindowTitle(_translate("CalibrateSelect", "Dialog"))
-        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
-        with open(calib_path) as jfile:
-            eepromDataJson = json.load(jfile)
 
-    def batches_changed(self):
+        # Set layout
+        layout = QtWidgets.QFormLayout()
+        layout.addRow(self.batch_label, self.device_dropdown)
+        layout.addRow(QtWidgets.QLabel("Description"), self.device_desc_label)
+        layout.addRow(self.json_label, self.json_combo)
+        layout.addRow(QtWidgets.QLabel("Description"), self.variant_desc_label)
+        layout.setRowWrapPolicy(layout.RowWrapPolicy.WrapLongRows)
+        self.setLayout(layout)
+
+        # Refresh devices
+        self.device_changed()
+
+    def device_changed(self):
         global calib_path
         global eepromDataJson
-        print("Batches changed!")
+        print("Devices changed!")
+
+        curDevice = self.device_jsons[self.device_dropdown.currentIndex()]
+        variantIndex = self.json_combo.currentIndex()
+
+        # Create "representational (title)" data for variants
+        variant_titles = []
+        for variant in curDevice["variants"]:
+            variant_titles.append(variant["title"])
+
+        # Update variants combobox
         self.json_combo.clear()
-        self.json_combo.addItems(self.jsons[self.batch_combo.currentText()])
-        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
-        with open(calib_path) as jfile:
-            eepromDataJson = json.load(jfile)
+        self.json_combo.addItems(variant_titles)
+        # Update desc
+        self.device_desc_label.setText(curDevice["description"])
+        if variantIndex >= 0 and variantIndex < len(curDevice["variants"]):
+            self.variant_desc_label.setText(curDevice["variants"][variantIndex]["description"])
 
-    def json_changed(self):
+        # Refresh variants
+        self.variant_changed()
+
+
+
+    def variant_changed(self):
         global eepromDataJson
         global calib_path
-        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
-        with open(calib_path) as jfile:
-            eepromDataJson = json.load(jfile)
+
+        curDevice = self.device_jsons[self.device_dropdown.currentIndex()]
+        variantIndex = self.json_combo.currentIndex()
+
+        # Update desc
+        if variantIndex >= 0 and variantIndex < len(curDevice["variants"]):
+            self.variant_desc_label.setText(curDevice["variants"][variantIndex]["description"])
+
+        # Load eeprom data if available
+        if len(curDevice['variants']) > variantIndex:
+            calib_path = DEVICE_DIR / curDevice['variants'][variantIndex]["eeprom"]
+            with open(calib_path) as jfile:
+                eepromDataJson = json.load(jfile)
 
 
 class Camera(QtWidgets.QWidget):
@@ -595,12 +637,12 @@ class UiTests(QtWidgets.QMainWindow):
         self.MB_END = "</p></body></html>"
         self.all_logs = ""
 
-        x = os.walk(BATCH_DIR)
+        x = os.walk(DEVICE_DIR)
         print(x)
         self.batches = []
         self.jsons = {}
         i = 0
-        for x in os.walk(BATCH_DIR):
+        for x in os.walk(DEVICE_DIR):
             if i == 0:
                 self.batches = x[1]
             else:
@@ -1408,7 +1450,7 @@ class UiTests(QtWidgets.QMainWindow):
                 del self.right
             del self.depth_camera
 
-    def batches_changed(self):
+    def device_changed(self):
         print("Batches changed!")
         self.json_combo.clear()
         self.json_combo.addItems(self.jsons[self.batches_combo.currentText()])
