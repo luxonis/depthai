@@ -2,7 +2,7 @@
     "title": "OAK-D S2",
     "description": "OAK-D Series 2",
     "image": "images/oak_d_s2.jpg",
-    "test-type": "USB",
+    "test_type": "OAK-D",
     "variants": [
         {
             "title":"OAK-D S2 AF (DM9098 R3M2E3)",
@@ -12,6 +12,7 @@
         {
             "title":"OAK-D S2 AF (DM9098 R6M2E6)",
             "description": "OAK-D Series 2, AutoFocus, based on R6M2E6 board, with PMIC IC",
+            "test_type": "OAK-D",
             "eeprom":"eeprom/DM9098_R6M2E6_oak_d_s2_af.json"
         },
         {

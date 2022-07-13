@@ -404,6 +404,7 @@ class DepthAICamera():
 
 eepromDataJson = None
 calib_path = None
+selectedDeviceInfo = ""
 class Ui_CalibrateSelect(QtWidgets.QDialog):
     def __init__(self):
         global eepromDataJson
@@ -501,10 +502,10 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         self.variant_changed()
 
 
-
     def variant_changed(self):
         global eepromDataJson
         global calib_path
+        global selectedDeviceInfo
 
         curDevice = self.device_jsons[self.device_dropdown.currentIndex()]
         variantIndex = self.json_combo.currentIndex()
@@ -513,12 +514,19 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         if variantIndex >= 0 and variantIndex < len(curDevice["variants"]):
             self.variant_desc_label.setText(curDevice["variants"][variantIndex]["description"])
 
+        # Load test_type, first from "device"
+        test_type = curDevice['test_type']
+
         # Load eeprom data if available
         if len(curDevice['variants']) > variantIndex:
+            # Load test_type, if variant also has it selected, override
+            if 'test_type' in curDevice['variants'][variantIndex]:
+                test_type = curDevice['variants'][variantIndex]["test_type"]
             calib_path = DEVICE_DIR / curDevice['variants'][variantIndex]["eeprom"]
             with open(calib_path) as jfile:
                 eepromDataJson = json.load(jfile)
 
+            selectedDeviceInfo = curDevice['variants'][variantIndex]['title']
 
 class Camera(QtWidgets.QWidget):
     def __init__(self, get_image, camera_format, title='Camera', location=(0, 0)):
@@ -1011,7 +1019,7 @@ class UiTests(QtWidgets.QMainWindow):
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
         UI_tests.setWindowTitle(_translate("UI_tests", "DepthAI UI Tests"))
-        self.title.setText(_translate("UI_tests", f"<html><head/><body><p align=\"center\">Batch: {calib_path.parent.name} <br> Device: {calib_path.name}</p></body></html>"))
+        self.title.setText(_translate("UI_tests", f"<html><head/><body><p align=\"center\">Device: {selectedDeviceInfo} <br> EEPROM: {calib_path.name}</p></body></html>"))
         self.connect_but.setText("CONNECT")
         self.connect_but.adjustSize()
 
