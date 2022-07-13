@@ -1,0 +1,13 @@
+{
+    "title": "OAK-D Lite",
+    "description": "OAK-D Lite",
+    "image": "images/oak_d_lite.jpg",
+    "test_type": "OAK-D-LITE",
+    "variants": [
+        {
+            "title":"OAK-D Lite (DM9095 R3M2E4)",
+            "description": "OAK-D Lite, based on DM9095 R3M2E4 board",
+            "eeprom":"eeprom/DM9095_R3M2E4_oak_d_lite.json"
+        }
+    ]
+}
