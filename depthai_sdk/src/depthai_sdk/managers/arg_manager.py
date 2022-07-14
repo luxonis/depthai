@@ -1,4 +1,6 @@
 import argparse
+import os
+import sys
 from pathlib import Path
 import depthai as dai
 
@@ -7,8 +9,8 @@ class ArgsManager:
     _openvinoVersions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
     _orientationChoices = list(filter(lambda var: var[0].isupper(), vars(dai.CameraImageOrientation)))
 
-    def __init__(self, path: Path) -> None:
-        self.folderPath = path.parent # Folder of the script user executed
+    def __init__(self) -> None:
+        self.folderPath = Path(os.path.abspath(sys.argv[0]))
         try:
             import cv2
             self._colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))
@@ -91,7 +93,7 @@ class ArgsManager:
                                 "Format: cameraName or cameraName,encFps \n"
                                 "Example: -enc left color \n"
                                 "Example: -enc color right,10 left,10")
-        parser.add_argument('-encout', '--encodeOutput', type=Path, default=self.folderPath, help="Path to directory where to store encoded files. Default: %(default)s")
+        parser.add_argument('-encout', '--encodeOutput', type=Path, default=self.folderPath / 'recordings', help="Path to directory where to store encoded files. Default: %(default)s")
         parser.add_argument('-xls', '--xlinkChunkSize', type=int, help="Specify XLink chunk size")
         parser.add_argument('-poeq', '--poeQuality', type=self._checkRange(1, 100), default=100, help="Specify PoE encoding video quality (1-100)")
         parser.add_argument('-camo', '--cameraOrientation', type=self._comaSeparated(default="AUTO", cast=self._orientationCast), nargs="+", default=[],
@@ -99,7 +101,7 @@ class ArgsManager:
                                 "Format: camera_name,camera_orientation \n"
                                 "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(self._orientationChoices))
                             )
-        parser.add_argument("--cameraControlls", action="store_true", help="Show camera configuration options in GUI and control them using keyboard")
+        parser.add_argument("--cameraControls", action="store_true", help="Show camera configuration options in GUI and control them using keyboard")
         parser.add_argument("--cameraExposure", type=self._comaSeparated("all", int), nargs="+", help="Specify camera saturation")
         parser.add_argument("--cameraSensitivity", type=self._comaSeparated("all", int), nargs="+", help="Specify camera sensitivity")
         parser.add_argument("--cameraSaturation", type=self._comaSeparated("all", int), nargs="+", help="Specify image saturation")
@@ -125,7 +127,7 @@ class ArgsManager:
         """
         Returns app name specified in the arguments, or None, if no app was specified.
         """
-        parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser(add_help=False)
         parser.add_argument("-app","--app", type=str, choices=["uvc", "record"], help="Specify which app to run instead of the demo")
         known, unknown = parser.parse_known_args()
         return known.app

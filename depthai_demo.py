@@ -23,7 +23,7 @@ sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str((Path(__file__).parent / "depthai_sdk" / "src").absolute()))
 from depthai_sdk.managers import ArgsManager
 
-argsMngr = ArgsManager(Path(__file__))
+argsMngr = ArgsManager()
 app = argsMngr.parseApp()
 
 if __name__ == "__main__":
@@ -449,7 +449,7 @@ class Demo:
                 nextFilter = next(self._medianFilters)
                 self._pm.updateDepthConfig(self._device, median=nextFilter)
 
-            if self._conf.args.cameraControlls:
+            if self._conf.args.cameraControls:
                 update = True
 
                 if key == ord('t'):
@@ -589,7 +589,7 @@ def prepareConfManager(in_args):
     confManager.linuxCheckApplyUsbRules()
     if not confManager.useCamera:
         if str(confManager.args.video).startswith('https'):
-            confManager.args.video = downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS)
+            confManager.args.video = str(downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS))
             print("Youtube video downloaded.")
         if not Path(confManager.args.video).exists():
             raise ValueError("Path {} does not exists!".format(confManager.args.video))
