@@ -1091,7 +1091,7 @@ class UiTests(QtWidgets.QMainWindow):
         name = eepromDataJson['productName'].lower()
         if 'poe' in name:
             self.update_bootloader()
-        elif not ('lite' in name):
+        elif not ('lite' in name or 'oak-1 ff-c09' in name):
             # Flash EEPROM and boot header, then reboot for boot header to take effect
             with dai.Device() as device:
                 usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
