@@ -193,6 +193,9 @@ class Demo:
         if self._conf.args.xlinkChunkSize is not None:
             self._pm.setXlinkChunkSize(self._conf.args.xlinkChunkSize)
 
+        if self._conf.args.cameraTuning:
+            self._pm.setCameraTuningBlob(self._conf.args.cameraTuning)
+
         self._nnManager = None
         if self._conf.useNN:
             self._blobManager = BlobManager(

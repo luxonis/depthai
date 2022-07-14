@@ -589,6 +589,9 @@ class PipelineManager:
     def setXlinkChunkSize(self, chunkSize):
         self.pipeline.setXLinkChunkSize(chunkSize)
 
+    def setCameraTuningBlob(self, path):
+        self.pipeline.setCameraTuningBlobPath(path)
+
     def _getMedianFilter(self, size: int) -> dai.MedianFilter:
         if size == 3:
             return dai.MedianFilter.KERNEL_3x3

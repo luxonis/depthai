@@ -114,6 +114,7 @@ class ArgsManager:
         parser.add_argument('--noRgbDepthAlign', action="store_true", help="Disable RGB-Depth align (depth frame will be aligned with the RGB frame)")
         parser.add_argument('--debug', action="store_true", help="Enables debug mode. Capability to connect to already BOOTED devices and also implicitly disables version check")
         parser.add_argument("-app","--app", type=str, choices=["uvc", "record"], help="Specify which app to run instead of the demo")
+        parser.add_argument('-tun', '--cameraTuning', type=Path, help="Path to camera tuning blob to use, overriding the built-in tuning")
         
         if parse:
             return parser.parse_args()
