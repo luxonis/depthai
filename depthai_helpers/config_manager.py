@@ -104,26 +104,6 @@ class ConfigManager:
         cvColorMap[0] = [0, 0, 0]
         return cvColorMap
 
-    def getRgbResolution(self):
-        if self.args.rgbResolution == 2160:
-            return dai.ColorCameraProperties.SensorResolution.THE_4_K
-        elif self.args.rgbResolution == 3040:
-            return dai.ColorCameraProperties.SensorResolution.THE_12_MP
-        elif self.args.rgbResolution == 720:
-            return dai.ColorCameraProperties.SensorResolution.THE_720_P
-        elif self.args.rgbResolution == 800:
-            return dai.ColorCameraProperties.SensorResolution.THE_800_P
-        else:
-            return dai.ColorCameraProperties.SensorResolution.THE_1080_P
-
-    def getMonoResolution(self):
-        if self.args.monoResolution == 720:
-            return dai.MonoCameraProperties.SensorResolution.THE_720_P
-        elif self.args.monoResolution == 800:
-            return dai.MonoCameraProperties.SensorResolution.THE_800_P
-        else:
-            return dai.MonoCameraProperties.SensorResolution.THE_400_P
-
     def getUsb2Mode(self):
         if self.args['forceUsb2']:
             cliPrint("FORCE USB2 MODE", PrintColors.WARNING)

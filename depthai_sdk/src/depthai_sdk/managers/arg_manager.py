@@ -10,7 +10,7 @@ class ArgsManager:
     _orientationChoices = list(filter(lambda var: var[0].isupper(), vars(dai.CameraImageOrientation)))
 
     def __init__(self) -> None:
-        self.folderPath = Path(os.path.abspath(sys.argv[0]))
+        self.folderPath = Path(os.path.abspath(sys.argv[0])).parent
         try:
             import cv2
             self._colorMaps = list(map(lambda name: name[len("COLORMAP_"):], filter(lambda name: name.startswith("COLORMAP_"), vars(cv2))))

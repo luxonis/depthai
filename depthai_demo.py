@@ -226,8 +226,6 @@ class Demo:
             print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
         self._conf.adjustParamsToDevice(self._device)
         self._conf.adjustPreviewToOptions()
-        self._rgbRes = conf.getRgbResolution()
-        self._monoRes = conf.getMonoResolution()
         if self._conf.lowBandwidth:
             self._pm.enableLowBandwidth(poeQuality=self._conf.args.poeQuality)
         self._cap = cv2.VideoCapture(self._conf.args.video) if not self._conf.useCamera else None
@@ -247,18 +245,11 @@ class Demo:
                                fpsHandler=self._fps, createWindows=self._displayFrames, depthConfig=self._pm._depthConfig)
 
             if self._conf.leftCameraEnabled:
-                self._pm.createLeftCam(self._monoRes, self._conf.args.monoFps,
-                                 orientation=self._conf.args.cameraOrientation.get(Previews.left.name),
-                                 xout=Previews.left.name in self._conf.args.show)
+                self._pm.createLeftCam(args = self._conf.args)
             if self._conf.rightCameraEnabled:
-                self._pm.createRightCam(self._monoRes, self._conf.args.monoFps,
-                                  orientation=self._conf.args.cameraOrientation.get(Previews.right.name),
-                                  xout=Previews.right.name in self._conf.args.show)
+                self._pm.createRightCam(args = self._conf.args)
             if self._conf.rgbCameraEnabled:
-                self._pm.createColorCam(previewSize=self._conf.previewSize, res=self._rgbRes, fps=self._conf.args.rgbFps,
-                                  orientation=self._conf.args.cameraOrientation.get(Previews.color.name),
-                                  fullFov=not self._conf.args.disableFullFovNn,
-                                  xout=Previews.color.name in self._conf.args.show)
+                self._pm.createColorCam(args = self._conf.args)
 
             if self._conf.useDepth:
                 self._pm.createDepth(args = self._conf.args)

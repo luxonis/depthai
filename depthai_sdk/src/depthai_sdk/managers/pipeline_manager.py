@@ -3,7 +3,6 @@ import depthai as dai
 
 from ..previews import Previews
 
-
 class PipelineManager:
     """
     Manager class handling different :obj:`depthai.Pipeline` operations. Most of the functions wrap up nodes creation
@@ -140,7 +139,18 @@ class PipelineManager:
         videnc.setQuality(self.poeQuality)
         videnc.bitstream.link(xout.input)
 
-    def createColorCam(self, previewSize=None, res=dai.ColorCameraProperties.SensorResolution.THE_1080_P, fps=30, fullFov=True, orientation: dai.CameraImageOrientation=None, colorOrder=dai.ColorCameraProperties.ColorOrder.BGR, xout=False, xoutVideo=False, xoutStill=False):
+    def createColorCam(self,
+        previewSize=None,
+        res=dai.ColorCameraProperties.SensorResolution.THE_1080_P,
+        fps=30,
+        fullFov=True,
+        orientation: dai.CameraImageOrientation=None,
+        colorOrder=dai.ColorCameraProperties.ColorOrder.BGR,
+        xout=False,
+        xoutVideo=False,
+        xoutStill=False,
+        args=None,
+        ):
         """
         Creates :obj:`depthai.node.ColorCamera` node based on specified attributes
 
@@ -155,7 +165,18 @@ class PipelineManager:
             xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
             xoutVideo (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for `video` output of this node
             xoutStill (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for `still` output of this node
+            args (Object, Optional): Arguments from the ArgsManager
         """
+        if args is not None:
+            return self.createColorCam(
+                previewSize=(576, 320), # 1080P / 3
+                res=self._getRgbResolution(args.rgbResolution),
+                fps=args.rgbFps,
+                orientation=args.cameraOrientation.get(Previews.color.name),
+                fullFov=not args.disableFullFovNn,
+                xout=Previews.color.name in args.show
+            )
+
         self.nodes.camRgb = self.pipeline.createColorCamera()
         if previewSize is not None:
             self.nodes.camRgb.setPreviewSize(*previewSize)
@@ -188,7 +209,13 @@ class PipelineManager:
         self.nodes.xinRgbControl.out.link(self.nodes.camRgb.inputControl)
 
 
-    def createLeftCam(self, res=None, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
+    def createLeftCam(self,
+        res=None,
+        fps=30,
+        orientation: dai.CameraImageOrientation=None,
+        xout=False,
+        args=None,
+        ):
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.LEFT`
 
@@ -197,7 +224,17 @@ class PipelineManager:
             fps (int, Optional): Camera FPS set on the device. Can limit / increase the amount of frames produced by the camera
             orientation (depthai.CameraImageOrientation, Optional): Custom camera orientation to be set on the device
             xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
+            args (Object, Optional): Arguments from the ArgsManager
         """
+
+        if args is not None:
+            return self.createLeftCam(
+                self._getMonoResolution(args.monoResolution),
+                args.monoFps,
+                args.cameraOrientation.get(Previews.left.name),
+                Previews.left.name in args.show
+            )
+
         self.nodes.monoLeft = self.pipeline.createMonoCamera()
         self.nodes.monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
         if orientation is not None:
@@ -220,7 +257,13 @@ class PipelineManager:
         self.nodes.xinLeftControl.setStreamName(Previews.left.name + "_control")
         self.nodes.xinLeftControl.out.link(self.nodes.monoLeft.inputControl)
 
-    def createRightCam(self, res=None, fps=30, orientation: dai.CameraImageOrientation=None, xout=False):
+    def createRightCam(self,
+        res=None,
+        fps=30,
+        orientation: dai.CameraImageOrientation=None,
+        xout=False,
+        args=None,
+        ):
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.RIGHT`
 
@@ -229,7 +272,17 @@ class PipelineManager:
             fps (int, Optional): Camera FPS set on the device. Can limit / increase the amount of frames produced by the camera
             orientation (depthai.CameraImageOrientation, Optional): Custom camera orientation to be set on the device
             xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
+            args (Object, Optional): Arguments from the ArgsManager
         """
+
+        if args is not None:
+            return self.createRightCam(
+                self._getMonoResolution(args.monoResolution),
+                args.monoFps,
+                args.cameraOrientation.get(Previews.right.name),
+                Previews.right.name in args.show
+            )
+
         self.nodes.monoRight = self.pipeline.createMonoCamera()
         self.nodes.monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         if orientation is not None:
@@ -601,3 +654,37 @@ class PipelineManager:
             return dai.MedianFilter.KERNEL_7x7
         else:
             return dai.MedianFilter.MEDIAN_OFF
+
+    def _getRgbResolution(self, resolution: str):
+        """
+        Parses Color camera resolution based on the string
+        """
+        resolution = str(resolution).upper()
+        if resolution == '3120' or resolution == '13MP':
+            return dai.ColorCameraProperties.SensorResolution.THE_13_MP
+        elif resolution == '3040' or resolution == '12MP':
+            return dai.ColorCameraProperties.SensorResolution.THE_12_MP
+        elif resolution == '2160' or resolution == '4K':
+            return dai.ColorCameraProperties.SensorResolution.THE_4_K
+        # elif resolution == '1920' or resolution == '5MP':
+        #     return dai.ColorCameraProperties.SensorResolution.THE_5_MP
+        elif resolution == '800' or resolution == '800P':
+            return dai.ColorCameraProperties.SensorResolution.THE_800_P
+        elif resolution == '720' or resolution == '720P':
+            return dai.ColorCameraProperties.SensorResolution.THE_720_P
+        else: # Default
+            return dai.ColorCameraProperties.SensorResolution.THE_1080_P
+
+    def _getMonoResolution(self, resolution: str):
+        """
+        Parses Mono camera resolution based on the string
+        """
+        resolution = str(resolution).upper()
+        if resolution == '800' or resolution == '800P':
+            return dai.MonoCameraProperties.SensorResolution.THE_800_P
+        elif resolution == '720' or resolution == '720P':
+            return dai.MonoCameraProperties.SensorResolution.THE_720_P
+        elif resolution == '480' or resolution == '480P':
+            return dai.MonoCameraProperties.SensorResolution.THE_480_P
+        else: # Default
+            return dai.MonoCameraProperties.SensorResolution.THE_400_P
