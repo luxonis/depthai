@@ -3,6 +3,9 @@ from pathlib import Path
 from typing import Optional, Union, List
 import depthai as dai
 
+
+
+
 class NNComponent(Component):
 
     _tracker: dai.node.ObjectTracker = None

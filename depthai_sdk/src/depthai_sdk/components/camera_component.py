@@ -1,5 +1,5 @@
 from .component import Component
-from typing import Optional, Union
+from typing import Optional, Union, Any
 import depthai as dai
 from ..replay import Replay
 
@@ -20,6 +20,7 @@ class CameraComponent(Component):
         out: bool = False,
         encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
         control: bool = False,
+        args: Any = None,
         ):
         """
         Args:
@@ -29,6 +30,7 @@ class CameraComponent(Component):
             out (bool, default False): Whether we want to stream frames to the host computer
             encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
             control (bool, default False): control the camera from the host keyboard (via cv2.waitKey())
+            args (Any, optional): Set the camera components based on user arguments
         """
 
         self.pipeline = pipeline
@@ -58,10 +60,11 @@ class CameraComponent(Component):
                         # Overwrite source - so Replay class can use it
                         source = str(downloadYTVideo(source))
                     else:
-                        # TODO: download video/image 
-                        a = 5
+                        # TODO: download video/image(s) from the internet
+                        raise NotImplementedError("Only YouTube video download is currently supported!")
                     
-                self._replay = Replay(source)
+                self._replay = Replay(source, self.pipeline)
+                self._source = "replay"
 
         else:
             self._colorcam = self.pipeline.create(dai.node.ColorCamera)
@@ -71,6 +74,16 @@ class CameraComponent(Component):
 
     def _isUrl(self, source: str) -> bool:
         return source.startswith("http://") or source.startswith("https://")
+
+    def _getSource(self):
+        if self._source == 'color':
+            return self._colorcam
+        elif self._source == 'left':
+
+
+    def _createXLinkOut(self):
+        a = 5
+
 
     def configureCamera(self, 
 
@@ -85,4 +98,7 @@ class CameraComponent(Component):
         """
         Configure quality, enable lossless,
         """
-        a = 5
+        if self._enc is None:
+            raise Exception('Video encoder was not enabled!')
+
+        self._enc.set

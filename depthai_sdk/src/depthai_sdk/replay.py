@@ -142,13 +142,17 @@ class Replay:
         self._seqNum += 1
         return True
 
-    def initPipeline(self):
+    def initPipeline(self,
+        pipeline: Optional[dai.Pipeline] = None
+        ):
         """
         Prepares the pipeline for replaying. It creates XLinkIn nodes and sets up StereoDepth node.
         Returns:
             pipeline, nodes
         """
-        pipeline = dai.Pipeline()
+        if pipeline is None: # Create pipeline if not passed
+            pipeline = dai.Pipeline()
+
         if self._calibData is not None:
             pipeline.setCalibrationData(self._calibData)
         nodes = types.SimpleNamespace()
