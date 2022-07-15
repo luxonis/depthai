@@ -149,8 +149,10 @@ class PipelineManager:
         xout=False,
         xoutVideo=False,
         xoutStill=False,
+        control=True, # Create input control
+        pipeline=None,
         args=None,
-        ):
+        ) -> dai.node.ColorCamera:
         """
         Creates :obj:`depthai.node.ColorCamera` node based on specified attributes
 
@@ -167,17 +169,21 @@ class PipelineManager:
             xoutStill (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for `still` output of this node
             args (Object, Optional): Arguments from the ArgsManager
         """
+        if pipeline is None:
+            pipeline = self.pipeline
+
         if args is not None:
             return self.createColorCam(
                 previewSize=(576, 320), # 1080P / 3
-                res=self._getRgbResolution(args.rgbResolution),
+                res=args.rgbResolution,
                 fps=args.rgbFps,
-                orientation=args.cameraOrientation.get(Previews.color.name),
+                orientation=dict(args.cameraOrientation).get(Previews.color.name),
                 fullFov=not args.disableFullFovNn,
-                xout=Previews.color.name in args.show
+                xout=Previews.color.name in args.show,
+                pipeline=pipeline
             )
 
-        self.nodes.camRgb = self.pipeline.createColorCamera()
+        self.nodes.camRgb = pipeline.createColorCamera()
         if previewSize is not None:
             self.nodes.camRgb.setPreviewSize(*previewSize)
         self.nodes.camRgb.setInterleaved(False)
@@ -189,33 +195,38 @@ class PipelineManager:
         self.nodes.camRgb.setPreviewKeepAspectRatio(not fullFov)
 
         if xout:
-            self.nodes.xoutRgb = self.pipeline.createXLinkOut()
+            self.nodes.xoutRgb = pipeline.createXLinkOut()
             self.nodes.xoutRgb.setStreamName(Previews.color.name)
             if self.lowBandwidth and not self.lowCapabilities:
                 self._mjpegLink(self.nodes.camRgb, self.nodes.xoutRgb, self.nodes.camRgb.video)
             else:
                 self.nodes.camRgb.preview.link(self.nodes.xoutRgb.input)
         if xoutVideo:
-            self.nodes.xoutRgbVideo = self.pipeline.createXLinkOut()
+            self.nodes.xoutRgbVideo = pipeline.createXLinkOut()
             self.nodes.xoutRgbVideo.setStreamName(Previews.color.name + "_video")
             self.nodes.camRgb.video.link(self.nodes.xoutRgbVideo.input)
         if xoutStill:
-            self.nodes.xoutRgbStill = self.pipeline.createXLinkOut()
+            self.nodes.xoutRgbStill = pipeline.createXLinkOut()
             self.nodes.xoutRgbStill.setStreamName(Previews.color.name + "_still")
             self.nodes.camRgb.still.link(self.nodes.xoutRgbStill.input)
-        self.nodes.xinRgbControl = self.pipeline.createXLinkIn()
-        self.nodes.xinRgbControl.setMaxDataSize(1024)
-        self.nodes.xinRgbControl.setStreamName(Previews.color.name + "_control")
-        self.nodes.xinRgbControl.out.link(self.nodes.camRgb.inputControl)
 
+        if control:
+            self.nodes.xinRgbControl = pipeline.createXLinkIn()
+            self.nodes.xinRgbControl.setMaxDataSize(1024)
+            self.nodes.xinRgbControl.setStreamName(Previews.color.name + "_control")
+            self.nodes.xinRgbControl.out.link(self.nodes.camRgb.inputControl)
+
+        return self.nodes.camRgb
 
     def createLeftCam(self,
         res=None,
         fps=30,
         orientation: dai.CameraImageOrientation=None,
         xout=False,
+        control=True,
+        pipeline = None,
         args=None,
-        ):
+        ) -> dai.node.MonoCamera:
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.LEFT`
 
@@ -226,16 +237,19 @@ class PipelineManager:
             xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
             args (Object, Optional): Arguments from the ArgsManager
         """
+        if pipeline is None:
+            pipeline = self.pipeline
 
         if args is not None:
             return self.createLeftCam(
-                self._getMonoResolution(args.monoResolution),
+                args.monoResolution,
                 args.monoFps,
-                args.cameraOrientation.get(Previews.left.name),
-                Previews.left.name in args.show
+                dict(args.cameraOrientation).get(Previews.left.name),
+                Previews.left.name in args.show,
+                pipeline=pipeline
             )
 
-        self.nodes.monoLeft = self.pipeline.createMonoCamera()
+        self.nodes.monoLeft = pipeline.createMonoCamera()
         self.nodes.monoLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
         if orientation is not None:
             self.nodes.monoLeft.setImageOrientation(orientation)
@@ -246,24 +260,29 @@ class PipelineManager:
         self.nodes.monoLeft.setFps(fps)
 
         if xout:
-            self.nodes.xoutLeft = self.pipeline.createXLinkOut()
+            self.nodes.xoutLeft = pipeline.createXLinkOut()
             self.nodes.xoutLeft.setStreamName(Previews.left.name)
             if self.lowBandwidth and not self.lowCapabilities:
                 self._mjpegLink(self.nodes.monoLeft, self.nodes.xoutLeft, self.nodes.monoLeft.out)
             else:
                 self.nodes.monoLeft.out.link(self.nodes.xoutLeft.input)
-        self.nodes.xinLeftControl = self.pipeline.createXLinkIn()
-        self.nodes.xinLeftControl.setMaxDataSize(1024)
-        self.nodes.xinLeftControl.setStreamName(Previews.left.name + "_control")
-        self.nodes.xinLeftControl.out.link(self.nodes.monoLeft.inputControl)
+        if control:
+            self.nodes.xinLeftControl = pipeline.createXLinkIn()
+            self.nodes.xinLeftControl.setMaxDataSize(1024)
+            self.nodes.xinLeftControl.setStreamName(Previews.left.name + "_control")
+            self.nodes.xinLeftControl.out.link(self.nodes.monoLeft.inputControl)
+
+        return self.nodes.monoLeft
 
     def createRightCam(self,
         res=None,
         fps=30,
         orientation: dai.CameraImageOrientation=None,
         xout=False,
+        control=True,
+        pipeline = None,
         args=None,
-        ):
+        ) -> dai.node.MonoCamera:
         """
         Creates :obj:`depthai.node.MonoCamera` node based on specified attributes, assigned to :obj:`depthai.CameraBoardSocket.RIGHT`
 
@@ -274,16 +293,19 @@ class PipelineManager:
             xout (bool, Optional): If set to :code:`True`, a dedicated :obj:`depthai.node.XLinkOut` will be created for this node
             args (Object, Optional): Arguments from the ArgsManager
         """
+        if pipeline is None:
+            pipeline = self.pipeline
 
         if args is not None:
             return self.createRightCam(
-                self._getMonoResolution(args.monoResolution),
+                args.monoResolution,
                 args.monoFps,
-                args.cameraOrientation.get(Previews.right.name),
-                Previews.right.name in args.show
+                dict(args.cameraOrientation).get(Previews.right.name),
+                Previews.right.name in args.show,
+                pipeline=pipeline
             )
 
-        self.nodes.monoRight = self.pipeline.createMonoCamera()
+        self.nodes.monoRight = pipeline.createMonoCamera()
         self.nodes.monoRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
         if orientation is not None:
             self.nodes.monoRight.setImageOrientation(orientation)
@@ -294,16 +316,20 @@ class PipelineManager:
         self.nodes.monoRight.setFps(fps)
 
         if xout:
-            self.nodes.xoutRight = self.pipeline.createXLinkOut()
+            self.nodes.xoutRight = pipeline.createXLinkOut()
             self.nodes.xoutRight.setStreamName(Previews.right.name)
             if self.lowBandwidth and not self.lowCapabilities:
                 self._mjpegLink(self.nodes.monoRight, self.nodes.xoutRight, self.nodes.monoRight.out)
             else:
                 self.nodes.monoRight.out.link(self.nodes.xoutRight.input)
-        self.nodes.xinRightControl = self.pipeline.createXLinkIn()
-        self.nodes.xinRightControl.setMaxDataSize(1024)
-        self.nodes.xinRightControl.setStreamName(Previews.right.name + "_control")
-        self.nodes.xinRightControl.out.link(self.nodes.monoRight.inputControl)
+
+        if control:
+            self.nodes.xinRightControl = pipeline.createXLinkIn()
+            self.nodes.xinRightControl.setMaxDataSize(1024)
+            self.nodes.xinRightControl.setStreamName(Previews.right.name + "_control")
+            self.nodes.xinRightControl.out.link(self.nodes.monoRight.inputControl)
+
+        return self.nodes.monoRight
 
     def updateIrConfig(self, device, irLaser=None, irFlood=None):
         """
@@ -318,7 +344,23 @@ class PipelineManager:
         if irFlood is not None:
             device.setIrFloodLightBrightness(irFlood)
 
-    def createDepth(self, dct=245, median=None, sigma=0, lr=True, lrcThreshold=5, extended=False, subpixel=False, useDisparity=False, useDepth=False, useRectifiedLeft=False, useRectifiedRight=False, runtimeSwitch=False, alignment=None, args=None):
+    def createDepth(self,
+        dct=245,
+        median=None,
+        sigma=0,
+        lr=True,
+        lrcThreshold=5,
+        extended=False,
+        subpixel=False,
+        useDisparity=False,
+        useDepth=False,
+        useRectifiedLeft=False,
+        useRectifiedRight=False,
+        runtimeSwitch=False,
+        alignment=None,
+        control=True,
+        pipeline=None,
+        args=None) -> dai.node.StereoDepth:
         """
         Creates :obj:`depthai.node.StereoDepth` node based on specified attributes
 
@@ -342,6 +384,8 @@ class PipelineManager:
         Raises:
             RuntimeError: if left of right mono cameras were not initialized
         """
+        if pipeline is None:
+            pipeline = self.pipeline
 
         if args is not None:
             return self.createDepth(
@@ -356,10 +400,11 @@ class PipelineManager:
                 useDisparity=Previews.disparity.name in args.show or Previews.disparityColor.name in args.show,
                 useRectifiedLeft=Previews.rectifiedLeft.name in args.show,
                 useRectifiedRight=Previews.rectifiedRight.name in args.show,
-                alignment=dai.CameraBoardSocket.RGB if args.stereoLrCheck and not args.noRgbDepthAlign else None
+                alignment=dai.CameraBoardSocket.RGB if args.stereoLrCheck and not args.noRgbDepthAlign else None,
+                pipeline=pipeline
             )
 
-        self.nodes.stereo = self.pipeline.createStereoDepth()
+        self.nodes.stereo = pipeline.createStereoDepth()
 
         self.nodes.stereo.initialConfig.setConfidenceThreshold(dct)
         if median is not None:
@@ -391,13 +436,14 @@ class PipelineManager:
         self.nodes.monoLeft.out.link(self.nodes.stereo.left)
         self.nodes.monoRight.out.link(self.nodes.stereo.right)
 
-        self.nodes.xinStereoConfig = self.pipeline.createXLinkIn()
-        self.nodes.xinStereoConfig.setMaxDataSize(1024)
-        self.nodes.xinStereoConfig.setStreamName("stereoConfig")
-        self.nodes.xinStereoConfig.out.link(self.nodes.stereo.inputConfig)
+        if control:
+            self.nodes.xinStereoConfig = pipeline.createXLinkIn()
+            self.nodes.xinStereoConfig.setMaxDataSize(1024)
+            self.nodes.xinStereoConfig.setStreamName("stereoConfig")
+            self.nodes.xinStereoConfig.out.link(self.nodes.stereo.inputConfig)
 
         if useDepth:
-            self.nodes.xoutDepth = self.pipeline.createXLinkOut()
+            self.nodes.xoutDepth = pipeline.createXLinkOut()
             self.nodes.xoutDepth.setStreamName(Previews.depthRaw.name)
             # if self.lowBandwidth and not self.lowCapabilities:  TODO change once depth frame type (14) is supported by VideoEncoder
             if False:
@@ -406,7 +452,7 @@ class PipelineManager:
                 self.nodes.stereo.depth.link(self.nodes.xoutDepth.input)
 
         if useDisparity:
-            self.nodes.xoutDisparity = self.pipeline.createXLinkOut()
+            self.nodes.xoutDisparity = pipeline.createXLinkOut()
             self.nodes.xoutDisparity.setStreamName(Previews.disparity.name)
             if False:
                 self._mjpegLink(self.nodes.stereo, self.nodes.xoutDisparity, self.nodes.stereo.disparity)
@@ -414,7 +460,7 @@ class PipelineManager:
                 self.nodes.stereo.disparity.link(self.nodes.xoutDisparity.input)
 
         if useRectifiedLeft:
-            self.nodes.xoutRectLeft = self.pipeline.createXLinkOut()
+            self.nodes.xoutRectLeft = pipeline.createXLinkOut()
             self.nodes.xoutRectLeft.setStreamName(Previews.rectifiedLeft.name)
             # if self.lowBandwidth:  # disabled to limit the memory usage
             if False:
@@ -423,13 +469,15 @@ class PipelineManager:
                 self.nodes.stereo.rectifiedLeft.link(self.nodes.xoutRectLeft.input)
 
         if useRectifiedRight:
-            self.nodes.xoutRectRight = self.pipeline.createXLinkOut()
+            self.nodes.xoutRectRight = pipeline.createXLinkOut()
             self.nodes.xoutRectRight.setStreamName(Previews.rectifiedRight.name)
             # if self.lowBandwidth:  # disabled to limit the memory usage
             if False:
                 self._mjpegLink(self.nodes.stereo, self.nodes.xoutRectRight, self.nodes.stereo.rectifiedRight)
             else:
                 self.nodes.stereo.rectifiedRight.link(self.nodes.xoutRectRight.input)
+
+        return self.nodes.stereo
 
     def _updateCamConfig(self, configRef: dai.CameraControl, exposure=None, sensitivity=None, saturation=None, contrast=None, brightness=None, sharpness=None):
         if any([exposure, sensitivity]):
@@ -655,36 +703,3 @@ class PipelineManager:
         else:
             return dai.MedianFilter.MEDIAN_OFF
 
-    def _getRgbResolution(self, resolution: str):
-        """
-        Parses Color camera resolution based on the string
-        """
-        resolution = str(resolution).upper()
-        if resolution == '3120' or resolution == '13MP':
-            return dai.ColorCameraProperties.SensorResolution.THE_13_MP
-        elif resolution == '3040' or resolution == '12MP':
-            return dai.ColorCameraProperties.SensorResolution.THE_12_MP
-        elif resolution == '2160' or resolution == '4K':
-            return dai.ColorCameraProperties.SensorResolution.THE_4_K
-        # elif resolution == '1920' or resolution == '5MP':
-        #     return dai.ColorCameraProperties.SensorResolution.THE_5_MP
-        elif resolution == '800' or resolution == '800P':
-            return dai.ColorCameraProperties.SensorResolution.THE_800_P
-        elif resolution == '720' or resolution == '720P':
-            return dai.ColorCameraProperties.SensorResolution.THE_720_P
-        else: # Default
-            return dai.ColorCameraProperties.SensorResolution.THE_1080_P
-
-    def _getMonoResolution(self, resolution: str):
-        """
-        Parses Mono camera resolution based on the string
-        """
-        resolution = str(resolution).upper()
-        if resolution == '800' or resolution == '800P':
-            return dai.MonoCameraProperties.SensorResolution.THE_800_P
-        elif resolution == '720' or resolution == '720P':
-            return dai.MonoCameraProperties.SensorResolution.THE_720_P
-        elif resolution == '480' or resolution == '480P':
-            return dai.MonoCameraProperties.SensorResolution.THE_480_P
-        else: # Default
-            return dai.MonoCameraProperties.SensorResolution.THE_400_P

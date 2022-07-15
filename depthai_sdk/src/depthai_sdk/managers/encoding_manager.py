@@ -2,7 +2,7 @@ import traceback
 from pathlib import Path
 from ..previews import Previews
 import depthai as dai
-
+import os
 
 class EncodingManager:
     """
@@ -22,7 +22,7 @@ class EncodingManager:
         self.encodeConfig = encodeConfig
         self.encodeOutput = Path(encodeOutput) if encodeOutput is not None else None
         if self.encodeOutput is not None and not self.encodeOutput.exists():
-            raise RuntimeError(f"Specified path does not exist: {encodeOutput}")
+            os.makedirs(self.encodeOutput, exist_ok=True)
 
     def createEncoders(self, pm):
         """

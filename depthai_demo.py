@@ -21,10 +21,9 @@ if platform.machine() == 'aarch64':  # Jetson
 
 sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str((Path(__file__).parent / "depthai_sdk" / "src").absolute()))
-from depthai_sdk.managers import ArgsManager
+from depthai_sdk.managers import ArgsManager, getMonoResolution, getRgbResolution
 
-argsMngr = ArgsManager()
-app = argsMngr.parseApp()
+app = ArgsManager.parseApp()
 
 if __name__ == "__main__":
     if app is not None:
@@ -58,7 +57,7 @@ from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManag
 class OverheatError(RuntimeError):
     pass
 
-args = argsMngr.parseArgs()
+args = ArgsManager.parseArgs()
 
 if args.noSupervisor and args.guiType == "qt":
     if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
@@ -890,10 +889,13 @@ def runQt():
                 else:
                     self.updateArg("monoFps", fps)
             if resolution is not None:
-                if name == "color":
-                    self.updateArg("rgbResolution", resolution)
+                if name == "color": 
+                    res = getRgbResolution(resolution)
+                    self.updateArg("rgbResolution", res)
+                    # Not ideal, we need to refactor this (throw the whole SDK away)
+                    self.updateArg("rgbResWidth", self.confManager.rgbResolutionWidth(res))
                 else:
-                    self.updateArg("monoResolution", resolution)
+                    self.updateArg("monoResolution", getMonoResolution(resolution))
 
         def guiOnAiSetupUpdate(self, cnn=None, shave=None, source=None, fullFov=None, sbb=None, sbbFactor=None, ov=None, countLabel=None):
             if cnn is not None:
