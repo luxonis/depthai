@@ -85,14 +85,16 @@ def _orientationCast(arg):
 
 class ArgsManager():
     @staticmethod
-    def parseArgs(parse: bool = True):
+    def parseArgs(parser: argparse.ArgumentParser = None):
         """
-        Creates Argument parser for common device configuration
+        Creates Argument parser for common OAK device configuration
 
         Args:
-            parse (bool): Whether we also want to parse arguments, True by default. Setting it to false can be useful when adding additional arguments to parse.
+            parser (argparse.ArgumentParser, optional): Use an existing parser. By default it creates a new ArgumentParser.
         """
-        parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+        if parser is None:
+            parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+
         parser.add_argument('-cam', '--camera', choices=["left", "right", "color"], default="color", help="Use one of DepthAI cameras for inference (conflicts with -vid)")
         parser.add_argument('-vid', '--video', type=str, help="Path to video file (or YouTube link) to be used for inference (conflicts with -cam)")
         parser.add_argument('-dd', '--disableDepth', action="store_true", help="Disable depth information")
@@ -113,6 +115,7 @@ class ArgsManager():
                             help="Mono cam res height: (1280x)720, (1280x)800 or (640x)400. Default: %(default)s")
         parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
                             help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
+        parser.add_argument('-fps', '--fps', type=float, help='Camera FPS applied to all sensors')
         
         # Depth related arguments
         parser.add_argument("-dct", "--disparityConfidenceThreshold", default=245, type=_checkRange(0, 255),
@@ -188,15 +191,15 @@ class ArgsManager():
         parser.add_argument("-app","--app", type=str, choices=["uvc", "record"], help="Specify which app to run instead of the demo")
         parser.add_argument('-tun', '--cameraTuning', type=Path, help="Path to camera tuning blob to use, overriding the built-in tuning")
         
-        if parse:
-            args = parser.parse_args()
-            # Parse arguments
-            args.rgbResolution = getRgbResolution(args.rgbResolution)
-            args.monoResolution = getMonoResolution(args.rgbResolution)
-
-            return args
-        else:
-            return parser
+        args = parser.parse_args()
+        # Parse arguments
+        args.rgbResolution = getRgbResolution(args.rgbResolution)
+        args.monoResolution = getMonoResolution(args.monoResolution)
+        # Global FPS setting, applied to all cameras
+        if args.fps is not None:
+            args.rgbFps = args.fps
+            args.monoFps = args.fps
+        return args
 
     @staticmethod
     def parseApp() -> str:

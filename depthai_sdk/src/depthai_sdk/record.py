@@ -5,6 +5,7 @@ from queue import Queue
 from threading import Thread
 import depthai as dai
 from enum import IntEnum
+from .managers import ArgsManager, PipelineManager
 
 class EncodingQuality(IntEnum):
     BEST = 1 # Lossless MJPEG
@@ -43,7 +44,6 @@ class Record():
     """
 
     save = ['color', 'left', 'right']
-    _fps: int = 30
     _timelapse: int = -1
     quality = EncodingQuality.HIGH
     rotate = -1
@@ -53,7 +53,7 @@ class Record():
     _mjpegQuality: int = None
     frameCntr = 0 # Used by recording app
 
-    def __init__(self, path: Path, device: dai.Device):
+    def __init__(self, path: Path, device: dai.Device, args: dict = None):
         """
         Args:
             path (Path): Path to the recording folder
@@ -67,6 +67,11 @@ class Record():
         calibData = device.readCalibration()
         calibData.eepromToJsonFile(str(self.path / "calib.json"))
 
+        if args is None:
+            args = ArgsManager.parseArgs()
+
+        self.args = args
+        self.pm = PipelineManager()
 
     def _getRecorders(self) -> dict:
         """
@@ -96,7 +101,8 @@ class Record():
             try:
                 # Try importing av
                 from .recorders.pyav_mp4_recorder import PyAvRecorder
-                rec = PyAvRecorder(self.path, self.quality, self._fps)
+                # TODO: make rgb/mono FPS manually confi
+                rec = PyAvRecorder(self.path, self.quality, self.args.rgbFps, self.args.monoFps)
             except:
                 print("'av' library is not installed, depthai-record will save raw encoded streams.")
                 from .recorders.raw_recorder import RawRecorder
@@ -121,7 +127,8 @@ class Record():
         if self._preview: self.save.append('preview')
 
         if 0 < self._timelapse:
-            self._fps = 5
+            self.args.monoFps = 5.0
+            self.args.rgbFps = 5.0
 
         self.pipeline, self.nodes = self._createPipeline()
 
@@ -139,12 +146,6 @@ class Record():
                 'msgs': [],
                 'name': stream,
             })
-
-    def setFps(self, fps):
-        """
-        Sets FPS of all cameras. TODO: use SDK and its parser
-        """
-        self._fps = fps
 
     def setTimelapse(self, timelapseSec: int):
         """
@@ -229,13 +230,6 @@ class Record():
         pipeline = dai.Pipeline()
         nodes = {}
 
-        def create_mono(name):
-            nodes[name] = pipeline.create(dai.node.MonoCamera)
-            nodes[name].setResolution(dai.MonoCameraProperties.SensorResolution.THE_720_P)
-            socket = dai.CameraBoardSocket.LEFT if name == "left" else dai.CameraBoardSocket.RIGHT
-            nodes[name].setBoardSocket(socket)
-            nodes[name].setFps(self._fps)
-
         def stream_out(name, fps, out, noEnc=False):
             # Create XLinkOutputs for the stream
             xout = pipeline.create(dai.node.XLinkOut)
@@ -262,59 +256,34 @@ class Record():
             encoder.bitstream.link(xout.input)
 
         if "color" in self.save:
-            nodes['color'] = pipeline.create(dai.node.ColorCamera)
-            nodes['color'].setBoardSocket(dai.CameraBoardSocket.RGB)
-            # RealSense Viewer expects RGB color order
-            nodes['color'].setColorOrder(dai.ColorCameraProperties.ColorOrder.RGB)
-            nodes['color'].setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
-            nodes['color'].setIspScale(1,2) # 1080P
-            nodes['color'].setFps(self._fps)
+            nodes['color'] = self.pm.createColorCam(
+                control=False,
+                colorOrder=dai.ColorCameraProperties.ColorOrder.RGB,
+                pipeline=pipeline,
+                args=self.args)
 
-            if self._preview:
-                nodes['color'].setPreviewSize(640, 360)
-                stream_out("preview", None, nodes['color'].preview, noEnc=True)
 
             # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
             # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
             stream_out("color", nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
 
         if True in (el in ["left", "disparity", "depth"] for el in self.save):
-            create_mono("left")
+            nodes['left'] = self.pm.createLeftCam(control=False, pipeline=pipeline, args=self.args)
             if "left" in self.save:
                 stream_out("left", nodes['left'].getFps(), nodes['left'].out)
 
         if True in (el in ["right", "disparity", "depth"] for el in self.save):
-            create_mono("right")
+            nodes['right'] = self.pm.createRightCam(control=False, pipeline=pipeline, args=self.args)
             if "right" in self.save:
                 stream_out("right", nodes['right'].getFps(), nodes['right'].out)
 
         if True in (el in ["disparity", "depth"] for el in self.save):
-            nodes['stereo'] = pipeline.create(dai.node.StereoDepth)
-
-            nodes['stereo'].initialConfig.setConfidenceThreshold(255)
-            nodes['stereo'].initialConfig.setMedianFilter(dai.StereoDepthProperties.MedianFilter.KERNEL_7x7)
-            nodes['stereo'].setLeftRightCheck(True)
-            nodes['stereo'].setExtendedDisparity(True)
-
-            # if "disparity" not in self.save and "depth" in self.save:
-            #     nodes['stereo'].setSubpixel(True) # For better depth visualization
-
-            # if "depth" and "color" in self.save: # RGB depth alignment
-            #     nodes['color'].setIspScale(1,3) # 4k -> 720P
-            #     # For now, RGB needs fixed focus to properly align with depth.
-            #     # This value was used during calibration
-            #     nodes['color'].initialControl.setManualFocus(130)
-            #     nodes['stereo'].setDepthAlign(dai.CameraBoardSocket.RGB)
-
-            nodes['left'].out.link(nodes['stereo'].left)
-            nodes['right'].out.link(nodes['stereo'].right)
+            nodes['stereo'] = self.pm.createDepth(control=False, pipeline=pipeline, args = self.args)
 
             if "disparity" in self.save:
                 stream_out("disparity", nodes['right'].getFps(), nodes['stereo'].disparity)
             if "depth" in self.save:
                 stream_out('depth', None, nodes['stereo'].depth, noEnc=True)
 
-        self.nodes = nodes
-        self.pipeline = pipeline
         return pipeline, nodes
 

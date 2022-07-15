@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
+
 import depthai as dai
 import contextlib
 import math
 import time
-from datetime import timedelta
 from pathlib import Path
 import signal
 import threading
 
 # DepthAI Record library
 from depthai_sdk import Record, EncodingQuality
-from depthai_sdk.managers import arg_manager
+from depthai_sdk.managers.arg_manager import ArgsManager
 import argparse
 
 _save_choices = ("color", "left", "right", "disparity", "depth", "pointcloud") # TODO: IMU/ToF...
@@ -25,12 +25,10 @@ def checkQuality(value: str):
             return num
     raise argparse.ArgumentTypeError(f"{value} is not a valid quality. Either use number 0-100 or {'/'.join(_quality_choices)}.")
 
-parser = arg_manager.parseArgs(parse=False) # Add additional arguments to be parsed
+parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
 parser.add_argument('-p', '--path', default="recordings", type=str, help="Path where to store the captured data")
 parser.add_argument('-save', '--save', default=["color", "left", "right"], nargs="+", choices=_save_choices,
                     help="Choose which streams to save. Default: %(default)s")
-parser.add_argument('-f', '--fps', type=float, default=30,
-                    help='Camera sensor FPS, applied to all cams')
 parser.add_argument('-q', '--quality', default="HIGH", type=checkQuality,
                     help='Selects the quality of the recording. Default: %(default)s')
 parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
@@ -38,9 +36,13 @@ parser.add_argument('-fc', '--frame_cnt', type=int, default=-1,
 parser.add_argument('-tl', '--timelapse', type=int, default=-1,
                     help='Number of seconds between frames for timelapse recording. Default: timelapse disabled')
 parser.add_argument('-mcap', '--mcap', action="store_true", help="MCAP file format")
+args = ArgsManager.parseArgs(parser)
 
 # TODO: make camera resolutions configrable
-args = parser.parse_args()
+if 'color' in args.save and 1 < len(args.save) and args.monoFps != args.rgbFps :
+    raise argparse.ArgumentTypeError('Recording app requires Mono and Color camera FPS to be the same!')
+args.fps = args.rgbFps if 'color' in args.save else args.monoFps
+
 save_path = Path.cwd() / args.path
 
 # Host side sequence number syncing
@@ -77,10 +79,8 @@ def run():
             device = stack.enter_context(dai.Device(openvino_version, device_info, usb2Mode=False))
 
             # Create recording object for this device
-            recording = Record(save_path, device)
+            recording = Record(save_path, device, args)
             # Set recording configuration
-            # TODO: add support for specifying resolution
-            recording.setFps(args.fps)
             recording.setTimelapse(args.timelapse)
             recording.setRecordStreams(args.save)
             recording.setQuality(args.quality)
