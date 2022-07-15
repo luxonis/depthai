@@ -90,9 +90,6 @@ def test_cameras():
     show_test_def("All cameras 5FPS", "You should see the color, left and right camera outputs", "limited to 5 FPS")
     subprocess.check_call([*demo_call, "-s", "left", "right", "color", "-monof", "5", "-rgbf", "5"])
     
-    show_test_def("Preview scaling", "You should see the left camera output scaled x2")
-    subprocess.check_call([*demo_call, "-s", "left", "--scale", "left,2"])
-    
     show_test_def("Camera orientation", "You should see the both rgb and mono camera previews rotated 180 degrees")
     subprocess.check_call([*demo_call, "-camo", "left,ROTATE_180_DEG", "right,ROTATE_180_DEG", "color,ROTATE_180_DEG"])
     

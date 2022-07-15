@@ -23,10 +23,6 @@ class ConfigManager:
         self.args = args
         self.args.encode = dict(self.args.encode)
         self.args.cameraOrientation = dict(self.args.cameraOrientation)
-        if self.args.scale is None:
-            self.args.scale = {"color": 0.37}
-        else:
-            self.args.scale = dict(self.args.scale)
         if (Previews.left.name in self.args.cameraOrientation or Previews.right.name in self.args.cameraOrientation) and self.useDepth:
             print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
 
