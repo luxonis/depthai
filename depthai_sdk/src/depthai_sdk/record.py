@@ -101,7 +101,6 @@ class Record():
             try:
                 # Try importing av
                 from .recorders.pyav_mp4_recorder import PyAvRecorder
-                # TODO: make rgb/mono FPS manually confi
                 rec = PyAvRecorder(self.path, self.quality, self.args.rgbFps, self.args.monoFps)
             except:
                 print("'av' library is not installed, depthai-record will save raw encoded streams.")
