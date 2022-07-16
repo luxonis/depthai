@@ -21,10 +21,9 @@ if platform.machine() == 'aarch64':  # Jetson
 
 sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str((Path(__file__).parent / "depthai_sdk" / "src").absolute()))
-from depthai_sdk.managers import ArgsManager
+from depthai_sdk.managers import ArgsManager, getMonoResolution, getRgbResolution
 
-argsMngr = ArgsManager(Path(__file__))
-app = argsMngr.parseApp()
+app = ArgsManager.parseApp()
 
 if __name__ == "__main__":
     if app is not None:
@@ -58,7 +57,7 @@ from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManag
 class OverheatError(RuntimeError):
     pass
 
-args = argsMngr.parseArgs()
+args = ArgsManager.parseArgs()
 
 if args.noSupervisor and args.guiType == "qt":
     if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
@@ -226,8 +225,6 @@ class Demo:
             print("USB Connection speed: {}".format(self._device.getUsbSpeed()))
         self._conf.adjustParamsToDevice(self._device)
         self._conf.adjustPreviewToOptions()
-        self._rgbRes = conf.getRgbResolution()
-        self._monoRes = conf.getMonoResolution()
         if self._conf.lowBandwidth:
             self._pm.enableLowBandwidth(poeQuality=self._conf.args.poeQuality)
         self._cap = cv2.VideoCapture(self._conf.args.video) if not self._conf.useCamera else None
@@ -247,18 +244,11 @@ class Demo:
                                fpsHandler=self._fps, createWindows=self._displayFrames, depthConfig=self._pm._depthConfig)
 
             if self._conf.leftCameraEnabled:
-                self._pm.createLeftCam(self._monoRes, self._conf.args.monoFps,
-                                 orientation=self._conf.args.cameraOrientation.get(Previews.left.name),
-                                 xout=Previews.left.name in self._conf.args.show)
+                self._pm.createLeftCam(args = self._conf.args)
             if self._conf.rightCameraEnabled:
-                self._pm.createRightCam(self._monoRes, self._conf.args.monoFps,
-                                  orientation=self._conf.args.cameraOrientation.get(Previews.right.name),
-                                  xout=Previews.right.name in self._conf.args.show)
+                self._pm.createRightCam(args = self._conf.args)
             if self._conf.rgbCameraEnabled:
-                self._pm.createColorCam(previewSize=self._conf.previewSize, res=self._rgbRes, fps=self._conf.args.rgbFps,
-                                  orientation=self._conf.args.cameraOrientation.get(Previews.color.name),
-                                  fullFov=not self._conf.args.disableFullFovNn,
-                                  xout=Previews.color.name in self._conf.args.show)
+                self._pm.createColorCam(args = self._conf.args)
 
             if self._conf.useDepth:
                 self._pm.createDepth(args = self._conf.args)
@@ -449,7 +439,7 @@ class Demo:
                 nextFilter = next(self._medianFilters)
                 self._pm.updateDepthConfig(self._device, median=nextFilter)
 
-            if self._conf.args.cameraControlls:
+            if self._conf.args.cameraControls:
                 update = True
 
                 if key == ord('t'):
@@ -589,7 +579,7 @@ def prepareConfManager(in_args):
     confManager.linuxCheckApplyUsbRules()
     if not confManager.useCamera:
         if str(confManager.args.video).startswith('https'):
-            confManager.args.video = downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS)
+            confManager.args.video = str(downloadYTVideo(confManager.args.video, DEPTHAI_VIDEOS))
             print("Youtube video downloaded.")
         if not Path(confManager.args.video).exists():
             raise ValueError("Path {} does not exists!".format(confManager.args.video))
@@ -899,10 +889,13 @@ def runQt():
                 else:
                     self.updateArg("monoFps", fps)
             if resolution is not None:
-                if name == "color":
-                    self.updateArg("rgbResolution", resolution)
+                if name == "color": 
+                    res = getRgbResolution(resolution)
+                    self.updateArg("rgbResolution", res)
+                    # Not ideal, we need to refactor this (throw the whole SDK away)
+                    self.updateArg("rgbResWidth", self.confManager.rgbResolutionWidth(res))
                 else:
-                    self.updateArg("monoResolution", resolution)
+                    self.updateArg("monoResolution", getMonoResolution(resolution))
 
         def guiOnAiSetupUpdate(self, cnn=None, shave=None, source=None, fullFov=None, sbb=None, sbbFactor=None, ov=None, countLabel=None):
             if cnn is not None:
