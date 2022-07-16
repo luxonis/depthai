@@ -13,7 +13,7 @@ class PyAvRecorder(Recorder):
         self.codec = "hevc" if int(quality) == 4 else "mjpeg"
         self._monoFps = monoFps
         self._rgbFps = rgbFps
-        self.start = None
+        self.start = dict()
 
         self.files = {}
 
@@ -22,25 +22,26 @@ class PyAvRecorder(Recorder):
             self.__create_file(name)
 
         packet = av.Packet(frame.getData()) # Create new packet with byte array
+        
         # Set frame timestamp
-        ts = int((time.time() - self.start) * 1000 * 1000)
-        packet.pts = ts
+        if name not in self.start:
+            self.start[name] = frame.getTimestampDevice()
+
+        ts = int((frame.getTimestampDevice() - self.start[name]).total_seconds() * 1e6) # To microsec
         packet.dts = ts
+        packet.pts = ts
 
         self.files[name].mux_one(packet) # Mux the Packet into container
 
     def __create_file(self, name):
         self.files[name] = av.open(str(self.folder / f"{name}.mp4"), 'w')
         fps = self._rgbFps if name == "color" else self._monoFps
-        stream = self.files[name].add_stream(self.codec, rate=fps)
+        stream = self.files[name].add_stream(self.codec, rate=int(fps))
         stream.time_base = Fraction(1, 1000 * 1000) # Microseconds
 
         # We need to set pixel format for MJEPG, for H264/H265 it's yuv420p by default
         if self.codec == "mjpeg":
             stream.pix_fmt = "yuvj420p"
-
-        if self.start is None:
-            self.start = time.time()
 
     def close(self):
         if self._closed: return

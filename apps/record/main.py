@@ -78,6 +78,9 @@ def run():
             openvino_version = dai.OpenVINO.Version.VERSION_2021_4
             device = stack.enter_context(dai.Device(openvino_version, device_info, usb2Mode=False))
 
+            if device.getUsbSpeed() == dai.UsbSpeed.HIGH and args.quality == "LOW":
+                print("USB2 speeds detected! Recorded video stream(s) might be look 'glitchy'. To avoid this, don't use LOW quality.")
+
             # Create recording object for this device
             recording = Record(save_path, device, args)
             # Set recording configuration
@@ -126,8 +129,6 @@ def run():
                                 frames = dict()
                                 for stream in recording.queues:
                                     frames[stream['name']] = stream['msgs'].pop(0)
-                                    print("Synced frames found! SEQ: ", frames[stream['name']].getSequenceNum())
-                                print("----------")
                                 recording.frame_q.put(frames)
 
                 time.sleep(0.001) # 1ms, avoid lazy looping
