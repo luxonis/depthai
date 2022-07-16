@@ -110,7 +110,7 @@ def clear_test_results():
     update_res = True
 
 imu_upgrade = True
-class DepthAICamera():
+class DepthAICamera() :
     def __init__(self):
         global update_res
         self.pipeline = dai.Pipeline()
@@ -290,7 +290,18 @@ class DepthAICamera():
             self.qJpeg = self.device.getOutputQueue(name="jpeg", maxSize=1, blocking=False)
         except RuntimeError:
             test_result['jpeg_enc_res'] = 'FAIL'
+        try:
+            self.qImu = self.device.getOutputQueue(name='IMU', maxSize=1, blocking=False)
+        except RuntimeError:
+            test_result['imu'] = 'FAIL'
         update_res = True
+
+    def get_imu(self):
+        in_imu = self.qImu.tryGet()
+        imu_packet = in_imu.packets[0]
+        accel = imu_packet.acceleroMeter
+        gyro = imu_packet.gyroscope
+        return accel, gyro
 
     def get_image(self, cam_type):
         global update_res
@@ -919,15 +930,18 @@ class UiTests(QtWidgets.QMainWindow):
         self.test_type_label.setGeometry(QtCore.QRect(10, 60, 281, 21))
         self.test_type_label.setObjectName("test_type_label")
         self.prog_bar = QtWidgets.QProgressBar(self.logs)
-        self.prog_bar.setGeometry(QtCore.QRect(540, 40, 118, 23))
+        self.prog_bar.setGeometry(QtCore.QRect(540, 56, 118, 23))
         self.prog_bar.setProperty("value", 24)
         self.prog_bar.setObjectName("IMU_prog_bar")
         self.prog_bar.setMinimum(0)
         self.prog_bar.setMaximum(100)
         self.prog_bar.setValue(0)
         self.prog_label = QtWidgets.QLabel(self.logs)
-        self.prog_label.setGeometry(QtCore.QRect(450, 40, 81, 17))
+        self.prog_label.setGeometry(QtCore.QRect(430, 60, 90, 17))
         self.prog_label.setObjectName("prog_label")
+        self.imu_label = QtWidgets.QLabel(self.logs)
+        self.imu_label.setGeometry(QtCore.QRect(430, 40, 280, 20))
+        # self.imu_label.setText('')
         self.logs_txt_browser = QtWidgets.QTextBrowser(self.logs)
         self.logs_txt_browser.setGeometry(QtCore.QRect(10, 90, 721, 121))
         self.logs_txt_browser.setObjectName("logs_txt_browser")
@@ -1156,6 +1170,7 @@ class UiTests(QtWidgets.QMainWindow):
             test_result['eeprom_res'] = 'FAIL'
             test_result['eeprom_data'] = ''
 
+    # refresh timer
     def set_result(self):
         global update_res
         if not self.connect_but.isCheckable() and self.prog_bar.value() == self.last_progress_val:
@@ -1188,6 +1203,10 @@ class UiTests(QtWidgets.QMainWindow):
                     self.print_logs('BOOTLOADER UPDATE FAIL!!!', log_level='ERROR')
                 else:
                     self.print_logs('BOOTLOADER UPDATED SUCCESSFULLY', log_level='GREEN')
+            if imu_upgrade:
+                if hasattr(self, 'depth_camera'):
+                    imu_data = self.depth_camera.get_imu()
+                    self.imu_label.setText(f'{imu_data}')
 
 
         time_string = datetime.now().strftime("%Y %m %d %H:%M:%S")
