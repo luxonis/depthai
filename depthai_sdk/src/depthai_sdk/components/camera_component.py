@@ -4,18 +4,17 @@ import depthai as dai
 from ..replay import Replay
 
 class CameraComponent(Component):
+    # Users should have access to these nodes
+    color: dai.node.ColorCamera = None
+    mono: dai.node.MonoCamera = None
+    encoder: dai.node.VideoEncoder = None
+    replay: Replay = None # Replay module
 
-    _colorcam: dai.node.ColorCamera = None
-    _monocam: dai.node.MonoCamera = None
-    _replay: Replay = None # Replay module
-
-    _enc: dai.node.VideoEncoder = None
-
-    _source = ""
+    out: dai.Node.Output = None
 
     def __init__(self,
         pipeline: dai.Pipeline,
-        source: Optional[str] = None, #
+        source: Optional[str], #
         name: Optional[str] = None,
         out: bool = False,
         encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
@@ -36,38 +35,31 @@ class CameraComponent(Component):
         self.pipeline = pipeline
         self._parseSource(source)
 
-        if out:
-            if encode is not None:
-                self._enc = pipeline.createVideoEncoder()
-
     def _parseSource(self, source: Optional[str] = None):
-        if source is not None:
-            if source.upper() == "COLOR" or source.upper() == "RGB":
-                self._colorcam = self.pipeline.create(dai.node.ColorCamera)
-                self._source = "color"
-            elif source.upper() == "RIGHT" or source.upper() == "MONO":
-                self._monocam = self.pipeline.create(dai.node.MonoCamera)
-                self._monocam.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-                self._source = "right"
-            elif source.upper() == "LEFT":
-                self._monocam = self.pipeline.create(dai.node.MonoCamera)
-                self._monocam.setBoardSocket(dai.CameraBoardSocket.LEFT)
-                self._source = "left"
-            else:
-                if self._isUrl(source):
-                    if self._isYoutubeLink(source):
-                        from ..utils import downloadYTVideo
-                        # Overwrite source - so Replay class can use it
-                        source = str(downloadYTVideo(source))
-                    else:
-                        # TODO: download video/image(s) from the internet
-                        raise NotImplementedError("Only YouTube video download is currently supported!")
-                    
-                self._replay = Replay(source, self.pipeline)
-                self._source = "replay"
-
+        if source.upper() == "COLOR" or source.upper() == "RGB":
+            self.color = self.pipeline.create(dai.node.ColorCamera)
+            self.color.setBoardSocket(dai.CameraBoardSocket.RGB)
+            self.out = self.color.preview
+        elif source.upper() == "RIGHT" or source.upper() == "MONO":
+            self.mono = self.pipeline.create(dai.node.MonoCamera)
+            self.mono.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+            self.out = self.mono.out
+        elif source.upper() == "LEFT":
+            self.mono = self.pipeline.create(dai.node.MonoCamera)
+            self.mono.setBoardSocket(dai.CameraBoardSocket.LEFT)
+            self.out = self.mono.out
         else:
-            self._colorcam = self.pipeline.create(dai.node.ColorCamera)
+            if self._isUrl(source):
+                if self._isYoutubeLink(source):
+                    from ..utils import downloadYTVideo
+                    # Overwrite source - so Replay class can use it
+                    source = str(downloadYTVideo(source))
+                else:
+                    # TODO: download video/image(s) from the internet
+                    raise NotImplementedError("Only YouTube video download is currently supported!")
+                
+            self.replay = Replay(source, self.pipeline)
+
 
     def _isYoutubeLink(self, source: str) -> bool:
         return "youtube.com" in source
@@ -75,21 +67,16 @@ class CameraComponent(Component):
     def _isUrl(self, source: str) -> bool:
         return source.startswith("http://") or source.startswith("https://")
 
-    def _getSource(self):
-        if self._source == 'color':
-            return self._colorcam
-        elif self._source == 'left':
-
 
     def _createXLinkOut(self):
         a = 5
 
-
+    # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def configureCamera(self, 
 
         ): 
         """
-        Configure resolution, FPS, etc.
+        Configure resolution, scale, FPS, etc.
         """
         a = 5
 
@@ -98,7 +85,8 @@ class CameraComponent(Component):
         """
         Configure quality, enable lossless,
         """
-        if self._enc is None:
-            raise Exception('Video encoder was not enabled!')
+        if self.encoder is None:
+            print('Video encoder was not enabled! This configuration attempt will be ignored.')
+            return
 
-        self._enc.set
+        # self.encoer.
