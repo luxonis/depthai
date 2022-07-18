@@ -21,7 +21,16 @@ if platform.machine() == 'aarch64':  # Jetson
 
 sys.path.append(str(Path(__file__).parent.absolute()))
 sys.path.append(str((Path(__file__).parent / "depthai_sdk" / "src").absolute()))
-from depthai_sdk.managers import ArgsManager, getMonoResolution, getRgbResolution
+
+try:
+    import cv2
+    import depthai as dai
+    import numpy as np
+    from depthai_sdk.managers import ArgsManager, getMonoResolution, getRgbResolution
+except Exception as ex:
+    print("Third party libraries failed to import: {}".format(ex))
+    print("Run \"python3 install_requirements.py\" to install dependencies or visit our installation page for more details - https://docs.luxonis.com/projects/api/en/latest/install/")
+    sys.exit(42)
 
 app = ArgsManager.parseApp()
 
@@ -36,14 +45,7 @@ if __name__ == "__main__":
         except KeyboardInterrupt:
             sys.exit(0)
 
-try:
-    import cv2
-    import depthai as dai
-    import numpy as np
-except Exception as ex:
-    print("Third party libraries failed to import: {}".format(ex))
-    print("Run \"python3 install_requirements.py\" to install dependencies or visit our installation page for more details - https://docs.luxonis.com/projects/api/en/latest/install/")
-    sys.exit(42)
+
 
 from log_system_information import make_sys_report
 from depthai_helpers.supervisor import Supervisor
