@@ -43,31 +43,6 @@
             "title":"OAK-D Pro W Dev (NG2094 R0M0E0)",
             "description": "OAK-D Pro Wide dev, based on NG2094 R0M0E0",
             "eeprom":"eeprom/NG2094_R0M0E0_oak_d_pro_w_dev.json"
-        },
-        {
-            "title":"OAK-D Pro PoE AF (NG9097 R3M2E2)",
-            "description": "OAK-D Pro PoE AutoFocus based on NG9097 R3M2E2",
-            "eeprom":"eeprom/NG9097_R3M2E2_oak_d_pro_poe_af.json"
-        },
-        {
-            "title":"OAK-D Pro PoE Custom (NG9097 R3M2E2)",
-            "description": "OAK-D Pro PoE Custom based on NG9097 R3M2E2",
-            "eeprom":"eeprom/NG9097_R3M2E2_oak_d_pro_poe_custom.json"
-        },
-        {
-            "title":"OAK-D Pro PoE FF (NG9097 R3M2E2)",
-            "description": "OAK-D Pro PoE FixedFocus based on NG9097 R3M2E2",
-            "eeprom":"eeprom/NG9097_R3M2E2_oak_d_pro_poe_af.json"
-        },
-        {
-            "title":"OAK-D Pro W PoE (NG9097 R3M2E2)",
-            "description": "OAK-D Pro PoE WideLens based on NG9097 R3M2E2",
-            "eeprom":"eeprom/NG9097_R3M2E2_oak_d_pro_w_poe.json"
-        },
-        {
-            "title":"OAK-D Pro W PoE Custom (NG9097 R3M2E2)",
-            "description": "OAK-D Pro PoE Custom based on NG9097 R3M2E2",
-            "eeprom":"eeprom/NG9097_R3M2E2_oak_d_pro_w_poe_custom.json"
         }
     ]
 }

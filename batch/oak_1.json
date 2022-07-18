@@ -20,16 +20,6 @@
             "eeprom":"eeprom/NG9093_R2M0E3_oak_1_ff.json"
         },
         {
-            "title":"OAK-1 Lite C05 (NG9093 R2M0E3)",
-            "description": "OAK-1 Lite C05",
-            "eeprom":"eeprom/NG9093_R2M0E3_oak_1_lite_c05.json"
-        },
-        {
-            "title":"OAK-1 Lite W (NG9093 R2M0E3)",
-            "description": "OAK-1 Lite Wide Lens",
-            "eeprom":"eeprom/NG9093_R2M0E3_oak_1_lite_w.json"
-        },
-        {
             "title":"OAK-1 Max (NG9093 R2M0E3)",
             "description": "OAK-1 Max",
             "eeprom":"eeprom/NG9093_R2M0E3_oak_1_max.json"
