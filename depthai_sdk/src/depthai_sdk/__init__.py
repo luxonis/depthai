@@ -19,41 +19,68 @@ class Camera:
 
     This abstraction layer will internally use SDK Components.
     """
-    _pipeline: dai.Pipeline
-    _devices: List[dai.Device]
-    _args = None # User defined arguments
+    # User should be able to access these:
+    pipeline: dai.Pipeline
+    devices: List[dai.Device] = []
+    args = None # User defined arguments
+    replay: Replay = None
+
+    availableStreams = dict() # If recording is set, get available streams. If not, query device's cameras
+
+    # TODO: 
+    # - available streams; query cameras, or Replay.getStreams(). Pass these to camera component
 
     def __init__(self, 
         device: Optional[str] = None, # MxId / IP / USB port / "ALL"
         usb2: Optional[bool] = None, # Auto by default
+        recording: Optional[str] = None,
         args: bool = True
         ) -> None:
         """
         Args:
             device (str, optional): OAK device we want to connect to
-            args (bool, optional): Use user defined arguments when constructing the pipeline
+            usb2 (bool, optional): Force USB2 mode
+            recording (str, optional): Use depthai-recording - either local path, or from depthai-recordings repo
+            args (bool): Use user defined arguments when constructing the pipeline
         """
 
-        self._devices = self._get_device(device, usb2)
-        self._pipeline = dai.Pipeline()
+        self.pipeline = dai.Pipeline()
+        self.devices.append(self._get_device(device, usb2))
+        print(self.devices[0].getConnectedCameras())
 
         if args:
             am = ArgsManager()
-            self._args = am.parseArgs()
+            self.args = am.parseArgs()
+
+        if recording is not None:
+            self.replay = self._getReplay(recording)
+            self.replay.initPipeline(self.pipeline)
+            print(self.replay.getStreams())
+
+    def _getReplay(self, path: str) -> Replay:
+        """
+        Either use local depthai-recording, or (TODO) download it from depthai-recordings
+        """
+        return Replay(path)
 
     def create_camera(self,
         source: Optional[str] = None,
         name: Optional[str] = None,
         out: bool = False,
+        encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+        control: bool = False,
         ) -> CameraComponent:
         """
         Create Color camera
         """
         return CameraComponent(
-            source,
-            name,
-            out,
-            args = self._args
+            pipeline=self.pipeline,
+            source=self.replay if self.replay is not None else source,
+            name=name,
+            out=out,
+            encode=encode,
+            control=control,
+            args = self.args,
         )
 
     def create_nn(self,
@@ -62,14 +89,14 @@ class Camera:
         
 
     def _get_device(self,
-        device: Optional[str],
-        usb2: Optional[bool] = None) -> List[dai.Device]:
+        device: Optional[str] = None,
+        usb2: Optional[bool] = None) -> dai.Device:
         """
-        Connect to the OAK camera and return dai.Device object
+        Connect to the OAK camera(s) and return dai.Device object
         """
-        if device.upper() == "ALL":
+        if device is not None and device.upper() == "ALL":
             # Connect to all available cameras
-            a = 1
+            raise NotImplementedError("TODO")
         if usb2 is not None:
             return dai.Device(
                 version = dai.OpenVINO.VERSION_2021_4,
@@ -89,21 +116,17 @@ class Camera:
         tuningBlob: Optional[str] = None,
         ) -> None:
         if xlinkChunk is not None:
-            self._pipeline.setXLinkChunkSize(xlinkChunk)
+            self.pipeline.setXLinkChunkSize(xlinkChunk)
         if calib is not None:
-            self._pipeline.setCalibrationData(calib)
+            self.pipeline.setCalibrationData(calib)
         if tuningBlob is not None:
-            self._pipeline.setCameraTuningBlobPath(tuningBlob)
-
-    @property
-    def pipeline(self) -> dai.Pipeline:
-        return self._pipeline
+            self.pipeline.setCameraTuningBlobPath(tuningBlob)
+    
+    def __del__(self):
+        for device in self.devices:
+            device.close()
 
     @property
     def device(self) -> dai.Device:
-        return self._devices[0]
-    
-    @property
-    def devices(self) -> List[dai.Device]:
-        return self._devices
+        return self.devices[0]
         

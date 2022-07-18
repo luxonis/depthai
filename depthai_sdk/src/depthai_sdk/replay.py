@@ -6,12 +6,13 @@ import types
 import depthai as dai
 import datetime
 from .utils import *
+from typing import Optional
 
 class Replay:
     disabledStreams = []
     _streamTypes = ['color', 'left', 'right', 'depth'] # Available types to stream back to the camera
     _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
-    _supportedExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap']
+    _supportedExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap', '.mpg']
     _imageExt = ['.bmp','.dib','.jpeg','.jpg','.jpe','.jp2','.png','.webp','.pbm','.pgm','.ppm','.pxm','.pnm','.pfm','.sr','.ras','.tiff','.tif','.exr','.hdr','.pic']
     _inputQueues = dict() # dai.InputQueue dictionary for each stream
     _seqNum = 0 # Frame sequence number, added to each imgFrame
@@ -33,6 +34,7 @@ class Replay:
             path (str): Path to the recording folder
         """
         self.path = Path(path).resolve().absolute()
+        print(self.path)
 
         self.frames = dict() # Frames read from Readers
         self.imgFrames = dict() # Last frame sent to the device
@@ -80,7 +82,6 @@ class Replay:
         Toggle pausing of sending frames to the OAK camera.
         """
         self._pause = not self._pause
-        print("PAUSE", self._pause)
 
     def setResizeColor(self, size: tuple):
         """
@@ -194,7 +195,7 @@ class Replay:
             device (dai.Device): Device to which we will stream frames
         """
         for name in self._xins:
-            self._inputQueues[name] = device.getInputQueue(name + '_in')
+            self._inputQueues[name] = device.getInputQueue(name + '_in', maxSize=1)
 
     def getStreams(self) -> array:
         streams = []

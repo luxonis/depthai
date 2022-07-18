@@ -14,7 +14,7 @@ class CameraComponent(Component):
 
     def __init__(self,
         pipeline: dai.Pipeline,
-        source: Optional[str], #
+        source: Union[str, Replay], #
         name: Optional[str] = None,
         out: bool = False,
         encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
@@ -24,7 +24,7 @@ class CameraComponent(Component):
         """
         Args:
             pipeline (dai.Pipeline)
-            source (str, optional): Source of the camera. Either color/rgb/right/left or Recorded stream or YouTube link
+            source (str or Replay): Source of the camera. Either color/rgb/right/left or Replay object
             name (str, optional): name of the camera
             out (bool, default False): Whether we want to stream frames to the host computer
             encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
