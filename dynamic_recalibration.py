@@ -183,12 +183,17 @@ if __name__ == "__main__":
     cam_left.out.link(stereo.left)
     cam_right.out.link(stereo.right)
 
-
     stereo.syncedLeft.link(xout_left.input)
     stereo.syncedRight.link(xout_right.input)
     stereo.rectifiedLeft.link(xout_left_rect.input)
     stereo.rectifiedRight.link(xout_right_rect.input)
     stereo_img_shape = cam_left.getResolutionSize()
+
+    leftFps = cam_left.getFps()
+    rightFps = cam_right.getFps()
+
+    if leftFps != rightFps:
+        raise Exception("FPS between left and right cameras must be the same!")
 
     if rgbEnabled:
         rgbLensPosition = None
@@ -215,6 +220,11 @@ if __name__ == "__main__":
         rgb_cam.isp.link(xout_rgb_isp.input)
 
         rgb_img_shape = rgb_cam.getVideoSize()
+
+        rgbFps = rgb_cam.getFps()
+        if leftFps != rgbFps:
+            raise Exception("FPS between stereo cameras and rgb camera must be the same!")
+
 
     with device:
         device.startPipeline(pipeline)
