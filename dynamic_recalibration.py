@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
 
+description=\
+"""
+Dynamic recalibration script.
+Capable of correcting extrinsic rotation (e.g. rotation change between sensors) without the need of full recalibration.
+Recommended way of doing dynamic calibration is pointing the camera to a static scene, and running the script.
+Recommended to try dynamic calibration if depth quality degraded over time.
+
+Requires initial intrinsic calibration.
+This script supports all sensor combinations that calibrate.py supports.
+"""
+
 from cmath import inf
 import numpy as np
 import cv2
@@ -12,9 +23,9 @@ ransacMethod = cv2.RANSAC
 if cv2.__version__ >= "4.5.4":
     ransacMethod.cv2.USAC_MAGSAC
 
-epilog_text="Dynamic recalibration"
+epilog_text="Dynamic recalibration."
 parser = argparse.ArgumentParser(
-    epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
+    epilog=epilog_text, description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
 
 parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
                     help="Display rectified images with lines drawn for epipolar check")
