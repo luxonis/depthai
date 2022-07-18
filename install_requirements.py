@@ -34,7 +34,7 @@ if sys.version_info[0] != 3:
 is_pi = thisPlatform.startswith("arm")
 prebuiltWheelsPythonVersion = [7,9]
 if is_pi and sys.version_info[1] not in prebuiltWheelsPythonVersion:
-    print("[WARNING] There are no prebuilt wheels for Python 3.{} for OpenCV, building process on this device may be long and unstable".format(sys.version_info[1]))
+    print("IGNORE-THIS! [WARNING] There are no prebuilt wheels for Python 3.{} for OpenCV, building process on this device may be long and unstable".format(sys.version_info[1]))
 
 if not in_venv:
     pip_install.append("--user")
@@ -42,7 +42,7 @@ if not in_venv:
 
 subprocess.check_call(pip_install + ["pip", "-U"])
 
-subprocess.check_call(pip_call + ["uninstall", "opencv-python", "opencv-contrib-python", "--yes"])
+# subprocess.check_call(pip_call + ["uninstall", "opencv-python", "opencv-contrib-python", "--yes"])
 # subprocess.check_call(pip_call + ["uninstall", "depthai", "--yes"])
 subprocess.check_call(pip_package_install + ["-r", "requirements.txt"], cwd=scriptDirectory)
 
