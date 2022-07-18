@@ -8,6 +8,10 @@ import math
 import argparse
 from pathlib import Path
 
+ransacMethod = cv2.RANSAC
+if cv2.__version__ >= "4.5.4":
+    ransacMethod.cv2.USAC_MAGSAC
+
 epilog_text="Dynamic recalibration"
 parser = argparse.ArgumentParser(
     epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -16,14 +20,9 @@ parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false"
                     help="Display rectified images with lines drawn for epipolar check")
 parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
                     help="Disable rgb camera Calibration")
-# parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
-#                     help="Interchange Left and right camera port.")
-# parser.add_argument("-brd", "--board", default=None, type=str, required=True,
-#                     help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
-#                     "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
 parser.add_argument("-ep", "--maxEpiploarError", default="1.0", type=float, required=False,
                     help="Sets the maximum epiploar allowed with rectification")
-parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
+parser.add_argument("-rlp", "--rgbLensPosition", default=None, type=int,
                     required=False, help="Set the manual lens position of the camera for calibration")
 parser.add_argument("-fps", "--fps", default=10, type=int,
                     required=False, help="Set capture FPS for all cameras. Default: %(default)s")
@@ -31,11 +30,12 @@ parser.add_argument("-d", "--debug", default=False, action="store_true", help="E
 parser.add_argument("-dr", "--dryRun", default=False, action="store_true", help="Dry run, don't flash obtained calib data, just save to disk.")
 options = parser.parse_args()
 
-#TODO implement -brd, -slr
+#TODO implement RGB-stereo sync
 
 epipolar_threshold = options.maxEpiploarError
 rgbEnabled = not options.disableRgb
 dryRun = options.dryRun
+debug = options.debug
 
 def calculate_Rt_from_frames(frame1,frame2,k1,k2,d1,d2):
 
@@ -59,21 +59,19 @@ def calculate_Rt_from_frames(frame1,frame2,k1,k2,d1,d2):
     if len(pts1) < minKeypoints:
         raise Exception(f'Need at least {minKeypoints} keypoints!')
 
-    # img=cv2.drawKeypoints(frame1, kp1, frame1, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    # cv2.imshow("Left", img)
-    # img2=cv2.drawKeypoints(frame2, kp2, frame2, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-    # cv2.imshow("Right", img2)
+    if debug:
+        img=cv2.drawKeypoints(frame1, kp1, frame1, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        cv2.imshow("Left", img)
+        img2=cv2.drawKeypoints(frame2, kp2, frame2, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        cv2.imshow("Right", img2)
+        cv2.waitKey(1)
 
     pts1 = np.float32(pts1)
     pts2 = np.float32(pts2)
-    E, mask = cv2.findEssentialMat(pts1,pts2,k1,d1,k2,d2, method=cv2.USAC_MAGSAC)
-    # print(f"essential_matrix: {E}")
+    E, mask = cv2.findEssentialMat(pts1,pts2,k1,d1,k2,d2, method=ransacMethod)
 
     points, R_est, t_est, mask_pose = cv2.recoverPose(E, pts1,pts2, mask=mask)
-    # print(frame1.shape[::-1])
-    flags = 0
-    # flags=cv2.CALIB_ZERO_DISPARITY
-    R1, R2, P1, P2, Q, roi_left, roi_right = cv2.stereoRectify(k1, d1, k2, d2, frame2.shape[::-1], R_est, t_est, flags=flags)
+    R1, R2, P1, P2, Q, roi_left, roi_right = cv2.stereoRectify(k1, d1, k2, d2, frame2.shape[::-1], R_est, t_est)
 
     return R_est, t_est, R1, R2, P1, P2, Q
 
@@ -97,7 +95,7 @@ def calculate_epipolar_error(frame1, frame2):
     pts1 = np.float32(pts1)
     pts2 = np.float32(pts2)
     # this is just to get inliers
-    M, mask = cv2.findHomography(pts1, pts2, method = cv2.USAC_MAGSAC, ransacReprojThreshold = 5.0) #TODO try and compare findHomography against recoverPose and extract rotation from obtained homography
+    M, mask = cv2.findHomography(pts1, pts2, method = ransacMethod, ransacReprojThreshold = 5.0)
     matchesMask = mask.ravel().tolist()
 
     epi_error_sum = 0
@@ -107,7 +105,6 @@ def calculate_epipolar_error(frame1, frame2):
         pt2 = pts2[i]
         pt1 = pts1[i]
 
-        # print(f"{pt1[1]} {pt2[1]}")
         epi_error_sum += abs(pt1[1] - pt2[1])
     if len(pts1) < 10:
         return math.inf
@@ -143,9 +140,17 @@ def display_rectification(image_data_pairs):
 if __name__ == "__main__":
 
     camFps = options.fps
-    rgbLensPosition = options.rgbLensPosition
 
     pipeline = dai.Pipeline()
+    device = dai.Device()
+
+    try:
+        calibration_handler = device.readCalibration2()
+        original_calibration = device.readCalibration2()
+    except Exception as e:
+        print("Dynamic recalibration requires initial intrinsic calibration!")
+        raise e
+
 
     cam_left = pipeline.create(dai.node.MonoCamera)
     cam_right = pipeline.create(dai.node.MonoCamera)
@@ -186,12 +191,23 @@ if __name__ == "__main__":
     stereo_img_shape = cam_left.getResolutionSize()
 
     if rgbEnabled:
+        rgbLensPosition = None
+
+        if options.rgbLensPosition:
+            rgbLensPosition = options.rgbLensPosition
+        else:
+            try:
+                rgbLensPosition = calibration_handler.getLensPosition(dai.CameraBoardSocket.RGB)
+            except:
+                pass
+
         rgb_cam = pipeline.createColorCamera()
         rgb_cam.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
         rgb_cam.setInterleaved(False)
         rgb_cam.setBoardSocket(dai.CameraBoardSocket.RGB)
         rgb_cam.setIspScale(1, 3)
-        rgb_cam.initialControl.setManualFocus(rgbLensPosition)
+        if rgbLensPosition:
+            rgb_cam.initialControl.setManualFocus(rgbLensPosition)
         rgb_cam.setFps(camFps)
 
         xout_rgb_isp = pipeline.create(dai.node.XLinkOut)
@@ -200,7 +216,8 @@ if __name__ == "__main__":
 
         rgb_img_shape = rgb_cam.getVideoSize()
 
-    with dai.Device(pipeline) as device:
+    with device:
+        device.startPipeline(pipeline)
 
         left_camera_queue = device.getOutputQueue("left", 4, True)
         right_camera_queue = device.getOutputQueue("right", 4, True)
@@ -208,9 +225,6 @@ if __name__ == "__main__":
             rgb_camera_queue = device.getOutputQueue("rgb", 4, True)
         left_rectified_camera_queue = device.getOutputQueue("left_rect", 4, True)
         right_rectified_camera_queue = device.getOutputQueue("right_rect", 4, True)
-
-        calibration_handler = device.readCalibration()
-        original_calibration = device.readCalibration()
 
         left_camera = dai.CameraBoardSocket.LEFT
         right_camera = dai.CameraBoardSocket.RIGHT
@@ -244,8 +258,6 @@ if __name__ == "__main__":
         right_d = np.array(right_d)
         rotationLeft = np.array(calibration_handler.getStereoLeftRectificationRotation())
         rotationRight = np.array(calibration_handler.getStereoRightRectificationRotation())
-        # print(rotationLeft)
-        # print(rotationRight)
 
         if rgbEnabled:
             rgb_k = calibration_handler.getCameraIntrinsics(rgb_camera, rgb_img_shape[0], rgb_img_shape[1])
