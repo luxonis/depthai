@@ -2,6 +2,7 @@ import array
 import cv2
 import os
 from .abstract_reader import AbstractReader
+from typing import List, Tuple
 
 class VideoCapReader(AbstractReader):
     """
@@ -20,10 +21,10 @@ class VideoCapReader(AbstractReader):
         if not ok: return False
         return frame
 
-    def getStreams(self) -> array:
+    def getStreams(self) -> List[str]:
         return [self._stream]
 
-    def getShape(self, name: str) -> tuple:
+    def getShape(self, name: str) -> Tuple[int, int]:
         return (
             int(self.reader.get(cv2.CAP_PROP_FRAME_WIDTH)),
             int(self.reader.get(cv2.CAP_PROP_FRAME_HEIGHT)),

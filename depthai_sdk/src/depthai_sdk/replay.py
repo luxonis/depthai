@@ -6,10 +6,18 @@ import types
 import depthai as dai
 import datetime
 from .utils import *
-from typing import Optional
+from typing import Dict, Optional, Tuple, List
+from .readers.abstract_reader import AbstractReader
 
 class Replay:
-    disabledStreams = []
+    disabledStreams: List[str] = []
+    readers: Dict[str, AbstractReader]
+    # Nodes
+    left: dai.node.XLinkIn
+    right: dai.node.XLinkIn
+    color: dai.node.XLinkIn
+    stereo: dai.node.StereoDepth
+
     _streamTypes = ['color', 'left', 'right', 'depth'] # Available types to stream back to the camera
     _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
     _supportedExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap', '.mpg']
@@ -18,7 +26,7 @@ class Replay:
     _seqNum = 0 # Frame sequence number, added to each imgFrame
     _start = datetime.datetime.now() # For frame timestamp
     _now = datetime.datetime.now()
-    _colorSize = None
+    _colorSize: Optional[Tuple[int,int]] = None
     _keepAR = True # By default crop image as needed to keep the aspect ratio
     _xins = [] # XLinkIn stream names
     _pause = False
@@ -83,7 +91,7 @@ class Replay:
         """
         self._pause = not self._pause
 
-    def setResizeColor(self, size: tuple):
+    def setResizeColor(self, size: Tuple[int,int]):
         """
         Resize color frames prior to sending them to the device.
 
@@ -145,7 +153,7 @@ class Replay:
 
     def initPipeline(self,
         pipeline: Optional[dai.Pipeline] = None
-        ):
+        ) -> dai.Pipeline:
         """
         Prepares the pipeline for replaying. It creates XLinkIn nodes and sets up StereoDepth node.
         Returns:
@@ -156,7 +164,6 @@ class Replay:
 
         if self._calibData is not None:
             pipeline.setCalibrationData(self._calibData)
-        nodes = types.SimpleNamespace()
 
         def createXIn(p: dai.Pipeline, name: str):
             xin = p.create(dai.node.XLinkIn)
@@ -168,24 +175,29 @@ class Replay:
         for _, reader in self.readers.items():
             for name in reader.getStreams():
                 if name not in self.disabledStreams:
-                    setattr(nodes, name, createXIn(pipeline, name))
+                    if name.upper() == 'LEFT': self.left = createXIn(pipeline, name)
+                    elif name.upper() == 'RIGHT': self.right = createXIn(pipeline, name)
+                    elif name.upper() == 'COLOR': self.color = createXIn(pipeline, name)
+                    else:
+                        pass # Not implemented
+                    
 
         # Create StereoDepth node
-        if hasattr(nodes, 'left') and hasattr(nodes, 'right'):
-            nodes.stereo = pipeline.create(dai.node.StereoDepth)
-            nodes.stereo.setInputResolution(self._getShape('left'))
+        if self.left and self.right:
+            self.stereo = pipeline.create(dai.node.StereoDepth)
+            self.stereo.setInputResolution(self._getShape('left'))
 
-            if hasattr(nodes, 'color'): # Enable RGB-depth alignment
-                nodes.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+            if self.color: # Enable RGB-depth alignment
+                self.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
                 if self._colorSize is not None:
-                    nodes.stereo.setOutputSize(*self._colorSize)
+                    self.stereo.setOutputSize(*self._colorSize)
                 else:
-                    nodes.stereo.setOutputSize(*self._getShape('color'))
+                    self.stereo.setOutputSize(*self._getShape('color'))
 
-            nodes.left.out.link(nodes.stereo.left)
-            nodes.right.out.link(nodes.stereo.right)
+            self.left.out.link(self.stereo.left)
+            self.right.out.link(self.stereo.right)
 
-        return pipeline, nodes
+        return pipeline
 
     def createQueues(self, device: dai.Device):
         """

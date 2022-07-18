@@ -5,6 +5,7 @@ from mcap_ros1.decoder import Decoder
 from depthai_sdk import PreviewDecoder
 import cv2
 import numpy as np
+from typing import List, Tuple
 
 from .abstract_reader import AbstractReader
 
@@ -85,13 +86,13 @@ class McapReader(AbstractReader):
             ret[name] = arr.pop(0)
         return ret
         
-    def getStreams(self) -> array:
+    def getStreams(self) -> List[str]:
         """
         Get available topics
         """
         return [name for name in self._topics]
 
-    def getShape(self, name: str) -> tuple:
+    def getShape(self, name: str) -> Tuple[int, int]:
         frame = self._readFrames[name][0]
         return (frame.shape[1], frame.shape[0])
 

@@ -1,84 +1,109 @@
 from .component import Component
-from typing import Optional, Union, Any
+from typing import Optional, Union, Tuple, Any
 import depthai as dai
 from ..replay import Replay
 
 class CameraComponent(Component):
     # Users should have access to these nodes
-    color: dai.node.ColorCamera = None
-    mono: dai.node.MonoCamera = None
+    camera: Union[dai.node.ColorCamera, dai.node.MonoCamera]
     encoder: dai.node.VideoEncoder = None
-    replay: Replay = None # Replay module
+    _replay: Optional[Replay] = None # Replay module
 
     out: dai.Node.Output = None
 
     def __init__(self,
         pipeline: dai.Pipeline,
-        source: Union[str, Replay], #
+        source: str,
+        resolution: Union[None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
+        fps: Optional[float] = None,
         name: Optional[str] = None,
         out: bool = False,
         encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
         control: bool = False,
+        replay: Optional[Replay] = None,
         args: Any = None,
         ):
         """
         Args:
             pipeline (dai.Pipeline)
-            source (str or Replay): Source of the camera. Either color/rgb/right/left or Replay object
+            source (str): Source of the camera. Either color/rgb/right/left
+            resolution: Camera resolution
+            fps: Camera FPS
             name (str, optional): name of the camera
             out (bool, default False): Whether we want to stream frames to the host computer
             encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
             control (bool, default False): control the camera from the host keyboard (via cv2.waitKey())
+            replay (Replay object, optional): Replay
             args (Any, optional): Set the camera components based on user arguments
         """
 
         self.pipeline = pipeline
+        self._replay = replay
         self._parseSource(source)
 
-    def _parseSource(self, source: Optional[str] = None):
+        if resolution and self.camera:
+            from .parser import parseResolution
+            self.camera.setResolution(parseResolution(resolution))
+        if fps and self.camera:
+            self.camera.setFps(fps)
+
+    def _parseSource(self, source: str) -> None:
         if source.upper() == "COLOR" or source.upper() == "RGB":
-            self.color = self.pipeline.create(dai.node.ColorCamera)
-            self.color.setBoardSocket(dai.CameraBoardSocket.RGB)
-            self.out = self.color.preview
+            if self._replay:
+                if not self._replay.color:
+                    raise Exception('Color stream was not found in specified depthai-recording!')
+                self.out = self._replay.color.out
+            else:
+                self.camera = self.pipeline.create(dai.node.ColorCamera)
+                self.camera.setInterleaved(False) # Most NNs are CHW (planar)
+                self.camera.setBoardSocket(dai.CameraBoardSocket.RGB)
+                self.out = self.camera.preview
+
         elif source.upper() == "RIGHT" or source.upper() == "MONO":
-            self.mono = self.pipeline.create(dai.node.MonoCamera)
-            self.mono.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-            self.out = self.mono.out
+            if self._replay is None:
+                self.camera = self.pipeline.create(dai.node.MonoCamera)
+                self.camera.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+                self.out = self.camera.out
+            else:
+                if not self._replay.right:
+                    raise Exception('Right stream was not found in specified depthai-recording!')
+                self.out = self._replay.right.out
         elif source.upper() == "LEFT":
-            self.mono = self.pipeline.create(dai.node.MonoCamera)
-            self.mono.setBoardSocket(dai.CameraBoardSocket.LEFT)
-            self.out = self.mono.out
+            if self._replay is None:
+                self.mono = self.pipeline.create(dai.node.MonoCamera)
+                self.mono.setBoardSocket(dai.CameraBoardSocket.LEFT)
+                self.out = self.mono.out
+            else:
+                if not self._replay.left:
+                    raise Exception('Left stream was not found in specified depthai-recording!')
+                self.out = self._replay.left.out
         else:
-            if self._isUrl(source):
-                if self._isYoutubeLink(source):
-                    from ..utils import downloadYTVideo
-                    # Overwrite source - so Replay class can use it
-                    source = str(downloadYTVideo(source))
-                else:
-                    # TODO: download video/image(s) from the internet
-                    raise NotImplementedError("Only YouTube video download is currently supported!")
-                
-            self.replay = Replay(source, self.pipeline)
-
-
-    def _isYoutubeLink(self, source: str) -> bool:
-        return "youtube.com" in source
-
-    def _isUrl(self, source: str) -> bool:
-        return source.startswith("http://") or source.startswith("https://")
-
-
-    def _createXLinkOut(self):
-        a = 5
+            raise ValueError(f"Source name '{source}' not supported!")
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
-    def configureCamera(self, 
-
-        ): 
+    def configureCamera(self,
+        preview: Union[None, str, Tuple[int, int]] = None, # Set preview size
+        fps: Optional[float] = None # Set fps
+        ) -> None:
         """
         Configure resolution, scale, FPS, etc.
         """
-        a = 5
+        if fps:
+            if self._replay: raise NotImplemented("Setting FPS for depthai-recording isn't yet supported")
+            self.camera.setFps(fps)
+
+        if preview:
+            from .parser import parseSize
+            preview = parseSize(preview)
+
+            if self._replay: self._replay.setResizeColor(preview)
+            elif self._isColor(): self.camera.setPreviewSize(preview)
+            else:
+                # TODO: Use ImageManip to set mono frame size
+                raise NotImplementedError("Not yet implemented")
+
+    def _isColor(self) -> bool: return isinstance(self.camera, dai.node.ColorCamera)
+    def _isMono(self) -> bool: return isinstance(self.camera, dai.node.MonoCamera)
 
     def configureEncoder(self,
         ):

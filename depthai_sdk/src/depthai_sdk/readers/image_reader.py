@@ -2,6 +2,7 @@ import array
 import cv2
 import os
 from .abstract_reader import AbstractReader
+from typing import List, Tuple
 
 class ImageReader(AbstractReader):
     """
@@ -24,10 +25,10 @@ class ImageReader(AbstractReader):
     def read(self):
         return self.image.copy()
 
-    def getStreams(self) -> array:
+    def getStreams(self) -> List[str]:
         return [self._stream]
 
-    def getShape(self, name: str) -> tuple:
+    def getShape(self, name: str) -> Tuple[int, int]:
         shape = self.image.shape
         return (shape[1], shape[0])
 

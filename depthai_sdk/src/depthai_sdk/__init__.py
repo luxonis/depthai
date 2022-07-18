@@ -4,11 +4,12 @@ from .utils import *
 from .managers import *
 from .record import *
 from .replay import *
+from .components import *
 
 from typing import Optional
 import depthai as dai
+from pathlib import Path
 
-from .components import *
 
 class Camera:
     """
@@ -23,9 +24,11 @@ class Camera:
     pipeline: dai.Pipeline
     devices: List[dai.Device] = []
     args = None # User defined arguments
-    replay: Replay = None
+    replay: Optional[Replay] = None
 
-    availableStreams = dict() # If recording is set, get available streams. If not, query device's cameras
+    _availableCameras = dict() # If recording is set, get available streams. If not, query device's cameras
+    cameras = SimpleNamespace() # Already inited cameras (color/monos/stereo)
+
 
     # TODO: 
     # - available streams; query cameras, or Replay.getStreams(). Pass these to camera component
@@ -52,19 +55,39 @@ class Camera:
             am = ArgsManager()
             self.args = am.parseArgs()
 
-        if recording is not None:
+        if recording:
             self.replay = self._getReplay(recording)
             self.replay.initPipeline(self.pipeline)
-            print(self.replay.getStreams())
+            print('available streams from recording', self.replay.getStreams())
 
     def _getReplay(self, path: str) -> Replay:
         """
-        Either use local depthai-recording, or (TODO) download it from depthai-recordings
+        Either use local depthai-recording, YT link, (TODO) mp4 url, or recording from depthai-recordings repo
         """
+        if self._isUrl(path):
+            if self._isYoutubeLink(path):
+                from utils import downloadYTVideo
+                # Overwrite source - so Replay class can use it
+                path = str(downloadYTVideo(path))
+            else:
+                # TODO: download video/image(s) from the internet
+                raise NotImplementedError("Only YouTube video download is currently supported!")
+
+        p = Path(path)
+        if not p.is_file:
+            raise NotImplementedError("TODO: download from depthai-recordings repo")
+            
         return Replay(path)
 
+    
+    def _isYoutubeLink(self, source: str) -> bool:
+        return "youtube.com" in source
+
+    def _isUrl(self, source: str) -> bool:
+        return source.startswith("http://") or source.startswith("https://")
+
     def create_camera(self,
-        source: Optional[str] = None,
+        source: str,
         name: Optional[str] = None,
         out: bool = False,
         encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
@@ -75,18 +98,45 @@ class Camera:
         """
         return CameraComponent(
             pipeline=self.pipeline,
-            source=self.replay if self.replay is not None else source,
+            source=source,
             name=name,
             out=out,
             encode=encode,
             control=control,
+            replay=self.replay,
             args = self.args,
         )
 
     def create_nn(self,
         ) -> NNComponent:
-        a = 5
-        
+        raise NotImplementedError()
+
+    def create_stereo(self,
+        resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
+        fps: Optional[float] = None,
+        name: Optional[str] = None,
+        out: Optional[str] = None, # 'depth', 'disparity', both seperated by comma? TBD
+        left: Union[None, dai.Node.Output, CameraComponent] = None, # Left mono camera
+        right: Union[None, dai.Node.Output, CameraComponent] = None, # Right mono camera
+        encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+        control: bool = False,
+        ) -> StereoComponent:
+        """
+        Create Stereo camera component
+        """
+        return StereoComponent(
+            pipeline=self.pipeline,
+            resolution=resolution,
+            fps=fps,
+            name=name,
+            out=out,
+            left=left,
+            right=right,
+            encode=encode,
+            control=control,
+            replay=self.replay,
+            args = self.args,
+        )
 
     def _get_device(self,
         device: Optional[str] = None,
@@ -94,10 +144,10 @@ class Camera:
         """
         Connect to the OAK camera(s) and return dai.Device object
         """
-        if device is not None and device.upper() == "ALL":
+        if device and device.upper() == "ALL":
             # Connect to all available cameras
             raise NotImplementedError("TODO")
-        if usb2 is not None:
+        if usb2:
             return dai.Device(
                 version = dai.OpenVINO.VERSION_2021_4,
                 deviceInfo = getDeviceInfo(device),
@@ -115,16 +165,48 @@ class Camera:
         calib: Optional[dai.CalibrationHandler] = None,
         tuningBlob: Optional[str] = None,
         ) -> None:
-        if xlinkChunk is not None:
+        if xlinkChunk:
             self.pipeline.setXLinkChunkSize(xlinkChunk)
-        if calib is not None:
+        if calib:
             self.pipeline.setCalibrationData(calib)
-        if tuningBlob is not None:
+        if tuningBlob:
             self.pipeline.setCameraTuningBlobPath(tuningBlob)
     
     def __del__(self):
         for device in self.devices:
+            print("Closing OAK camera")
             device.close()
+    
+    def start(self) -> None:
+        """
+        Start the application. Configure XLink queues, upload the pipeline to the device(s)
+        """
+        if True:
+            # Debug pipeline with pipeline graph tool
+            folderPath = Path(os.path.abspath(sys.argv[0])).parent
+            with open(folderPath / "pipeline.json", 'w') as f:
+                f.write(json.dumps(self.pipeline.serializeToJson()['pipeline']))
+
+        for device in self.devices:
+            device.startPipeline(self.pipeline)
+
+        # TODO: Go through each component, check if out is enabled
+        for device in self.devices:
+            if self.replay:
+                self.replay.createQueues(device)
+
+
+
+    def running(self) -> bool:
+        """
+        Check whether device is running. If we are using depthai-recording, send msgs to the device.
+        """
+        if self.replay:
+            return self.replay.sendFrames()
+        
+        # TODO: check if device is closed
+        return True
+
 
     @property
     def device(self) -> dai.Device:
