@@ -246,14 +246,22 @@ if __name__ == "__main__":
         right_frame = None
         rgb_frame = None
 
-        for i in range(60): #let the exposure settle
+        for i in range(2*int(leftFps)): #let the exposure settle
             left_rect_frame = left_rectified_camera_queue.get().getCvFrame()
             right_rect_frame = right_rectified_camera_queue.get().getCvFrame()
 
-            left_frame = left_camera_queue.get().getCvFrame()
-            right_frame = right_camera_queue.get().getCvFrame()
+            leftFrameData = left_camera_queue.get()
+            left_frame = leftFrameData.getCvFrame()
+            rightFrameData = right_camera_queue.get()
+            right_frame = rightFrameData.getCvFrame()
+
+            stereo_img_shape = (leftFrameData.getWidth(), leftFrameData.getHeight())
+
             if rgbEnabled:
-                rgb_frame = rgb_camera_queue.get().getCvFrame()
+                rgbFrameData = rgb_camera_queue.get()
+                rgb_frame = rgbFrameData.getCvFrame()
+                rgb_img_shape = (rgbFrameData.getWidth(), rgbFrameData.getHeight())
+
 
         left_k = calibration_handler.getCameraIntrinsics(left_camera, stereo_img_shape[0], stereo_img_shape[1])
         right_k = calibration_handler.getCameraIntrinsics(right_camera, stereo_img_shape[0], stereo_img_shape[1])
@@ -279,8 +287,12 @@ if __name__ == "__main__":
             try:
                 left_rect_frame = left_rectified_camera_queue.get().getCvFrame()
                 right_rect_frame = right_rectified_camera_queue.get().getCvFrame()
-                left_frame = left_camera_queue.get().getCvFrame()
-                right_frame = right_camera_queue.get().getCvFrame()
+
+                leftFrameData = left_camera_queue.get()
+                left_frame = leftFrameData.getCvFrame()
+                rightFrameData = right_camera_queue.get()
+                right_frame = rightFrameData.getCvFrame()
+
                 if rgbEnabled:
                     rgb_frame = rgb_camera_queue.get().getCvFrame()
                 R, T, R1, R2, P1, P2, Q = calculate_Rt_from_frames(left_frame,right_frame,left_k,right_k,left_d,right_d)
