@@ -125,7 +125,7 @@ class Replay:
 
         self.disabledStreams.append(streamName)
 
-    def sendFrames(self):
+    def sendFrames(self) -> bool:
         """
         Reads and sends recorded frames from all enabled streams to the OAK camera.
 
@@ -209,8 +209,8 @@ class Replay:
         for name in self._xins:
             self._inputQueues[name] = device.getInputQueue(name + '_in', maxSize=1)
 
-    def getStreams(self) -> array:
-        streams = []
+    def getStreams(self) -> List[str]:
+        streams: List[str] = []
         for _, reader in self.readers.items():
             [streams.append(name) for name in reader.getStreams()]
         return streams
@@ -281,7 +281,7 @@ class Replay:
                 self.frames[name] = self.frames[name][:,:,0] # All 3 planes are the same
         return True
 
-    def _getMaxSize(self, name: str):
+    def _getMaxSize(self, name: str) -> int:
         """
         Used when setting XLinkIn nodes, so they consume the least amount of memory needed.
         """
@@ -291,13 +291,13 @@ class Replay:
         elif name == 'depth': bytes_per_pixel = 2 # 16bit
         return size[0] * size[1] * bytes_per_pixel
 
-    def _getShape(self, name: str) -> tuple:
+    def getShape(self, streamName: str) -> Tuple[int, int]:
         """
         Get shape of a stream
         """
         for _, reader in self.readers.items():
-            if name in reader.getStreams():
-                return reader.getShape(name)
+            if streamName in reader.getStreams():
+                return reader.getShape(streamName)
 
 
     def close(self):
