@@ -1,3 +1,4 @@
+from cProfile import label
 from .fps import *
 from .previews import *
 from .utils import *
@@ -108,8 +109,25 @@ class Camera:
         )
 
     def create_nn(self,
+        model: Union[str, Path], # str for SDK supported model or Path to custom model's json
+        input: Union[CameraComponent, NNComponent, dai.Node.Output],
+        type: Optional[str] = None,
+        name: Optional[str] = None, # name of the node
+        tracker: bool = False, # Enable object tracker - only for Object detection models
+        spatial: bool = False, # 
+        out: bool = False,
         ) -> NNComponent:
-        raise NotImplementedError()
+        return NNComponent(
+            pipeline=self.pipeline,
+            model=model,
+            input=input,
+            nnType=type,
+            name=name,
+            tracker=tracker,
+            spatial=spatial,
+            out=out,
+            args=self.args
+        )
 
     def create_stereo(self,
         resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
