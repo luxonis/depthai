@@ -30,6 +30,10 @@ BATCH_DIR = Path(__file__).resolve().parent / 'batch'
 
 test_result = {
     'usb3_res': '',
+    'nor_flash_res': '',
+    'bootloader_flash_res': '',
+    'imu_upgrade_res': '',
+    'imu_test_res': '',
     'eeprom_res': '',
     'rgb_cam_res': '',
     'jpeg_enc_res': '',
@@ -61,25 +65,29 @@ OP_OAK_KEYS = {
     'OAK-D-PRO-POE': ['jpeg_enc', 'prew_out_rgb', 'left_strm', 'right_strm', 'ir_light'],
 }
 
+br_command = '<br style="font-size:30px">'
+OAK_D_LABELS = f'<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
+        USB3 {br_command} \
+        EEPROM write test {br_command} \
+        NOR Flash {br_command} \
+        Bootloader Flash {br_command} \
+        IMU Upgrade {br_command} \
+        IMU test {br_command} \
+        RGB Camera connected  {br_command} \
+        JPEG Encoding Stream {br_command} \
+        preview-out-rgb Stream {br_command} \
+        left camera connected {br_command} \
+        right camera connected {br_command} \
+        left Stream {br_command} \
+        right Stream {br_command} </span></p></body></html>'
 
-OAK_D_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
-        USB3 <br style="font-size:18pt"> \
-        EEPROM write test <br style="font-size:22pt"> \
-        RGB Camera connected  <br style="font-size:21pt"> \
-        JPEG Encoding Stream <br style="font-size:21pt"> \
-        preview-out-rgb Stream <br style="font-size:21pt"> \
-        left camera connected <br style="font-size:23pt"> \
-        right camera connected<br style="font-size:21pt"> \
-        left Stream <br style="font-size:22pt"> \
-        right Stream <br style="font-size:21pt"> </span></p></body></html>'
 
-
-OAK_ONE_LABELS = '<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
-        USB3 <br style="font-size:18pt"> \
-        EEPROM write test <br style="font-size:22pt"> \
-        RGB Camera connected  <br style="font-size:21pt"> \
-        JPEG Encoding Stream <br style="font-size:21pt"> \
-        preview-out-rgb Stream <br style="font-size:21pt"></span></p></body></html>'
+OAK_ONE_LABELS = f'<html><head/><body><p align=\"right\"><span style=\" font-size:14pt;\"> \
+        USB3 {br_command} \
+        EEPROM write test {br_command} \
+        RGB Camera connected {br_command} \
+        JPEG Encoding Stream {br_command} \
+        preview-out-rgb Stream {br_command} \</span></p></body></html>'
 
 CSV_HEADER = {
     'OAK-1': '"Device ID","Device Type","Timestamp","USB3","RGB camera connect","JPEG Encoding","RGB Stream","JPEG Encoding Operator","RGB Encoding Operator"',
@@ -110,7 +118,7 @@ def clear_test_results():
     update_res = True
 
 imu_upgrade = True
-class DepthAICamera() :
+class DepthAICamera:
     def __init__(self):
         global update_res
         self.pipeline = dai.Pipeline()
@@ -153,7 +161,7 @@ class DepthAICamera() :
             self.xoutIMU = self.pipeline.create(dai.node.XLinkOut)
             self.xoutIMU.setStreamName("IMU")
             self.imu.enableFirmwareUpdate(True)
-            self.imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
+            self.imu.enableIMUSensor([dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW], 500)
             self.imu.setBatchReportThreshold(1)
             self.imu.setMaxBatchReports(10)
             self.imu.out.link(self.xoutIMU.input)
@@ -298,6 +306,9 @@ class DepthAICamera() :
 
     def get_imu(self):
         in_imu = self.qImu.tryGet()
+        if in_imu is None:
+            print('empty packet')
+            return None
         imu_packet = in_imu.packets[0]
         accel = imu_packet.acceleroMeter
         gyro = imu_packet.gyroscope
@@ -522,7 +533,7 @@ class Camera(QtWidgets.QWidget):
 
 
 WIDTH = 766
-HEIGHT = 717
+HEIGHT = 980
 
 
 def test_connexion():
@@ -636,92 +647,122 @@ class UiTests(QtWidgets.QMainWindow):
         self.centralwidget = QtWidgets.QWidget(UI_tests)
         self.centralwidget.setObjectName("centralwidget")
         self.title = QtWidgets.QLabel(self.centralwidget)
-        self.title.setGeometry(QtCore.QRect(10, 10, 751, 51))
+        self.title.setGeometry(QtCore.QRect(10, 10, 751, 71))
         font = QtGui.QFont()
         font.setPointSize(16)
         self.title.setFont(font)
         self.title.setObjectName("title")
         self.connect_but = QtWidgets.QPushButton(self.centralwidget)
-        self.connect_but.setGeometry(QtCore.QRect(460, 390, 86, 25))
+        self.connect_but.setGeometry(QtCore.QRect(440, 410, 86, 25))
         self.connect_but.setObjectName("connect_but")
         self.connect_but.clicked.connect(self.show_cameras)
-        # self.save_but = QtWidgets.QPushButton(self.centralwidget)
-        # self.save_but.setGeometry(QtCore.QRect(550, 390, 86, 25))
-        # self.save_but.setObjectName("connect_but")
-        # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
         if test_type == 'OAK-1':
-            self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 241))
+            self.automated_tests.setGeometry(QtCore.QRect(20, 90, 311, 590))
         else:
-            self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 395))
+            self.automated_tests.setGeometry(QtCore.QRect(20, 90, 311, 590))
         self.automated_tests.setObjectName("automated_tests")
         self.automated_tests_labels = QtWidgets.QLabel(self.automated_tests)
-        self.automated_tests_labels.setGeometry(QtCore.QRect(10, 20, 221, 351))
+        self.automated_tests_labels.setGeometry(QtCore.QRect(10, 20, 225, 540))
         self.automated_tests_labels.setObjectName("automated_tests_labels")
         self.automated_tests_labels.setContentsMargins(0,9,9,5)
         self.automated_tests_labels.setAlignment(QtCore.Qt.AlignRight)
         # self.automated_tests_labels.setGeometry(QtCore.QRect(10, 30, 221, 150))
 
-        px, py, x, y = 240, 37, 51, 21
-        dy = 39
+        px, py, x, y = 240, 43, 51, 21
+        dy = 41
         self.usb3_res = QtWidgets.QLabel(self.automated_tests)
         self.usb3_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.usb3_res.setObjectName("usb3_res")
+        self.usb3_res.setText("SKIP")
 
         py += dy
         self.eeprom_res = QtWidgets.QLabel(self.automated_tests)
         self.eeprom_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.eeprom_res.setObjectName("eeprom_res")
+        self.eeprom_res.setText("SKIP")
+
+        py += dy
+        self.nor_flash_res = QtWidgets.QLabel(self.automated_tests)
+        self.nor_flash_res.setGeometry(QtCore.QRect(px, py, x, y))
+        self.nor_flash_res.setObjectName("NOR Flash")
+        self.nor_flash_res.setText("SKIP")
+
+        py += dy
+        self.bootloader_flash_res = QtWidgets.QLabel(self.automated_tests)
+        self.bootloader_flash_res.setGeometry(QtCore.QRect(px, py, x, y))
+        self.bootloader_flash_res.setObjectName("NOR Flash")
+        self.bootloader_flash_res.setText("SKIP")
+
+        py += dy
+        self.imu_upgrade_res = QtWidgets.QLabel(self.automated_tests)
+        self.imu_upgrade_res.setGeometry(QtCore.QRect(px, py, x, y))
+        self.imu_upgrade_res.setObjectName("NOR Flash")
+        self.imu_upgrade_res.setText("SKIP")
+
+        py += dy
+        self.imu_test_res = QtWidgets.QLabel(self.automated_tests)
+        self.imu_test_res.setGeometry(QtCore.QRect(px, py, x, y))
+        self.imu_test_res.setObjectName("NOR Flash")
+        self.imu_test_res.setText("SKIP")
 
         py += dy
         self.rgb_cam_res = QtWidgets.QLabel(self.automated_tests)
         self.rgb_cam_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.rgb_cam_res.setObjectName("rgb_cam_res")
+        self.rgb_cam_res.setText("SKIP")
 
         py += dy
         self.jpeg_enc_res = QtWidgets.QLabel(self.automated_tests)
         self.jpeg_enc_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.jpeg_enc_res.setObjectName("jpeg_enc_res")
+        self.jpeg_enc_res.setText("SKIP")
 
         py += dy
         self.prew_out_rgb_res = QtWidgets.QLabel(self.automated_tests)
         self.prew_out_rgb_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.prew_out_rgb_res.setObjectName("prew_out_rgb_res")
+        self.prew_out_rgb_res.setText("SKIP")
 
         py += dy
         self.left_cam_res = QtWidgets.QLabel(self.automated_tests)
         self.left_cam_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.left_cam_res.setObjectName("left_cam_res")
+        self.left_cam_res.setText("SKIP")
 
         py += dy
         self.right_cam_res = QtWidgets.QLabel(self.automated_tests)
         self.right_cam_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.right_cam_res.setObjectName("right_cam_res")
+        self.right_cam_res.setText("SKIP")
 
         py += dy
         self.left_strm_res = QtWidgets.QLabel(self.automated_tests)
         self.left_strm_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.left_strm_res.setObjectName("left_strm_res")
+        self.left_strm_res.setText("SKIP")
 
         py += dy
         self.right_strm_res = QtWidgets.QLabel(self.automated_tests)
         self.right_strm_res.setGeometry(QtCore.QRect(px, py, x, y))
         self.right_strm_res.setObjectName("right_strm_res")
+        self.right_strm_res.setText("SKIP")
 
-        py += dy
-        self.ir_project_res = QtWidgets.QLabel(self.automated_tests)
-        self.ir_project_res.setGeometry(QtCore.QRect(px, py, x, y))
-        self.ir_project_res.setObjectName("ir_project_res")
+        # py += dy
+        # self.ir_project_res = QtWidgets.QLabel(self.automated_tests)
+        # self.ir_project_res.setGeometry(QtCore.QRect(px, py, x, y))
+        # self.ir_project_res.setObjectName("ir_project_res")
+        # self.ir_project_res.setText("LAST")
 
         self.operator_tests = QtWidgets.QGroupBox(self.centralwidget)
         # self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 321))
         # if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
         if 'oak-d pro' in eepromDataJson['productName'].lower():
-            self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 311))
+            self.operator_tests.setGeometry(QtCore.QRect(360, 90, 321, 321))
         elif test_type == 'OAK-1':
-            self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 190))
+            self.operator_tests.setGeometry(QtCore.QRect(360, 90, 321, 200))
         else:
-            self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 281))
+            self.operator_tests.setGeometry(QtCore.QRect(360, 90, 321, 291))
         self.operator_tests.setObjectName("operator_tests")
         self.operator_tests_label = QtWidgets.QLabel(self.operator_tests)
         self.operator_tests_label.setGeometry(QtCore.QRect(10, 100, 131, 201))
@@ -917,7 +958,7 @@ class UiTests(QtWidgets.QMainWindow):
                 self.ir_fail_but.toggled.connect(lambda: set_operator_test(self.ir_fail_but))
 
         self.logs = QtWidgets.QGroupBox(self.centralwidget)
-        self.logs.setGeometry(QtCore.QRect(10, 460, 741, 221))
+        self.logs.setGeometry(QtCore.QRect(10, HEIGHT-260, 741, 221))
         self.logs.setObjectName("logs")
         self.logs_title_label = QtWidgets.QLabel(self.logs)
         self.logs_title_label.setGeometry(QtCore.QRect(10, 20, 281, 21))
@@ -994,6 +1035,11 @@ class UiTests(QtWidgets.QMainWindow):
         self.operator_tests.setTitle(_translate("UI_tests", "Operator Tests"))
         self.NOT_TESTED_LABEL.setText(_translate("UI_tests", "<html><head/><body><p align=\"center\"><span style=\" font-size:11pt; color:#aaaa00;\">Not<br>Tested</span></p></body></html>"))
         self.FAIL_LABEL.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:11pt; color:#ff0000;\">FAIL</span></p></body></html>"))
+        if 'oak-d pro' in eepromDataJson['productName'].lower():
+            ir_light = 'IR Light'
+        else:
+            ir_light = ''
+
         self.operator_tests_label.setText(_translate("UI_tests", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -1003,7 +1049,7 @@ class UiTests(QtWidgets.QMainWindow):
 "preview-out-rgb <br><br>\n"
 "Stream Left <br><br>\n"
 "Stream Right <br><br>\n"
-"IR Light</span></p></body></html>"))
+f"{ir_light}</span></p></body></html>"))
         self.PASS_LABEL.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:11pt; color:#00aa7f;\">PASS</span></p></body></html>"))
         self.logs.setTitle(_translate("UI_tests", ""))
         self.date_time_label.setText(_translate("UI_tests", "date_time: "))
@@ -1100,7 +1146,7 @@ class UiTests(QtWidgets.QMainWindow):
         name = eepromDataJson['productName'].lower()
         if 'poe' in name:
             self.update_bootloader()
-        elif not ('lite' in name):
+        elif not ('lite' in name or 'oak-d w' in name):
             # Flash EEPROM and boot header, then reboot for boot header to take effect
             with dai.Device() as device:
                 usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
@@ -1214,62 +1260,33 @@ class UiTests(QtWidgets.QMainWindow):
         if not update_res:
             return
         update_res = False
-        if test_result['usb3_res'] == 'PASS':
-            self.usb3_res.setPalette(self.green_pallete)
-        elif test_result['usb3_res'] == 'SKIP':
-            self.usb3_res.setPalette(self.inactive_pallete)
-        else:
-            self.usb3_res.setPalette(self.red_pallete)
-        self.usb3_res.setText(test_result['usb3_res'])
 
-        if test_result['eeprom_res'] == 'PASS':
-            self.eeprom_res.setPalette(self.green_pallete)
-        else:
-            self.eeprom_res.setPalette(self.red_pallete)
-        self.eeprom_res.setText(test_result['eeprom_res'])
+        def set_test_res(label, result):
+            if result == 'PASS':
+                label.setPalette(self.green_pallete)
+            elif result == 'SKIP':
+                label.setPalette(self.inactive_pallete)
+            else:
+                label.setPalette(self.red_pallete)
+            label.setText(result)
 
-        if test_result['rgb_cam_res'] == 'PASS':
-            self.rgb_cam_res.setPalette(self.green_pallete)
-        else:
-            self.rgb_cam_res.setPalette(self.red_pallete)
-        self.rgb_cam_res.setText(test_result['rgb_cam_res'])
-
-        if test_result['jpeg_enc_res'] == 'PASS':
-            self.jpeg_enc_res.setPalette(self.green_pallete)
-        else:
-            self.jpeg_enc_res.setPalette(self.red_pallete)
-        self.jpeg_enc_res.setText(test_result['jpeg_enc_res'])
-
-        if test_result['prew_out_rgb_res'] == 'PASS':
-            self.prew_out_rgb_res.setPalette(self.green_pallete)
-        else:
-            self.prew_out_rgb_res.setPalette(self.red_pallete)
-        self.prew_out_rgb_res.setText(test_result['prew_out_rgb_res'])
+        set_test_res(self.usb3_res, test_result['usb3_res'])
+        set_test_res(self.eeprom_res, test_result['eeprom_res'])
+        set_test_res(self.rgb_cam_res, test_result['rgb_cam_res'])
+        set_test_res(self.jpeg_enc_res, test_result['jpeg_enc_res'])
+        set_test_res(self.prew_out_rgb_res, test_result['prew_out_rgb_res'])
 
         if test_type != 'OAK-1':
-            if test_result['left_cam_res'] == 'PASS':
-                self.left_cam_res.setPalette(self.green_pallete)
-            else:
-                self.left_cam_res.setPalette(self.red_pallete)
-            self.left_cam_res.setText(test_result['left_cam_res'])
+            set_test_res(self.left_cam_res, test_result['left_cam_res'])
+            set_test_res(self.right_cam_res, test_result['right_cam_res'])
+            set_test_res(self.left_strm_res, test_result['left_strm_res'])
+            set_test_res(self.right_strm_res, test_result['right_strm_res'])
 
-            if test_result['right_cam_res'] == 'PASS':
-                self.right_cam_res.setPalette(self.green_pallete)
-            else:
-                self.right_cam_res.setPalette(self.red_pallete)
-            self.right_cam_res.setText(test_result['right_cam_res'])
-
-            if test_result['left_strm_res'] == 'PASS':
-                self.left_strm_res.setPalette(self.green_pallete)
-            else:
-                self.left_strm_res.setPalette(self.red_pallete)
-            self.left_strm_res.setText(test_result['left_strm_res'])
-
-            if test_result['right_strm_res'] == 'PASS':
-                self.right_strm_res.setPalette(self.green_pallete)
-            else:
-                self.right_strm_res.setPalette(self.red_pallete)
-            self.right_strm_res.setText(test_result['right_strm_res'])
+        # if imu_upgrade:
+        set_test_res(self.imu_upgrade_res, test_result['imu_upgrade_res'])
+        # set_test_res(self.nor_flash_res, 'SKIP')
+        # set_test_res(self.bootloader_flash_res, 'SKIP')
+        # set_test_res(self.imu_test_res, 'SKIP')
 
     def update_bootloader_impl(self):
         self.print_logs('Check bootloader')
@@ -1347,17 +1364,23 @@ class UiTests(QtWidgets.QMainWindow):
             self.prog_label.setText('IMU PASS')
             self.update_prog_bar(1.0)
             self.print_logs_trigger.emit(f'Successfully updated IMU!')
+            test_result['imu_upgrade_res'] = 'PASS'
+            self.set_result()
             self.update_imu = False
 
         if 'IMU firmware update failed' in msg.payload:
             if "Your board likely doesn't have IMU!" in msg.payload:
                 self.print_logs_trigger.emit('IMU Upgrade not supported')
                 self.prog_label.setText('SKIP IMU')
+                test_result['imu_upgrade_res'] = 'SKIP'
+                self.set_result()
                 self.update_imu = False
                 return
             self.prog_label.setText('IMU FAIL')
             self.update_prog_bar(0.0)
             self.print_logs_trigger.emit(f'FAILED updating IMU!')
+            test_result['imu_upgrade_res'] = 'FAIL'
+            self.set_result()
             self.update_imu = False
         # print(percentage_float)
         # print(percentage_float == 1, flush=True)
@@ -1457,7 +1480,7 @@ def signal_handler(sig, frame):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Arguments for test UI')
-    parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)', default='OAK-D-PRO-POE')
+    parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)', default='OAK-D-POE')
     # parser.add_argument('-b', '--batch', dest='batch', help='enter the path to batch file', required=True)
     # CALIB_JSON_FILE = path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib.json'
     CALIB_BACKUP_FILE = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib_backup.json'
