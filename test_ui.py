@@ -153,7 +153,7 @@ class DepthAICamera():
             self.imu = self.pipeline.create(dai.node.IMU)
             self.xoutIMU = self.pipeline.create(dai.node.XLinkOut)
             self.xoutIMU.setStreamName("IMU")
-            if 'lite' in test_type:
+            if 'LITE' in test_type:
                 self.imu.enableFirmwareUpdate(True)
             self.imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
             self.imu.setBatchReportThreshold(1)
@@ -169,8 +169,7 @@ class DepthAICamera():
         self.videoEnc.setDefaultProfilePreset(self.camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
         self.xoutJpeg.setStreamName("jpeg")
 
-        # if test_type != 'OAK-1':
-        if 'oak-1' not in eepromDataJson['productName'].lower():
+        if 'OAK-1' in test_type:
             self.camLeft = self.pipeline.create(dai.node.MonoCamera)
             self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
             self.xoutLeft.setStreamName("left")
@@ -188,8 +187,7 @@ class DepthAICamera():
             self.camRight.setFps(10)
 
         usb_speed = dai.UsbSpeed.SUPER
-        # if test_type == 'OAK-D-PRO-POE':
-        if 'poe' in eepromDataJson['productName'].lower():
+        if 'POE' in test_type:
             usb_speed = dai.UsbSpeed.HIGH
 
         self.device = dai.Device(dai.OpenVINO.VERSION_2021_4, usb_speed)
@@ -255,8 +253,7 @@ class DepthAICamera():
         except RuntimeError:
             test_result['usb3_res'] = 'FAIL'
 
-        # if test_type == 'OAK-D-PRO-POE':
-        if 'poe' in eepromDataJson['productName'].lower():
+        if 'POE' in test_type:
             test_result['usb3_res'] = 'SKIP'
 
         self.start_queue()
@@ -516,6 +513,7 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
             self.variant_desc_label.setText(curDevice["variants"][variantIndex]["description"])
 
         # Load test_type, first from "device"
+        global test_type
         test_type = curDevice['test_type']
 
         # Load eeprom data if available
@@ -693,8 +691,7 @@ class UiTests(QtWidgets.QMainWindow):
         # self.save_but.setObjectName("connect_but")
         # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
-        # if test_type == 'OAK-1':
-        if 'oak-1' in eepromDataJson['productName'].lower():
+        if 'OAK-1' in test_type:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 241))
         else:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 395))
@@ -759,11 +756,9 @@ class UiTests(QtWidgets.QMainWindow):
 
         self.operator_tests = QtWidgets.QGroupBox(self.centralwidget)
         # self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 321))
-        # if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
-        if 'oak-d pro' in eepromDataJson['productName'].lower():
+        if 'PRO' in test_type:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 311))
-        # elif test_type == 'OAK-1':
-        elif 'oak-1' in eepromDataJson['productName'].lower():
+        elif 'OAK-1' in test_type:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 190))
         else:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 281))
@@ -853,7 +848,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.rgb_fail_but.name = 'prew_out_rgb'
         self.rgb_fail_but.toggled.connect(lambda: set_operator_test(self.rgb_fail_but))
 
-        if test_type != 'OAK-1':
+        if 'OAK-1' not in test_type:
             self.op_left_frame = QtWidgets.QFrame(self.operator_tests)
             self.op_left_frame.setGeometry(QtCore.QRect(160, 180, 131, 41))
             self.op_left_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
@@ -924,8 +919,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.right_fail_but.name = 'right_strm'
             self.right_fail_but.toggled.connect(lambda: set_operator_test(self.right_fail_but))
 
-            # if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
-            if 'oak-d pro' in eepromDataJson['productName'].lower():
+            if 'PRO' in test_type:
                 self.op_ir_frame = QtWidgets.QFrame(self.operator_tests)
                 self.op_ir_frame.setGeometry(QtCore.QRect(160, 270, 131, 41))
                 self.op_ir_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
@@ -1027,7 +1021,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.connect_but.adjustSize()
 
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
-        if test_type == 'OAK-1':
+        if 'OAK-1' in test_type:
             self.automated_tests_labels.setText(_translate("UI_tests", OAK_ONE_LABELS))
         else:
             self.automated_tests_labels.setText(_translate("UI_tests", OAK_D_LABELS))
@@ -1047,7 +1041,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.PASS_LABEL.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:11pt; color:#00aa7f;\">PASS</span></p></body></html>"))
         self.logs.setTitle(_translate("UI_tests", ""))
         self.date_time_label.setText(_translate("UI_tests", "date_time: "))
-        self.test_type_label.setText(_translate("UI_tests", "test_type: " + eepromDataJson['productName']))
+        self.test_type_label.setText(_translate("UI_tests", "test_type: " + test_type))
         self.prog_label.setText(_translate("UI_tests", "Flash IMU"))
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
         self.print_logs(f'calib_path={calib_path}')
@@ -1092,12 +1086,10 @@ class UiTests(QtWidgets.QMainWindow):
             self.disconnect()
             self.rgb_ntes_but.setChecked(True)
             self.jpeg_ntes_but.setChecked(True)
-            # if test_type != 'OAK-1':
-            if 'oak-1' not in eepromDataJson['productName'].lower():
+            if 'OAK-1' not in test_type:
                 self.right_ntes_but.setChecked(True)
                 self.left_ntes_but.setChecked(True)
-                # if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
-                if 'oak-d pro' in eepromDataJson['productName'].lower():
+                if 'PRO' in test_type:
                     self.ir_ntes_but.setChecked(True)
             self.connect_but.setText("CONNECT")
             self.connect_but.adjustSize()
@@ -1179,8 +1171,7 @@ class UiTests(QtWidgets.QMainWindow):
         location = WIDTH, prew_height + 80
         self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
         self.jpeg.show()
-        # if test_type != 'OAK-1':
-        if 'oak-1' not in eepromDataJson['productName'].lower():
+        if 'OAK-1' in test_type:
             location = WIDTH + prew_width + 20, 0
             self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
                                'LEFT Preview', location)
@@ -1216,9 +1207,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.connect_but.adjustSize()
             self.update_imu = True
 
-            # if test_type == 'OAK-D-PRO-POE':
-            print(eepromDataJson['productName'].lower())
-            if 'poe' in eepromDataJson['productName'].lower():
+            if 'POE' in test_type:
                 if test_result['nor_flash_res'] == 'FAIL':
                     self.print_logs('BOOTLOADER UPDATE FAIL, RETRYING...')
                     global imu_upgrade
@@ -1270,8 +1259,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.prew_out_rgb_res.setPalette(self.red_pallete)
         self.prew_out_rgb_res.setText(test_result['prew_out_rgb_res'])
 
-        # if test_type != 'OAK-1':
-        if 'oak-1' not in eepromDataJson['productName'].lower():
+        if 'OAK-1' in test_type:
             if test_result['left_cam_res'] == 'PASS':
                 self.left_cam_res.setPalette(self.green_pallete)
             else:
@@ -1306,8 +1294,7 @@ class UiTests(QtWidgets.QMainWindow):
             with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
                 self.print_logs('Starting Update')
                 self.prog_label.setText('Bootloader')
-                # if test_type == 'OAK-D-PRO-POE':
-                if 'poe' in eepromDataJson['productName'].lower():
+                if 'POE' in test_type:
                     self.print_logs('Flashing NETWORK bootloader...')
                     return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, self.update_prog_bar)
                 else:
@@ -1459,8 +1446,7 @@ class UiTests(QtWidgets.QMainWindow):
         if hasattr(self, 'depth_camera'):
             del self.rgb
             del self.jpeg
-            # if test_type != 'OAK-1':
-            if 'oak-1' not in eepromDataJson['productName'].lower():
+            if 'OAK-1' not in test_type:
                 del self.left
                 del self.right
             del self.depth_camera
@@ -1477,17 +1463,7 @@ def signal_handler(sig, frame):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Arguments for test UI')
-    parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)', default='OAK-D-PRO-POE')
-    # parser.add_argument('-b', '--batch', dest='batch', help='enter the path to batch file', required=True)
-    # CALIB_JSON_FILE = path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib.json'
     CALIB_BACKUP_FILE = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib_backup.json'
-    # parser.add_argument('--calib_json_file', '-c', dest='calib_json_file', help='Path to V6 calibration file in json', default=CALIB_JSON_FILE)
-    args = parser.parse_args()
-    test_type = args.camera_type.upper()
-    # calib_path = args.calib_json_file
-    # calib_path = args.batch
-    # calib_path = None
     app = QtWidgets.QApplication(sys.argv)
     screen = app.primaryScreen()
     rect = screen.availableGeometry()
