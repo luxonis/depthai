@@ -11,7 +11,7 @@ class Replay:
     disabledStreams = []
     _streamTypes = ['color', 'left', 'right', 'depth'] # Available types to stream back to the camera
     _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
-    _supportedExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap']
+    _supportedExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap', '.db3']
     _imageExt = ['.bmp','.dib','.jpeg','.jpg','.jpe','.jp2','.png','.webp','.pbm','.pgm','.ppm','.pxm','.pnm','.pfm','.sr','.ras','.tiff','.tif','.exr','.hdr','.pic']
     _inputQueues = dict() # dai.InputQueue dictionary for each stream
     _seqNum = 0 # Frame sequence number, added to each imgFrame
@@ -51,6 +51,9 @@ class Replay:
                 elif extension == '.mcap':
                     from .readers.mcap_reader import McapReader
                     self.readers[name] = McapReader(strPath)
+                elif extension == '.db3':
+                    from .readers.db3_reader import Db3Reader
+                    self.readers[name] = Db3Reader(Path(strPath).parent)
                 elif extension in self._imageExt:
                     from .readers.image_reader import ImageReader
                     self.readers[name] = ImageReader(strPath)
