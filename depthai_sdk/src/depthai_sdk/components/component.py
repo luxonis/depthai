@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import depthai as dai
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union, Type
+import random
 
 class Component(ABC):
     """
@@ -9,21 +10,23 @@ class Component(ABC):
     # nodes: List[dai.Node] # List of dai.nodes that this components abstracts
 
     # Camera object can loop through all components to get all XLinkOuts
-    xouts: List[Tuple[str, dai.Node.Output]] = []
+    # Tuple[str, Component]
+    xouts: Tuple = {}
 
-    def _createXOut(self,
+    def createXOut(self,
         pipeline: dai.Pipeline,
-        name: str,
+        type: Type,
+        name: Union[str, bool],
         out: dai.Node.Output,
         fpsLimit: Optional[float] = None) -> None:
         
         xout = pipeline.create(dai.node.XLinkOut)
+        if isinstance(name, bool):
+            name = f"__{str(type)}_{random.randint(100,999)}"
         xout.setStreamName(name)
         out.link(xout.input)
 
         if fpsLimit:
             xout.setFpsLimit(fpsLimit)
 
-        self.xouts.append((name, out))
-
-
+        self.xouts[name] = type

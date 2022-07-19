@@ -1,8 +1,8 @@
 from .component import Component
+from .camera_component import CameraComponent
 from typing import Optional, Union, Tuple, Any
 import depthai as dai
 from ..replay import Replay
-from .camera_component import CameraComponent
 
 class StereoComponent(Component):
     # Users should have access to these nodes

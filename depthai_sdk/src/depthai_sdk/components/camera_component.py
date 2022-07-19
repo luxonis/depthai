@@ -17,7 +17,7 @@ class CameraComponent(Component):
         resolution: Union[None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
         fps: Optional[float] = None,
         name: Optional[str] = None,
-        out: bool = False,
+        out: Union[None, bool, str] = False,
         encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
         control: bool = False,
         replay: Optional[Replay] = None,
@@ -38,7 +38,10 @@ class CameraComponent(Component):
         """
 
         self.pipeline = pipeline
+
         self._replay = replay
+        self._sourceName = source.lower()
+
         self._parseSource(source)
 
         if resolution and self.camera:
@@ -46,6 +49,14 @@ class CameraComponent(Component):
             self.camera.setResolution(parseResolution(resolution))
         if fps and self.camera:
             self.camera.setFps(fps)
+
+        if out:
+            super().createXOut(
+                pipeline,
+                type(self),
+                name = out,
+                out = self.camera.video if self._isColor() else self.out, 
+            )
 
     def _parseSource(self, source: str) -> None:
         if source.upper() == "COLOR" or source.upper() == "RGB":
@@ -104,6 +115,11 @@ class CameraComponent(Component):
 
     def _isColor(self) -> bool: return isinstance(self.camera, dai.node.ColorCamera)
     def _isMono(self) -> bool: return isinstance(self.camera, dai.node.MonoCamera)
+    
+    def getSize(self) -> Tuple[int, int]:
+        if self._isColor(): return self.camera.getPreviewSize()
+        elif self._isMono(): raise NotImplementedError()
+        elif self._replay: return self._replay.getShape(self._sourceName)
 
     def configureEncoder(self,
         ):
