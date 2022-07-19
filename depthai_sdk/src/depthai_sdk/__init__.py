@@ -90,7 +90,7 @@ class Camera:
     def create_camera(self,
         source: str,
         name: Optional[str] = None,
-        out: bool = False,
+        out: Union[None, bool, str] = None,
         encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
         control: bool = False,
         ) -> CameraComponent:
@@ -111,21 +111,21 @@ class Camera:
     def create_nn(self,
         model: Union[str, Path], # str for SDK supported model or Path to custom model's json
         input: Union[CameraComponent, NNComponent, dai.Node.Output],
+        out: Union[None, bool, str] = None,
         type: Optional[str] = None,
         name: Optional[str] = None, # name of the node
         tracker: bool = False, # Enable object tracker - only for Object detection models
         spatial: bool = False, # 
-        out: bool = False,
         ) -> NNComponent:
         return NNComponent(
             pipeline=self.pipeline,
             model=model,
             input=input,
+            out=out,
             nnType=type,
             name=name,
             tracker=tracker,
             spatial=spatial,
-            out=out,
             args=self.args
         )
 

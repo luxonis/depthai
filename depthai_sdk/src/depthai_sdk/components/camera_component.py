@@ -17,7 +17,7 @@ class CameraComponent(Component):
         resolution: Union[None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
         fps: Optional[float] = None,
         name: Optional[str] = None,
-        out: Union[None, bool, str] = False,
+        out: Union[None, bool, str] = None,
         encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
         control: bool = False,
         replay: Optional[Replay] = None,

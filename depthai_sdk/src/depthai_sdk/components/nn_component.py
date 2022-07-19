@@ -1,6 +1,7 @@
 from .component import Component
 from.camera_component import CameraComponent
 from .stereo_component import StereoComponent
+from .multi_stage_nn import MultiStageNN
 from pathlib import Path
 from typing import Optional, Union, List, Dict, Tuple
 import depthai as dai
@@ -17,20 +18,21 @@ class NNComponent(Component):
         dai.node.YoloDetectionNetwork,
         dai.node.YoloSpatialDetectionNetwork,
     ]
-    _input: Union[Component, dai.Node.Output]
+    input: dai.Node.Output # Original high-res input
     manip: dai.node.ImageManip
     out: dai.Node.Output
     resizeManip: dai.node.ImageManip # ImageManip used to resize the input to match the expected NN input size
+    _multiStageNn: MultiStageNN
 
     def __init__(self,
         pipeline: dai.Pipeline,
         model: Union[str, Path], # str for SDK supported model or Path to custom model's json
-        input: Union[Component, dai.Node.Output],
+        input: Union[dai.Node.Output, Component], 
+        out: Union[None, bool, str] = None,
         nnType: Optional[str] = None,
         name: Optional[str] = None, # name of the node
         tracker: bool = False, # Enable object tracker - only for Object detection models
         spatial: Union[None, bool, StereoComponent, dai.Node.Output] = None,
-        out: bool = False,
         args = None # User defined args
         ) -> None:
         """
@@ -48,7 +50,6 @@ class NNComponent(Component):
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
             out (bool, default False): Stream component's output to the host
         """
-        self._input = input
 
         # TODO: parse config / use blobconverter to download the model
         if isinstance(model, str):
@@ -88,16 +89,17 @@ class NNComponent(Component):
         # maxSize = dims
         
         if isinstance(input, CameraComponent):
+            self.input = input.out
             self._createResizeManip(pipeline, size, input.out).link(self.node.input)
         elif isinstance(input, type(self)):
             if not input.isDetector():
                 raise Exception('Only object detector models can be used as an input to the NNComponent!')
-            input.isMobileNet
             # Create script node, get HQ frames from input.
-
-            raise NotImplementedError()
+            self._multiStageNn = MultiStageNN(pipeline, input, input.input, size)
+            self._multiStageNn.out.link(self.node.input) # Cropped frames
         elif isinstance(input, dai.Node.Output):
             # Link directly via ImageManip
+            self.input = input
             self._createResizeManip(pipeline, size, input).link(self.node.input)
 
         if spatial:
@@ -114,6 +116,15 @@ class NNComponent(Component):
             else:
                 raise NotImplementedError()
                 self.tracker = pipeline.createObjectTracker()
+                # self.out = self.tracker.out
+
+        if out:
+            super().createXOut(
+                pipeline,
+                type(self),
+                name = out,
+                out = self.out
+            )
 
 
     def _createResizeManip(self, pipeline: dai.Pipeline, size: Tuple[int, int], input: dai.Node.Output) -> dai.Node.Output:
@@ -133,21 +144,24 @@ class NNComponent(Component):
             # TODO: Parse json config file
             pass
 
-    def configCropping(self,
+    def configMultiStageCropping(self,
+        debug = False,
         labels: Optional[List[int]] = None,
+        scaleBb: Optional[Tuple[int, int]] = None,
     ) -> None:
         """
         For multi-stage NN pipelines. Available if the input to this NNComponent was another NN component.
 
         Args:
-            labels (Optional[List[int]]): Crop & run inference only on objects with these labels
-
+            debug (bool, default False): Debug script node
+            labels (List[int], optional): Crop & run inference only on objects with these labels
+            scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame
         """
         if not isinstance(self._input, type(self)):
             print("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
 
-        raise NotImplementedError()
+        self._multiStageNn.configMultiStageNn(debug, labels)
 
     def configTracker(self,
         type: Optional[dai.TrackerType] = None,
