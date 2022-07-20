@@ -17,10 +17,11 @@ class NNComponent(Component):
         dai.node.MobileNetSpatialDetectionNetwork,
         dai.node.YoloDetectionNetwork,
         dai.node.YoloSpatialDetectionNetwork,
-    ]
-    input: dai.Node.Output # Original high-res input
+    ] = None
     manip: dai.node.ImageManip
+    input: dai.Node.Output # Original high-res input
     out: dai.Node.Output
+    passthrough: dai.Node.Output
     resizeManip: dai.node.ImageManip # ImageManip used to resize the input to match the expected NN input size
     _multiStageNn: MultiStageNN
 
@@ -50,6 +51,7 @@ class NNComponent(Component):
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
             out (bool, default False): Stream component's output to the host
         """
+        self.input = input
 
         # TODO: parse config / use blobconverter to download the model
         if isinstance(model, str):
@@ -64,18 +66,17 @@ class NNComponent(Component):
         else:
             raise Exception("model must be Path/str")
 
+        nodeType = dai.node.NeuralNetwork
         if nnType:
             if nnType.upper() == 'YOLO':
                 nodeType = dai.node.YoloSpatialDetectionNetwork if spatial else dai.node.YoloDetectionNetwork
             elif nnType.upper() == 'MOBILENET':
                 nodeType = dai.node.MobileNetSpatialDetectionNetwork if spatial else dai.node.MobileNetDetectionNetwork
-            else:
-                nodeType = dai.node.NeuralNetwork
 
-            self.node = pipeline.create(nodeType)
-            self.node.setBlob(self.blob)
-            self.out = self.node.out
-
+        self.node = pipeline.create(nodeType)
+        self.node.setBlob(self.blob)
+        self.out = self.node.out
+        # self.passthrough = self.node.passthrough
         
         # TODO implement reading from config
         if not self.node or not self.blob: raise NotImplementedError()
@@ -97,6 +98,8 @@ class NNComponent(Component):
             # Create script node, get HQ frames from input.
             self._multiStageNn = MultiStageNN(pipeline, input, input.input, size)
             self._multiStageNn.out.link(self.node.input) # Cropped frames
+            # For debugging, for intenral counter
+            # self.node.out.link(self._multiStageNn.script.inputs['recognition'])
         elif isinstance(input, dai.Node.Output):
             # Link directly via ImageManip
             self.input = input
@@ -140,6 +143,7 @@ class NNComponent(Component):
     def _parsePath(self, path: Path) -> None:
         if path.suffix == '.blob':
             self.blob = dai.OpenVINO.Blob(path)
+            print('blob found')
         elif path.suffix == '.json':
             # TODO: Parse json config file
             pass
@@ -157,7 +161,7 @@ class NNComponent(Component):
             labels (List[int], optional): Crop & run inference only on objects with these labels
             scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame
         """
-        if not isinstance(self._input, type(self)):
+        if not isinstance(self.input, type(self)):
             print("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
 

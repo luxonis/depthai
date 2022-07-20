@@ -23,8 +23,6 @@ def get_msgs():
     seq_remove = [] # Arr of sequence numbers to get deleted
     for seq, syncMsgs in msgs.items():
         seq_remove.append(seq) # Will get removed from dict if we find synced msgs pair
-        ${DEBUG}node.warn(f"Checking sync {seq}")
-
         # Check if we have both detections and color frame with this sequence number
         if len(syncMsgs) == 2: # 1 frame, 1 detection
             for rm in seq_remove:
@@ -49,10 +47,7 @@ while True:
 
     dets = node.io['detections'].tryGet()
     if dets is not None:
-        # TODO: in 2.18.0.0 use face_dets.getSequenceNum()
-        passthrough = node.io['passthrough'].get()
-        seq = passthrough.getSequenceNum()
-        add_msg(dets, 'detections', seq)
+        add_msg(dets, 'detections')
 
     sync_msgs = get_msgs()
     if sync_msgs is not None:
@@ -60,6 +55,7 @@ while True:
         dets = sync_msgs['detections']
         for i, det in enumerate(dets.detections):
             ${CHECK_LABELS}
+            node.warn(f"Detection label {det.label}, i {i}")
             cfg = ImageManipConfig()
             correct_bb(det)
             cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
@@ -68,3 +64,4 @@ while True:
             cfg.setKeepAspectRatio(False)
             node.io['manip_cfg'].send(cfg)
             node.io['manip_img'].send(img)
+            node.warn(f"Sent frame+cfg")

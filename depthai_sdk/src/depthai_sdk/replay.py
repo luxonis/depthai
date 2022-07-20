@@ -168,6 +168,7 @@ class Replay:
         def createXIn(p: dai.Pipeline, name: str):
             xin = p.create(dai.node.XLinkIn)
             xin.setMaxDataSize(self._getMaxSize(name))
+            xin.setNumFrames(10)
             xin.setStreamName(name + '_in')
             self._xins.append(name)
             return xin
@@ -185,14 +186,14 @@ class Replay:
         # Create StereoDepth node
         if self.left and self.right:
             self.stereo = pipeline.create(dai.node.StereoDepth)
-            self.stereo.setInputResolution(self._getShape('left'))
+            self.stereo.setInputResolution(self.getShape('left'))
 
             if self.color: # Enable RGB-depth alignment
                 self.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
                 if self._colorSize is not None:
                     self.stereo.setOutputSize(*self._colorSize)
                 else:
-                    self.stereo.setOutputSize(*self._getShape('color'))
+                    self.stereo.setOutputSize(*self.getShape('color'))
 
             self.left.out.link(self.stereo.left)
             self.right.out.link(self.stereo.right)
@@ -285,7 +286,7 @@ class Replay:
         """
         Used when setting XLinkIn nodes, so they consume the least amount of memory needed.
         """
-        size = self._getShape(name)
+        size = self.getShape(name)
         bytes_per_pixel = 1
         if name == 'color': bytes_per_pixel = 3
         elif name == 'depth': bytes_per_pixel = 2 # 16bit

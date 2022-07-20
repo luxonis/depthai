@@ -5,7 +5,7 @@ from ..replay import Replay
 
 class CameraComponent(Component):
     # Users should have access to these nodes
-    camera: Union[dai.node.ColorCamera, dai.node.MonoCamera]
+    camera: Union[dai.node.ColorCamera, dai.node.MonoCamera] = None
     encoder: dai.node.VideoEncoder = None
     _replay: Optional[Replay] = None # Replay module
 

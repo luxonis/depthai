@@ -109,14 +109,24 @@ class Camera:
         )
 
     def create_nn(self,
-        model: Union[str, Path], # str for SDK supported model or Path to custom model's json
+        model: Union[str, Path], # 
         input: Union[CameraComponent, NNComponent, dai.Node.Output],
         out: Union[None, bool, str] = None,
         type: Optional[str] = None,
         name: Optional[str] = None, # name of the node
         tracker: bool = False, # Enable object tracker - only for Object detection models
-        spatial: bool = False, # 
+        spatial: Union[None, bool, StereoComponent, dai.Node.Output] = None,
         ) -> NNComponent:
+        """
+        Create NN component.
+        Args:
+            model (str / Path): str for SDK supported model or Path to custom model's json
+            input (Component / dai.Node.Output): Input to the model. If NNComponent (detector), it creates 2-stage NN
+            out (str / bool): Stream results to the host
+            type (str): Type of the network (yolo/mobilenet) for on-device NN result decoding
+            tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
+            spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
+        """
         return NNComponent(
             pipeline=self.pipeline,
             model=model,
