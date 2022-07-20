@@ -29,6 +29,9 @@ class Camera:
 
     _availableCameras = dict() # If recording is set, get available streams. If not, query device's cameras
     cameras = SimpleNamespace() # Already inited cameras (color/monos/stereo)
+    
+    components: List[Component] = [] # List of components
+    queues: List[dai.DataOutputQueue] = [] # List of Output queues
 
 
     # TODO: 
@@ -87,6 +90,10 @@ class Camera:
     def _isUrl(self, source: str) -> bool:
         return source.startswith("http://") or source.startswith("https://")
 
+    def _comp(self, comp: Component) -> Component:
+        self.components.append(comp)
+        return comp
+
     def create_camera(self,
         source: str,
         name: Optional[str] = None,
@@ -97,7 +104,7 @@ class Camera:
         """
         Create Color camera
         """
-        return CameraComponent(
+        return self._comp(CameraComponent(
             pipeline=self.pipeline,
             source=source,
             name=name,
@@ -106,7 +113,7 @@ class Camera:
             control=control,
             replay=self.replay,
             args = self.args,
-        )
+        ))
 
     def create_nn(self,
         model: Union[str, Path], # 
@@ -127,7 +134,7 @@ class Camera:
             tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
         """
-        return NNComponent(
+        return self._comp(NNComponent(
             pipeline=self.pipeline,
             model=model,
             input=input,
@@ -137,7 +144,7 @@ class Camera:
             tracker=tracker,
             spatial=spatial,
             args=self.args
-        )
+        ))
 
     def create_stereo(self,
         resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
@@ -152,7 +159,7 @@ class Camera:
         """
         Create Stereo camera component
         """
-        return StereoComponent(
+        return self._comp(StereoComponent(
             pipeline=self.pipeline,
             resolution=resolution,
             fps=fps,
@@ -164,7 +171,7 @@ class Camera:
             control=control,
             replay=self.replay,
             args = self.args,
-        )
+        ))
 
     def _get_device(self,
         device: Optional[str] = None,
@@ -199,6 +206,9 @@ class Camera:
             self.pipeline.setCalibrationData(calib)
         if tuningBlob:
             self.pipeline.setCameraTuningBlobPath(tuningBlob)
+
+    def get_synced_msgs(self,):
+        a = 5
     
     def __del__(self):
         for device in self.devices:
@@ -223,6 +233,22 @@ class Camera:
             if self.replay:
                 self.replay.createQueues(device)
 
+        for component in self.components:
+            for qName, comp in component.xouts.items():
+                q = self.device.getOutputQueue(qName)
+                self.queues.append(q)
+
+
+        """
+        Component: <depthai_sdk.components.camera_component.CameraComponent object at 0x7f49751d6fe0>
+        Xout: {'color': <class 'depthai_sdk.replay.Replay'>}
+        Component: <depthai_sdk.components.stereo_component.StereoComponent object at 0x7f49751d7df0>
+        Xout: {}
+        Component: <depthai_sdk.components.nn_component.NNComponent object at 0x7f49751d7e20>
+        Xout: {'detection': <class 'depthai_sdk.components.nn_component.NNComponent'>}
+        Component: <depthai_sdk.components.nn_component.NNComponent object at 0x7f49751d7e80>
+        Xout: {'recognition': <class 'depthai_sdk.components.nn_component.NNComponent'>}
+        """
 
 
     def running(self) -> bool:

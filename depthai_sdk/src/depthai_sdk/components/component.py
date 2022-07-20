@@ -1,9 +1,8 @@
-from abc import ABC, abstractmethod
 import depthai as dai
-from typing import List, Optional, Tuple, Union, Type
+from typing import Any, List, Optional, Tuple, Union, Type, Dict
 import random
 
-class Component(ABC):
+class Component():
     """
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
@@ -11,7 +10,9 @@ class Component(ABC):
 
     # Camera object can loop through all components to get all XLinkOuts
     # Tuple[str, Component]
-    xouts: Tuple = {}
+    xouts: Dict[str, Any]
+    def __init__(self) -> None:
+        self.xouts = {}
 
     def createXOut(self,
         pipeline: dai.Pipeline,

@@ -33,9 +33,6 @@ class MultiStageNN():
         self._size = size
 
         detector.out.link(self.script.inputs['detections'])
-        # Remove in 2.18 and use `imgFrame.getSequenceNum()` in Script node
-        # detector.passthrough.link(self.script.inputs['passthrough'])
-
         highResFrames.link(self.script.inputs['frames'])
 
         self.configMultiStageNn(debug = debug,)
@@ -62,5 +59,5 @@ class MultiStageNN():
                 HEIGHT = str(self._size[1]),
             )
             self.script.setScript(code)
-            print(f"\n------------{code}\n---------------")
+            # print(f"\n------------{code}\n---------------")
 

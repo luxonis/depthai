@@ -18,11 +18,10 @@ class NNComponent(Component):
         dai.node.YoloDetectionNetwork,
         dai.node.YoloSpatialDetectionNetwork,
     ] = None
-    manip: dai.node.ImageManip
+    manip: dai.node.ImageManip # ImageManip used to resize the input to match the expected NN input size
     input: dai.Node.Output # Original high-res input
     out: dai.Node.Output
     passthrough: dai.Node.Output
-    resizeManip: dai.node.ImageManip # ImageManip used to resize the input to match the expected NN input size
     _multiStageNn: MultiStageNN
 
     def __init__(self,
@@ -51,6 +50,7 @@ class NNComponent(Component):
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
             out (bool, default False): Stream component's output to the host
         """
+        super().__init__()
         self.input = input
 
         # TODO: parse config / use blobconverter to download the model
@@ -99,7 +99,9 @@ class NNComponent(Component):
             self._multiStageNn = MultiStageNN(pipeline, input, input.input, size)
             self._multiStageNn.out.link(self.node.input) # Cropped frames
             # For debugging, for intenral counter
-            # self.node.out.link(self._multiStageNn.script.inputs['recognition'])
+            self.node.out.link(self._multiStageNn.script.inputs['recognition'])
+            self.node.input.setBlocking(True)
+            self.node.input.setQueueSize(15)
         elif isinstance(input, dai.Node.Output):
             # Link directly via ImageManip
             self.input = input
@@ -134,11 +136,12 @@ class NNComponent(Component):
         """
         Creates manip that resizes the input to match the expected NN input size
         """
-        self.resizeManip = pipeline.create(dai.node.ImageManip)
-        self.resizeManip.initialConfig.setResize(size)
-        self.resizeManip.setMaxOutputFrameSize(size[0] * size[1] *3)
-        input.link(self.resizeManip.inputImage)
-        return self.resizeManip.out
+        self.manip = pipeline.create(dai.node.ImageManip)
+        self.manip.initialConfig.setResize(size)
+        self.manip.setMaxOutputFrameSize(size[0] * size[1] *3)
+        self.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+        input.link(self.manip.inputImage)
+        return self.manip.out
 
     def _parsePath(self, path: Path) -> None:
         if path.suffix == '.blob':

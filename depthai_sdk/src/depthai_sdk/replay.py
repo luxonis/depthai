@@ -1,13 +1,12 @@
-import array
 from pathlib import Path
 import os
 import cv2
-import types
 import depthai as dai
 import datetime
 from .utils import *
 from typing import Dict, Optional, Tuple, List
 from .readers.abstract_reader import AbstractReader
+from time import monotonic
 
 class Replay:
     disabledStreams: List[str] = []
@@ -24,8 +23,7 @@ class Replay:
     _imageExt = ['.bmp','.dib','.jpeg','.jpg','.jpe','.jp2','.png','.webp','.pbm','.pgm','.ppm','.pxm','.pnm','.pfm','.sr','.ras','.tiff','.tif','.exr','.hdr','.pic']
     _inputQueues = dict() # dai.InputQueue dictionary for each stream
     _seqNum = 0 # Frame sequence number, added to each imgFrame
-    _start = datetime.datetime.now() # For frame timestamp
-    _now = datetime.datetime.now()
+    _now: monotonic = None
     _colorSize: Optional[Tuple[int,int]] = None
     _keepAR = True # By default crop image as needed to keep the aspect ratio
     _xins = [] # XLinkIn stream names
@@ -136,7 +134,7 @@ class Replay:
             if not self._readFrames():
                 return False # End of the recording
 
-        self._now = datetime.datetime.now()
+        self._now = monotonic()
         for name in self.frames:
             imgFrame = self._createImgFrame(name, self.frames[name])
             # Save the imgFrame
@@ -231,7 +229,7 @@ class Replay:
     def _createNewFrame(self, cvFrame) -> dai.ImgFrame:
         imgFrame = dai.ImgFrame()
         imgFrame.setData(cvFrame)
-        imgFrame.setTimestamp(self._now - self._start)
+        imgFrame.setTimestamp(self._now)
         imgFrame.setSequenceNum(self._seqNum)
         shape = cvFrame.shape[::-1]
         imgFrame.setWidth(shape[0])

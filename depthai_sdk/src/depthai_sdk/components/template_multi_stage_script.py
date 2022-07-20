@@ -1,6 +1,6 @@
 import time
 msgs = dict()
-
+cntr = 0
 def add_msg(msg, name, seq = None):
     global msgs
     if seq is None:
@@ -49,13 +49,20 @@ while True:
     if dets is not None:
         add_msg(dets, 'detections')
 
+    rec = node.io['recognition'].tryGet()
+    if rec is not None:
+        cntr -= 1
+        ${DEBUG}node.warn(f"Recognition results received. cntr {cntr}")
+
     sync_msgs = get_msgs()
     if sync_msgs is not None:
         img = sync_msgs['frames']
         dets = sync_msgs['detections']
+        if 10 < cntr:
+            ${DEBUG}node.warn(f"NN too slow, skipping frame. Cntr {cntr}")
+            continue # If recognition model is too slow
         for i, det in enumerate(dets.detections):
             ${CHECK_LABELS}
-            node.warn(f"Detection label {det.label}, i {i}")
             cfg = ImageManipConfig()
             correct_bb(det)
             cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
@@ -64,4 +71,5 @@ while True:
             cfg.setKeepAspectRatio(False)
             node.io['manip_cfg'].send(cfg)
             node.io['manip_img'].send(img)
-            node.warn(f"Sent frame+cfg")
+            cntr += 1
+            ${DEBUG}node.warn(f"Frame sent to recognition NN. cntr {cntr}")

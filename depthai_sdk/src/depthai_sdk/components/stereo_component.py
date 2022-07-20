@@ -38,7 +38,7 @@ class StereoComponent(Component):
             replay (Replay object, optional): Replay
             args (Any, optional): Set the camera components based on user arguments
         """
-
+        super().__init__()
         self.pipeline = pipeline
         self.replay = replay
 

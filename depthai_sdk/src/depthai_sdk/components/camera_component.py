@@ -36,7 +36,7 @@ class CameraComponent(Component):
             replay (Replay object, optional): Replay
             args (Any, optional): Set the camera components based on user arguments
         """
-
+        super().__init__()
         self.pipeline = pipeline
 
         self._replay = replay
@@ -51,12 +51,15 @@ class CameraComponent(Component):
             self.camera.setFps(fps)
 
         if out:
-            super().createXOut(
-                pipeline,
-                type(self),
-                name = out,
-                out = self.camera.video if self._isColor() else self.out, 
-            )
+            if self._replay:
+                self.xouts[out] = type(self._replay)
+            else:
+                super().createXOut(
+                    pipeline,
+                    type(self),
+                    name = out,
+                    out = self.camera.video if self._isColor() else self.out, 
+                )
 
     def _parseSource(self, source: str) -> None:
         if source.upper() == "COLOR" or source.upper() == "RGB":
