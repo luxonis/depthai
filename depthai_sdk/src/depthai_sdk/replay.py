@@ -4,18 +4,21 @@ import cv2
 import depthai as dai
 import datetime
 from .utils import *
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Any
 from .readers.abstract_reader import AbstractReader
 from time import monotonic
 
 class Replay:
     disabledStreams: List[str] = []
-    readers: Dict[str, AbstractReader]
+    readers: Dict[str, AbstractReader] = dict()
     # Nodes
     left: dai.node.XLinkIn
     right: dai.node.XLinkIn
     color: dai.node.XLinkIn
     stereo: dai.node.StereoDepth
+
+    frames: Dict[str, Any] = dict() # Cv2 frames read from Readers
+    imgFrames: Dict[str, dai.ImgFrame] = dict() # Last frame sent to the device
 
     _streamTypes = ['color', 'left', 'right', 'depth'] # Available types to stream back to the camera
     _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
@@ -40,12 +43,6 @@ class Replay:
             path (str): Path to the recording folder
         """
         self.path = Path(path).resolve().absolute()
-        print(self.path)
-
-        self.frames = dict() # Frames read from Readers
-        self.imgFrames = dict() # Last frame sent to the device
-
-        self.readers = dict()
         self._supportedExt.extend(self._imageExt)
 
         def readFile(filePath: Path) -> None:

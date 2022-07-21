@@ -1,5 +1,5 @@
 import depthai as dai
-from typing import Any, List, Optional, Tuple, Union, Type, Dict
+from typing import Optional, Union, Type, Dict
 import random
 
 class Component():
@@ -10,7 +10,7 @@ class Component():
 
     # Camera object can loop through all components to get all XLinkOuts
     # Tuple[str, Component]
-    xouts: Dict[str, Any]
+    xouts: Dict[str, Type]
     def __init__(self) -> None:
         self.xouts = {}
 

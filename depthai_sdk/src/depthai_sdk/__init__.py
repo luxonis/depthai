@@ -21,18 +21,49 @@ class Camera:
 
     This abstraction layer will internally use SDK Components.
     """
+
+    class OakDevice:
+        device: dai.Device
+        # str: Name (XLinkOut stream name, or replay stream)
+        # Type: Component name, or Replay
+        queues: Dict[str, Type] = {}
+        messages: Dict[str, List[dai.Buffer]] = {} # List of messages
+
+        @property
+        def imageSensors(self) -> List[dai.CameraBoardSocket]:
+            """
+            Available imageSensors available on the camera
+            """
+            return self.device.getConnectedCameras()
+        @property
+        def info(self) -> dai.DeviceInfo: return self.device.getDeviceInfo()
+
+        _xoutNames: List[str] = None
+        @property
+        def xoutNames(self) -> List[str]:
+            if not self._xoutNames:
+                self._xoutNames = []
+                for qName, qType in self.queues.items():
+                    if qType == type(Replay): continue
+                    self._xoutNames.append(qName)
+            return self._xoutNames
+
+        _replayNames: List[str] = None
+        @property
+        def replayNames(self) -> List[str]:
+            if not self._replayNames:
+                self._replayNames = []
+                for qName, qType in self.queues.items():
+                    if qType != type(Replay): continue
+                    self._replayNames.append(qName)
+            return self._replayNames
+
     # User should be able to access these:
     pipeline: dai.Pipeline
-    devices: List[dai.Device] = []
+    devices: List[OakDevice]
     args = None # User defined arguments
     replay: Optional[Replay] = None
-
-    _availableCameras = dict() # If recording is set, get available streams. If not, query device's cameras
-    cameras = SimpleNamespace() # Already inited cameras (color/monos/stereo)
-    
     components: List[Component] = [] # List of components
-    queues: List[dai.DataOutputQueue] = [] # List of Output queues
-
 
     # TODO: 
     # - available streams; query cameras, or Replay.getStreams(). Pass these to camera component
@@ -52,8 +83,7 @@ class Camera:
         """
 
         self.pipeline = dai.Pipeline()
-        self.devices.append(self._get_device(device, usb2))
-        print(self.devices[0].getConnectedCameras())
+        self._init_devices(device, usb2)
 
         if args:
             am = ArgsManager()
@@ -173,27 +203,31 @@ class Camera:
             args = self.args,
         ))
 
-    def _get_device(self,
+    def _init_devices(self,
         device: Optional[str] = None,
-        usb2: Optional[bool] = None) -> dai.Device:
+        usb2: Optional[bool] = None) -> None:
         """
         Connect to the OAK camera(s) and return dai.Device object
         """
+        self.devices = []
         if device and device.upper() == "ALL":
             # Connect to all available cameras
             raise NotImplementedError("TODO")
+
+        obj = self.OakDevice()
         if usb2:
-            return dai.Device(
+            obj.device = dai.Device(
                 version = dai.OpenVINO.VERSION_2021_4,
                 deviceInfo = getDeviceInfo(device),
                 usb2Mode = usb2
-                )
+            )
         else:
-            return dai.Device(
+            obj.device = dai.Device(
                 version = dai.OpenVINO.VERSION_2021_4,
                 deviceInfo = getDeviceInfo(device),
                 maxUsbSpeed = dai.UsbSpeed.SUPER_PLUS
                 )
+        self.devices.append(obj)
 
     def configPipeline(self,
         xlinkChunk: Optional[int] = None,
@@ -207,13 +241,80 @@ class Camera:
         if tuningBlob:
             self.pipeline.setCameraTuningBlobPath(tuningBlob)
 
-    def get_synced_msgs(self,):
-        a = 5
+    def get_new_msg(self, daiDevice: OakDevice) -> Tuple[str, dai.Buffer]:
+        """
+        Get the first new messages that arrives to the host. Blocking behaviour.
+        """
+        # First check whether there are existing messages in queues
+        for qName in daiDevice.xoutNames:
+            if daiDevice.device.getOutputQueue(qName).has():
+                return (qName, daiDevice.device.getOutputQueue(qName).get())
+
+        qName = daiDevice.device.getQueueEvent(daiDevice.xoutNames)
+        # Getting that message from queue with name specified by the event
+        # Note: number of events doesn't necessarily match number of messages in queues
+        # because queues can be set to non-blocking (overwriting) behavior
+        msg = daiDevice.device.getOutputQueue(qName).get()
+        return (qName, msg)
+
+    def get_msgs(self, daiDevice: Optional[OakDevice] = None) -> Dict[str, dai.Buffer]:
+        """
+        Get all messages (not synced). Blocking until a new frame arrives.
+        """
+        if daiDevice is None: # Only 1 device
+            if 1 < len(self.devices):
+                raise ValueError("You have multiple OAK devices connected! Pass the OakDevice object to specify \
+                from which OAK device you want to get a new message.")
+
+        daiDevice = self.oakDevice
+
+        # Get latest msgs
+        self._wait_for_new_msg(daiDevice)
+
+        msgs: Dict[str, dai.Buffer] = dict()
+        for name, msgList in daiDevice.messages.items():
+            msgs[name] = msgList[-1]
+            # Clear all old msgs
+            msgList = msgList[len(msgList) -1:]
+            print('Msg list clear', msgList)
+
+        
+        return msgs
+
+    def _wait_for_new_msg(self, daiDevice: Optional[OakDevice] = None) -> None:
+        """
+        Waits to receive a new message from the device. Function will block until at least one message from
+        each queue has been received.
+        """
+        while True:
+            name, msg = self.get_new_msg(daiDevice)
+            if name not in daiDevice.messages:
+                daiDevice.messages[name] = []
+
+            daiDevice.messages[name].append(msg)
+
+            # If Replay module, get frame
+            for replayName in daiDevice.replayNames:
+                imgFrame = self.replay.imgFrames[replayName]
+                if daiDevice.messages[replayName][-1].getSequenceNum() != imgFrame.getSequenceNum():
+                    # Add the frame to queue
+                    daiDevice.messages[replayName].append(imgFrame)
+
+            # Check if all frames available were received
+            if len(daiDevice.messages) == len(daiDevice.queues):
+                return
+
+    def get_synced_msgs(self, daiDevice: Optional[OakDevice] = None) -> Dict[str, dai.Buffer]:
+        raise NotImplementedError()
+        
     
     def __del__(self):
-        for device in self.devices:
+        self.close()
+
+    def close(self):
+        for oak in self.devices:
             print("Closing OAK camera")
-            device.close()
+            oak.device.close()
     
     def start(self) -> None:
         """
@@ -225,31 +326,18 @@ class Camera:
             with open(folderPath / "pipeline.json", 'w') as f:
                 f.write(json.dumps(self.pipeline.serializeToJson()['pipeline']))
 
-        for device in self.devices:
-            device.startPipeline(self.pipeline)
+        for oakDev in self.devices:
+            oakDev.device.startPipeline(self.pipeline)
 
-        # TODO: Go through each component, check if out is enabled
-        for device in self.devices:
-            if self.replay:
+        if self.replay:
+            for device in self.devices:
                 self.replay.createQueues(device)
 
+        # Go through each component, check if out is enabled
         for component in self.components:
-            for qName, comp in component.xouts.items():
-                q = self.device.getOutputQueue(qName)
-                self.queues.append(q)
-
-
-        """
-        Component: <depthai_sdk.components.camera_component.CameraComponent object at 0x7f49751d6fe0>
-        Xout: {'color': <class 'depthai_sdk.replay.Replay'>}
-        Component: <depthai_sdk.components.stereo_component.StereoComponent object at 0x7f49751d7df0>
-        Xout: {}
-        Component: <depthai_sdk.components.nn_component.NNComponent object at 0x7f49751d7e20>
-        Xout: {'detection': <class 'depthai_sdk.components.nn_component.NNComponent'>}
-        Component: <depthai_sdk.components.nn_component.NNComponent object at 0x7f49751d7e80>
-        Xout: {'recognition': <class 'depthai_sdk.components.nn_component.NNComponent'>}
-        """
-
+            for qName, type in component.xouts.items():
+                for dev in self.devices:
+                    dev.queues[qName] = type
 
     def running(self) -> bool:
         """
@@ -263,6 +351,7 @@ class Camera:
 
 
     @property
-    def device(self) -> dai.Device:
-        return self.devices[0]
+    def oakDevice(self) -> OakDevice: return self.devices[0]
+    @property
+    def device(self) -> dai.Device: return self.devices[0].device
         
