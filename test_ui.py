@@ -169,7 +169,7 @@ class DepthAICamera():
         self.videoEnc.setDefaultProfilePreset(self.camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
         self.xoutJpeg.setStreamName("jpeg")
 
-        if 'OAK-1' in test_type:
+        if 'OAK-1' not in test_type:
             self.camLeft = self.pipeline.create(dai.node.MonoCamera)
             self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
             self.xoutLeft.setStreamName("left")
@@ -1130,10 +1130,9 @@ class UiTests(QtWidgets.QMainWindow):
         # Update BL if PoE
         # if test_type == 'OAK-D-PRO-POE':
         eeprom_written = False
-        name = eepromDataJson['productName'].lower()
-        if 'poe' in name:
+        if 'POE' in test_type:
             self.update_bootloader()
-        elif not ('lite' in name):
+        elif not ('LITE' in test_type or '1' in test_type):
             # Flash EEPROM and boot header, then reboot for boot header to take effect
             with dai.Device() as device:
                 usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
@@ -1171,7 +1170,7 @@ class UiTests(QtWidgets.QMainWindow):
         location = WIDTH, prew_height + 80
         self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
         self.jpeg.show()
-        if 'OAK-1' in test_type:
+        if 'OAK-1' not in test_type:
             location = WIDTH + prew_width + 20, 0
             self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
                                'LEFT Preview', location)
@@ -1259,7 +1258,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.prew_out_rgb_res.setPalette(self.red_pallete)
         self.prew_out_rgb_res.setText(test_result['prew_out_rgb_res'])
 
-        if 'OAK-1' in test_type:
+        if 'OAK-1' not in test_type:
             if test_result['left_cam_res'] == 'PASS':
                 self.left_cam_res.setPalette(self.green_pallete)
             else:
