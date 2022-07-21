@@ -27,16 +27,16 @@ try:
     import depthai as dai
     import numpy as np
     from depthai_sdk.managers import ArgsManager, getMonoResolution, getRgbResolution
+    from depthai_helpers.app_manager import App
 except Exception as ex:
     print("Third party libraries failed to import: {}".format(ex))
-    print("Run \"python3 install_requirements.py\" to install dependencies or visit our installation page for more details - https://docs.luxonis.com/projects/api/en/latest/install/")
+    print("Run \"python3 install_requirements.py\" to install dependencies")
     sys.exit(42)
 
 app = ArgsManager.parseApp()
 
 if __name__ == "__main__":
     if app is not None:
-        from depthai_helpers.app_manager import App
         try:
             app = App(appName=app)
             app.createVenv()
