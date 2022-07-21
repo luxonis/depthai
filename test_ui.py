@@ -45,6 +45,7 @@ test_result = {
     'eeprom_data': '',
     'nor_flash_res': '',
 }
+
 OAK_KEYS = {
     'OAK-1': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res'],
     'OAK-D': ['usb3_res', 'rgb_cam_res', 'jpeg_enc_res', 'prew_out_rgb_res', 'left_cam_res', 'right_cam_res','left_strm_res', 'right_strm_res'],
