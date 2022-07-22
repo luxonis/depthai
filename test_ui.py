@@ -126,6 +126,10 @@ class DepthAICamera():
         self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         self.camRgb.preview.link(self.xoutRgb.input)
         self.camRgb.setFps(FPS)
+        if 'max' in variant_desc_label.lower():
+            print('On a MAX board (IMX582), setting 4K res')
+            self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+            self.camRgb.setIspScale(1, 2)
 
         # # TMP TMP TMP - IMU update simulation
         # script = self.pipeline.create(dai.node.Script)
@@ -508,9 +512,12 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         curDevice = self.device_jsons[self.device_dropdown.currentIndex()]
         variantIndex = self.json_combo.currentIndex()
 
+        global variant_desc_label
+        variant_desc_label = ""
         # Update desc
         if variantIndex >= 0 and variantIndex < len(curDevice["variants"]):
             self.variant_desc_label.setText(curDevice["variants"][variantIndex]["description"])
+            variant_desc_label = curDevice["variants"][variantIndex]["description"]
 
         # Load test_type, first from "device"
         global test_type
