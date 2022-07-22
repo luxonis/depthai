@@ -1,4 +1,5 @@
 from cProfile import label
+import re
 from .fps import *
 from .previews import *
 from .utils import *
@@ -44,7 +45,8 @@ class Camera:
             if not self._xoutNames:
                 self._xoutNames = []
                 for qName, qType in self.queues.items():
-                    if qType == type(Replay): continue
+                    if qType == Replay:
+                        continue
                     self._xoutNames.append(qName)
             return self._xoutNames
 
@@ -54,7 +56,8 @@ class Camera:
             if not self._replayNames:
                 self._replayNames = []
                 for qName, qType in self.queues.items():
-                    if qType != type(Replay): continue
+                    if qType != Replay:
+                        continue
                     self._replayNames.append(qName)
             return self._replayNames
 
@@ -241,21 +244,21 @@ class Camera:
         if tuningBlob:
             self.pipeline.setCameraTuningBlobPath(tuningBlob)
 
-    def get_new_msg(self, daiDevice: OakDevice) -> Tuple[str, dai.Buffer]:
+    def _get_new_msgs(self, daiDevice: OakDevice) -> None:
         """
-        Get the first new messages that arrives to the host. Blocking behaviour.
+        Get messages from the device. Blocking behaviour. It will insert messages directly into daiDevice.messages
+        List[dai.Messages]
         """
         # First check whether there are existing messages in queues
+        flag = False
         for qName in daiDevice.xoutNames:
             if daiDevice.device.getOutputQueue(qName).has():
-                return (qName, daiDevice.device.getOutputQueue(qName).get())
+                flag = True
+                daiDevice.messages[qName].extend(daiDevice.device.getOutputQueue(qName).getAll())
+        if flag: return
 
         qName = daiDevice.device.getQueueEvent(daiDevice.xoutNames)
-        # Getting that message from queue with name specified by the event
-        # Note: number of events doesn't necessarily match number of messages in queues
-        # because queues can be set to non-blocking (overwriting) behavior
-        msg = daiDevice.device.getOutputQueue(qName).get()
-        return (qName, msg)
+        daiDevice.messages[qName].extend(daiDevice.device.getOutputQueue(qName).getAll())
 
     def get_msgs(self, daiDevice: Optional[OakDevice] = None) -> Dict[str, dai.Buffer]:
         """
@@ -287,17 +290,12 @@ class Camera:
         each queue has been received.
         """
         while True:
-            name, msg = self.get_new_msg(daiDevice)
-            if name not in daiDevice.messages:
-                daiDevice.messages[name] = []
-
-            daiDevice.messages[name].append(msg)
+            self._get_new_msgs(daiDevice)
 
             # If Replay module, get frame
             for replayName in daiDevice.replayNames:
                 imgFrame = self.replay.imgFrames[replayName]
-                if daiDevice.messages[replayName][-1].getSequenceNum() != imgFrame.getSequenceNum():
-                    # Add the frame to queue
+                if len(daiDevice.messages[replayName]) == 0 or daiDevice.messages[replayName][-1].getSequenceNum() != imgFrame.getSequenceNum():
                     daiDevice.messages[replayName].append(imgFrame)
 
             # Check if all frames available were received
@@ -330,13 +328,14 @@ class Camera:
             oakDev.device.startPipeline(self.pipeline)
 
         if self.replay:
-            for device in self.devices:
-                self.replay.createQueues(device)
+            for oakDevice in self.devices:
+                self.replay.createQueues(oakDevice.device)
 
         # Go through each component, check if out is enabled
         for component in self.components:
             for qName, type in component.xouts.items():
                 for dev in self.devices:
+                    dev.messages[qName] = []
                     dev.queues[qName] = type
 
     def running(self) -> bool:
