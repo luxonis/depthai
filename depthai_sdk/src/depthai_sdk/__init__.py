@@ -1,5 +1,3 @@
-from cProfile import label
-import re
 from .fps import *
 from .previews import *
 from .utils import *
@@ -29,6 +27,9 @@ class Camera:
         # Type: Component name, or Replay
         queues: Dict[str, Type] = {}
         messages: Dict[str, List[dai.Buffer]] = {} # List of messages
+
+        # Dict of sequences, with Dict of stream names and their dai message(s)
+        seqFrames: Dict[str, Dict[str, Any]] = {}
 
         @property
         def imageSensors(self) -> List[dai.CameraBoardSocket]:
@@ -129,6 +130,8 @@ class Camera:
 
     def create_camera(self,
         source: str,
+        resolution: Union[None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
+        fps: Optional[float] = None,
         name: Optional[str] = None,
         out: Union[None, bool, str] = None,
         encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
@@ -140,6 +143,8 @@ class Camera:
         return self._comp(CameraComponent(
             pipeline=self.pipeline,
             source=source,
+            resolution=resolution,
+            fps=fps,
             name=name,
             out=out,
             encode=encode,
@@ -255,10 +260,12 @@ class Camera:
             if daiDevice.device.getOutputQueue(qName).has():
                 flag = True
                 daiDevice.messages[qName].extend(daiDevice.device.getOutputQueue(qName).getAll())
+                # print(time.time(),"Getting msgs from local", qName)
         if flag: return
 
         qName = daiDevice.device.getQueueEvent(daiDevice.xoutNames)
         daiDevice.messages[qName].extend(daiDevice.device.getOutputQueue(qName).getAll())
+        # print(time.time(),"Waited for msgs from", qName)
 
     def get_msgs(self, daiDevice: Optional[OakDevice] = None) -> Dict[str, dai.Buffer]:
         """
