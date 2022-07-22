@@ -31,12 +31,12 @@ def get_msgs():
             return syncMsgs # Returned synced msgs
     return None
 
-def correct_bb(bb):
-    if bb.xmin < 0: bb.xmin = 0.001
-    if bb.ymin < 0: bb.ymin = 0.001
-    if bb.xmax > 1: bb.xmax = 0.999
-    if bb.ymax > 1: bb.ymax = 0.999
-    return bb
+def correct_bb(xmin,ymin,xmax,ymax):
+    if xmin < 0: xmin = 0.001
+    if ymin < 0: ymin = 0.001
+    if xmax > 1: xmax = 0.999
+    if ymax > 1: ymax = 0.999
+    return [xmin,ymin,xmax,ymax]
 
 while True:
     time.sleep(0.001) # Avoid lazy looping
@@ -64,8 +64,13 @@ while True:
         for i, det in enumerate(dets.detections):
             ${CHECK_LABELS}
             cfg = ImageManipConfig()
-            correct_bb(det)
-            cfg.setCropRect(det.xmin, det.ymin, det.xmax, det.ymax)
+            bb = correct_bb(
+                det.xmin${SCALE_BB_XMIN},
+                det.ymin${SCALE_BB_YMIN},
+                det.xmax${SCALE_BB_XMAX},
+                det.ymax${SCALE_BB_YMAX},
+                )
+            cfg.setCropRect(*bb)
             ${DEBUG}node.warn(f"Sending {i + 1}. det. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
             cfg.setResize(${WIDTH}, ${HEIGHT})
             cfg.setKeepAspectRatio(False)

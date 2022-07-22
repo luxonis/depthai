@@ -49,14 +49,25 @@ class MultiStageNN():
     def configMultiStageNn(self,
         debug = False,
         labels: Optional[List[int]] = None,
+        scaleBb: Optional[Tuple[int, int]] = None,
         ) -> None:
-        # TODO: add support to scale bounding box
+        """
+        Args:
+            debug (bool, default False): Debug script node
+            labels (List[int], optional): Crop & run inference only on objects with these labels
+            scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
+        """
+
         with open(Path(os.path.dirname(__file__)) / 'template_multi_stage_script.py', 'r') as file:
             code = Template(file.read()).substitute(
                 DEBUG = '' if debug else '#',
                 CHECK_LABELS = f"if det.label not in {str(labels)}: continue" if labels else "",
                 WIDTH = str(self._size[0]),
                 HEIGHT = str(self._size[1]),
+                SCALE_BB_XMIN = f"-{scaleBb[0]/100}" if scaleBb else "", # % to float value
+                SCALE_BB_YMIN = f"-{scaleBb[1]/100}" if scaleBb else "",
+                SCALE_BB_XMAX = f"+{scaleBb[0]/100}" if scaleBb else "",
+                SCALE_BB_YMAX = f"+{scaleBb[1]/100}" if scaleBb else "",
             )
             self.script.setScript(code)
             # print(f"\n------------{code}\n---------------")

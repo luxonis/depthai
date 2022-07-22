@@ -162,13 +162,13 @@ class NNComponent(Component):
         Args:
             debug (bool, default False): Debug script node
             labels (List[int], optional): Crop & run inference only on objects with these labels
-            scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame
+            scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
         """
         if not isinstance(self.input, type(self)):
             print("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
 
-        self._multiStageNn.configMultiStageNn(debug, labels)
+        self._multiStageNn.configMultiStageNn(debug, labels, scaleBb)
 
     def configTracker(self,
         type: Optional[dai.TrackerType] = None,
