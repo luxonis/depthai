@@ -1139,7 +1139,7 @@ class UiTests(QtWidgets.QMainWindow):
         eeprom_written = False
         if 'POE' in test_type:
             self.update_bootloader()
-            with dai.Device() as device:
+            with dai.Device(dai.OpenVINO.VERSION_2021_4, dai.UsbSpeed.HIGH) as device:
                 if not eeprom_written:
                     self.print_logs('Writing EEPROM...')
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
