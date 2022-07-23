@@ -1139,6 +1139,11 @@ class UiTests(QtWidgets.QMainWindow):
         eeprom_written = False
         if 'POE' in test_type:
             self.update_bootloader()
+            with dai.Device() as device:
+                if not eeprom_written:
+                    self.print_logs('Writing EEPROM...')
+                    eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
+                    eeprom_written = True
         elif not ('LITE' in test_type or '1' in test_type):
             # Flash EEPROM and boot header, then reboot for boot header to take effect
             with dai.Device() as device:
