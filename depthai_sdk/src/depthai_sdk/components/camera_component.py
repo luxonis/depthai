@@ -71,6 +71,7 @@ class CameraComponent(Component):
                 self.camera = self.pipeline.create(dai.node.ColorCamera)
                 self.camera.setInterleaved(False) # Most NNs are CHW (planar)
                 self.camera.setBoardSocket(dai.CameraBoardSocket.RGB)
+                self.camera.setPreviewNumFramesPool(20)
                 self.out = self.camera.preview
 
         elif source.upper() == "RIGHT" or source.upper() == "MONO":
@@ -103,8 +104,10 @@ class CameraComponent(Component):
         Configure resolution, scale, FPS, etc.
         """
         if fps:
-            if self._replay: raise NotImplemented("Setting FPS for depthai-recording isn't yet supported")
-            self.camera.setFps(fps)
+            if self._replay:
+                print("Setting FPS for depthai-recording isn't yet supported. This configuration attempt will be ignored.")
+            else:
+                self.camera.setFps(fps)
 
         if preview:
             from .parser import parseSize
