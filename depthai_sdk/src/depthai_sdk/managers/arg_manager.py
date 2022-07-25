@@ -116,6 +116,8 @@ class ArgsManager():
         parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
                             help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
         parser.add_argument('-fps', '--fps', type=float, help='Camera FPS applied to all sensors')
+        parser.add_argument('-mf', '--manualFocus', type=int,
+                            help="Specify a Lens Position between 0 and 255 to use manual focus. Otherwise, auto-focus is used by default.")
         
         # Depth related arguments
         parser.add_argument("-dct", "--disparityConfidenceThreshold", default=245, type=_checkRange(0, 255),

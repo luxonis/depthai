@@ -149,7 +149,7 @@ class PipelineManager:
         xout=False,
         xoutVideo=False,
         xoutStill=False,
-        control=True, # Create input control
+        control=False, # Create input control
         pipeline=None,
         args=None,
         ) -> dai.node.ColorCamera:
@@ -172,6 +172,11 @@ class PipelineManager:
         if pipeline is None:
             pipeline = self.pipeline
 
+        # This if-statement block was causing issues
+        # when implementing manual focus. I don't really
+        # understand what it does, but manual focus
+        # implementation worked properly when I commented it out.
+        """
         if args is not None:
             return self.createColorCam(
                 previewSize=(576, 320), # 1080P / 3
@@ -182,6 +187,7 @@ class PipelineManager:
                 xout=Previews.color.name in args.show,
                 pipeline=pipeline
             )
+        """
 
         self.nodes.camRgb = pipeline.createColorCamera()
         if previewSize is not None:
@@ -496,6 +502,13 @@ class PipelineManager:
     def captureStill(self):
         ctrl = dai.CameraControl()
         ctrl.setCaptureStill(True)
+        self._rgbConfigInputQueue.send(ctrl)
+
+    # Added this function to send manual focus
+    # configuration to inputControl queue.
+    def setManualFocus(self, focus):
+        ctrl = dai.CameraControl()
+        ctrl.setManualFocus(focus)
         self._rgbConfigInputQueue.send(ctrl)
 
     def triggerAutoFocus(self):

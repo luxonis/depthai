@@ -51,6 +51,7 @@ class Record():
     _mcap: bool = False
     _pointcloud: bool = False
     _mjpegQuality: int = None
+    control: bool = False       # 'control' flag
     frameCntr = 0 # Used by recording app
 
     def __init__(self, path: Path, device: dai.Device, args: dict = None):
@@ -69,6 +70,11 @@ class Record():
 
         if args is None:
             args = ArgsManager.parseArgs()
+
+        # if a manual focus argument has been passed,
+        # set 'control' flag to True
+        if args.manualFocus is not None:
+            self.control = True
 
         self.args = args
         self.pm = PipelineManager()
@@ -136,6 +142,10 @@ class Record():
         self.process.start()
 
         self.device.startPipeline(self.pipeline)
+
+        if self.control:
+            self.pm.createDefaultQueues(self.device)
+            self.pm.setManualFocus(self.args.manualFocus)
 
         self.queues = []
         maxSize = 1 if 0 < self._timelapse else 10
@@ -256,11 +266,10 @@ class Record():
 
         if "color" in self.save:
             nodes['color'] = self.pm.createColorCam(
-                control=False,
+                control=self.control,
                 colorOrder=dai.ColorCameraProperties.ColorOrder.RGB,
                 pipeline=pipeline,
                 args=self.args)
-
 
             # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
             # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
