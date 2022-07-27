@@ -47,8 +47,12 @@ class CameraComponent(Component):
         if resolution and self.camera:
             from .parser import parseResolution
             self.camera.setResolution(parseResolution(resolution))
-        if fps and self.camera:
-            self.camera.setFps(fps)
+
+        if fps:
+            if self.camera:
+                self.camera.setFps(fps)
+            elif self._replay:
+                self._replay.setFps(fps)
 
         if out:
             if self._replay:

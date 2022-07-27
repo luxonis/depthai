@@ -26,10 +26,7 @@ class Camera:
         # str: Name (XLinkOut stream name, or replay stream)
         # Type: Component name, or Replay
         queues: Dict[str, Type] = {}
-        messages: Dict[str, List[dai.Buffer]] = {} # List of messages
-
-        # Dict of sequences, with Dict of stream names and their dai message(s)
-        seqFrames: Dict[str, Dict[str, Any]] = {}
+        sync: BaseSync = None
 
         @property
         def imageSensors(self) -> List[dai.CameraBoardSocket]:
@@ -61,6 +58,14 @@ class Camera:
                         continue
                     self._replayNames.append(qName)
             return self._replayNames
+
+        def initCallbacks(self):
+            for name in self.xoutNames:
+                self.device.getOutputQueue(name, maxSize=4, blocking=False).addCallback(lambda name, msg: self.new_msg(name, msg))
+
+        def new_msg(self, name, msg):
+            if self.sync:
+                self.sync.newMsg(name, msg)
 
     # User should be able to access these:
     pipeline: dai.Pipeline
@@ -248,70 +253,6 @@ class Camera:
             self.pipeline.setCalibrationData(calib)
         if tuningBlob:
             self.pipeline.setCameraTuningBlobPath(tuningBlob)
-
-    def _get_new_msgs(self, daiDevice: OakDevice) -> None:
-        """
-        Get messages from the device. Blocking behaviour. It will insert messages directly into daiDevice.messages
-        List[dai.Messages]
-        """
-        # First check whether there are existing messages in queues
-        flag = False
-        for qName in daiDevice.xoutNames:
-            if daiDevice.device.getOutputQueue(qName).has():
-                flag = True
-                daiDevice.messages[qName].extend(daiDevice.device.getOutputQueue(qName).getAll())
-                # print(time.time(),"Getting msgs from local", qName)
-        if flag: return
-
-        qName = daiDevice.device.getQueueEvent(daiDevice.xoutNames)
-        daiDevice.messages[qName].extend(daiDevice.device.getOutputQueue(qName).getAll())
-        # print(time.time(),"Waited for msgs from", qName)
-
-    def get_msgs(self, daiDevice: Optional[OakDevice] = None) -> Dict[str, dai.Buffer]:
-        """
-        Get all messages (not synced). Blocking until a new frame arrives.
-        """
-        if daiDevice is None: # Only 1 device
-            if 1 < len(self.devices):
-                raise ValueError("You have multiple OAK devices connected! Pass the OakDevice object to specify \
-                from which OAK device you want to get a new message.")
-
-        daiDevice = self.oakDevice
-
-        # Get latest msgs
-        self._wait_for_new_msg(daiDevice)
-
-        msgs: Dict[str, dai.Buffer] = dict()
-        for name, msgList in daiDevice.messages.items():
-            msgs[name] = msgList[-1]
-            # Clear all old msgs
-            msgList = msgList[len(msgList) -1:]
-            print('Msg list clear', msgList)
-
-        
-        return msgs
-
-    def _wait_for_new_msg(self, daiDevice: Optional[OakDevice] = None) -> None:
-        """
-        Waits to receive a new message from the device. Function will block until at least one message from
-        each queue has been received.
-        """
-        while True:
-            self._get_new_msgs(daiDevice)
-
-            # If Replay module, get frame
-            for replayName in daiDevice.replayNames:
-                imgFrame = self.replay.imgFrames[replayName]
-                if len(daiDevice.messages[replayName]) == 0 or daiDevice.messages[replayName][-1].getSequenceNum() != imgFrame.getSequenceNum():
-                    daiDevice.messages[replayName].append(imgFrame)
-
-            # Check if all frames available were received
-            if len(daiDevice.messages) == len(daiDevice.queues):
-                return
-
-    def get_synced_msgs(self, daiDevice: Optional[OakDevice] = None) -> Dict[str, dai.Buffer]:
-        raise NotImplementedError()
-        
     
     def __del__(self):
         self.close()
@@ -321,40 +262,63 @@ class Camera:
             print("Closing OAK camera")
             oak.device.close()
     
-    def start(self) -> None:
+    def start(self, blocking=False) -> None:
         """
         Start the application. Configure XLink queues, upload the pipeline to the device(s)
         """
-        if True:
+        if False:
             # Debug pipeline with pipeline graph tool
             folderPath = Path(os.path.abspath(sys.argv[0])).parent
             with open(folderPath / "pipeline.json", 'w') as f:
                 f.write(json.dumps(self.pipeline.serializeToJson()['pipeline']))
 
-        for oakDev in self.devices:
-            oakDev.device.startPipeline(self.pipeline)
-
-        if self.replay:
-            for oakDevice in self.devices:
-                self.replay.createQueues(oakDevice.device)
-
         # Go through each component, check if out is enabled
         for component in self.components:
             for qName, type in component.xouts.items():
                 for dev in self.devices:
-                    dev.messages[qName] = []
                     dev.queues[qName] = type
 
-    def running(self) -> bool:
-        """
-        Check whether device is running. If we are using depthai-recording, send msgs to the device.
-        """
+        for oakDev in self.devices:
+            oakDev.device.startPipeline(self.pipeline)
+            oakDev.initCallbacks()
+
         if self.replay:
-            return self.replay.sendFrames()
-        
+            self.replay.createQueues(self.device)
+            self.replay.start(self._replay_callback)
+
+        # Check if callbacks (sync/non-sync are set)
+        if blocking:
+            while True: # Constant loop: get messages, call callbacks
+                a = 5
+
+    def _replay_callback(self, name, msg):
+        """
+        Called from Replay module on each new frame sent to the device.
+        """
+        for oakDevice in self.devices:
+            if name in oakDevice.replayNames:
+                oakDevice.new_msg(name, msg)
+
+    # def poll(self):
+    #     """
+    #     Poll events. If not callbacks, 
+    #     """
+
+    def running(self) -> bool:       
         # TODO: check if device is closed
         return True
 
+    def synchronize(self, components: List[Component], callback: Callable):
+        raise NotImplementedError()
+
+    def callback(self, components: List[Component], function: Callable):
+        streams = []
+        for comp in components:
+            streams.extend([name for name, _ in comp.xouts.items()])
+
+        for oakDevice in self.devices:
+            oakDevice.sync = NoSync(streams)
+            oakDevice.sync.setCallback(function)
 
     @property
     def oakDevice(self) -> OakDevice: return self.devices[0]

@@ -8,10 +8,7 @@ labelMap = ["background", "aeroplane", "bicycle", "bird", "boat", "bottle", "bus
 
 cam = Camera()
 color = cam.create_camera('color', out='color')
-cam.create_nn(blobconverter.from_zoo('mobilenet-ssd', shaves=6), color, out='dets', type='mobilenet')
-
-cam.start()
-fps = FPSHandler()
+nn = cam.create_nn(blobconverter.from_zoo('mobilenet-ssd', shaves=6), color, out='dets', type='mobilenet')
 
 def displayFrame(name, frame, detections):
     color = (255, 127, 0)
@@ -23,14 +20,21 @@ def displayFrame(name, frame, detections):
     # Show the frame
     cv2.imshow(name, frame)
 
-while cam.running():
-    msgs = cam.get_msgs()
-    fps.nextIter()
-    print(fps.fps())
-    cropped = utils.cropToAspectRatio(msgs['color'].getCvFrame(), (1,1)) # Mobilenet is 300:300, 1:1 aspect ratio
-    displayFrame('color', cropped, msgs['dets'].detections)
+fps = FPSHandler()
+from queue import Queue
+q = Queue(10)
 
+def newDet(msgs):
+    fps.nextIter()
+    cropped = utils.cropToAspectRatio(msgs['color'].getCvFrame(), (1,1)) # Mobilenet is 300:300, 1:1 aspect ratio
+    q.put({'color': cropped, 'dets': msgs['dets'].detections})
+
+cam.callback([color, nn], newDet)
+cam.start()
+
+while True:
+    msgs = q.get(block=True)
+    displayFrame('color', msgs['color'], msgs['dets'])
     if cv2.waitKey(1) == ord('q'):
         break
-
 del cam
