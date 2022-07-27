@@ -2,11 +2,12 @@ from pathlib import Path
 import os
 import cv2
 import depthai as dai
-import datetime
 from .utils import *
 from typing import Dict, Optional, Tuple, List, Any
 from .readers.abstract_reader import AbstractReader
 from time import monotonic
+import time
+from threading import Thread
 
 class Replay:
     disabledStreams: List[str] = []
@@ -32,6 +33,9 @@ class Replay:
     _xins = [] # XLinkIn stream names
     _pause = False
     _calibData = None
+    fps: float = 30.0
+    thread: Thread
+    _stop: bool = False
 
     def __init__(self, path: str):
         """
@@ -101,6 +105,12 @@ class Replay:
         this is set to True, so frames are cropped to keep the original aspect ratio.
         """
         self._keepAR = keepAspectRatio
+    
+    def setFps(self, fps: float):
+        """
+        Sets frequency at which Replay module will send frames to the camera. Default 30FPS.
+        """
+        self.fps = fps
 
     def disableStream(self, streamName: str, disableReading: bool = False):
         """
@@ -120,7 +130,7 @@ class Replay:
 
         self.disabledStreams.append(streamName)
 
-    def sendFrames(self) -> bool:
+    def sendFrames(self, cb = None) -> bool:
         """
         Reads and sends recorded frames from all enabled streams to the OAK camera.
 
@@ -136,6 +146,8 @@ class Replay:
             imgFrame = self._createImgFrame(name, self.frames[name])
             # Save the imgFrame
             self.imgFrames[name] = imgFrame
+            if cb: # callback
+                cb(name, imgFrame)
 
             # Don't send these frames to the OAK camera
             if name in self.disabledStreams: continue
@@ -194,6 +206,22 @@ class Replay:
             self.right.out.link(self.stereo.right)
 
         return pipeline
+
+    def start(self, cb):
+        """
+        Start sending frames to the OAK device on a new thread
+        """
+        self.thread = Thread(target=self.run, args=(cb,))
+        self.thread.start()
+
+    def run(self, cb):
+        delay = 1.0/self.fps
+        while True:
+            time.sleep(delay)
+            if not self.sendFrames(cb): break
+            if self._stop: break
+        print('Replay `run` thread stopped')
+
 
     def createQueues(self, device: dai.Device):
         """
@@ -302,3 +330,5 @@ class Replay:
         """
         for name in self.readers:
             self.readers[name].close()
+        self._stop = True
+        self.thread.join()
