@@ -26,7 +26,10 @@ class Camera:
         # str: Name (XLinkOut stream name, or replay stream)
         # Type: Component name, or Replay
         queues: Dict[str, Type] = {}
-        sync: BaseSync = None
+
+        # Each Sync has it's own Queue to which it pushes sycned msgs.
+        # For each OAK cam you can have multiple sync mechanisms.
+        sync: List[BaseSync] = []
 
         @property
         def imageSensors(self) -> List[dai.CameraBoardSocket]:
@@ -61,11 +64,18 @@ class Camera:
 
         def initCallbacks(self):
             for name in self.xoutNames:
-                self.device.getOutputQueue(name, maxSize=4, blocking=False).addCallback(lambda name, msg: self.new_msg(name, msg))
+                self.device.getOutputQueue(name, maxSize=4, blocking=False).addCallback(lambda name, msg: self.newMsg(name, msg))
 
-        def new_msg(self, name, msg):
-            if self.sync:
-                self.sync.newMsg(name, msg)
+        def newMsg(self, name, msg):
+            for sync in self.sync:
+                sync.newMsg(name, msg)
+
+        def checkSync(self):
+            """
+            Checks whether there are new synced messages, non-blocking.
+            """
+            for sync in self.sync:
+                sync.checkQueue(block=False) # Don't block!
 
     # User should be able to access these:
     pipeline: dai.Pipeline
@@ -288,8 +298,9 @@ class Camera:
 
         # Check if callbacks (sync/non-sync are set)
         if blocking:
-            while True: # Constant loop: get messages, call callbacks
-                a = 5
+            # Constant loop: get messages, call callbacks
+            while True:
+                if not self.poll(): break
 
     def _replay_callback(self, name, msg):
         """
@@ -297,12 +308,21 @@ class Camera:
         """
         for oakDevice in self.devices:
             if name in oakDevice.replayNames:
-                oakDevice.new_msg(name, msg)
+                oakDevice.newMsg(name, msg)
 
-    # def poll(self):
-    #     """
-    #     Poll events. If not callbacks, 
-    #     """
+    def poll(self) -> bool:
+        """
+        Poll events; cv2.waitKey, send controls to OAK (if controls are enabled), update, check syncs.
+        True if successful.
+        """
+        key = cv2.waitKey(1)
+        if key == ord('q'): return False
+
+        for oakDevice in self.devices:
+            oakDevice.checkSync()
+
+        return True
+
 
     def running(self) -> bool:       
         # TODO: check if device is closed
@@ -317,8 +337,7 @@ class Camera:
             streams.extend([name for name, _ in comp.xouts.items()])
 
         for oakDevice in self.devices:
-            oakDevice.sync = NoSync(streams)
-            oakDevice.sync.setCallback(function)
+            oakDevice.sync.append(NoSync(function, streams))
 
     @property
     def oakDevice(self) -> OakDevice: return self.devices[0]

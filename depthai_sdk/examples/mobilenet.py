@@ -1,4 +1,4 @@
-from depthai_sdk import Camera, utils, FPSHandler
+from depthai_sdk import Camera, utils
 import blobconverter
 import cv2
 
@@ -20,21 +20,9 @@ def displayFrame(name, frame, detections):
     # Show the frame
     cv2.imshow(name, frame)
 
-fps = FPSHandler()
-from queue import Queue
-q = Queue(10)
-
 def newDet(msgs):
-    fps.nextIter()
     cropped = utils.cropToAspectRatio(msgs['color'].getCvFrame(), (1,1)) # Mobilenet is 300:300, 1:1 aspect ratio
-    q.put({'color': cropped, 'dets': msgs['dets'].detections})
+    displayFrame('color', cropped, msgs['dets'].detections)
 
 cam.callback([color, nn], newDet)
-cam.start()
-
-while True:
-    msgs = q.get(block=True)
-    displayFrame('color', msgs['color'], msgs['dets'])
-    if cv2.waitKey(1) == ord('q'):
-        break
-del cam
+cam.start(blocking=True)
