@@ -15,6 +15,11 @@ class Component():
     def __init__(self) -> None:
         self.xouts = {}
 
+    def updateDeviceInfo(self, device: dai.Device):
+        """
+        This function will be called 
+        """
+
     def createXOut(self,
         pipeline: dai.Pipeline,
         type: Type,
@@ -25,18 +30,20 @@ class Component():
 
         # If Replay we don't want to have XLinkIn->XLinkOut. Will read
         # frames directly from last ImgFrame sent by the Replay module.
+        if isinstance(name, bool):
+            name = f"__{str(type)}_{random.randint(100,999)}"
+
         if type == Replay:
-            self.xouts[out] = (type, dai.ImgFrame)
+            print('Adding xout replay', out, type)
+            self.xouts[name] = (type, dai.ImgFrame)
             return
         
         xout = pipeline.create(dai.node.XLinkOut)
-        if isinstance(name, bool):
-            name = f"__{str(type)}_{random.randint(100,999)}"
         xout.setStreamName(name)
         out.link(xout.input)
-        print('node outut name', out.name)
 
         if fpsLimit:
             xout.setFpsLimit(fpsLimit)
 
+        print('Adding xout', out, type)
         self.xouts[name] = (type, depthaiMsg)

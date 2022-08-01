@@ -25,7 +25,7 @@ class Camera:
 
     # User should be able to access these:
     pipeline: dai.Pipeline
-    devices: List[OakDevice]
+    oak: OakDevice
     args = None  # User defined arguments
     replay: Optional[Replay] = None
     components: List[Component] = []  # List of components
@@ -50,7 +50,7 @@ class Camera:
         """
 
         self.pipeline = dai.Pipeline()
-        self._init_devices(device, usb2, openvinoVersion)
+        self._init_device(device, usb2, openvinoVersion)
 
         if args:
             am = ArgsManager()
@@ -149,12 +149,12 @@ class Camera:
             args=self.args,
         ))
 
-    def create_visualizer(self, components: List[Component], scale: Union[None, float, Tuple[int, int]], fps=False):
+    def create_visualizer(self, components: List[Component], scale: Union[None, float, Tuple[int, int]], fps=False) -> Visualizer:
         vis = Visualizer(components, scale, fps)
         self.callback(components, vis.newMsgs)
         return vis
 
-    def _init_devices(self,
+    def _init_device(self,
                       device: Optional[str] = None,
                       usb2: Optional[bool] = None,
                       openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None,
@@ -162,25 +162,23 @@ class Camera:
         """
         Connect to the OAK camera(s) and return dai.Device object
         """
-        self.devices = []
         if device and device.upper() == "ALL":
             # Connect to all available cameras
             raise NotImplementedError("TODO")
 
-        obj = OakDevice()
+        self.oak = OakDevice()
         if usb2:
-            obj.device = dai.Device(
+            self.oak.device = dai.Device(
                 version=parseOpenVinoVersion(openvinoVersion),
                 deviceInfo=getDeviceInfo(device),
                 usb2Mode=usb2
             )
         else:
-            obj.device = dai.Device(
+            self.oak.device = dai.Device(
                 version=parseOpenVinoVersion(openvinoVersion),
                 deviceInfo=getDeviceInfo(device),
                 maxUsbSpeed=dai.UsbSpeed.SUPER_PLUS
             )
-        self.devices.append(obj)
 
     def configPipeline(self,
                        xlinkChunk: Optional[int] = None,
@@ -191,14 +189,12 @@ class Camera:
         configPipeline(self.pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
 
     def __enter__(self):
-        print('enter')
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        print('EXIT')
-        for oak in self.devices:
-            print("Closing OAK camera")
-            oak.device.close()
+        self.oak.device.close()
+        print("Closing OAK camera")
+
         if self.replay:
             print("Closing replay")
             self.replay.close()
@@ -216,30 +212,21 @@ class Camera:
         # Go through each component, check if out is enabled
         for component in self.components:
             for qName, (compType, daiMsgType) in component.xouts.items():
-                for dev in self.devices:
-                    dev.queues[qName] = compType
+                self.oak.queues[qName] = compType
 
-        for oakDev in self.devices:
-            oakDev.device.startPipeline(self.pipeline)
-            oakDev.initCallbacks()
+        self.oak.device.startPipeline(self.pipeline)
+        self.oak.initCallbacks()
 
         if self.replay:
-            self.replay.createQueues(self.device)
-            self.replay.start(self._replay_callback)
+            self.replay.createQueues(self.oak.device)
+            # Called from Replay module on each new frame sent to the device.
+            self.replay.start(self.oak.newMsg)
 
         # Check if callbacks (sync/non-sync are set)
         if blocking:
             # Constant loop: get messages, call callbacks
             while True:
                 if not self.poll(): break
-
-    def _replay_callback(self, name, msg):
-        """
-        Called from Replay module on each new frame sent to the device.
-        """
-        for oakDevice in self.devices:
-            if name in oakDevice.replayNames:
-                oakDevice.newMsg(name, msg)
 
     def poll(self) -> bool:
         """
@@ -249,8 +236,7 @@ class Camera:
         key = cv2.waitKey(1)
         if key == ord('q'): return False
 
-        for oakDevice in self.devices:
-            oakDevice.checkSync()
+        self.oak.checkSync()
 
         return True
 
@@ -266,13 +252,9 @@ class Camera:
         for comp in components:
             streams.extend([name for name, _ in comp.xouts.items()])
 
-        for oakDevice in self.devices:
-            oakDevice.sync.append(NoSync(function, streams))
-
-    @property
-    def oakDevice(self) -> OakDevice:
-        return self.devices[0]
+        print('callback', streams)
+        self.oak.sync.append(NoSync(function, streams))
 
     @property
     def device(self) -> dai.Device:
-        return self.devices[0].device
+        return self.oak.device

@@ -190,7 +190,6 @@ class NNComponent(Component):
         if 'blob' in model:
             return str(path / model['blob'])
 
-        print('model', model)
         if 'model_name' in model:  # Use blobconverter to download the model
             zoo_type = model.get("zoo_type", 'intel')
             return blobconverter.from_zoo(model['model_name'],

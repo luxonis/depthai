@@ -10,7 +10,7 @@ class BaseSync(ABC):
 
     def __init__(self, callback: Callable, streams: List[str]) -> None:
         self.callback = callback
-        self.queue = Queue(maxsize=10)
+        self.queue = Queue(maxsize=30)
         self.streams = streams
 
     @abstractstaticmethod
@@ -42,6 +42,7 @@ class NoSync(BaseSync):
 
     def newMsg(self, name: str, msg) -> None:
         # Return all latest msgs (not synced)
+        print('msg', name, 'type',msg)
         if name not in self.msgs: self.msgs[name] = []
 
         self.msgs[name].append(msg)

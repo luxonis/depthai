@@ -102,6 +102,9 @@ def getAvailableRecordings() -> Dict[str, Tuple[List[str], int]]:
 def downloadRecording(name: str, keys: List[str]) -> Path:
     for key in keys:
         r = requests.get(DEPTHAI_RECORDINGS_URL + key)
+        if r.status_code != 200:
+            raise ValueError(f"depthai-recording '{name}' isn't available on our server!")
+
         (DEPTHAI_RECORDINGS_PATH / name).mkdir(parents=True, exist_ok=True)
         # retrieving data from the URL using get method
         with open(DEPTHAI_RECORDINGS_PATH / key, 'wb') as f:
@@ -281,7 +284,9 @@ def showProgress(curr, max):
 def isYoutubeLink(source: str) -> bool:
     return "youtube.com" in source
 
-def isUrl(source: str) -> bool:
+def isUrl(source: Union[str, Path]) -> bool:
+    if isinstance(source, Path):
+        source = str(source)
     return source.startswith("http://") or source.startswith("https://")
 
 def downloadYTVideo(video: str, output_dir: Optional[Path] = None) -> Path:

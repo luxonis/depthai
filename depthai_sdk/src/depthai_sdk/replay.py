@@ -15,10 +15,10 @@ class Replay:
     disabledStreams: List[str] = []
     readers: Dict[str, AbstractReader] = dict()
     # Nodes
-    left: dai.node.XLinkIn
-    right: dai.node.XLinkIn
-    color: dai.node.XLinkIn
-    stereo: dai.node.StereoDepth
+    left: dai.node.XLinkIn = None
+    right: dai.node.XLinkIn = None
+    color: dai.node.XLinkIn = None
+    stereo: dai.node.StereoDepth = None
 
     frames: Dict[str, Any] = dict()  # Cv2 frames read from Readers
     imgFrames: Dict[str, dai.ImgFrame] = dict()  # Last frame sent to the device
@@ -37,7 +37,7 @@ class Replay:
     _pause = False
     _calibData = None
     fps: float = 30.0
-    thread: Thread
+    thread: Thread = None
     _stop: bool = False
 
     def __init__(self, path: str):
@@ -93,20 +93,20 @@ class Replay:
         if isUrl(path):
             if isYoutubeLink(path):
                 # Overwrite source - so Replay class can use it
-                return Replay(downloadYTVideo(path))
+                return downloadYTVideo(path)
             else:
                 # TODO: download video/image(s) from the internet
                 raise NotImplementedError("Only YouTube video download is currently supported!")
 
         # TODO: check if absolute or relative
         if Path(path).is_file():
-            return Replay(path)
+            return Path(path)
 
         recordingName: str = path
         # Check if we have it stored locally
-        path = getLocalRecording(recordingName)
+        path: Path = getLocalRecording(recordingName)
         if path is not None:
-            return Replay(path)
+            return path
         # Try to download from the server
         dic = getAvailableRecordings()
         if recordingName in dic:
@@ -114,7 +114,7 @@ class Replay:
             print("Downloading depthai recording '{}' from our server, in total {:.2f} MB".format(recordingName,
                                                                                                   arr[1] / 1e6))
             path = downloadRecording(recordingName, arr[0])
-            return Replay(path)
+            return path
         else:
             raise ValueError(f"DepthAI recording '{recordingName}' was not found on the server!")
 
@@ -367,4 +367,5 @@ class Replay:
         for name in self.readers:
             self.readers[name].close()
         self._stop = True
-        self.thread.join()
+        if self.thread:
+            self.thread.join()
