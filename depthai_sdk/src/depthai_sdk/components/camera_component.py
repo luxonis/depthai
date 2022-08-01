@@ -12,17 +12,17 @@ class CameraComponent(Component):
     out: dai.Node.Output = None
 
     def __init__(self,
-        pipeline: dai.Pipeline,
-        source: str,
-        resolution: Union[None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
-        fps: Optional[float] = None,
-        name: Optional[str] = None,
-        out: Union[None, bool, str] = None,
-        encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-        control: bool = False,
-        replay: Optional[Replay] = None,
-        args: Any = None,
-        ):
+                 pipeline: dai.Pipeline,
+                 source: str,
+                 resolution: Union[None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
+                 fps: Optional[float] = None,
+                 name: Optional[str] = None,
+                 out: Union[None, bool, str] = None,
+                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                 control: bool = False,
+                 replay: Optional[Replay] = None,
+                 args: Any = None,
+                 ):
         """
         Args:
             pipeline (dai.Pipeline)
@@ -55,15 +55,13 @@ class CameraComponent(Component):
                 self._replay.setFps(fps)
 
         if out:
-            if self._replay:
-                self.xouts[out] = type(self._replay)
-            else:
-                super().createXOut(
-                    pipeline,
-                    type(self),
-                    name = out,
-                    out = self.camera.video if self._isColor() else self.out, 
-                )
+            super().createXOut(
+                pipeline,
+                type(self._replay) if self._replay else type(self),
+                name = out,
+                out = self.camera.video if self._isColor() else self.out,
+                depthaiMsg = dai.ImgFrame
+            )
 
     def _parseSource(self, source: str) -> None:
         if source.upper() == "COLOR" or source.upper() == "RGB":
@@ -101,9 +99,9 @@ class CameraComponent(Component):
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def configureCamera(self,
-        preview: Union[None, str, Tuple[int, int]] = None, # Set preview size
-        fps: Optional[float] = None # Set fps
-        ) -> None:
+                        preview: Union[None, str, Tuple[int, int]] = None, # Set preview size
+                        fps: Optional[float] = None # Set fps
+                        ) -> None:
         """
         Configure resolution, scale, FPS, etc.
         """
@@ -123,16 +121,35 @@ class CameraComponent(Component):
                 # TODO: Use ImageManip to set mono frame size
                 raise NotImplementedError("Not yet implemented")
 
+    def configColorCamera(self,
+                          interleaved: Optional[bool] = None,
+                          colorOrder: Union[None, dai.ColorCameraProperties.ColorOrder, str] = None,
+                          ) -> None:
+        # TODO: add option for other configs
+        if not self._isColor():
+            print("Attempted to configure ColorCamera, but this component doesn't have it. Config attempt ignored.")
+            return
+
+        if interleaved is not None:
+            self.camera.setInterleaved(interleaved)
+        if colorOrder:
+            if isinstance(colorOrder, str):
+                colorOrder = getattr(dai.ColorCameraProperties.ColorOrder, colorOrder.upper())
+            self.camera.getColorOrder(colorOrder)
+
+
+
+
     def _isColor(self) -> bool: return isinstance(self.camera, dai.node.ColorCamera)
     def _isMono(self) -> bool: return isinstance(self.camera, dai.node.MonoCamera)
-    
+
     def getSize(self) -> Tuple[int, int]:
         if self._isColor(): return self.camera.getPreviewSize()
         elif self._isMono(): raise NotImplementedError()
         elif self._replay: return self._replay.getShape(self._sourceName)
 
     def configureEncoder(self,
-        ):
+                         ):
         """
         Configure quality, enable lossless,
         """

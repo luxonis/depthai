@@ -1,6 +1,7 @@
 import depthai as dai
-from typing import Optional, Union, Type, Dict
+from typing import Optional, Union, Type, Dict, Tuple
 import random
+from ..replay import Replay
 
 class Component():
     """
@@ -9,8 +10,8 @@ class Component():
     # nodes: List[dai.Node] # List of dai.nodes that this components abstracts
 
     # Camera object can loop through all components to get all XLinkOuts
-    # Tuple[str, Component]
-    xouts: Dict[str, Type]
+    # Dict[str, Typle(Component type, dai msg type)]
+    xouts: Dict[str, Tuple[Type, Type]]
     def __init__(self) -> None:
         self.xouts = {}
 
@@ -19,15 +20,23 @@ class Component():
         type: Type,
         name: Union[str, bool],
         out: dai.Node.Output,
+        depthaiMsg: Type,
         fpsLimit: Optional[float] = None) -> None:
+
+        # If Replay we don't want to have XLinkIn->XLinkOut. Will read
+        # frames directly from last ImgFrame sent by the Replay module.
+        if type == Replay:
+            self.xouts[out] = (type, dai.ImgFrame)
+            return
         
         xout = pipeline.create(dai.node.XLinkOut)
         if isinstance(name, bool):
             name = f"__{str(type)}_{random.randint(100,999)}"
         xout.setStreamName(name)
         out.link(xout.input)
+        print('node outut name', out.name)
 
         if fpsLimit:
             xout.setFpsLimit(fpsLimit)
 
-        self.xouts[name] = type
+        self.xouts[name] = (type, depthaiMsg)

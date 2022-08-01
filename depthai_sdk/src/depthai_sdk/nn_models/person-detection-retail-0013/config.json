@@ -1,0 +1,18 @@
+{
+    "nn_config":
+    {
+        "output_format" : "detection",
+        "NN_family" : "mobilenet",
+        "confidence_threshold" : 0.5,
+        "input_size": "544x320"
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "unknown",
+            "person"
+        ]
+    }
+}
+
