@@ -19,6 +19,7 @@ class Component():
         """
         This function will be called 
         """
+        pass
 
     def createXOut(self,
         pipeline: dai.Pipeline,
@@ -34,7 +35,6 @@ class Component():
             name = f"__{str(type)}_{random.randint(100,999)}"
 
         if type == Replay:
-            print('Adding xout replay', out, type)
             self.xouts[name] = (type, dai.ImgFrame)
             return
         
@@ -45,5 +45,4 @@ class Component():
         if fpsLimit:
             xout.setFpsLimit(fpsLimit)
 
-        print('Adding xout', out, type)
         self.xouts[name] = (type, depthaiMsg)

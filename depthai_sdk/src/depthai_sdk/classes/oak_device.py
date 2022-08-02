@@ -51,7 +51,6 @@ class OakDevice:
             self.device.getOutputQueue(name, maxSize=4, blocking=False).addCallback(lambda name, msg: self.newMsg(name, msg))
 
     def newMsg(self, name, msg):
-        print('OAK newMsg', name, msg)
         for sync in self.sync:
             sync.newMsg(name, msg)
 

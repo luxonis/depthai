@@ -149,11 +149,6 @@ class Camera:
             args=self.args,
         ))
 
-    def create_visualizer(self, components: List[Component], scale: Union[None, float, Tuple[int, int]], fps=False) -> Visualizer:
-        vis = Visualizer(components, scale, fps)
-        self.callback(components, vis.newMsgs)
-        return vis
-
     def _init_device(self,
                       device: Optional[str] = None,
                       usb2: Optional[bool] = None,
@@ -243,6 +238,13 @@ class Camera:
     def running(self) -> bool:
         # TODO: check if device is closed
         return True
+
+    def create_visualizer(self, components: List[Component],
+                        scale: Union[None, float, Tuple[int, int]] = None,
+                        fps=False) -> Visualizer:
+        vis = Visualizer(components, scale, fps)
+        self.callback(components, vis.newMsgs)
+        return vis
 
     def synchronize(self, components: List[Component], callback: Callable):
         raise NotImplementedError()

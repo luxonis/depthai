@@ -42,7 +42,6 @@ class NoSync(BaseSync):
 
     def newMsg(self, name: str, msg) -> None:
         # Return all latest msgs (not synced)
-        print('msg', name, 'type',msg)
         if name not in self.msgs: self.msgs[name] = []
 
         self.msgs[name].append(msg)

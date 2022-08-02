@@ -1,7 +1,6 @@
-from cv2 import Mat
 import numpy as np
 import depthai as dai
-from typing import Tuple, Optional, Union, List, Dict, Type
+from typing import Tuple, Optional, Union, List, Dict, Type, Any
 import cv2
 import time
 from ..components import Component, NNComponent
@@ -62,7 +61,7 @@ def drawDetections(frame, dets: dai.ImgDetections, labelMap: List[str] =  None, 
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
 jet_custom = jet_custom[::-1]
 jet_custom[0] = [0, 0, 0]
-def colorizeDepth(depthFrame: Union[dai.ImgFrame, Mat], colorMap = None) -> Mat:
+def colorizeDepth(depthFrame: Union[dai.ImgFrame, Any], colorMap = None):
     if isinstance(depthFrame, dai.ImgFrame):
         depthFrame = depthFrame.getFrame()
     depthFrameColor = cv2.normalize(depthFrame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
@@ -70,7 +69,7 @@ def colorizeDepth(depthFrame: Union[dai.ImgFrame, Mat], colorMap = None) -> Mat:
     return cv2.applyColorMap(depthFrameColor, colorMap if colorMap else jet_custom)
 
 
-def drawBbMappings(depthFrame: Union[dai.ImgFrame, Mat], bbMappings: dai.SpatialLocationCalculatorConfig):
+def drawBbMappings(depthFrame: Union[dai.ImgFrame, Any], bbMappings: dai.SpatialLocationCalculatorConfig):
     depthFrameColor = colorizeDepth(depthFrame)
     roiDatas = bbMappings.getConfigData()
     for roiData in roiDatas:
@@ -110,7 +109,7 @@ class BaseVisualizer():
         if fps:
             self._fps = FPSHandler()
 
-    def newMsgs(self, frame: Union[Dict, dai.ImgFrame, Mat]):
+    def newMsgs(self, frame: Union[Dict, dai.ImgFrame, Any]):
         if isinstance(frame, Dict):
             frame = frame[self._name]
         if isinstance(frame, dai.ImgFrame):
@@ -177,24 +176,15 @@ class Visualizer:
     def __init__(self, components: List[Component], scale: Union[None, float, Tuple[int,int]] = None,fps=False) -> None:
         self._components = components
 
-        daiTypes = []
-        for comp in components:
-            for name, (compType, daiType) in comp.xouts.items():
+        nns = self._components_by_type(components, NNComponent)
+        frames = self._streams_by_type(components, dai.ImgFrame)
 
-                if isinstance(comp, NNComponent):
-                    comp: NNComponent
-                    if comp.inputComponent not in components:
-                        raise Exception("When creating visualizer for NN component, it's input must be passed as well!")
-                    
-                    if daiType == dai.ImgDetections:
-                        # YOLO/MobileNet
-                        frameStream = self._getStreamName(comp.inputComponent.xouts, dai.ImgFrame)
-                        detVis = DetectionsVisualizer(frameStream, name, comp.labels, aspectRatio=comp.size)
-                        detVis.setBase(scale, fps)
-                        self._visualizers.append(detVis)
-
-                    else: # NNData, decode.
-                        raise NotImplementedError('Decoding not yet supported!')
+        for nn in nns:
+            for frame in frames:
+                nnStreamNames = self._streams_by_type_xout(nn.xouts, dai.ImgDetections)
+                detVis = DetectionsVisualizer(frame, nnStreamNames[0], nn.labels, aspectRatio=nn.size if frame != 'passthrough' else None)
+                detVis.setBase(scale, fps)
+                self._visualizers.append(detVis)
 
     def _getStreamName(self, xouts: Dict, type: Type) -> str:
         for name, (compType, daiType) in xouts.items():
@@ -214,9 +204,20 @@ class Visualizer:
             arr.append((name, msg, type(msg)))
         return arr
 
-    def _msgTypeExists(self, msgs: List[Tuple], type: Type):
-        pass
+    def _streams_by_type(self, components: List[Component], type: Type) -> List[str]:
+        streams = []
+        for comp in components:
+            for name, (compType, daiType) in comp.xouts.items():
+                if daiType == type:
+                    streams.append(name)
+        return streams
 
+    def _components_by_type(self, components: List[Component], type: Type) -> List[Component]:
+        comps = []
+        for comp in components:
+            if isinstance(comp, type):
+                comps.append(comp)
+        return comps
 
     def _getTypeDict(self, msgs: Dict) -> Dict[str, Type]:
         ret = dict()
@@ -224,12 +225,17 @@ class Visualizer:
             ret[name] = type(msg)
         return ret
 
-
     def _getComponent(self, streamName: str) -> Component:
         for comp in self._components:
             if streamName in comp.xouts:
                 return comp
 
         raise ValueError("[SDK Visualizer] stream name wasn't found in any component!")
+        return
 
-        
+    def _streams_by_type_xout(self, xouts:  Dict[str, Tuple[type, type]], type: Type) -> List[str]:
+        streams = []
+        for name, (compType, daiType) in xouts.items():
+            if type == daiType:
+                streams.append(name)
+        return streams

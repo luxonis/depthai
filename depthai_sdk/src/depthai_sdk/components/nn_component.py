@@ -65,6 +65,7 @@ class NNComponent(Component):
         super().__init__()
         self.input = input
         self.spatial = spatial
+        self.pipeline = pipeline
 
         # Parse the input config/model
         if isinstance(model, str):
@@ -89,7 +90,7 @@ class NNComponent(Component):
             availableModels = self.getSupportedModels(printModels=False)
             if str(model) not in availableModels:
                 raise ValueError(f"Specified model '{str(model)}' is not supported by DepthAI SDK. \
-                    Check SDK documentation page to see which models are supproted.")
+                    Check SDK documentation page to see which models are supported.")
 
             model = availableModels[str(model)] / 'config.json'
             with model.open() as f:
@@ -127,8 +128,6 @@ class NNComponent(Component):
 
         if conf:
             self.update_from_config(conf)
-
-        # self.passthrough = self.node.passthrough
 
         if not self.node or not self.blob: raise NotImplementedError()
 
@@ -322,6 +321,18 @@ class NNComponent(Component):
 
         if confThreshold: self.node.setConfidenceThreshold(confThreshold)
 
+    def configNn(self,
+                 passthroughOut: bool = False
+                 ):
+        if passthroughOut:
+            super().createXOut(
+                self.pipeline,
+                type(self),
+                name='passthrough',
+                out=self.node.passthrough,
+                depthaiMsg=dai.ImgFrame
+            )
+
     def configSpatial(self,
                       bbScaleFactor: Optional[float] = None,
                       lowerThreshold: Optional[int] = None,
@@ -398,7 +409,7 @@ class NNComponent(Component):
         # Configure node based on conf file
         nnConfig = conf.get("nn_config", {})
         if self.isDetector() and 'confidence_threshold' in nnConfig:
-            self.node.setConfidenceThreshold(int(nnConfig['confidence_threshold']))
+            self.node.setConfidenceThreshold(float(nnConfig['confidence_threshold']))
 
         meta = nnConfig.get('NN_specific_metadata', None)
         if self.isYolo() and meta:
