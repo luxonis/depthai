@@ -16,6 +16,7 @@ import signal
 import json, time
 from pathlib import Path
 import cv2
+import glob
 
 # Try setting native cv2 image format, otherwise RGB888
 colorMode = QtGui.QImage.Format_RGB888
@@ -26,7 +27,7 @@ except:
 
 FPS = 10
 
-BATCH_DIR = Path(__file__).resolve().parent / 'batch'
+DEVICE_DIR = Path(__file__).resolve().parent / 'batch'
 
 test_result = {
     'usb3_res': '',
@@ -125,6 +126,10 @@ class DepthAICamera():
         self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         self.camRgb.preview.link(self.xoutRgb.input)
         self.camRgb.setFps(FPS)
+        if 'max' in variant_desc_label.lower():
+            print('On a MAX board (IMX582), setting 4K res')
+            self.camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_4_K)
+            self.camRgb.setIspScale(1, 2)
 
         # # TMP TMP TMP - IMU update simulation
         # script = self.pipeline.create(dai.node.Script)
@@ -152,7 +157,7 @@ class DepthAICamera():
             self.imu = self.pipeline.create(dai.node.IMU)
             self.xoutIMU = self.pipeline.create(dai.node.XLinkOut)
             self.xoutIMU.setStreamName("IMU")
-            if 'lite' in test_type:
+            if 'LITE' in test_type:
                 self.imu.enableFirmwareUpdate(True)
             self.imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
             self.imu.setBatchReportThreshold(1)
@@ -168,7 +173,7 @@ class DepthAICamera():
         self.videoEnc.setDefaultProfilePreset(self.camRgb.getFps(), dai.VideoEncoderProperties.Profile.MJPEG)
         self.xoutJpeg.setStreamName("jpeg")
 
-        if test_type != 'OAK-1':
+        if 'OAK-1' not in test_type:
             self.camLeft = self.pipeline.create(dai.node.MonoCamera)
             self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
             self.xoutLeft.setStreamName("left")
@@ -186,8 +191,7 @@ class DepthAICamera():
             self.camRight.setFps(10)
 
         usb_speed = dai.UsbSpeed.SUPER
-        # if test_type == 'OAK-D-PRO-POE':
-        if 'poe' in eepromDataJson['productName'].lower():
+        if 'POE' in test_type:
             usb_speed = dai.UsbSpeed.HIGH
 
         self.device = dai.Device(dai.OpenVINO.VERSION_2021_4, usb_speed)
@@ -253,8 +257,7 @@ class DepthAICamera():
         except RuntimeError:
             test_result['usb3_res'] = 'FAIL'
 
-        # if test_type == 'OAK-D-PRO-POE':
-        if 'poe' in eepromDataJson['productName'].lower():
+        if 'POE' in test_type:
             test_result['usb3_res'] = 'SKIP'
 
         self.start_queue()
@@ -403,80 +406,133 @@ class DepthAICamera():
 
 eepromDataJson = None
 calib_path = None
+selectedDeviceInfo = ""
 class Ui_CalibrateSelect(QtWidgets.QDialog):
     def __init__(self):
         global eepromDataJson
         global calib_path
         super().__init__()
-        x = os.walk(BATCH_DIR)
-        print(x)
-        self.batches = []
-        self.jsons = {}
-        for x in os.walk(BATCH_DIR):
-            self.batches = sorted(x[1])
-            break
-        for batch in self.batches:
-            for js in os.walk(BATCH_DIR/batch):
-                self.jsons[batch] = sorted(js[2])
-                print(js)
 
-        self.batch_combo = QtWidgets.QComboBox(self)
-        self.batch_combo.setGeometry(QtCore.QRect(100, 20, 141, 32))
-        self.batch_combo.addItems(self.batches)
-        self.batch_combo.currentTextChanged.connect(self.batches_changed)
+        # Create list of devices data
+        self.device_jsons = []
+        # Create "representational (title)" data
+        self.device_titles = []
+
+        # Get all devices
+        devices = glob.glob(f'{DEVICE_DIR}/*.json')
+        # Retrieve all information
+        for dev in devices:
+            with open(dev, 'r') as f:
+                j = json.load(f)
+                self.device_jsons.append(j)
+                self.device_titles.append(j["title"])
+
+        self.device_dropdown = QtWidgets.QComboBox(self)
+        self.device_dropdown.addItems(self.device_titles)
+        self.device_dropdown.currentTextChanged.connect(self.device_changed)
         self.json_combo = QtWidgets.QComboBox(self)
-        self.json_combo.setGeometry(QtCore.QRect(100, 70, 261, 32))
-        self.json_combo.addItems(self.jsons[self.batches[0]])
-        self.json_combo.currentTextChanged.connect(self.json_changed)
+        self.json_combo.currentTextChanged.connect(self.variant_changed)
 
         self.setObjectName("CalibrateSelect")
-        self.resize(386, 192)
         self.buttonBox = QtWidgets.QDialogButtonBox(self)
-        self.buttonBox.setGeometry(QtCore.QRect(70, 130, 191, 32))
         self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
         self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
-        self.buttonBox.setObjectName("buttonBox")
+        self.buttonBox.accepted.connect(self.accept)
+        self.buttonBox.rejected.connect(self.reject)
+
         self.batch_label = QtWidgets.QLabel(self)
-        self.batch_label.setGeometry(QtCore.QRect(10, 20, 51, 27))
         font = QtGui.QFont()
         font.setPointSize(12)
         self.batch_label.setFont(font)
-        self.batch_label.setObjectName("batch_label")
+        self.batch_label.setObjectName("device_label")
+
+        self.device_desc_label = QtWidgets.QLabel(self)
+        self.device_desc_label.setObjectName("device_desc_label")
+
         self.json_label = QtWidgets.QLabel(self)
-        self.json_label.setGeometry(QtCore.QRect(10, 70, 77, 27))
+        self.json_label.setGeometry(QtCore.QRect(10, 150, 77, 27))
         font = QtGui.QFont()
         font.setPointSize(12)
         self.json_label.setFont(font)
         self.json_label.setObjectName("json_label")
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
+
+        self.variant_desc_label = QtWidgets.QLabel(self)
+
         QtCore.QMetaObject.connectSlotsByName(self)
 
         _translate = QtCore.QCoreApplication.translate
-        self.batch_label.setText(_translate("CalibrateSelect", "Batch"))
-        self.json_label.setText(_translate("CalibrateSelect", "JSON file"))
+        self.batch_label.setText(_translate("CalibrateSelect", "Device"))
+        self.json_label.setText(_translate("CalibrateSelect", "Variant"))
         self.setWindowTitle(_translate("CalibrateSelect", "Dialog"))
-        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
-        with open(calib_path) as jfile:
-            eepromDataJson = json.load(jfile)
 
-    def batches_changed(self):
+        # Set layout
+        layout = QtWidgets.QFormLayout()
+        layout.addRow(self.batch_label, self.device_dropdown)
+        layout.addRow(QtWidgets.QLabel("Description"), self.device_desc_label)
+        layout.addRow(self.json_label, self.json_combo)
+        layout.addRow(QtWidgets.QLabel("Description"), self.variant_desc_label)
+        layout.addRow(QtWidgets.QLabel("Description"), self.variant_desc_label)
+        layout.addRow(self.buttonBox)
+        layout.setRowWrapPolicy(layout.RowWrapPolicy.WrapLongRows)
+        self.setLayout(layout)
+
+        # Refresh devices
+        self.device_changed()
+
+    def device_changed(self):
         global calib_path
         global eepromDataJson
-        print("Batches changed!")
+        print("Devices changed!")
+
+        curDevice = self.device_jsons[self.device_dropdown.currentIndex()]
+        variantIndex = self.json_combo.currentIndex()
+
+        # Create "representational (title)" data for variants
+        variant_titles = []
+        for variant in curDevice["variants"]:
+            variant_titles.append(variant["title"])
+
+        # Update variants combobox
         self.json_combo.clear()
-        self.json_combo.addItems(self.jsons[self.batch_combo.currentText()])
-        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
-        with open(calib_path) as jfile:
-            eepromDataJson = json.load(jfile)
+        self.json_combo.addItems(variant_titles)
+        # Update desc
+        self.device_desc_label.setText(curDevice["description"])
+        if variantIndex >= 0 and variantIndex < len(curDevice["variants"]):
+            self.variant_desc_label.setText(curDevice["variants"][variantIndex]["description"])
 
-    def json_changed(self):
+        # Refresh variants
+        self.variant_changed()
+
+
+    def variant_changed(self):
         global eepromDataJson
         global calib_path
-        calib_path = BATCH_DIR / self.batch_combo.currentText() / self.json_combo.currentText()
-        with open(calib_path) as jfile:
-            eepromDataJson = json.load(jfile)
+        global selectedDeviceInfo
 
+        curDevice = self.device_jsons[self.device_dropdown.currentIndex()]
+        variantIndex = self.json_combo.currentIndex()
+
+        global variant_desc_label
+        variant_desc_label = ""
+        # Update desc
+        if variantIndex >= 0 and variantIndex < len(curDevice["variants"]):
+            self.variant_desc_label.setText(curDevice["variants"][variantIndex]["description"])
+            variant_desc_label = curDevice["variants"][variantIndex]["description"]
+
+        # Load test_type, first from "device"
+        global test_type
+        test_type = curDevice['test_type']
+
+        # Load eeprom data if available
+        if len(curDevice['variants']) > variantIndex:
+            # Load test_type, if variant also has it selected, override
+            if 'test_type' in curDevice['variants'][variantIndex]:
+                test_type = curDevice['variants'][variantIndex]["test_type"]
+            calib_path = DEVICE_DIR / curDevice['variants'][variantIndex]["eeprom"]
+            with open(calib_path) as jfile:
+                eepromDataJson = json.load(jfile)
+
+            selectedDeviceInfo = curDevice['variants'][variantIndex]['title']
 
 class Camera(QtWidgets.QWidget):
     def __init__(self, get_image, camera_format, title='Camera', location=(0, 0)):
@@ -595,12 +651,12 @@ class UiTests(QtWidgets.QMainWindow):
         self.MB_END = "</p></body></html>"
         self.all_logs = ""
 
-        x = os.walk(BATCH_DIR)
+        x = os.walk(DEVICE_DIR)
         print(x)
         self.batches = []
         self.jsons = {}
         i = 0
-        for x in os.walk(BATCH_DIR):
+        for x in os.walk(DEVICE_DIR):
             if i == 0:
                 self.batches = x[1]
             else:
@@ -642,7 +698,7 @@ class UiTests(QtWidgets.QMainWindow):
         # self.save_but.setObjectName("connect_but")
         # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
-        if test_type == 'OAK-1':
+        if 'OAK-1' in test_type:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 241))
         else:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 395))
@@ -707,10 +763,9 @@ class UiTests(QtWidgets.QMainWindow):
 
         self.operator_tests = QtWidgets.QGroupBox(self.centralwidget)
         # self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 321))
-        # if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
-        if 'oak-d pro' in eepromDataJson['productName'].lower():
+        if 'PRO' in test_type:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 311))
-        elif test_type == 'OAK-1':
+        elif 'OAK-1' in test_type:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 190))
         else:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 281))
@@ -800,7 +855,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.rgb_fail_but.name = 'prew_out_rgb'
         self.rgb_fail_but.toggled.connect(lambda: set_operator_test(self.rgb_fail_but))
 
-        if test_type != 'OAK-1':
+        if 'OAK-1' not in test_type:
             self.op_left_frame = QtWidgets.QFrame(self.operator_tests)
             self.op_left_frame.setGeometry(QtCore.QRect(160, 180, 131, 41))
             self.op_left_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
@@ -871,8 +926,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.right_fail_but.name = 'right_strm'
             self.right_fail_but.toggled.connect(lambda: set_operator_test(self.right_fail_but))
 
-            # if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
-            if 'oak-d pro' in eepromDataJson['productName'].lower():
+            if 'PRO' in test_type:
                 self.op_ir_frame = QtWidgets.QFrame(self.operator_tests)
                 self.op_ir_frame.setGeometry(QtCore.QRect(160, 270, 131, 41))
                 self.op_ir_frame.setFrameShape(QtWidgets.QFrame.StyledPanel)
@@ -969,12 +1023,12 @@ class UiTests(QtWidgets.QMainWindow):
     def retranslateUi(self, UI_tests):
         _translate = QtCore.QCoreApplication.translate
         UI_tests.setWindowTitle(_translate("UI_tests", "DepthAI UI Tests"))
-        self.title.setText(_translate("UI_tests", f"<html><head/><body><p align=\"center\">Batch: {calib_path.parent.name} <br> Device: {calib_path.name}</p></body></html>"))
+        self.title.setText(_translate("UI_tests", f"<html><head/><body><p align=\"center\">Device: {selectedDeviceInfo} <br> EEPROM: {calib_path.name}</p></body></html>"))
         self.connect_but.setText("CONNECT")
         self.connect_but.adjustSize()
 
         self.automated_tests.setTitle(_translate("UI_tests", "Automated Tests"))
-        if test_type == 'OAK-1':
+        if 'OAK-1' in test_type:
             self.automated_tests_labels.setText(_translate("UI_tests", OAK_ONE_LABELS))
         else:
             self.automated_tests_labels.setText(_translate("UI_tests", OAK_D_LABELS))
@@ -994,7 +1048,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.PASS_LABEL.setText(_translate("UI_tests", "<html><head/><body><p><span style=\" font-size:11pt; color:#00aa7f;\">PASS</span></p></body></html>"))
         self.logs.setTitle(_translate("UI_tests", ""))
         self.date_time_label.setText(_translate("UI_tests", "date_time: "))
-        self.test_type_label.setText(_translate("UI_tests", "test_type: " + eepromDataJson['productName']))
+        self.test_type_label.setText(_translate("UI_tests", "test_type: " + test_type))
         self.prog_label.setText(_translate("UI_tests", "Flash IMU"))
         # self.logs_txt_browser.setHtml(_translate("UI_tests", self.MB_INIT + "Test<br>" + "Test2<br>" + self.MB_END))
         self.print_logs(f'calib_path={calib_path}')
@@ -1039,11 +1093,10 @@ class UiTests(QtWidgets.QMainWindow):
             self.disconnect()
             self.rgb_ntes_but.setChecked(True)
             self.jpeg_ntes_but.setChecked(True)
-            if test_type != 'OAK-1':
+            if 'OAK-1' not in test_type:
                 self.right_ntes_but.setChecked(True)
                 self.left_ntes_but.setChecked(True)
-                # if test_type == 'OAK-D-PRO' or test_type == 'OAK-D-PRO-POE':
-                if 'oak-d pro' in eepromDataJson['productName'].lower():
+                if 'PRO' in test_type:
                     self.ir_ntes_but.setChecked(True)
             self.connect_but.setText("CONNECT")
             self.connect_but.adjustSize()
@@ -1084,10 +1137,14 @@ class UiTests(QtWidgets.QMainWindow):
         # Update BL if PoE
         # if test_type == 'OAK-D-PRO-POE':
         eeprom_written = False
-        name = eepromDataJson['productName'].lower()
-        if 'poe' in name:
+        if 'POE' in test_type:
             self.update_bootloader()
-        elif not ('lite' in name):
+            with dai.Device(dai.OpenVINO.VERSION_2021_4, dai.UsbSpeed.HIGH) as device:
+                if not eeprom_written:
+                    self.print_logs('Writing EEPROM...')
+                    eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
+                    eeprom_written = True
+        elif not ('LITE' in test_type or '1' in test_type):
             # Flash EEPROM and boot header, then reboot for boot header to take effect
             with dai.Device() as device:
                 usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
@@ -1125,7 +1182,7 @@ class UiTests(QtWidgets.QMainWindow):
         location = WIDTH, prew_height + 80
         self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
         self.jpeg.show()
-        if test_type != 'OAK-1':
+        if 'OAK-1' not in test_type:
             location = WIDTH + prew_width + 20, 0
             self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
                                'LEFT Preview', location)
@@ -1161,9 +1218,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.connect_but.adjustSize()
             self.update_imu = True
 
-            # if test_type == 'OAK-D-PRO-POE':
-            print(eepromDataJson['productName'].lower())
-            if 'poe' in eepromDataJson['productName'].lower():
+            if 'POE' in test_type:
                 if test_result['nor_flash_res'] == 'FAIL':
                     self.print_logs('BOOTLOADER UPDATE FAIL, RETRYING...')
                     global imu_upgrade
@@ -1215,7 +1270,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.prew_out_rgb_res.setPalette(self.red_pallete)
         self.prew_out_rgb_res.setText(test_result['prew_out_rgb_res'])
 
-        if test_type != 'OAK-1':
+        if 'OAK-1' not in test_type:
             if test_result['left_cam_res'] == 'PASS':
                 self.left_cam_res.setPalette(self.green_pallete)
             else:
@@ -1250,8 +1305,7 @@ class UiTests(QtWidgets.QMainWindow):
             with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
                 self.print_logs('Starting Update')
                 self.prog_label.setText('Bootloader')
-                # if test_type == 'OAK-D-PRO-POE':
-                if 'poe' in eepromDataJson['productName'].lower():
+                if 'POE' in test_type:
                     self.print_logs('Flashing NETWORK bootloader...')
                     return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, self.update_prog_bar)
                 else:
@@ -1403,12 +1457,12 @@ class UiTests(QtWidgets.QMainWindow):
         if hasattr(self, 'depth_camera'):
             del self.rgb
             del self.jpeg
-            if test_type != 'OAK-1':
+            if 'OAK-1' not in test_type:
                 del self.left
                 del self.right
             del self.depth_camera
 
-    def batches_changed(self):
+    def device_changed(self):
         print("Batches changed!")
         self.json_combo.clear()
         self.json_combo.addItems(self.jsons[self.batches_combo.currentText()])
@@ -1420,17 +1474,7 @@ def signal_handler(sig, frame):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Arguments for test UI')
-    parser.add_argument('-t', '--type', dest='camera_type', help='enter the type of device(OAK-1, OAK-D, OAK-D-PRO, OAK-D-LITE, OAK-D-PRO-POE)', default='OAK-D-PRO-POE')
-    # parser.add_argument('-b', '--batch', dest='batch', help='enter the path to batch file', required=True)
-    # CALIB_JSON_FILE = path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib.json'
     CALIB_BACKUP_FILE = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib_backup.json'
-    # parser.add_argument('--calib_json_file', '-c', dest='calib_json_file', help='Path to V6 calibration file in json', default=CALIB_JSON_FILE)
-    args = parser.parse_args()
-    test_type = args.camera_type.upper()
-    # calib_path = args.calib_json_file
-    # calib_path = args.batch
-    # calib_path = None
     app = QtWidgets.QApplication(sys.argv)
     screen = app.primaryScreen()
     rect = screen.availableGeometry()
