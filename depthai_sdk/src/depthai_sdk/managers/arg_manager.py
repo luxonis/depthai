@@ -3,7 +3,7 @@ import os
 import sys
 from pathlib import Path
 import depthai as dai
-from typing import Tuple
+from typing import Tuple, List
 
 def getRgbResolution(resolution: str):
     """
@@ -58,8 +58,26 @@ def _checkRange(minVal, maxVal):
             raise argparse.ArgumentTypeError(
                 "{} is an invalid int value, must be in range {}..{}".format(value, minVal, maxVal)
             )
-
     return checkFn
+
+def _ispScale(option):
+    vals = option.split(",")
+    if len(vals) not in [2, 4]:
+        raise argparse.ArgumentTypeError(
+            "{0} format is invalid. See --help".format(option)
+        )
+    else:
+        try:
+            if len(vals) == 2:
+                return [int(vals[0]), int(vals[1])]
+            return [int(vals[0]), int(vals[1]), int(vals[2]), int(vals[3])]
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                "In option: {0} {1} is not in a correct format!".format(option, vals[1])
+            )
+
+def _devices(devices:str) -> List[str]:
+    return devices.split(",")
 
 def _commaSeparated(default, cast=str):
     def _fun(option):
@@ -117,7 +135,7 @@ class ArgsManager():
         parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
                             help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
         parser.add_argument('-fps', '--fps', type=float, help='Camera FPS applied to all sensors')
-        parser.add_argument('-isp', '--ispScale', type=_commaSeparated(None), help="Sets ColorCamera's ISP scale")
+        parser.add_argument('-isp', '--ispScale', type=_ispScale, help="Sets ColorCamera's ISP scale. Either []")
         
         # Depth related arguments
         parser.add_argument("-dct", "--disparityConfidenceThreshold", default=245, type=_checkRange(0, 255),
@@ -155,8 +173,8 @@ class ArgsManager():
         parser.add_argument("--openvinoVersion", type=str, choices=_openvinoVersions, help="Specify which OpenVINO version to use in the pipeline")
         parser.add_argument("--count", type=str, dest='countLabel',
                             help="Count and display the number of specified objects on the frame. You can enter either the name of the object or its label id (number).")
-        parser.add_argument("-dev", "--deviceId", type=str,
-                            help="DepthAI MX id of the device to connect to. Use the word 'list' to show all devices and exit.")
+        parser.add_argument("-dev", "--deviceId", type=_devices,
+                            help="MX id(s) of the device(s) to connect to. Use the word 'list' to show all devices and exit.")
         parser.add_argument('-bandw', '--bandwidth', type=str, default="auto", choices=["auto", "low", "high"], help="Force bandwidth mode. \n"
                                                                                                                     "If set to \"high\", the output streams will stay uncompressed\n"
                                                                                                                     "If set to \"low\", the output streams will be MJPEG-encoded\n"

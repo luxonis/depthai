@@ -6,6 +6,7 @@ from threading import Thread
 import depthai as dai
 from enum import IntEnum
 from .managers import ArgsManager, PipelineManager
+import math
 
 class EncodingQuality(IntEnum):
     BEST = 1 # Lossless MJPEG
@@ -261,10 +262,12 @@ class Record():
                 pipeline=pipeline,
                 args=self.args)
 
+            conversionManip = pipeline.createImageManip()
+            conversionManip.setFrameType(dai.RawImgFrame.Type.NV12)
+            conversionManip.setMaxOutputFrameSize(math.ceil(nodes['color'].getIspHeight() * nodes['color'].getIspWidth() * 1.5))
+            nodes['color'].isp.link(conversionManip.inputImage)
 
-            # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
-            # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
-            stream_out("color", nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
+            stream_out("color", nodes['color'].getFps(), conversionManip.out) #, noEnc='depth' in self.save)
 
         if True in (el in ["left", "disparity", "depth"] for el in self.save):
             nodes['left'] = self.pm.createLeftCam(control=False, pipeline=pipeline, args=self.args)

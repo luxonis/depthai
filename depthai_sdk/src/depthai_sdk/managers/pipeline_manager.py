@@ -2,7 +2,7 @@ from types import SimpleNamespace
 import depthai as dai
 
 from ..previews import Previews
-from typing import Tuple, Optional
+from typing import List, Optional
 
 class PipelineManager:
     """
@@ -145,7 +145,7 @@ class PipelineManager:
         res=dai.ColorCameraProperties.SensorResolution.THE_1080_P,
         fps=30,
         fullFov=True,
-        ispScale: Optional[Tuple[int,int]] = None,
+        ispScale: Optional[List[int]] = None,
         orientation: dai.CameraImageOrientation=None,
         colorOrder=dai.ColorCameraProperties.ColorOrder.BGR,
         xout=False,
@@ -197,8 +197,8 @@ class PipelineManager:
             self.nodes.camRgb.setImageOrientation(orientation)
         self.nodes.camRgb.setPreviewKeepAspectRatio(not fullFov)
 
-        if ispScale and len(ispScale) == 2:
-            self.nodes.camRgb.setIspScale(int(ispScale[0]), int(ispScale[1]))
+        if ispScale and len(ispScale) in [2, 4]:
+            self.nodes.camRgb.setIspScale(*ispScale)
 
         if xout:
             self.nodes.xoutRgb = pipeline.createXLinkOut()
