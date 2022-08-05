@@ -227,34 +227,6 @@ ListView {
         }
 
         Text {
-            id: textOptions
-            x: 350
-            y: 8
-            width: 185
-            height: 30
-            color: "#ffffff"
-            text: qsTr("Demo options")
-            font.pixelSize: 26
-            horizontalAlignment: Text.AlignHCenter
-            font.family: "Courier"
-            font.styleName: "Regular"
-        }
-
-        Switch {
-            id: consentSwitch
-            x: 330
-            y: 40
-            checked: statisticsAccepted
-            width: 270
-            height: 27
-            text: qsTr("<font color=\"white\">Send anonymous usage data</font>")
-            bottomPadding: 5
-            onToggled: {
-                appBridge.toggleStatisticsConsent(consentSwitch.checked)
-            }
-        }
-
-        Text {
             id: textOptions1
             x: 350
             y: 203
