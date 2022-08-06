@@ -3,6 +3,7 @@ import os
 import sys
 from pathlib import Path
 import depthai as dai
+from typing import Tuple
 
 def getRgbResolution(resolution: str):
     """
@@ -60,7 +61,7 @@ def _checkRange(minVal, maxVal):
 
     return checkFn
 
-def _comaSeparated(default, cast=str):
+def _commaSeparated(default, cast=str):
     def _fun(option):
         optionList = option.split(",")
         if len(optionList) not in [1, 2]:
@@ -128,6 +129,7 @@ class ArgsManager():
         parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
                             help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
         parser.add_argument('-fps', '--fps', type=float, help='Camera FPS applied to all sensors')
+        parser.add_argument('-isp', '--ispScale', type=_commaSeparated(None), help="Sets ColorCamera's ISP scale")
 
         # ColorCamera controls
         parser.add_argument('-manualFocus', '--manualFocus', default=None, type=_checkRange(0, 255),
@@ -188,7 +190,7 @@ class ArgsManager():
                                                                                                                     "If set to \"auto\" (default), the optimal bandwidth will be selected based on your connection type and speed")
         parser.add_argument('-gt', '--guiType', type=str, default="auto", choices=["auto", "qt", "cv"], help="Specify GUI type of the demo. \"cv\" uses built-in OpenCV display methods, \"qt\" uses Qt to display interactive GUI. \"auto\" will use OpenCV for Raspberry Pi and Qt for other platforms")
         parser.add_argument('-usbs', '--usbSpeed', type=str, default="usb3", choices=["usb2", "usb3"], help="Force USB communication speed. Default: %(default)s")
-        parser.add_argument('-enc', '--encode', type=_comaSeparated(default=30.0, cast=float), nargs="+", default=[],
+        parser.add_argument('-enc', '--encode', type=_commaSeparated(default=30.0, cast=float), nargs="+", default=[],
                             help="Define which cameras to encode (record) \n"
                                 "Format: cameraName or cameraName,encFps \n"
                                 "Example: -enc left color \n"
@@ -196,18 +198,18 @@ class ArgsManager():
         parser.add_argument('-encout', '--encodeOutput', type=Path, default=folderPath / 'recordings', help="Path to directory where to store encoded files. Default: %(default)s")
         parser.add_argument('-xls', '--xlinkChunkSize', type=int, help="Specify XLink chunk size")
         parser.add_argument('-poeq', '--poeQuality', type=_checkRange(1, 100), default=100, help="Specify PoE encoding video quality (1-100)")
-        parser.add_argument('-camo', '--cameraOrientation', type=_comaSeparated(default="AUTO", cast=_orientationCast), nargs="+", default=[],
+        parser.add_argument('-camo', '--cameraOrientation', type=_commaSeparated(default="AUTO", cast=_orientationCast), nargs="+", default=[],
                             help=("Define cameras orientation (available: {}) \n"
                                 "Format: camera_name,camera_orientation \n"
                                 "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(_orientationChoices))
                             )
         parser.add_argument("--cameraControls", action="store_true", help="Show camera configuration options in GUI and control them using keyboard")
-        parser.add_argument("--cameraExposure", type=_comaSeparated("all", int), nargs="+", help="Specify camera saturation")
-        parser.add_argument("--cameraSensitivity", type=_comaSeparated("all", int), nargs="+", help="Specify camera sensitivity")
-        parser.add_argument("--cameraSaturation", type=_comaSeparated("all", int), nargs="+", help="Specify image saturation")
-        parser.add_argument("--cameraContrast", type=_comaSeparated("all", int), nargs="+", help="Specify image contrast")
-        parser.add_argument("--cameraBrightness", type=_comaSeparated("all", int), nargs="+", help="Specify image brightness")
-        parser.add_argument("--cameraSharpness", type=_comaSeparated("all", int), nargs="+", help="Specify image sharpness")
+        parser.add_argument("--cameraExposure", type=_commaSeparated("all", int), nargs="+", help="Specify camera saturation")
+        parser.add_argument("--cameraSensitivity", type=_commaSeparated("all", int), nargs="+", help="Specify camera sensitivity")
+        parser.add_argument("--cameraSaturation", type=_commaSeparated("all", int), nargs="+", help="Specify image saturation")
+        parser.add_argument("--cameraContrast", type=_commaSeparated("all", int), nargs="+", help="Specify image contrast")
+        parser.add_argument("--cameraBrightness", type=_commaSeparated("all", int), nargs="+", help="Specify image brightness")
+        parser.add_argument("--cameraSharpness", type=_commaSeparated("all", int), nargs="+", help="Specify image sharpness")
         parser.add_argument("--irDotBrightness", type=_checkRange(0, 1200), default=0, help="For OAK-D Pro: specify IR dot projector brightness, range: 0..1200 [mA], default 0 (turned off)")
         parser.add_argument("--irFloodBrightness", type=_checkRange(0, 1500), default=0, help="For OAK-D Pro: specify IR flood illumination brightness, range: 0..1500 [mA], default 0 (turned off)")
         parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")

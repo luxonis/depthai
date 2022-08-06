@@ -6,12 +6,112 @@ import urllib.request
 import cv2
 import numpy as np
 import depthai as dai
+from typing import Dict, List, Tuple, Optional, Union
+import requests
+import xmltodict
+
+DEPTHAI_RECORDINGS_PATH = Path.home() / Path('.cache/depthai-recordings')
+BLOBS_PATH = Path.home() / Path('.cache/blobs')
+DEPTHAI_RECORDINGS_URL = 'https://depthai-recordings.fra1.digitaloceanspaces.com/'
+
 
 def cosDist(a, b):
     """
     Calculates cosine distance - https://en.wikipedia.org/wiki/Cosine_similarity
     """
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+def getLocalRecording(recording: str) -> Optional[Path]:
+    p: Path = DEPTHAI_RECORDINGS_PATH / recording
+    if p.exists():
+        return p
+    return None
+
+def configPipeline(pipeline: dai.Pipeline,
+                   xlinkChunk: Optional[int] = None,
+                   calib: Optional[dai.CalibrationHandler] = None,
+                   tuningBlob: Optional[str] = None,
+                   openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
+                   ) -> None:
+    if xlinkChunk:
+        pipeline.setXLinkChunkSize(xlinkChunk)
+    if calib:
+        pipeline.setCalibrationData(calib)
+    if tuningBlob:
+        pipeline.setCameraTuningBlobPath(tuningBlob)
+    if openvinoVersion:
+        pipeline.setOpenVINOVersion(parseOpenVinoVersion(openvinoVersion))
+
+def parseOpenVinoVersion(version: Union[None, str, dai.OpenVINO.Version]) -> dai.OpenVINO.Version:
+    if version is None:
+        return dai.OpenVINO.Version.VERSION_2021_4
+    if isinstance(version, str):
+        vals = None
+        if '.' in version:
+            vals = version.split('.')
+        elif '_' in version:
+            vals = version.split('_')
+        if vals is None:
+            raise ValueError(f"OpenVINO version '{version}' passed in incorrect format!")
+        version = getattr(dai.OpenVINO.Version, f"VERSION_{vals[0]}_{vals[1]}")
+    return version
+
+
+def getBlob(url: str) -> Path:
+    """
+    Download the blob path from the url. If blob is cached, serve that. TODO: compute hash, check server hash,
+    as there will likely be many `model.blob`s.
+
+    @param url: Url to the blob
+    @return: Local path to the blob
+    """
+    fileName = Path(url).name
+    filePath = BLOBS_PATH / fileName
+    if filePath.exists():
+        return filePath
+    BLOBS_PATH.mkdir(parents=True, exist_ok=True)
+
+    r = requests.get(url)
+    with open(filePath, 'wb') as f:
+        f.write(r.content)
+        print('Downloaded', fileName)
+
+    return filePath
+
+def getAvailableRecordings() -> Dict[str, Tuple[List[str], int]]:
+    """
+    Get available (online) depthai-recordings. Returns list of available recordings and it's size
+    """
+    x = requests.get(DEPTHAI_RECORDINGS_URL)
+    if x.status_code != 200:
+        raise ValueError("DepthAI-Recordings server currently isn't available!")
+
+    # TODO: refactor and use native XML parsing to improve performance and reduce module dependencies
+    d = xmltodict.parse(x.content)
+    recordings: Dict[str, List[List[str], int]] = dict()
+
+    for content in d['ListBucketResult']['Contents']:
+        name = content['Key'].split('/')[0]
+        if name not in recordings: recordings[name] = [[], 0]
+        recordings[name][0].append(content['Key'])
+        recordings[name][1] += int(content['Size'])
+
+    return recordings
+
+
+def downloadRecording(name: str, keys: List[str]) -> Path:
+    for key in keys:
+        r = requests.get(DEPTHAI_RECORDINGS_URL + key)
+        if r.status_code != 200:
+            raise ValueError(f"depthai-recording '{name}' isn't available on our server!")
+
+        (DEPTHAI_RECORDINGS_PATH / name).mkdir(parents=True, exist_ok=True)
+        # retrieving data from the URL using get method
+        with open(DEPTHAI_RECORDINGS_PATH / key, 'wb') as f:
+            f.write(r.content)
+            print('Downloaded', key)
+
+    return DEPTHAI_RECORDINGS_PATH / name
 
 
 def frameNorm(frame, bbox):
@@ -71,7 +171,7 @@ def toTensorResult(packet):
     return data
 
 
-def merge(source:dict, destination:dict):
+def merge(source: dict, destination: dict):
     """
     Utility function to merge two dictionaries
 
@@ -178,18 +278,24 @@ def showProgress(curr, max):
         max (int): Maximum position on progress bar
     """
     done = int(50 * curr / max)
-    sys.stdout.write("\r[{}{}] ".format('=' * done, ' ' * (50-done)) )
+    sys.stdout.write("\r[{}{}] ".format('=' * done, ' ' * (50 - done)))
     sys.stdout.flush()
 
+def isYoutubeLink(source: str) -> bool:
+    return "youtube.com" in source
 
+def isUrl(source: Union[str, Path]) -> bool:
+    if isinstance(source, Path):
+        source = str(source)
+    return source.startswith("http://") or source.startswith("https://")
 
-def downloadYTVideo(video, outputDir):
+def downloadYTVideo(video: str, output_dir: Optional[Path] = None) -> Path:
     """
     Downloads a video from YouTube and returns the path to video. Will choose the best resolutuion if possible.
 
     Args:
         video (str): URL to YouTube video
-        outputDir (pathlib.Path): Path to directory where youtube video should be downloaded.
+        output_dir (pathlib.Path): Path to directory where youtube video should be downloaded.
 
     Returns:
          pathlib.Path: Path to downloaded video file
@@ -197,22 +303,25 @@ def downloadYTVideo(video, outputDir):
     Raises:
         RuntimeError: thrown when video download was unsuccessful
     """
+    if output_dir is None:
+        output_dir = DEPTHAI_RECORDINGS_PATH
+
     def progressFunc(stream, chunk, bytesRemaining):
         showProgress(stream.filesize - bytesRemaining, stream.filesize)
 
+    path = None
     try:
         from pytube import YouTube
     except ImportError as ex:
         raise RuntimeError("Unable to use YouTube video due to the following import error: {}".format(ex))
-    path = None
     for _ in range(10):
         try:
-            path = YouTube(video, on_progress_callback=progressFunc)\
-                .streams\
-                .order_by('resolution')\
-                .desc()\
-                .first()\
-                .download(output_path=str(outputDir))
+            path = YouTube(video, on_progress_callback=progressFunc) \
+                .streams \
+                .order_by('resolution') \
+                .desc() \
+                .first() \
+                .download(output_path=str(output_dir))
         except urllib.error.HTTPError:
             # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
             # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
@@ -221,7 +330,7 @@ def downloadYTVideo(video, outputDir):
             break
     if path is None:
         raise RuntimeError("Unable to download YouTube video. Please try again")
-    return path
+    return Path(path)
 
 
 def cropToAspectRatio(frame, size):
@@ -242,14 +351,14 @@ def cropToAspectRatio(frame, size):
     # Crop width/height to match the aspect ratio needed by the NN
     if newRatio < currentRatio:  # Crop width
         # Use full height, crop width
-        newW = (newRatio/currentRatio) * w
+        newW = (newRatio / currentRatio) * w
         crop = int((w - newW) / 2)
-        return frame[:, crop:w-crop]
+        return frame[:, crop:w - crop]
     else:  # Crop height
         # Use full width, crop height
-        newH = (currentRatio/newRatio) * h
+        newH = (currentRatio / newRatio) * h
         crop = int((h - newH) / 2)
-        return frame[crop:h-crop, :]
+        return frame[crop:h - crop, :]
 
 
 def resizeLetterbox(frame, size):

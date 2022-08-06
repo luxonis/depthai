@@ -1,0 +1,9 @@
+{
+    "nn_config": {
+        "output_format" : "raw",
+        "input_size": "432x368"
+    },
+    "openvino_version": "2020_4",
+    "handler": "handler.py"
+}
+
