@@ -151,7 +151,7 @@ class PipelineManager:
         xout=False,
         xoutVideo=False,
         xoutStill=False,
-        control=True, # Create input control
+        control=False, # Create input control
         pipeline=None,
         args=None,
         ) -> dai.node.ColorCamera:
@@ -175,7 +175,7 @@ class PipelineManager:
             pipeline = self.pipeline
 
         if args is not None:
-            return self.createColorCam(
+            self.nodes.camRgb = self.createColorCam(
                 previewSize=(576, 320), # 1080P / 3
                 res=args.rgbResolution,
                 fps=args.rgbFps,
@@ -185,8 +185,13 @@ class PipelineManager:
                 pipeline=pipeline,
                 ispScale=args.ispScale
             )
+            # Using CameraComponent's static function. Managers (including this one) will get deprecated when the full SDK
+            # refactor is complete.
+
+            return self.nodes.camRgb
 
         self.nodes.camRgb = pipeline.createColorCamera()
+
         if previewSize is not None:
             self.nodes.camRgb.setPreviewSize(*previewSize)
         self.nodes.camRgb.setInterleaved(False)
@@ -502,6 +507,13 @@ class PipelineManager:
     def captureStill(self):
         ctrl = dai.CameraControl()
         ctrl.setCaptureStill(True)
+        self._rgbConfigInputQueue.send(ctrl)
+
+    # Added this function to send manual focus
+    # configuration to inputControl queue.
+    def setManualFocus(self, focus):
+        ctrl = dai.CameraControl()
+        ctrl.setManualFocus(focus)
         self._rgbConfigInputQueue.send(ctrl)
 
     def triggerAutoFocus(self):
