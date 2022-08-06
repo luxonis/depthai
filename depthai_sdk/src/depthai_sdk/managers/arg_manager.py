@@ -89,8 +89,9 @@ def _checkEnum(enum):
         try:
             return getattr(enum, value.upper())
         except:
+            choices = [f"'{str(item).split('.')[-1]}'" for name, item in vars(enum).items() if name.isupper()]
             raise argparse.ArgumentTypeError(
-                "{} option wasn't found in {} options!".format(value, enum)
+                "{} option wasn't found in {} options! Choices: {}".format(value, enum, ', '.join(choices))
             )
 
     return _fun
@@ -129,7 +130,16 @@ class ArgsManager():
         parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
                             help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
         parser.add_argument('-fps', '--fps', type=float, help='Camera FPS applied to all sensors')
+
+        # ColorCamera ISP values
         parser.add_argument('-isp', '--ispScale', type=_commaSeparated(None), help="Sets ColorCamera's ISP scale")
+        parser.add_argument('-sharpness', '--sharpness', default=None, type=_checkRange(0,4),
+                            help="Sets ColorCamera's sharpness")
+        parser.add_argument('-lumaDenoise', '--lumaDenoise', default=None, type=_checkRange(0, 4),
+                            help="Sets ColorCamera's Luma denoise")
+        parser.add_argument('-chromaDenoise', '--chromaDenoise', default=None, type=_checkRange(0, 4),
+                            help="Sets ColorCamera's Chroma denoise")
+
 
         # ColorCamera controls
         parser.add_argument('-manualFocus', '--manualFocus', default=None, type=_checkRange(0, 255),

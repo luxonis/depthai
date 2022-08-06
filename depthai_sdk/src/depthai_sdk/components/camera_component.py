@@ -1,7 +1,56 @@
 from .component import Component
-from typing import Optional, Union, Tuple, Any
+from typing import Optional, Union, Tuple, Any, Dict
 import depthai as dai
 from ..replay import Replay
+
+
+def setControl(control: dai.CameraControl,
+               manualFocus: Optional[int] = None,
+               afMode: Optional[dai.CameraControl.AutoFocusMode] = None,
+               awbMode: Optional[dai.CameraControl.AutoWhiteBalanceMode] = None,
+               sceneMode: Optional[dai.CameraControl.SceneMode] = None,
+               antiBandingMode: Optional[dai.CameraControl.AntiBandingMode] = None,
+               effectMode: Optional[dai.CameraControl.EffectMode] = None,
+               sharpness: Optional[int] = None,
+               lumaDenoise: Optional[int] = None,
+               chromaDenoise: Optional[int] = None,
+
+               ):
+    if manualFocus is not None:
+        control.setManualFocus(manualFocus)
+    if afMode is not None:
+        control.setAutoFocusMode(afMode)
+    if awbMode is not None:
+        control.setAutoWhiteBalanceMode(awbMode)
+    if sceneMode is not None:
+        control.setSceneMode(sceneMode)
+    if antiBandingMode is not None:
+        control.setAntiBandingMode(antiBandingMode)
+    if effectMode is not None:
+        control.setEffectMode(effectMode)
+    if sharpness is not None:
+        control.setSharpness(sharpness)
+    if lumaDenoise is not None:
+        control.setLumaDenoise(lumaDenoise)
+    if chromaDenoise is not None:
+        control.setChromaDenoise(chromaDenoise)
+
+    # TODO: Add contrast, exposure compensation, brightness, manual exposure, and saturation
+
+
+def parseUserArgs(options: Dict[str, Any], cam: dai.node.ColorCamera):
+    setControl(cam.initialControl,
+               options.get('manualFocus', None),
+               options.get('afMode', None),
+               options.get('awbMode', None),
+               options.get('sceneMode', None),
+               options.get('antiBandingMode', None),
+               options.get('effectMode', None),
+               options.get('sharpness', None),
+               options.get('lumaDenoise', None),
+               options.get('chromaDenoise', None),
+            )
+
 
 class CameraComponent(Component):
     # Users should have access to these nodes
@@ -136,9 +185,6 @@ class CameraComponent(Component):
             if isinstance(colorOrder, str):
                 colorOrder = getattr(dai.ColorCameraProperties.ColorOrder, colorOrder.upper())
             self.camera.getColorOrder(colorOrder)
-
-
-
 
     def _isColor(self) -> bool: return isinstance(self.camera, dai.node.ColorCamera)
     def _isMono(self) -> bool: return isinstance(self.camera, dai.node.MonoCamera)

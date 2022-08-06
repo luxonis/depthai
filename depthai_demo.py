@@ -296,7 +296,7 @@ class Demo:
                 "saturation": self._conf.args.cameraSaturation,
                 "contrast": self._conf.args.cameraContrast,
                 "brightness": self._conf.args.cameraBrightness,
-                "sharpness": self._conf.args.cameraSharpness
+                "sharpness": self._conf.args.sharpness,
             })
 
             self._pv.createQueues(self._device, self._createQueueCallback)
