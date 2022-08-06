@@ -1,6 +1,6 @@
-from multiprocessing.sharedctypes import Value
 import depthai as dai
-from typing import Union, Tuple
+from typing import Union, Tuple, Optional, Dict, Any
+from .camera_helper import setCameraControl
 
 def rgbResolution(resolution: Union[str, dai.ColorCameraProperties.SensorResolution]) -> dai.ColorCameraProperties.SensorResolution:
     """
@@ -62,3 +62,17 @@ def parseSize(size: Union[str, Tuple[int, int]]) -> Tuple[int, int]:
         return Tuple[int(vals[0]), int(vals[1])]
     else:
         raise ValueError("Size typle not supported!")
+
+
+def parseColorCamControl(options: Dict[str, Any], cam: dai.node.ColorCamera):
+    setCameraControl(cam.initialControl,
+                     options.get('manualFocus', None),
+                     options.get('afMode', None),
+                     options.get('awbMode', None),
+                     options.get('sceneMode', None),
+                     options.get('antiBandingMode', None),
+                     options.get('effectMode', None),
+                     options.get('sharpness', None),
+                     options.get('lumaDenoise', None),
+                     options.get('chromaDenoise', None),
+                     )
