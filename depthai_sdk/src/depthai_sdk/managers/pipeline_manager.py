@@ -172,13 +172,8 @@ class PipelineManager:
         if pipeline is None:
             pipeline = self.pipeline
 
-        # This if-statement block was causing issues
-        # when implementing manual focus. I don't really
-        # understand what it does, but manual focus
-        # implementation worked properly when I commented it out.
-        """
         if args is not None:
-            return self.createColorCam(
+            self.nodes.camRgb = self.createColorCam(
                 previewSize=(576, 320), # 1080P / 3
                 res=args.rgbResolution,
                 fps=args.rgbFps,
@@ -187,9 +182,13 @@ class PipelineManager:
                 xout=Previews.color.name in args.show,
                 pipeline=pipeline
             )
-        """
+            # Using CameraComponent's static function. Managers (including this one) will get deprecated when the full SDK
+            # refactor is complete.
+
+            return self.nodes.camRgb
 
         self.nodes.camRgb = pipeline.createColorCamera()
+
         if previewSize is not None:
             self.nodes.camRgb.setPreviewSize(*previewSize)
         self.nodes.camRgb.setInterleaved(False)

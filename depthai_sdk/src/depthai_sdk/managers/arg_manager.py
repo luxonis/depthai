@@ -83,6 +83,18 @@ def _orientationCast(arg):
         raise argparse.ArgumentTypeError("Invalid camera orientation specified: '{}'. Available: {}".format(arg, _orientationChoices))
     return getattr(dai.CameraImageOrientation, arg)
 
+def _checkEnum(enum):
+    def _fun(value: str):
+        try:
+            return getattr(enum, value.upper())
+        except:
+            raise argparse.ArgumentTypeError(
+                "{} option wasn't found in {} options!".format(value, enum)
+            )
+
+    return _fun
+
+
 class ArgsManager():
     @staticmethod
     def parseArgs(parser: argparse.ArgumentParser = None):
@@ -116,8 +128,21 @@ class ArgsManager():
         parser.add_argument("-monof", "--monoFps", default=30.0, type=float,
                             help="Mono cam fps: max 60.0 for H:720 or H:800, max 120.0 for H:400. Default: %(default)s")
         parser.add_argument('-fps', '--fps', type=float, help='Camera FPS applied to all sensors')
-        parser.add_argument('-mf', '--manualFocus', type=int,
+
+        # ColorCamera controls
+        parser.add_argument('-manualFocus', '--manualFocus', default=None, type=_checkRange(0, 255),
                             help="Specify a Lens Position between 0 and 255 to use manual focus. Otherwise, auto-focus is used by default.")
+        parser.add_argument('-afMode', '--afMode', default=None, type=_checkEnum(dai.CameraControl.AutoFocusMode),
+                            help="Specify the Auto Focus mode for the ColorCamera. AUTO by default.")
+        parser.add_argument('-awbMode', '--awbMode', default=None, type=_checkEnum(dai.CameraControl.AutoWhiteBalanceMode),
+                            help="Specify the Auto White Balance mode for the ColorCamera. AUTO by default.")
+        parser.add_argument('-sceneMode', '--sceneMode', default=None, type=_checkEnum(dai.CameraControl.SceneMode),
+                            help="Specify the Scene mode for the ColorCamera. AUTO by default.")
+        parser.add_argument('-abMode', '-antiBandingMode', '--antiBandingMode', default=None, type=_checkEnum(dai.CameraControl.AntiBandingMode),
+                            help="Specify the Anti-Banding mode for the ColorCamera. AUTO by default.")
+        parser.add_argument('-effectMode', '--effectMode', default=None, type=_checkEnum(dai.CameraControl.EffectMode),
+                            help="Specify the Effect mode for the ColorCamera. AUTO by default.")
+
         
         # Depth related arguments
         parser.add_argument("-dct", "--disparityConfidenceThreshold", default=245, type=_checkRange(0, 255),
