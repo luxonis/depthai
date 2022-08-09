@@ -3,10 +3,53 @@
     {
         "name": "OAK-D",
         "revision": "R1M0E1",
-        "swap_left_and_right_cameras": true,
-        "left_fov_deg": 71.86,
-        "rgb_fov_deg": 68.7938,
-        "left_to_right_distance_cm": 7.5,
-        "left_to_rgb_distance_cm": 3.75
+        "cameras":{
+            "CAM_A": {
+                "name": "rgb",
+                "hfov": 68.7938,
+                "type": "color"
+            },
+            "CAM_B": {
+                "name": "left",
+                "hfov": 71.86,
+                "type": "mono",
+                "extrinsics": {
+                    "to_cam": "CAM_C",
+                    "specTranslation": {
+                        "x": -7.5,
+                        "y": 0,
+                        "z": 0
+                    },
+                    "rotation":{
+                        "r": 0,
+                        "p": 0,
+                        "y": 0
+                    }
+                }
+            },
+            "CAM_C": {
+                "name": "right",
+                "hfov": 71.86,
+                "type": "mono",
+                "extrinsics": {
+                    "to_cam": "CAM_A",
+                    "specTranslation": {
+                        "x": 3.75,
+                        "y": 0,
+                        "z": 0
+                    },
+                    "rotation":{
+                        "r": 0,
+                        "p": 0,
+                        "y": 0
+                    }
+                }
+            }
+        },
+        "stereo_config":{
+            "left_cam": "CAM_B",
+            "right_cam": "CAM_C"
+        }
     }
 }
+
