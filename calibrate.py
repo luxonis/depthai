@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 import argparse
 import json
+from pydoc import render_doc
 import shutil
 import traceback
 from argparse import ArgumentParser
 from pathlib import Path
 import time
 from datetime import datetime, timedelta
+from collections import deque 
 
 import cv2
 from cv2 import resize
 import depthai as dai
 import numpy as np
+import copy
 
-import depthai_helpers.calibration_utils_old as calibUtils
+import depthai_helpers.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 debug = False
@@ -169,7 +172,7 @@ def parse_args():
 class HostSync:
     def __init__(self, deltaMilliSec):
         self.arrays = {}
-        # self.arraySize = arraySize
+        self.arraySize = 15
         self.recentFrameTs = None
         self.deltaMilliSec = timedelta(milliseconds=deltaMilliSec)
         # self.synced = queue.Queue()
@@ -179,23 +182,69 @@ class HostSync:
 
     def add_msg(self, name, data, ts):
         if name not in self.arrays:
-            self.arrays[name] = []
+            self.arrays[name] = deque(maxlen=self.arraySize)
         # Add msg to array
-        self.arrays[name].append({'data': data, 'timestamp': ts})
-        if self.recentFrameTs == None or self.recentFrameTs < ts:
+        self.arrays[name].appendleft({'data': data, 'timestamp': ts})
+        if self.recentFrameTs == None or self.recentFrameTs - ts:
             self.recentFrameTs = ts
-
-        for name, arr in self.arrays.items():
-            for i, obj in enumerate(arr):
-                if self.remove(obj['timestamp']):
-                    arr.remove(obj)
-                else: break
+        print(len(self.arrays[name]))
+        # print(f'Added Msgs typ {name}')
+        print(ts)
+        # for name, arr in self.arrays.items():
+        #     for i, obj in enumerate(arr):
+        #         if self.remove(obj['timestamp']):
+        #             arr.remove(obj)
+        #         else: break
     
-        
+    def clearQueues(self):
+        print('Clearing Queues...')
+        for name, msgList in self.arrays.items():
+            self.arrays[name].clear()
+            print(len(self.arrays[name]))
+
     def get_synced(self):
         synced = {}
-    
-        for name, arr in self.arrays.items():
+        for name, msgList in self.arrays.items():
+            # print('len(pivotM---------sgList)')
+            # print(len(pivotMsgList))
+
+            if len(msgList) != self.arraySize:
+                return False 
+
+        for name, pivotMsgList in self.arrays.items():
+            print('len(pivotMsgList)')
+            print(len(pivotMsgList))
+            pivotMsgListDuplicate = pivotMsgList
+            while pivotMsgListDuplicate:
+                currPivot = pivotMsgListDuplicate.popleft()
+                synced[name] = currPivot['data']
+                
+                for subName, msgList in self.arrays.items():
+                    print(f'len of {subName}')
+                    print(len(msgList))
+                    if name == subName:
+                        continue
+                    msgListDuplicate = msgList.copy()
+                    while msgListDuplicate:
+                        print(f'---len of dup {subName} is {len(msgListDuplicate)}')
+                        currMsg = msgListDuplicate.popleft()
+                        time_diff = abs(currMsg['timestamp'] - currPivot['timestamp'])
+                        print(f'---Time diff is {time_diff} and delta is {self.deltaMilliSec}')
+                        if time_diff < self.deltaMilliSec:
+                            print(f'--------Adding {subName} to sync. Messages left is {len(msgListDuplicate)}')
+                            synced[subName] = currMsg['data']
+                            break
+                    print(f'Size of Synced is {len(synced)} amd array size is {len(self.arrays)}')
+                    if len(synced) == len(self.arrays):
+                        self.clearQueues()
+                        return synced
+
+            # raise SystemExit(1)
+            self.clearQueues()
+            return False
+
+
+        """ for name, arr in self.arrays.items():
             for i, obj in enumerate(arr):
                 time_diff = abs(obj['timestamp'] - self.recentFrameTs)
                 print("Time diff for {0} is {1} milliseconds".format(name ,time_diff.total_seconds() * 1000))
@@ -213,7 +262,7 @@ class HostSync:
                         arr.remove(obj)
                     else: break
             return synced
-        return False
+        return False """
 
 class Main:
     output_scale_factor = 0.5
@@ -393,7 +442,7 @@ class Main:
     def show_failed_capture_frame(self):
         width, height = int(
             self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
-        info_frame = np.zeros((height, width, 3), np.uint8)
+        info_frame = np.zeros((self.height, self.width, 3), np.uint8)
         print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
 
         def show(position, text):
@@ -448,13 +497,14 @@ class Main:
         curr_time = None
 
         self.display_name = "Image Window"
-        syncCollector = HostSync(20)
+        syncCollector = HostSync(60)
         while not finished:
             currImageList = {}
             for key in self.camera_queue.keys():
                 frameMsg = self.camera_queue[key].get()
 
-                print(f'key is {key}')
+                # print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
+
                 syncCollector.add_msg(key, frameMsg, frameMsg.getTimestamp())
                 gray_frame = None
                 if frameMsg.getType() == dai.RawImgFrame.Type.RAW8:
@@ -462,19 +512,17 @@ class Main:
                 else:
                     gray_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
                 currImageList[key] = gray_frame
-                print(gray_frame.shape)
+                # print(gray_frame.shape)
 
             resizeHeight = 0
             resizeWidth = 0
             for name, imgFrame in currImageList.items():
                 
-                print(f'original Shape of {name} is {imgFrame.shape}' )
+                # print(f'original Shape of {name} is {imgFrame.shape}' )
                 currImageList[name] = cv2.resize(
                     imgFrame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
                 
                 height, width = currImageList[name].shape
-               
-                print(f'resized Shape of {name} is {width}x{height}' )
 
                 widthRatio = resizeWidth / width
                 heightRatio = resizeHeight / height
@@ -495,7 +543,7 @@ class Main:
                 # if height > resizeHeight:
                 #     resizeHeight = height
             
-            print(f'Scale Shape  is {resizeWidth}x{resizeHeight}' )
+            # print(f'Scale Shape  is {resizeWidth}x{resizeHeight}' )
             
             combinedImage = None
             for name, imgFrame in currImageList.items():
@@ -504,7 +552,7 @@ class Main:
                     imgFrame = cv2.resize(
                     imgFrame, (0, 0), fx= resizeWidth / width, fy= resizeWidth / width)
                 
-                print(f'final_scaledImageSize is {imgFrame.shape}')
+                # print(f'final_scaledImageSize is {imgFrame.shape}')
                 if self.polygons is None:
                     self.height, self.width = imgFrame.shape
                     print(self.height, self.width)
@@ -559,11 +607,14 @@ class Main:
             cv2.imshow(self.display_name, combinedImage)
             tried = {}
             allPassed = True
+
             if capturing:
                 syncedMsgs = syncCollector.get_synced()
                 if syncedMsgs == False:
-                    continue #
-                for name, frameMsg in syncedMsgs:
+                    for key in self.camera_queue.keys():
+                        self.camera_queue[key].getAll()
+                    continue 
+                for name, frameMsg in syncedMsgs.items():
                     tried[name] = self.parse_frame(frameMsg.getCvFrame(), name)
                     allPassed = allPassed and tried[name]
                 
@@ -577,12 +628,14 @@ class Main:
 
                     self.images_captured += 1
                     self.images_captured_polygon += 1
+                    capturing = False
                 else:
                     self.show_failed_capture_frame()
+                    capturing = False
 
-            print(f'self.images_captured_polygon  {self.images_captured_polygon}')
-            print(f'self.current_polygon  {self.current_polygon}')
-            print(f'len(self.polygons)  {len(self.polygons)}')
+            # print(f'self.images_captured_polygon  {self.images_captured_polygon}')
+            # print(f'self.current_polygon  {self.current_polygon}')
+            # print(f'len(self.polygons)  {len(self.polygons)}')
 
             if self.images_captured_polygon == self.args.count:
                 self.images_captured_polygon = 0
@@ -805,6 +858,8 @@ class Main:
         try:
 
             # stereo_calib = StereoCalibration()
+            print("Starting image processingxxccx")
+            print(self.args.squaresX)
             status, result_config = stereo_calib.calibrate(
                                         self.board_config,
                                         self.dataset_path,
@@ -828,13 +883,14 @@ class Main:
                     reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
 
                 if cam_info['name'] == 'rgb':
-                    reprojection_error_threshold = 6
+                    reprojection_error_threshold = 3
                 print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
                 
                 if cam_info['reprojection_error'] > reprojection_error_threshold:
                     color = red
                     error_text.append("high Reprojection Error")
                 text = cam_info['name'] + ' Reprojection Error: ' + format(cam_info['reprojection_error'], '.6f')
+                print(text)
                 # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
 
                 calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
@@ -842,7 +898,7 @@ class Main:
                 calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
 
                 if cam_info['hasAutofocus']:
-                    calibration_handler.setLensPosition(stringToCam[camera], self.lensPosition[cam_info['name']])
+                    calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
 
                 # log_list.append(self.focusSigma[cam_info['name']])
                 # log_list.append(cam_info['reprojection_error'])
@@ -877,7 +933,7 @@ class Main:
 
             if len(error_text) == 0:
                 print('Flashing Calibration data into ')
-                print(calib_dest_path)
+                # print(calib_dest_path)
 
                 eeepromData = calibration_handler.getEepromData()
                 print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
@@ -937,7 +993,7 @@ class Main:
                 print(error_text)
                 for text in error_text: 
                 # text = error_text[0]                
-                    resImage = create_blank(900, 512, rgb_color=false)
+                    resImage = create_blank(900, 512, rgb_color=red)
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)

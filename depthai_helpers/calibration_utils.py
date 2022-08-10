@@ -93,10 +93,12 @@ class StereoCalibration(object):
         """Function to calculate calibration for stereo camera."""
         start_time = time.time()
         # init object data
+        print(f'squareX is {squaresX}')
         self.enable_rectification_disp = enable_disp_rectify
         self.cameraModel = camera_model
         self.data_path = filepath
         self.aruco_dictionary = aruco.Dictionary_get(aruco.DICT_4X4_1000)
+        
         self.board = aruco.CharucoBoard_create(
             # 22, 16,
             squaresX, squaresY,
