@@ -7,8 +7,7 @@
     {
         "output_format" : "detection",
         "NN_family" : "mobilenet",
-        "confidence_threshold" : 0.5,
-        "input_size": "672x384"
+        "confidence_threshold" : 0.5
     },
     "mappings":
     {
@@ -17,6 +16,7 @@
             "",
             "vehicle"
         ]
-    }
+    },
+    "version": 1
 }
 

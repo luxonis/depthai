@@ -7,7 +7,6 @@
     {
         "output_format" : "detection",
         "NN_family" : "YOLO",
-        "input_size": "416x416",
         "NN_specific_metadata" :
         {
             "classes" : 80,
@@ -107,6 +106,7 @@
             "hair drier",
             "toothbrush"        
         ]
-    }
+    },
+    "version": 1
 }
 
