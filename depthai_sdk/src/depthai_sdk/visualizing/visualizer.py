@@ -3,56 +3,92 @@ import depthai as dai
 from typing import Tuple, Optional, Union, List, Dict, Type, Any
 import cv2
 import time
+
+from .. import AspectRatioResizeMode
 from ..components import Component, NNComponent
 
 bg_color = (0, 0, 0)
 color = (255, 255, 255)
 text_type = cv2.FONT_HERSHEY_SIMPLEX
 line_type = cv2.LINE_AA
+
+
 def putText(frame, text, coords):
     cv2.putText(frame, text, coords, text_type, 1.0, bg_color, 3, line_type)
     cv2.putText(frame, text, coords, text_type, 1.0, color, 1, line_type)
+
+
 def rectangle(frame, bbox):
-    x1,y1,x2,y2 = bbox
+    x1, y1, x2, y2 = bbox
     cv2.rectangle(frame, (x1, y1), (x2, y2), bg_color, 3)
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
+
+
+class NormalizeBoundingBox:
+    def __init__(self,
+                 aspectRatio: Tuple[float, float],
+                 arResizeMode: AspectRatioResizeMode,
+                 ):
+        """
+        @param aspectRatio: NN input size
+        @param arResizeMode
+        """
+        self.aspectRatio = aspectRatio
+        self.arResizeMode = arResizeMode
+
+    def normalize(self, frame, bbox: Tuple[float, float, float, float]):
+        """
+        Mapps bounding box coordinates (0..1) to pixel values on frame
+
+        Args:
+            frame (numpy.ndarray): Frame to which adjust the bounding box
+            bbox (list): list of bounding box points in a form of :code:`[x1, y1, x2, y2, ...]`
+
+        Returns:
+            list: Bounding box points mapped to pixel values on frame
+        """
+        bbox = np.array(bbox)
+
+        # Edit the bounding boxes before normalizing them
+        if self.arResizeMode == AspectRatioResizeMode.CROP:
+            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[0] / frame.shape[1]
+            sel = 0 if 0 < ar_diff else 1
+            bbox[sel::2] *= 1 - abs(ar_diff)
+            bbox[sel::2] += abs(ar_diff) / 2
+        elif self.arResizeMode == AspectRatioResizeMode.STRETCH:
+            # No need to edit bounding boxes when stretching
+            pass
+        elif self.arResizeMode == AspectRatioResizeMode.LETTERBOX:
+            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[0] / frame.shape[1]
+            sel = 1 if 0 < ar_diff else 0
+            bbox[sel::2] -= abs(ar_diff) / 2
+            bbox[sel::2] /= 1 - abs(ar_diff)
+        # Normalize bounding boxes
+        normVals = np.full(len(bbox), frame.shape[0])
+        normVals[::2] = frame.shape[1]
+        return (np.clip(bbox, 0, 1) * normVals).astype(int)
+
 
 class FPSHandler:
     def __init__(self):
         self.timestamp = time.time() + 1
         self.start = time.time()
         self.frame_cnt = 0
+
     def next_iter(self):
         self.timestamp = time.time()
         self.frame_cnt += 1
+
     def fps(self):
         return self.frame_cnt / (self.timestamp - self.start)
 
-def frameNorm(frame, bbox: Tuple[float,float,float,float], aspectRatio: Optional[Tuple[int,int]]= None):
-    """
-    Mapps bounding box coordinates (0..1) to pixel values on frame
 
-    Args:
-        frame (numpy.ndarray): Frame to which adjust the bounding box
-        bbox (list): list of bounding box points in a form of :code:`[x1, y1, x2, y2, ...]`
-        aspectRatio (Tuple[float,float], optional): Aspect ratio of the NN, for which the image was cropped
-
-    Returns:
-        list: Bounding box points mapped to pixel values on frame
-    """
-    bbox = np.array(bbox)
-    if aspectRatio: # Edit bbox values to match that of the NN (that uses cropped image)
-        ar_diff = aspectRatio[0] / aspectRatio[1] - frame.shape[0] / frame.shape[1]
-        sel = 0 if 0 < ar_diff else 1
-        bbox[sel::2] *= 1-abs(ar_diff)
-        bbox[sel::2] += abs(ar_diff)/2
-    normVals = np.full(len(bbox), frame.shape[0])
-    normVals[::2] = frame.shape[1]
-    return (np.clip(bbox, 0, 1) * normVals).astype(int)
-
-def drawDetections(frame, dets: dai.ImgDetections, labelMap: List[str] =  None, aspectRatio: Optional[Tuple[float,float]]= None):
+def drawDetections(frame,
+                   dets: dai.ImgDetections,
+                   norm: NormalizeBoundingBox,
+                   labelMap: List[str] = None):
     for detection in dets.detections:
-        bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax), aspectRatio)
+        bbox = norm.normalize(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
         putText(frame, labelMap[detection.label] if labelMap else str(detection.label), (bbox[0] + 10, bbox[1] + 20))
         putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40))
         rectangle(frame, bbox)
@@ -61,7 +97,9 @@ def drawDetections(frame, dets: dai.ImgDetections, labelMap: List[str] =  None, 
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
 jet_custom = jet_custom[::-1]
 jet_custom[0] = [0, 0, 0]
-def colorizeDepth(depthFrame: Union[dai.ImgFrame, Any], colorMap = None):
+
+
+def colorizeDepth(depthFrame: Union[dai.ImgFrame, Any], colorMap=None):
     if isinstance(depthFrame, dai.ImgFrame):
         depthFrame = depthFrame.getFrame()
     depthFrameColor = cv2.normalize(depthFrame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
@@ -84,27 +122,30 @@ def drawBbMappings(depthFrame: Union[dai.ImgFrame, Any], bbMappings: dai.Spatial
 
         rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), 255, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
 
-def hex_to_rgb(hex: str) -> Tuple[int,int,int]:
-    value = value.lstrip('#')
+
+def hex_to_rgb(hex: str) -> Tuple[int, int, int]:
+    value = str.lstrip('#')
     lv = len(value)
     return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
 
-def hex_to_bgr(hex: str) -> Tuple[int,int,int]:
+
+def hex_to_bgr(hex: str) -> Tuple[int, int, int]:
     rgb = hex_to_rgb(hex)
     return tuple(rgb[2], rgb[1], rgb[0])
 
-class BaseVisualizer():
+
+class BaseVisualizer:
     _name: str
-    _scale: Union[None, float, Tuple[int,int]] = None
+    _scale: Union[None, float, Tuple[int, int]] = None
     _fps: FPSHandler = None
 
     def __init__(self, frameStream: str) -> None:
         self._name = frameStream
 
     def setBase(self,
-        scale: Union[None, float, Tuple[int,int]] = None,
-        fps: bool = False,
-        ):
+                scale: Union[None, float, Tuple[int, int]] = None,
+                fps: bool = False,
+                ):
         self._scale = scale
         if fps:
             self._fps = FPSHandler()
@@ -117,11 +158,11 @@ class BaseVisualizer():
 
         if self._fps:
             self._fps.next_iter()
-            putText(frame, "FPS: {:.1f}".format(self._fps.fps()), (10,20))
+            putText(frame, "FPS: {:.1f}".format(self._fps.fps()), (10, 20))
 
         if self._scale:
             if isinstance(self._scale, Tuple):
-                frame = cv2.resize(frame, self._scale) # Resize frame
+                frame = cv2.resize(frame, self._scale)  # Resize frame
             elif isinstance(self._scale, float):
                 shape = frame.shape
                 frame = cv2.resize(frame, (
@@ -135,17 +176,17 @@ class BaseVisualizer():
     def name(self) -> str:
         return self._name
 
+
 class DetectionsVisualizer(BaseVisualizer):
-    detectionStream: str # Detection stream name
+    detectionStream: str  # Detection stream name
     labels: List[Union[str, Tuple[str, str]]] = None
-    aspectRatio: Tuple[int,int] = None
+    normalizer: NormalizeBoundingBox
 
     def __init__(self,
-        frameStream: str,
-        detectionsStream: str,
-        labels: List[Union[str, Tuple[str, str]]] = None,
-        aspectRatio: Tuple[int,int] = None,
-        ) -> None:
+                 frameStream: str,
+                 detectionsStream: str,
+                 nnComp: NNComponent
+                 ) -> None:
         """
         Visualizes object detection results.
 
@@ -158,33 +199,56 @@ class DetectionsVisualizer(BaseVisualizer):
         """
         super().__init__(frameStream)
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
-        if labels is not None:
-            self.labels = [label if isinstance(label, str) else label[0] for label in labels]
-        self.aspectRatio = aspectRatio
+        if nnComp.labels:
+            self.labels = [label if isinstance(label, str) else label[0] for label in nnComp.labels]
+
         self.detectionStream = detectionsStream
-    
+        self.normalizer = NormalizeBoundingBox(nnComp.size, nnComp.arResizeMode)
+
     def newMsgs(self, msgs: Dict):
-        frame = msgs[super().name].getCvFrame()
+        imgFrame: dai.ImgFrame = msgs[super().name]
+        h = imgFrame.getHeight()
+        if h == 0:
+            return
+        frame = imgFrame.getCvFrame()
         dets = msgs[self.detectionStream]
-        drawDetections(frame, dets, self.labels, self.aspectRatio)
+        drawDetections(frame, dets, self.normalizer, self.labels)
         super().newMsgs(frame=frame)
+
 
 class Visualizer:
     _components: List[Component]
     _visualizers: List[BaseVisualizer] = []
+    _scale: Union[None, float, Tuple[int, int]] = None
+    _fps = False
 
-    def __init__(self, components: List[Component], scale: Union[None, float, Tuple[int,int]] = None,fps=False) -> None:
+    def __init__(self, components: List[Component], scale: Union[None, float, Tuple[int, int]] = None,
+                 fps=False) -> None:
         self._components = components
+        self._scale = scale
+        self._fps = fps
 
-        nns = self._components_by_type(components, NNComponent)
-        frames = self._streams_by_type(components, dai.ImgFrame)
+    def setup(self):
+        """
+        Called after connected to the device, and all components have been configured
+        @return:
+        """
 
-        for nn in nns:
+        nns = self._components_by_type(self._components, NNComponent)
+        frames = self._streams_by_type(self._components, dai.ImgFrame)
+
+        if len(nns) == 0:
             for frame in frames:
-                nnStreamNames = self._streams_by_type_xout(nn.xouts, dai.ImgDetections)
-                detVis = DetectionsVisualizer(frame, nnStreamNames[0], nn.labels, aspectRatio=nn.size if frame != 'passthrough' else None)
-                detVis.setBase(scale, fps)
-                self._visualizers.append(detVis)
+                vis = BaseVisualizer(frame)
+                vis.setBase(self._scale, self._fps)
+                self._visualizers.append(vis)
+        else:
+            for nn in nns:
+                for frame in frames:
+                    nnStreamNames = self._streams_by_type_xout(nn.xouts, dai.ImgDetections)
+                    detVis = DetectionsVisualizer(frame, nnStreamNames[0], nn)
+                    detVis.setBase(self._scale, self._fps)
+                    self._visualizers.append(detVis)
 
     def _getStreamName(self, xouts: Dict, type: Type) -> str:
         for name, (compType, daiType) in xouts.items():
@@ -233,7 +297,7 @@ class Visualizer:
         raise ValueError("[SDK Visualizer] stream name wasn't found in any component!")
         return
 
-    def _streams_by_type_xout(self, xouts:  Dict[str, Tuple[type, type]], type: Type) -> List[str]:
+    def _streams_by_type_xout(self, xouts: Dict[str, Tuple[type, type]], type: Type) -> List[str]:
         streams = []
         for name, (compType, daiType) in xouts.items():
             if type == daiType:
