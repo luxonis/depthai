@@ -2,6 +2,56 @@ import math
 import depthai as dai
 from typing import *
 
+class ImageSensor:
+    name: str
+    resolution: Union[
+        dai.ColorCameraProperties.SensorResolution,
+        dai.MonoCameraProperties.SensorResolution
+    ]
+    type: dai.node
+
+    def __eq__(self, other):
+        return self.name == other
+
+    def __init__(self,
+                 name: str,
+                 resolution: str,
+                 type: str):
+        from .parser import parseResolution
+        self.name = name
+        self.type = dai.node.ColorCamera if type == 'color' else dai.node.MonoCamera
+        self.resolution = parseResolution(self.type, resolution)
+
+
+cameraSensors: List[ImageSensor] = [
+    ImageSensor('IMX378', '12mp', 'color'),
+    ImageSensor('OV9282', '800P', 'mono'),
+    ImageSensor('OV9782', '800P', 'color'),
+    ImageSensor('OV9281', '800P', 'color'),
+    ImageSensor('IMX214', '13mp', 'color'),
+    ImageSensor('OV7750', '480P', 'mono'),
+    ImageSensor('OV7251', '480P', 'mono'),
+    ImageSensor('IMX477', '12mp', 'color'),
+    ImageSensor('IMX577', '12mp', 'color'),
+    ImageSensor('AR0234', '1200P', 'color'),
+    ImageSensor('IMX582', '48mp', 'color'),
+]
+
+cameraResolutions: Dict[Any, Tuple[int, int]] = {
+    dai.ColorCameraProperties.SensorResolution.THE_13_MP: (4208, 3120),
+    dai.ColorCameraProperties.SensorResolution.THE_12_MP: (4056, 3040),
+    dai.ColorCameraProperties.SensorResolution.THE_4_K: (3840, 2160),
+    dai.ColorCameraProperties.SensorResolution.THE_1080_P: (1920, 1080),
+    dai.ColorCameraProperties.SensorResolution.THE_800_P: (1280, 800),
+    dai.ColorCameraProperties.SensorResolution.THE_720_P: (1280, 720),
+
+    dai.MonoCameraProperties.SensorResolution.THE_800_P: (1280, 800),
+    dai.MonoCameraProperties.SensorResolution.THE_720_P: (1280, 720),
+    dai.MonoCameraProperties.SensorResolution.THE_480_P: (640, 480),
+    dai.MonoCameraProperties.SensorResolution.THE_400_P: (640, 400),
+}
+
+
 
 def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
     """
@@ -37,10 +87,10 @@ def getClosestIspScale(camResolution: Tuple[int, int],
     @param encoderFlag: Not for user. Flag to avoid infinite looping.
     @return ISP scaling values (list of 4 ints)
     """
-    if width and height: raise ValueError(
-        "You have to specify EITHER width OR height to calculate desired ISP scaling options!")
-    if not width and not height: raise ValueError(
-        "You have to provide width or height calculate desired ISP scaling options!")
+    if width and height:
+        raise ValueError("You have to specify EITHER width OR height to calculate desired ISP scaling options!")
+    if not width and not height:
+        raise ValueError("You have to provide width or height calculate desired ISP scaling options!")
 
     minError = 99999
     ispScale: List[int] = None
@@ -53,19 +103,17 @@ def getClosestIspScale(camResolution: Tuple[int, int],
                  height and newH % 8 != 0)):
             continue  # ISP output size isn't supported by VideoEncoder
 
-        if width:
-            err = abs(newW - width)
-            if err < minError:
-                ispScale = [n, d, n, d]
-                minError = err
-        else:
-            err = abs(newH - height)
-            if err < minError:
-                ispScale = [n, d, n, d]
-                minError = err
+        # Currently, new ISP width must be divisible by 2. FW engineers are looking into it.
+        if newW % 2 != 0:
+            continue
+
+        err = abs((newW - width) if width else (newH - height))
+        if err < minError:
+            ispScale = [n, d, n, d]
+            minError = err
 
     if videoEncoder and encoderFlag:
-        # Calculate the ISP scale for the other direction. Note that this means aspect ratio will be ignored.
+        # Calculate the ISP scale for the other direction. Note that this means aspect ratio won't be preserved
         if width:
             hScale = getClosestIspScale(camResolution,
                                         height=int(camResolution[1] * ispScale[0] / ispScale[1]),
@@ -118,3 +166,24 @@ def setCameraControl(control: dai.CameraControl,
         control.setChromaDenoise(chromaDenoise)
 
     # TODO: Add contrast, exposure compensation, brightness, manual exposure, and saturation
+
+def cameraSensorType(sensorName: str) -> dai.node:
+    """
+    Gets camera sensor type from it's name, either MonoCamera or ColorCamera.
+    @param sensorName: Name of the camera sensor
+    @return: dai.node.MonoCamera or dai.node.ColorCamera
+    """
+    return cameraSensors[cameraSensors.index(sensorName.upper())].type
+
+def cameraSensorResolution(sensorName: str
+    ) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
+    """
+    Gets camera sensor type from it's name, either MonoCamera or ColorCamera.
+    @param sensorName: Name of the camera sensor
+    @return: dai.node.MonoCamera or dai.node.ColorCamera
+    """
+    return cameraSensors[cameraSensors.index(sensorName.upper())].resolution
+
+def cameraSensorResolutionSize(sensorName: str) -> Tuple[int, int]:
+    res = cameraSensorResolution(sensorName)
+    return cameraResolutions[res]

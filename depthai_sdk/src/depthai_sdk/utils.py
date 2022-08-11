@@ -42,21 +42,6 @@ def configPipeline(pipeline: dai.Pipeline,
     if openvinoVersion:
         pipeline.setOpenVINOVersion(parseOpenVinoVersion(openvinoVersion))
 
-def parseOpenVinoVersion(version: Union[None, str, dai.OpenVINO.Version]) -> dai.OpenVINO.Version:
-    if version is None:
-        return dai.OpenVINO.Version.VERSION_2021_4
-    if isinstance(version, str):
-        vals = None
-        if '.' in version:
-            vals = version.split('.')
-        elif '_' in version:
-            vals = version.split('_')
-        if vals is None:
-            raise ValueError(f"OpenVINO version '{version}' passed in incorrect format!")
-        version = getattr(dai.OpenVINO.Version, f"VERSION_{vals[0]}_{vals[1]}")
-    return version
-
-
 def getBlob(url: str) -> Path:
     """
     Download the blob path from the url. If blob is cached, serve that. TODO: compute hash, check server hash,

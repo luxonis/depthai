@@ -1,6 +1,6 @@
 import depthai as dai
-from typing import Union, Tuple, Optional, Dict, Any
-from .camera_helper import setCameraControl
+from typing import Union, Tuple, Optional, Dict, Any, Type
+
 
 def rgbResolution(resolution: Union[str, dai.ColorCameraProperties.SensorResolution]) -> dai.ColorCameraProperties.SensorResolution:
     """
@@ -22,7 +22,7 @@ def rgbResolution(resolution: Union[str, dai.ColorCameraProperties.SensorResolut
         return dai.ColorCameraProperties.SensorResolution.THE_800_P
     elif resolution == '720' or resolution == '720P':
         return dai.ColorCameraProperties.SensorResolution.THE_720_P
-    else: # Default
+    else:  # Default
         return dai.ColorCameraProperties.SensorResolution.THE_1080_P
 
 def monoResolution(resolution: Union[str, dai.MonoCameraProperties.SensorResolution]) -> dai.MonoCameraProperties.SensorResolution:
@@ -33,7 +33,7 @@ def monoResolution(resolution: Union[str, dai.MonoCameraProperties.SensorResolut
         return resolution
 
     resolution = str(resolution).upper()
-    if resolution == '800' or resolution == '800P':
+    if resolution == '800' or resolution == '800P' or resolution == '1MP':
         return dai.MonoCameraProperties.SensorResolution.THE_800_P
     elif resolution == '720' or resolution == '720P':
         return dai.MonoCameraProperties.SensorResolution.THE_720_P
@@ -43,15 +43,31 @@ def monoResolution(resolution: Union[str, dai.MonoCameraProperties.SensorResolut
         return dai.MonoCameraProperties.SensorResolution.THE_400_P
 
 def parseResolution(
-    camera: Union[dai.node.ColorCamera, dai.node.MonoCamera],
+    camera: Union[dai.node.ColorCamera, dai.node.MonoCamera, Type],
     resolution: Union[str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]
     ):
-    if isinstance(camera, dai.node.ColorCamera):
+    if resolution is None:
+        return None
+    elif isinstance(camera, dai.node.ColorCamera) or camera == dai.node.ColorCamera:
         return rgbResolution(resolution)
-    elif isinstance(camera, dai.node.MonoCamera):
+    elif isinstance(camera, type(dai.node.MonoCamera)) or camera == dai.node.ColorCamera:
         return monoResolution(resolution)
     else:
         raise ValueError("camera must be either MonoCamera or ColorCamera!")
+
+def parseOpenVinoVersion(version: Union[None, str, dai.OpenVINO.Version]) -> Optional[dai.OpenVINO.Version]:
+    if version is None:
+        return None
+    if isinstance(version, str):
+        vals = None
+        if '.' in version:
+            vals = version.split('.')
+        elif '_' in version:
+            vals = version.split('_')
+        if vals is None:
+            return None
+        version = getattr(dai.OpenVINO.Version, f"VERSION_{vals[0]}_{vals[1]}")
+    return version
 
 def parseSize(size: Union[str, Tuple[int, int]]) -> Tuple[int, int]:
     if isinstance(size, Tuple):
@@ -65,6 +81,7 @@ def parseSize(size: Union[str, Tuple[int, int]]) -> Tuple[int, int]:
 
 
 def parseColorCamControl(options: Dict[str, Any], cam: dai.node.ColorCamera):
+    from .camera_helper import setCameraControl
     setCameraControl(cam.initialControl,
                      options.get('manualFocus', None),
                      options.get('afMode', None),
@@ -76,3 +93,23 @@ def parseColorCamControl(options: Dict[str, Any], cam: dai.node.ColorCamera):
                      options.get('lumaDenoise', None),
                      options.get('chromaDenoise', None),
                      )
+
+
+def parseEncode(encode = Union[None, str, bool, dai.VideoEncoderProperties.Profile]
+                ) -> Optional[dai.VideoEncoderProperties.Profile]:
+    if encode is None:
+        return None
+    elif isinstance(encode, dai.VideoEncoderProperties.Profile):
+        return encode
+    elif isinstance(encode, bool) and encode:
+        return dai.VideoEncoderProperties.Profile.MJPEG  # MJPEG by default
+    elif isinstance(encode, str):
+        encode = encode.upper()
+        if encode in ['MJPEG', 'JPEG', 'JPG', '.MJPEG', '.JPEG', '.JPG']:
+            return dai.VideoEncoderProperties.Profile.MJPEG
+        elif encode in ['H265', '.H265', 'H.265', 'HEVC', '.HEVC']:
+            return dai.VideoEncoderProperties.Profile.H265_MAIN
+        elif encode in ['H264', '.H264', 'H.264', 'MPEG-4', 'MPEG', 'AVC']:
+            return dai.VideoEncoderProperties.Profile.H265_MAIN
+    raise ValueError(f"Parsing user-defined encode value '{encode}' failed!")
+

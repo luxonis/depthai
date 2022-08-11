@@ -2,8 +2,9 @@ import depthai as dai
 from typing import Optional, Union, Type, Dict, Tuple
 import random
 from ..replay import Replay
+from abc import ABC, abstractmethod
 
-class Component():
+class Component(ABC):
     """
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
@@ -13,13 +14,26 @@ class Component():
     # Dict[str, Typle(Component type, dai msg type)]
     xouts: Dict[str, Tuple[Type, Type]]
     def __init__(self) -> None:
+        """
+        On init, components should only parse and save passed settings. Pipeline building process
+        should be done on when user starts the Camera.
+        """
         self.xouts = {}
 
-    def updateDeviceInfo(self, device: dai.Device):
+    def forcedOpenVinoVersion(self) -> Optional[dai.OpenVINO.Version]:
         """
-        This function will be called 
+        Checks whether the component forces a specific OpenVINO version. Only used by NNComponent (which overrides this
+        method). This function is called after Camera has been configured and right before we connect to the OAK camera.
+        @return: Forced OpenVINO version (optional).
         """
-        pass
+        return None
+
+    @abstractmethod
+    def updateDeviceInfo(self, pipeline: dai.Pipeline, device: dai.Device):
+        """
+        This function will be called after the app connects to the Device
+        """
+        raise NotImplementedError("Every component needs to include 'updateDeviceInfo()' method!")
 
     def createXOut(self,
         pipeline: dai.Pipeline,

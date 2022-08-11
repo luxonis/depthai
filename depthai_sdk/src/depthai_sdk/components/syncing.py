@@ -1,25 +1,36 @@
 import depthai as dai
 from typing import Dict, List, Any, Optional, Tuple, Callable
 from queue import Empty, Queue
-from abc import ABC, abstractstaticmethod
+from abc import ABC, abstractmethod
+from .component import Component
+
 
 class BaseSync(ABC):
-    callback: Callable # Callback to call with new (synced) msgs
-    queue: Queue # Queue to which (synced/non-synced) messages will be added
-    streams: List[str] # Streams to listen for
+    callback: Callable  # Callback to call with new (synced) msgs
+    queue: Queue  # Queue to which (synced/non-synced) messages will be added
+    streams: List[str]  # Streams to listen for
+    components: List[Component]
 
-    def __init__(self, callback: Callable, streams: List[str]) -> None:
+    def __init__(self, callback: Callable, components: List[Component]) -> None:
         self.callback = callback
         self.queue = Queue(maxsize=30)
-        self.streams = streams
+        self.components = components
 
-    @abstractstaticmethod
+    def setup(self):
+        """
+        Set up the Syncing logic after the OAK is connected and all components are finilized
+        """
+        self.streams = []
+        for comp in self.components:
+            self.streams.extend([name for name, _ in comp.xouts.items()])
+
+    @abstractmethod
     def newMsg(self, name: str, msg) -> None:
         raise NotImplementedError()
 
     # This approach is used as some functions (eg. imshow()) need to be called from
     # main thread, and calling them from callback thread wouldn't work.
-    def checkQueue(self, block = False) -> None:
+    def checkQueue(self, block=False) -> None:
         """
         Checks queue for any available messages. If avialable, call callback. Non blocking by default.
         """
@@ -27,14 +38,15 @@ class BaseSync(ABC):
             msgs = self.queue.get(block=block)
             if msgs is not None:
                 self.callback(msgs)
-        except Empty: # Queue empty
+        except Empty:  # Queue empty
             pass
+
 
 class NoSync(BaseSync):
     """
     Will call callback whenever it gets a new message
     """
-    msgs: Dict[str, List[dai.Buffer]] = dict() # List of messages
+    msgs: Dict[str, List[dai.Buffer]] = dict()  # List of messages
 
     def __init__(self, callback: Callable, streams: List[str]) -> None:
         super().__init__(callback, streams)
@@ -51,7 +63,7 @@ class NoSync(BaseSync):
             # We have at least 1 msg for each stream. Get the latest, remove all others.
             ret = {}
             for name, arr in self.msgs.items():
-                arr = arr[-1:] # Remove older msgs
+                arr = arr[-1:]  # Remove older msgs
                 ret[name] = arr[0]
 
             self.queue.put(ret)
@@ -66,7 +78,7 @@ class NoSync(BaseSync):
 #         seq = str(msg.getSequenceNum())
 #         if seq not in self.msgs:
 #             self.msgs[seq] = {} # Create directory for msgs
-        
+
 #         self.msgs[seq][name] = msg
 #         self.msgs[name].append(msg)
 
