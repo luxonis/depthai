@@ -156,7 +156,9 @@ def parse_args():
     parser.add_argument("-d", "--debug", default=False, action="store_true", help="Enable debug logs.")
     parser.add_argument("-fac", "--factoryCalibration", default=False, action="store_true",
                         help="Enable writing to Factory Calibration.")
-    
+    parser.add_argument("-osf", "--outputScaleFactor", type=float, default=0.5,
+                        help="set the scaling factor for output visualization. Default: 0.5.")
+
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -275,9 +277,10 @@ class Main:
     images_captured = 0
 
     def __init__(self):
-        global debug
+        global debug, output_scale_factor
         self.args = parse_args()
         debug = self.args.debug
+        output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
@@ -624,8 +627,8 @@ class Main:
                         leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
                         rightStereo = self.board_config['cameras'][self.board_config['stereo_config']['right_cam']]['name']
                         print(f'Left Camera of stereo is {leftStereo} and right Camera of stereo is {rightStereo}')
-                        if not self.test_camera_orientation(syncedMsgs[leftStereo].getCvFrame(), syncedMsgs[rightStereo].getCvFrame()):
-                            self.show_failed_orientation()
+                        # if not self.test_camera_orientation(syncedMsgs[leftStereo].getCvFrame(), syncedMsgs[rightStereo].getCvFrame()):
+                        #     self.show_failed_orientation()
 
                     self.images_captured += 1
                     self.images_captured_polygon += 1
@@ -647,16 +650,6 @@ class Main:
                     cv2.destroyAllWindows()
                     break
                     
-
-
-
-
-
-
-
-
-
-
 
 
 
