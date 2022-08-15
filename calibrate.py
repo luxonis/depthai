@@ -277,10 +277,10 @@ class Main:
     images_captured = 0
 
     def __init__(self):
-        global debug, output_scale_factor
+        global debug
         self.args = parse_args()
         debug = self.args.debug
-        output_scale_factor = self.args.outputScaleFactor
+        self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
