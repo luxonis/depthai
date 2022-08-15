@@ -190,9 +190,9 @@ class HostSync:
         self.arrays[name].appendleft({'data': data, 'timestamp': ts})
         if self.recentFrameTs == None or self.recentFrameTs - ts:
             self.recentFrameTs = ts
-        print(len(self.arrays[name]))
+        # print(len(self.arrays[name]))
         # print(f'Added Msgs typ {name}')
-        print(ts)
+        # print(ts)
         # for name, arr in self.arrays.items():
         #     for i, obj in enumerate(arr):
         #         if self.remove(obj['timestamp']):
@@ -649,8 +649,6 @@ class Main:
                     finished = True
                     cv2.destroyAllWindows()
                     break
-                    
-
 
 
     def capture_images(self):
@@ -863,6 +861,7 @@ class Main:
                                         self.args.squaresY,
                                         self.args.cameraMode,
                                         self.args.rectifiedDisp) # Turn off enable disp rectify
+
             calibration_handler = self.device.readCalibration2()
             error_text = []
 
@@ -1000,10 +999,10 @@ class Main:
             try:
                 if Path('dataset').exists():
                     shutil.rmtree('dataset/')
-                Path("dataset/left").mkdir(parents=True, exist_ok=True)
-                Path("dataset/right").mkdir(parents=True, exist_ok=True)
-                if not self.args.disableRgb:
-                    Path("dataset/rgb").mkdir(parents=True, exist_ok=True)
+                for cam_id in self.board_config['cameras']:
+                    name = self.board_config['cameras'][cam_id]['name']
+                    Path("dataset/{}".format(name)).mkdir(parents=True, exist_ok=True)
+                
             except OSError:
                 traceback.print_exc()
                 print("An error occurred trying to create image dataset directories!")
