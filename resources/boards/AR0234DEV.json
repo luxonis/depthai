@@ -30,7 +30,7 @@
             "CAM_C": {
                 "name": "right",
                 "hfov": 71.86,
-                "type": "mono",
+                "type": "color",
                 "extrinsics": {
                     "to_cam": "CAM_A",
                     "specTranslation": {
