@@ -16,7 +16,7 @@
                 "extrinsics": {
                     "to_cam": "CAM_C",
                     "specTranslation": {
-                        "x": -4.5,
+                        "x": -7.5,
                         "y": 0,
                         "z": 0
                     },
@@ -34,8 +34,8 @@
                 "extrinsics": {
                     "to_cam": "CAM_A",
                     "specTranslation": {
-                        "x": 3.75,
-                        "y": 0,
+                        "x": 7.5,
+                        "y": 3.25,
                         "z": 0
                     },
                     "rotation":{
