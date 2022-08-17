@@ -157,15 +157,23 @@ class StereoCalibration(object):
                         board_config['stereo_config']['rectification_left'] = extrinsics[3]
                         board_config['stereo_config']['rectification_right'] = extrinsics[4]
 
-                    left_cam_info['extrinsics']['rotation_matrix'] = extrinsics[1]
-                    left_cam_info['extrinsics']['translation'] = extrinsics[2]
-                    left_cam_info['extrinsics']['stereo_error'] = extrinsics[0]
+                    """ for stereoObj in board_config['stereo_config']:
+
+                        if stereoObj['left_cam'] == left_cam and stereoObj['right_cam'] == right_cam and stereoObj['main'] == 1:
+                            stereoObj['rectification_left'] = extrinsics[3]
+                            stereoObj['rectification_right'] = extrinsics[4] """
 
                     print('<-------------Epipolar error of {} and {} ------------>'.format(
                         left_cam_info['name'], right_cam_info['name']))
                     left_cam_info['extrinsics']['epipolar_error'] = self.test_epipolar_charuco(
-                        left_path, right_path, left_cam_info['intrinsics'], left_cam_info['dist_coeff'], right_cam_info['intrinsics'], right_cam_info['dist_coeff'], extrinsics[3], extrinsics[4])
+                        left_path, right_path, left_cam_info['intrinsics'], left_cam_info['dist_coeff'], right_cam_info['intrinsics'], right_cam_info['dist_coeff'], extrinsics[2], extrinsics[3], extrinsics[4])
 
+
+                    left_cam_info['extrinsics']['rotation_matrix'] = extrinsics[1]
+                    left_cam_info['extrinsics']['translation'] = extrinsics[2]
+                    left_cam_info['extrinsics']['stereo_error'] = extrinsics[0]
+
+ 
         return 1, board_config
 
     def analyze_charuco(self, images, scale_req=False, req_resolution=(800, 1280)):
@@ -501,7 +509,8 @@ class StereoCalibration(object):
             #     obj_pts, left_corners_sampled, right_corners_sampled,
             #     cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
             #     criteria=stereocalib_criteria, flags=flags)
-
+            # if np.absolute(T[1])  > 0.2:
+                
             R_l, R_r, P_l, P_r, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
                 cameraMatrix_l,
                 distCoeff_l,
@@ -547,21 +556,36 @@ class StereoCalibration(object):
 
             return [ret, R, T, R_l, R_r]
 
-    def display_rectification(self, image_data_pairs):
+    def display_rectification(self, image_data_pairs, isHorizontal):
         print(
             "Displaying Stereo Pair for visual inspection. Press the [ESC] key to exit.")
         for image_data_pair in image_data_pairs:
-            img_concat = cv2.hconcat([image_data_pair[0], image_data_pair[1]])
+            if isHorizontal:
+                img_concat = cv2.hconcat([image_data_pair[0], image_data_pair[1]])
+            else:
+                img_concat = cv2.vconcat([image_data_pair[0], image_data_pair[1]])
             img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
 
             # draw epipolar lines for debug purposes
+
             line_row = 0
-            while line_row < img_concat.shape[0]:
+            while isHorizontal and line_row < img_concat.shape[0]:
                 cv2.line(img_concat,
                          (0, line_row), (img_concat.shape[1], line_row),
                          (0, 255, 0), 1)
                 line_row += 30
 
+            line_col = 0
+            while not isHorizontal and line_col < img_concat.shape[1]:
+                cv2.line(img_concat,
+                         (line_col, 0), (line_col, img_concat.shape[0]),
+                         (0, 255, 0), 1)
+                line_col += 40
+
+
+            img_concat = cv2.resize(
+                    img_concat, (0, 0), fx=0.4, fy=0.4)
+            
             # show image
             cv2.imshow('Stereo Pair', img_concat)
             k = cv2.waitKey(0)
@@ -603,14 +627,17 @@ class StereoCalibration(object):
         else:
             return img
 
-    def test_epipolar_charuco(self, left_img_pth, right_img_pth, M_l, d_l, M_r, d_r, r_l, r_r):
+    def test_epipolar_charuco(self, left_img_pth, right_img_pth, M_l, d_l, M_r, d_r, t, r_l, r_r):
         images_left = glob.glob(left_img_pth + '/*.png')
         images_right = glob.glob(right_img_pth + '/*.png')
         images_left.sort()
         images_right.sort()
         assert len(images_left) != 0, "ERROR: Images not read correctly"
         assert len(images_right) != 0, "ERROR: Images not read correctly"
-
+        isHorizontal = True
+        if np.absolute(t[1])  > 0.2:
+            isHorizontal = False    
+        
         scale = None
         scale_req = False
         frame_left_shape = cv2.imread(images_left[0], 0).shape
@@ -739,7 +766,10 @@ class StereoCalibration(object):
                 imgpoints_r.extend(corners_r)
                 epi_error_sum = 0
                 for l_pt, r_pt in zip(corners_l, corners_r):
-                    epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+                    if isHorizontal:
+                        epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+                    else:
+                        epi_error_sum += abs(l_pt[0][0] - r_pt[0][0])
 
                 print("Average Epipolar Error per image on host in " + img_pth.name + " : " +
                       str(epi_error_sum / len(corners_l)))
@@ -749,13 +779,16 @@ class StereoCalibration(object):
 
         epi_error_sum = 0
         for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):
-            epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+            if isHorizontal:
+                epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+            else:
+                epi_error_sum += abs(l_pt[0][0] - r_pt[0][0])
 
         avg_epipolar = epi_error_sum / len(imgpoints_r)
         print("Average Epipolar Error is : " + str(avg_epipolar))
 
         if self.enable_rectification_disp:
-            self.display_rectification(image_data_pairs)
+            self.display_rectification(image_data_pairs, isHorizontal)
 
         return avg_epipolar
 

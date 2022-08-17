@@ -1,0 +1,66 @@
+{
+    "board_config":
+    {
+        "name": "AR0234DEV",
+        "revision": "R1M0E1",
+        "cameras":{
+            "CAM_A": {
+                "name": "below",
+                "hfov": 68.7938,
+                "type": "color"
+            },
+            "CAM_B": {
+                "name": "left",
+                "hfov": 71.86,
+                "type": "color",
+                "extrinsics": {
+                    "to_cam": "CAM_C",
+                    "specTranslation": {
+                        "x": -7.5,
+                        "y": 0,
+                        "z": 0
+                    },
+                    "rotation":{
+                        "r": 0,
+                        "p": 0,
+                        "y": 0
+                    }
+                }
+            },
+            "CAM_C": {
+                "name": "right",
+                "hfov": 71.86,
+                "type": "color",
+                "extrinsics": {
+                    "to_cam": "CAM_A",
+                    "specTranslation": {
+                        "x": 7.5,
+                        "y": 3.25,
+                        "z": 0
+                    },
+                    "rotation":{
+                        "r": 0,
+                        "p": 0,
+                        "y": 0
+                    }
+                }
+            }
+        },
+        "stereo_config":
+            [
+                {
+                    "left_cam": "CAM_B",
+                    "right_cam": "CAM_C",
+                    "mode": "horizontal",
+                    "main": 1
+                },
+                {
+                    "left_cam": "CAM_B",
+                    "right_cam": "CAM_A",
+                    "mode": "vertical",
+                    "main": 0
+                }
+            ]
+    }
+}
+
