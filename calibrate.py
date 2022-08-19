@@ -862,7 +862,15 @@ class Main:
                                         self.args.cameraMode,
                                         self.args.rectifiedDisp) # Turn off enable disp rectify
 
-            calibration_handler = self.device.readCalibration2()
+            calibration_handler = self.device.readCalibration()
+            try:
+                if self.empty_calibration(calibration_handler):
+                    calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+            except:
+                print("Writing in except...")
+                calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+
+            # calibration_handler.set
             error_text = []
 
             for camera in result_config['cameras'].keys():
