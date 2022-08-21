@@ -20,7 +20,7 @@ class Component(ABC):
         """
         self.xouts = {}
 
-    def forcedOpenVinoVersion(self) -> Optional[dai.OpenVINO.Version]:
+    def _forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
         """
         Checks whether the component forces a specific OpenVINO version. Only used by NNComponent (which overrides this
         method). This function is called after Camera has been configured and right before we connect to the OAK camera.
@@ -29,19 +29,19 @@ class Component(ABC):
         return None
 
     @abstractmethod
-    def updateDeviceInfo(self, pipeline: dai.Pipeline, device: dai.Device):
+    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         """
         This function will be called after the app connects to the Device
         """
         raise NotImplementedError("Every component needs to include 'updateDeviceInfo()' method!")
 
-    def createXOut(self,
-        pipeline: dai.Pipeline,
-        type: Type,
-        name: Union[str, bool],
-        out: dai.Node.Output,
-        depthaiMsg: Type,
-        fpsLimit: Optional[float] = None) -> None:
+    def _create_xout(self,
+                     pipeline: dai.Pipeline,
+                     type: Type,
+                     name: Union[str, bool],
+                     out: dai.Node.Output,
+                     depthaiMsg: Type,
+                     fpsLimit: Optional[float] = None) -> None:
 
         # If Replay we don't want to have XLinkIn->XLinkOut. Will read
         # frames directly from last ImgFrame sent by the Replay module.

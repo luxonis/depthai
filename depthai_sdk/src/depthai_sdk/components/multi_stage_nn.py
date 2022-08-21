@@ -35,7 +35,7 @@ class MultiStageNN():
         detector.out.link(self.script.inputs['detections'])
         highResFrames.link(self.script.inputs['frames'])
 
-        self.configMultiStageNn(debug = debug,)
+        self.config_multistage_nn(debug = debug, )
 
         self.manip = pipeline.create(dai.node.ImageManip)
         self.manip.initialConfig.setResize(size)
@@ -46,11 +46,11 @@ class MultiStageNN():
         self.script.outputs['manip_img'].link(self.manip.inputImage)
         self.out = self.manip.out
 
-    def configMultiStageNn(self,
-        debug = False,
-        labels: Optional[List[int]] = None,
-        scaleBb: Optional[Tuple[int, int]] = None,
-        ) -> None:
+    def config_multistage_nn(self,
+                             debug = False,
+                             labels: Optional[List[int]] = None,
+                             scaleBb: Optional[Tuple[int, int]] = None,
+                             ) -> None:
         """
         Args:
             debug (bool, default False): Debug script node

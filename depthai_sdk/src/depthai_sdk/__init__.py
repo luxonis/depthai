@@ -13,7 +13,7 @@ import depthai as dai
 from pathlib import Path
 
 
-class Camera:
+class OakCamera:
     """
     TODO: Write useful comments for users
 
@@ -25,7 +25,7 @@ class Camera:
 
     # User should be able to access these:
     pipeline: dai.Pipeline
-    oak: OakDevice = OakDevice()  # Init tihs object by default
+    oak: OakDevice = OakDevice()  # Init this object by default
     args = None  # User defined arguments
     replay: Optional[Replay] = None
     components: List[Component] = []  # List of components
@@ -60,10 +60,9 @@ class Camera:
 
         if recording:
             self.replay = Replay(recording)
-            self.replay.initPipeline(self.pipeline)
             print('available streams from recording', self.replay.getStreams())
 
-    def _comp(self, comp: Component) -> Component:
+    def _comp(self, comp: Component) -> Union[CameraComponent, NNComponent, StereoComponent]:
         self.components.append(comp)
         return comp
 
@@ -153,33 +152,35 @@ class Camera:
             if not found:
                 raise Exception("No OAK device found to connect to!")
 
+        version = self.pipeline.getOpenVINOVersion()
         if self.usb2:
             self.oak.device = dai.Device(
-                version=self.pipeline.getOpenVINOVersion(),
+                version=version,
                 deviceInfo=deviceInfo,
                 usb2Mode=self.usb2
             )
         else:
             self.oak.device = dai.Device(
-                version=self.pipeline.getOpenVINOVersion(),
+                version=version,
                 deviceInfo=deviceInfo,
-                maxUsbSpeed=dai.UsbSpeed.SUPER_PLUS
+                maxUsbSpeed=dai.UsbSpeed.SUPER
             )
 
-    def configPipeline(self,
-                       xlinkChunk: Optional[int] = None,
-                       calib: Optional[dai.CalibrationHandler] = None,
-                       tuningBlob: Optional[str] = None,
-                       openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
-                       ) -> None:
+    def config_pipeline(self,
+                        xlinkChunk: Optional[int] = None,
+                        calib: Optional[dai.CalibrationHandler] = None,
+                        tuningBlob: Optional[str] = None,
+                        openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
+                        ) -> None:
         configPipeline(self.pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        self.oak.device.close()
         print("Closing OAK camera")
+        self.oak.device.close()
+        print('Device closed')
 
         if self.replay:
             print("Closing replay")
@@ -192,8 +193,10 @@ class Camera:
         # First go through each components to check whether any is forcing an OpenVINO version
 
         self.pipeline = dai.Pipeline()
+        if self.replay:
+            self.replay.initPipeline(self.pipeline)
         for c in self.components:
-            ov = c.forcedOpenVinoVersion()
+            ov = c._forced_openvino_version()
             if ov:
                 if self.pipeline.getRequiredOpenVINOVersion() and self.pipeline.getRequiredOpenVINOVersion() != ov:
                     raise Exception(
@@ -206,7 +209,7 @@ class Camera:
         # Go through each component
         for component in self.components:
             # Update the component now that we can query device info
-            component.updateDeviceInfo(self.pipeline, self.oak.device)
+            component._update_device_info(self.pipeline, self.oak.device, self.pipeline.getOpenVINOVersion())
 
             # check if out is enabled
             for qName, (compType, daiMsgType) in component.xouts.items():
@@ -236,7 +239,8 @@ class Camera:
         # Check if callbacks (sync/non-sync are set)
         if blocking:
             # Constant loop: get messages, call callbacks
-            while True:
+            while self.running():
+                time.sleep(0.0005)
                 if not self.poll():
                     break
 
@@ -246,19 +250,25 @@ class Camera:
         True if successful.
         """
         key = cv2.waitKey(1)
-        if key == ord('q'): return False
+        if key == ord('q'):
+            return False
 
         self.oak.checkSync()
 
         return True
 
     def running(self) -> bool:
-        return not self.oak.device.isClosed()
+        return True
+
 
     def create_visualizer(self, components: List[Component],
                           scale: Union[None, float, Tuple[int, int]] = None,
                           fps=False) -> Visualizer:
-        vis = Visualizer(components, scale, fps)
+        handlers = None
+        if fps:
+            self.oak.enable_fps(True)
+            handlers = self.oak.fpsHandlers
+        vis = Visualizer(components, scale, handlers)
         self.visualizers.append(vis)
         self.callback(components, vis.newMsgs)
         return vis

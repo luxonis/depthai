@@ -5,6 +5,7 @@ from ..replay import Replay
 from .camera_helper import *
 from .parser import parseResolution, parseEncode
 
+
 class CameraComponent(Component):
     # Users should have access to these nodes
     camera: Union[dai.node.ColorCamera, dai.node.MonoCamera] = None
@@ -20,9 +21,10 @@ class CameraComponent(Component):
     _control: bool
 
     # Parsed from settings
-    _camType: Type
+    _camType: Type = None
     _boardSocket: dai.CameraBoardSocket
-    _resolution: Union[None, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None
+    _resolution: Union[
+        None, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None
     _encoderProfile: dai.VideoEncoderProperties.Profile = None
 
     def __init__(self,
@@ -60,16 +62,13 @@ class CameraComponent(Component):
         self._encoderProfile = parseEncode(encode)  # Parse encoder profile
         self._resolution = parseResolution(self._camType, resolution)
 
-    def updateDeviceInfo(self, pipeline: dai.Pipeline, device: dai.Device):
+    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         # Create the camera
         self._createCam(pipeline, device)
 
-        if self._replay:
-            return  # No need to config anything
-
         # Create XLinkOut after we know camera specs
         if self._out:
-            super().createXOut(
+            super()._create_xout(
                 pipeline,
                 type(self._replay) if self._replay else type(self),
                 name=self._out,
@@ -90,6 +89,12 @@ class CameraComponent(Component):
         @param pipeline: dai.Pipeline
         """
         if self._replay:  # If replay, don't create camera node
+            res = self._replay.getShape(self._out)
+            resize = getResize(res, width=1200)
+            self._replay.setResizeColor(resize)
+            xin: dai.node.XLinkIn = getattr(self._replay, self._out)
+            xin.setMaxDataSize(resize[0] * resize[1] * 3)
+            self.out = xin.out
             return
 
         self.camera = pipeline.create(self._camType)
@@ -106,18 +111,16 @@ class CameraComponent(Component):
             cams = device.getCameraSensorNames()
             print('Available sensors on OAK:', cams)
             sensorName = cams[dai.CameraBoardSocket.RGB]
-            # Set max sensor resolution (for full FOV)
-            self.camera.setResolution(cameraSensorResolution(sensorName))
-            camRes = cameraSensorResolutionSize(sensorName)
-            scale = getClosestIspScale(camRes, width=1200)
+
+            if self._resolution:  # Set sensor resolution as specified by user
+                self.camera.setResolution(self._resolution)
+            else:  # Find the closest resolution
+                self.camera.setResolution(getClosesResolution(sensorName, width=1200))
+
+            scale = getClosestIspScale(self.camera.getIspSize(), width=1200)
             self.camera.setIspScale(*scale)
-
-            self.camera.setPreviewSize(
-                int(camRes[0] * scale[0]/scale[1]),
-                int(camRes[1] * scale[0]/scale[1]),
-            )
-
-            self.out = self.camera.preview  # For full FOV
+            self.camera.setPreviewSize(*self.camera.getIspSize())
+            self.out = self.camera.preview
 
         else:
             self.out = self.camera.out
@@ -129,27 +132,24 @@ class CameraComponent(Component):
         """
         if source == "COLOR" or source == "RGB":
             if self._replay:
-                if not self._replay.color:
+                if 'color' not in self._replay.getStreams():
                     raise Exception('Color stream was not found in specified depthai-recording!')
-                self.out = self._replay.color.out
             else:
                 self._camType = dai.node.ColorCamera
                 self._boardSocket = dai.CameraBoardSocket.RGB
 
         elif source == "RIGHT" or source == "MONO":
             if self._replay:
-                if not self._replay.right:
+                if 'right' not in self._replay.getStreams():
                     raise Exception('Right stream was not found in specified depthai-recording!')
-                self.out = self._replay.right.out
             else:
                 self._camType = dai.node.MonoCamera
                 self._boardSocket = dai.CameraBoardSocket.RIGHT
 
         elif source == "LEFT":
             if self._replay:
-                if not self._replay.left:
+                if 'left' not in self._replay.getStreams():
                     raise Exception('Left stream was not found in specified depthai-recording!')
-                self.out = self._replay.left.out
             else:
                 self._camType = dai.node.MonoCamera
                 self._boardSocket = dai.CameraBoardSocket.LEFT
@@ -157,14 +157,15 @@ class CameraComponent(Component):
             raise ValueError(f"Source name '{source}' not supported!")
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
-    def configureCamera(self,
-                        preview: Union[None, str, Tuple[int, int]] = None,  # Set preview size
-                        fps: Optional[float] = None  # Set fps
-                        ) -> None:
+    def configure_camera(self,
+                         preview: Union[None, str, Tuple[int, int]] = None,  # Set preview size
+                         fps: Optional[float] = None  # Set fps
+                         ) -> None:
         """
         Configure resolution, scale, FPS, etc.
         """
-        raise NotImplementedError()
+        return
+        # TODO
         if fps:
             if self._replay:
                 print(
@@ -184,10 +185,10 @@ class CameraComponent(Component):
                 # TODO: Use ImageManip to set mono frame size
                 raise NotImplementedError("Not yet implemented")
 
-    def configColorCamera(self,
-                          interleaved: Optional[bool] = None,
-                          colorOrder: Union[None, dai.ColorCameraProperties.ColorOrder, str] = None,
-                          ) -> None:
+    def config_color_camera(self,
+                            interleaved: Optional[bool] = None,
+                            colorOrder: Union[None, dai.ColorCameraProperties.ColorOrder, str] = None,
+                            ) -> None:
         raise NotImplementedError()
         # TODO: add option for other configs
         if not self._isColor():
@@ -207,8 +208,8 @@ class CameraComponent(Component):
     def _isMono(self) -> bool:
         return isinstance(self.camera, dai.node.MonoCamera)
 
-    def configureEncoder(self,
-                         ):
+    def configure_encoder(self,
+                          ):
         """
         Configure quality, enable lossless,
         """

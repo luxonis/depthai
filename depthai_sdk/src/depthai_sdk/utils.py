@@ -2,7 +2,6 @@ import importlib
 import sys
 from pathlib import Path
 import urllib.request
-
 import cv2
 import numpy as np
 import depthai as dai
@@ -11,7 +10,6 @@ import requests
 import xmltodict
 
 DEPTHAI_RECORDINGS_PATH = Path.home() / Path('.cache/depthai-recordings')
-BLOBS_PATH = Path.home() / Path('.cache/blobs')
 DEPTHAI_RECORDINGS_URL = 'https://depthai-recordings.fra1.digitaloceanspaces.com/'
 
 
@@ -40,28 +38,8 @@ def configPipeline(pipeline: dai.Pipeline,
     if tuningBlob:
         pipeline.setCameraTuningBlobPath(tuningBlob)
     if openvinoVersion:
-        pipeline.setOpenVINOVersion(parseOpenVinoVersion(openvinoVersion))
-
-def getBlob(url: str) -> Path:
-    """
-    Download the blob path from the url. If blob is cached, serve that. TODO: compute hash, check server hash,
-    as there will likely be many `model.blob`s.
-
-    @param url: Url to the blob
-    @return: Local path to the blob
-    """
-    fileName = Path(url).name
-    filePath = BLOBS_PATH / fileName
-    if filePath.exists():
-        return filePath
-    BLOBS_PATH.mkdir(parents=True, exist_ok=True)
-
-    r = requests.get(url)
-    with open(filePath, 'wb') as f:
-        f.write(r.content)
-        print('Downloaded', fileName)
-
-    return filePath
+        # pipeline.setOpenVINOVersion(parseOpenVinoVersion(openvinoVersion))
+        pass
 
 def getAvailableRecordings() -> Dict[str, Tuple[List[str], int]]:
     """

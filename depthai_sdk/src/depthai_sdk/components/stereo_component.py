@@ -63,29 +63,30 @@ class StereoComponent(Component):
         self.depth = self.node.depth
         self.disparity = self.node.disparity
 
-    def updateDeviceInfo(self, pipeline: dai.Pipeline, device: dai.Device):
+    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         # TODO: disable mono cams if OAK doesn't have them
         pass
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
-    def configureStereo(self,
-                        confidence: Optional[int] = None,
-                        align: Optional[dai.CameraBoardSocket] = None,
-                        extended: Optional[bool] = None,
-                        subpixel: Optional[bool] = None,
-                        lrcheck: Optional[bool] = None,
-                        ) -> None:
+    def configure_stereo(self,
+                         confidence: Optional[int] = None,
+                         align: Optional[dai.CameraBoardSocket] = None,
+                         extended: Optional[bool] = None,
+                         subpixel: Optional[bool] = None,
+                         lr_check: Optional[bool] = None,
+                         ) -> None:
         """
         Configure StereoDepth modes, filters, etc.
         """
-        if confidence: self.node.setConfidenceThreshold(confidence)
-        if align: self.node.setDepthAlign(align)
-        if extended: self.node.setExtendedDisparity(extended)
-        if subpixel: self.node.setExtendedDisparity(subpixel)
-        if lrcheck: self.node.setExtendedDisparity(lrcheck)
+        initialConfig = dai.StereoDepthConfig()
+        if confidence: initialConfig.setConfidenceThreshold(confidence)
+        if align: initialConfig.setDepthAlign(align)
+        if extended: initialConfig.setExtendedDisparity(extended)
+        if subpixel: initialConfig.setSubpixel(subpixel)
+        if lr_check: initialConfig.setExtendedDisparity(lr_check)
 
-    def configureEncoder(self,
-                         ):
+    def configure_encoder(self,
+                          ):
         """
         Configure quality, enable lossless,
         """
@@ -93,4 +94,4 @@ class StereoComponent(Component):
             print('Video encoder was not enabled! This configuration attempt will be ignored.')
             return
 
-        # self.encoer.
+        raise NotImplementedError()

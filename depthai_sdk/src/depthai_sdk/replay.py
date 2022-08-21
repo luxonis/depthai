@@ -209,7 +209,7 @@ class Replay:
         def createXIn(p: dai.Pipeline, name: str):
             xin = p.create(dai.node.XLinkIn)
             xin.setMaxDataSize(self._getMaxSize(name))
-            xin.setNumFrames(10)
+            xin.setNumFrames(4)
             xin.setStreamName(name + '_in')
             self._xins.append(name)
             return xin

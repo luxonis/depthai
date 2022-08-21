@@ -1,11 +1,15 @@
 import depthai as dai
-from typing import Optional, Type, Dict, List
+from typing import Type, Dict, List
 from ..replay import Replay
 from ..components.syncing import BaseSync
+from ..fps import FPSHandler
+
 
 class OakDevice:
     device: dai.Device
-    
+
+    fpsHandlers: Dict[str, FPSHandler] = None
+
     # str: Name (XLinkOut stream name, or replay stream)
     # Type: Component name, or Replay
     queues: Dict[str, Type] = {}
@@ -20,10 +24,13 @@ class OakDevice:
         Available imageSensors available on the camera
         """
         return self.device.getConnectedCameras()
+
     @property
-    def info(self) -> dai.DeviceInfo: return self.device.getDeviceInfo()
+    def info(self) -> dai.DeviceInfo:
+        return self.device.getDeviceInfo()
 
     _xoutNames: List[str] = None
+
     @property
     def xoutNames(self) -> List[str]:
         if not self._xoutNames:
@@ -35,7 +42,7 @@ class OakDevice:
         return self._xoutNames
 
     _replayNames: List[str] = None
-    
+
     @property
     def replayNames(self) -> List[str]:
         if not self._replayNames:
@@ -48,15 +55,28 @@ class OakDevice:
 
     def initCallbacks(self):
         for name in self.xoutNames:
-            self.device.getOutputQueue(name, maxSize=4, blocking=False).addCallback(lambda name, msg: self.newMsg(name, msg))
+            self.device.getOutputQueue(name, maxSize=4, blocking=False).addCallback(
+                lambda name, msg: self.newMsg(name, msg))
+
+    def enable_fps(self, enable: bool):
+        """
+        Enable or disable FPS measurement of each queue.
+        @param enable: Whether to enable FPS measurement
+        """
+        self.fpsHandlers = dict() if enable else None
 
     def newMsg(self, name, msg):
         for sync in self.sync:
             sync.newMsg(name, msg)
+
+        if self.fpsHandlers is not None:
+            if name not in self.fpsHandlers:
+                self.fpsHandlers[name] = FPSHandler()
+            self.fpsHandlers[name].nextIter()
 
     def checkSync(self):
         """
         Checks whether there are new synced messages, non-blocking.
         """
         for sync in self.sync:
-            sync.checkQueue(block=False) # Don't block!
+            sync.checkQueue(block=False)  # Don't block!

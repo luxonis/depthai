@@ -1,5 +1,4 @@
 import re
-from enum import IntEnum
 from .component import Component
 from .camera_component import CameraComponent
 from .stereo_component import StereoComponent
@@ -7,24 +6,11 @@ from .multi_stage_nn import MultiStageNN
 from pathlib import Path
 from typing import Callable, Optional, Union, List, Dict, Tuple
 import depthai as dai
-import os
 import blobconverter
-from ..utils import loadModule, isUrl, getBlob
 from .parser import *
+from .nn_helper import *
 from ..classes.nn_config import Config, Model
 import json
-
-
-class AspectRatioResizeMode(IntEnum):
-    """
-    If NN input frame is in different aspect ratio than what the model expect, we have 3 different
-    modes of operation. Full documentation:
-    https://docs.luxonis.com/projects/api/en/latest/tutorials/maximize_fov/
-    """
-    LETTERBOX = 0  # Preserves full FOV, but smaller frame means less features which might decrease NN accuracy
-    STRETCH = 1  # Preserves full FOV, but frames are stretched which might decrease NN accuracy
-    CROP = 2  # Crops some FOV to match the required FOV. No potential NN accuracy decrease.
-
 
 class NNComponent(Component):
     tracker: dai.node.ObjectTracker
@@ -39,14 +25,14 @@ class NNComponent(Component):
     arResizeMode: AspectRatioResizeMode = AspectRatioResizeMode.LETTERBOX  # Default
     manip: dai.node.ImageManip = None  # ImageManip used to resize the input to match the expected NN input size
 
-    # Setting passed at init or persed from these settings
+    # Setting passed at init or parsed from these settings
     inputComponent: Optional[Component] = None  # Used for visualizer. Only set if component was passed as an input
-    blob: dai.OpenVINO.Blob
+    blob: dai.OpenVINO.Blob = None
     _forcedVersion: Optional[dai.OpenVINO.Version] = None  # Forced OpenVINO version
     _input: dai.Node.Output  # Original high-res input
     size: Tuple[int, int]  # Input size to the NN
     _args: Dict = None
-    config: Config = None
+    config: Dict = None
     _xout: Union[None, bool, str] = None  # Argument passed by user
     _tracker: bool = False
     _spatial: Union[None, bool, StereoComponent, dai.Node.Output] = None
@@ -98,7 +84,11 @@ class NNComponent(Component):
         # Parse passed settings
         self._blob = self._parseModel(model)
 
-    def forcedOpenVinoVersion(self) -> dai.OpenVINO.Version:
+        if self.blob is None:
+            # Model will get downloaded from blobconverter, where 2022.1 isn't supported yet
+            self._forcedVersion = dai.OpenVINO.Version.VERSION_2021_4
+
+    def _forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
         Checks whether the component forces a specific OpenVINO version. This function is called after
         Camera has been configured and right before we connect to the OAK camera.
@@ -106,7 +96,11 @@ class NNComponent(Component):
         """
         return self._forcedVersion
 
-    def updateDeviceInfo(self, pipeline: dai.Pipeline, device: dai.Device):
+    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+
+        if self.blob is None:
+            self.blob = dai.OpenVINO.Blob(self._blobFromConfig(self.config['model'], version))
+
         # TODO: update NN input based on camera resolution
         if self.config and not self._nnType:
             nnConfig = self.config.get("nn_config", {})
@@ -119,12 +113,12 @@ class NNComponent(Component):
 
         if self.config:
             nnConfig = self.config.get("nn_config", {})
-            if self.isDetector() and 'confidence_threshold' in nnConfig:
+            if self._isDetector() and 'confidence_threshold' in nnConfig:
                 self.node.setConfidenceThreshold(float(nnConfig['confidence_threshold']))
 
             meta = nnConfig.get('NN_specific_metadata', None)
-            if self.isYolo() and meta:
-                self.configYoloFromMeta(metadata=meta)
+            if self._isYolo() and meta:
+                self.config_yolo_from_metadata(metadata=meta)
 
         if not self.node or not self.blob:
             raise Exception('Blob/Node not found!')
@@ -142,7 +136,7 @@ class NNComponent(Component):
             self.input = self.input.out
             self._setupResizeManip(pipeline).link(self.node.input)
         elif isinstance(self.input, type(self)):
-            if not self.input.isDetector():
+            if not self.input._isDetector():
                 raise Exception('Only object detector models can be used as an input to the NNComponent!')
             self.inputComponent = self.input  # Used by visualizer
             # Create script node, get HQ frames from input.
@@ -166,7 +160,7 @@ class NNComponent(Component):
                 spatial.link(self.node.inputDepth)
 
         if self._spatial:
-            if not self.isDetector():
+            if not self._isDetector():
                 print('Currently, only object detector models (Yolo/MobileNet) can use tracker!')
             else:
                 raise NotImplementedError()
@@ -174,16 +168,16 @@ class NNComponent(Component):
                 # self.out = self.tracker.out
 
         if self._xout:
-            super().createXOut(
+            super()._create_xout(
                 pipeline,
                 type(self),
                 name=self._xout,
                 out=self.out,
-                depthaiMsg=dai.ImgDetections if self.isDetector() else dai.NNData
+                depthaiMsg=dai.ImgDetections if self._isDetector() else dai.NNData
             )
 
         if self.passthroughOut:
-            super().createXOut(
+            super()._create_xout(
                 pipeline,
                 type(self),
                 name='passthrough',
@@ -211,27 +205,27 @@ class NNComponent(Component):
                     # Will force specific OpenVINO version
                     self._forcedVersion = parseOpenVinoVersion(version)
             elif model.suffix == '.json':  # json config file was passed
-                self.parseConfig(model)
+                self.parse_config(model)
         else:  # SDK supported model
-            availableModels = self.getSupportedModels(printModels=False)
-            if str(model) not in availableModels:
+            models = getSupportedModels(printModels=False)
+            if str(model) not in models:
                 raise ValueError(f"Specified model '{str(model)}' is not supported by DepthAI SDK. \
                     Check SDK documentation page to see which models are supported.")
 
-            model = availableModels[str(model)] / 'config.json'
-            self.parseConfig(model)
+            model = models[str(model)] / 'config.json'
+            self.parse_config(model)
 
-    def setAspectRatioResizeMode(self, mode: AspectRatioResizeMode):
+    def set_aspect_ratio_resize_mode(self, mode: AspectRatioResizeMode):
         self.arResizeMode = mode
 
-    def parseNodeType(self, nnType: str) -> None:
+    def _parse_node_type(self, nnType: str) -> None:
         self._nodeType = dai.node.NeuralNetwork
         if nnType:
             if nnType.upper() == 'YOLO':
                 self._nodeType = dai.node.YoloSpatialDetectionNetwork if self._spatial else dai.node.YoloDetectionNetwork
             elif nnType.upper() == 'MOBILENET':
                 self._nodeType = dai.node.MobileNetSpatialDetectionNetwork if self._spatial else dai.node.MobileNetDetectionNetwork
-    def parseConfig(self, modelConfig: Path):
+    def parse_config(self, modelConfig: Path):
         """
         Called when NNComponent is initialized. Reads config.json file and parses relevant setting from there
         """
@@ -239,8 +233,9 @@ class NNComponent(Component):
             self.config = Config().load(json.loads(f.read()))
 
         # Get blob from the config file
-        blob = self._blobFromConfig(self.config['model'], modelConfig.parent)
-        self.blob = dai.OpenVINO.Blob(blob)
+        model = self.config['model']
+        if 'blob' in model:
+            self.blob = dai.OpenVINO.Blob(str(modelConfig.parent / model['blob']))
 
         # Parse OpenVINO version
         if "openvino_version" in self.config:
@@ -259,23 +254,24 @@ class NNComponent(Component):
         # Parse node type
         nnFamily = self.config.get("nn_config", {}).get("NN_family", None)
         if nnFamily:
-            self.parseNodeType(nnFamily)
+            self._parse_node_type(nnFamily)
 
 
-    def _blobFromConfig(self, model: Dict, parent: Path) -> str:
+    def _blobFromConfig(self, model: Dict, version: dai.OpenVINO.Version) -> str:
         """
         Gets the blob from the config file.
         @param model:
         @param parent: Path to the parent folder where the json file is stored
         """
-        if 'blob' in model:
-            return str(parent / model['blob'])
+        vals = str(version).split('_')
+        versionStr = f"{vals[1]}.{vals[2]}"
 
         if 'model_name' in model:  # Use blobconverter to download the model
             zoo_type = model.get("zoo_type", 'intel')
             return blobconverter.from_zoo(model['model_name'],
                                           zoo_type=zoo_type,
-                                          shaves=6  # TODO: Calulate ideal shave amount
+                                          shaves=6,  # TODO: Calulate ideal shave amount
+                                          version=versionStr
                                           )
 
         if 'xml' in model and 'bin' in model:
@@ -283,7 +279,8 @@ class NNComponent(Component):
                                           xml=model['xml'],
                                           bin=model['bin'],
                                           data_type="FP16",  # Myriad X
-                                          shaves=6  # TODO: Calulate ideal shave amount
+                                          shaves=6,  # TODO: Calulate ideal shave amount
+                                          version=versionStr
                                           )
 
         raise ValueError("Specified `model` values in json config files are incorrect!")
@@ -311,11 +308,11 @@ class NNComponent(Component):
 
         return self.manip.out
 
-    def configMultiStageCropping(self,
-                                 debug=False,
-                                 labels: Optional[List[int]] = None,
-                                 scaleBb: Optional[Tuple[int, int]] = None,
-                                 ) -> None:
+    def config_multistage_cropping(self,
+                                   debug=False,
+                                   labels: Optional[List[int]] = None,
+                                   scaleBb: Optional[Tuple[int, int]] = None,
+                                   ) -> None:
         """
         For multi-stage NN pipelines. Available if the input to this NNComponent was another NN component.
 
@@ -329,30 +326,15 @@ class NNComponent(Component):
                 "Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
 
-        self._multiStageNn.configMultiStageNn(debug, labels, scaleBb)
+        self._multiStageNn.config_multistage_nn(debug, labels, scaleBb)
 
-    @staticmethod
-    def getSupportedModels(printModels=True) -> Dict[str, Path]:
-        folder = Path(os.path.dirname(__file__)).parent / "nn_models"
-        d = dict()
-        for item in folder.iterdir():
-            if item.is_dir() and item.name != '__pycache__':
-                d[item.name] = item
-
-        if printModels:
-            print("\nDepthAI SDK supported models:\n")
-            [print(f"- {name}") for name in d]
-            print('')
-
-        return d
-
-    def configTracker(self,
-                      type: Optional[dai.TrackerType] = None,
-                      trackLabels: Optional[List[int]] = None,
-                      assignmentPolicy: Optional[dai.TrackerIdAssignmentPolicy] = None,
-                      maxObj: Optional[int] = None,
-                      threshold: Optional[float] = None
-                      ):
+    def config_tracker(self,
+                       type: Optional[dai.TrackerType] = None,
+                       trackLabels: Optional[List[int]] = None,
+                       assignmentPolicy: Optional[dai.TrackerIdAssignmentPolicy] = None,
+                       maxObj: Optional[int] = None,
+                       threshold: Optional[float] = None
+                       ):
         """
         Configure object tracker if it's enabled.
 
@@ -382,7 +364,7 @@ class NNComponent(Component):
         if threshold:
             self.tracker.setTrackerThreshold(threshold)
 
-    def configYoloFromMeta(self, metadata: Dict):
+    def config_yolo_from_metadata(self, metadata: Dict):
         return self._configYolo(
             numClasses=metadata['classes'],
             coordinateSize=metadata['coordinates'],
@@ -400,7 +382,7 @@ class NNComponent(Component):
                     iouThreshold: float,
                     confThreshold: Optional[float] = None,
                     ) -> None:
-        if not self.isYolo():
+        if not self._isYolo():
             print('This is not a YOLO detection network! This configuration attempt will be ignored.')
             return
 
@@ -412,19 +394,19 @@ class NNComponent(Component):
 
         if confThreshold: self.node.setConfidenceThreshold(confThreshold)
 
-    def configNn(self,
-                 passthroughOut: bool = False
-                 ):
+    def config_nn(self,
+                  passthroughOut: bool = False
+                  ):
 
         self.passthroughOut = passthroughOut
 
-    def configSpatial(self,
-                      bbScaleFactor: Optional[float] = None,
-                      lowerThreshold: Optional[int] = None,
-                      upperThreshold: Optional[int] = None,
-                      calcAlgo: Optional[dai.SpatialLocationCalculatorAlgorithm] = None,
-                      out: Optional[Tuple[str, str]] = None
-                      ) -> None:
+    def config_spatial(self,
+                       bbScaleFactor: Optional[float] = None,
+                       lowerThreshold: Optional[int] = None,
+                       upperThreshold: Optional[int] = None,
+                       calcAlgo: Optional[dai.SpatialLocationCalculatorAlgorithm] = None,
+                       out: Optional[Tuple[str, str]] = None
+                       ) -> None:
         """
         Configures the Spatial NN network.
         Args:
@@ -434,7 +416,7 @@ class NNComponent(Component):
             calcAlgo (dai.SpatialLocationCalculatorAlgorithm, optional): Specifies spatial location calculator algorithm: Average/Min/Max
             out (Tuple[str, str], optional): Enable streaming depth + bounding boxes mappings to the host. Useful for debugging.
         """
-        if not self.isSpatial():
+        if not self._isSpatial():
             print('This is not a Spatial Detection network! This configuration attempt will be ignored.')
             return
 
@@ -443,14 +425,14 @@ class NNComponent(Component):
         if upperThreshold: self.node.setDepthUpperThreshold(upperThreshold)
         if calcAlgo: self.node.setSpatialCalculationAlgorithm(calcAlgo)
         if out:
-            super().createXOut(
+            super()._create_xout(
                 self.pipeline,
                 type(self),
                 name=True if isinstance(out, bool) else out[0],
                 out=self.node.passthroughDepth,
                 depthaiMsg=dai.ImgFrame
             )
-            super().createXOut(
+            super()._create_xout(
                 self.pipeline,
                 type(self),
                 name=True if isinstance(out, bool) else out[1],
@@ -458,26 +440,26 @@ class NNComponent(Component):
                 depthaiMsg=dai.SpatialLocationCalculatorConfig
             )
 
-    def isSpatial(self) -> bool:
+    def _isSpatial(self) -> bool:
         return (
-                isinstance(self.node, dai.node.MobileNetSpatialDetectionNetwork) or \
+                isinstance(self.node, dai.node.MobileNetSpatialDetectionNetwork) or
                 isinstance(self.node, dai.node.YoloSpatialDetectionNetwork)
         )
 
-    def isYolo(self) -> bool:
+    def _isYolo(self) -> bool:
         return (
-                isinstance(self.node, dai.node.YoloDetectionNetwork) or \
+                isinstance(self.node, dai.node.YoloDetectionNetwork) or
                 isinstance(self.node, dai.node.YoloSpatialDetectionNetwork)
         )
 
-    def isMobileNet(self) -> bool:
+    def _isMobileNet(self) -> bool:
         return (
-                isinstance(self.node, dai.node.MobileNetDetectionNetwork) or \
+                isinstance(self.node, dai.node.MobileNetDetectionNetwork) or
                 isinstance(self.node, dai.node.MobileNetSpatialDetectionNetwork)
         )
 
-    def isDetector(self) -> bool:
+    def _isDetector(self) -> bool:
         """
         Currently these 2 object detectors are supported
         """
-        return self.isYolo() or self.isMobileNet()
+        return self._isYolo() or self._isMobileNet()

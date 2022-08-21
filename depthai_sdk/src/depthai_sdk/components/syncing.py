@@ -1,3 +1,5 @@
+import time
+
 import depthai as dai
 from typing import Dict, List, Any, Optional, Tuple, Callable
 from queue import Empty, Queue
@@ -18,7 +20,7 @@ class BaseSync(ABC):
 
     def setup(self):
         """
-        Set up the Syncing logic after the OAK is connected and all components are finilized
+        Set up the Syncing logic after the OAK is connected and all components are finalized
         """
         self.streams = []
         for comp in self.components:
@@ -48,25 +50,32 @@ class NoSync(BaseSync):
     """
     msgs: Dict[str, List[dai.Buffer]] = dict()  # List of messages
 
-    def __init__(self, callback: Callable, streams: List[str]) -> None:
-        super().__init__(callback, streams)
-        self.streams = streams
+    def __init__(self, callback: Callable, components: List[Component]) -> None:
+        super().__init__(callback, components)
 
     def newMsg(self, name: str, msg) -> None:
         # Return all latest msgs (not synced)
         if name not in self.msgs: self.msgs[name] = []
 
         self.msgs[name].append(msg)
+        print(self.msgs)
         msgsAvailableCnt = [0 < len(arr) for _, arr in self.msgs.items()].count(True)
 
         if len(self.streams) == msgsAvailableCnt:
             # We have at least 1 msg for each stream. Get the latest, remove all others.
             ret = {}
             for name, arr in self.msgs.items():
-                arr = arr[-1:]  # Remove older msgs
-                ret[name] = arr[0]
+                # print(f'len(msgs[{name}])', len(self.msgs[name]))
+                self.msgs[name] = self.msgs[name][-1:]  # Remove older msgs
+                # print(f'After removing - len(msgs[{name}])', len(self.msgs[name]))
+                ret[name] = arr[-1]
 
-            self.queue.put(ret)
+            if self.queue.full():
+                self.queue.get()  # Get one, so queue isn't full
+
+            # print(time.time(),' Putting msg batch into queue. queue size', self.queue.qsize(), 'self.msgs len')
+
+            self.queue.put(ret, block=False)
 
 # class SeqSync(BaseSync):
 #     """

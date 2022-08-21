@@ -2,12 +2,13 @@ import math
 import depthai as dai
 from typing import *
 
+
 class ImageSensor:
     name: str
-    resolution: Union[
+    resolutions: List[Union[
         dai.ColorCameraProperties.SensorResolution,
         dai.MonoCameraProperties.SensorResolution
-    ]
+    ]]
     type: dai.node
 
     def __eq__(self, other):
@@ -15,26 +16,30 @@ class ImageSensor:
 
     def __init__(self,
                  name: str,
-                 resolution: str,
+                 resolutions: List[str],
                  type: str):
         from .parser import parseResolution
         self.name = name
         self.type = dai.node.ColorCamera if type == 'color' else dai.node.MonoCamera
-        self.resolution = parseResolution(self.type, resolution)
+        self.resolutions = [parseResolution(self.type, resolution) for resolution in resolutions]
+
+    @property
+    def maxRes(self) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
+        return self.resolutions[0]
 
 
 cameraSensors: List[ImageSensor] = [
-    ImageSensor('IMX378', '12mp', 'color'),
-    ImageSensor('OV9282', '800P', 'mono'),
-    ImageSensor('OV9782', '800P', 'color'),
-    ImageSensor('OV9281', '800P', 'color'),
-    ImageSensor('IMX214', '13mp', 'color'),
-    ImageSensor('OV7750', '480P', 'mono'),
-    ImageSensor('OV7251', '480P', 'mono'),
-    ImageSensor('IMX477', '12mp', 'color'),
-    ImageSensor('IMX577', '12mp', 'color'),
-    ImageSensor('AR0234', '1200P', 'color'),
-    ImageSensor('IMX582', '48mp', 'color'),
+    ImageSensor('IMX378', ['12mp', '4k', '1080p'], 'color'),
+    ImageSensor('OV9282', ['800P', '720p', '400p'], 'mono'),
+    ImageSensor('OV9782', ['800P', '720p', '400p'], 'color'),
+    ImageSensor('OV9281', ['800P', '720p', '400p'], 'color'),
+    ImageSensor('IMX214', ['13mp', '12mp', '4k', '1080p'], 'color'),
+    ImageSensor('OV7750', ['480P', '400p'], 'mono'),
+    ImageSensor('OV7251', ['480P', '400p'], 'mono'),
+    ImageSensor('IMX477', ['12mp', '4k', '1080p'], 'color'),
+    ImageSensor('IMX577', ['12mp', '4k', '1080p'], 'color'),
+    ImageSensor('AR0234', ['1200P'], 'color'),
+    ImageSensor('IMX582', ['48mp', '12mp', '4k'], 'color'),
 ]
 
 cameraResolutions: Dict[Any, Tuple[int, int]] = {
@@ -50,7 +55,6 @@ cameraResolutions: Dict[Any, Tuple[int, int]] = {
     dai.MonoCameraProperties.SensorResolution.THE_480_P: (640, 480),
     dai.MonoCameraProperties.SensorResolution.THE_400_P: (640, 400),
 }
-
 
 
 def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
@@ -144,8 +148,11 @@ def setCameraControl(control: dai.CameraControl,
                      sharpness: Optional[int] = None,
                      lumaDenoise: Optional[int] = None,
                      chromaDenoise: Optional[int] = None,
-
                      ):
+    """
+    This function will be used when initializing cameras (ColorCamera.initialControl) and during runtime,
+    when user configures camera with keyboard (if enabled).
+    """
     if manualFocus is not None:
         control.setManualFocus(manualFocus)
     if afMode is not None:
@@ -167,23 +174,65 @@ def setCameraControl(control: dai.CameraControl,
 
     # TODO: Add contrast, exposure compensation, brightness, manual exposure, and saturation
 
+
+def cameraSensor(sensorName: str) -> ImageSensor:
+    return cameraSensors[cameraSensors.index(sensorName.upper())]
+
+
 def cameraSensorType(sensorName: str) -> dai.node:
     """
     Gets camera sensor type from it's name, either MonoCamera or ColorCamera.
     @param sensorName: Name of the camera sensor
     @return: dai.node.MonoCamera or dai.node.ColorCamera
     """
-    return cameraSensors[cameraSensors.index(sensorName.upper())].type
+    return cameraSensor(sensorName).type
+
 
 def cameraSensorResolution(sensorName: str
-    ) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
+                           ) -> Union[
+    dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
     """
     Gets camera sensor type from it's name, either MonoCamera or ColorCamera.
     @param sensorName: Name of the camera sensor
     @return: dai.node.MonoCamera or dai.node.ColorCamera
     """
-    return cameraSensors[cameraSensors.index(sensorName.upper())].resolution
+    return cameraSensor(sensorName).maxRes
+
 
 def cameraSensorResolutionSize(sensorName: str) -> Tuple[int, int]:
     res = cameraSensorResolution(sensorName)
     return cameraResolutions[res]
+
+
+def getClosesResolution(sensorName: str,
+                        width: Optional[int] = None,
+                        height: Optional[int] = None, ):
+    if width and height:
+        raise ValueError("You have to specify EITHER width OR height to calculate desired ISP scaling options!")
+    if not width and not height:
+        raise ValueError("You have to provide width or height calculate desired ISP scaling options!")
+
+    minError = 99999
+    closestRes = None
+    desired, i = (width, 0) if width else (height, 1)
+    for res in cameraSensor(sensorName).resolutions:
+        size = cameraResolutions[res]
+        err = abs(size[i] - desired)
+        if err < minError:
+            minError = err
+            closestRes = res
+    return closestRes
+
+
+def getResize(size: Tuple[int, int],
+                    width: Optional[int] = None,
+                    height: Optional[int] = None) -> Tuple[int, int]:
+    if width and height:
+        raise ValueError("You have to specify EITHER width OR height to calculate desired ISP scaling options!")
+    if not width and not height:
+        raise ValueError("You have to provide width or height calculate desired ISP scaling options!")
+
+    if width:
+        return width, int(size[1] / size[0] * width)
+    else:
+        return int(size[0] / size[1] * height), height

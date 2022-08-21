@@ -3,25 +3,118 @@ import depthai as dai
 from typing import Tuple, Optional, Union, List, Dict, Type, Any
 import cv2
 import time
-
+import distinctipy
 from .. import AspectRatioResizeMode
 from ..components import Component, NNComponent
 
 bg_color = (0, 0, 0)
-color = (255, 255, 255)
+front_color = (255, 255, 255)
 text_type = cv2.FONT_HERSHEY_SIMPLEX
 line_type = cv2.LINE_AA
 
 
-def putText(frame, text, coords):
-    cv2.putText(frame, text, coords, text_type, 1.0, bg_color, 3, line_type)
-    cv2.putText(frame, text, coords, text_type, 1.0, color, 1, line_type)
+def putText(frame, text, coords, scale: float = 1.0, backColor = None, color: Tuple[int, int, int] = None):
+    cv2.putText(frame, text, coords, text_type, scale, backColor if backColor else bg_color, int(scale * 3), line_type)
+    cv2.putText(frame, text=text, org=coords, fontFace=text_type, fontScale=scale,
+                color=(int(color[0]), int(color[1]), int(color[2])) if color else front_color, thickness=int(scale),
+                lineType=line_type)
 
 
-def rectangle(frame, bbox):
-    x1, y1, x2, y2 = bbox
-    cv2.rectangle(frame, (x1, y1), (x2, y2), bg_color, 3)
-    cv2.rectangle(frame, (x1, y1), (x2, y2), color, 1)
+# def rectangle(frame, bbox, color: Tuple[int, int, int] = None):
+#     x1, y1, x2, y2 = bbox
+#     cv2.rectangle(frame, (x1, y1), (x2, y2), bg_color, 3)
+#     cv2.rectangle(frame, pt1=(x1, y1), pt2=(x2, y2),
+#                   color=(int(color[0]), int(color[1]), int(color[2])) if color else front_color, thickness=1)
+
+
+def rectangle(src,
+              bbox,
+              color,
+              thickness=-1,
+              radius=0.1,
+              line_type=cv2.LINE_AA,
+              alpha=0.15):
+    """
+    Draw the rectangle (bounding box) on the frame.
+    @param src: Frame
+    @param top_left: Top left corner of the bounding box
+    @param bottom_right: Bottom right corner of the bounding box
+    @param color: Color of the rectangle
+    @param thickness: Thickness of the rectangle. If -1, it will colorize the rectangle as well (with alpha)
+    @param radius: Radius of the corners (for rounded rectangle)
+    @param line_type: Line type for the rectangle
+    @param alpha: Alpha for colorizing of the rectangle
+    @return: Frame
+    """
+    topLeft = (bbox[0], bbox[1])
+    bottomRight = (bbox[2], bbox[3])
+    topRight = (bottomRight[0], topLeft[1])
+    bottomLeft = (topLeft[0], bottomRight[1])
+
+    height = abs(bottomRight[1] - topLeft[1])
+
+    if radius > 1:
+        radius = 1
+
+    corner_radius = int(radius * (height / 2))
+
+    if thickness < 0:
+        overlay = src.copy()
+
+        # big rect
+        top_left_main_rect = (int(topLeft[0] + corner_radius), int(topLeft[1]))
+        bottom_right_main_rect = (int(bottomRight[0] - corner_radius), int(bottomRight[1]))
+
+        top_left_rect_left = (topLeft[0], topLeft[1] + corner_radius)
+        bottom_right_rect_left = (bottomLeft[0] + corner_radius, bottomLeft[1] - corner_radius)
+
+        top_left_rect_right = (topRight[0] - corner_radius, topRight[1] + corner_radius)
+        bottom_right_rect_right = (bottomRight[0], bottomRight[1] - corner_radius)
+
+        all_rects = [
+            [top_left_main_rect, bottom_right_main_rect],
+            [top_left_rect_left, bottom_right_rect_left],
+            [top_left_rect_right, bottom_right_rect_right]]
+
+        [cv2.rectangle(overlay, pt1=rect[0], pt2=rect[1], color=color, thickness=thickness) for rect in all_rects]
+
+        cv2.ellipse(overlay, (topLeft[0] + corner_radius, topLeft[1] + corner_radius), (corner_radius, corner_radius), 180.0, 0,
+                    90, color, thickness, line_type)
+        cv2.ellipse(overlay, (topRight[0] - corner_radius, topRight[1] + corner_radius), (corner_radius, corner_radius), 270.0, 0,
+                    90, color, thickness, line_type)
+        cv2.ellipse(overlay, (bottomRight[0] - corner_radius, bottomRight[1] - corner_radius), (corner_radius, corner_radius), 0.0, 0, 90,
+                    color, thickness, line_type)
+        cv2.ellipse(overlay, (bottomLeft[0] + corner_radius, bottomLeft[1] - corner_radius), (corner_radius, corner_radius), 90.0, 0,
+                    90, color, thickness, line_type)
+
+        cv2.ellipse(src, (topLeft[0] + corner_radius, topLeft[1] + corner_radius), (corner_radius, corner_radius), 180.0, 0, 90,
+                    color, 2, line_type)
+        cv2.ellipse(src, (topRight[0] - corner_radius, topRight[1] + corner_radius), (corner_radius, corner_radius), 270.0, 0, 90,
+                    color, 2, line_type)
+        cv2.ellipse(src, (bottomRight[0] - corner_radius, bottomRight[1] - corner_radius), (corner_radius, corner_radius), 0.0, 0, 90,
+                    color, 2, line_type)
+        cv2.ellipse(src, (bottomLeft[0] + corner_radius, bottomLeft[1] - corner_radius), (corner_radius, corner_radius), 90.0, 0, 90,
+                    color, 2, line_type)
+
+        cv2.addWeighted(overlay, alpha, src, 1 - alpha, 0, src)
+    else:  # Don't fill the rectangle
+        # draw straight lines
+        cv2.line(src, (topLeft[0] + corner_radius, topLeft[1]), (topRight[0] - corner_radius, topRight[1]), color, abs(thickness), line_type)
+        cv2.line(src, (topRight[0], topRight[1] + corner_radius), (bottomRight[0], bottomRight[1] - corner_radius), color, abs(thickness), line_type)
+        cv2.line(src, (bottomRight[0] - corner_radius, bottomLeft[1]), (bottomLeft[0] + corner_radius, bottomRight[1]), color, abs(thickness), line_type)
+        cv2.line(src, (bottomLeft[0], bottomLeft[1] - corner_radius), (topLeft[0], topLeft[1] + corner_radius), color, abs(thickness), line_type)
+
+        # draw arcs
+        cv2.ellipse(src, (topLeft[0] + corner_radius, topLeft[1] + corner_radius), (corner_radius, corner_radius), 180.0, 0, 90,
+                    color, thickness, line_type)
+        cv2.ellipse(src, (topRight[0] - corner_radius, topRight[1] + corner_radius), (corner_radius, corner_radius), 270.0, 0, 90,
+                    color, thickness, line_type)
+        cv2.ellipse(src, (bottomRight[0] - corner_radius, bottomRight[1] - corner_radius), (corner_radius, corner_radius), 0.0, 0, 90,
+                    color, thickness, line_type)
+        cv2.ellipse(src, (bottomLeft[0] + corner_radius, bottomLeft[1] - corner_radius), (corner_radius, corner_radius), 90.0, 0, 90,
+                    color, thickness, line_type)
+
+    return src
 
 
 class NormalizeBoundingBox:
@@ -83,15 +176,25 @@ class FPSHandler:
         return self.frame_cnt / (self.timestamp - self.start)
 
 
+def get_text_color(background, threshold=0.6):
+    bck = np.array(background) / 256
+    clr = distinctipy.get_text_color((bck[2], bck[1], bck[0]), threshold)
+    clr = distinctipy.get_rgb256(clr)
+    return (clr[2], clr[1], clr[0])
+
 def drawDetections(frame,
                    dets: dai.ImgDetections,
                    norm: NormalizeBoundingBox,
-                   labelMap: List[str] = None):
+                   labelMap: List[Tuple[str, Tuple]] = None):
     for detection in dets.detections:
         bbox = norm.normalize(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-        putText(frame, labelMap[detection.label] if labelMap else str(detection.label), (bbox[0] + 10, bbox[1] + 20))
-        putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40))
-        rectangle(frame, bbox)
+        color, txt = None, None
+        if labelMap:
+            txt, color = labelMap[detection.label]
+        else:
+            txt = str(detection.label)
+        putText(frame, txt, (bbox[0] + 10, bbox[1] + 20), color=color)
+        rectangle(frame, bbox, color=color)
 
 
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
@@ -123,32 +226,28 @@ def drawBbMappings(depthFrame: Union[dai.ImgFrame, Any], bbMappings: dai.Spatial
         rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), 255, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
 
 
-def hex_to_rgb(hex: str) -> Tuple[int, int, int]:
-    value = str.lstrip('#')
-    lv = len(value)
-    return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
-
-
 def hex_to_bgr(hex: str) -> Tuple[int, int, int]:
-    rgb = hex_to_rgb(hex)
-    return tuple(rgb[2], rgb[1], rgb[0])
+    """
+    "#ff1f00" (red) => (0, 31, 255)
+    """
+    value = hex.lstrip('#')
+    return tuple(int(value[i:i + 2], 16) for i in (4, 2, 0))
 
 
 class BaseVisualizer:
     _name: str
     _scale: Union[None, float, Tuple[int, int]] = None
-    _fps: FPSHandler = None
+    _fps: Dict[str, FPSHandler] = None
 
     def __init__(self, frameStream: str) -> None:
         self._name = frameStream
 
     def setBase(self,
                 scale: Union[None, float, Tuple[int, int]] = None,
-                fps: bool = False,
+                fps: Dict[str, FPSHandler] = None,
                 ):
         self._scale = scale
-        if fps:
-            self._fps = FPSHandler()
+        self._fps = fps
 
     def newMsgs(self, frame: Union[Dict, dai.ImgFrame, Any]):
         if isinstance(frame, Dict):
@@ -157,8 +256,10 @@ class BaseVisualizer:
             frame = frame.getCvFrame()
 
         if self._fps:
-            self._fps.next_iter()
-            putText(frame, "FPS: {:.1f}".format(self._fps.fps()), (10, 20))
+            i = 0
+            for name, handler in self._fps.items():
+                putText(frame, "{} FPS: {:.1f}".format(name, handler.fps()), (10, 20 + i * 20), scale=0.7)
+                i += 1
 
         if self._scale:
             if isinstance(self._scale, Tuple):
@@ -179,7 +280,7 @@ class BaseVisualizer:
 
 class DetectionsVisualizer(BaseVisualizer):
     detectionStream: str  # Detection stream name
-    labels: List[Union[str, Tuple[str, str]]] = None
+    labels: List[Tuple[str, Tuple[int, int, int]]] = None
     normalizer: NormalizeBoundingBox
 
     def __init__(self,
@@ -200,16 +301,28 @@ class DetectionsVisualizer(BaseVisualizer):
         super().__init__(frameStream)
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
         if nnComp.labels:
-            self.labels = [label if isinstance(label, str) else label[0] for label in nnComp.labels]
+            self.labels = []
+            n_colors = [isinstance(label, str) for label in nnComp.labels].count(True)
+            # np.array of (b,g,r), 0..1
+            colors = np.array(distinctipy.get_colors(n_colors=n_colors, rng=154165170, pastel_factor=0.5))[..., ::-1]
+            colors = [distinctipy.get_rgb256(clr) for clr in colors]  # List of (b,g,r), 0..255
+            for label in nnComp.labels:
+                if isinstance(label, str):
+                    text = label
+                    color = colors.pop(0)  # Take last row
+                elif isinstance(label, list):
+                    text = label[0]
+                    color = hex_to_bgr(label[1])
+                else:
+                    raise ValueError('Model JSON config error. Label map list can have either str or list!')
+
+                self.labels.append((text, color))
 
         self.detectionStream = detectionsStream
         self.normalizer = NormalizeBoundingBox(nnComp.size, nnComp.arResizeMode)
 
     def newMsgs(self, msgs: Dict):
         imgFrame: dai.ImgFrame = msgs[super().name]
-        h = imgFrame.getHeight()
-        if h == 0:
-            return
         frame = imgFrame.getCvFrame()
         dets = msgs[self.detectionStream]
         drawDetections(frame, dets, self.normalizer, self.labels)
@@ -220,13 +333,13 @@ class Visualizer:
     _components: List[Component]
     _visualizers: List[BaseVisualizer] = []
     _scale: Union[None, float, Tuple[int, int]] = None
-    _fps = False
+    _fps: Dict[str, FPSHandler] = None
 
     def __init__(self, components: List[Component], scale: Union[None, float, Tuple[int, int]] = None,
-                 fps=False) -> None:
+                 fpsHandlers: Dict[str, FPSHandler] = None) -> None:
         self._components = components
         self._scale = scale
-        self._fps = fps
+        self._fps = fpsHandlers
 
     def setup(self):
         """
@@ -257,6 +370,7 @@ class Visualizer:
 
     # Called via callback
     def newMsgs(self, msgs: Dict):
+        print('vis new msg', msgs)
         for vis in self._visualizers:
             vis.newMsgs(msgs)
         # frame = self._getFirstMsg(msgs, dai.ImgFrame).getCvFrame()
