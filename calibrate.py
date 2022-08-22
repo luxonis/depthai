@@ -946,8 +946,9 @@ class Main:
                 try:
                     self.device.flashCalibration2(calibration_handler)
                     is_write_succesful = True
-                except RuntimeError:
+                except RuntimeError as e:
                     is_write_succesful = False
+                    print(e)
                     print("Writing in except...")
                     is_write_succesful = self.device.flashCalibration2(calibration_handler)
 
