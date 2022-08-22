@@ -35,11 +35,13 @@ class Db3Reader(AbstractReader):
 
     def read(self):
         rosMsgs: Dict[str, Any] = dict()
-        for name, gen in self.generators.items():
-            con, ts, raw = next(gen)
-            rosMsgs[name] = self._getCvFrame(deserialize_cdr(raw, con.msgtype), name)
-        print(rosMsgs)
-        return rosMsgs
+        try:
+            for name, gen in self.generators.items():
+                con, ts, raw = next(gen)
+                rosMsgs[name] = self._getCvFrame(deserialize_cdr(raw, con.msgtype), name)
+            return rosMsgs
+        except:
+            return None
 
 
     def _getCvFrame(self, msg, name: str):

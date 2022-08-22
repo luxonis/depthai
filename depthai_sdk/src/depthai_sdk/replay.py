@@ -7,19 +7,21 @@ import depthai as dai
 import datetime
 from .utils import *
 
+
 class Replay:
     disabledStreams = []
-    _streamTypes = ['color', 'left', 'right', 'depth'] # Available types to stream back to the camera
+    _streamTypes = ['color', 'left', 'right', 'depth']  # Available types to stream back to the camera
     _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
     _supportedExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap', '.db3']
-    _imageExt = ['.bmp','.dib','.jpeg','.jpg','.jpe','.jp2','.png','.webp','.pbm','.pgm','.ppm','.pxm','.pnm','.pfm','.sr','.ras','.tiff','.tif','.exr','.hdr','.pic']
-    _inputQueues = dict() # dai.InputQueue dictionary for each stream
-    _seqNum = 0 # Frame sequence number, added to each imgFrame
-    _start = datetime.datetime.now() # For frame timestamp
+    _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '.pbm', '.pgm', '.ppm', '.pxm',
+                 '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
+    _inputQueues = dict()  # dai.InputQueue dictionary for each stream
+    _seqNum = 0  # Frame sequence number, added to each imgFrame
+    _start = datetime.datetime.now()  # For frame timestamp
     _now = datetime.datetime.now()
     _colorSize = None
-    _keepAR = True # By default crop image as needed to keep the aspect ratio
-    _xins = [] # XLinkIn stream names
+    _keepAR = True  # By default crop image as needed to keep the aspect ratio
+    _xins = []  # XLinkIn stream names
     _pause = False
     _calibData = None
 
@@ -34,8 +36,8 @@ class Replay:
         """
         self.path = Path(path).resolve().absolute()
 
-        self.frames = dict() # Frames read from Readers
-        self.imgFrames = dict() # Last frame sent to the device
+        self.frames = dict()  # Frames read from Readers
+        self.imgFrames = dict()  # Last frame sent to the device
 
         self.readers = dict()
         self._supportedExt.extend(self._imageExt)
@@ -62,17 +64,17 @@ class Replay:
                     from .readers.videocap_reader import VideoCapReader
                     self.readers[name] = VideoCapReader(strPath)
                 else:
-                    print(f"Found and skipped an unsupported file name: '{file}'.")    
+                    print(f"Found and skipped an unsupported file name: '{file}'.")
             elif file == 'calib.json':
                 self._calibData = dai.CalibrationHandler(strPath)
             else:
                 print(f"Found and skipped an unknown file, extension: '{extension}'.")
 
-        if self.path.is_dir(): # Provided path is a folder
+        if self.path.is_dir():  # Provided path is a folder
             for fileName in os.listdir(path):
                 filePath = self.path / fileName
                 if filePath.is_file(): readFile(filePath)
-        else: # Provided path is a file
+        else:  # Provided path is a file
             readFile(self.path)
 
         if len(self.readers) == 0:
@@ -126,9 +128,9 @@ class Replay:
         Returns:
             bool: True if successful, otherwise False.
         """
-        if not self._pause: # If replaying is paused, don't read new frames        
+        if not self._pause:  # If replaying is paused, don't read new frames
             if not self._readFrames():
-                return False # End of the recording
+                return False  # End of the recording
 
         self._now = datetime.datetime.now()
         for name in self.frames:
@@ -141,7 +143,7 @@ class Replay:
 
             # Send an imgFrame to the OAK camera
             self._inputQueues[name].send(imgFrame)
-        
+
         self._seqNum += 1
         return True
 
@@ -173,7 +175,7 @@ class Replay:
             nodes.stereo = pipeline.create(dai.node.StereoDepth)
             nodes.stereo.setInputResolution(self._getShape('left'))
 
-            if hasattr(nodes, 'color'): # Enable RGB-depth alignment
+            if hasattr(nodes, 'color'):  # Enable RGB-depth alignment
                 nodes.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
                 if self._colorSize is not None:
                     nodes.stereo.setOutputSize(*self._colorSize)
@@ -252,19 +254,21 @@ class Replay:
         """
         self.frames = dict()
         for name in self.readers:
-            if 1 < len(self.readers[name].getStreams()): # Read all frames (one of each)
+            if 1 < len(self.readers[name].getStreams()):  # Read all frames (one of each)
                 frames = self.readers[name].read()
+                if frames is None:
+                    return False  # No more frames!
+
                 for name, frame in frames.items():
                     self.frames[name] = frame
             else:
-                self.frames[name] = self.readers[name].read() # Read a frame
-            
-            if self.frames[name] is False:
-                return False # No more frames!
-            
+                self.frames[name] = self.readers[name].read()  # Read a frame
+                if self.frames[name] is None:
+                    return False  # No more frames!
+
             # Compress 3-plane frame to a single plane
             if name in ["left", "right", "disparity"] and len(self.frames[name].shape) == 3:
-                self.frames[name] = self.frames[name][:,:,0] # All 3 planes are the same
+                self.frames[name] = self.frames[name][:, :, 0]  # All 3 planes are the same
         return True
 
     def _getMaxSize(self, name: str):
@@ -273,8 +277,10 @@ class Replay:
         """
         size = self._getShape(name)
         bytes_per_pixel = 1
-        if name == 'color': bytes_per_pixel = 3
-        elif name == 'depth': bytes_per_pixel = 2 # 16bit
+        if name == 'color':
+            bytes_per_pixel = 3
+        elif name == 'depth':
+            bytes_per_pixel = 2  # 16bit
         return size[0] * size[1] * bytes_per_pixel
 
     def _getShape(self, name: str) -> tuple:
@@ -284,7 +290,6 @@ class Replay:
         for _, reader in self.readers.items():
             if name in reader.getStreams():
                 return reader.getShape(name)
-
 
     def close(self):
         """

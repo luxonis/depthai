@@ -15,9 +15,9 @@ class VideoCapReader(AbstractReader):
         self._stream = f_name
 
     def read(self):
-        if not self.reader.isOpened(): return False
+        if not self.reader.isOpened(): return None
         ok, frame = self.reader.read()
-        if not ok: return False
+        if not ok: return None
         return frame
 
     def getStreams(self) -> array:
