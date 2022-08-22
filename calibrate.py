@@ -867,8 +867,7 @@ class Main:
                 if self.empty_calibration(calibration_handler):
                     calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
             except:
-                print("Writing in except...")
-                calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+                pass
 
             # calibration_handler.set
             error_text = []
@@ -943,14 +942,14 @@ class Main:
                 mx_serial_id = self.device.getDeviceInfo().getMxId()
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
-                try:
-                    self.device.flashCalibration2(calibration_handler)
-                    is_write_succesful = True
-                except RuntimeError as e:
-                    is_write_succesful = False
-                    print(e)
-                    print("Writing in except...")
-                    is_write_succesful = self.device.flashCalibration2(calibration_handler)
+                # try:
+                self.device.flashCalibration2(calibration_handler)
+                is_write_succesful = True
+                # except RuntimeError as e:
+                #     is_write_succesful = False
+                #     print(e)
+                #     print("Writing in except...")
+                #     is_write_succesful = self.device.flashCalibration2(calibration_handler)
 
                 if self.args.factoryCalibration:
                     try:
