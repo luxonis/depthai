@@ -156,6 +156,10 @@ class StereoCalibration(object):
                     if board_config['stereo_config']['left_cam'] == left_cam and board_config['stereo_config']['right_cam'] == right_cam:
                         board_config['stereo_config']['rectification_left'] = extrinsics[3]
                         board_config['stereo_config']['rectification_right'] = extrinsics[4]
+                    elif board_config['stereo_config']['left_cam'] == right_cam and board_config['stereo_config']['right_cam'] == left_cam:
+                        print('Adding rect data ------------------->')
+                        board_config['stereo_config']['rectification_left'] = extrinsics[4]
+                        board_config['stereo_config']['rectification_right'] = extrinsics[3]
 
                     """ for stereoObj in board_config['stereo_config']:
 
