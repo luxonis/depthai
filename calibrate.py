@@ -929,7 +929,9 @@ class Main:
                         if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
                             calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
                             calibration_handler.setStereoRight(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_right'])
-
+                        elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:                           
+                            calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
+                            calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
 
             if len(error_text) == 0:
                 print('Flashing Calibration data into ')
