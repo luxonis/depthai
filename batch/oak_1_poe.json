@@ -1,0 +1,13 @@
+{
+    "title": "OAK-1 PoE",
+    "description": "OAK-1 PoE",
+    "image": "images/oak_1_poe.jpg",
+    "test_type": "OAK-1-POE",
+    "variants": [
+        {
+            "title":"OAK-1 PoE FF (SJ2096 R2M1E2)",
+            "description": "OAK-1 PoE with Fixed Focus",
+            "eeprom":"eeprom/SJ2096_R2M1E2_oak_1_poe_ff.json"
+        }
+    ]
+}
