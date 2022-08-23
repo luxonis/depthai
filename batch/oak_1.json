@@ -1,0 +1,33 @@
+{
+    "title": "OAK-1",
+    "description": "OAK-1",
+    "image": "images/oak_1.jpg",
+    "test_type": "OAK-1",
+    "variants": [
+        {
+            "title":"OAK-1 AF (NG9093 R2M0E3)",
+            "description": "OAK-1 with Auto Focus",
+            "eeprom":"eeprom/NG9093_R2M0E3_oak_1_af.json"
+        },
+        {
+            "title":"OAK-1 FF C09 (NG9093 R2M0E3)",
+            "description": "OAK-1 with Fixed Focus C09",
+            "eeprom":"eeprom/NG9093_R2M0E3_oak_1_af.json"
+        },
+        {
+            "title":"OAK-1 FF (NG9093 R2M0E3)",
+            "description": "OAK-1 with Fixed Focus",
+            "eeprom":"eeprom/NG9093_R2M0E3_oak_1_ff.json"
+        },
+        {
+            "title":"OAK-1 Max (NG9093 R2M0E3)",
+            "description": "OAK-1 Max",
+            "eeprom":"eeprom/NG9093_R2M0E3_oak_1_max.json"
+        },
+        {
+            "title":"OAK-1 W (NG9093 R2M0E3)",
+            "description": "OAK-1 Wide Lens",
+            "eeprom":"eeprom/NG9093_R2M0E3_oak_1_w.json"
+        }
+    ]
+}
