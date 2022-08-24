@@ -157,7 +157,6 @@ class StereoCalibration(object):
                         board_config['stereo_config']['rectification_left'] = extrinsics[3]
                         board_config['stereo_config']['rectification_right'] = extrinsics[4]
                     elif board_config['stereo_config']['left_cam'] == right_cam and board_config['stereo_config']['right_cam'] == left_cam:
-                        print('Adding rect data ------------------->')
                         board_config['stereo_config']['rectification_left'] = extrinsics[4]
                         board_config['stereo_config']['rectification_right'] = extrinsics[3]
 
@@ -269,6 +268,7 @@ class StereoCalibration(object):
             # (Height, width)
             return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors, imsize[::-1]
         else:
+            print('Fisheye--------------------------------------------------')
             ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors = self.calibrate_fisheye(
                 allCorners, allIds, imsize[::-1])
             # (Height, width)
@@ -445,9 +445,10 @@ class StereoCalibration(object):
         print("Camera Matrix initialization.............")
         print(cameraMatrixInit)
         flags = 0
+        flags = cv2.fisheye.CALIB_CHECK_COND
         distCoeffsInit = np.zeros((4, 1))
         term_criteria = (cv2.TERM_CRITERIA_COUNT +
-                         cv2.TERM_CRITERIA_EPS, 100, 1e-5)
+                         cv2.TERM_CRITERIA_EPS, 10000, 1e-5)
 
         return cv2.fisheye.calibrate(obj_points, allCorners, imsize, cameraMatrixInit, distCoeffsInit, flags=flags, criteria=term_criteria)
 
@@ -543,9 +544,17 @@ class StereoCalibration(object):
             #     print(len(left_corners_sampled[i]))
             #     print(len(right_corners_sampled[i]))
             flags = 0
-            flags |= cv2.CALIB_FIX_INTRINSIC
-            flags |= cv2.CALIB_RATIONAL_MODEL
-            # flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC # TODO(SACHIN): Try without intrinsic guess
+            # flags |= cv2.CALIB_FIX_INTRINSIC
+            # flags |= cv2.CALIB_RATIONAL_MODEL
+            flags |= cv2.CALIB_USE_INTRINSIC_GUESS # TODO(sACHIN): Try without intrinsic guess
+            flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC # TODO(sACHIN): Try without intrinsic guess
+
+            print('Fisyeye stereo model..................')
+            print(len(cameraMatrix_l))
+            print(len(cameraMatrix_r))
+            print(len(distCoeff_l))
+            print(len(distCoeff_r))
+            
             ret, M1, d1, M2, d2, R, T, E, F = cv2.fisheye.stereoCalibrate(
                 obj_pts, left_corners_sampled, right_corners_sampled,
                 cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
