@@ -559,11 +559,6 @@ class Main:
 
             calibration_handler = self.device.readCalibration()
 
-            # calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
-               # Set board name / revision only if calibration is empty
-            if self.empty_calibration(calibration_handler):
-                calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
-
             calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
             calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
             measuredTranslation = [
@@ -593,25 +588,28 @@ class Main:
                 calibration_handler.setCameraExtrinsics(
                     right, dai.CameraBoardSocket.RGB, calibData[7], calibData[8], measuredTranslation)
 
+            eeprom_data = calibration_handler.getEepromData()
+            eeprom_data.vesion = 7
             resImage = None
+            new_calibration_handler = dai.CalibrationHandler(eeprom_data)
             if not self.device.isClosed():
                 mx_serial_id = self.device.getDeviceInfo().getMxId()
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
-                calibration_handler.eepromToJsonFile(calib_dest_path)
+                new_calibration_handler.eepromToJsonFile(calib_dest_path)
                 is_write_succesful = False
 
                 try:
                     if self.args.factoryCalibration:
-                        self.device.flashFactoryCalibration(calibration_handler)
+                        self.device.flashFactoryCalibration(new_calibration_handler)
                     is_write_succesful = self.device.flashCalibration(
-                        calibration_handler)
+                        new_calibration_handler)
                 except:
                     print("Writing in except...")
 
                     if self.args.factoryCalibration:
-                        self.device.flashFactoryCalibration(calibration_handler)
+                        self.device.flashFactoryCalibration(new_calibration_handler)
                     is_write_succesful = self.device.flashCalibration(
-                        calibration_handler)
+                        new_calibration_handler)
 
                 if is_write_succesful:
                     resImage = create_blank(900, 512, rgb_color=green)
