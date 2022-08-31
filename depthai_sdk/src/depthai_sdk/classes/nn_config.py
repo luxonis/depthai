@@ -23,6 +23,7 @@ class NNConfig(Schema):
     confidence_threshold = fields.Float(required=False)
     NN_specific_metadata = fields.Nested(YoloConfig, required=False)
     output_format = fields.Str()
+    input_size = fields.Str()
 
 
 class Config(Schema):

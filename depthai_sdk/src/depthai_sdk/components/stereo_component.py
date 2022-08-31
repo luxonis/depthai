@@ -14,8 +14,10 @@ class StereoComponent(Component):
     depth: dai.Node.Output
     disparity: dai.Node.Output
 
+    left: Union[None, dai.Node.Output, CameraComponent] = None
+    right: Union[None, dai.Node.Output, CameraComponent] = None
+
     def __init__(self,
-                 pipeline: dai.Pipeline,
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
                  out: Optional[str] = None,  # 'depth', 'disparity', both separated by comma? TBD
@@ -28,7 +30,6 @@ class StereoComponent(Component):
                  ):
         """
         Args:
-            pipeline (dai.Pipeline)
             out (str, optional): 'depth', 'disparity', both seperated by comma? TBD
             left (None / dai.None.Output / CameraComponent): Left mono camera source. Will get handled by Camera object.
             right (None / dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
@@ -38,7 +39,6 @@ class StereoComponent(Component):
             args (Any, optional): Set the camera components based on user arguments
         """
         super().__init__()
-        self.pipeline = pipeline
         self.replay = replay
 
         if replay:
@@ -47,13 +47,18 @@ class StereoComponent(Component):
                 raise Exception('Stereo stream was not found in specified depthai-recording!')
             self.node = replay.stereo
         else:
-            print('creating Left/Right')
+            self.left = left
+            self.right = right
             from .camera_component import CameraComponent
-            if not left: left = CameraComponent(pipeline, 'left', resolution, fps)
-            if not right: right = CameraComponent(pipeline, 'right', resolution, fps)
+            if not left:
+                left = CameraComponent('left', resolution, fps)
+            if not right:
+                right = CameraComponent('right', resolution, fps)
             # TODO create StereoDepth
-            if isinstance(left, CameraComponent): left = left.out
-            if isinstance(right, CameraComponent): right = right.out
+            if isinstance(left, CameraComponent):
+                left = left.out
+            if isinstance(right, CameraComponent):
+                right = right.out
 
             self.node = pipeline.createStereoDepth()
             left.link(self.node.left)

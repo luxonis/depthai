@@ -42,21 +42,24 @@ class OakCamera:
                  device: Optional[str] = None,  # MxId / IP / USB port
                  usb2: Optional[bool] = None,  # Auto by default
                  recording: Optional[str] = None,
-                 args: bool = True
+                 args: Union[None, bool, Dict] = None
                  ) -> None:
         """
         Args:
             device (str, optional): OAK device we want to connect to
             usb2 (bool, optional): Force USB2 mode
             recording (str, optional): Use depthai-recording - either local path, or from depthai-recordings repo
-            args (bool): Use user defined arguments when constructing the pipeline
+            args (None, bool, Dict): Use user defined arguments when constructing the pipeline
         """
         self.deviceName = device
         self.usb2 = usb2
 
-        if args:
-            am = ArgsManager()
-            self.args = am.parseArgs()
+        if args is not None:
+            if isinstance(args, bool) and args:
+                am = ArgsManager()
+                self.args = am.parseArgs()
+            else:  # Already parsed
+                self.args = args
 
         if recording:
             self.replay = Replay(recording)

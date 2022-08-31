@@ -49,7 +49,7 @@ class NNComponent(Component):
     handler: Callable = None  # Custom model handler for decoding
 
     def __init__(self,
-                 model: Union[str, Path],  # str for SDK supported model or Path to custom model's json
+                 model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
                  input: Union[dai.Node.Output, Component],
                  out: Union[None, bool, str] = None,
                  nnType: Optional[str] = None,
@@ -63,7 +63,7 @@ class NNComponent(Component):
         (only for object detectors).
 
         Args:
-            model (Union[str, Path]): str for SDK supported model / Path to blob or custom model's json
+            model (Union[str, Path, Dict]): str for SDK supported model / Path to blob or custom model's json
             input: (Union[Component, dai.Node.Output]): Input to the NN. If nn_component that is object detector, crop HQ frame at detections (Script node + ImageManip node)
             out (bool, default False): Stream component's output to the host
             nnType (str, optional): Type of the NN - Either Yolo or MobileNet
@@ -153,7 +153,9 @@ class NNComponent(Component):
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
-                spatial = StereoComponent(pipeline, args=self._args)
+                left = CameraComponent('left')
+                right = CameraComponent('right')
+                spatial = StereoComponent(left=left, right=right, args=self._args)
             if isinstance(spatial, StereoComponent):
                 spatial.depth.link(self.node.inputDepth)
             elif isinstance(spatial, dai.Node.Output):
@@ -189,14 +191,17 @@ class NNComponent(Component):
         """
         Called when NNComponent is initialized. Parses "model" argument passed by user.
         """
+        if isinstance(model, Dict):
+            self.parse_config(model)
+            return
         # Parse the input config/model
-        if isinstance(model, str):
+        elif isinstance(model, str):
             # Download from the web, or convert to Path
             model = getBlob(model) if isUrl(model) else Path(model)
 
-        if model.is_file():
+        if model.suffix in ['.blob', '.json']:
             if model.suffix == '.blob':
-                self.blob = dai.OpenVINO.Blob(model)
+                self.blob = dai.OpenVINO.Blob(model.resolve())
                 # BlobConverter sets name of the blob '[name]_openvino_[version]_[num]cores.blob'
                 # So we can parse this openvino version if it exists
                 match = re.search('_openvino_\d{4}.\d', str(model))
@@ -225,18 +230,23 @@ class NNComponent(Component):
                 self._nodeType = dai.node.YoloSpatialDetectionNetwork if self._spatial else dai.node.YoloDetectionNetwork
             elif nnType.upper() == 'MOBILENET':
                 self._nodeType = dai.node.MobileNetSpatialDetectionNetwork if self._spatial else dai.node.MobileNetDetectionNetwork
-    def parse_config(self, modelConfig: Path):
+    def parse_config(self, modelConfig: Union[Path, str, Dict]):
         """
         Called when NNComponent is initialized. Reads config.json file and parses relevant setting from there
         """
-        with modelConfig.open() as f:
-            self.config = Config().load(json.loads(f.read()))
+        if isinstance(modelConfig, str):
+            modelConfig = Path(modelConfig).resolve()
+        if isinstance(modelConfig, Path):
+            with modelConfig.open() as f:
+                self.config = Config().load(json.loads(f.read()))
+        else:  # Dict
+            self.config = modelConfig
 
         # Get blob from the config file
-        model = self.config['model']
-        if 'blob' in model:
-            self.blob = dai.OpenVINO.Blob(str(modelConfig.parent / model['blob']))
-
+        if 'model' in self.config:
+            model = self.config['model']
+            if 'blob' in model:
+                self.blob = dai.OpenVINO.Blob(str(Path(model['blob']).resolve()))
         # Parse OpenVINO version
         if "openvino_version" in self.config:
             self._forcedVersion = parseOpenVinoVersion(self.conf.get("openvino_version"))

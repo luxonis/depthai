@@ -111,7 +111,7 @@ class Replay:
         dic = getAvailableRecordings()
         if recordingName in dic:
             arr = dic[recordingName]
-            print("Downloading depthai recording '{}' from our server, in total {:.2f} MB".format(recordingName,
+            print("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB".format(recordingName,
                                                                                                   arr[1] / 1e6))
             path = downloadRecording(recordingName, arr[0])
             return path
