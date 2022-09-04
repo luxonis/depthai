@@ -234,9 +234,11 @@ class NNComponent(Component):
         """
         Called when NNComponent is initialized. Reads config.json file and parses relevant setting from there
         """
+        parentFolder = None
         if isinstance(modelConfig, str):
             modelConfig = Path(modelConfig).resolve()
         if isinstance(modelConfig, Path):
+            parentFolder = modelConfig.parent
             with modelConfig.open() as f:
                 self.config = Config().load(json.loads(f.read()))
         else:  # Dict
@@ -245,8 +247,16 @@ class NNComponent(Component):
         # Get blob from the config file
         if 'model' in self.config:
             model = self.config['model']
+
+            # Resolve the paths inside config
+            if parentFolder:
+                for name in ['blob', 'xml', 'bin']:
+                    if name in model:
+                        model[name] = str((parentFolder / model[name]).resolve())
+
             if 'blob' in model:
-                self.blob = dai.OpenVINO.Blob(str(Path(model['blob']).resolve()))
+                self.blob = dai.OpenVINO.Blob(model['blob'])
+
         # Parse OpenVINO version
         if "openvino_version" in self.config:
             self._forcedVersion = parseOpenVinoVersion(self.conf.get("openvino_version"))
@@ -285,8 +295,7 @@ class NNComponent(Component):
                                           )
 
         if 'xml' in model and 'bin' in model:
-            return blobconverter.from_zoo(model['model_name'],
-                                          xml=model['xml'],
+            return blobconverter.from_openvino(xml=model['xml'],
                                           bin=model['bin'],
                                           data_type="FP16",  # Myriad X
                                           shaves=6,  # TODO: Calulate ideal shave amount
