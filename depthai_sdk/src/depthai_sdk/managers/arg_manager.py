@@ -17,10 +17,10 @@ def getRgbResolution(resolution: str):
         return dai.ColorCameraProperties.SensorResolution.THE_4_K
     # elif resolution == '1920' or resolution == '5MP':
     #     return dai.ColorCameraProperties.SensorResolution.THE_5_MP
-    elif resolution == '800' or resolution == '800P':
-        return dai.ColorCameraProperties.SensorResolution.THE_800_P
-    elif resolution == '720' or resolution == '720P':
-        return dai.ColorCameraProperties.SensorResolution.THE_720_P
+    # elif resolution == '800' or resolution == '800P':
+    #     return dai.ColorCameraProperties.SensorResolution.THE_800_P
+    # elif resolution == '720' or resolution == '720P':
+    #     return dai.ColorCameraProperties.SensorResolution.THE_720_P
     else: # Default
         return dai.ColorCameraProperties.SensorResolution.THE_1080_P
 
