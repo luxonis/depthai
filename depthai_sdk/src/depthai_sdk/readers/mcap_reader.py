@@ -2,7 +2,7 @@ import array
 from mcap.mcap0.stream_reader import StreamReader
 from mcap.mcap0.reader import make_reader
 from mcap_ros1.decoder import Decoder
-from depthai_sdk import PreviewDecoder
+from ..previews import PreviewDecoder
 import cv2
 import numpy as np
 from typing import List, Tuple
