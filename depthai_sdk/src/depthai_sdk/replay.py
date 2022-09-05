@@ -86,7 +86,7 @@ class Replay:
 
     def _get_path(self, path: str) -> Path:
         """
-        Either use local depthai-recording, YT link, (TODO) mp4 url, or recording from depthai-recordings repo
+        Either use local depthai-recording, YT link, mp4 url
         @param path: depthai-recording path.
         @return: Replay module
         """
@@ -99,7 +99,7 @@ class Replay:
                 raise NotImplementedError("Only YouTube video download is currently supported!")
 
         # TODO: check if absolute or relative
-        if Path(path).is_file():
+        if Path(path).is_file() or Path(path).is_dir():
             return Path(path)
 
         recordingName: str = path

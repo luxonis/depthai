@@ -8,13 +8,13 @@ from .component import Component
 
 
 class BaseSync(ABC):
-    callback: Callable  # Callback to call with new (synced) msgs
+    callbacks: List[Callable]  # List of callback to be called when we have new synced msgs
     queue: Queue  # Queue to which (synced/non-synced) messages will be added
     streams: List[str]  # Streams to listen for
     components: List[Component]
 
-    def __init__(self, callback: Callable, components: List[Component]) -> None:
-        self.callback = callback
+    def __init__(self, callbacks: List[Callable], components: List[Component]) -> None:
+        self.callbacks = callbacks
         self.queue = Queue(maxsize=30)
         self.components = components
 
@@ -34,12 +34,13 @@ class BaseSync(ABC):
     # main thread, and calling them from callback thread wouldn't work.
     def checkQueue(self, block=False) -> None:
         """
-        Checks queue for any available messages. If avialable, call callback. Non blocking by default.
+        Checks queue for any available messages. If available, call callback. Non-blocking by default.
         """
         try:
             msgs = self.queue.get(block=block)
             if msgs is not None:
-                self.callback(msgs)
+                for cb in self.callbacks:  # Call all callbacks
+                    cb(msgs)
         except Empty:  # Queue empty
             pass
 
@@ -50,15 +51,11 @@ class NoSync(BaseSync):
     """
     msgs: Dict[str, List[dai.Buffer]] = dict()  # List of messages
 
-    def __init__(self, callback: Callable, components: List[Component]) -> None:
-        super().__init__(callback, components)
-
     def newMsg(self, name: str, msg) -> None:
         # Return all latest msgs (not synced)
         if name not in self.msgs: self.msgs[name] = []
 
         self.msgs[name].append(msg)
-        print(self.msgs)
         msgsAvailableCnt = [0 < len(arr) for _, arr in self.msgs.items()].count(True)
 
         if len(self.streams) == msgsAvailableCnt:

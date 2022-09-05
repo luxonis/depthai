@@ -1,11 +1,12 @@
 import numpy as np
 import depthai as dai
-from typing import Tuple, Optional, Union, List, Dict, Type, Any
+from typing import Tuple, Optional, Union, List, Dict, Type, Any, Callable
 import cv2
 import time
 import distinctipy
 from .. import AspectRatioResizeMode
 from ..components import Component, NNComponent
+from enum import IntEnum
 
 bg_color = (0, 0, 0)
 front_color = (255, 255, 255)
@@ -193,6 +194,7 @@ def drawDetections(frame,
             txt, color = labelMap[detection.label]
         else:
             txt = str(detection.label)
+
         putText(frame, txt, (bbox[0] + 10, bbox[1] + 20), color=color)
         rectangle(frame, bbox, color=color)
 
@@ -234,10 +236,25 @@ def hex_to_bgr(hex: str) -> Tuple[int, int, int]:
     return tuple(int(value[i:i + 2], 16) for i in (4, 2, 0))
 
 
+class FramePosition(IntEnum):
+    """
+    Where on frame do we want to print text.
+    """
+    TopLeft = 0
+    MidLeft = 1
+    BottomLeft = 2
+    TopMid = 10
+    Mid = 11
+    BottomMid = 12
+    TopRight = 20
+    MidRight = 21
+    BottomRight = 22
+
 class BaseVisualizer:
     _name: str
     _scale: Union[None, float, Tuple[int, int]] = None
     _fps: Dict[str, FPSHandler] = None
+    _callback: Callable = None
 
     def __init__(self, frameStream: str) -> None:
         self._name = frameStream
@@ -245,15 +262,17 @@ class BaseVisualizer:
     def setBase(self,
                 scale: Union[None, float, Tuple[int, int]] = None,
                 fps: Dict[str, FPSHandler] = None,
+                callback: Callable = None
                 ):
         self._scale = scale
         self._fps = fps
+        self._callback = callback
 
-    def newMsgs(self, frame: Union[Dict, dai.ImgFrame, Any]):
-        if isinstance(frame, Dict):
-            frame = frame[self._name]
+    def newMsgs(self, input: Union[Dict, dai.ImgFrame]):
+        if isinstance(input, Dict):
+            frame = input[self._name]
         if isinstance(frame, dai.ImgFrame):
-            frame = frame.getCvFrame()
+            frame = input.getCvFrame()
 
         if self._fps:
             i = 0
@@ -271,11 +290,46 @@ class BaseVisualizer:
                     int(frame.shape[0] * self._scale)
                 ))
 
-        cv2.imshow(self.name, frame)
+        if self._callback:  # Don't display frame, call the callback
+            self._callback(input, frame)
+        else:
+            cv2.imshow(self.name, frame)
 
     @property
     def name(self) -> str:
         return self._name
+
+    @staticmethod
+    def print(frame, text: str, position: FramePosition = FramePosition.BottomLeft, padPx=10):
+        """
+        Prints text on the frame.
+        @param frame: Frame
+        @param text: Text to be printed
+        @param position: Where on frame we want to print the text
+        @param padPx: Padding (in pixels)
+        """
+        textSize = cv2.getTextSize(text, text_type, fontScale=1.0, thickness=1)[0]
+        frameW = frame.shape[1]
+        frameH = frame.shape[0]
+
+        yPos = int(position) % 10
+        if yPos == 0: # Y Top
+            y = textSize[1] + padPx
+        elif yPos == 1: # Y Mid
+            y = int(frameH / 2) + int(textSize[1] / 2)
+        else:  # yPos == 2. Y Bottom
+            y = frameH - padPx
+
+        xPos = int(position) // 10
+        if xPos == 0: # X Left
+            x = padPx
+        elif xPos == 1:  # X Mid
+            x = int(frameW / 2) - int(textSize[0] / 2)
+        else:  # xPos == 2  # X Right
+            x = frameW - textSize[0] - padPx
+
+        putText(frame, text, (x, y))
+
 
 
 class DetectionsVisualizer(BaseVisualizer):
@@ -326,7 +380,8 @@ class DetectionsVisualizer(BaseVisualizer):
         frame = imgFrame.getCvFrame()
         dets = msgs[self.detectionStream]
         drawDetections(frame, dets, self.normalizer, self.labels)
-        super().newMsgs(frame=frame)
+        msgs[super().name] = frame
+        super().newMsgs(msgs)
 
 
 class Visualizer:
@@ -334,12 +389,16 @@ class Visualizer:
     _visualizers: List[BaseVisualizer] = []
     _scale: Union[None, float, Tuple[int, int]] = None
     _fps: Dict[str, FPSHandler] = None
+    _callback: Callable = None
 
-    def __init__(self, components: List[Component], scale: Union[None, float, Tuple[int, int]] = None,
-                 fpsHandlers: Dict[str, FPSHandler] = None) -> None:
+    def __init__(self, components: List[Component],
+                 scale: Union[None, float, Tuple[int, int]] = None,
+                 fpsHandlers: Dict[str, FPSHandler] = None,
+                 callback: Callable = None) -> None:
         self._components = components
         self._scale = scale
         self._fps = fpsHandlers
+        self._callback = callback
 
     def setup(self):
         """
@@ -353,14 +412,14 @@ class Visualizer:
         if len(nns) == 0:
             for frame in frames:
                 vis = BaseVisualizer(frame)
-                vis.setBase(self._scale, self._fps)
+                vis.setBase(self._scale, self._fps, self._callback)
                 self._visualizers.append(vis)
         else:
             for nn in nns:
                 for frame in frames:
                     nnStreamNames = self._streams_by_type_xout(nn.xouts, dai.ImgDetections)
                     detVis = DetectionsVisualizer(frame, nnStreamNames[0], nn)
-                    detVis.setBase(self._scale, self._fps)
+                    detVis.setBase(self._scale, self._fps, self._callback)
                     self._visualizers.append(detVis)
 
     def _getStreamName(self, xouts: Dict, type: Type) -> str:
@@ -370,7 +429,6 @@ class Visualizer:
 
     # Called via callback
     def newMsgs(self, msgs: Dict):
-        print('vis new msg', msgs)
         for vis in self._visualizers:
             vis.newMsgs(msgs)
         # frame = self._getFirstMsg(msgs, dai.ImgFrame).getCvFrame()

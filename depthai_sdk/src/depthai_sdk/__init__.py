@@ -266,12 +266,13 @@ class OakCamera:
 
     def create_visualizer(self, components: List[Component],
                           scale: Union[None, float, Tuple[int, int]] = None,
-                          fps=False) -> Visualizer:
+                          fps=False,
+                          callback: Callable=None) -> Visualizer:
         handlers = None
         if fps:
             self.oak.enable_fps(True)
             handlers = self.oak.fpsHandlers
-        vis = Visualizer(components, scale, handlers)
+        vis = Visualizer(components, scale, handlers, callback)
         self.visualizers.append(vis)
         self.callback(components, vis.newMsgs)
         return vis
@@ -279,8 +280,10 @@ class OakCamera:
     def synchronize(self, components: List[Component], callback: Callable):
         raise NotImplementedError()
 
-    def callback(self, components: List[Component], function: Callable):
-        self.oak.sync.append(NoSync(function, components))
+    def callback(self, components: List[Component], function: Callable) -> BaseSync:
+        sync = NoSync([function], components)
+        self.oak.sync.append(sync)
+        return sync
 
     @property
     def device(self) -> dai.Device:
