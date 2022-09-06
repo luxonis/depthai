@@ -3,6 +3,7 @@ from rosbags.rosbag1 import Reader
 from rosbags.serde import deserialize_cdr, ros1_to_cdr
 import numpy as np
 from typing import List, Tuple
+from pathlib import Path
 
 from .abstract_reader import AbstractReader
 
@@ -10,7 +11,7 @@ class RosbagReader(AbstractReader):
     """
     TODO: make the stream selectable, add function that returns all available streams
     """
-    def __init__(self, source: str) -> None:
+    def __init__(self, folder: Path) -> None:
         self.reader = Reader(source)
         self.reader.open()
         if '/device_0/sensor_0/Depth_0/image/data' not in self.reader.topics:

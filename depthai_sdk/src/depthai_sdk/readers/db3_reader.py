@@ -6,18 +6,19 @@ from typing import Any, Generator, List, Dict
 import numpy as np
 from ..previews import PreviewDecoder
 import cv2
-
+from pathlib import Path
+import os
 from .abstract_reader import AbstractReader
 
 class Db3Reader(AbstractReader):
-    STREAMS = ['left', 'color', 'right', 'depth']
+    STREAMS = ['left', 'right', 'depth']
     generators: Dict[str, Generator] = {}
     frames = None # For shapes
     """
     TODO: make the stream selectable, add function that returns all available streams
     """
-    def __init__(self, source: str) -> None:
-        self.reader = Reader(source)
+    def __init__(self, folder: Path) -> None:
+        self.reader = Reader(self._fileWithExt(folder, '.db3'))
         self.reader.open()
 
         for con in self.reader.connections:

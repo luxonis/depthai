@@ -6,6 +6,7 @@ from ..previews import PreviewDecoder
 import cv2
 import numpy as np
 from typing import List, Tuple
+from pathlib import Path
 
 from .abstract_reader import AbstractReader
 
@@ -15,7 +16,7 @@ class McapReader(AbstractReader):
     Supported ROS messages: Image (depth), CompressedImage (left, right, color, disparity)
     """
     _readFrames = dict()
-    def __init__(self, source: str) -> None:
+    def __init__(self, folder: Path) -> None:
         # Get available topics
         with open(source, "rb") as file:
             reader = make_reader(file)

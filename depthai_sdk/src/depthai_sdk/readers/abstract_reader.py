@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Tuple
+import os
+from pathlib import Path
 
 class AbstractReader(ABC):
     @abstractmethod
@@ -24,3 +26,16 @@ class AbstractReader(ABC):
     @abstractmethod
     def close(self):
         pass
+
+    @abstractmethod
+    def disableStream(self, name: str):
+        """
+        @param name: Name of the stream to be disabled
+        """
+        pass
+
+    def _fileWithExt(self, folder: Path, ext: str) -> str:
+        for f in os.listdir(str(folder)):
+            if f.endswith(ext):
+                return f
+        raise ValueError(f"Couldn't find a file with '{ext}' extension in folder '{folder}'!")
