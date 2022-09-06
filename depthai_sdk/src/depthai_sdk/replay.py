@@ -53,13 +53,7 @@ class Replay:
         Args:
             path (str): Path to the recording folder
         """
-        self.path = Path(path).resolve().absolute()
-
-        def readFile(filePath: Path) -> None:
-            strPath = str(filePath)
-            file = os.path.basename(filePath)
-            (name, extension) = os.path.splitext(file)
-
+        self.path = self._get_path(path)
 
         def cntFilesExt(path: Path, ext: Union[str, List[str]]) -> int:
             def fileWithExt(file: str) -> bool:
@@ -110,9 +104,8 @@ class Replay:
                 # TODO: download video/image(s) from the internet
                 raise NotImplementedError("Only YouTube video download is currently supported!")
 
-        # TODO: check if absolute or relative
-        if Path(path).is_file() or Path(path).is_dir():
-            return Path(path)
+        if Path(path).exists():
+            return Path(path).resolve()
 
         recordingName: str = path
         # Check if we have it stored locally

@@ -145,7 +145,7 @@ class NormalizeBoundingBox:
 
         # Edit the bounding boxes before normalizing them
         if self.arResizeMode == AspectRatioResizeMode.CROP:
-            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[0] / frame.shape[1]
+            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[1] / frame.shape[0]
             sel = 0 if 0 < ar_diff else 1
             bbox[sel::2] *= 1 - abs(ar_diff)
             bbox[sel::2] += abs(ar_diff) / 2
@@ -153,17 +153,24 @@ class NormalizeBoundingBox:
             # No need to edit bounding boxes when stretching
             pass
         elif self.arResizeMode == AspectRatioResizeMode.LETTERBOX:
-            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[0] / frame.shape[1]
-            sel = 1 if 0 < ar_diff else 0
-            bbox[sel::2] -= abs(ar_diff) / 2
-            bbox[sel::2] /= 1 - abs(ar_diff)
+            # There might be better way of doing this. TODO: test if it works as expected
+            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[1] / frame.shape[0]
+            sel = 0 if 0 < ar_diff else 1
+            nsel = 0 if sel == 1 else 1
+            # Get the divisor
+            div = frame.shape[sel] / self.aspectRatio[nsel]
+            letterboxing_ratio = 1 - (frame.shape[nsel] / div) / self.aspectRatio[sel]
+
+            bbox[sel::2] -= abs(letterboxing_ratio) / 2
+            bbox[sel::2] /= 1 - abs(letterboxing_ratio)
+
         # Normalize bounding boxes
         normVals = np.full(len(bbox), frame.shape[0])
         normVals[::2] = frame.shape[1]
         return (np.clip(bbox, 0, 1) * normVals).astype(int)
 
 
-class FPSHandler:
+class FPS:
     def __init__(self):
         self.timestamp = time.time() + 1
         self.start = time.time()
@@ -196,7 +203,7 @@ def drawDetections(frame,
             txt = str(detection.label)
 
         putText(frame, txt, (bbox[0] + 10, bbox[1] + 20), color=color)
-        rectangle(frame, bbox, color=color)
+        rectangle(frame, bbox, color=color, thickness=1, radius=0)
 
 
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
@@ -253,7 +260,7 @@ class FramePosition(IntEnum):
 class BaseVisualizer:
     _name: str
     _scale: Union[None, float, Tuple[int, int]] = None
-    _fps: Dict[str, FPSHandler] = None
+    _fps: Dict[str, FPS] = None
     _callback: Callable = None
 
     def __init__(self, frameStream: str) -> None:
@@ -261,7 +268,7 @@ class BaseVisualizer:
 
     def setBase(self,
                 scale: Union[None, float, Tuple[int, int]] = None,
-                fps: Dict[str, FPSHandler] = None,
+                fps: Dict[str, FPS] = None,
                 callback: Callable = None
                 ):
         self._scale = scale
@@ -348,9 +355,6 @@ class DetectionsVisualizer(BaseVisualizer):
         Args:
             frameStream (str): Name of the frame stream to which we will draw detection results
             detectionsStream (str): Name of the detections stream
-            labels (List, optional): List of mappings for object detection labels. List of either labels, or (label, color)
-            aspectRatio (Tuple, optional): Aspect ratio of the input frame object detector
-            fps (bool): Whether we want to display FPS on the frame
         """
         super().__init__(frameStream)
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
@@ -358,7 +362,7 @@ class DetectionsVisualizer(BaseVisualizer):
             self.labels = []
             n_colors = [isinstance(label, str) for label in nnComp.labels].count(True)
             # np.array of (b,g,r), 0..1
-            colors = np.array(distinctipy.get_colors(n_colors=n_colors, rng=154165170, pastel_factor=0.5))[..., ::-1]
+            colors = np.array(distinctipy.get_colors(n_colors=n_colors, rng=123123, pastel_factor=0.5))[..., ::-1]
             colors = [distinctipy.get_rgb256(clr) for clr in colors]  # List of (b,g,r), 0..255
             for label in nnComp.labels:
                 if isinstance(label, str):
@@ -388,12 +392,12 @@ class Visualizer:
     _components: List[Component]
     _visualizers: List[BaseVisualizer] = []
     _scale: Union[None, float, Tuple[int, int]] = None
-    _fps: Dict[str, FPSHandler] = None
+    _fps: Dict[str, FPS] = None
     _callback: Callable = None
 
     def __init__(self, components: List[Component],
                  scale: Union[None, float, Tuple[int, int]] = None,
-                 fpsHandlers: Dict[str, FPSHandler] = None,
+                 fpsHandlers: Dict[str, FPS] = None,
                  callback: Callable = None) -> None:
         self._components = components
         self._scale = scale
