@@ -24,7 +24,7 @@ class OakCamera:
     """
 
     # User should be able to access these:
-    pipeline: dai.Pipeline
+    pipeline: dai.Pipeline = None
     oak: OakDevice = OakDevice()  # Init this object by default
     args = None  # User defined arguments
     replay: Optional[Replay] = None
@@ -64,6 +64,7 @@ class OakCamera:
         if recording:
             self.replay = Replay(recording)
             print('available streams from recording', self.replay.getStreams())
+
 
     def _comp(self, comp: Component) -> Union[CameraComponent, NNComponent, StereoComponent]:
         self.components.append(comp)
@@ -191,39 +192,10 @@ class OakCamera:
 
     def start(self, blocking=False, visualize=False) -> None:
         """
-        Start the application. Configure XLink queues, upload the pipeline to the device(s)
+        Start the application
         """
-        # First go through each components to check whether any is forcing an OpenVINO version
-
-        self.pipeline = dai.Pipeline()
-        if self.replay:
-            self.replay.initPipeline(self.pipeline)
-        for c in self.components:
-            ov = c._forced_openvino_version()
-            if ov:
-                if self.pipeline.getRequiredOpenVINOVersion() and self.pipeline.getRequiredOpenVINOVersion() != ov:
-                    raise Exception(
-                        'Two components forced two different OpenVINO version! Please make sure that all your models are compiled using the same OpenVINO version.')
-                self.pipeline.setOpenVINOVersion(ov)
-
-        # Connect to the OAK camera
-        self._init_device()
-
-        # Go through each component
-        for component in self.components:
-            # Update the component now that we can query device info
-            component._update_device_info(self.pipeline, self.oak.device, self.pipeline.getOpenVINOVersion())
-
-            # check if out is enabled
-            for qName, (compType, daiMsgType) in component.xouts.items():
-                self.oak.queues[qName] = compType
-
-        if visualize:  # Visualize after components are updated (as pipeline can change)
-            # Debug pipeline with pipeline graph tool
-            # TODO: Integrate geaxgx's DepthAI Pipeline Graph tool into SDK
-            folderPath = Path(os.path.abspath(sys.argv[0])).parent
-            with open(folderPath / "pipeline.json", 'w') as f:
-                f.write(json.dumps({'pipeline': self.pipeline.serializeToJson()['pipeline']}))
+        if self.pipeline is None:
+            self.build() # Build the pipeline
 
         # Set up Syncing classes and visualizers
         for vis in self.visualizers:
@@ -262,6 +234,47 @@ class OakCamera:
 
     def running(self) -> bool:
         return True
+
+    def build(self) -> None:
+        """
+        Connect to the device and build the pipeline based on previously provided configuration. This is called
+        by start() function. Configure XLink queues, upload the pipeline to the device.
+        """
+        self.pipeline = dai.Pipeline()
+        if self.replay:
+            self.replay.initPipeline(self.pipeline)
+
+        # First go through each components to check whether any is forcing an OpenVINO version
+        for c in self.components:
+            ov = c._forced_openvino_version()
+            if ov:
+                if self.pipeline.getRequiredOpenVINOVersion() and self.pipeline.getRequiredOpenVINOVersion() != ov:
+                    raise Exception(
+                        'Two components forced two different OpenVINO version! Please make sure that all your models are compiled using the same OpenVINO version.')
+                self.pipeline.setOpenVINOVersion(ov)
+
+        # Connect to the OAK camera
+        self._init_device()
+
+        # Go through each component
+        for component in self.components:
+            # Update the component now that we can query device info
+            component._update_device_info(self.pipeline, self.oak.device, self.pipeline.getOpenVINOVersion())
+
+            # check if out is enabled
+            for qName, (compType, daiMsgType) in component.xouts.items():
+                self.oak.queues[qName] = compType
+
+
+    def show_graph(self) -> None:
+        """
+        Show pipeline graph, useful for debugging.
+        @return:
+        """
+        if self.pipeline is None:
+            self.build() # Build the pipeline
+
+        p = PipelineGraph(self.pipeline.serializeToJson()['pipeline'])
 
 
     def create_visualizer(self, components: List[Component],
