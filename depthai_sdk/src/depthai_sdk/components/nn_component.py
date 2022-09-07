@@ -2,7 +2,7 @@ import re
 from .component import Component
 from .camera_component import CameraComponent
 from .stereo_component import StereoComponent
-from .multi_stage_nn import MultiStageNN
+from .multi_stage_nn import MultiStageNN, MultiStageNnConfig
 from pathlib import Path
 from typing import Callable, Optional, Union, List, Dict, Tuple
 import depthai as dai
@@ -11,6 +11,7 @@ from .parser import *
 from .nn_helper import *
 from ..classes.nn_config import Config, Model
 import json
+
 
 class NNComponent(Component):
     tracker: dai.node.ObjectTracker
@@ -42,7 +43,9 @@ class NNComponent(Component):
 
     out: dai.Node.Output  # NN output
     passthrough: dai.Node.Output
+
     _multiStageNn: MultiStageNN
+    _multiStageNnConfig: MultiStageNnConfig = None
 
     # For visualizer
     labels: List = None  # obj detector labels
@@ -141,6 +144,7 @@ class NNComponent(Component):
             self.inputComponent = self.input  # Used by visualizer
             # Create script node, get HQ frames from input.
             self._multiStageNn = MultiStageNN(pipeline, self.input, self.input.input, self.size)
+            self._multiStageNn.configure(self._multiStageNnConfig)
             self._multiStageNn.out.link(self.node.input)  # Cropped frames
             # For debugging, for intenral counter
             self.node.out.link(self._multiStageNn.script.inputs['recognition'])
@@ -345,7 +349,7 @@ class NNComponent(Component):
                 "Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
 
-        self._multiStageNn.config_multistage_nn(debug, labels, scaleBb)
+        self._multiStageNnConfig = MultiStageNnConfig(debug, labels, scaleBb)
 
     def config_tracker(self,
                        type: Optional[dai.TrackerType] = None,

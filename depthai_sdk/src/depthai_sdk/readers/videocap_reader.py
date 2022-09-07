@@ -11,7 +11,7 @@ class VideoCapReader(AbstractReader):
     """
     Reads stream from mp4, mjpeg, h264, h265
     """
-    initialFrames = Dict[str, Any] = dict()
+    initialFrames: Dict[str, Any] = dict()
     shapes: Dict[str, Tuple[int, int]] = dict()
     readers: Dict[str, cv2.VideoCapture] = dict()
 

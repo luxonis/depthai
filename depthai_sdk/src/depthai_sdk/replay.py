@@ -58,8 +58,8 @@ class Replay:
         def cntFilesExt(path: Path, ext: Union[str, List[str]]) -> int:
             def fileWithExt(file: str) -> bool:
                 if isinstance(ext, List):
-                    return os.path.splitext(file)[1] in _imageExt
-                elif isinstance((ext, str)):
+                    return os.path.splitext(file)[1] in ext
+                elif isinstance(ext, str):
                     return file.endswith(ext)
                 else:
                     raise ValueError('ext should be either str or List[str]!')

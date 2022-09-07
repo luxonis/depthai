@@ -8,12 +8,12 @@ def add_msg(msg, name, seq = None):
     seq = str(seq)
     ${DEBUG}node.warn(f"New msg {name}, seq {seq}")
 
-    # Each seq number has it's own dict of msgs
+    # Each seq number has its own dict of msgs
     if seq not in msgs:
         msgs[seq] = dict()
     msgs[seq][name] = msg
 
-    # To avoid freezing (not necessary for this ObjDet model)
+    # To avoid freezing
     if 15 < len(msgs):
         ${DEBUG}node.warn(f"Removing first element! len {len(msgs)}")
         msgs.popitem() # Remove first element
