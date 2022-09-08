@@ -9,6 +9,7 @@ from pathlib import Path
 import time
 from datetime import datetime, timedelta
 from collections import deque 
+from scipy.spatial.transform import Rotation
 
 import cv2
 from cv2 import resize
@@ -563,8 +564,32 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
                 
+                localPolygon = np.array([self.polygons[self.current_polygon]])
+                print(localPolygon.shape)
+                print(localPolygon)
+                if self.images_captured_polygon == 1:
+                    # perspectiveRotationMatrix = Rotation.from_euler('z', 45, degrees=True).as_matrix()
+                    angle = 30.
+                    theta = (angle/180.) * np.pi
+                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)], 
+                                                        [np.sin(theta),  np.cos(theta)]])
+                    
+                    localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
+                    localPolygon[0][:, 1] += abs(localPolygon.min())    
+                if self.images_captured_polygon == 2:
+                    # perspectiveRotationMatrix = Rotation.from_euler('z', -45, degrees=True).as_matrix()
+                    angle = -30.
+                    theta = (angle/180.) * np.pi
+                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)], 
+                                                        [np.sin(theta),  np.cos(theta)]])
+                    localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
+                    localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))    
+                    localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())    
+
+                print(localPolygon)
+                print(localPolygon.shape)
                 cv2.polylines(
-                    imgFrame, np.array([self.polygons[self.current_polygon]]),
+                    imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
                 
                 # TODO(Sachin): Add this back with proper alignment
