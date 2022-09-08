@@ -1,4 +1,7 @@
 {
+    "model": {
+        "model_name":"person-reidentification-retail-0288"
+    },
     "nn_config": {
         "output_format" : "raw"
     },
