@@ -37,7 +37,7 @@ class NNComponent(Component):
     _xout: Union[None, bool, str] = None  # Argument passed by user
     _tracker: bool = False
     _spatial: Union[None, bool, StereoComponent, dai.Node.Output] = None
-    _nodeType: dai.node = None  # Type of the node for `node`
+    _nodeType: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
 
     passthroughOut: bool = False  # Whether to stream passthrough frame to the host
 
@@ -116,7 +116,7 @@ class NNComponent(Component):
 
         if self.config:
             nnConfig = self.config.get("nn_config", {})
-            if self._isDetector() and 'confidence_threshold' in nnConfig:
+            if self.isDetector() and 'confidence_threshold' in nnConfig:
                 self.node.setConfidenceThreshold(float(nnConfig['confidence_threshold']))
 
             meta = nnConfig.get('NN_specific_metadata', None)
@@ -139,7 +139,7 @@ class NNComponent(Component):
             self.input = self.input.out
             self._setupResizeManip(pipeline).link(self.node.input)
         elif isinstance(self.input, type(self)):
-            if not self.input._isDetector():
+            if not self.input.isDetector():
                 raise Exception('Only object detector models can be used as an input to the NNComponent!')
             self.inputComponent = self.input  # Used by visualizer
             # Create script node, get HQ frames from input.
@@ -166,7 +166,7 @@ class NNComponent(Component):
                 spatial.link(self.node.inputDepth)
 
         if self._spatial:
-            if not self._isDetector():
+            if not self.isDetector():
                 print('Currently, only object detector models (Yolo/MobileNet) can use tracker!')
             else:
                 raise NotImplementedError()
@@ -179,7 +179,7 @@ class NNComponent(Component):
                 type(self),
                 name=self._xout,
                 out=self.out,
-                depthaiMsg=dai.ImgDetections if self._isDetector() else dai.NNData
+                depthaiMsg=dai.ImgDetections if self.isDetector() else dai.NNData
             )
 
         if self.passthroughOut:
@@ -481,7 +481,7 @@ class NNComponent(Component):
                 isinstance(self.node, dai.node.MobileNetSpatialDetectionNetwork)
         )
 
-    def _isDetector(self) -> bool:
+    def isDetector(self) -> bool:
         """
         Currently these 2 object detectors are supported
         """

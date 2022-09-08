@@ -1,12 +1,10 @@
 import numpy as np
 import depthai as dai
-from typing import Tuple, Optional, Union, List, Dict, Type, Any, Callable
+from typing import Tuple, Union, List, Any, Callable
 import cv2
-import time
 import distinctipy
 from .. import AspectRatioResizeMode
-from ..components import Component, NNComponent
-from enum import IntEnum
+
 
 bg_color = (0, 0, 0)
 front_color = (255, 255, 255)
@@ -170,20 +168,6 @@ class NormalizeBoundingBox:
         return (np.clip(bbox, 0, 1) * normVals).astype(int)
 
 
-class FPS:
-    def __init__(self):
-        self.timestamp = time.time() + 1
-        self.start = time.time()
-        self.frame_cnt = 0
-
-    def next_iter(self):
-        self.timestamp = time.time()
-        self.frame_cnt += 1
-
-    def fps(self):
-        return self.frame_cnt / (self.timestamp - self.start)
-
-
 def get_text_color(background, threshold=0.6):
     bck = np.array(background) / 256
     clr = distinctipy.get_text_color((bck[2], bck[1], bck[0]), threshold)
@@ -193,7 +177,17 @@ def get_text_color(background, threshold=0.6):
 def drawDetections(frame,
                    dets: dai.ImgDetections,
                    norm: NormalizeBoundingBox,
-                   labelMap: List[Tuple[str, Tuple]] = None):
+                   labelMap: List[Tuple[str, Tuple]] = None,
+                   callback: Callable = None):
+    """
+    Draw object detections to the frame.
+
+    @param frame: np.ndarray frame
+    @param dets: dai.ImgDetections
+    @param norm: Object that handles normalization of the bounding box
+    @param labelMap: Label map for the detections
+    @param callback: Callback that will be called on each object, with (frame, bbox) in arguments
+    """
     for detection in dets.detections:
         bbox = norm.normalize(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
         color, txt = None, None
@@ -201,9 +195,10 @@ def drawDetections(frame,
             txt, color = labelMap[detection.label]
         else:
             txt = str(detection.label)
-
         putText(frame, txt, (bbox[0] + 10, bbox[1] + 20), color=color)
         rectangle(frame, bbox, color=color, thickness=1, radius=0)
+        if callback:
+            callback(frame, bbox)
 
 
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
@@ -241,241 +236,3 @@ def hex_to_bgr(hex: str) -> Tuple[int, int, int]:
     """
     value = hex.lstrip('#')
     return tuple(int(value[i:i + 2], 16) for i in (4, 2, 0))
-
-
-class FramePosition(IntEnum):
-    """
-    Where on frame do we want to print text.
-    """
-    TopLeft = 0
-    MidLeft = 1
-    BottomLeft = 2
-    TopMid = 10
-    Mid = 11
-    BottomMid = 12
-    TopRight = 20
-    MidRight = 21
-    BottomRight = 22
-
-class BaseVisualizer:
-    _name: str
-    _scale: Union[None, float, Tuple[int, int]] = None
-    _fps: Dict[str, FPS] = None
-    _callback: Callable = None
-
-    def __init__(self, frameStream: str) -> None:
-        self._name = frameStream
-
-    def setBase(self,
-                scale: Union[None, float, Tuple[int, int]] = None,
-                fps: Dict[str, FPS] = None,
-                callback: Callable = None
-                ):
-        self._scale = scale
-        self._fps = fps
-        self._callback = callback
-
-    def newMsgs(self, input: Union[Dict, dai.ImgFrame]):
-        if isinstance(input, Dict):
-            frame = input[self._name]
-        if isinstance(frame, dai.ImgFrame):
-            frame = input.getCvFrame()
-
-        if self._fps:
-            i = 0
-            for name, handler in self._fps.items():
-                putText(frame, "{} FPS: {:.1f}".format(name, handler.fps()), (10, 20 + i * 20), scale=0.7)
-                i += 1
-
-        if self._scale:
-            if isinstance(self._scale, Tuple):
-                frame = cv2.resize(frame, self._scale)  # Resize frame
-            elif isinstance(self._scale, float):
-                shape = frame.shape
-                frame = cv2.resize(frame, (
-                    int(frame.shape[1] * self._scale),
-                    int(frame.shape[0] * self._scale)
-                ))
-
-        if self._callback:  # Don't display frame, call the callback
-            self._callback(input, frame)
-        else:
-            cv2.imshow(self.name, frame)
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @staticmethod
-    def print(frame, text: str, position: FramePosition = FramePosition.BottomLeft, padPx=10):
-        """
-        Prints text on the frame.
-        @param frame: Frame
-        @param text: Text to be printed
-        @param position: Where on frame we want to print the text
-        @param padPx: Padding (in pixels)
-        """
-        textSize = cv2.getTextSize(text, text_type, fontScale=1.0, thickness=1)[0]
-        frameW = frame.shape[1]
-        frameH = frame.shape[0]
-
-        yPos = int(position) % 10
-        if yPos == 0: # Y Top
-            y = textSize[1] + padPx
-        elif yPos == 1: # Y Mid
-            y = int(frameH / 2) + int(textSize[1] / 2)
-        else:  # yPos == 2. Y Bottom
-            y = frameH - padPx
-
-        xPos = int(position) // 10
-        if xPos == 0: # X Left
-            x = padPx
-        elif xPos == 1:  # X Mid
-            x = int(frameW / 2) - int(textSize[0] / 2)
-        else:  # xPos == 2  # X Right
-            x = frameW - textSize[0] - padPx
-
-        putText(frame, text, (x, y))
-
-
-
-class DetectionsVisualizer(BaseVisualizer):
-    detectionStream: str  # Detection stream name
-    labels: List[Tuple[str, Tuple[int, int, int]]] = None
-    normalizer: NormalizeBoundingBox
-
-    def __init__(self,
-                 frameStream: str,
-                 detectionsStream: str,
-                 nnComp: NNComponent
-                 ) -> None:
-        """
-        Visualizes object detection results.
-
-        Args:
-            frameStream (str): Name of the frame stream to which we will draw detection results
-            detectionsStream (str): Name of the detections stream
-        """
-        super().__init__(frameStream)
-        # TODO: add support for colors, generate new colors for each label that doesn't have colors
-        if nnComp.labels:
-            self.labels = []
-            n_colors = [isinstance(label, str) for label in nnComp.labels].count(True)
-            # np.array of (b,g,r), 0..1
-            colors = np.array(distinctipy.get_colors(n_colors=n_colors, rng=123123, pastel_factor=0.5))[..., ::-1]
-            colors = [distinctipy.get_rgb256(clr) for clr in colors]  # List of (b,g,r), 0..255
-            for label in nnComp.labels:
-                if isinstance(label, str):
-                    text = label
-                    color = colors.pop(0)  # Take last row
-                elif isinstance(label, list):
-                    text = label[0]
-                    color = hex_to_bgr(label[1])
-                else:
-                    raise ValueError('Model JSON config error. Label map list can have either str or list!')
-
-                self.labels.append((text, color))
-
-        self.detectionStream = detectionsStream
-        self.normalizer = NormalizeBoundingBox(nnComp.size, nnComp.arResizeMode)
-
-    def newMsgs(self, msgs: Dict):
-        imgFrame: dai.ImgFrame = msgs[super().name]
-        frame = imgFrame.getCvFrame()
-        dets = msgs[self.detectionStream]
-        drawDetections(frame, dets, self.normalizer, self.labels)
-        msgs[super().name] = frame
-        super().newMsgs(msgs)
-
-
-class Visualizer:
-    _components: List[Component]
-    _visualizers: List[BaseVisualizer] = []
-    _scale: Union[None, float, Tuple[int, int]] = None
-    _fps: Dict[str, FPS] = None
-    _callback: Callable = None
-
-    def __init__(self, components: List[Component],
-                 scale: Union[None, float, Tuple[int, int]] = None,
-                 fpsHandlers: Dict[str, FPS] = None,
-                 callback: Callable = None) -> None:
-        self._components = components
-        self._scale = scale
-        self._fps = fpsHandlers
-        self._callback = callback
-
-    def setup(self):
-        """
-        Called after connected to the device, and all components have been configured
-        @return:
-        """
-
-        nns = self._components_by_type(self._components, NNComponent)
-        frames = self._streams_by_type(self._components, dai.ImgFrame)
-
-        if len(nns) == 0:
-            for frame in frames:
-                vis = BaseVisualizer(frame)
-                vis.setBase(self._scale, self._fps, self._callback)
-                self._visualizers.append(vis)
-        else:
-            for nn in nns:
-                for frame in frames:
-                    nnStreamNames = self._streams_by_type_xout(nn.xouts, dai.ImgDetections)
-                    detVis = DetectionsVisualizer(frame, nnStreamNames[0], nn)
-                    detVis.setBase(self._scale, self._fps, self._callback)
-                    self._visualizers.append(detVis)
-
-    def _getStreamName(self, xouts: Dict, type: Type) -> str:
-        for name, (compType, daiType) in xouts.items():
-            if daiType == type: return name
-        raise ValueError('Stream name was not found in these Xouts!')
-
-    # Called via callback
-    def newMsgs(self, msgs: Dict):
-        for vis in self._visualizers:
-            vis.newMsgs(msgs)
-        # frame = self._getFirstMsg(msgs, dai.ImgFrame).getCvFrame()
-        # dets = self._getFirstMsg(msgs, dai.ImgDetections).detections
-
-    def _MsgsList(self, msgs: Dict) -> List[Tuple]:
-        arr = []
-        for name, msg in msgs:
-            arr.append((name, msg, type(msg)))
-        return arr
-
-    def _streams_by_type(self, components: List[Component], type: Type) -> List[str]:
-        streams = []
-        for comp in components:
-            for name, (compType, daiType) in comp.xouts.items():
-                if daiType == type:
-                    streams.append(name)
-        return streams
-
-    def _components_by_type(self, components: List[Component], type: Type) -> List[Component]:
-        comps = []
-        for comp in components:
-            if isinstance(comp, type):
-                comps.append(comp)
-        return comps
-
-    def _getTypeDict(self, msgs: Dict) -> Dict[str, Type]:
-        ret = dict()
-        for name, msg in msgs:
-            ret[name] = type(msg)
-        return ret
-
-    def _getComponent(self, streamName: str) -> Component:
-        for comp in self._components:
-            if streamName in comp.xouts:
-                return comp
-
-        raise ValueError("[SDK Visualizer] stream name wasn't found in any component!")
-        return
-
-    def _streams_by_type_xout(self, xouts: Dict[str, Tuple[type, type]], type: Type) -> List[str]:
-        streams = []
-        for name, (compType, daiType) in xouts.items():
-            if type == daiType:
-                streams.append(name)
-        return streams

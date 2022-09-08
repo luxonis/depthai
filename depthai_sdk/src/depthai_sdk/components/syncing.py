@@ -52,7 +52,9 @@ class NoSync(BaseSync):
     msgs: Dict[str, List[dai.Buffer]] = dict()  # List of messages
 
     def newMsg(self, name: str, msg) -> None:
-        # Return all latest msgs (not synced)
+        # Ignore frames that we aren't listening for
+        if name not in self.streams: return
+
         if name not in self.msgs: self.msgs[name] = []
 
         self.msgs[name].append(msg)
@@ -74,102 +76,190 @@ class NoSync(BaseSync):
 
             self.queue.put(ret, block=False)
 
-# class SeqSync(BaseSync):
-#     """
-#     Will call callback whenever it gets a new message
-#     """
-#     msgs: dict = dict() # List of messages
+class SequenceSync(BaseSync):
+    """
+    This class will sync all messages based on their sequence number
+    """
+    msgs: Dict[str, Dict[str, dai.Buffer]] = dict()  # List of messages.
+    """
+    msgs = {seq: {stream_name: frame}}
+    Example:
+    
+    msgs = {
+        '1': {
+            'rgb': dai.Frame(),
+            'dets': dai.ImgDetections(),
+        }
+        '2': {
+            'rgb': dai.Frame(),
+            'dets': dai.ImgDetections(),
+        }
+    }
+    """
 
+    def newMsg(self, name: str, msg) -> None:
+        # Ignore frames that we aren't listening for
+        if name not in self.streams: return
+
+        # TODO: what if msg doesn't have sequence num?
+        seq = str(msg.getSequenceNum())
+
+        if seq not in self.msgs: self.msgs[seq] = dict()
+        self.msgs[seq][name] = msg
+
+        if len(self.streams) == len(self.msgs[seq]): # We have sequence num synced frames!
+
+            if self.queue.full():
+                self.queue.get()  # Get one, so queue isn't full
+
+            self.queue.put(self.msgs[seq], block=False)
+
+            # Remove previous msgs (memory cleaning)
+            for s in self.msgs:
+                if int(s) <= int(seq):
+                    del self.msgs[s]
+
+# class TimestampSycn(BaseSync):
+#     """
+#     Timestamp sync will sync all streams based on the timestamp
+#     """
+#     msgs: Dict[str, List[dai.Buffer]] = dict()  # List of messages
+#
 #     def newMsg(self, name: str, msg) -> None:
-#         seq = str(msg.getSequenceNum())
-#         if seq not in self.msgs:
-#             self.msgs[seq] = {} # Create directory for msgs
-
-#         self.msgs[seq][name] = msg
+#         # Ignore frames that we aren't listening for
+#         if name not in self.streams: return
+#         # Return all latest msgs (not synced)
+#         if name not in self.msgs: self.msgs[name] = []
+#
 #         self.msgs[name].append(msg)
-
-#         if super().callback:
-#             super().callback(name, msg)
-
-# class SeqSycn:
-#     _msgs = dict()
-
-#     def addMsg(self, msg, name: str):
-#         a = 5
-#     def getMsgs(self) -> dict:
-#         seqRemove = [] # Arr of sequence numbers to get deleted
-#         for seq, msgs in self._msgs.items():
-#             seqRemove.append(seq) # Will get removed from dict if we find synced msgs pair
-
-#             # Check if we have both detections and color frame with this sequence number
-#             if "detection" in msgs and "color" in msgs:
-#                 # We have synced msgs, remove previous msgs (memory cleaning)
-#                 for rm in seqRemove:
-#                     del self._msgs[rm]
-
-#                 return msgs # Returned synced msgs
-#         return None # No synced msgs
+#         msgsAvailableCnt = [0 < len(arr) for _, arr in self.msgs.items()].count(True)
+#
+#         if len(self.streams) == msgsAvailableCnt:
+#             # We have at least 1 msg for each stream. Get the latest, remove all others.
+#             ret = {}
+#             for name, arr in self.msgs.items():
+#                 # print(f'len(msgs[{name}])', len(self.msgs[name]))
+#                 self.msgs[name] = self.msgs[name][-1:]  # Remove older msgs
+#                 # print(f'After removing - len(msgs[{name}])', len(self.msgs[name]))
+#                 ret[name] = arr[-1]
+#
+#             if self.queue.full():
+#                 self.queue.get()  # Get one, so queue isn't full
+#
+#             # print(time.time(),' Putting msg batch into queue. queue size', self.queue.qsize(), 'self.msgs len')
+#
+#             self.queue.put(ret, block=False)
 
 
-# class TwoStageHostSeqSync:
-#     def __init__(self, labels = None, scaleBbs = None) -> None:
-#         self.labels = labels
-#         self.scaleBbs = scaleBbs
+class TwoStageSeqSync(BaseSync):
+    """
+    Two stage syncing based on sequence number. Each frame produces ImgDetections msg that contains X detections.
+    Each detection (if not on blacklist) will crop the original frame and forward it to the second (stage) NN for
+    inferencing.
+    """
+    labels: Optional[List[int]]
+    scaleBbs: Optional[Tuple[int, int]]
 
-#     def getSyncedMsgs(self, ogMsgs: Dict[str, List[dai.Buffer]]) -> dict:
-#         seqRemove = [] # Arr of sequence numbers to get deleted
-#         seqMsgs = self.SeqArray(ogMsgs)
+    class TwoStageSyncPacket:
+        """
+        Packet of (two-stage NN) synced messages
+        """
+        global labels
+        global scaleBbs
+
+        frames: List[dai.ImgFrame] = []
+        _dets: dai.ImgDetections = None
+        recognitions: List[dai.NNData] = []
+
+        @property
+        def dets(self) -> dai.ImgDetections:
+            return self._dets
+        @dets.setter
+        def dets(self, dets: dai.ImgDetections):
+            # Used to match the scaled bounding boxes by the 2-stage NN script node
+            self._dets = dets
+            if self.scaleBbs is None: return # No scaling required, ignore
+
+            for det in self._dets.detections:
+                # Skip resizing BBs if we have whitelist and the detection label is not on it
+                if self.labels and det.label not in self.labels: continue
+                det.xmin -= self.scaleBbs[0] / 100
+                det.ymin -= self.scaleBbs[1] / 100
+                det.xmax += self.scaleBbs[0] / 100
+                det.ymax += self.scaleBbs[1] / 100
+
+        def synced(self) -> bool:
+            """
+            Messages are in sync if:
+                - dets is not None
+                - We have at least one ImgFrame
+                - number of recognition msgs is sufficient
+            """
+            return (self.dets and 0 < len(self.frames) and  len(self.recognitions) == self._required_recognitions())
+
+        def _required_recognitions(self) -> int:
+            """
+            Required recognition results for this packet, which depends on number of detections (and white-list labels)
+            """
+            if self.labels:
+                return len([det for det in self.dets.detections if det.label in self.labels])
+            else:
+                return len(self.dets.detections)
 
 
-#         for seq, msgs in seqMsgs.items():
-#             seqRemove.append(seq) # Will get removed from dict if we find synced msgs pair
+    msgs: Dict[str, TwoStageSyncPacket]
+    """
+    msgs = {
+        '1': TwoStageSyncPacket(),
+        '2': TwoStageSyncPacket(),
+    }
+    """
+    frameStreams: List[str]
+    detStream: str
+    recognitionStream: str
 
-#             if 'detection' not in msgs: return None
+    def __init__(self, callbacks: List[Callable],
+                 components: List[Component],
+                 frameStreams: List[str],
+                 detStream: str,
+                 recognitionStream: str,
+                 labels = None,
+                 scaleBbs = None,
+                 ):
+        super().__init__(callbacks, components)
+        self.labels = labels
+        self.scaleBbs = scaleBbs
 
-#             detNum = len([det for det in msgs['detection'].detections if det.label in self.labels])
-#             # Check if we have both detections and color frame with this sequence number
+        self.frameStreams = frameStreams
+        self.detStream = detStream
+        self.recognitionStream = recognitionStream
 
-#             print(f"Seq {seq}, det len {detNum}, rec len {len(msgs['recognition'])},  msgs", msgs)
-#             # Check if all detected objects (faces) have finished recognition inference
-#             if detNum == len(msgs["recognition"]):
-#                 # print(f"Synced msgs with sequence number {seq}", msgs)
+    def newMsg(self, name: str, msg) -> None:
+        # TODO: what if msg doesn't have sequence num?
+        seq = str(msg.getSequenceNum())
 
-#                 # We have synced msgs, remove previous msgs (memory cleaning)
-#                 # print(f"\nSYNCED {seq}, removing others\n")
-#                 self.removeSeqNums(ogMsgs, seqRemove)
+        if seq not in self.msgs:
+            self.msgs[seq] = self.TwoStageSyncPacket()
 
-#                 if self.scaleBbs:
-#                     for det in msgs['detection'].detections:
-#                         if det.label not in self.labels: continue # Only scale whitelist label BBs
-#                         det.xmin -= self.scaleBbs[0]/100
-#                         det.ymin -= self.scaleBbs[1]/100
-#                         det.xmax += self.scaleBbs[0]/100
-#                         det.ymax += self.scaleBbs[1]/100
+        if name == self.recognitionStream:
+            self.msgs[seq].recognitions.append(msg)
+            # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
+        elif name == self.detStream:
+            self.msgs[seq].dets = msg
+            # print(f'Added detection seq {seq}')
+        elif name in self.frameStreams:
+            self.msgs[seq].frames.append(msg)
+            # print(f'Added frame seq {seq}')
+        else:
+            raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
 
-#                 return msgs # Returned synced msgs
+        if self.msgs[seq].synced():
+            # Frames synced!
+            if self.queue.full():
+                self.queue.get()  # Get one, so queue isn't full
 
-#         return None # No synced msgs
+            self.queue.put(self.msgs[seq], block=False)
 
-
-#     def SeqArray(msgsByStream: Dict[str, List[dai.Buffer]]) -> Dict[str, Dict[str, Any]]:
-#         arr: Dict[str, Dict[str, List[dai.Buffer]]] = dict()
-#         # Generate dict of sequence numbers, where items are dict of stream names and their msgs
-#         for name, msgs in msgsByStream.items():
-#             for msg in msgs:
-#                 seq = str(msg.getSequenceNum())
-#                 if seq not in arr:
-#                     arr[seq] = {}
-#                     arr[seq]['recognition'] = []
-#                 # print(f"Stream Name {name}, msgs, seq {seq}")
-#                 # TODO: query from NNComponent
-#                 if name == 'recognition':
-#                     arr[seq][name].append(msg)
-#                 else:
-#                     arr[seq][name] = msg
-#         return arr
-
-#     def removeSeqNums(msgs: Dict[str, List[dai.Buffer]], seqRemove: List[str]) -> None:
-#         for _, msgs in msgs.items():
-#             for msg in msgs:
-#                 if str(msg.getSequenceNum()) in seqRemove:
-#                     msgs.remove(msg)
+            for s in self.msgs:
+                if int(s) <= int(seq):
+                    del self.msgs[s]

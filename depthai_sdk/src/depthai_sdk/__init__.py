@@ -287,7 +287,7 @@ class OakCamera:
             handlers = self.oak.fpsHandlers
         vis = Visualizer(components, scale, handlers, callback)
         self.visualizers.append(vis)
-        self.callback(components, vis.newMsgs)
+        self.callback(components, vis.new_msgs)
         return vis
 
     def synchronize(self, components: List[Component], callback: Callable):
