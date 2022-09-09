@@ -21,7 +21,7 @@ from pathlib import Path
 
 ransacMethod = cv2.RANSAC
 if cv2.__version__ >= "4.5.4":
-    ransacMethod.cv2.USAC_MAGSAC
+    ransacMethod = cv2.USAC_MAGSAC
 
 epilog_text="Dynamic recalibration."
 parser = argparse.ArgumentParser(
