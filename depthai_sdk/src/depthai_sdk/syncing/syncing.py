@@ -1,10 +1,9 @@
-import time
-
 import depthai as dai
 from typing import Dict, List, Any, Optional, Tuple, Callable
 from queue import Empty, Queue
 from abc import ABC, abstractmethod
-from .component import Component
+from ..components import Component
+from ..classes.two_stage_packet import TwoStageSyncPacket
 
 
 class BaseSync(ABC):
@@ -115,9 +114,11 @@ class SequenceSync(BaseSync):
             self.queue.put(self.msgs[seq], block=False)
 
             # Remove previous msgs (memory cleaning)
-            for s in self.msgs:
-                if int(s) <= int(seq):
-                    del self.msgs[s]
+            newMsgs = {}
+            for name, msg in self.msgs.items():
+                if int(name) > int(seq):
+                    newMsgs[name] = msg
+            self.msgs = newMsgs
 
 # class TimestampSycn(BaseSync):
 #     """
@@ -157,98 +158,45 @@ class TwoStageSeqSync(BaseSync):
     Each detection (if not on blacklist) will crop the original frame and forward it to the second (stage) NN for
     inferencing.
     """
-    labels: Optional[List[int]]
-    scaleBbs: Optional[Tuple[int, int]]
+    labels: Optional[List[int]] = None
+    scaleBbs: Optional[Tuple[int, int]] = None
 
-    class TwoStageSyncPacket:
-        """
-        Packet of (two-stage NN) synced messages
-        """
-        global labels
-        global scaleBbs
-
-        frames: List[dai.ImgFrame] = []
-        _dets: dai.ImgDetections = None
-        recognitions: List[dai.NNData] = []
-
-        @property
-        def dets(self) -> dai.ImgDetections:
-            return self._dets
-        @dets.setter
-        def dets(self, dets: dai.ImgDetections):
-            # Used to match the scaled bounding boxes by the 2-stage NN script node
-            self._dets = dets
-            if self.scaleBbs is None: return # No scaling required, ignore
-
-            for det in self._dets.detections:
-                # Skip resizing BBs if we have whitelist and the detection label is not on it
-                if self.labels and det.label not in self.labels: continue
-                det.xmin -= self.scaleBbs[0] / 100
-                det.ymin -= self.scaleBbs[1] / 100
-                det.xmax += self.scaleBbs[0] / 100
-                det.ymax += self.scaleBbs[1] / 100
-
-        def synced(self) -> bool:
-            """
-            Messages are in sync if:
-                - dets is not None
-                - We have at least one ImgFrame
-                - number of recognition msgs is sufficient
-            """
-            return (self.dets and 0 < len(self.frames) and  len(self.recognitions) == self._required_recognitions())
-
-        def _required_recognitions(self) -> int:
-            """
-            Required recognition results for this packet, which depends on number of detections (and white-list labels)
-            """
-            if self.labels:
-                return len([det for det in self.dets.detections if det.label in self.labels])
-            else:
-                return len(self.dets.detections)
-
-
-    msgs: Dict[str, TwoStageSyncPacket]
+    msgs: Dict[str, TwoStageSyncPacket] = dict() # List of messsages
     """
     msgs = {
         '1': TwoStageSyncPacket(),
-        '2': TwoStageSyncPacket(),
+        '2': TwoStageSyncPacket(), 
     }
     """
-    frameStreams: List[str]
-    detStream: str
-    recognitionStream: str
 
     def __init__(self, callbacks: List[Callable],
-                 components: List[Component],
-                 frameStreams: List[str],
-                 detStream: str,
-                 recognitionStream: str,
-                 labels = None,
-                 scaleBbs = None,
+                 group
                  ):
-        super().__init__(callbacks, components)
-        self.labels = labels
-        self.scaleBbs = scaleBbs
+        super().__init__(callbacks, group.components)
 
-        self.frameStreams = frameStreams
-        self.detStream = detStream
-        self.recognitionStream = recognitionStream
+        if group.second_nn.multi_stage_config:
+            self.scaleBbs = group.second_nn.multi_stage_config.scaleBb
+            self.labels = group.second_nn.multi_stage_config.labels
+
+        self.group = group
 
     def newMsg(self, name: str, msg) -> None:
+        if name not in self.streams: return # From Replay modules. TODO: better handling?
+
         # TODO: what if msg doesn't have sequence num?
         seq = str(msg.getSequenceNum())
 
         if seq not in self.msgs:
-            self.msgs[seq] = self.TwoStageSyncPacket()
+            self.msgs[seq] = self.TwoStageSyncPacket(self.labels, self.scaleBbs)
 
-        if name == self.recognitionStream:
+        if name == self.group.second_nn_name:
             self.msgs[seq].recognitions.append(msg)
             # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
-        elif name == self.detStream:
+        elif name == self.group.nn_name:
             self.msgs[seq].dets = msg
             # print(f'Added detection seq {seq}')
-        elif name in self.frameStreams:
-            self.msgs[seq].frames.append(msg)
+        elif name in self.group.frame_names:
+            self.msgs[seq].frame = msg
             # print(f'Added frame seq {seq}')
         else:
             raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
@@ -258,8 +206,19 @@ class TwoStageSeqSync(BaseSync):
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
 
+            # for name in self.frame_names:
+            #     packet = dict()
+            #     packet[self.]
+
             self.queue.put(self.msgs[seq], block=False)
 
-            for s in self.msgs:
-                if int(s) <= int(seq):
-                    del self.msgs[s]
+            # Throws RuntimeError: dictionary changed size during iteration
+            # for s in self.msgs:
+            #     if int(s) <= int(seq):
+            #         del self.msgs[s]
+
+            newMsgs = {}
+            for name, msg in self.msgs.items():
+                if int(name) > int(seq):
+                    newMsgs[name] = msg
+            self.msgs = newMsgs

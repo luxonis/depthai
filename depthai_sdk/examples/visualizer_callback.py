@@ -12,5 +12,5 @@ with OakCamera() as oak:
         BaseVisualizer.print(frame, 'BottomRight!', FramePosition.BottomRight)
         cv2.imshow('frame', frame)
 
-    oak.create_visualizer([color, nn], fps=True, callback=cb)
+    oak.visualize([color, nn], fps=True, callback=cb)
     oak.start(blocking=True)

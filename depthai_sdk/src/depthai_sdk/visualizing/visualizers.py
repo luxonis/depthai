@@ -1,10 +1,9 @@
-from typing import Dict, Callable
-
-import numpy as np
-
-from ..components import NNComponent
+from typing import Dict
+import time
+from ..components import NNComponent, ComponentGroup
 from enum import IntEnum
 from .visualizer_helper import *
+
 
 class FramePosition(IntEnum):
     """
@@ -20,6 +19,7 @@ class FramePosition(IntEnum):
     MidRight = 21
     BottomRight = 22
 
+
 class FPS:
     def __init__(self):
         self.timestamp = time.time() + 1
@@ -30,17 +30,19 @@ class FPS:
         self.timestamp = time.time()
         self.frame_cnt += 1
 
-    def fps(self):
-        return self.frame_cnt / (self.timestamp - self.start)
+    def fps(self) -> float:
+        diff = self.timestamp - self.start
+        return self.frame_cnt / diff if diff != 0 else 0.0
+
 
 class BaseVisualizer:
-    _name: str
+    _frame_stream: str
     _scale: Union[None, float, Tuple[int, int]] = None
     _fps: Dict[str, FPS] = None
     _callback: Callable = None
 
     def __init__(self, frameStream: str) -> None:
-        self._name = frameStream
+        self._frame_stream = frameStream
 
     def setBase(self,
                 scale: Union[None, float, Tuple[int, int]] = None,
@@ -51,12 +53,18 @@ class BaseVisualizer:
         self._fps = fps
         self._callback = callback
 
-    def newMsgs(self, input: Union[Dict, dai.ImgFrame]):
+    def newMsgs(self, input: Union[Dict, dai.ImgFrame, np.ndarray]):
+        msgs = input
         if isinstance(input, Dict):
-            input = input[self._name]
-        if not isinstance(input, dai.ImgFrame):
-            raise ValueError('input should be either list of msgs or ImgFrame!')
-        frame = input.getCvFrame()
+            input = input[self._frame_stream]
+
+        if isinstance(input, dai.ImgFrame):
+            frame = input.getCvFrame()
+        elif isinstance(input, np.ndarray):
+            frame = input
+        else:
+            ValueError(f'BaseSync received {type(input)} on newMsgs function! It requires Union[Dict, dai.ImgFrame, np.ndarray]')
+
 
         if self._fps:
             i = 0
@@ -74,13 +82,13 @@ class BaseVisualizer:
                 ))
 
         if self._callback:  # Don't display frame, call the callback
-            self._callback(input, frame)
+            self._callback(msgs, frame)
         else:
             cv2.imshow(self.name, frame)
 
     @property
     def name(self) -> str:
-        return self._name
+        return self._frame_stream
 
     @staticmethod
     def print(frame, text: str, position: FramePosition = FramePosition.BottomLeft, padPx=10):
@@ -96,15 +104,15 @@ class BaseVisualizer:
         frameH = frame.shape[0]
 
         yPos = int(position) % 10
-        if yPos == 0: # Y Top
+        if yPos == 0:  # Y Top
             y = textSize[1] + padPx
-        elif yPos == 1: # Y Mid
+        elif yPos == 1:  # Y Mid
             y = int(frameH / 2) + int(textSize[1] / 2)
         else:  # yPos == 2. Y Bottom
             y = frameH - padPx
 
         xPos = int(position) // 10
-        if xPos == 0: # X Left
+        if xPos == 0:  # X Left
             x = padPx
         elif xPos == 1:  # X Mid
             x = int(frameW / 2) - int(textSize[0] / 2)
@@ -112,7 +120,6 @@ class BaseVisualizer:
             x = frameW - textSize[0] - padPx
 
         putText(frame, text, (x, y))
-
 
 
 class DetectionVisualizer(BaseVisualizer):
@@ -171,21 +178,18 @@ class DetectionVisualizer(BaseVisualizer):
 
 
 class DetectionClassificationVisualizer(DetectionVisualizer):
-    classificationStream: str
+
     def __init__(self,
-                 frameStream: str,
-                 detectionsStream: str,
-                 classificationsStream: str,
-                 detectorComp: NNComponent,
-                 classificationComp: NNComponent
+                 frame_name: str,
+                 group: ComponentGroup
                  ) -> None:
-        super().__init__(frameStream=frameStream,
-                         detectionsStream=detectionsStream,
-                         detectorComp=detectorComp)
-        self.classificationStream = classificationsStream
+
+        super().__init__(frameStream=frame_name,
+                         detectionsStream=group.nn_name,
+                         detectorComp=group.nn_component)
+
+        self.classificationStream = group.second_nn_name
 
     def newMsgs(self, msgs: Dict):
         print(msgs[self.classificationStream])
         super().newMsgs(msgs)
-
-

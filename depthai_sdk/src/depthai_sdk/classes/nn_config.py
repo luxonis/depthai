@@ -1,4 +1,4 @@
-from marshmallow import Schema, fields, post_load
+from marshmallow import Schema, fields
 from .yolo_config import YoloConfig
 
 

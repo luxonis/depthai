@@ -15,5 +15,5 @@ with OakCamera(recording='people-images-01') as oak:
         BaseVisualizer.print(frame, f"Number of people: {num}", FramePosition.BottomMid)
         cv2.imshow(f'frame {frame.shape[0] }', frame)
 
-    oak.create_visualizer([color, nn], fps=True, callback=cb)
+    oak.visualize([color, nn], fps=True, callback=cb)
     oak.start(blocking=True)

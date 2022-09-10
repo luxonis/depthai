@@ -1,5 +1,6 @@
 from .fps import *
 from .previews import *
+from .syncing import *
 from .utils import *
 from .managers import *
 from .record import *
@@ -7,6 +8,7 @@ from .replay import *
 from .components import *
 from .classes import *
 from .visualizing import *
+from .oak_device import OakDevice
 
 from typing import Optional
 import depthai as dai
@@ -34,6 +36,7 @@ class OakCamera:
     deviceName: str = None  # MxId / IP / USB port
 
     visualizers: List[Visualizer] = []
+    syncs: List[Sync] = []
 
     # TODO: 
     # - available streams; query cameras, or Replay.getStreams(). Pass these to camera component
@@ -190,7 +193,7 @@ class OakCamera:
             print("Closing replay")
             self.replay.close()
 
-    def start(self, blocking=False, visualize=False) -> None:
+    def start(self, blocking=False) -> None:
         """
         Start the application
         """
@@ -200,8 +203,9 @@ class OakCamera:
         # Set up Syncing classes and visualizers
         for vis in self.visualizers:
             vis.setup()
-        for sync in self.oak.sync:
+        for sync in self.syncs:
             sync.setup()
+            self.oak.sync.append(sync.base)
 
         self.oak.device.startPipeline(self.pipeline)
         self.oak.initCallbacks()
@@ -277,25 +281,23 @@ class OakCamera:
         p = PipelineGraph(self.pipeline.serializeToJson()['pipeline'])
 
 
-    def create_visualizer(self, components: List[Component],
-                          scale: Union[None, float, Tuple[int, int]] = None,
-                          fps=False,
-                          callback: Callable=None) -> Visualizer:
+    def visualize(self, components: List[Component],
+                  scale: Union[None, float, Tuple[int, int]] = None,
+                  fps=False,
+                  callback: Callable=None) -> Visualizer:
         handlers = None
         if fps:
             self.oak.enable_fps(True)
             handlers = self.oak.fpsHandlers
+
         vis = Visualizer(components, scale, handlers, callback)
         self.visualizers.append(vis)
-        self.callback(components, vis.new_msgs)
+        self.synchronize(components, vis.new_msgs)
         return vis
 
-    def synchronize(self, components: List[Component], callback: Callable):
-        raise NotImplementedError()
-
-    def callback(self, components: List[Component], function: Callable) -> BaseSync:
-        sync = NoSync([function], components)
-        self.oak.sync.append(sync)
+    def synchronize(self, components: List[Component], callback: Callable) -> Sync:
+        sync = Sync(components, callback)
+        self.syncs.append(sync)
         return sync
 
     @property

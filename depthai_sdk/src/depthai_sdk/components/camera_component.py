@@ -21,7 +21,7 @@ class CameraComponent(Component):
     _control: bool
 
     # Parsed from settings
-    _camType: Type = None
+    _cam_type: Union[Type[dai.node.ColorCamera], Type[dai.node.MonoCamera]] = None
     _boardSocket: dai.CameraBoardSocket
     _resolution: Union[
         None, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None
@@ -58,9 +58,9 @@ class CameraComponent(Component):
         self._args = args
         self._control = control
 
-        self._parseSource(source.upper())  # Parses out and _camType, _boardSocket if replay is passed
+        self._parseSource(source.upper())  # Parses out and _cam_type, _boardSocket if replay is passed
         self._encoderProfile = parseEncode(encode)  # Parse encoder profile
-        self._resolution = parseResolution(self._camType, resolution)
+        self._resolution = parseResolution(self._cam_type, resolution)
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         # Create the camera
@@ -97,10 +97,10 @@ class CameraComponent(Component):
             self.out = xin.out
             return
 
-        self.camera = pipeline.create(self._camType)
+        self.camera = pipeline.create(self._cam_type)
         self.camera.setBoardSocket(self._boardSocket)
 
-        if self._camType == dai.node.ColorCamera:
+        if self._cam_type == dai.node.ColorCamera:
             # DepthAI uses CHW (Planar) channel layout convention for NN inferencing
             self.camera.setInterleaved(False)
             # DepthAI uses BGR color order convention for NN inferencing
@@ -135,7 +135,7 @@ class CameraComponent(Component):
                 if 'color' not in self._replay.getStreams():
                     raise Exception('Color stream was not found in specified depthai-recording!')
             else:
-                self._camType = dai.node.ColorCamera
+                self._cam_type = dai.node.ColorCamera
                 self._boardSocket = dai.CameraBoardSocket.RGB
 
         elif source == "RIGHT" or source == "MONO":
@@ -143,7 +143,7 @@ class CameraComponent(Component):
                 if 'right' not in self._replay.getStreams():
                     raise Exception('Right stream was not found in specified depthai-recording!')
             else:
-                self._camType = dai.node.MonoCamera
+                self._cam_type = dai.node.MonoCamera
                 self._boardSocket = dai.CameraBoardSocket.RIGHT
 
         elif source == "LEFT":
@@ -151,7 +151,7 @@ class CameraComponent(Component):
                 if 'left' not in self._replay.getStreams():
                     raise Exception('Left stream was not found in specified depthai-recording!')
             else:
-                self._camType = dai.node.MonoCamera
+                self._cam_type = dai.node.MonoCamera
                 self._boardSocket = dai.CameraBoardSocket.LEFT
         else:
             raise ValueError(f"Source name '{source}' not supported!")
@@ -203,10 +203,10 @@ class CameraComponent(Component):
             self.camera.getColorOrder(colorOrder)
 
     def _isColor(self) -> bool:
-        return isinstance(self.camera, dai.node.ColorCamera)
+        return self._cam_type == dai.node.ColorCamera
 
     def _isMono(self) -> bool:
-        return isinstance(self.camera, dai.node.MonoCamera)
+        return self._cam_type == dai.node.MonoCamera
 
     def configure_encoder(self,
                           ):

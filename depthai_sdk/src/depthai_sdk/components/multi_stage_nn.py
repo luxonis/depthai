@@ -4,7 +4,7 @@ from string import Template
 import os
 from pathlib import Path
 
-class MultiStageNnConfig:
+class MultiStageConfig:
     debug: bool
     labels: Optional[List[int]]
     scaleBb: Optional[Tuple[int, int]]
@@ -17,22 +17,21 @@ class MultiStageNnConfig:
 
 class MultiStageNN():
     script: dai.node.Script
-    manip: dai.node.ImageManip
+    manip: dai.node.ImageManip # Cropping ImageManip
     out: dai.Node.Output # Cropped imgFrame output
-    i: int = 0
-
     _size: Tuple[int, int]
+
     def __init__(self,
-        pipeline: dai.Pipeline,
-        detector: Union[
-            dai.node.MobileNetDetectionNetwork,
-            dai.node.MobileNetSpatialDetectionNetwork,
-            dai.node.YoloDetectionNetwork,
-            dai.node.YoloSpatialDetectionNetwork], # Object detector
-        highResFrames: dai.Node.Output,
-        size: Tuple[int, int],
-        debug = False
-        ) -> None:
+                 pipeline: dai.Pipeline,
+                 detection_node: Union[
+                    dai.node.MobileNetDetectionNetwork,
+                    dai.node.MobileNetSpatialDetectionNetwork,
+                    dai.node.YoloDetectionNetwork,
+                    dai.node.YoloSpatialDetectionNetwork],  # Object detection node
+                 highResFrames: dai.Node.Output,
+                 size: Tuple[int, int],
+                 debug = False
+                 ) -> None:
         """
         Args:
             detections (dai.Node.Output): Object detection output
@@ -43,10 +42,10 @@ class MultiStageNN():
         self.script.setProcessor(dai.ProcessorType.LEON_CSS) # More stable
         self._size = size
 
-        detector.out.link(self.script.inputs['detections'])
+        detection_node.out.link(self.script.inputs['detections'])
         highResFrames.link(self.script.inputs['frames'])
 
-        self.configure(MultiStageNnConfig(debug))
+        self.configure(MultiStageConfig(debug))
 
         self.manip = pipeline.create(dai.node.ImageManip)
         self.manip.initialConfig.setResize(size)
@@ -57,7 +56,7 @@ class MultiStageNN():
         self.script.outputs['manip_img'].link(self.manip.inputImage)
         self.out = self.manip.out
 
-    def configure(self, config: MultiStageNnConfig = None) -> None:
+    def configure(self, config: MultiStageConfig = None) -> None:
         """
         Args:
             debug (bool, default False): Debug script node

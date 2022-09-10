@@ -1,20 +1,21 @@
 import depthai as dai
 from typing import Type, Dict, List
-from ..replay import Replay
-from ..components.syncing import BaseSync
-from ..fps import FPSHandler
+
+from .syncing import BaseSync
+from .visualizing import FPS
+from .replay import Replay
 
 
 class OakDevice:
     device: dai.Device
 
-    fpsHandlers: Dict[str, FPSHandler] = None
+    fpsHandlers: Dict[str, FPS] = None
 
     # str: Name (XLinkOut stream name, or replay stream)
     # Type: Component name, or Replay
     queues: Dict[str, Type] = {}
 
-    # Each Sync has it's own Queue to which it pushes sycned msgs.
+    # Each Sync has its own Queue to which it pushes sycned msgs.
     # For each OAK cam you can have multiple sync mechanisms.
     sync: List[BaseSync] = []
 
@@ -71,8 +72,8 @@ class OakDevice:
 
         if self.fpsHandlers is not None:
             if name not in self.fpsHandlers:
-                self.fpsHandlers[name] = FPSHandler()
-            self.fpsHandlers[name].nextIter()
+                self.fpsHandlers[name] = FPS()
+            self.fpsHandlers[name].next_iter()
 
     def checkSync(self):
         """

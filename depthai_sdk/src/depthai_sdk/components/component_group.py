@@ -1,15 +1,20 @@
 from enum import IntEnum
-from .component import Component
-from typing import List, Dict, Tuple, Type
-from ..components.nn_component import NNComponent
+from typing import List, Dict, Tuple, Type, Union
+from ..components import CameraComponent, StereoComponent, NNComponent, Component
 import depthai as dai
 
-class GroupType(IntEnum):
-    OTHER=0 # Unsupported group type; NoSync, print (non-)synced messages
-    FRAMES=1 # If only frames we don't need syncing (NoSync) and we can use BaseVisualizer
-    DETECTIONS=2 # Frames+detections. Use SequenceSync for now (later: TimestampSync)
-    TWO_STAGE=3 # Frames + detections + another NN. Use TwoStageSeqSync (later: timestap-based Two-Stage syncing)
 
+class GroupType(IntEnum):
+    LOG = 0  # Unsupported group type; NoSync, print (non-)synced messages
+    FRAMES = 1  # If only frames we don't need syncing (NoSync) and we can use BaseVisualizer
+    RECOGNITION = 2 # Frames + recognition NN results. Use SequenceSync
+    DETECTIONS = 3  # Frames+detections. Use SequenceSync for now (later: TimestampSync)
+    MULTI_STAGE = 4  # Frames + detections + another NN. Use TwoStageSeqSync (later: timestamp-based Two-Stage syncing)
+
+
+"""
+What kind of dataflow we want to synchronize / visualize
+"""
 
 
 class ComponentGroup:
@@ -17,82 +22,64 @@ class ComponentGroup:
     This class contains a group of components that we want to use together, and helps with syncing
     and visualization.
     """
-    group_type: GroupType
+    type: GroupType
+    components: List[Component]
 
-    frames: List[str]
+    frame_component: Union[CameraComponent, StereoComponent]
+    frame_names: List[str]
 
-    det_name: str
-    det_component: NNComponent
+    nn_component: NNComponent
+    nn_name: str  # Stream name
 
-    recognition_name: str
-    recognition_component: NNComponent
+    second_nn: NNComponent
+    second_nn_name: str  # Stream name
+
 
     def __init__(self, components: List[Component]):
-        detectors = _get_obj_detectors(components)
-        recognition_nns = _get_recognition_nns(components)
-        self.frames = _streams_by_type(components, dai.ImgFrame)
+        """
+        Resolves what kind of data flow we have with multiple nodes, which helps with syncing and visualization.
+        @param components: List of Components
+        """
+        self.components = components
 
-        if len(detectors) == 0 and len(recognition_nns) == 0:
+        detection_nns = _object_detectors(components)
+        recognition_nns = _recognition_nns(components)
+        second_stage_nns = _second_stage_nn(components)
+        frames = _streams_by_type(components, dai.ImgFrame)
+
+        if len(frames) == 0:
+            # We don't have any frame to display things on, just log all messages
+            self.type = GroupType.LOG
+            return
+
+        self.frame_names = frames
+
+        if len(detection_nns) == 0 and len(recognition_nns) == 0:
             # We only have frames to display, no NN results
-            self.group_type = GroupType.FRAMES
-        elif len(self.frames) == 0:
-            # TODO: We don't have any frame to display NN results on, so just print NN results
-            raise NotImplementedError('Printing NN results not yet implemented')
-            self.group_type = GroupType.OTHER
-        elif len(detectors) == 1 and len(recognition_nns) == 0:
-            self.group_type = GroupType.DETECTIONS
-            self.det_component = detectors[0]
-            nnStreamNames = _streams_by_type_xout(self.det_component.xouts, dai.ImgDetections)
-            self.det_name = nnStreamNames[0]
-        elif len(detectors) == 1 and len(recognition_nns) == 1:
-            self.group_type = GroupType.TWO_STAGE
+            self.type = GroupType.FRAMES
+            return
 
-            self.det_component = detectors[0]
-            nnStreamNames = _streams_by_type_xout(self.det_component.xouts, dai.ImgDetections)
-            self.det_name = nnStreamNames[0]
-
-            self.recognition_component = recognition_nns[0]
-            recNames = _streams_by_type_xout(self.det_component.xouts, dai.NNData)
-            self.recognition_name = recNames[0]
+        if len(detection_nns) == 0 and len(recognition_nns) != 0:
+            # We only have recognition non-detection NN results
+            self.type = GroupType.RECOGNITION
+            return
 
 
-        else:
-            raise NotImplementedError('Visualization of these components is not yet implemented!')
+        if len(detection_nns) != 0:
+            # We have some detection results
+            self.type = GroupType.DETECTIONS
+
+            self.nn_component = detection_nns[0]
+            self.nn_name = _streams_by_type_xout(self.nn_component.xouts, dai.ImgDetections)[0]
+
+            if len(second_stage_nns) == 1:
+                self.type = GroupType.MULTI_STAGE
+
+                self.second_nn = second_stage_nns[0]
+                self.second_nn_name = _streams_by_type_xout(self.second_nn.xouts, dai.NNData)[0]
 
 
-def _get_stream_name(xouts: Dict, type: Type) -> str:
-    for name, (compType, daiType) in xouts.items():
-        if daiType == type: return name
-    raise ValueError('Stream name was not found in these Xouts!')
-
-def _msgs_list(msgs: Dict) -> List[Tuple]:
-    arr = []
-    for name, msg in msgs:
-        arr.append((name, msg, type(msg)))
-    return arr
-
-def _streams_by_type(components: List[Component], type: Type) -> List[str]:
-    streams = []
-    for comp in components:
-        for name, (compType, daiType) in comp.xouts.items():
-            if daiType == type:
-                streams.append(name)
-    return streams
-
-def _components_by_type(components: List[Component], type: Type) -> List[Component]:
-    comps: List[Component] = []
-    for comp in components:
-        if isinstance(comp, type):
-            comps.append(comp)
-    return comps
-
-def _get_type_dict(msgs: Dict) -> Dict[str, Type]:
-    ret = dict()
-    for name, msg in msgs:
-        ret[name] = type(msg)
-    return ret
-
-def _get_obj_detectors(components: List[Component]) -> List[NNComponent]:
+def _object_detectors(components: List[Component]) -> List[NNComponent]:
     """
     Finds object detection NNComponents from the list of all components
     """
@@ -102,9 +89,10 @@ def _get_obj_detectors(components: List[Component]) -> List[NNComponent]:
             comps.append(comp)
     return comps
 
-def _get_recognition_nns(components: List[Component]) -> List[NNComponent]:
+
+def _recognition_nns(components: List[Component]) -> List[NNComponent]:
     """
-    Reverse function of the `_get_obj_decetors`
+    Reverse function of the `_get_obj_detectors`
     """
     comps = []
     for comp in components:
@@ -112,9 +100,27 @@ def _get_recognition_nns(components: List[Component]) -> List[NNComponent]:
             comps.append(comp)
     return comps
 
-def _streams_by_type_xout(xouts: Dict[str, Tuple[type, type]], type: Type) -> List[str]:
+
+def _second_stage_nn(components: List[Component]) -> List[NNComponent]:
+    comps = []
+    for comp in components:
+        if isinstance(comp, NNComponent) and isinstance(comp._input, NNComponent):
+            comps.append(comp)
+    return comps
+
+
+def _streams_by_type_xout(xouts: Dict[str, Tuple[type, type]], msg_type: Type) -> List[str]:
     streams = []
     for name, (compType, daiType) in xouts.items():
-        if type == daiType:
+        if msg_type == daiType:
             streams.append(name)
+    return streams
+
+
+def _streams_by_type(components: List[Component], msg_type: Type) -> List[str]:
+    streams = []
+    for comp in components:
+        for name, (compType, daiType) in comp.xouts.items():
+            if msg_type == daiType:
+                streams.append(name)
     return streams
