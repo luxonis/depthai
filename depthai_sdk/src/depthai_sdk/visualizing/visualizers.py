@@ -191,5 +191,5 @@ class DetectionClassificationVisualizer(DetectionVisualizer):
         self.classificationStream = group.second_nn_name
 
     def newMsgs(self, msgs: Dict):
-        print(msgs[self.classificationStream])
+        # print('2nd stage results:',msgs[self.classificationStream])
         super().newMsgs(msgs)

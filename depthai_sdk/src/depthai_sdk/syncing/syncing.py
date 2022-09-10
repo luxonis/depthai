@@ -2,8 +2,9 @@ import depthai as dai
 from typing import Dict, List, Any, Optional, Tuple, Callable
 from queue import Empty, Queue
 from abc import ABC, abstractmethod
+
+from ..components.component_group import ComponentGroup
 from ..components import Component
-from ..classes.two_stage_packet import TwoStageSyncPacket
 
 
 class BaseSync(ABC):
@@ -161,14 +162,14 @@ class TwoStageSeqSync(BaseSync):
     labels: Optional[List[int]] = None
     scaleBbs: Optional[Tuple[int, int]] = None
 
-    msgs: Dict[str, TwoStageSyncPacket] = dict() # List of messsages
+    msgs: Dict[str, Dict[str, Any]] = dict() # List of messages
     """
     msgs = {
         '1': TwoStageSyncPacket(),
         '2': TwoStageSyncPacket(), 
     }
     """
-
+    group: ComponentGroup
     def __init__(self, callbacks: List[Callable],
                  group
                  ):
@@ -180,28 +181,30 @@ class TwoStageSeqSync(BaseSync):
 
         self.group = group
 
-    def newMsg(self, name: str, msg) -> None:
+    def newMsg(self, name: str, msg: dai.Buffer) -> None:
         if name not in self.streams: return # From Replay modules. TODO: better handling?
 
         # TODO: what if msg doesn't have sequence num?
         seq = str(msg.getSequenceNum())
 
         if seq not in self.msgs:
-            self.msgs[seq] = self.TwoStageSyncPacket(self.labels, self.scaleBbs)
+            self.msgs[seq] = dict()
+            self.msgs[seq][self.group.second_nn_name] = []
+            self.msgs[seq][self.group.nn_name] = None
 
         if name == self.group.second_nn_name:
-            self.msgs[seq].recognitions.append(msg)
+            self.msgs[seq][name].append(msg)
             # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
         elif name == self.group.nn_name:
-            self.msgs[seq].dets = msg
+            self.add_detections(seq, msg)
             # print(f'Added detection seq {seq}')
         elif name in self.group.frame_names:
-            self.msgs[seq].frame = msg
+            self.msgs[seq][name] = msg
             # print(f'Added frame seq {seq}')
         else:
             raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
 
-        if self.msgs[seq].synced():
+        if self.synced(seq):
             # Frames synced!
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
@@ -222,3 +225,49 @@ class TwoStageSeqSync(BaseSync):
                 if int(name) > int(seq):
                     newMsgs[name] = msg
             self.msgs = newMsgs
+
+    def add_detections(self, seq:str , dets: dai.ImgDetections):
+        # Used to match the scaled bounding boxes by the 2-stage NN script node
+        self.msgs[seq][self.group.nn_name] = dets
+
+        if self.scaleBbs is None: return  # No scaling required, ignore
+
+        for det in dets.detections:
+            # Skip resizing BBs if we have whitelist and the detection label is not on it
+            if self.labels and det.label not in self.labels: continue
+            det.xmin -= self.scaleBbs[0] / 100
+            det.ymin -= self.scaleBbs[1] / 100
+            det.xmax += self.scaleBbs[0] / 100
+            det.ymax += self.scaleBbs[1] / 100
+
+    def synced(self, seq: str) -> bool:
+        """
+        Messages are in sync if:
+            - dets is not None
+            - We have at least one ImgFrame
+            - number of recognition msgs is sufficient
+        """
+        packet = self.msgs[seq]
+
+        for name in self.group.frame_names:
+            # print(f'checking if stream {name} in {self.group.frame_names}')
+            if name not in packet:
+                return False  # We don't have required ImgFrame
+
+        if not packet[self.group.nn_name]:
+            return False  # We don't have dai.ImgDetections
+
+        if len(packet[self.group.second_nn_name]) < self.required_recognitions(seq):
+            return False  # We don't have enough 2nd stage NN results
+        return True
+
+    def required_recognitions(self, seq: str) -> int:
+        """
+        Required recognition results for this packet, which depends on number of detections (and white-list labels)
+        """
+        dets: List[dai.ImgDetection] = self.msgs[seq][self.group.nn_name].detections
+        print('required_recognitions, dets', dets)
+        if self.labels:
+            return len([det for det in dets if det.label in self.labels])
+        else:
+            return len(dets)

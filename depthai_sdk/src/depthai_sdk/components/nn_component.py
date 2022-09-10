@@ -138,7 +138,7 @@ class NNComponent(Component):
             if not self._input.isDetector():
                 raise Exception('Only object detector models can be used as an input to the NNComponent!')
             # Create script node, get HQ frames from input.
-            self._multiStageNn = MultiStageNN(pipeline, self.node, self._input.stream_input, self.size)
+            self._multiStageNn = MultiStageNN(pipeline, self._input.node, self._input.stream_input, self.size)
             self._multiStageNn.configure(self.multi_stage_config)
             self._multiStageNn.out.link(self.node.input)  # Cropped frames
             # For debugging, for intenral counter
