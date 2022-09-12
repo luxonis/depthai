@@ -1,0 +1,13 @@
+{
+    "title": "OAK-D SR",
+    "description": "OAK-D SR",
+    "image": "images/oak_d_sr.jpg",
+    "test_type": "OAK-D-SR",
+    "variants": [
+        {
+            "title":"OAK-D SR (DM2080 R0M0E0)",
+            "description": "OAK-D SR, based on DM2080 R0M0E0 board",
+            "eeprom":"eeprom/DM2080_R0M0E0_oak_d_sr.json"
+        }
+    ]
+}
