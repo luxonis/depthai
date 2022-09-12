@@ -10,6 +10,7 @@ import time
 from datetime import datetime, timedelta
 from collections import deque 
 from scipy.spatial.transform import Rotation
+import traceback
 
 import cv2
 from cv2 import resize
@@ -1027,6 +1028,7 @@ class Main:
                     cv2.waitKey(0)
         except Exception as e:
             print(e)
+            print(traceback.format_exc())
             raise SystemExit(1)
 
     def run(self):
