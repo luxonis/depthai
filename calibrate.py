@@ -118,7 +118,7 @@ def parse_args():
     '''
     parser = ArgumentParser(
         epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-c", "--count", default=1, type=int, required=False,
+    parser.add_argument("-c", "--count", default=3, type=int, required=False,
                         help="Number of images per polygon to capture. Default: 1.")
     parser.add_argument("-s", "--squareSizeCm", type=float, required=True,
                         help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")

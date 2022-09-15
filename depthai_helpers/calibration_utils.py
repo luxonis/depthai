@@ -11,7 +11,7 @@ import json
 import cv2.aruco as aruco
 from pathlib import Path
 # Creates a set of 13 polygon coordinates
-traceLevel = 0
+traceLevel = 1
 
 
 def setPolygonCoordinates(height, width):
@@ -612,7 +612,7 @@ class StereoCalibration(object):
             else:
                 img_concat = cv2.vconcat(
                     [image_data_pair[0], image_data_pair[1]])
-            img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
+            # img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
 
             # draw epipolar lines for debug purposes
 
@@ -775,6 +775,7 @@ class StereoCalibration(object):
         # compute metrics
         imgpoints_r = []
         imgpoints_l = []
+        # new_imagePairs = []
         for i, image_data_pair in enumerate(image_data_pairs):
             #             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             marker_corners_l, ids_l, rejectedImgPoints = cv2.aruco.detectMarkers(
@@ -820,7 +821,12 @@ class StereoCalibration(object):
                                  criteria=criteria)
 
                 # termination criteria
-                img_pth = Path(images_right[i])
+                img_pth_right = Path(images_right[i])
+                img_pth_left = Path(images_left[i])
+                org = (100, 50)
+                # cv2.imshow('ltext', lText)
+                # cv2.waitKey(0)
+                localError = 0
                 corners_l = []
                 corners_r = []
                 for j in range(len(res2_l[2])):
@@ -838,13 +844,18 @@ class StereoCalibration(object):
                         epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
                     else:
                         epi_error_sum += abs(l_pt[0][0] - r_pt[0][0])
+                localError = epi_error_sum / len(corners_l)
 
-                print("Average Epipolar Error per image on host in " + img_pth.name + " : " +
-                      str(epi_error_sum / len(corners_l)))
+                print("Average Epipolar Error per image on host in " + img_pth_right.name + " : " +
+                      str(localError))
             else:
                 print('Numer of corners is in left -> {} and right -> {}'.format(
                     len(marker_corners_l), len(marker_corners_r)))
                 return -1
+            lText = cv2.putText(cv2.cvtColor(image_data_pair[0],cv2.COLOR_GRAY2RGB), img_pth_left.name, org, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            rText = cv2.putText(cv2.cvtColor(image_data_pair[1],cv2.COLOR_GRAY2RGB), img_pth_right.name + " Error: " + str(localError), org, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            image_data_pairs[i] = (lText, rText)
+
 
         epi_error_sum = 0
         for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):
