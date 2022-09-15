@@ -12,6 +12,7 @@ class CameraComponent(Component):
     encoder: dai.node.VideoEncoder = None
 
     out: dai.Node.Output = None  # Node output to be used as eg. an input into NN
+    out_size: Tuple[int,int] # Output size
 
     # Setting passed at init
     _replay: Replay  # Replay module
@@ -94,11 +95,14 @@ class CameraComponent(Component):
             self._replay.setResizeColor(resize)
             xin: dai.node.XLinkIn = getattr(self._replay, self._out)
             xin.setMaxDataSize(resize[0] * resize[1] * 3)
+            self.out_size = resize
             self.out = xin.out
             return
 
         self.camera = pipeline.create(self._cam_type)
         self.camera.setBoardSocket(self._boardSocket)
+        if self._resolution:  # Set sensor resolution as specified by user
+            self.camera.setResolution(self._resolution)
 
         if self._cam_type == dai.node.ColorCamera:
             # DepthAI uses CHW (Planar) channel layout convention for NN inferencing
@@ -107,22 +111,22 @@ class CameraComponent(Component):
             self.camera.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
             self.camera.setPreviewNumFramesPool(4)
 
-            # Use full FOV, ISP downscale to get about 1300 pixel width (for visualization)
             cams = device.getCameraSensorNames()
-            print('Available sensors on OAK:', cams)
+            # print('Available sensors on OAK:', cams)
             sensorName = cams[dai.CameraBoardSocket.RGB]
 
-            if self._resolution:  # Set sensor resolution as specified by user
-                self.camera.setResolution(self._resolution)
-            else:  # Find the closest resolution
+
+            if self._resolution is None:  # Find the closest resolution
                 self.camera.setResolution(getClosesResolution(sensorName, width=1200))
 
             scale = getClosestIspScale(self.camera.getIspSize(), width=1200)
             self.camera.setIspScale(*scale)
             self.camera.setPreviewSize(*self.camera.getIspSize())
+            self.out_size = self.camera.getPreviewSize()
             self.out = self.camera.preview
 
-        else:
+        elif self._cam_type == dai.node.MonoCamera:
+            self.out_size = self.camera.getResolutionSize()
             self.out = self.camera.out
 
     def _parseSource(self, source: str) -> None:

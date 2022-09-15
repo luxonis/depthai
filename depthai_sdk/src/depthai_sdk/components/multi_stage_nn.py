@@ -6,11 +6,13 @@ from pathlib import Path
 
 class MultiStageConfig:
     debug: bool
+    show_cropped_frames: bool
     labels: Optional[List[int]]
     scaleBb: Optional[Tuple[int, int]]
 
-    def __init__(self, debug, labels=None, scaleBb=None):
+    def __init__(self, debug, show_cropped_frames=False, labels=None, scaleBb=None):
         self.debug = debug
+        self.show_cropped_frames = show_cropped_frames
         self.labels = labels
         self.scaleBb = scaleBb
 
@@ -37,6 +39,8 @@ class MultiStageNN():
             detections (dai.Node.Output): Object detection output
             highResFrames (dai.Node.Output): Output that will provide high resolution frames
         """
+        # self._input.node, self._input.stream_input, self.size
+
 
         self.script = pipeline.create(dai.node.Script)
         self.script.setProcessor(dai.ProcessorType.LEON_CSS) # More stable

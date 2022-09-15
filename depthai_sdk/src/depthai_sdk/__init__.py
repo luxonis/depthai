@@ -26,7 +26,7 @@ class OakCamera:
     """
 
     # User should be able to access these:
-    pipeline: dai.Pipeline = None
+    _pipeline: dai.Pipeline = None
     oak: OakDevice = OakDevice()  # Init this object by default
     args = None  # User defined arguments
     replay: Optional[Replay] = None
@@ -35,7 +35,7 @@ class OakCamera:
     usb2: bool = False  # Whether to force USB2 mode
     deviceName: str = None  # MxId / IP / USB port
 
-    visualizers: List[Visualizer] = []
+    visualizers: List[VisualizerManager] = []
     syncs: List[Sync] = []
 
     # TODO: 
@@ -159,7 +159,7 @@ class OakCamera:
             if not found:
                 raise Exception("No OAK device found to connect to!")
 
-        version = self.pipeline.getOpenVINOVersion()
+        version = self._pipeline.getOpenVINOVersion()
         if self.usb2:
             self.oak.device = dai.Device(
                 version=version,
@@ -179,7 +179,7 @@ class OakCamera:
                         tuningBlob: Optional[str] = None,
                         openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
                         ) -> None:
-        configPipeline(self.pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
+        configPipeline(self._pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
 
     def __enter__(self):
         return self
@@ -197,7 +197,7 @@ class OakCamera:
         """
         Start the application
         """
-        if self.pipeline is None:
+        if self._pipeline is None:
             self.build() # Build the pipeline
 
         # Set up Syncing classes and visualizers
@@ -207,7 +207,7 @@ class OakCamera:
             sync.setup()
             self.oak.sync.append(sync.base)
 
-        self.oak.device.startPipeline(self.pipeline)
+        self.oak.device.startPipeline(self._pipeline)
         self.oak.initCallbacks()
 
         if self.replay:
@@ -239,23 +239,28 @@ class OakCamera:
     def running(self) -> bool:
         return True
 
-    def build(self) -> None:
+    def build(self) -> dai.Pipeline:
         """
-        Connect to the device and build the pipeline based on previously provided configuration. This is called
-        by start() function. Configure XLink queues, upload the pipeline to the device.
+        Connect to the device and build the pipeline based on previously provided configuration. Configure XLink queues,
+        upload the pipeline to the device. This function must only be called once!  build() is also called by start().
+
+        @return Built dai.Pipeline
         """
-        self.pipeline = dai.Pipeline()
+        if self._pipeline is not None:
+            raise Exception('OakCamera.build() can only be called once!')
+
+        self._pipeline = dai.Pipeline()
         if self.replay:
-            self.replay.initPipeline(self.pipeline)
+            self.replay.initPipeline(self._pipeline)
 
         # First go through each components to check whether any is forcing an OpenVINO version
         for c in self.components:
             ov = c._forced_openvino_version()
             if ov:
-                if self.pipeline.getRequiredOpenVINOVersion() and self.pipeline.getRequiredOpenVINOVersion() != ov:
+                if self._pipeline.getRequiredOpenVINOVersion() and self._pipeline.getRequiredOpenVINOVersion() != ov:
                     raise Exception(
                         'Two components forced two different OpenVINO version! Please make sure that all your models are compiled using the same OpenVINO version.')
-                self.pipeline.setOpenVINOVersion(ov)
+                self._pipeline.setOpenVINOVersion(ov)
 
         # Connect to the OAK camera
         self._init_device()
@@ -263,11 +268,13 @@ class OakCamera:
         # Go through each component
         for component in self.components:
             # Update the component now that we can query device info
-            component._update_device_info(self.pipeline, self.oak.device, self.pipeline.getOpenVINOVersion())
+            component._update_device_info(self._pipeline, self.oak.device, self._pipeline.getOpenVINOVersion())
 
             # check if out is enabled
             for qName, (compType, daiMsgType) in component.xouts.items():
                 self.oak.queues[qName] = compType
+
+        return self._pipeline
 
 
     def show_graph(self) -> None:
@@ -275,22 +282,22 @@ class OakCamera:
         Show pipeline graph, useful for debugging.
         @return:
         """
-        if self.pipeline is None:
+        if self._pipeline is None:
             self.build() # Build the pipeline
 
-        p = PipelineGraph(self.pipeline.serializeToJson()['pipeline'])
+        p = PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
 
 
     def visualize(self, components: List[Component],
                   scale: Union[None, float, Tuple[int, int]] = None,
                   fps=False,
-                  callback: Callable=None) -> Visualizer:
+                  callback: Callable=None) -> VisualizerManager:
         handlers = None
         if fps:
             self.oak.enable_fps(True)
             handlers = self.oak.fpsHandlers
 
-        vis = Visualizer(components, scale, handlers, callback)
+        vis = VisualizerManager(components, scale, handlers, callback)
         self.visualizers.append(vis)
         self.synchronize(components, vis.new_msgs)
         return vis

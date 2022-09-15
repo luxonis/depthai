@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import os, signal
-from Qt import QtWidgets, QtCore
-from .NodeGraphQt import NodeGraph, BaseNode, PropertiesBinWidget
-from .NodeGraphQt.constants import ViewerEnum
+import signal
 from typing import Dict
+from .node_graph_qt import NodeGraph, BaseNode, PropertiesBinWidget
+from .node_graph_qt.constants import ViewerEnum
 
 class DepthaiNode(BaseNode):
     # unique node identifier.
@@ -20,7 +19,11 @@ class DepthaiNode(BaseNode):
         # self.add_text_input('my_input', 'Text Input', tab='widgets')
 
 class PipelineGraph:
+
     def __init__(self, schema: Dict):
+
+        from Qt import QtWidgets, QtCore
+
         node_color = {
             "ColorCamera": (241,148,138),
             "MonoCamera": (243,243,243),

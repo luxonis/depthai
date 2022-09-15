@@ -137,14 +137,39 @@ class NNComponent(Component):
         elif isinstance(self._input, type(self)):
             if not self._input.isDetector():
                 raise Exception('Only object detector models can be used as an input to the NNComponent!')
+
+            # Calculate crop shape of the object detector
+            frameSize = self._input._input.out_size
+            nnSize = self._input.size
+            scale = frameSize[0] / nnSize[0], frameSize[1] / nnSize[1]
+            i = 0 if scale[0] < scale[1] else 1
+            crop = int(scale[i] * nnSize[0]), int(scale[i] * nnSize[1])
+            # Crop the high-resolution frames so it matches object detection frame shape
+            crop_manip = pipeline.createImageManip()
+            crop_manip.setResize(*crop)
+            crop_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
+            crop_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            self._input.stream_input.link(crop_manip.inputImage)
+
             # Create script node, get HQ frames from input.
-            self._multiStageNn = MultiStageNN(pipeline, self._input.node, self._input.stream_input, self.size)
+            self._multiStageNn = MultiStageNN(pipeline, self._input.node, crop_manip.out, self.size)
             self._multiStageNn.configure(self.multi_stage_config)
             self._multiStageNn.out.link(self.node.input)  # Cropped frames
             # For debugging, for intenral counter
             self.node.out.link(self._multiStageNn.script.inputs['recognition'])
             self.node.input.setBlocking(True)
             self.node.input.setQueueSize(15)
+
+            # Set up cropped img streaming to the host
+            if self.multi_stage_config and self.multi_stage_config.show_cropped_frames:
+                super()._create_xout(
+                    pipeline,
+                    type(self),
+                    name="__cropped_frame",
+                    out=self._multiStageNn.out,  # ImageManip out (cropped frames)
+                    depthaiMsg=dai.ImgFrame
+                )
+
         # elif isinstance(self._input, dai.Node.Output):
         #     # Link directly via ImageManip
         #     self._setupResizeManip(pipeline, self.size, self._input).link(self.node.input)
@@ -217,9 +242,6 @@ class NNComponent(Component):
             model = models[str(model)] / 'config.json'
             self.parse_config(model)
 
-    def set_aspect_ratio_resize_mode(self, mode: AspectRatioResizeMode):
-        self.arResizeMode = mode
-
     def _parse_node_type(self, nnType: str) -> None:
         self._nodeType = dai.node.NeuralNetwork
         if nnType:
@@ -287,17 +309,17 @@ class NNComponent(Component):
             zoo_type = model.get("zoo_type", 'intel')
             return blobconverter.from_zoo(model['model_name'],
                                           zoo_type=zoo_type,
-                                          shaves=6,  # TODO: Calulate ideal shave amount
+                                          shaves=6,  # TODO: Calculate ideal shave amount
                                           version=versionStr
                                           )
 
         if 'xml' in model and 'bin' in model:
             return blobconverter.from_openvino(xml=model['xml'],
-                                          bin=model['bin'],
-                                          data_type="FP16",  # Myriad X
-                                          shaves=6,  # TODO: Calulate ideal shave amount
-                                          version=versionStr
-                                          )
+                                               bin=model['bin'],
+                                               data_type="FP16",  # Myriad X
+                                               shaves=6,  # TODO: Calculate ideal shave amount
+                                               version=versionStr
+                                               )
 
         raise ValueError("Specified `model` values in json config files are incorrect!")
 
@@ -324,11 +346,12 @@ class NNComponent(Component):
 
         return self.manip.out
 
-    def config_multistage_cropping(self,
-                                   debug=False,
-                                   labels: Optional[List[int]] = None,
-                                   scaleBb: Optional[Tuple[int, int]] = None,
-                                   ) -> None:
+    def config_multistage_nn(self,
+                             debug=False,
+                             show_cropped_frames=False,
+                             labels: Optional[List[int]] = None,
+                             scaleBb: Optional[Tuple[int, int]] = None,
+                             ) -> None:
         """
         For multi-stage NN pipelines. Available if the input to this NNComponent was another NN component.
 
@@ -338,11 +361,10 @@ class NNComponent(Component):
             scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
         """
         if not isinstance(self._input, type(self)):
-            print(
-                "Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
+            print("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
 
-        self.multi_stage_config = MultiStageConfig(debug, labels, scaleBb)
+        self.multi_stage_config = MultiStageConfig(debug, show_cropped_frames, labels, scaleBb)
 
     def config_tracker(self,
                        type: Optional[dai.TrackerType] = None,
@@ -358,7 +380,7 @@ class NNComponent(Component):
             type (dai.TrackerType, optional): Set object tracker type
             trackLabels (List[int], optional): Set detection labels to track
             assignmentPolicy (dai.TrackerType, optional): Set object tracker ID assignment policy
-            maxObj (int, optional): Set set max objects to track. Max 60.
+            maxObj (int, optional): Set max objects to track. Max 60.
             threshold (float, optional): Set threshold for object detection confidence. Default: 0.0
         """
 
@@ -411,10 +433,13 @@ class NNComponent(Component):
         if confThreshold: self.node.setConfidenceThreshold(confThreshold)
 
     def config_nn(self,
-                  passthroughOut: bool = False
+                  passthroughOut: bool = False,
+                  aspectRatioResizeMode: AspectRatioResizeMode = None,
                   ):
 
         self.passthroughOut = passthroughOut
+        if aspectRatioResizeMode:
+            self.arResizeMode = aspectRatioResizeMode
 
     def config_spatial(self,
                        bbScaleFactor: Optional[float] = None,

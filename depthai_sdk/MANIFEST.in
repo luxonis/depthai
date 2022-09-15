@@ -1,10 +1,13 @@
-include src/depthai_sdk/managers/*.py
-include src/depthai_sdk/readers/*.py
-include src/depthai_sdk/recorders/*.py
-include src/depthai_sdk/components/*.py
 include src/depthai_sdk/classes/*.py
-include src/depthai_sdk/visualizing/*.py
+recursive-include src/depthai_sdk/components *.py
+include src/depthai_sdk/managers/*.py
+
 recursive-include src/depthai_sdk/nn_models handler.py
 recursive-include src/depthai_sdk/nn_models *.yml
 recursive-include src/depthai_sdk/nn_models config.json
+
+include src/depthai_sdk/readers/*.py
+include src/depthai_sdk/recorders/*.py
+include src/depthai_sdk/syncing/*.py
+include src/depthai_sdk/visualizing/*.py
 include requirements.txt
