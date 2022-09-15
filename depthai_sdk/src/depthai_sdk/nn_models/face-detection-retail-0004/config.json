@@ -1,4 +1,7 @@
 {
+    "model":{
+        "model_name": "face-detection-retail-0004"
+    },
     "nn_config":
     {
         "output_format" : "detection",

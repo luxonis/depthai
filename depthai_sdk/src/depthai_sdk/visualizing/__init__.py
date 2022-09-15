@@ -1,14 +1,14 @@
-import depthai as dai
 from typing import Tuple, Union, List, Dict, Callable
-from ..components import Component, GroupType
-from .visualizers import *
+from ..components import Component, GroupType, ComponentGroup
+from .visualizers import BaseVisualizer, DetectionVisualizer, DetectionClassificationVisualizer, FPS, FrameVisualizer
+from .visualizer_helper import Visualizer
+from .packets import TwoStagePacket, DetectionPacket, FramePacket
 
-class Visualizer:
+class VisualizerManager:
     """
-    Each visualizer contains a frame stream and potentially additional NN result streams that are then
-    displayed on the frame.
+    VisualizerManager will create required visualizers on setup() based on components we want to visualize.
+    Each VisualizerManager can contain multiple visualizers.
     """
-
     _visualizers: List[BaseVisualizer] = []
     _scale: Union[None, float, Tuple[int, int]] = None
     _fps: Dict[str, FPS] = None
@@ -17,23 +17,33 @@ class Visualizer:
 
     def __init__(self, components: List[Component],
                  scale: Union[None, float, Tuple[int, int]] = None,
-                 fpsHandlers: Dict[str, FPS] = None,
-                 callback: Callable = None) -> None:
+                 fps: Dict[str, FPS] = None,
+                 callback: Callable = None):
+        """
+        Create the VisualizerManager.
+
+        @param components: Components which we want to visualize
+        @param scale: Optionally rescale the frame
+        @param fpsHandlers: FPS counters if we want to display FPS on the frame
+        @param callback: Callback to be called instead of displaying the frame. Synced packet will be sent to the callback
+        """
         self._scale = scale
-        self._fps = fpsHandlers
+        self._fps = fps
         self._callback = callback
         self._components = components
 
-    def setup(self):
+    def setup(self) -> None:
         """
-        Called after connected to the device, and all components have been configured
+        Called after connected to the device and all components have been configured.
         """
         group = ComponentGroup(self._components)
 
         for frame_name in group.frame_names:
             vis: BaseVisualizer
             # We only have frames to display, no NN results
-            if group.type == GroupType.FRAMES:
+            if frame_name.startswith('__'):
+                vis = FrameVisualizer(frame_name)
+            elif group.type == GroupType.FRAMES:
                 vis = BaseVisualizer(frame_name)
             elif group.type == GroupType.LOG:
                 # TODO: We don't have any frame to display NN results on, so just print NN results

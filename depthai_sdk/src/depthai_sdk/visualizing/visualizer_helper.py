@@ -3,20 +3,33 @@ import depthai as dai
 from typing import Tuple, Union, List, Any, Callable
 import cv2
 import distinctipy
-from .. import AspectRatioResizeMode
+from .normalize_bb import NormalizeBoundingBox
+from .packets import DetectionPacket, TwoStageDetection
+
 
 
 bg_color = (0, 0, 0)
 front_color = (255, 255, 255)
 text_type = cv2.FONT_HERSHEY_SIMPLEX
 line_type = cv2.LINE_AA
-
-
-def putText(frame, text, coords, scale: float = 1.0, backColor = None, color: Tuple[int, int, int] = None):
-    cv2.putText(frame, text, coords, text_type, scale, backColor if backColor else bg_color, int(scale * 3), line_type)
-    cv2.putText(frame, text=text, org=coords, fontFace=text_type, fontScale=scale,
-                color=(int(color[0]), int(color[1]), int(color[2])) if color else front_color, thickness=int(scale),
-                lineType=line_type)
+class Visualizer:
+    @staticmethod
+    def putText(frame: np.ndarray,
+                text: str,
+                coords: Tuple[int,int],
+                scale: float = 1.0,
+                backColor: Tuple[int,int,int] = None,
+                color: Tuple[int, int, int] = None):
+        # Background text
+        cv2.putText(frame, text, coords, text_type, scale,
+                    color=backColor if backColor else bg_color,
+                    thickness=int(scale * 3),
+                    lineType=line_type)
+        # Front text
+        cv2.putText(frame, text, coords, text_type, scale,
+                    color=(int(color[0]), int(color[1]), int(color[2])) if color else front_color,
+                    thickness=int(scale),
+                    lineType=line_type)
 
 
 # def rectangle(frame, bbox, color: Tuple[int, int, int] = None):
@@ -27,8 +40,8 @@ def putText(frame, text, coords, scale: float = 1.0, backColor = None, color: Tu
 
 
 def rectangle(src,
-              bbox,
-              color,
+              bbox: np.ndarray,
+              color: Tuple[int,int,int],
               thickness=-1,
               radius=0.1,
               line_type=cv2.LINE_AA,
@@ -116,69 +129,16 @@ def rectangle(src,
     return src
 
 
-class NormalizeBoundingBox:
-    def __init__(self,
-                 aspectRatio: Tuple[float, float],
-                 arResizeMode: AspectRatioResizeMode,
-                 ):
-        """
-        @param aspectRatio: NN input size
-        @param arResizeMode
-        """
-        self.aspectRatio = aspectRatio
-        self.arResizeMode = arResizeMode
-
-    def normalize(self, frame, bbox: Tuple[float, float, float, float]):
-        """
-        Mapps bounding box coordinates (0..1) to pixel values on frame
-
-        Args:
-            frame (numpy.ndarray): Frame to which adjust the bounding box
-            bbox (list): list of bounding box points in a form of :code:`[x1, y1, x2, y2, ...]`
-
-        Returns:
-            list: Bounding box points mapped to pixel values on frame
-        """
-        bbox = np.array(bbox)
-
-        # Edit the bounding boxes before normalizing them
-        if self.arResizeMode == AspectRatioResizeMode.CROP:
-            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[1] / frame.shape[0]
-            sel = 0 if 0 < ar_diff else 1
-            bbox[sel::2] *= 1 - abs(ar_diff)
-            bbox[sel::2] += abs(ar_diff) / 2
-        elif self.arResizeMode == AspectRatioResizeMode.STRETCH:
-            # No need to edit bounding boxes when stretching
-            pass
-        elif self.arResizeMode == AspectRatioResizeMode.LETTERBOX:
-            # There might be better way of doing this. TODO: test if it works as expected
-            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[1] / frame.shape[0]
-            sel = 0 if 0 < ar_diff else 1
-            nsel = 0 if sel == 1 else 1
-            # Get the divisor
-            div = frame.shape[sel] / self.aspectRatio[nsel]
-            letterboxing_ratio = 1 - (frame.shape[nsel] / div) / self.aspectRatio[sel]
-
-            bbox[sel::2] -= abs(letterboxing_ratio) / 2
-            bbox[sel::2] /= 1 - abs(letterboxing_ratio)
-
-        # Normalize bounding boxes
-        normVals = np.full(len(bbox), frame.shape[0])
-        normVals[::2] = frame.shape[1]
-        return (np.clip(bbox, 0, 1) * normVals).astype(int)
-
-
 def get_text_color(background, threshold=0.6):
     bck = np.array(background) / 256
     clr = distinctipy.get_text_color((bck[2], bck[1], bck[0]), threshold)
     clr = distinctipy.get_rgb256(clr)
     return (clr[2], clr[1], clr[0])
 
-def drawDetections(frame,
-                   dets: dai.ImgDetections,
+
+def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
                    norm: NormalizeBoundingBox,
-                   labelMap: List[Tuple[str, Tuple]] = None,
-                   callback: Callable = None):
+                   labelMap: List[Tuple[str, Tuple]] = None):
     """
     Draw object detections to the frame.
 
@@ -188,17 +148,19 @@ def drawDetections(frame,
     @param labelMap: Label map for the detections
     @param callback: Callback that will be called on each object, with (frame, bbox) in arguments
     """
-    for detection in dets.detections:
-        bbox = norm.normalize(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-        color, txt = None, None
+    for detection in packet.imgDetections.detections:
+        bbox = norm.normalize(packet.frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+
         if labelMap:
             txt, color = labelMap[detection.label]
         else:
             txt = str(detection.label)
-        putText(frame, txt, (bbox[0] + 10, bbox[1] + 20), color=color)
-        rectangle(frame, bbox, color=color, thickness=1, radius=0)
-        if callback:
-            callback(frame, bbox)
+            color = Visualizer.front_color
+
+        Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
+        rectangle(packet.frame, bbox, color=color, thickness=1, radius=0)
+
+        packet.add_detection(detection, bbox, txt, color)
 
 
 jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)

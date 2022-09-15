@@ -3,6 +3,7 @@ import time
 from ..components import NNComponent, ComponentGroup
 from enum import IntEnum
 from .visualizer_helper import *
+from .packets import DetectionPacket, FramePacket, TwoStagePacket
 
 
 class FramePosition(IntEnum):
@@ -53,23 +54,18 @@ class BaseVisualizer:
         self._fps = fps
         self._callback = callback
 
-    def newMsgs(self, input: Union[Dict, dai.ImgFrame, np.ndarray]):
-        msgs = input
+    def newMsgs(self, input: Union[Dict, FramePacket]):
         if isinstance(input, Dict):
-            input = input[self._frame_stream]
-
-        if isinstance(input, dai.ImgFrame):
-            frame = input.getCvFrame()
-        elif isinstance(input, np.ndarray):
-            frame = input
+            frame = input[self._frame_stream].getCvFrame()
+        elif isinstance(input, FramePacket):
+            frame = input.frame
         else:
-            ValueError(f'BaseSync received {type(input)} on newMsgs function! It requires Union[Dict, dai.ImgFrame, np.ndarray]')
-
+            raise ValueError('Input to BaseVisualizer.newMsgs has to be either Dict or FramePacket!')
 
         if self._fps:
             i = 0
             for name, handler in self._fps.items():
-                putText(frame, "{} FPS: {:.1f}".format(name, handler.fps()), (10, 20 + i * 20), scale=0.7)
+                Visualizer.putText(frame, "{} FPS: {:.1f}".format(name, handler.fps()), (10, 20 + i * 20), scale=0.7)
                 i += 1
 
         if self._scale:
@@ -82,7 +78,7 @@ class BaseVisualizer:
                 ))
 
         if self._callback:  # Don't display frame, call the callback
-            self._callback(msgs, frame)
+            self._callback(input)
         else:
             cv2.imshow(self.name, frame)
 
@@ -99,7 +95,7 @@ class BaseVisualizer:
         @param position: Where on frame we want to print the text
         @param padPx: Padding (in pixels)
         """
-        textSize = cv2.getTextSize(text, text_type, fontScale=1.0, thickness=1)[0]
+        textSize = cv2.getTextSize(text, Visualizer.text_type, fontScale=1.0, thickness=1)[0]
         frameW = frame.shape[1]
         frameH = frame.shape[0]
 
@@ -119,7 +115,22 @@ class BaseVisualizer:
         else:  # xPos == 2  # X Right
             x = frameW - textSize[0] - padPx
 
-        putText(frame, text, (x, y))
+        Visualizer.putText(frame, text, (x, y))
+
+
+class FrameVisualizer(BaseVisualizer):
+    def __init__(self,
+                 frameStream: str,
+                 ) -> None:
+        """
+        Visualizes frames. No drawing, callbacks, just display.
+        """
+        super().__init__(frameStream)
+
+    def newMsgs(self, msgs: Dict):
+        if super().name in msgs:
+            frame: dai.ImgFrame = msgs[super().name]
+            cv2.imshow(super().name, frame.getCvFrame())
 
 
 class DetectionVisualizer(BaseVisualizer):
@@ -168,28 +179,39 @@ class DetectionVisualizer(BaseVisualizer):
     def get_imgDetections(self, msgs: Dict) -> dai.ImgDetections:
         return msgs[self.detectionStream]
 
-    def newMsgs(self, msgs: Dict):
-        imgFrame = self.get_imgFrame(msgs)
-        frame = imgFrame.getCvFrame()
-        dets = self.get_imgDetections(msgs)
-        drawDetections(frame, dets, self.normalizer, self.labels)
-        msgs[super().name] = frame
-        super().newMsgs(msgs)
+    def newMsgs(self, msgs: Union[Dict, TwoStagePacket]):
+        if isinstance(msgs, TwoStagePacket):
+            super().newMsgs(msgs)
+        else:
+            imgFrame = self.get_imgFrame(msgs)
+            dets = self.get_imgDetections(msgs)
+            detPacket = DetectionPacket(super().name, imgFrame, dets)
+            drawDetections(detPacket, self.normalizer, self.labels)
+            super().newMsgs(detPacket)
 
 
 class DetectionClassificationVisualizer(DetectionVisualizer):
-
+    whitelist_labels: List[int]
     def __init__(self,
                  frame_name: str,
-                 group: ComponentGroup
+                 group: ComponentGroup,
                  ) -> None:
 
         super().__init__(frameStream=frame_name,
                          detectionsStream=group.nn_name,
                          detectorComp=group.nn_component)
 
-        self.classificationStream = group.second_nn_name
+        self.second_nn_stream = group.second_nn_name
+        self.whitelist_labels = group.second_nn.labels
+
+    def get_nnData(self, msgs: Dict) -> List[dai.NNData]:
+        return msgs[self.second_nn_stream]
 
     def newMsgs(self, msgs: Dict):
         # print('2nd stage results:',msgs[self.classificationStream])
-        super().newMsgs(msgs)
+        imgFrame = self.get_imgFrame(msgs)
+        dets = self.get_imgDetections(msgs)
+        nn_data = self.get_nnData(msgs)
+        packet = TwoStagePacket(super().name, imgFrame, dets, nn_data, self.whitelist_labels)
+        drawDetections(packet, self.normalizer, self.labels)
+        super().newMsgs(packet)

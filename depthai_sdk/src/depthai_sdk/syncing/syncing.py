@@ -251,6 +251,8 @@ class TwoStageSeqSync(BaseSync):
 
         for name in self.group.frame_names:
             # print(f'checking if stream {name} in {self.group.frame_names}')
+            if name.startswith('__'):
+                continue # Frame not required for syncing purposes (debugging stream)
             if name not in packet:
                 return False  # We don't have required ImgFrame
 
@@ -266,7 +268,6 @@ class TwoStageSeqSync(BaseSync):
         Required recognition results for this packet, which depends on number of detections (and white-list labels)
         """
         dets: List[dai.ImgDetection] = self.msgs[seq][self.group.nn_name].detections
-        print('required_recognitions, dets', dets)
         if self.labels:
             return len([det for det in dets if det.label in self.labels])
         else:

@@ -1,6 +1,6 @@
 {
     "model": {
-        "model_name":"age-gender-recognition-retail-0013"
+        "model_name":"emotions-recognition-retail-0003"
     },
     "nn_config": {
         "output_format" : "raw"
