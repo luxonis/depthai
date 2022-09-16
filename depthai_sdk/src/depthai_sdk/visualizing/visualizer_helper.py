@@ -158,12 +158,17 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
             color = Visualizer.front_color
 
         Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
+        if packet.isSpatialDetection():
+            Visualizer.putText(packet.frame, packet.spatialsText(detection).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
+            Visualizer.putText(packet.frame, packet.spatialsText(detection).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
+            Visualizer.putText(packet.frame, packet.spatialsText(detection).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
+
         rectangle(packet.frame, bbox, color=color, thickness=1, radius=0)
 
         packet.add_detection(detection, bbox, txt, color)
 
 
-jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_JET)
+jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_TURBO)
 jet_custom = jet_custom[::-1]
 jet_custom[0] = [0, 0, 0]
 
@@ -175,6 +180,12 @@ def colorizeDepth(depthFrame: Union[dai.ImgFrame, Any], colorMap=None):
     depthFrameColor = cv2.equalizeHist(depthFrameColor)
     return cv2.applyColorMap(depthFrameColor, colorMap if colorMap else jet_custom)
 
+def colorizeDisparity(depthFrame: Union[dai.ImgFrame, Any],  colorMap=None):
+    if isinstance(depthFrame, dai.ImgFrame):
+        depthFrame = depthFrame.getFrame()
+    depthFrameColor = cv2.normalize(depthFrame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
+    depthFrameColor = cv2.equalizeHist(depthFrameColor)
+    return cv2.applyColorMap(depthFrameColor, colorMap if colorMap else jet_custom)
 
 def drawBbMappings(depthFrame: Union[dai.ImgFrame, Any], bbMappings: dai.SpatialLocationCalculatorConfig):
     depthFrameColor = colorizeDepth(depthFrame)

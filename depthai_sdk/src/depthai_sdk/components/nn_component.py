@@ -36,7 +36,6 @@ class NNComponent(Component):
     config: Dict = None
     _xout: Union[None, bool, str] = None  # Argument passed by user
     _tracker: bool = False
-    _spatial: Union[None, bool, StereoComponent, dai.Node.Output] = None
     _nodeType: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
 
     passthroughOut: bool = False  # Whether to stream passthrough frame to the host
@@ -46,6 +45,9 @@ class NNComponent(Component):
 
     _multiStageNn: MultiStageNN = None
     multi_stage_config: MultiStageConfig = None
+
+    _spatial: Union[None, bool, StereoComponent] = None
+    _spatial_config: SpatialConfig = None
 
     # For visualizer
     labels: List = None  # obj detector labels
@@ -57,7 +59,7 @@ class NNComponent(Component):
                  out: Union[None, bool, str] = None,
                  nnType: Optional[str] = None, # Either 'yolo' or 'mobilenet'
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
-                 spatial: Union[None, bool, StereoComponent, dai.Node.Output] = None,
+                 spatial: Union[None, bool, StereoComponent] = None,
                  args: Dict = None  # User defined args
                  ) -> None:
         """
@@ -170,19 +172,16 @@ class NNComponent(Component):
                     depthaiMsg=dai.ImgFrame
                 )
 
-        # elif isinstance(self._input, dai.Node.Output):
-        #     # Link directly via ImageManip
-        #     self._setupResizeManip(pipeline, self.size, self._input).link(self.node.input)
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
-                left = CameraComponent('left')
-                right = CameraComponent('right')
-                self._spatial = StereoComponent(left=left, right=right, args=self._args)
+                self._spatial = StereoComponent(args=self._args)
+                self._spatial._update_device_info(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
-            elif isinstance(self._spatial, dai.Node.Output):
-                self._spatial.link(self.node.inputDepth)
+
+            # Configure Spatial Detection Network
+            self._update_spatial(pipeline)
 
         if self._tracker:
             if not self.isDetector():
@@ -249,6 +248,7 @@ class NNComponent(Component):
                 self._nodeType = dai.node.YoloSpatialDetectionNetwork if self._spatial else dai.node.YoloDetectionNetwork
             elif nnType.upper() == 'MOBILENET':
                 self._nodeType = dai.node.MobileNetSpatialDetectionNetwork if self._spatial else dai.node.MobileNetDetectionNetwork
+
     def parse_config(self, modelConfig: Union[Path, str, Dict]):
         """
         Called when NNComponent is initialized. Reads config.json file and parses relevant setting from there
@@ -446,8 +446,8 @@ class NNComponent(Component):
                        lowerThreshold: Optional[int] = None,
                        upperThreshold: Optional[int] = None,
                        calcAlgo: Optional[dai.SpatialLocationCalculatorAlgorithm] = None,
-                       out: Optional[Tuple[str, str]] = None
-                       ) -> None:
+                       out: Union[None, Tuple[str, str], bool] = None
+                       ):
         """
         Configures the Spatial NN network.
         Args:
@@ -457,31 +457,45 @@ class NNComponent(Component):
             calcAlgo (dai.SpatialLocationCalculatorAlgorithm, optional): Specifies spatial location calculator algorithm: Average/Min/Max
             out (Tuple[str, str], optional): Enable streaming depth + bounding boxes mappings to the host. Useful for debugging.
         """
-        if not self._isSpatial():
+        if not self.isSpatial():
             print('This is not a Spatial Detection network! This configuration attempt will be ignored.')
             return
 
-        if bbScaleFactor: self.node.setBoundingBoxScaleFactor(bbScaleFactor)
-        if lowerThreshold: self.node.setDepthLowerThreshold(lowerThreshold)
-        if upperThreshold: self.node.setDepthUpperThreshold(upperThreshold)
-        if calcAlgo: self.node.setSpatialCalculationAlgorithm(calcAlgo)
-        if out:
+        config = SpatialConfig()
+        config.bbScaleFactor = bbScaleFactor
+        config.lowerThreshold = lowerThreshold
+        config.upperThreshold = upperThreshold
+        config.calcAlgo = calcAlgo
+        config.out = out
+        self._spatial_config = config
+
+    def _update_spatial(self, pipeline: dai.Pipeline):
+        # Nothing to configure
+        if self._spatial_config is None:
+            return
+
+        cfg = self._spatial_config
+        if cfg.bbScaleFactor: self.node.setBoundingBoxScaleFactor(cfg.bbScaleFactor)
+        if cfg.lowerThreshold: self.node.setDepthLowerThreshold(cfg.lowerThreshold)
+        if cfg.upperThreshold: self.node.setDepthUpperThreshold(cfg.upperThreshold)
+        if cfg.calcAlgo: self.node.setSpatialCalculationAlgorithm(cfg.calcAlgo)
+        if cfg.out:
             super()._create_xout(
-                self.pipeline,
+                pipeline,
                 type(self),
-                name=True if isinstance(out, bool) else out[0],
+                name=True if isinstance(cfg.out, bool) else cfg.out[0],
                 out=self.node.passthroughDepth,
                 depthaiMsg=dai.ImgFrame
             )
             super()._create_xout(
-                self.pipeline,
+                pipeline,
                 type(self),
-                name=True if isinstance(out, bool) else out[1],
+                name=True if isinstance(cfg.out, bool) else cfg.out[1],
                 out=self.node.boundingBoxMapping,
                 depthaiMsg=dai.SpatialLocationCalculatorConfig
             )
 
-    def _isSpatial(self) -> bool:
+    def isSpatial(self) -> bool:
         return (
                 self._nodeType == dai.node.MobileNetSpatialDetectionNetwork or
                 self._nodeType == dai.node.YoloSpatialDetectionNetwork

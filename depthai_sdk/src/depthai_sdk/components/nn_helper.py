@@ -2,11 +2,19 @@ import importlib
 from enum import IntEnum
 from pathlib import Path
 import os
-from typing import Dict, Union
+from typing import Dict, Union, Optional, Tuple
 import requests
+import depthai as dai
 
 BLOBS_PATH = Path.home() / Path('.cache/blobs')
 
+
+class SpatialConfig:
+    bbScaleFactor: Optional[float] = None
+    lowerThreshold: Optional[int] = None
+    upperThreshold: Optional[int] = None
+    calcAlgo: Optional[dai.SpatialLocationCalculatorAlgorithm] = None
+    out: Optional[Tuple[str, str]] = None
 
 class AspectRatioResizeMode(IntEnum):
     """

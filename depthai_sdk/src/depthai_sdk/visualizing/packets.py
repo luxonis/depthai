@@ -1,7 +1,8 @@
-from typing import Tuple, List
+from types import SimpleNamespace
+from typing import Tuple, List, Union
 import depthai as dai
 import numpy as np
-
+import math
 
 class Detection():
     def __init__(self):
@@ -33,15 +34,30 @@ class FramePacket:
 
 class DetectionPacket(FramePacket):
     # Original depthai messages
-    imgDetections: dai.ImgDetections
+    imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]
     detections: List[Detection] = []
 
-    def __init__(self, name: str, imgFrame: dai.ImgFrame, imgDetections: dai.ImgDetections):
+    def __init__(self,
+                 name: str,
+                 imgFrame: dai.ImgFrame,
+                 imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]):
         super().__init__()
         self.name = name
         self.imgFrame = imgFrame
         self.imgDetections = imgDetections
         self.frame = self.imgFrame.getCvFrame()
+
+    def isSpatialDetection(self) -> bool:
+        return isinstance(self.imgDetections, dai.SpatialImgDetections)
+
+    @staticmethod
+    def spatialsText(detection: dai.SpatialImgDetection):
+        spatials = detection.spatialCoordinates
+        return SimpleNamespace(
+            x = "X: " + ("{:.1f}m".format(spatials.x / 1000) if not math.isnan(spatials.x) else "--"),
+            y = "Y: " + ("{:.1f}m".format(spatials.y / 1000) if not math.isnan(spatials.y) else "--"),
+            z = "Z: " + ("{:.1f}m".format(spatials.z / 1000) if not math.isnan(spatials.z) else "--"),
+        )
 
     def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color, _=None):
         det = Detection()

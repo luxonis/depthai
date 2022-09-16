@@ -1,6 +1,6 @@
 from .component import Component
 from .camera_component import CameraComponent
-from typing import Optional, Union, Tuple, Any
+from typing import Optional, Union, Tuple, Any, Dict
 import depthai as dai
 from ..replay import Replay
 
@@ -8,14 +8,16 @@ from ..replay import Replay
 class StereoComponent(Component):
     # Users should have access to these nodes
     node: dai.node.StereoDepth
-    _replay: Optional[Replay] = None  # Replay module
-
-    out: dai.Node.Output  # depth output
-    depth: dai.Node.Output
-    disparity: dai.Node.Output
 
     left: Union[None, dai.Node.Output, CameraComponent] = None
     right: Union[None, dai.Node.Output, CameraComponent] = None
+
+    _replay: Optional[Replay]  # Replay module
+    _resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution]
+    _fps: Optional[float]
+    _control: bool
+    _args: Dict
+    _out: Optional[str] = None
 
     def __init__(self,
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
@@ -23,7 +25,6 @@ class StereoComponent(Component):
                  out: Optional[str] = None,  # 'depth', 'disparity', both separated by comma? TBD
                  left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                  right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
-                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                  control: bool = False,
                  replay: Optional[Replay] = None,
                  args: Any = None,
@@ -39,38 +40,61 @@ class StereoComponent(Component):
             args (Any, optional): Set the camera components based on user arguments
         """
         super().__init__()
-        self.replay = replay
+        self._replay = replay
+        self._resolution = resolution
+        self._fps = fps
+        self._args = args
+        self._control = control
+        self._out = out
 
-        if replay:
-            print('Replay found, using that')
-            if not replay.stereo:
-                raise Exception('Stereo stream was not found in specified depthai-recording!')
-            self.node = replay.stereo
-        else:
-            self.left = left
-            self.right = right
-            from .camera_component import CameraComponent
-            if not left:
-                left = CameraComponent('left', resolution, fps)
-            if not right:
-                right = CameraComponent('right', resolution, fps)
-            # TODO create StereoDepth
-            if isinstance(left, CameraComponent):
-                left = left.out
-            if isinstance(right, CameraComponent):
-                right = right.out
+        self.left = left
+        self.right = right
 
-            self.node = pipeline.createStereoDepth()
-            left.link(self.node.left)
-            right.link(self.node.right)
+    @property
+    def depth(self) -> dai.Node.Output:
+        """
+        Depth output from the StereoDepth node.
+        """
+        return self.node.depth
 
-        self.out = self.node.depth
-        self.depth = self.node.depth
-        self.disparity = self.node.disparity
+    @property
+    def disparity(self) -> dai.Node.Output:
+        """
+        Disparity output from the StereoDepth node.
+        """
+        return self.node.disparity
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-        # TODO: disable mono cams if OAK doesn't have them
-        pass
+        if self._replay:
+            print('Replay found, using that')
+            if not self._replay.stereo:
+                raise Exception('Stereo stream was not found in specified depthai-recording!')
+            self.node = self._replay.stereo
+
+        # TODO: check sensor names / device name whether it has stereo camera pair (or maybe calibration?)
+        if len(device.getCameraSensorNames()) == 1:
+            raise Exception('OAK-1 camera does not have Stereo camera pair!')
+
+        from .camera_component import CameraComponent
+        if not self.left:
+            self.left = CameraComponent('left', self._resolution, self._fps)
+            self.left._update_device_info(pipeline, device, version)
+        if not self.right:
+            self.right = CameraComponent('right', self._resolution, self._fps)
+            self.right._update_device_info(pipeline, device, version)
+
+        self.node = pipeline.createStereoDepth()
+        # TODO: use self._args to setup the StereoDepth node
+
+        if isinstance(self.left, CameraComponent):
+            self.left = self.left.out
+        if isinstance(self.right, CameraComponent):
+            self.right = self.right.out
+
+        # Connect Mono cameras to the StereoDepth node
+        self.left.link(self.node.left)
+        self.right.link(self.node.right)
+
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def configure_stereo(self,
