@@ -372,7 +372,7 @@ class StereoCalibration(object):
                                     * scale - destShape[0]) / 2
         scaled_intrinsics[0][2] -= (originalShape[1]
                                     * scale - destShape[1]) / 2
-        if traceLevel == 1:
+        if traceLevel == 2:
             print('original_intrinsics')
             print(intrinsics)
             print('scaled_intrinsics')
@@ -568,8 +568,8 @@ class StereoCalibration(object):
             r_euler = Rotation.from_matrix(R_r).as_euler('xyz', degrees=True)
             print(f'R_R Euler angles in XYZ {r_euler}')
             
-            print(f'P_l is \n {P_l}')
-            print(f'P_r is \n {P_r}')
+            # print(f'P_l is \n {P_l}')
+            # print(f'P_r is \n {P_r}')
 
             return [ret, R, T, R_l, R_r, P_l, P_r]
 
@@ -716,18 +716,24 @@ class StereoCalibration(object):
         M_lp = self.scale_intrinsics(M_l, frame_left_shape, scaled_res)
         M_rp = self.scale_intrinsics(M_r, frame_right_shape, scaled_res)
 
-        p_lp = self.scale_intrinsics(p_l, frame_left_shape, scaled_res)
-        p_rp = self.scale_intrinsics(p_r, frame_right_shape, scaled_res)
+        # p_lp = self.scale_intrinsics(p_l, frame_left_shape, scaled_res)
+        # p_rp = self.scale_intrinsics(p_r, frame_right_shape, scaled_res)
 
         criteria = (cv2.TERM_CRITERIA_EPS +
                     cv2.TERM_CRITERIA_MAX_ITER, 10000, 0.00001)
 
         # TODO(Sachin): Observe Images by adding visualization 
         # TODO(Sachin): Check if the stetch is only in calibration Images
-
-        kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_rp, d_l, scaled_res[::-1], 0)
-        kScaledR, _ = cv2.getOptimalNewCameraMatrix(M_rp, d_r, scaled_res[::-1], 0)
-
+        print('Original intrinsics ....')
+        print(M_lp)
+        print(M_rp)
+        kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_lp, d_l, scaled_res[::-1], 0)
+        # kScaledR, _ = cv2.getOptimalNewCameraMatrix(M_lp, d_r, scaled_res[::-1], 0)
+        kScaledR = kScaledL
+        print('Intrinsics from the getOptimalNewCameraMatrix....')
+        print(kScaledL)
+        print(kScaledR)
+        
         mapx_l, mapy_l = cv2.initUndistortRectifyMap(
             M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
