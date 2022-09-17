@@ -10,6 +10,7 @@ import time
 import json
 import cv2.aruco as aruco
 from pathlib import Path
+from collections import deque
 # Creates a set of 13 polygon coordinates
 traceLevel = 1
 
@@ -673,6 +674,138 @@ class StereoCalibration(object):
                 return img
         else:
             return img
+    
+    def sgdEpipolar(self, images_left, images_right, M_lp, d_l, M_rp, d_r, r_l, r_r, kScaledL, kScaledR, scaled_res, isHorizontal):
+        mapx_l, mapy_l = cv2.initUndistortRectifyMap(
+            M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
+        mapx_r, mapy_r = cv2.initUndistortRectifyMap(
+            M_rp, d_r, r_r, kScaledR, scaled_res[::-1], cv2.CV_32FC1)
+        
+        
+        image_data_pairs = []
+        imagesCount = 0
+        # print(len(images_left))
+        # print(len(images_right))
+        for image_left, image_right in zip(images_left, images_right):
+            # read images
+            imagesCount += 1
+            # print(imagesCount)
+            img_l = cv2.imread(image_left, 0)
+            img_r = cv2.imread(image_right, 0)
+
+            img_l = self.scale_image(img_l, scaled_res)
+            img_r = self.scale_image(img_r, scaled_res)
+            # print(img_l.shape)
+            # print(img_r.shape)
+
+            # warp right image
+            # img_l = cv2.warpPerspective(img_l, self.H1, img_l.shape[::-1],
+            #                             cv2.INTER_CUBIC +
+            #                             cv2.WARP_FILL_OUTLIERS +
+            #                             cv2.WARP_INVERSE_MAP)
+
+            # img_r = cv2.warpPerspective(img_r, self.H2, img_r.shape[::-1],
+            #                             cv2.INTER_CUBIC +
+            #                             cv2.WARP_FILL_OUTLIERS +
+            #                             cv2.WARP_INVERSE_MAP)
+
+            img_l = cv2.remap(img_l, mapx_l, mapy_l, cv2.INTER_LINEAR)
+            img_r = cv2.remap(img_r, mapx_r, mapy_r, cv2.INTER_LINEAR)
+
+            image_data_pairs.append((img_l, img_r))
+        # print(f'Images data pair size ios {len(image_data_pairs)}')
+        imgpoints_r = []
+        imgpoints_l = []
+        criteria = (cv2.TERM_CRITERIA_EPS +
+                    cv2.TERM_CRITERIA_MAX_ITER, 10000, 0.00001)
+            
+        for i, image_data_pair in enumerate(image_data_pairs):
+            marker_corners_l, ids_l, rejectedImgPoints = cv2.aruco.detectMarkers(
+                image_data_pair[0], self.aruco_dictionary)
+            marker_corners_l, ids_l, _, _ = cv2.aruco.refineDetectedMarkers(image_data_pair[0], self.board,
+                                                                            marker_corners_l, ids_l,
+                                                                            rejectedCorners=rejectedImgPoints)
+
+            marker_corners_r, ids_r, rejectedImgPoints = cv2.aruco.detectMarkers(
+                image_data_pair[1], self.aruco_dictionary)
+            marker_corners_r, ids_r, _, _ = cv2.aruco.refineDetectedMarkers(image_data_pair[1], self.board,
+                                                                            marker_corners_r, ids_r,
+                                                                            rejectedCorners=rejectedImgPoints)
+
+            res2_l = cv2.aruco.interpolateCornersCharuco(
+                marker_corners_l, ids_l, image_data_pair[0], self.board)
+            res2_r = cv2.aruco.interpolateCornersCharuco(
+                marker_corners_r, ids_r, image_data_pair[1], self.board)
+
+            # img_concat = cv2.hconcat([image_data_pair[0], image_data_pair[1]])
+            # img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
+            # line_row = 0
+            # while line_row < img_concat.shape[0]:
+            #     cv2.line(img_concat,
+            #              (0, line_row), (img_concat.shape[1], line_row),
+            #              (0, 255, 0), 1)
+            #     line_row += 30
+
+            # cv2.imshow('Stereo Pair', img_concat)
+            # k = cv2.waitKey(0)
+            # if k == 27:  # Esc key to stop
+            #     break
+
+            if res2_l[1] is not None and res2_r[2] is not None and len(res2_l[1]) > 3 and len(res2_r[1]) > 3:
+
+                cv2.cornerSubPix(image_data_pair[0], res2_l[1],
+                                 winSize=(5, 5),
+                                 zeroZone=(-1, -1),
+                                 criteria=criteria)
+                cv2.cornerSubPix(image_data_pair[1], res2_r[1],
+                                 winSize=(5, 5),
+                                 zeroZone=(-1, -1),
+                                 criteria=criteria)
+
+                # termination criteria
+                img_pth_right = Path(images_right[i])
+                img_pth_left = Path(images_left[i])
+                org = (100, 50)
+                # cv2.imshow('ltext', lText)
+                # cv2.waitKey(0)
+                localError = 0
+                corners_l = []
+                corners_r = []
+                for j in range(len(res2_l[2])):
+                    idx = np.where(res2_r[2] == res2_l[2][j])
+                    if idx[0].size == 0:
+                        continue
+                    corners_l.append(res2_l[1][j])
+                    corners_r.append(res2_r[1][idx])
+
+                imgpoints_l.extend(corners_l)
+                imgpoints_r.extend(corners_r)
+                epi_error_sum = 0
+                for l_pt, r_pt in zip(corners_l, corners_r):
+                    if isHorizontal:
+                        epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+                    else:
+                        epi_error_sum += abs(l_pt[0][0] - r_pt[0][0])
+                # localError = epi_error_sum / len(corners_l)
+
+                # print("Average Epipolar in test Error per image on host in " + img_pth_right.name + " : " +
+                #       str(localError))
+            else:
+                print('Numer of corners is in left -> {} and right -> {}'.format(
+                    len(marker_corners_l), len(marker_corners_r)))
+                raise SystemExit(1)
+
+        epi_error_sum = 0
+        for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):
+            if isHorizontal:
+                epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+            else:
+                epi_error_sum += abs(l_pt[0][0] - r_pt[0][0])
+
+        avg_epipolar = epi_error_sum / len(imgpoints_r)
+        print("Average Epipolar Error in test is : " + str(avg_epipolar))
+        return avg_epipolar
+
 
     def test_epipolar_charuco(self, left_img_pth, right_img_pth, M_l, d_l, M_r, d_r, t, r_l, r_r, p_l, p_r):
         images_left = glob.glob(left_img_pth + '/*.png')
@@ -732,8 +865,61 @@ class StereoCalibration(object):
         kScaledR = kScaledL
         print('Intrinsics from the getOptimalNewCameraMatrix....')
         print(kScaledL)
-        print(kScaledR)
-        
+        # print(kScaledR)
+        oldEpipolarError = None
+        epQueue = deque()
+        movePos = True
+        # increments = 1
+        if 0:
+            while True:
+                
+                epError = self.sgdEpipolar(images_left, images_right, M_lp, d_l, M_rp, d_r, r_l, r_r, kScaledL, kScaledR, scaled_res, isHorizontal)
+
+                if oldEpipolarError is None:
+                    epQueue.append((epError, kScaledR))
+                    oldEpipolarError = epError
+                    kScaledR[0][0] += 1
+                    kScaledR[1][1] += 1
+                    continue
+                if movePos:
+                    if epError < oldEpipolarError:
+                        epQueue.append((epError, kScaledR))
+                        oldEpipolarError = epError
+                        kScaledR[0][0] += 1
+                        kScaledR[1][1] += 1
+                    else:
+                        movePos = False
+                        startPos = epQueue.popleft()
+                        oldEpipolarError = startPos[0]
+                        kScaledR = startPos[1]
+                        epQueue.appendleft((oldEpipolarError, kScaledR))
+                        kScaledR[0][0] -= 1
+                        kScaledR[1][1] -= 1
+                else:
+                    if epError < oldEpipolarError:
+                        epQueue.appendleft((epError, kScaledR))
+                        oldEpipolarError = epError
+                        kScaledR[0][0] -= 1
+                        kScaledR[1][1] -= 1
+                    else:
+                        break
+            oldEpipolarError = None
+            while epQueue:
+                currEp, currK = epQueue.popleft()
+                if oldEpipolarError is None:
+                    oldEpipolarError = currEp
+                    kScaledR = currK
+                else:
+                    currEp, currK = epQueue.popleft()
+                    if currEp < oldEpipolarError:
+                        oldEpipolarError = currEp
+                        kScaledR = currK
+
+
+        print('Lets find the best epipolar Error')
+
+
+
         mapx_l, mapy_l = cv2.initUndistortRectifyMap(
             M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
