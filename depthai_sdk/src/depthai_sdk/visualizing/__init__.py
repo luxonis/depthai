@@ -1,7 +1,9 @@
 from typing import Tuple, Union, Dict, Callable
-from .visualizers import BaseVisualizer, DetectionVisualizer, DetectionClassificationVisualizer, FPS, FrameVisualizer, FramePosition
+from .visualizers import BaseVisualizer, DetectionVisualizer, DetectionClassificationVisualizer, FPS, FrameVisualizer, \
+    FramePosition, SpatialBbMappingsVisualizer, DisparityVisualizer, DepthVisualizer
 from .visualizer_helper import Visualizer
-from ..classes.xout import XoutNnResults, XoutFrames, XoutTwoStage
+from ..classes.xout import XoutNnResults, XoutFrames, XoutTwoStage, XoutSpatialBbMappings, XoutDisparity, XoutDepth
+
 
 class VisualizerManager:
     """
@@ -35,6 +37,15 @@ class VisualizerManager:
 
         if isinstance(xout, XoutNnResults):
             self._visualizer = DetectionVisualizer(xout)
+
+        elif isinstance(xout, XoutDisparity):
+            # Needs to be before checking if instanceof XoutFrames
+            self._visualizer = DisparityVisualizer(xout)
+
+        elif isinstance(xout, XoutDepth):
+            # Needs to be before checking if instanceof XoutFrames
+            self._visualizer = DepthVisualizer(xout.frames.name)
+
         elif isinstance(xout, XoutFrames):
             self._visualizer = BaseVisualizer(xout.frames.name)
         # elif group.type == GroupType.FRAMES:
@@ -48,6 +59,8 @@ class VisualizerManager:
         elif isinstance(xout, XoutTwoStage):
             self._visualizer = DetectionClassificationVisualizer(xout)
         # # TODO: if classification network, display NN results in the bounding box
+        elif isinstance(xout, XoutSpatialBbMappings):
+            self._visualizer = SpatialBbMappingsVisualizer(xout)
         else:
             raise NotImplementedError('Visualization of these components is not yet implemented!')
 

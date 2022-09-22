@@ -12,7 +12,7 @@ from .nn_helper import *
 from ..classes.nn_config import Config
 import json
 
-from ..classes.xout import XoutNnResults, XoutSpatialBoundingBox, XoutTwoStage
+from ..classes.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings
 from ..classes.xout_base import StreamXout, XoutBase
 
 
@@ -151,6 +151,7 @@ class NNComponent(Component):
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
                 self._spatial = StereoComponent(args=self._args)
+                self._spatial.configure_stereo(align=self._input._source)
                 self._spatial._update_device_info(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
@@ -469,29 +470,16 @@ class NNComponent(Component):
         super()._create_xout(pipeline, out)
         return out
 
-    def out_spatials(self, pipeline: dai.Pipeline, callback: Callable) -> XoutSpatialBoundingBox:
+    def out_spatials(self, pipeline: dai.Pipeline, callback: Callable) -> XoutSpatialBbMappings:
         if not self.isSpatial():
-            print('This is not a Spatial Detection network! This configuration attempt will be ignored.')
-            return
+            raise ValueError('SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
 
-        # self.xout()
-        # super()._create_xout1(
-        #     pipeline,
-        #     type(self),
-        #     name=True,
-        #     out=self.node.passthroughDepth,
-        #     depthaiMsg=dai.ImgFrame
-        # )
-        # super()._create_xout1(
-        #     pipeline,
-        #     type(self),
-        #     name=True,
-        #     out=self.node.boundingBoxMapping,
-        #     depthaiMsg=dai.SpatialLocationCalculatorConfig
-        # )
-
-        # xout = XoutSpatialBoundingBox()
-        # return xout
+        out = XoutSpatialBbMappings(callback,
+                                    StreamXout(self.node.id, self.node.passthroughDepth),
+                                    StreamXout(self.node.id, self.node.boundingBoxMapping)
+                                    )
+        super()._create_xout(pipeline, out)
+        return out
 
     def isSpatial(self) -> bool:
         return (

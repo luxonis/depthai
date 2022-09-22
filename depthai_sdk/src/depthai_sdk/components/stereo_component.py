@@ -2,13 +2,14 @@ from .component import Component
 from .camera_component import CameraComponent
 from typing import Optional, Union, Tuple, Any, Dict, Callable
 import depthai as dai
+
+from ..classes.xout_base import XoutBase, StreamXout
+from ..classes.xout import XoutDisparity, XoutDepth
 from ..replay import Replay
+from .parser import parse_cam_socket
 
 
 class StereoComponent(Component):
-    def out(selfm, pipeline: dai.Pipeline, callback: Callable):
-        pass
-
     # Users should have access to these nodes
     node: dai.node.StereoDepth
 
@@ -20,6 +21,9 @@ class StereoComponent(Component):
     _fps: Optional[float]
     _control: bool
     _args: Dict
+    # Configs
+    _align: dai.CameraBoardSocket = None
+    _initialConfig: dai.StereoDepthConfig = None
 
     def __init__(self,
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
@@ -91,6 +95,11 @@ class StereoComponent(Component):
         if isinstance(self.right, CameraComponent):
             self.right = self.right.out
 
+        if self._align:
+            self.node.setDepthAlign(self._align)
+        # if self._initialConfig:
+        #     self.node.initialConfig = self._initialConfig
+
         # Connect Mono cameras to the StereoDepth node
         self.left.link(self.node.left)
         self.right.link(self.node.right)
@@ -99,7 +108,7 @@ class StereoComponent(Component):
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def configure_stereo(self,
                          confidence: Optional[int] = None,
-                         align: Optional[dai.CameraBoardSocket] = None,
+                         align: Union[None, str, dai.CameraBoardSocket] = None,
                          extended: Optional[bool] = None,
                          subpixel: Optional[bool] = None,
                          lr_check: Optional[bool] = None,
@@ -107,20 +116,25 @@ class StereoComponent(Component):
         """
         Configure StereoDepth modes, filters, etc.
         """
-        initialConfig = dai.StereoDepthConfig()
-        if confidence: initialConfig.setConfidenceThreshold(confidence)
-        if align: initialConfig.setDepthAlign(align)
-        if extended: initialConfig.setExtendedDisparity(extended)
-        if subpixel: initialConfig.setSubpixel(subpixel)
-        if lr_check: initialConfig.setExtendedDisparity(lr_check)
+        _initialConfig = dai.StereoDepthConfig()
+        if confidence: _initialConfig.setConfidenceThreshold(confidence)
+        if align: self._align = parse_cam_socket(align)
+        if extended: _initialConfig.setExtendedDisparity(extended)
+        if subpixel: _initialConfig.setSubpixel(subpixel)
+        if lr_check: _initialConfig.setExtendedDisparity(lr_check)
 
-    def configure_encoder(self,
-                          ):
-        """
-        Configure quality, enable lossless,
-        """
-        if self.encoder is None:
-            print('Video encoder was not enabled! This configuration attempt will be ignored.')
-            return
+    """
+    Available outputs (to the host) of this component
+    """
+    def out(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+        # By default, we want to show disparity
+        return self.out_disparity(pipeline, callback)
+    def out_disparity(self, pipeline: dai.Pipeline, callback: Callable) -> XoutDisparity:
+        out = XoutDisparity(callback, StreamXout(self.node.id, self.disparity), self.node.getMaxDisparity())
+        super()._create_xout(pipeline, out)
+        return out
 
-        raise NotImplementedError()
+    def out_depth(self, pipeline: dai.Pipeline, callback: Callable) -> XoutDepth:
+        out = XoutDepth(callback, StreamXout(self.node.id, self.depth))
+        super()._create_xout(pipeline, out)
+        return out

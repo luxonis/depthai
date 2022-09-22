@@ -4,9 +4,7 @@ from typing import Tuple, Union, List, Any, Callable
 import cv2
 import distinctipy
 from .normalize_bb import NormalizeBoundingBox
-from ..classes.packets import DetectionPacket, TwoStageDetection
-
-
+from ..classes.packets import DetectionPacket, TwoStageDetection, FramePacket
 
 bg_color = (0, 0, 0)
 front_color = (255, 255, 255)
@@ -141,6 +139,22 @@ def get_text_color(background, threshold=0.6):
     return (clr[2], clr[1], clr[0])
 
 
+def drawMappings(packet: FramePacket, config: dai.SpatialLocationCalculatorConfig):
+    roiDatas = config.getConfigData()
+    for roiData in roiDatas:
+        roi = roiData.roi
+        roi = roi.denormalize(packet.frame.shape[1], packet.frame.shape[0])
+        topLeft = roi.topLeft()
+        bottomRight = roi.bottomRight()
+        xmin = int(topLeft.x)
+        ymin = int(topLeft.y)
+        xmax = int(bottomRight.x)
+        ymax = int(bottomRight.y)
+
+        cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), bg_color, 3)
+        cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), front_color, 1)
+
+
 def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
                    norm: NormalizeBoundingBox,
                    labelMap: List[Tuple[str, Tuple]] = None):
@@ -185,12 +199,11 @@ def colorizeDepth(depthFrame: Union[dai.ImgFrame, Any], colorMap=None):
     depthFrameColor = cv2.equalizeHist(depthFrameColor)
     return cv2.applyColorMap(depthFrameColor, colorMap if colorMap else jet_custom)
 
-def colorizeDisparity(depthFrame: Union[dai.ImgFrame, Any],  colorMap=None):
-    if isinstance(depthFrame, dai.ImgFrame):
-        depthFrame = depthFrame.getFrame()
-    depthFrameColor = cv2.normalize(depthFrame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
-    depthFrameColor = cv2.equalizeHist(depthFrameColor)
-    return cv2.applyColorMap(depthFrameColor, colorMap if colorMap else jet_custom)
+def colorizeDisparity(frame: Union[dai.ImgFrame, Any], multiplier: float, colorMap=None):
+    if isinstance(frame, dai.ImgFrame):
+        frame = frame.getFrame()
+    frame = (frame * multiplier).astype(np.uint8)
+    return cv2.applyColorMap(frame, colorMap if colorMap else jet_custom)
 
 def drawBbMappings(depthFrame: Union[dai.ImgFrame, Any], bbMappings: dai.SpatialLocationCalculatorConfig):
     depthFrameColor = colorizeDepth(depthFrame)

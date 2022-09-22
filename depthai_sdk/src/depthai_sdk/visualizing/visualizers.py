@@ -1,6 +1,6 @@
 from typing import Dict
 import time
-from ..classes.xout import XoutNnResults, XoutTwoStage
+from ..classes.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutDisparity
 from enum import IntEnum
 from .visualizer_helper import *
 from ..classes.packets import DetectionPacket, FramePacket, TwoStagePacket
@@ -73,9 +73,9 @@ class BaseVisualizer:
 
         if self._scale:
             if isinstance(self._scale, Tuple):
-                frame = cv2.resize(packet.frame, self._scale)  # Resize frame
+                packet.frame = cv2.resize(packet.frame, self._scale)  # Resize frame
             elif isinstance(self._scale, float):
-                frame = cv2.resize(packet.frame, (
+                packet.frame = cv2.resize(packet.frame, (
                     int(packet.frame.shape[1] * self._scale),
                     int(packet.frame.shape[0] * self._scale)
                 ))
@@ -135,34 +135,49 @@ class FrameVisualizer(BaseVisualizer):
 
 
 class DepthVisualizer(BaseVisualizer):
-    def __init__(self,
-                 frameStream: str,
-                 ) -> None:
-        """
-        Colorize & visualize depth frames.
-        """
+    def __init__(self, frameStream: str) -> None:
         super().__init__(frameStream)
 
     def newMsgs(self, msgs: Dict):
-        if super().name in msgs:
-            frame: dai.ImgFrame = msgs[super().name]
-            cv2.imshow(super().name, colorizeDepth(frame))
+        packet = FramePacket()
+        packet.imgFrame = msgs[super().name]
+        packet.frame = colorizeDepth(packet.imgFrame)
+        packet.name = super().name
+        super().newMsgs(packet)
+
+class SpatialBbMappingsVisualizer(BaseVisualizer):
+    depth: str
+    configs: str
+    def __init__(self, xout: XoutSpatialBbMappings) -> None:
+        super().__init__(xout.frames.name)
+        self.depth = xout.frames.name
+        self.configs = xout.configs.name
+
+    def newMsgs(self, msgs: Dict):
+        packet = FramePacket()
+        packet.imgFrame = msgs[self.depth]
+        packet.frame = colorizeDepth(packet.imgFrame)
+        packet.name = self.depth
+
+        config = msgs[self.configs]
+
+        drawMappings(packet, config)
+        super().newMsgs(packet)
+
 
 class DisparityVisualizer(BaseVisualizer):
-    def __init__(self,
-                 frameStream: str,
-                 ) -> None:
-        """
-        Colorize & visualize depth frames.
-        """
-        super().__init__(frameStream)
+    multiplier: float #
+    def __init__(self, xout: XoutDisparity) -> None:
+        super().__init__(xout.frames.name)
+        self.multiplier = 255.0 / xout.max_disp
+
 
     def newMsgs(self, msgs: Dict):
-        if super().name in msgs:
-            frame: dai.ImgFrame = msgs[super().name]
-            cv2.imshow(super().name, colorizeDepth(frame))
-
-
+        packet = FramePacket()
+        packet.imgFrame = msgs[super().name]
+        packet.frame = colorizeDisparity(packet.imgFrame, self.multiplier)
+        packet.name = super().name
+        super().newMsgs(packet)
 
 class DetectionVisualizer(BaseVisualizer):
     detectionStream: str  # Detection stream name

@@ -31,6 +31,60 @@ class XoutFrames(XoutBase):
 
         self.queue.put({name: msg}, block=False)
 
+class XoutDisparity(XoutFrames):
+    max_disp: float
+    def __init__(self, cb: Callable, frames: StreamXout, max_disp: float):
+        super().__init__(cb, frames)
+        self.max_disp = max_disp
+
+class XoutDepth(XoutFrames):
+    def __init__(self, cb: Callable, frames: StreamXout):
+        super().__init__(cb, frames)
+
+class XoutSpatialBbMappings(XoutBase):
+    # Streams
+    frames: StreamXout
+    configs: StreamXout
+
+    # Save messages
+    depth_msg: Optional[dai.ImgFrame] = None
+    config_msg: Optional[dai.SpatialLocationCalculatorConfig] = None
+
+    def __init__(self, cb: Callable, frames: StreamXout, configs: StreamXout):
+        self.frames = frames
+        self.configs = configs
+        super().__init__()
+        self.setup_base(cb)
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames, self.configs]
+
+    def newMsg(self, name: str, msg: dai.Buffer) -> None:
+        # Ignore frames that we aren't listening for
+        if name not in self._streams: return
+
+        if name == self.frames.name:
+            self.depth_msg = msg
+
+        if name == self.configs.name:
+            self.config_msg = msg
+
+        if self.depth_msg and self.config_msg:
+
+            if self.queue.full():
+                self.queue.get()  # Get one, so queue isn't full
+
+            msgs = {
+                self.configs.name: self.config_msg,
+                self.frames.name: self.depth_msg,
+            }
+            self.queue.put(msgs, block=False)
+
+            self.config_msg = None
+            self.depth_msg = None
+
+
+
 
 class XoutSequenceSync(XoutBase):
     """
@@ -81,22 +135,6 @@ class XoutSequenceSync(XoutBase):
                 if int(name) > int(seq):
                     newMsgs[name] = msg
             self.msgs = newMsgs
-
-
-class XoutSpatialBoundingBox(XoutSequenceSync):
-    frames: StreamXout
-    bb_stream: StreamXout
-
-    def __init__(self, nnComp, cb: Callable, frames: StreamXout, bb_stream: StreamXout):
-        self.frames = frames
-        self.bb_stream = bb_stream
-        # Save StreamXout before initializing super()!
-        super().__init__()
-        self.setup_base(cb)
-        self.nnComp = nnComp
-
-    def xstreams(self) -> List[StreamXout]:
-        return [self.frames, self.bb_stream]
 
 
 class XoutNnResults(XoutSequenceSync):

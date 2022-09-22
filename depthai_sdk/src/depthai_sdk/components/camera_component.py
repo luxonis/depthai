@@ -173,7 +173,7 @@ class CameraComponent(Component):
 
             if self._replay:
                 self._replay.setResizeColor(preview)
-            elif self._isColor():
+            elif self.isColor():
                 self.camera.setPreviewSize(preview)
             else:
                 # TODO: Use ImageManip to set mono frame size
@@ -185,7 +185,7 @@ class CameraComponent(Component):
                             ) -> None:
         raise NotImplementedError()
         # TODO: add option for other configs
-        if not self._isColor():
+        if not self.isColor():
             print("Attempted to configure ColorCamera, but this component doesn't have it. Config attempt ignored.")
             return
 
@@ -196,7 +196,7 @@ class CameraComponent(Component):
                 colorOrder = getattr(dai.ColorCameraProperties.ColorOrder, colorOrder.upper())
             self.camera.getColorOrder(colorOrder)
 
-    def _isColor(self) -> bool:
+    def isColor(self) -> bool:
         return self._cam_type == dai.node.ColorCamera
 
     def _isMono(self) -> bool:
