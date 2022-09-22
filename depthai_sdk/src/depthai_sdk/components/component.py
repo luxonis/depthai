@@ -1,7 +1,7 @@
 import depthai as dai
-from typing import Optional, Union, Type, Dict, Tuple
-import random
+from typing import Optional, Union, Type, Dict, Tuple, List, Callable
 from ..replay import Replay
+from ..classes.xout_base import XoutBase
 from abc import ABC, abstractmethod
 
 class Component(ABC):
@@ -12,13 +12,15 @@ class Component(ABC):
 
     # Camera object can loop through all components to get all XLinkOuts
     # Dict[str, Typle(Component type, dai msg type)]
-    xouts: Dict[str, Tuple[Type, Type]]
-    def __init__(self) -> None:
+    xouts: List[XoutBase]
+    streams_created: List[str]
+
+    def __init__(self):
         """
         On init, components should only parse and save passed settings. Pipeline building process
         should be done on when user starts the Camera.
         """
-        self.xouts = {}
+        self.xouts: List[str] = []
 
     def _forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
         """
@@ -29,34 +31,27 @@ class Component(ABC):
         return None
 
     @abstractmethod
+    def out(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+        """
+        Main XLink output (to the host) from the component. Component is already initialized (_update_device_info()
+        is called).
+        @return:
+        """
+        raise NotImplementedError("Every component needs to include 'out()' method!")
+
+    @abstractmethod
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         """
         This function will be called after the app connects to the Device
         """
         raise NotImplementedError("Every component needs to include 'updateDeviceInfo()' method!")
 
-    def _create_xout(self,
-                     pipeline: dai.Pipeline,
-                     type: Type,
-                     name: Union[str, bool],
-                     out: dai.Node.Output,
-                     depthaiMsg: Type,
-                     fpsLimit: Optional[float] = None) -> None:
+    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase):
+        for xstream in xout.xstreams():
+            if xstream.name in self.xouts:
+                continue
 
-        # If Replay we don't want to have XLinkIn->XLinkOut. Will read
-        # frames directly from last ImgFrame sent by the Replay module.
-        if isinstance(name, bool):
-            name = f"__{str(type)}_{random.randint(100,999)}"
-
-        if type == Replay:
-            self.xouts[name] = (type, dai.ImgFrame)
-            return
-        
-        xout = pipeline.create(dai.node.XLinkOut)
-        xout.setStreamName(name)
-        out.link(xout.input)
-
-        if fpsLimit:
-            xout.setFpsLimit(fpsLimit)
-
-        self.xouts[name] = (type, depthaiMsg)
+            xout = pipeline.createXLinkOut()
+            xout.setStreamName(xstream.name)
+            xstream.stream.link(xout.input)
+            self.xouts.append(xstream.name)

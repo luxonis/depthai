@@ -4,9 +4,8 @@ import cv2
 from depthai_sdk import OakCamera, BaseVisualizer, FramePosition
 
 with OakCamera(recording='people-images-01') as oak:
-    color = oak.create_camera('color', out='color')
-    nn = oak.create_nn('person-detection-retail-0013', color, out='dets')
-    nn.config_nn(passthroughOut=True)
+    color = oak.create_camera('color')
+    nn = oak.create_nn('person-detection-retail-0013', color)
     oak.replay.setFps(3)
 
     def cb(msgs, frame):

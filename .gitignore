@@ -62,3 +62,6 @@ venv/
 
 # DepthAI recordings
 recordings/
+
+# PyPi token
+.pypirc

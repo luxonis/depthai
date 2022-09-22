@@ -4,6 +4,8 @@ import depthai as dai
 from ..replay import Replay
 from .camera_helper import *
 from .parser import parseResolution, parseEncode
+from ..classes.xout_base import XoutBase, StreamXout
+from ..classes.xout import XoutFrames
 
 
 class CameraComponent(Component):
@@ -12,14 +14,14 @@ class CameraComponent(Component):
     encoder: dai.node.VideoEncoder = None
 
     out: dai.Node.Output = None  # Node output to be used as eg. an input into NN
-    out_size: Tuple[int,int] # Output size
+    out_size: Tuple[int, int]  # Output size
 
     # Setting passed at init
     _replay: Replay  # Replay module
-    _out: Union[None, bool, str]
     _fps: Optional[float]
     _args: Dict
     _control: bool
+    _source: str
 
     # Parsed from settings
     _cam_type: Union[Type[dai.node.ColorCamera], Type[dai.node.MonoCamera]] = None
@@ -33,7 +35,6 @@ class CameraComponent(Component):
                  resolution: Union[
                      None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
-                 out: Union[None, bool, str] = None,
                  encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                  control: bool = False,
                  replay: Optional[Replay] = None,
@@ -53,8 +54,8 @@ class CameraComponent(Component):
         super().__init__()
 
         # Save passed settings
+        self._source = source
         self._replay = replay
-        self._out = out
         self._fps = fps
         self._args = args
         self._control = control
@@ -66,16 +67,6 @@ class CameraComponent(Component):
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         # Create the camera
         self._createCam(pipeline, device)
-
-        # Create XLinkOut after we know camera specs
-        if self._out:
-            super()._create_xout(
-                pipeline,
-                type(self._replay) if self._replay else type(self),
-                name=self._out,
-                out=self.out,
-                depthaiMsg=dai.ImgFrame
-            )
 
         if self._fps:
             (self.camera if self.camera else self._replay).setFps(self._fps)
@@ -90,10 +81,10 @@ class CameraComponent(Component):
         @param pipeline: dai.Pipeline
         """
         if self._replay:  # If replay, don't create camera node
-            res = self._replay.getShape(self._out)
+            res = self._replay.getShape(self._source)
             resize = getResize(res, width=1200)
             self._replay.setResizeColor(resize)
-            xin: dai.node.XLinkIn = getattr(self._replay, self._out)
+            xin: dai.node.XLinkIn = getattr(self._replay, self._source)
             xin.setMaxDataSize(resize[0] * resize[1] * 3)
             self.out_size = resize
             self.out = xin.out
@@ -114,7 +105,6 @@ class CameraComponent(Component):
             cams = device.getCameraSensorNames()
             # print('Available sensors on OAK:', cams)
             sensorName = cams[dai.CameraBoardSocket.RGB]
-
 
             if self._resolution is None:  # Find the closest resolution
                 self.camera.setResolution(getClosesResolution(sensorName, width=1200))
@@ -212,8 +202,7 @@ class CameraComponent(Component):
     def _isMono(self) -> bool:
         return self._cam_type == dai.node.MonoCamera
 
-    def configure_encoder(self,
-                          ):
+    def configure_encoder(self):
         """
         Configure quality, enable lossless,
         """
@@ -222,3 +211,9 @@ class CameraComponent(Component):
             return
 
         raise NotImplementedError()
+
+    def out(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+        # Main output is the
+        out = XoutFrames(callback, StreamXout(self.camera.id, self.out))
+        super()._create_xout(pipeline, out)
+        return out

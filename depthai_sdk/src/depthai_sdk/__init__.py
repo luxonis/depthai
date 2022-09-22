@@ -1,3 +1,4 @@
+from .classes.output_temp import OutputTemplate
 from .fps import *
 from .previews import *
 from .syncing import *
@@ -27,7 +28,7 @@ class OakCamera:
 
     # User should be able to access these:
     _pipeline: dai.Pipeline = None
-    oak: OakDevice = OakDevice()  # Init this object by default
+    oak: OakDevice  # Init this object by default
     args = None  # User defined arguments
     replay: Optional[Replay] = None
     components: List[Component] = []  # List of components
@@ -35,8 +36,7 @@ class OakCamera:
     usb2: bool = False  # Whether to force USB2 mode
     deviceName: str = None  # MxId / IP / USB port
 
-    visualizers: List[VisualizerManager] = []
-    syncs: List[Sync] = []
+    out_templates: List[OutputTemplate] = []
 
     # TODO: 
     # - available streams; query cameras, or Replay.getStreams(). Pass these to camera component
@@ -56,6 +56,7 @@ class OakCamera:
         """
         self.deviceName = device
         self.usb2 = usb2
+        self.oak = OakDevice()
 
         if args is not None:
             if isinstance(args, bool) and args:
@@ -78,7 +79,6 @@ class OakCamera:
                       resolution: Union[
                           None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
-                      out: Union[None, bool, str] = None,
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                       control: bool = False,
                       ) -> CameraComponent:
@@ -89,7 +89,6 @@ class OakCamera:
             source=source,
             resolution=resolution,
             fps=fps,
-            out=out,
             encode=encode,
             control=control,
             replay=self.replay,
@@ -99,7 +98,6 @@ class OakCamera:
     def create_nn(self,
                   model: Union[str, Path],
                   input: Union[CameraComponent, NNComponent, dai.Node.Output],
-                  out: Union[None, bool, str] = None,
                   type: Optional[str] = None,
                   tracker: bool = False,  # Enable object tracker - only for Object detection models
                   spatial: Union[None, bool, StereoComponent, dai.Node.Output] = None,
@@ -117,7 +115,6 @@ class OakCamera:
         return self._comp(NNComponent(
             model=model,
             input=input,
-            out=out,
             nnType=type,
             tracker=tracker,
             spatial=spatial,
@@ -127,7 +124,6 @@ class OakCamera:
     def create_stereo(self,
                       resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
-                      out: Optional[str] = None,  # 'depth', 'disparity', both seperated by comma? TBD
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
@@ -139,10 +135,8 @@ class OakCamera:
         return self._comp(StereoComponent(
             resolution=resolution,
             fps=fps,
-            out=out,
             left=left,
             right=right,
-            encode=encode,
             control=control,
             replay=self.replay,
             args=self.args,
@@ -200,13 +194,6 @@ class OakCamera:
         if self._pipeline is None:
             self.build() # Build the pipeline
 
-        # Set up Syncing classes and visualizers
-        for vis in self.visualizers:
-            vis.setup()
-        for sync in self.syncs:
-            sync.setup()
-            self.oak.sync.append(sync.base)
-
         self.oak.device.startPipeline(self._pipeline)
         self.oak.initCallbacks()
 
@@ -232,9 +219,11 @@ class OakCamera:
         if key == ord('q'):
             return False
 
+        # TODO: check if components have controls enabled and check whether key == `control`
+
         self.oak.checkSync()
 
-        return True
+        return True # TODO: check whether OAK is connectednnComp
 
     def running(self) -> bool:
         return True
@@ -253,7 +242,8 @@ class OakCamera:
         if self.replay:
             self.replay.initPipeline(self._pipeline)
 
-        # First go through each components to check whether any is forcing an OpenVINO version
+        # First go through each component to check whether any is forcing an OpenVINO version
+        # TODO: check each component's SHAVE usage
         for c in self.components:
             ov = c._forced_openvino_version()
             if ov:
@@ -261,6 +251,10 @@ class OakCamera:
                     raise Exception(
                         'Two components forced two different OpenVINO version! Please make sure that all your models are compiled using the same OpenVINO version.')
                 self._pipeline.setOpenVINOVersion(ov)
+
+        if self._pipeline.getRequiredOpenVINOVersion() == None:
+            # Force 2021.4 as it's better supported (blobconverter, compile tool) for now.
+            self._pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
         # Connect to the OAK camera
         self._init_device()
@@ -270,9 +264,13 @@ class OakCamera:
             # Update the component now that we can query device info
             component._update_device_info(self._pipeline, self.oak.device, self._pipeline.getOpenVINOVersion())
 
-            # check if out is enabled
-            for qName, (compType, daiMsgType) in component.xouts.items():
-                self.oak.queues[qName] = compType
+        # Create XLinkOuts based on visualizers/callbacks enabled
+        # TODO Refactor this, it's not clean at all
+        for out in self.out_templates:
+            xoutbase = out.output(self._pipeline, out.callback)
+            out.vis.setup(xoutbase)
+            self.oak.sync.append(xoutbase)
+
 
         return self._pipeline
 
@@ -288,24 +286,33 @@ class OakCamera:
         p = PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
 
 
-    def visualize(self, components: List[Component],
+    def visualize(self, output: Union[List, Callable, Component],
                   scale: Union[None, float, Tuple[int, int]] = None,
                   fps=False,
                   callback: Callable=None) -> VisualizerManager:
-        handlers = None
-        if fps:
-            self.oak.enable_fps(True)
-            handlers = self.oak.fpsHandlers
 
-        vis = VisualizerManager(components, scale, handlers, callback)
-        self.visualizers.append(vis)
-        self.synchronize(components, vis.new_msgs)
+        if isinstance(output, List):
+            for element in output:
+                self.visualize(element, scale, fps, callback)
+            return
+
+        if isinstance(output, Component):
+            output = output.out
+
+        vis = VisualizerManager(scale, self.oak.fpsHandlers, callback)
+        self.callback(output, vis.new_msgs, vis)
         return vis
 
-    def synchronize(self, components: List[Component], callback: Callable) -> Sync:
-        sync = Sync(components, callback)
-        self.syncs.append(sync)
-        return sync
+    def callback(self, output: Union[List, Callable, Component], callback: Callable, vis=None) -> None:
+        if isinstance(output, List):
+            for element in output:
+                self.callback(element, callback)
+            return
+
+        if isinstance(output, Component):
+            output = output.out
+
+        self.out_templates.append(OutputTemplate(output, callback, vis))
 
     @property
     def device(self) -> dai.Device:

@@ -14,7 +14,6 @@ class SpatialConfig:
     lowerThreshold: Optional[int] = None
     upperThreshold: Optional[int] = None
     calcAlgo: Optional[dai.SpatialLocationCalculatorAlgorithm] = None
-    out: Optional[Tuple[str, str]] = None
 
 class AspectRatioResizeMode(IntEnum):
     """

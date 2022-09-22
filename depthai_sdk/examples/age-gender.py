@@ -6,15 +6,14 @@ import cv2
 emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 
 with OakCamera() as oak:
-    color = oak.create_camera('color', out='color')
-
-    det = oak.create_nn('face-detection-retail-0004', color, out='dets')
+    color = oak.create_camera('color')
+    det = oak.create_nn('face-detection-retail-0004', color)
     # Passthrough is enabled for debugging purposes
     # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
-    det.config_nn(passthroughOut=True, aspectRatioResizeMode=AspectRatioResizeMode.CROP)
+    det.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.CROP)
 
-    emotion_nn = oak.create_nn('emotions-recognition-retail-0003', input=det, out='reid')
-    emotion_nn.config_multistage_nn(show_cropped_frames=True) # For debugging
+    emotion_nn = oak.create_nn('emotions-recognition-retail-0003', input=det)
+    # emotion_nn.config_multistage_nn(show_cropped_frames=True) # For debugging
 
     def cb(packet: TwoStagePacket):
         for det in packet.detections:
@@ -26,6 +25,6 @@ with OakCamera() as oak:
 
     # Visualize detections on the frame. Also display FPS on the frame. Don't show the frame but send the packet
     # to the callback function (where it will be displayed)
-    oak.visualize([color, det, emotion_nn], fps=True, callback=cb)
+    oak.visualize(emotion_nn, fps=True, callback=cb)
     # oak.show_graph() # Show pipeline graph, no need for now
     oak.start(blocking=True) # This call will block until the app is stopped (by pressing 'Q' button)

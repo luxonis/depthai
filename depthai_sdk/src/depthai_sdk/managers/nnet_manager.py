@@ -170,13 +170,13 @@ class NNetManager:
 
         nodes.xoutNn = pipeline.createXLinkOut()
         nodes.xoutNn.setStreamName("nnOut")
-        nodes.nn.out.link(nodes.xoutNn.input)
+        nodes.nn._out.link(nodes.xoutNn.input)
 
         if self.source == "host":
             nodes.xinNn = pipeline.createXLinkIn()
             nodes.xinNn.setMaxDataSize(self.inputSize[0] * self.inputSize[1] * 3)
             nodes.xinNn.setStreamName("nnIn")
-            nodes.xinNn.out.link(nodes.nn.input)
+            nodes.xinNn._out.link(nodes.nn.input)
         else:
             if useImageManip:
                 nodes.manipNn = pipeline.createImageManip()
@@ -184,7 +184,7 @@ class NNetManager:
                 # The NN model expects BGR input. By default ImageManip output type would be same as input (gray in this case)
                 nodes.manipNn.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
                 # NN inputs
-                nodes.manipNn.out.link(nodes.nn.input)
+                nodes.manipNn._out.link(nodes.nn.input)
                 nodes.manipNn.setKeepAspectRatio(not self._fullFov)
                 nodes.manipNn.setMaxOutputFrameSize(self.inputSize[0] * self.inputSize[1] * 3)
 
@@ -195,9 +195,9 @@ class NNetManager:
             if self.source == "color":
                 nodes.camRgb.preview.link(link_input)
             if self.source == "left":
-                nodes.monoLeft.out.link(link_input)
+                nodes.monoLeft._out.link(link_input)
             elif self.source == "right":
-                nodes.monoRight.out.link(link_input)
+                nodes.monoRight._out.link(link_input)
             elif self.source == "rectifiedLeft":
                 nodes.stereo.rectifiedLeft.link(link_input)
             elif self.source == "rectifiedRight":

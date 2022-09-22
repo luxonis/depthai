@@ -1,90 +1,51 @@
 import depthai as dai
-from typing import Dict, List, Any, Optional, Tuple, Callable
-from queue import Empty, Queue
-from abc import ABC, abstractmethod
+from typing import Dict, List, Any, Optional, Tuple, Callable, Union
+from .xout_base import XoutBase, StreamXout
 
-from ..components.component_group import ComponentGroup
-from ..components import Component
+"""
+Xout classes are abstracting streaming messages to the host computer (via XLinkOut) and syncing those messages
+on the host side before sending (synced) messages to message sinks (eg. visualizers, or loggers).
+TODO:
+- separate syncing logic from the class. XoutTwoStage should extend the XoutNnResults (currently can't as syncing logic is not separated)
+"""
 
-
-class BaseSync(ABC):
-    callbacks: List[Callable]  # List of callback to be called when we have new synced msgs
-    queue: Queue  # Queue to which (synced/non-synced) messages will be added
-    streams: List[str]  # Streams to listen for
-    components: List[Component]
-
-    def __init__(self, callbacks: List[Callable], components: List[Component]) -> None:
-        self.callbacks = callbacks
-        self.queue = Queue(maxsize=30)
-        self.components = components
-
-    def setup(self):
-        """
-        Set up the Syncing logic after the OAK is connected and all components are finalized
-        """
-        self.streams = []
-        for comp in self.components:
-            self.streams.extend([name for name, _ in comp.xouts.items()])
-
-    @abstractmethod
-    def newMsg(self, name: str, msg) -> None:
-        raise NotImplementedError()
-
-    # This approach is used as some functions (eg. imshow()) need to be called from
-    # main thread, and calling them from callback thread wouldn't work.
-    def checkQueue(self, block=False) -> None:
-        """
-        Checks queue for any available messages. If available, call callback. Non-blocking by default.
-        """
-        try:
-            msgs = self.queue.get(block=block)
-            if msgs is not None:
-                for cb in self.callbacks:  # Call all callbacks
-                    cb(msgs)
-        except Empty:  # Queue empty
-            pass
-
-
-class NoSync(BaseSync):
+class XoutFrames(XoutBase):
     """
-    Will call callback whenever it gets a new message
+    Single message, no syncing required
     """
-    msgs: Dict[str, List[dai.Buffer]] = dict()  # List of messages
+    frames: StreamXout
+    def __init__(self, cb: Callable, frames: StreamXout):
+        self.frames = frames
+        super().__init__()
+        self.setup_base(cb)
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames]
 
     def newMsg(self, name: str, msg) -> None:
         # Ignore frames that we aren't listening for
-        if name not in self.streams: return
+        if name not in self._streams: return
 
-        if name not in self.msgs: self.msgs[name] = []
+        if self.queue.full():
+            self.queue.get()  # Get one, so queue isn't full
 
-        self.msgs[name].append(msg)
-        msgsAvailableCnt = [0 < len(arr) for _, arr in self.msgs.items()].count(True)
+        self.queue.put({name: msg}, block=False)
 
-        if len(self.streams) == msgsAvailableCnt:
-            # We have at least 1 msg for each stream. Get the latest, remove all others.
-            ret = {}
-            for name, arr in self.msgs.items():
-                # print(f'len(msgs[{name}])', len(self.msgs[name]))
-                self.msgs[name] = self.msgs[name][-1:]  # Remove older msgs
-                # print(f'After removing - len(msgs[{name}])', len(self.msgs[name]))
-                ret[name] = arr[-1]
 
-            if self.queue.full():
-                self.queue.get()  # Get one, so queue isn't full
-
-            # print(time.time(),' Putting msg batch into queue. queue size', self.queue.qsize(), 'self.msgs len')
-
-            self.queue.put(ret, block=False)
-
-class SequenceSync(BaseSync):
+class XoutSequenceSync(XoutBase):
     """
     This class will sync all messages based on their sequence number
     """
-    msgs: Dict[str, Dict[str, dai.Buffer]] = dict()  # List of messages.
+    msgs: Dict[str, Dict[str, dai.Buffer]]  # List of messages.
+
+    def __init__(self):
+        super().__init__()
+        self.msgs = dict()
+
     """
     msgs = {seq: {stream_name: frame}}
     Example:
-    
+
     msgs = {
         '1': {
             'rgb': dai.Frame(),
@@ -99,7 +60,7 @@ class SequenceSync(BaseSync):
 
     def newMsg(self, name: str, msg) -> None:
         # Ignore frames that we aren't listening for
-        if name not in self.streams: return
+        if name not in self._streams: return
 
         # TODO: what if msg doesn't have sequence num?
         seq = str(msg.getSequenceNum())
@@ -107,7 +68,7 @@ class SequenceSync(BaseSync):
         if seq not in self.msgs: self.msgs[seq] = dict()
         self.msgs[seq][name] = msg
 
-        if len(self.streams) == len(self.msgs[seq]): # We have sequence num synced frames!
+        if len(self._streams) == len(self.msgs[seq]):  # We have sequence num synced frames!
 
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
@@ -120,6 +81,39 @@ class SequenceSync(BaseSync):
                 if int(name) > int(seq):
                     newMsgs[name] = msg
             self.msgs = newMsgs
+
+
+class XoutSpatialBoundingBox(XoutSequenceSync):
+    frames: StreamXout
+    bb_stream: StreamXout
+
+    def __init__(self, nnComp, cb: Callable, frames: StreamXout, bb_stream: StreamXout):
+        self.frames = frames
+        self.bb_stream = bb_stream
+        # Save StreamXout before initializing super()!
+        super().__init__()
+        self.setup_base(cb)
+        self.nnComp = nnComp
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames, self.bb_stream]
+
+
+class XoutNnResults(XoutSequenceSync):
+    frames: StreamXout
+    nn_results: StreamXout
+
+    def __init__(self, nnComp, cb: Callable, frames: StreamXout, nn_results: StreamXout):
+        self.frames = frames
+        self.nn_results = nn_results
+        # Save StreamXout before initializing super()!
+        super().__init__()
+        self.setup_base(cb)
+        self.nnComp = nnComp
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames, self.nn_results]
+
 
 # class TimestampSycn(BaseSync):
 #     """
@@ -153,52 +147,62 @@ class SequenceSync(BaseSync):
 #             self.queue.put(ret, block=False)
 
 
-class TwoStageSeqSync(BaseSync):
+class XoutTwoStage(XoutBase):
     """
     Two stage syncing based on sequence number. Each frame produces ImgDetections msg that contains X detections.
     Each detection (if not on blacklist) will crop the original frame and forward it to the second (stage) NN for
     inferencing.
     """
-    labels: Optional[List[int]] = None
-    scaleBbs: Optional[Tuple[int, int]] = None
-
-    msgs: Dict[str, Dict[str, Any]] = dict() # List of messages
+    msgs: Dict[str, Dict[str, Any]] = dict()  # List of messages
     """
     msgs = {
         '1': TwoStageSyncPacket(),
         '2': TwoStageSyncPacket(), 
     }
     """
-    group: ComponentGroup
-    def __init__(self, callbacks: List[Callable],
-                 group
-                 ):
-        super().__init__(callbacks, group.components)
+    labels: Optional[List[int]] = None
+    scaleBb: Optional[Tuple[int, int]] = None
 
-        if group.second_nn.multi_stage_config:
-            self.scaleBbs = group.second_nn.multi_stage_config.scaleBb
-            self.labels = group.second_nn.multi_stage_config.labels
+    frames: StreamXout
+    nn_results: StreamXout
+    second_nn: StreamXout
 
-        self.group = group
+    def __init__(self, detectionComp, cb: Callable, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
+        self.frames = frames
+        self.nn_results = detections
+        self.second_nn = second_nn
+        # Save StreamXout before initializing super()!
+        super().__init__()
+        self.setup_base(cb)
+
+        self.nnComp = detectionComp
+
+        conf = detectionComp._multi_stage_config # No types due to circular import...
+        if conf is not None:
+            self.labels = conf.labels
+            self.scaleBb = conf.scaleBb
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames, self.nn_results, self.second_nn]
 
     def newMsg(self, name: str, msg: dai.Buffer) -> None:
-        if name not in self.streams: return # From Replay modules. TODO: better handling?
+        if name not in self._streams: return  # From Replay modules. TODO: better handling?
 
         # TODO: what if msg doesn't have sequence num?
         seq = str(msg.getSequenceNum())
 
         if seq not in self.msgs:
             self.msgs[seq] = dict()
-            self.msgs[seq][self.group.second_nn_name] = []
-            self.msgs[seq][self.group.nn_name] = None
+            self.msgs[seq][self.second_nn.name] = []
+            self.msgs[seq][self.nn_results.name] = None
 
-        if name == self.group.second_nn_name:
+        if name == self.second_nn.name:
             self.msgs[seq][name].append(msg)
             # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
-        elif name == self.group.nn_name:
+        elif name == self.nn_results.name:
             self.add_detections(seq, msg)
             # print(f'Added detection seq {seq}')
-        elif name in self.group.frame_names:
+        elif name in self.frames.name:
             self.msgs[seq][name] = msg
             # print(f'Added frame seq {seq}')
         else:
@@ -226,19 +230,19 @@ class TwoStageSeqSync(BaseSync):
                     newMsgs[name] = msg
             self.msgs = newMsgs
 
-    def add_detections(self, seq:str , dets: dai.ImgDetections):
+    def add_detections(self, seq: str, dets: dai.ImgDetections):
         # Used to match the scaled bounding boxes by the 2-stage NN script node
-        self.msgs[seq][self.group.nn_name] = dets
+        self.msgs[seq][self.nn_results.name] = dets
 
-        if self.scaleBbs is None: return  # No scaling required, ignore
+        if self.scaleBb is None: return  # No scaling required, ignore
 
         for det in dets.detections:
             # Skip resizing BBs if we have whitelist and the detection label is not on it
             if self.labels and det.label not in self.labels: continue
-            det.xmin -= self.scaleBbs[0] / 100
-            det.ymin -= self.scaleBbs[1] / 100
-            det.xmax += self.scaleBbs[0] / 100
-            det.ymax += self.scaleBbs[1] / 100
+            det.xmin -= self.scaleBb[0] / 100
+            det.ymin -= self.scaleBb[1] / 100
+            det.xmax += self.scaleBb[0] / 100
+            det.ymax += self.scaleBb[1] / 100
 
     def synced(self, seq: str) -> bool:
         """
@@ -249,17 +253,15 @@ class TwoStageSeqSync(BaseSync):
         """
         packet = self.msgs[seq]
 
-        for name in self.group.frame_names:
+        for name in self.frames.name:
             # print(f'checking if stream {name} in {self.group.frame_names}')
-            if name.startswith('__'):
-                continue # Frame not required for syncing purposes (debugging stream)
             if name not in packet:
-                return False  # We don't have required ImgFrame
+                return False  # We don't have required ImgFrames
 
-        if not packet[self.group.nn_name]:
+        if not packet[self.nn_results.name]:
             return False  # We don't have dai.ImgDetections
 
-        if len(packet[self.group.second_nn_name]) < self.required_recognitions(seq):
+        if len(packet[self.second_nn.name]) < self.required_recognitions(seq):
             return False  # We don't have enough 2nd stage NN results
         return True
 
@@ -267,7 +269,7 @@ class TwoStageSeqSync(BaseSync):
         """
         Required recognition results for this packet, which depends on number of detections (and white-list labels)
         """
-        dets: List[dai.ImgDetection] = self.msgs[seq][self.group.nn_name].detections
+        dets: List[dai.ImgDetection] = self.msgs[seq][self.nn_results.name].nn_results
         if self.labels:
             return len([det for det in dets if det.label in self.labels])
         else:

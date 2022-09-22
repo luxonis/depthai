@@ -1,11 +1,14 @@
 from .component import Component
 from .camera_component import CameraComponent
-from typing import Optional, Union, Tuple, Any, Dict
+from typing import Optional, Union, Tuple, Any, Dict, Callable
 import depthai as dai
 from ..replay import Replay
 
 
 class StereoComponent(Component):
+    def out(selfm, pipeline: dai.Pipeline, callback: Callable):
+        pass
+
     # Users should have access to these nodes
     node: dai.node.StereoDepth
 
@@ -17,12 +20,10 @@ class StereoComponent(Component):
     _fps: Optional[float]
     _control: bool
     _args: Dict
-    _out: Optional[str] = None
 
     def __init__(self,
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
-                 out: Optional[str] = None,  # 'depth', 'disparity', both separated by comma? TBD
                  left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                  right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
                  control: bool = False,
@@ -45,7 +46,6 @@ class StereoComponent(Component):
         self._fps = fps
         self._args = args
         self._control = control
-        self._out = out
 
         self.left = left
         self.right = right

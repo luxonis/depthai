@@ -1,6 +1,6 @@
 from typing import Dict
 import time
-from ..components import NNComponent, ComponentGroup
+from ..classes.xout import XoutNnResults, XoutTwoStage
 from enum import IntEnum
 from .visualizer_helper import *
 from .packets import DetectionPacket, FramePacket, TwoStagePacket
@@ -119,9 +119,7 @@ class BaseVisualizer:
 
 
 class FrameVisualizer(BaseVisualizer):
-    def __init__(self,
-                 frameStream: str,
-                 ) -> None:
+    def __init__(self, frameStream: str) -> None:
         """
         Visualizes frames. No drawing, callbacks, just display.
         """
@@ -133,16 +131,42 @@ class FrameVisualizer(BaseVisualizer):
             cv2.imshow(super().name, frame.getCvFrame())
 
 
+class DepthVisualizer(BaseVisualizer):
+    def __init__(self,
+                 frameStream: str,
+                 ) -> None:
+        """
+        Colorize & visualize depth frames.
+        """
+        super().__init__(frameStream)
+
+    def newMsgs(self, msgs: Dict):
+        if super().name in msgs:
+            frame: dai.ImgFrame = msgs[super().name]
+            cv2.imshow(super().name, colorizeDepth(frame))
+
+class DisparityVisualizer(BaseVisualizer):
+    def __init__(self,
+                 frameStream: str,
+                 ) -> None:
+        """
+        Colorize & visualize depth frames.
+        """
+        super().__init__(frameStream)
+
+    def newMsgs(self, msgs: Dict):
+        if super().name in msgs:
+            frame: dai.ImgFrame = msgs[super().name]
+            cv2.imshow(super().name, colorizeDepth(frame))
+
+
+
 class DetectionVisualizer(BaseVisualizer):
     detectionStream: str  # Detection stream name
     labels: List[Tuple[str, Tuple[int, int, int]]] = None
     normalizer: NormalizeBoundingBox
 
-    def __init__(self,
-                 frameStream: str,
-                 detectionsStream: str,
-                 detectorComp: NNComponent
-                 ) -> None:
+    def __init__(self, xout: XoutNnResults) -> None:
         """
         Visualizes object detection results.
 
@@ -150,7 +174,8 @@ class DetectionVisualizer(BaseVisualizer):
             frameStream (str): Name of the frame stream to which we will draw detection results
             detectionsStream (str): Name of the detections stream
         """
-        super().__init__(frameStream)
+        super().__init__(xout.frames.name)
+        detectorComp = xout.nnComp
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
         if detectorComp.labels:
             self.labels = []
@@ -170,7 +195,7 @@ class DetectionVisualizer(BaseVisualizer):
 
                 self.labels.append((text, color))
 
-        self.detectionStream = detectionsStream
+        self.detectionStream = xout.nn_results.name
         self.normalizer = NormalizeBoundingBox(detectorComp.size, detectorComp.arResizeMode)
 
     def get_imgFrame(self, msgs: Dict) -> dai.ImgFrame:
@@ -192,17 +217,11 @@ class DetectionVisualizer(BaseVisualizer):
 
 class DetectionClassificationVisualizer(DetectionVisualizer):
     whitelist_labels: List[int]
-    def __init__(self,
-                 frame_name: str,
-                 group: ComponentGroup,
-                 ) -> None:
+    def __init__(self, xout: XoutTwoStage) -> None:
 
-        super().__init__(frameStream=frame_name,
-                         detectionsStream=group.nn_name,
-                         detectorComp=group.nn_component)
-
-        self.second_nn_stream = group.second_nn_name
-        self.whitelist_labels = group.second_nn.labels
+        super().__init__(xout) # Not ideal
+        self.second_nn_stream = xout.second_nn.name
+        self.whitelist_labels = xout.labels
 
     def get_nnData(self, msgs: Dict) -> List[dai.NNData]:
         return msgs[self.second_nn_stream]
