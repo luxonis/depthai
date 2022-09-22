@@ -195,7 +195,8 @@ class OakCamera:
             self.build() # Build the pipeline
 
         self.oak.device.startPipeline(self._pipeline)
-        self.oak.initCallbacks()
+
+        self.oak.initCallbacks(self.components)
 
         if self.replay:
             self.replay.createQueues(self.oak.device)

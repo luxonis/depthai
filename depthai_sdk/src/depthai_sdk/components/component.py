@@ -7,7 +7,7 @@ class Component(ABC):
     """
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
-    xouts: List[XoutBase]
+    xouts: List[str]
 
     def __init__(self):
         """
@@ -45,10 +45,10 @@ class Component(ABC):
             if xstream.name in self.xouts:
                 continue
 
-            self.xouts.append(xstream.name)
             if isinstance(xstream, ReplayStream):
                 continue
 
             xout = pipeline.createXLinkOut()
             xout.setStreamName(xstream.name)
             xstream.stream.link(xout.input)
+            self.xouts.append(xstream.name)

@@ -3,6 +3,7 @@ from typing import Type, Dict, List
 from .classes.xout_base import XoutBase, ReplayStream
 from .visualizing import FPS
 from .replay import Replay
+from .components.component import Component
 
 
 class OakDevice:
@@ -23,16 +24,12 @@ class OakDevice:
     def info(self) -> dai.DeviceInfo:
         return self.device.getDeviceInfo()
 
-    def initCallbacks(self):
-        for xout in self.oak_out_streams:
-            for stream in xout.xstreams():
-                if isinstance(stream, ReplayStream):
-                    continue # Replay stream, we skip this to preserve bandwidth
-
-                self.device.getOutputQueue(stream.name, maxSize=4, blocking=False).addCallback(
-                    lambda name, msg: self.newMsg(stream.name, msg))
-                self.fpsHandlers[stream.name] = FPS()
-
+    def initCallbacks(self, components: List[Component]):
+        for comp in components:
+            for name in comp.xouts:
+                self.fpsHandlers[name] = FPS()
+                self.device.getOutputQueue(name, maxSize=4, blocking=False).addCallback(
+                    lambda name, msg: self.newMsg(name, msg))
 
     def newMsg(self, name, msg):
         for sync in self.oak_out_streams:
