@@ -35,7 +35,7 @@ class FramePacket:
 class DetectionPacket(FramePacket):
     # Original depthai messages
     imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]
-    detections: List[Detection] = []
+    detections: List[Detection]
 
     def __init__(self,
                  name: str,
@@ -46,6 +46,7 @@ class DetectionPacket(FramePacket):
         self.imgFrame = imgFrame
         self.imgDetections = imgDetections
         self.frame = self.imgFrame.getCvFrame()
+        self.detections = []
 
     def isSpatialDetection(self) -> bool:
         return isinstance(self.imgDetections, dai.SpatialImgDetections)
@@ -90,6 +91,9 @@ class TwoStagePacket(FramePacket):
         self.frame = self.imgFrame.getCvFrame()
         self.nnData = nnData
         self.labels = labels
+
+    def isSpatialDetection(self) -> bool:
+        return isinstance(self.imgDetections, dai.SpatialImgDetections)
 
     def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
         det = TwoStageDetection()

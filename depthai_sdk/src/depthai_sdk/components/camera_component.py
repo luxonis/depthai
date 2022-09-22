@@ -4,7 +4,7 @@ import depthai as dai
 from ..replay import Replay
 from .camera_helper import *
 from .parser import parseResolution, parseEncode
-from ..classes.xout_base import XoutBase, StreamXout
+from ..classes.xout_base import XoutBase, StreamXout, ReplayStream
 from ..classes.xout import XoutFrames
 
 
@@ -212,8 +212,15 @@ class CameraComponent(Component):
 
         raise NotImplementedError()
 
+    def get_stream_xout(self) -> StreamXout:
+        if self._replay:
+            return ReplayStream(self._source)
+        else:
+            return StreamXout(self.camera.id, self.out)
+
+
     def out(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
         # Main output is the
-        out = XoutFrames(callback, StreamXout(self.camera.id, self.out))
+        out = XoutFrames(callback, self.get_stream_xout())
         super()._create_xout(pipeline, out)
         return out

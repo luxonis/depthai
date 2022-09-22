@@ -10,6 +10,11 @@ class StreamXout:
         self.stream = out
         self.name = f"{str(id)}_{out.name}"
 
+class ReplayStream(StreamXout):
+    def __init__(self, name: str):
+        self.name = name
+
+
 class XoutBase(ABC):
     callbacks: List[Callable]  # List of callback to be called when we have new synced msgs
     queue: Queue  # Queue to which (synced/non-synced) messages will be added

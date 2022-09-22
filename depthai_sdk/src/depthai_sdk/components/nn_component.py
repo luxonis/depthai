@@ -442,21 +442,21 @@ class NNComponent(Component):
         # Check if it's XoutNnResults or XoutTwoStage
 
         if self._isMultiStage():
-            out = XoutTwoStage(self, callback,
-                               StreamXout(self._input._input.camera.id, self._input._input.out), # CameraComponent
+            out = XoutTwoStage(self._input, self, callback,
+                               self._input._input.get_stream_xout(), # CameraComponent
                                StreamXout(self._input.node.id, self._input.node.out), # NnComponent (detections)
                                StreamXout(self.node.id, self.node.out), # This NnComponent (2nd stage NN)
                                )
         else:
             out = XoutNnResults(self, callback,
-                                StreamXout(id(self._input), self._input.out),
-                                StreamXout(self.node.id, self.node.out))
+                                self._input.get_stream_xout(), # CameraComponent
+                                StreamXout(self.node.id, self.node.out)) # NnComponent
         super()._create_xout(pipeline, out)
         return out
 
     def out_passthrough(self, pipeline: dai.Pipeline, callback: Callable) -> XoutNnResults:
         if self._isMultiStage():
-            out = XoutTwoStage(self, callback,
+            out = XoutTwoStage(self._input, self, callback,
                                StreamXout(self._input.node.id, self._input.node.passthrough), # Passthrough frame
                                StreamXout(self._input.node.id, self._input.node.out), # NnComponent (detections)
                                StreamXout(self.node.id, self.node.out), # This NnComponent (2nd stage NN)

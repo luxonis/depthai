@@ -3,7 +3,7 @@ import time
 from ..classes.xout import XoutNnResults, XoutTwoStage
 from enum import IntEnum
 from .visualizer_helper import *
-from .packets import DetectionPacket, FramePacket, TwoStagePacket
+from ..classes.packets import DetectionPacket, FramePacket, TwoStagePacket
 
 
 class FramePosition(IntEnum):
@@ -56,31 +56,34 @@ class BaseVisualizer:
 
     def newMsgs(self, input: Union[Dict, FramePacket]):
         if isinstance(input, Dict):
-            frame = input[self._frame_stream].getCvFrame()
+            packet = FramePacket()
+            packet.imgFrame = input[self._frame_stream]
+            packet.frame = packet.imgFrame.getCvFrame()
+            packet.name = self._frame_stream
         elif isinstance(input, FramePacket):
-            frame = input.frame
+            packet = input
         else:
             raise ValueError('Input to BaseVisualizer.newMsgs has to be either Dict or FramePacket!')
 
         if self._fps:
             i = 0
             for name, handler in self._fps.items():
-                Visualizer.putText(frame, "{} FPS: {:.1f}".format(name, handler.fps()), (10, 20 + i * 20), scale=0.7)
+                Visualizer.putText(packet.frame, "{} FPS: {:.1f}".format(name, handler.fps()), (10, 20 + i * 20), scale=0.7)
                 i += 1
 
         if self._scale:
             if isinstance(self._scale, Tuple):
-                frame = cv2.resize(frame, self._scale)  # Resize frame
+                frame = cv2.resize(packet.frame, self._scale)  # Resize frame
             elif isinstance(self._scale, float):
-                frame = cv2.resize(frame, (
-                    int(frame.shape[1] * self._scale),
-                    int(frame.shape[0] * self._scale)
+                frame = cv2.resize(packet.frame, (
+                    int(packet.frame.shape[1] * self._scale),
+                    int(packet.frame.shape[0] * self._scale)
                 ))
 
         if self._callback:  # Don't display frame, call the callback
-            self._callback(input)
+            self._callback(packet)
         else:
-            cv2.imshow(self.name, frame)
+            cv2.imshow(self.name, packet.frame)
 
     @property
     def name(self) -> str:
@@ -175,7 +178,7 @@ class DetectionVisualizer(BaseVisualizer):
             detectionsStream (str): Name of the detections stream
         """
         super().__init__(xout.frames.name)
-        detectorComp = xout.nnComp
+        detectorComp = xout.detNn
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
         if detectorComp.labels:
             self.labels = []

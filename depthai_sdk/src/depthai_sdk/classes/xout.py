@@ -103,13 +103,13 @@ class XoutNnResults(XoutSequenceSync):
     frames: StreamXout
     nn_results: StreamXout
 
-    def __init__(self, nnComp, cb: Callable, frames: StreamXout, nn_results: StreamXout):
+    def __init__(self, detNn, cb: Callable, frames: StreamXout, nn_results: StreamXout):
         self.frames = frames
         self.nn_results = nn_results
         # Save StreamXout before initializing super()!
         super().__init__()
         self.setup_base(cb)
-        self.nnComp = nnComp
+        self.detNn = detNn
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.nn_results]
@@ -167,7 +167,7 @@ class XoutTwoStage(XoutBase):
     nn_results: StreamXout
     second_nn: StreamXout
 
-    def __init__(self, detectionComp, cb: Callable, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
+    def __init__(self, detNn, secondNn, cb: Callable, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
         self.frames = frames
         self.nn_results = detections
         self.second_nn = second_nn
@@ -175,9 +175,10 @@ class XoutTwoStage(XoutBase):
         super().__init__()
         self.setup_base(cb)
 
-        self.nnComp = detectionComp
+        self.detNn = detNn
+        self.secondNn = secondNn
 
-        conf = detectionComp._multi_stage_config # No types due to circular import...
+        conf = detNn._multi_stage_config # No types due to circular import...
         if conf is not None:
             self.labels = conf.labels
             self.scaleBb = conf.scaleBb
@@ -253,23 +254,22 @@ class XoutTwoStage(XoutBase):
         """
         packet = self.msgs[seq]
 
-        for name in self.frames.name:
-            # print(f'checking if stream {name} in {self.group.frame_names}')
-            if name not in packet:
-                return False  # We don't have required ImgFrames
+        if self.frames.name not in packet:
+            return False  # We don't have required ImgFrames
 
         if not packet[self.nn_results.name]:
             return False  # We don't have dai.ImgDetections
 
         if len(packet[self.second_nn.name]) < self.required_recognitions(seq):
             return False  # We don't have enough 2nd stage NN results
+
         return True
 
     def required_recognitions(self, seq: str) -> int:
         """
         Required recognition results for this packet, which depends on number of detections (and white-list labels)
         """
-        dets: List[dai.ImgDetection] = self.msgs[seq][self.nn_results.name].nn_results
+        dets: List[dai.ImgDetection] = self.msgs[seq][self.nn_results.name].detections
         if self.labels:
             return len([det for det in dets if det.label in self.labels])
         else:

@@ -1,6 +1,6 @@
 import depthai as dai
 from typing import Type, Dict, List
-from .classes.xout_base import XoutBase
+from .classes.xout_base import XoutBase, ReplayStream
 from .visualizing import FPS
 from .replay import Replay
 
@@ -10,7 +10,7 @@ class OakDevice:
     fpsHandlers: Dict[str, FPS] = dict()
     # str: Name (XLinkOut stream name, or replay stream)
     # Type: Component name, or Replay
-    sync: List[XoutBase] = []
+    oak_out_streams: List[XoutBase] = []
 
     @property
     def imageSensors(self) -> List[dai.CameraBoardSocket]:
@@ -24,16 +24,18 @@ class OakDevice:
         return self.device.getDeviceInfo()
 
     def initCallbacks(self):
-        for xout in self.sync:
-            for name in xout._streams:
-                self.device.getOutputQueue(name, maxSize=4, blocking=False).addCallback(
-                    lambda name, msg: self.newMsg(name, msg))
-                self.fpsHandlers[name] = FPS()
+        for xout in self.oak_out_streams:
+            for stream in xout.xstreams():
+                if isinstance(stream, ReplayStream):
+                    continue # Replay stream, we skip this to preserve bandwidth
+
+                self.device.getOutputQueue(stream.name, maxSize=4, blocking=False).addCallback(
+                    lambda name, msg: self.newMsg(stream.name, msg))
+                self.fpsHandlers[stream.name] = FPS()
 
 
     def newMsg(self, name, msg):
-        print('New msg', name, msg)
-        for sync in self.sync:
+        for sync in self.oak_out_streams:
             sync.newMsg(name, msg)
 
         if name not in self.fpsHandlers:
@@ -44,5 +46,5 @@ class OakDevice:
         """
         Checks whether there are new synced messages, non-blocking.
         """
-        for sync in self.sync:
+        for sync in self.oak_out_streams:
             sync.checkQueue(block=False)  # Don't block!

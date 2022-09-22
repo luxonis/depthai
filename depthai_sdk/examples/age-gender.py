@@ -25,6 +25,6 @@ with OakCamera() as oak:
 
     # Visualize detections on the frame. Also display FPS on the frame. Don't show the frame but send the packet
     # to the callback function (where it will be displayed)
-    oak.visualize(emotion_nn, fps=True, callback=cb)
+    oak.visualize([emotion_nn, emotion_nn.out_passthrough], fps=True, callback=cb)
     # oak.show_graph() # Show pipeline graph, no need for now
     oak.start(blocking=True) # This call will block until the app is stopped (by pressing 'Q' button)

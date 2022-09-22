@@ -1,7 +1,6 @@
 from typing import Tuple, Union, Dict, Callable
 from .visualizers import BaseVisualizer, DetectionVisualizer, DetectionClassificationVisualizer, FPS, FrameVisualizer, FramePosition
 from .visualizer_helper import Visualizer
-from .packets import TwoStagePacket, DetectionPacket, FramePacket
 from ..classes.xout import XoutNnResults, XoutFrames, XoutTwoStage
 
 class VisualizerManager:

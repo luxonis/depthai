@@ -269,7 +269,7 @@ class OakCamera:
         for out in self.out_templates:
             xoutbase = out.output(self._pipeline, out.callback)
             out.vis.setup(xoutbase)
-            self.oak.sync.append(xoutbase)
+            self.oak.oak_out_streams.append(xoutbase)
 
 
         return self._pipeline

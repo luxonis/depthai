@@ -1,19 +1,13 @@
 import depthai as dai
-from typing import Optional, Union, Type, Dict, Tuple, List, Callable
-from ..replay import Replay
-from ..classes.xout_base import XoutBase
+from typing import Optional, List, Callable
+from ..classes.xout_base import XoutBase, ReplayStream
 from abc import ABC, abstractmethod
 
 class Component(ABC):
     """
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
-    # nodes: List[dai.Node] # List of dai.nodes that this components abstracts
-
-    # Camera object can loop through all components to get all XLinkOuts
-    # Dict[str, Typle(Component type, dai msg type)]
     xouts: List[XoutBase]
-    streams_created: List[str]
 
     def __init__(self):
         """
@@ -51,7 +45,10 @@ class Component(ABC):
             if xstream.name in self.xouts:
                 continue
 
+            self.xouts.append(xstream.name)
+            if isinstance(xstream, ReplayStream):
+                continue
+
             xout = pipeline.createXLinkOut()
             xout.setStreamName(xstream.name)
             xstream.stream.link(xout.input)
-            self.xouts.append(xstream.name)

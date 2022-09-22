@@ -4,7 +4,7 @@ from typing import Tuple, Union, List, Any, Callable
 import cv2
 import distinctipy
 from .normalize_bb import NormalizeBoundingBox
-from .packets import DetectionPacket, TwoStageDetection
+from ..classes.packets import DetectionPacket, TwoStageDetection
 
 
 
@@ -13,6 +13,11 @@ front_color = (255, 255, 255)
 text_type = cv2.FONT_HERSHEY_SIMPLEX
 line_type = cv2.LINE_AA
 class Visualizer:
+    bg_color = (0, 0, 0)
+    front_color = (255, 255, 255)
+    text_type = cv2.FONT_HERSHEY_SIMPLEX
+    line_type = cv2.LINE_AA
+
     @staticmethod
     def putText(frame: np.ndarray,
                 text: str,
@@ -155,7 +160,7 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
             txt, color = labelMap[detection.label]
         else:
             txt = str(detection.label)
-            color = Visualizer.front_color
+            color = front_color
 
         Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
         if packet.isSpatialDetection():
