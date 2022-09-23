@@ -30,6 +30,22 @@ There are two installation steps that need to be performed to make sure the demo
   $ python3 install_requirements.py
   ```
 
+## Docker
+
+One may start any DepthAI programs also through Docker:
+(Allowing X11 access from container might be required: `xhost local:root`)
+
+DepthAI Demo
+```
+docker run --privileged -v /dev/bus/usb:/dev/bus/usb --device-cgroup-rule='c 189:* rmw' -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --network host --rm -i -t luxonis/depthai:latest python3 /depthai/depthai_demo.py
+```
+
+Calibration
+```
+docker run --privileged -v /dev/bus/usb:/dev/bus/usb --device-cgroup-rule='c 189:* rmw' -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix --network host --rm -i -t luxonis/depthai:latest python3 /depthai/calibrate.py [parameters]
+```
+
+
 ## Usage
 
 This repository and the demo script itself can be used in various independent cases:
