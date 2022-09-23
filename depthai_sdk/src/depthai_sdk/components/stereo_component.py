@@ -11,7 +11,7 @@ from .parser import parse_cam_socket
 
 class StereoComponent(Component):
     # Users should have access to these nodes
-    node: dai.node.StereoDepth
+    node: dai.node.StereoDepth = None
 
     left: Union[None, dai.Node.Output, CameraComponent] = None
     right: Union[None, dai.Node.Output, CameraComponent] = None
@@ -88,6 +88,7 @@ class StereoComponent(Component):
             self.right._update_device_info(pipeline, device, version)
 
         self.node = pipeline.createStereoDepth()
+        self.node.setDefaultProfilePreset(dai.)
         # TODO: use self._args to setup the StereoDepth node
 
         if isinstance(self.left, CameraComponent):
@@ -97,8 +98,8 @@ class StereoComponent(Component):
 
         if self._align:
             self.node.setDepthAlign(self._align)
-        # if self._initialConfig:
-        #     self.node.initialConfig = self._initialConfig
+        if self._initialConfig:
+            self._set_initial_conf(self.node, self._initialConfig)
 
         # Connect Mono cameras to the StereoDepth node
         self.left.link(self.node.left)
@@ -116,12 +117,43 @@ class StereoComponent(Component):
         """
         Configure StereoDepth modes, filters, etc.
         """
-        _initialConfig = dai.StereoDepthConfig()
-        if confidence: _initialConfig.setConfidenceThreshold(confidence)
+        if self._initialConfig is None:
+            self._initialConfig = dai.StereoDepthConfig()
+
+        if confidence: self._initialConfig.setConfidenceThreshold(confidence)
         if align: self._align = parse_cam_socket(align)
-        if extended: _initialConfig.setExtendedDisparity(extended)
-        if subpixel: _initialConfig.setSubpixel(subpixel)
-        if lr_check: _initialConfig.setExtendedDisparity(lr_check)
+        if extended: self._initialConfig.setExtendedDisparity(extended)
+        if subpixel: self._initialConfig.setSubpixel(subpixel)
+        if lr_check: self._initialConfig.setExtendedDisparity(lr_check)
+
+        if self.node: # Already initialized
+            self._set_initial_conf(self.node, self._initialConfig)
+
+    def _set_initial_conf(self, node: dai.node.StereoDepth, config: dai.StereoDepthConfig):
+        """
+        This function is a workaround, because we can't do `node.initialConfig=config`
+        """
+        raw = config.get()
+        node.initialConfig.setConfidenceThreshold(raw.costMatching.confidenceThreshold)
+        node.initialConfig.setExtendedDisparity(raw.algorithmControl.enableExtended)
+        node.initialConfig.setSubpixel(raw.algorithmControl.enableSubpixel)
+        node.initialConfig.setExtendedDisparity(raw.algorithmControl.enableExtended)
+        if self._align:
+            # Because you can't set cam socket in StereoDepthConfig
+            node.setDepthAlign(self._align)
+
+    def get_disparity_factor(self, device: dai.Device) -> float:
+        """
+        Calculates the disparity factor used to calculate depth from disparity.
+        `depth = disparity_factor / disparity`
+        @param device: OAK device
+        """
+        calib = device.readCalibration()
+        baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
+        intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, self.right.getResolutionSize())
+        focalLength = intrinsics[0][0]
+        disp_levels = self.node.getMaxDisparity() / 95
+        return baseline * focalLength * disp_levels
 
     """
     Available outputs (to the host) of this component

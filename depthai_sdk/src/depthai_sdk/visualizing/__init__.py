@@ -3,7 +3,7 @@ from .visualizers import BaseVisualizer, DetectionVisualizer, DetectionClassific
     FramePosition, SpatialBbMappingsVisualizer, DisparityVisualizer, DepthVisualizer
 from .visualizer_helper import Visualizer
 from ..classes.xout import XoutNnResults, XoutFrames, XoutTwoStage, XoutSpatialBbMappings, XoutDisparity, XoutDepth
-
+import depthai as dai
 
 class VisualizerManager:
     """
@@ -30,7 +30,7 @@ class VisualizerManager:
         self._fps = fps
         self._callback = callback
 
-    def setup(self, xout) -> None:
+    def setup(self, device: dai.Device, xout) -> None:
         """
         Called after connected to the device and all components have been configured.
         """
@@ -44,7 +44,7 @@ class VisualizerManager:
 
         elif isinstance(xout, XoutDepth):
             # Needs to be before checking if instanceof XoutFrames
-            self._visualizer = DepthVisualizer(xout.frames.name)
+            self._visualizer = DepthVisualizer(device, xout.frames.name)
 
         elif isinstance(xout, XoutFrames):
             self._visualizer = BaseVisualizer(xout.frames.name)
@@ -60,7 +60,7 @@ class VisualizerManager:
             self._visualizer = DetectionClassificationVisualizer(xout)
         # # TODO: if classification network, display NN results in the bounding box
         elif isinstance(xout, XoutSpatialBbMappings):
-            self._visualizer = SpatialBbMappingsVisualizer(xout)
+            self._visualizer = SpatialBbMappingsVisualizer(device, xout)
         else:
             raise NotImplementedError('Visualization of these components is not yet implemented!')
 

@@ -135,41 +135,63 @@ class FrameVisualizer(BaseVisualizer):
 
 
 class DepthVisualizer(BaseVisualizer):
-    def __init__(self, frameStream: str) -> None:
+    factor: float = None
+    def __init__(self, device: dai.Device, frameStream: str) -> None:
         super().__init__(frameStream)
+        self.device = device
+        self.multiplier = 255 / 95.0
 
     def newMsgs(self, msgs: Dict):
         packet = FramePacket()
         packet.imgFrame = msgs[super().name]
-        packet.frame = colorizeDepth(packet.imgFrame)
+        if not self.factor:
+            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
+            self.factor = calc_disp_multiplier(self.device, size)
+
+        depth = np.array(packet.imgFrame.getFrame())
+        with np.errstate(divide='ignore'):
+            disp = (self.factor / depth).astype(np.uint8)
+
+        packet.frame = colorizeDisparity(disp, multiplier=self.multiplier)
         packet.name = super().name
         super().newMsgs(packet)
 
 class SpatialBbMappingsVisualizer(BaseVisualizer):
+    factor: float = None
     depth: str
     configs: str
-    def __init__(self, xout: XoutSpatialBbMappings) -> None:
+    def __init__(self, device: dai.Device, xout: XoutSpatialBbMappings) -> None:
         super().__init__(xout.frames.name)
         self.depth = xout.frames.name
         self.configs = xout.configs.name
+        self.device = device
+        self.multiplier = 255 / 95.0
 
     def newMsgs(self, msgs: Dict):
         packet = FramePacket()
-        packet.imgFrame = msgs[self.depth]
-        packet.frame = colorizeDepth(packet.imgFrame)
-        packet.name = self.depth
+        packet.imgFrame = msgs[super().name]
+        if not self.factor:
+            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
+            self.factor = calc_disp_multiplier(self.device, size)
+
+        depth = np.array(packet.imgFrame.getFrame())
+        with np.errstate(divide='ignore'):
+            disp = (self.factor / depth).astype(np.uint8)
+
+        packet.frame = colorizeDisparity(disp, multiplier=self.multiplier)
+        packet.name = super().name
 
         config = msgs[self.configs]
-
         drawMappings(packet, config)
-        super().newMsgs(packet)
 
+        super().newMsgs(packet)
 
 class DisparityVisualizer(BaseVisualizer):
     multiplier: float #
     def __init__(self, xout: XoutDisparity) -> None:
         super().__init__(xout.frames.name)
         self.multiplier = 255.0 / xout.max_disp
+        print('DISP MULTIPLIER', xout.max_disp)
 
 
     def newMsgs(self, msgs: Dict):

@@ -1,7 +1,6 @@
 from .classes.output_temp import OutputTemplate
 from .fps import *
 from .previews import *
-from .syncing import *
 from .utils import *
 from .managers import *
 from .record import *
@@ -269,7 +268,7 @@ class OakCamera:
         # TODO Refactor this, it's not clean at all
         for out in self.out_templates:
             xoutbase = out.output(self._pipeline, out.callback)
-            out.vis.setup(xoutbase)
+            out.vis.setup(self.device, xoutbase)
             self.oak.oak_out_streams.append(xoutbase)
 
 

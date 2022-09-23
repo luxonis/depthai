@@ -10,6 +10,10 @@ bg_color = (0, 0, 0)
 front_color = (255, 255, 255)
 text_type = cv2.FONT_HERSHEY_SIMPLEX
 line_type = cv2.LINE_AA
+
+color_map = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_TURBO)
+color_map[0] = [0, 0, 0]
+
 class Visualizer:
     bg_color = (0, 0, 0)
     front_color = (255, 255, 255)
@@ -186,24 +190,18 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
 
         packet.add_detection(detection, bbox, txt, color)
 
-
-jet_custom = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_TURBO)
-jet_custom = jet_custom[::-1]
-jet_custom[0] = [0, 0, 0]
-
-
 def colorizeDepth(depthFrame: Union[dai.ImgFrame, Any], colorMap=None):
     if isinstance(depthFrame, dai.ImgFrame):
         depthFrame = depthFrame.getFrame()
     depthFrameColor = cv2.normalize(depthFrame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
     depthFrameColor = cv2.equalizeHist(depthFrameColor)
-    return cv2.applyColorMap(depthFrameColor, colorMap if colorMap else jet_custom)
+    return cv2.applyColorMap(depthFrameColor, colorMap if colorMap else color_map)
 
 def colorizeDisparity(frame: Union[dai.ImgFrame, Any], multiplier: float, colorMap=None):
     if isinstance(frame, dai.ImgFrame):
         frame = frame.getFrame()
     frame = (frame * multiplier).astype(np.uint8)
-    return cv2.applyColorMap(frame, colorMap if colorMap else jet_custom)
+    return cv2.applyColorMap(frame, colorMap if colorMap else color_map)
 
 def drawBbMappings(depthFrame: Union[dai.ImgFrame, Any], bbMappings: dai.SpatialLocationCalculatorConfig):
     depthFrameColor = colorizeDepth(depthFrame)
@@ -220,6 +218,12 @@ def drawBbMappings(depthFrame: Union[dai.ImgFrame, Any], bbMappings: dai.Spatial
 
         rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), 255, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
 
+def calc_disp_multiplier(device: dai.Device, size: Tuple[int,int]) -> float:
+    calib = device.readCalibration()
+    baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
+    intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, size)
+    focalLength = intrinsics[0][0]
+    return baseline * focalLength
 
 def hex_to_bgr(hex: str) -> Tuple[int, int, int]:
     """
