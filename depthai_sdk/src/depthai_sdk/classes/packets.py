@@ -23,11 +23,21 @@ class TwoStageDetection(Detection):
 
 
 class FramePacket:
-    def __init__(self):
-        pass
     name: str  # ImgFrame stream name
-    imgFrame: dai.ImgFrame # Original depthai message
+    imgFrame: dai.ImgFrame  # Original depthai message
     frame: np.ndarray  # cv2 frame for visualization
+    def __init__(self, name: str, imgFrame: dai.ImgFrame, frame: np.ndarray):
+        self.name = name
+        self.imgFrame = imgFrame
+        self.frame = frame
+
+
+class SpatialBbMappingPacket(FramePacket):
+    config: dai.SpatialLocationCalculatorConfig
+
+    def __init__(self, name: str, imgFrame: dai.ImgFrame, config: dai.SpatialLocationCalculatorConfig):
+        super().__init__(name, imgFrame, imgFrame.getFrame())
+        self.config = config
 
 
 class DetectionPacket(FramePacket):
@@ -39,17 +49,14 @@ class DetectionPacket(FramePacket):
                  name: str,
                  imgFrame: dai.ImgFrame,
                  imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]):
-        super().__init__()
-        self.name = name
-        self.imgFrame = imgFrame
+        super().__init__(name, imgFrame,  imgFrame.getCvFrame())
         self.imgDetections = imgDetections
-        self.frame = self.imgFrame.getCvFrame()
         self.detections = []
 
     def isSpatialDetection(self) -> bool:
         return isinstance(self.imgDetections, dai.SpatialImgDetections)
 
-    def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color, _=None):
+    def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
         det = Detection()
         det.imgDetection = img_det
         det.label_str = txt
@@ -59,10 +66,8 @@ class DetectionPacket(FramePacket):
         self.detections.append(det)
 
 
-class TwoStagePacket(FramePacket):
+class TwoStagePacket(DetectionPacket):
     # Original depthai messages
-    imgDetections: dai.ImgDetections
-    detections: List[TwoStageDetection]
     nnData: List[dai.NNData]
     labels: List[int] = None
     _cntr: int = 0 # Label counter
@@ -72,14 +77,11 @@ class TwoStagePacket(FramePacket):
                  imgDetections: dai.ImgDetections,
                  nnData: List[dai.NNData],
                  labels: List[int]):
-        super().__init__()
-        self.detections = []
-        self.name = name
-        self.imgFrame = imgFrame
-        self.imgDetections = imgDetections
+        super().__init__(name, imgFrame, imgDetections)
         self.frame = self.imgFrame.getCvFrame()
         self.nnData = nnData
         self.labels = labels
+        self._cntr = 0
 
     def isSpatialDetection(self) -> bool:
         return isinstance(self.imgDetections, dai.SpatialImgDetections)

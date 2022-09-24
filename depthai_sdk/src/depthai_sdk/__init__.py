@@ -1,4 +1,4 @@
-from .classes.output_temp import OutputTemplate
+from .classes.output_temp import OutputTemplate, VisualizeTemplate
 from .fps import *
 from .previews import *
 from .utils import *
@@ -7,7 +7,7 @@ from .record import *
 from .replay import *
 from .components import *
 from .classes import *
-from .visualizing import *
+from .oak_outputs import *
 from .oak_device import OakDevice
 
 from typing import Optional
@@ -270,11 +270,12 @@ class OakCamera:
             component._update_device_info(self.pipeline, self.oak.device, self.pipeline.getOpenVINOVersion())
 
         # Create XLinkOuts based on visualizers/callbacks enabled
-        # TODO Refactor this, it's not clean at all
         for out in self.out_templates:
-            xoutbase = out.output(self.pipeline)
+            xoutbase: XoutBase = out.output(self.pipeline, self.oak.device)
             xoutbase.setup_base(out.callback)
-            out.vis.setup(self.device, xoutbase)
+            if out.vis:
+                fps = self.oak.fpsHandlers if out.vis.fps else None
+                xoutbase.setup_visualize(out.vis.scale, fps)
             self.oak.oak_out_streams.append(xoutbase)
 
 
@@ -295,24 +296,14 @@ class OakCamera:
     def visualize(self, output: Union[List, Callable, Component],
                   scale: Union[None, float, Tuple[int, int]] = None,
                   fps=False,
-                  callback: Callable=None) -> VisualizerManager:
+                  callback: Callable=None):
 
-        if isinstance(output, List):
-            for element in output:
-                self.visualize(element, scale, fps, callback)
-            return
-
-        if isinstance(output, Component):
-            output = output.out
-
-        vis = VisualizerManager(scale, self.oak.fpsHandlers, callback)
-        self.callback(output, vis.new_msgs, vis)
-        return vis
+        self.callback(output, callback, VisualizeTemplate(scale, fps))
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable, vis=None) -> None:
         if isinstance(output, List):
             for element in output:
-                self.callback(element, callback)
+                self.callback(element, callback, vis)
             return
 
         if isinstance(output, Component):

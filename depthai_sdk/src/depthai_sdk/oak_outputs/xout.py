@@ -1,6 +1,15 @@
+import cv2
 import depthai as dai
 from typing import Dict, List, Any, Optional, Tuple, Callable, Union
+
+import numpy as np
+from distinctipy import distinctipy
+
 from .xout_base import XoutBase, StreamXout
+from ..classes.packets import FramePacket, SpatialBbMappingPacket, DetectionPacket, TwoStagePacket
+from .visualizer_helper import Visualizer, FPS, colorizeDisparity, calc_disp_multiplier, drawMappings, drawDetections, \
+    hex_to_bgr
+from .normalize_bb import NormalizeBoundingBox
 
 """
 Xout classes are abstracting streaming messages to the host computer (via XLinkOut) and syncing those messages
@@ -14,33 +23,90 @@ class XoutFrames(XoutBase):
     Single message, no syncing required
     """
     frames: StreamXout
+    _scale: Union[None, float, Tuple[int, int]] = None
+    _fps: Dict[str, FPS] = None
+
     def __init__(self, frames: StreamXout):
         self.frames = frames
         super().__init__()
+
+    def setup_visualize(self,
+                scale: Union[None, float, Tuple[int, int]] = None,
+                fps: Dict[str, FPS] = None,
+                ):
+        self._scale = scale
+        self._fps = fps
+        self._vis = True
+
+    def visualize(self, packet: FramePacket) -> None:
+        """
+        Called from main thread if vis=True
+        """
+
+        if self._fps:
+            i = 0
+            for name, handler in self._fps.items():
+                Visualizer.putText(packet.frame, "{} FPS: {:.1f}".format(name, handler.fps()), (10, 20 + i * 20),
+                                   scale=0.7)
+                i += 1
+
+        if self._scale:
+            if isinstance(self._scale, Tuple):
+                packet.frame = cv2.resize(packet.frame, self._scale)  # Resize frame
+            elif isinstance(self._scale, float):
+                packet.frame = cv2.resize(packet.frame, (
+                    int(packet.frame.shape[1] * self._scale),
+                    int(packet.frame.shape[0] * self._scale)
+                ))
+
+        if self.callback:  # Don't display frame, call the callback
+            self.callback(packet)
+        else:
+            cv2.imshow(packet.name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
 
     def newMsg(self, name: str, msg) -> None:
-        # Ignore frames that we aren't listening for
         if name not in self._streams: return
 
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
 
-        self.queue.put({name: msg}, block=False)
+        packet = FramePacket(name, msg, msg.getCvFrame())
+
+        self.queue.put(packet, block=False)
 
 class XoutDisparity(XoutFrames):
-    max_disp: float
+    multiplier: float
     def __init__(self, frames: StreamXout, max_disp: float):
         super().__init__(frames)
-        self.max_disp = max_disp
+        self.multiplier = 255.0 / max_disp
+
+    def visualize(self, packet: FramePacket):
+        packet.frame = colorizeDisparity(packet.imgFrame, self.multiplier)
+        super().visualize(packet)
 
 class XoutDepth(XoutFrames):
-    def __init__(self, frames: StreamXout):
+    factor: float = None
+    def __init__(self, device: dai.Device, frames: StreamXout):
         super().__init__(frames)
+        self.device = device
+        self.multiplier = 255 / 95.0
 
-class XoutSpatialBbMappings(XoutBase):
+    def visualize(self, packet: FramePacket):
+        if not self.factor:
+            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
+            self.factor = calc_disp_multiplier(self.device, size)
+
+        depth = np.array(packet.imgFrame.getFrame())
+        with np.errstate(divide='ignore'):
+            disp = (self.factor / depth).astype(np.uint8)
+
+        packet.frame = colorizeDisparity(disp, multiplier=self.multiplier)
+        super().visualize(packet)
+
+class XoutSpatialBbMappings(XoutFrames):
     # Streams
     frames: StreamXout
     configs: StreamXout
@@ -49,13 +115,31 @@ class XoutSpatialBbMappings(XoutBase):
     depth_msg: Optional[dai.ImgFrame] = None
     config_msg: Optional[dai.SpatialLocationCalculatorConfig] = None
 
-    def __init__(self, frames: StreamXout, configs: StreamXout):
+    factor: float = None
+
+    def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
         self.frames = frames
         self.configs = configs
-        super().__init__()
+        self.device = device
+        self.multiplier = 255 / 95.0
+        super().__init__(frames)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.configs]
+
+    def visualize(self, packet: SpatialBbMappingPacket):
+        if not self.factor:
+            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
+            self.factor = calc_disp_multiplier(self.device, size)
+
+        depth = np.array(packet.imgFrame.getFrame())
+        with np.errstate(divide='ignore'):
+            disp = (self.factor / depth).astype(np.uint8)
+
+        packet.frame = colorizeDisparity(disp, multiplier=self.multiplier)
+        drawMappings(packet)
+
+        super().visualize(packet)
 
     def newMsg(self, name: str, msg: dai.Buffer) -> None:
         # Ignore frames that we aren't listening for
@@ -72,28 +156,25 @@ class XoutSpatialBbMappings(XoutBase):
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
 
-            msgs = {
-                self.configs.name: self.config_msg,
-                self.frames.name: self.depth_msg,
-            }
-            self.queue.put(msgs, block=False)
+            packet = SpatialBbMappingPacket(
+                self.frames.name,
+                self.depth_msg,
+                self.config_msg
+            )
+
+            self.queue.put(packet, block=False)
 
             self.config_msg = None
             self.depth_msg = None
 
 
+class XoutNnResults(XoutFrames):
+    nn_results: StreamXout
 
+    labels: List[Tuple[str, Tuple[int, int, int]]] = None
+    normalizer: NormalizeBoundingBox
 
-class XoutSequenceSync(XoutBase):
-    """
-    This class will sync all messages based on their sequence number
-    """
     msgs: Dict[str, Dict[str, dai.Buffer]]  # List of messages.
-
-    def __init__(self):
-        super().__init__()
-        self.msgs = dict()
-
     """
     msgs = {seq: {stream_name: frame}}
     Example:
@@ -110,6 +191,39 @@ class XoutSequenceSync(XoutBase):
     }
     """
 
+    def __init__(self, detNn, frames: StreamXout, nn_results: StreamXout):
+        self.nn_results = nn_results
+        # Save StreamXout before initializing super()!
+        super().__init__(frames)
+        self.detNn = detNn
+        self.msgs = dict()
+
+        # TODO: add support for colors, generate new colors for each label that doesn't have colors
+        if detNn.labels:
+            self.labels = []
+            n_colors = [isinstance(label, str) for label in detNn.labels].count(True)
+            # np.array of (b,g,r), 0..1
+            colors = np.array(distinctipy.get_colors(n_colors=n_colors, rng=123123, pastel_factor=0.5))[..., ::-1]
+            colors = [distinctipy.get_rgb256(clr) for clr in colors]  # List of (b,g,r), 0..255
+            for label in detNn.labels:
+                if isinstance(label, str):
+                    text = label
+                    color = colors.pop(0)  # Take last row
+                elif isinstance(label, list):
+                    text = label[0]
+                    color = hex_to_bgr(label[1])
+                else:
+                    raise ValueError('Model JSON config error. Label map list can have either str or list!')
+
+                self.labels.append((text, color))
+
+        self.normalizer = NormalizeBoundingBox(detNn.size, detNn.arResizeMode)
+
+
+    def visualize(self, packet: DetectionPacket):
+        drawDetections(packet, self.normalizer, self.labels)
+        super().visualize(packet)
+
     def newMsg(self, name: str, msg) -> None:
         # Ignore frames that we aren't listening for
         if name not in self._streams: return
@@ -125,7 +239,13 @@ class XoutSequenceSync(XoutBase):
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
 
-            self.queue.put(self.msgs[seq], block=False)
+            packet = DetectionPacket(
+                self.frames.name,
+                self.msgs[seq][self.frames.name],
+                self.msgs[seq][self.nn_results.name],
+            )
+
+            self.queue.put(packet, block=False)
 
             # Remove previous msgs (memory cleaning)
             newMsgs = {}
@@ -133,18 +253,6 @@ class XoutSequenceSync(XoutBase):
                 if int(name) > int(seq):
                     newMsgs[name] = msg
             self.msgs = newMsgs
-
-
-class XoutNnResults(XoutSequenceSync):
-    frames: StreamXout
-    nn_results: StreamXout
-
-    def __init__(self, detNn, frames: StreamXout, nn_results: StreamXout):
-        self.frames = frames
-        self.nn_results = nn_results
-        # Save StreamXout before initializing super()!
-        super().__init__()
-        self.detNn = detNn
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.nn_results]
@@ -182,7 +290,7 @@ class XoutNnResults(XoutSequenceSync):
 #             self.queue.put(ret, block=False)
 
 
-class XoutTwoStage(XoutBase):
+class XoutTwoStage(XoutNnResults):
     """
     Two stage syncing based on sequence number. Each frame produces ImgDetections msg that contains X detections.
     Each detection (if not on blacklist) will crop the original frame and forward it to the second (stage) NN for
@@ -195,19 +303,15 @@ class XoutTwoStage(XoutBase):
         '2': TwoStageSyncPacket(), 
     }
     """
-    labels: Optional[List[int]] = None
+    whitelist_labels: Optional[List[int]] = None
     scaleBb: Optional[Tuple[int, int]] = None
 
-    frames: StreamXout
-    nn_results: StreamXout
     second_nn: StreamXout
 
     def __init__(self, detNn, secondNn, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
-        self.frames = frames
-        self.nn_results = detections
         self.second_nn = second_nn
         # Save StreamXout before initializing super()!
-        super().__init__()
+        super().__init__(detNn, frames, detections)
 
         self.detNn = detNn
         self.secondNn = secondNn
@@ -219,6 +323,8 @@ class XoutTwoStage(XoutBase):
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.nn_results, self.second_nn]
+
+    # No need for `def visualize()` as `XoutNnResults.visualize()` does what we want
 
     def newMsg(self, name: str, msg: dai.Buffer) -> None:
         if name not in self._streams: return  # From Replay modules. TODO: better handling?
@@ -248,11 +354,14 @@ class XoutTwoStage(XoutBase):
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
 
-            # for name in self.frame_names:
-            #     packet = dict()
-            #     packet[self.]
-
-            self.queue.put(self.msgs[seq], block=False)
+            packet = TwoStagePacket(
+                self.frames.name,
+                self.msgs[seq][self.frames.name],
+                self.msgs[seq][self.nn_results.name],
+                self.msgs[seq][self.second_nn.name],
+                self.whitelist_labels
+            )
+            self.queue.put(packet, block=False)
 
             # Throws RuntimeError: dictionary changed size during iteration
             # for s in self.msgs:
@@ -304,7 +413,7 @@ class XoutTwoStage(XoutBase):
         Required recognition results for this packet, which depends on number of detections (and white-list labels)
         """
         dets: List[dai.ImgDetection] = self.msgs[seq][self.nn_results.name].detections
-        if self.labels:
-            return len([det for det in dets if det.label in self.labels])
+        if self.whitelist_labels:
+            return len([det for det in dets if det.label in self.whitelist_labels])
         else:
             return len(dets)

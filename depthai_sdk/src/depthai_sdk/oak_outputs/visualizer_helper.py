@@ -1,18 +1,29 @@
 import math
+import time
+from enum import IntEnum
 from types import SimpleNamespace
-
 import numpy as np
 import depthai as dai
 from typing import Tuple, Union, List, Any, Callable
 import cv2
 import distinctipy
 from .normalize_bb import NormalizeBoundingBox
-from ..classes.packets import DetectionPacket, TwoStageDetection, FramePacket
+from ..classes.packets import DetectionPacket, TwoStageDetection, FramePacket, SpatialBbMappingPacket
 
-bg_color = (0, 0, 0)
-front_color = (255, 255, 255)
-text_type = cv2.FONT_HERSHEY_SIMPLEX
-line_type = cv2.LINE_AA
+
+class FramePosition(IntEnum):
+    """
+    Where on frame do we want to print text.
+    """
+    TopLeft = 0
+    MidLeft = 1
+    BottomLeft = 2
+    TopMid = 10
+    Mid = 11
+    BottomMid = 12
+    TopRight = 20
+    MidRight = 21
+    BottomRight = 22
 
 color_map = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_TURBO)
 color_map[0] = [0, 0, 0]
@@ -23,24 +34,68 @@ class Visualizer:
     text_type = cv2.FONT_HERSHEY_SIMPLEX
     line_type = cv2.LINE_AA
 
-    @staticmethod
-    def putText(frame: np.ndarray,
+    @classmethod
+    def putText(cls, frame: np.ndarray,
                 text: str,
                 coords: Tuple[int,int],
                 scale: float = 1.0,
                 backColor: Tuple[int,int,int] = None,
                 color: Tuple[int, int, int] = None):
         # Background text
-        cv2.putText(frame, text, coords, text_type, scale,
-                    color=backColor if backColor else bg_color,
+        cv2.putText(frame, text, coords, cls.text_type, scale,
+                    color=backColor if backColor else cls.bg_color,
                     thickness=int(scale * 3),
-                    lineType=line_type)
+                    lineType=cls.line_type)
         # Front text
-        cv2.putText(frame, text, coords, text_type, scale,
-                    color=(int(color[0]), int(color[1]), int(color[2])) if color else front_color,
+        cv2.putText(frame, text, coords, cls.text_type, scale,
+                    color=(int(color[0]), int(color[1]), int(color[2])) if color else cls.front_color,
                     thickness=int(scale),
-                    lineType=line_type)
+                    lineType=cls.line_type)
 
+    @classmethod
+    def print(cls, frame, text: str, position: FramePosition = FramePosition.BottomLeft, padPx=10):
+        """
+        Prints text on the frame.
+        @param frame: Frame
+        @param text: Text to be printed
+        @param position: Where on frame we want to print the text
+        @param padPx: Padding (in pixels)
+        """
+        textSize = cv2.getTextSize(text, Visualizer.text_type, fontScale=1.0, thickness=1)[0]
+        frameW = frame.shape[1]
+        frameH = frame.shape[0]
+
+        yPos = int(position) % 10
+        if yPos == 0:  # Y Top
+            y = textSize[1] + padPx
+        elif yPos == 1:  # Y Mid
+            y = int(frameH / 2) + int(textSize[1] / 2)
+        else:  # yPos == 2. Y Bottom
+            y = frameH - padPx
+
+        xPos = int(position) // 10
+        if xPos == 0:  # X Left
+            x = padPx
+        elif xPos == 1:  # X Mid
+            x = int(frameW / 2) - int(textSize[0] / 2)
+        else:  # xPos == 2  # X Right
+            x = frameW - textSize[0] - padPx
+
+        cls.putText(frame, text, (x, y))
+
+class FPS:
+    def __init__(self):
+        self.timestamp = time.time() + 1
+        self.start = time.time()
+        self.frame_cnt = 0
+
+    def next_iter(self):
+        self.timestamp = time.time()
+        self.frame_cnt += 1
+
+    def fps(self) -> float:
+        diff = self.timestamp - self.start
+        return self.frame_cnt / diff if diff != 0 else 0.0
 
 # def rectangle(frame, bbox, color: Tuple[int, int, int] = None):
 #     x1, y1, x2, y2 = bbox
@@ -146,8 +201,8 @@ def get_text_color(background, threshold=0.6):
     return (clr[2], clr[1], clr[0])
 
 
-def drawMappings(packet: FramePacket, config: dai.SpatialLocationCalculatorConfig):
-    roiDatas = config.getConfigData()
+def drawMappings(packet: SpatialBbMappingPacket):
+    roiDatas = packet.config.getConfigData()
     for roiData in roiDatas:
         roi = roiData.roi
         roi = roi.denormalize(packet.frame.shape[1], packet.frame.shape[0])
@@ -158,8 +213,8 @@ def drawMappings(packet: FramePacket, config: dai.SpatialLocationCalculatorConfi
         xmax = int(bottomRight.x)
         ymax = int(bottomRight.y)
 
-        cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), bg_color, 3)
-        cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), front_color, 1)
+        cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), Visualizer.bg_color, 3)
+        cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), Visualizer.front_color, 1)
 
 def spatialsText(detection: dai.SpatialImgDetection):
     spatials = detection.spatialCoordinates
@@ -189,7 +244,7 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
             txt, color = labelMap[detection.label]
         else:
             txt = str(detection.label)
-            color = front_color
+            color = Visualizer.front_color
 
         Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
         if packet.isSpatialDetection():

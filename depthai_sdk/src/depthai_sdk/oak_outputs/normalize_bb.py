@@ -1,5 +1,5 @@
 from typing import Tuple
-from ..components import AspectRatioResizeMode
+from ..components.nn_helper import AspectRatioResizeMode
 import numpy as np
 
 class NormalizeBoundingBox:

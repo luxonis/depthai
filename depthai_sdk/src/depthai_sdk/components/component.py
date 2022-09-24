@@ -1,6 +1,6 @@
 import depthai as dai
 from typing import Optional, List, Callable
-from ..classes.xout_base import XoutBase, ReplayStream
+from ..oak_outputs.xout_base import XoutBase, ReplayStream
 from abc import ABC, abstractmethod
 
 class Component(ABC):
@@ -25,7 +25,7 @@ class Component(ABC):
         return None
 
     @abstractmethod
-    def out(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         """
         Main XLink output (to the host) from the component. Component is already initialized (_update_device_info()
         is called).
