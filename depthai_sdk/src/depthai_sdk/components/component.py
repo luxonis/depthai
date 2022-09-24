@@ -1,6 +1,6 @@
 import depthai as dai
 from typing import Optional, List, Callable
-from ..classes.xout_base import XoutBase, ReplayStream
+from ..oak_outputs.xout_base import XoutBase, ReplayStream
 from abc import ABC, abstractmethod
 
 class Component(ABC):

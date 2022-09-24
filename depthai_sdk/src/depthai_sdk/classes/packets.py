@@ -23,11 +23,14 @@ class TwoStageDetection(Detection):
 
 
 class FramePacket:
-    def __init__(self):
-        pass
     name: str  # ImgFrame stream name
     imgFrame: dai.ImgFrame # Original depthai message
     frame: np.ndarray  # cv2 frame for visualization
+
+class SpatialBbMappingPacket(FramePacket):
+    config: dai.SpatialLocationCalculatorConfig
+    def __init__(self):
+        super().__init__()
 
 
 class DetectionPacket(FramePacket):

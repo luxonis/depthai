@@ -12,8 +12,8 @@ from .nn_helper import *
 from ..classes.nn_config import Config
 import json
 
-from ..classes.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames
-from ..classes.xout_base import StreamXout, XoutBase
+from ..oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames
+from ..oak_outputs.xout_base import StreamXout, XoutBase
 
 
 class NNComponent(Component):

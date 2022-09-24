@@ -3,6 +3,9 @@ from queue import Empty, Queue
 from abc import ABC, abstractmethod
 import depthai as dai
 
+from ..classes.packets import FramePacket
+
+
 class StreamXout:
     stream: dai.Node.Output
     name: str # XLinkOut stream name
@@ -16,27 +19,29 @@ class ReplayStream(StreamXout):
 
 
 class XoutBase(ABC):
-    callbacks: List[Callable]  # List of callback to be called when we have new synced msgs
-    queue: Queue  # Queue to which (synced/non-synced) messages will be added
+    callback: Callable  # User defined callback. Called either after visualization (if vis=True) or after syncing.
+    queue: Queue  # Queue to which synced Packets will be added. Main thread will get these
     _streams: List[str]  # Streams to listen for
+    vis: bool = False
+
+    def __init__(self) -> None:
+        self._streams = [xout.name for xout in self.xstreams()]
 
     @abstractmethod
     def xstreams(self) -> List[StreamXout]:
         raise NotImplementedError()
 
-    def __init__(self) -> None:
-        self._streams = [xout.name for xout in self.xstreams()]
-
-    def setup_base(self, callback: Union[Callable, List[Callable]]):
+    def setup_base(self, callback: Callable):
         # Gets called when initializing
         self.queue = Queue(maxsize=30)
-        if isinstance(callback, List):
-            self.callbacks = callback
-        else:
-            self.callbacks = [callback]
+        self.callback = callback
 
     @abstractmethod
     def newMsg(self, name: str, msg) -> None:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def visualize(self, packet: FramePacket) -> None:
         raise NotImplementedError()
 
     # This approach is used as some functions (eg. imshow()) need to be called from
@@ -48,7 +53,7 @@ class XoutBase(ABC):
         try:
             msgs = self.queue.get(block=block)
             if msgs is not None:
-                for cb in self.callbacks:  # Call all callbacks
+                for cb in self.callback:  # Call all callbacks
                     cb(msgs)
         except Empty:  # Queue empty
             pass

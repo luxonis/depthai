@@ -3,8 +3,8 @@ from .camera_component import CameraComponent
 from typing import Optional, Union, Tuple, Any, Dict, Callable
 import depthai as dai
 
-from ..classes.xout_base import XoutBase, StreamXout
-from ..classes.xout import XoutDisparity, XoutDepth
+from ..oak_outputs.xout_base import XoutBase, StreamXout
+from ..oak_outputs.xout import XoutDisparity, XoutDepth
 from ..replay import Replay
 from .parser import parse_cam_socket
 

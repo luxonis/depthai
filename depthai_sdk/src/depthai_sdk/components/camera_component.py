@@ -4,8 +4,8 @@ import depthai as dai
 from ..replay import Replay
 from .camera_helper import *
 from .parser import parseResolution, parseEncode
-from ..classes.xout_base import XoutBase, StreamXout, ReplayStream
-from ..classes.xout import XoutFrames
+from ..oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
+from ..oak_outputs.xout import XoutFrames
 
 
 class CameraComponent(Component):
