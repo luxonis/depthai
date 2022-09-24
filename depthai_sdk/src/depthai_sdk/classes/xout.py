@@ -14,10 +14,9 @@ class XoutFrames(XoutBase):
     Single message, no syncing required
     """
     frames: StreamXout
-    def __init__(self, cb: Callable, frames: StreamXout):
+    def __init__(self, frames: StreamXout):
         self.frames = frames
         super().__init__()
-        self.setup_base(cb)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -33,13 +32,13 @@ class XoutFrames(XoutBase):
 
 class XoutDisparity(XoutFrames):
     max_disp: float
-    def __init__(self, cb: Callable, frames: StreamXout, max_disp: float):
-        super().__init__(cb, frames)
+    def __init__(self, frames: StreamXout, max_disp: float):
+        super().__init__(frames)
         self.max_disp = max_disp
 
 class XoutDepth(XoutFrames):
-    def __init__(self, cb: Callable, frames: StreamXout):
-        super().__init__(cb, frames)
+    def __init__(self, frames: StreamXout):
+        super().__init__(frames)
 
 class XoutSpatialBbMappings(XoutBase):
     # Streams
@@ -50,11 +49,10 @@ class XoutSpatialBbMappings(XoutBase):
     depth_msg: Optional[dai.ImgFrame] = None
     config_msg: Optional[dai.SpatialLocationCalculatorConfig] = None
 
-    def __init__(self, cb: Callable, frames: StreamXout, configs: StreamXout):
+    def __init__(self, frames: StreamXout, configs: StreamXout):
         self.frames = frames
         self.configs = configs
         super().__init__()
-        self.setup_base(cb)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.configs]
@@ -141,12 +139,11 @@ class XoutNnResults(XoutSequenceSync):
     frames: StreamXout
     nn_results: StreamXout
 
-    def __init__(self, detNn, cb: Callable, frames: StreamXout, nn_results: StreamXout):
+    def __init__(self, detNn, frames: StreamXout, nn_results: StreamXout):
         self.frames = frames
         self.nn_results = nn_results
         # Save StreamXout before initializing super()!
         super().__init__()
-        self.setup_base(cb)
         self.detNn = detNn
 
     def xstreams(self) -> List[StreamXout]:
@@ -205,13 +202,12 @@ class XoutTwoStage(XoutBase):
     nn_results: StreamXout
     second_nn: StreamXout
 
-    def __init__(self, detNn, secondNn, cb: Callable, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
+    def __init__(self, detNn, secondNn, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
         self.frames = frames
         self.nn_results = detections
         self.second_nn = second_nn
         # Save StreamXout before initializing super()!
         super().__init__()
-        self.setup_base(cb)
 
         self.detNn = detNn
         self.secondNn = secondNn

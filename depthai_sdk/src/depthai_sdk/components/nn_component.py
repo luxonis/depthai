@@ -431,52 +431,56 @@ class NNComponent(Component):
     """
     Available outputs (to the host) of this component
     """
-    def out(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+    def out(self, pipeline: dai.Pipeline) -> XoutBase:
         # Check if it's XoutNnResults or XoutTwoStage
 
         if self._isMultiStage():
-            out = XoutTwoStage(self._input, self, callback,
+            out = XoutTwoStage(self._input, self,
                                self._input._input.get_stream_xout(), # CameraComponent
                                StreamXout(self._input.node.id, self._input.node.out), # NnComponent (detections)
                                StreamXout(self.node.id, self.node.out), # This NnComponent (2nd stage NN)
                                )
         else:
-            out = XoutNnResults(self, callback,
+            out = XoutNnResults(self,
                                 self._input.get_stream_xout(), # CameraComponent
                                 StreamXout(self.node.id, self.node.out)) # NnComponent
         return super()._create_xout(pipeline, out)
 
-    def out_passthrough(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+    def out_passthrough(self, pipeline: dai.Pipeline) -> XoutBase:
         if self._isMultiStage():
-            out = XoutTwoStage(self._input, self, callback,
+            out = XoutTwoStage(self._input, self,
                                StreamXout(self._input.node.id, self._input.node.passthrough), # Passthrough frame
                                StreamXout(self._input.node.id, self._input.node.out), # NnComponent (detections)
                                StreamXout(self.node.id, self.node.out), # This NnComponent (2nd stage NN)
                                )
         else:
-            out = XoutNnResults(self, callback,
+            out = XoutNnResults(self,
                                 StreamXout(self.node.id, self.node.passthrough),
-                                StreamXout(self.node.id, self.node.out))
+                                StreamXout(self.node.id, self.node.out)
+                                )
 
         return super()._create_xout(pipeline, out)
 
-    def out_spatials(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+    def out_spatials(self, pipeline: dai.Pipeline) -> XoutBase:
         if not self.isSpatial():
             raise Exception('SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
 
-        out = XoutSpatialBbMappings(callback,
-                                    StreamXout(self.node.id, self.node.passthroughDepth),
+        out = XoutSpatialBbMappings(StreamXout(self.node.id, self.node.passthroughDepth),
                                     StreamXout(self.node.id, self.node.boundingBoxMapping)
                                     )
         return super()._create_xout(pipeline, out)
 
-    def out_twostage_crops(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+    def out_twostage_crops(self, pipeline: dai.Pipeline) -> XoutBase:
 
         if not self._isMultiStage():
             raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
-        out = XoutFrames(callback, StreamXout(self.manip.id, self.manip.out))
+        out = XoutFrames(StreamXout(self.manip.id, self.manip.out))
         return super()._create_xout(pipeline, out)
+
+    """
+    Checks
+    """
     def isSpatial(self) -> bool:
         return self._spatial is not None
 

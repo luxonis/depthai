@@ -251,22 +251,22 @@ class CameraComponent(Component):
     """
     Available outputs (to the host) of this component
     """
-    def out(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+    def out(self, pipeline: dai.Pipeline) -> XoutBase:
         if self.encoder:
-            return self.out_encoded(pipeline, callback)
+            return self.out_encoded(pipeline)
         elif self.isReplay():
-            return self.out_replay(pipeline, callback)
+            return self.out_replay(pipeline)
         else:
-            return self.out_camera(pipeline, callback)
-    def out_camera(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
-        out = XoutFrames(callback, StreamXout(self.node.id, self.out))
+            return self.out_camera(pipeline)
+    def out_camera(self, pipeline: dai.Pipeline) -> XoutBase:
+        out = XoutFrames(StreamXout(self.node.id, self.out))
         return super()._create_xout(pipeline, out)
 
-    def out_replay(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
-        out = XoutFrames(callback, ReplayStream(self._source))
+    def out_replay(self, pipeline: dai.Pipeline) -> XoutBase:
+        out = XoutFrames(ReplayStream(self._source))
         return super()._create_xout(pipeline, out)
 
-    def out_encoded(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+    def out_encoded(self, pipeline: dai.Pipeline) -> XoutBase:
         self.encoder = pipeline.createVideoEncoder()
         self.encoder.setDefaultProfilePreset(self.getFps(), self._encoderProfile)
 
@@ -284,5 +284,5 @@ class CameraComponent(Component):
         else:
             raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
 
-        out = XoutFrames(callback, StreamXout(self.encoder.id, self.encoder.bitstream))
+        out = XoutFrames(StreamXout(self.encoder.id, self.encoder.bitstream))
         return super()._create_xout(pipeline, out)

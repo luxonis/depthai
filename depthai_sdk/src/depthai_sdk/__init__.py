@@ -272,7 +272,8 @@ class OakCamera:
         # Create XLinkOuts based on visualizers/callbacks enabled
         # TODO Refactor this, it's not clean at all
         for out in self.out_templates:
-            xoutbase = out.output(self.pipeline, out.callback)
+            xoutbase = out.output(self.pipeline)
+            xoutbase.setup_base(out.callback)
             out.vis.setup(self.device, xoutbase)
             self.oak.oak_out_streams.append(xoutbase)
 
