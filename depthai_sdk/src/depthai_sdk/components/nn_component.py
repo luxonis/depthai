@@ -157,7 +157,7 @@ class NNComponent(Component):
                 self._spatial._update_device_info(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
-                self._spatial.configure_stereo(align=self._input._source)
+                self._spatial.config_stereo(align=self._input._source)
             # Configure Spatial Detection Network
 
         if self.tracker:
@@ -166,6 +166,9 @@ class NNComponent(Component):
             raise NotImplementedError()
             # self.tracker = pipeline.createObjectTracker()
             # self.out = self.tracker.out
+
+        if self._args:
+            self._config_spatials_args(self._args)
 
     def _parse_model(self, model):
         """
@@ -208,6 +211,15 @@ class NNComponent(Component):
             elif nnType.upper() == 'MOBILENET':
                 self._nodeType = dai.node.MobileNetSpatialDetectionNetwork if self.isSpatial() else dai.node.MobileNetDetectionNetwork
 
+
+    def _config_spatials_args(self, args):
+        if not isinstance(args, Dict):
+            args = vars(args)  # Namespace -> Dict
+        self.config_spatial(
+            bbScaleFactor=args.get('sbbScaleFactor',None),
+            lowerThreshold=args.get('minDepth', None),
+            upperThreshold=args.get('maxDepth', None),
+        )
     def parse_config(self, modelConfig: Union[Path, str, Dict]):
         """
         Called when NNComponent is initialized. Reads config.json file and parses relevant setting from there

@@ -140,7 +140,6 @@ class ArgsManager():
         parser.add_argument('-chromaDenoise', '--chromaDenoise', default=None, type=_checkRange(0, 4),
                             help="Sets ColorCamera's Chroma denoise")
 
-
         # ColorCamera controls
         parser.add_argument('-manualFocus', '--manualFocus', default=None, type=_checkRange(0, 255),
                             help="Specify a Lens Position between 0 and 255 to use manual focus. Otherwise, auto-focus is used by default.")
@@ -154,6 +153,14 @@ class ArgsManager():
                             help="Specify the Anti-Banding mode for the ColorCamera. AUTO by default.")
         parser.add_argument('-effectMode', '--effectMode', default=None, type=_checkEnum(dai.CameraControl.EffectMode),
                             help="Specify the Effect mode for the ColorCamera. AUTO by default.")
+
+        parser.add_argument("--cameraControls", action="store_true", help="Show camera configuration options in GUI and control them using keyboard")
+        parser.add_argument("--cameraExposure", type=_commaSeparated("all", int), nargs="+", help="Specify camera saturation")
+        parser.add_argument("--cameraSensitivity", type=_commaSeparated("all", int), nargs="+", help="Specify camera sensitivity")
+        parser.add_argument("--cameraSaturation", type=_commaSeparated("all", int), nargs="+", help="Specify image saturation")
+        parser.add_argument("--cameraContrast", type=_commaSeparated("all", int), nargs="+", help="Specify image contrast")
+        parser.add_argument("--cameraBrightness", type=_commaSeparated("all", int), nargs="+", help="Specify image brightness")
+        parser.add_argument("--cameraSharpness", type=_commaSeparated("all", int), nargs="+", help="Specify image sharpness")
 
         
         # Depth related arguments
@@ -213,13 +220,6 @@ class ArgsManager():
                                 "Format: camera_name,camera_orientation \n"
                                 "Example: -camo color,ROTATE_180_DEG right,ROTATE_180_DEG left,ROTATE_180_DEG").format(', '.join(_orientationChoices))
                             )
-        parser.add_argument("--cameraControls", action="store_true", help="Show camera configuration options in GUI and control them using keyboard")
-        parser.add_argument("--cameraExposure", type=_commaSeparated("all", int), nargs="+", help="Specify camera saturation")
-        parser.add_argument("--cameraSensitivity", type=_commaSeparated("all", int), nargs="+", help="Specify camera sensitivity")
-        parser.add_argument("--cameraSaturation", type=_commaSeparated("all", int), nargs="+", help="Specify image saturation")
-        parser.add_argument("--cameraContrast", type=_commaSeparated("all", int), nargs="+", help="Specify image contrast")
-        parser.add_argument("--cameraBrightness", type=_commaSeparated("all", int), nargs="+", help="Specify image brightness")
-        parser.add_argument("--cameraSharpness", type=_commaSeparated("all", int), nargs="+", help="Specify image sharpness")
         parser.add_argument("--irDotBrightness", type=_checkRange(0, 1200), default=0, help="For OAK-D Pro: specify IR dot projector brightness, range: 0..1200 [mA], default 0 (turned off)")
         parser.add_argument("--irFloodBrightness", type=_checkRange(0, 1500), default=0, help="For OAK-D Pro: specify IR flood illumination brightness, range: 0..1500 [mA], default 0 (turned off)")
         parser.add_argument('--skipVersionCheck', action="store_true", help="Disable libraries version check")

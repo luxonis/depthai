@@ -46,14 +46,25 @@ def parseResolution(
     camera: Union[dai.node.ColorCamera, dai.node.MonoCamera, Type],
     resolution: Union[str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]
     ):
-    if resolution is None:
-        return None
-    elif isinstance(camera, dai.node.ColorCamera) or camera == dai.node.ColorCamera:
+    if isinstance(camera, dai.node.ColorCamera) or camera == dai.node.ColorCamera:
         return rgbResolution(resolution)
     elif isinstance(camera, type(dai.node.MonoCamera)) or camera == dai.node.ColorCamera:
         return monoResolution(resolution)
     else:
         raise ValueError("camera must be either MonoCamera or ColorCamera!")
+
+def parse_median_filter(filter: Union[int, dai.MedianFilter]) -> dai.MedianFilter:
+    if isinstance(filter, dai.MedianFilter):
+        return filter
+
+    if filter == 3:
+        return dai.MedianFilter.KERNEL_3x3
+    elif filter == 5:
+        return dai.MedianFilter.KERNEL_5x5
+    elif filter == 7:
+        return dai.MedianFilter.KERNEL_7x7
+    else:
+        return dai.MedianFilter.MEDIAN_OFF
 
 def parseOpenVinoVersion(version: Union[None, str, dai.OpenVINO.Version]) -> Optional[dai.OpenVINO.Version]:
     if version is None:

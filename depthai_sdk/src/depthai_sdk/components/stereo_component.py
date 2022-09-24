@@ -6,7 +6,7 @@ import depthai as dai
 from ..oak_outputs.xout_base import XoutBase, StreamXout
 from ..oak_outputs.xout import XoutDisparity, XoutDepth
 from ..replay import Replay
-from .parser import parse_cam_socket
+from .parser import parse_cam_socket, parse_median_filter
 
 
 class StereoComponent(Component):
@@ -55,20 +55,6 @@ class StereoComponent(Component):
         self.node = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
-    @property
-    def depth(self) -> dai.Node.Output:
-        """
-        Depth output from the StereoDepth node.
-        """
-        return self.node.depth
-
-    @property
-    def disparity(self) -> dai.Node.Output:
-        """
-        Disparity output from the StereoDepth node.
-        """
-        return self.node.disparity
-
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._replay:
             print('Replay found, using that')
@@ -98,29 +84,38 @@ class StereoComponent(Component):
         self.left.link(self.node.left)
         self.right.link(self.node.right)
 
+        if self._args:
+            self._config_stereo_args(self._args)
 
-    # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
-    def configure_stereo(self,
-                         confidence: Optional[int] = None,
-                         align: Union[None, str, dai.CameraBoardSocket] = None,
-                         extended: Optional[bool] = None,
-                         subpixel: Optional[bool] = None,
-                         lr_check: Optional[bool] = None,
-                         ) -> None:
+    def _config_stereo_args(self, args: Dict):
+        if not isinstance(args, Dict):
+            args = vars(args)  # Namespace -> Dict
+        self.config_stereo(
+            confidence=args.get('disparityConfidenceThreshold', None),
+            median=args.get('stereoMedianSize', None),
+            extended=args.get('extendedDisparity', None),
+            subpixel=args.get('subpixel', None),
+            lrCheck=args.get('lrCheck', None),
+        )
+
+    def config_stereo(self,
+                      confidence: Optional[int] = None,
+                      align: Union[None, str, dai.CameraBoardSocket] = None,
+                      median: Union[None, int, dai.MedianFilter] = None,
+                      extended: Optional[bool] = None,
+                      subpixel: Optional[bool] = None,
+                      lrCheck: Optional[bool] = None,
+                      ) -> None:
         """
         Configure StereoDepth modes, filters, etc.
         """
+        if confidence: self.node.initialConfig.setConfidenceThreshold(confidence)
+        if align: self.node.setDepthAlign(parse_cam_socket(align))
+        if median: self.node.setMedianFilter(parse_median_filter(median))
+        if extended: self.node.initialConfig.setExtendedDisparity(extended)
+        if subpixel: self.node.initialConfig.setSubpixel(subpixel)
+        if lrCheck: self.node.initialConfig.setLeftRightCheck(lrCheck)
 
-        if confidence:
-            self.node.initialConfig.setConfidenceThreshold(confidence)
-        if align:
-            self.node.setDepthAlign(parse_cam_socket(align))
-        if extended:
-            self.node.initialConfig.setExtendedDisparity(extended)
-        if subpixel:
-            self.node.initialConfig.setSubpixel(subpixel)
-        if lr_check:
-            self.node.initialConfig.setExtendedDisparity(lr_check)
 
     def get_disparity_factor(self, device: dai.Device) -> float:
         """
@@ -138,9 +133,11 @@ class StereoComponent(Component):
     """
     Available outputs (to the host) of this component
     """
+
     def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         # By default, we want to show disparity
         return self.out_disparity(pipeline, device)
+
     def out_disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         out = XoutDisparity(StreamXout(self.node.id, self.disparity), self.node.getMaxDisparity())
         return super()._create_xout(pipeline, out)
@@ -148,3 +145,13 @@ class StereoComponent(Component):
     def out_depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         out = XoutDepth(device, StreamXout(self.node.id, self.depth))
         return super()._create_xout(pipeline, out)
+
+    @property
+    def depth(self) -> dai.Node.Output:
+        # Depth output from the StereoDepth node.
+        return self.node.depth
+
+    @property
+    def disparity(self) -> dai.Node.Output:
+        # Disparity output from the StereoDepth node.
+        return self.node.disparity

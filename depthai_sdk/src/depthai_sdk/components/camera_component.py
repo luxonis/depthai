@@ -10,7 +10,7 @@ from ..oak_outputs.xout import XoutFrames
 
 class CameraComponent(Component):
     # Users should have access to these nodes
-    node: Union[dai.node.ColorCamera, dai.node.MonoCamera, dai.node.XLinkIn] = None
+    node: Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera] = None
     encoder: dai.node.VideoEncoder = None
 
     out: dai.Node.Output = None  # Node output to be used as eg. an input into NN
@@ -18,13 +18,11 @@ class CameraComponent(Component):
 
     # Setting passed at init
     _replay: Replay  # Replay module
-    _fps: Optional[float]
     _args: Dict
     _control: bool
     _source: str
 
     # Parsed from settings
-    _resolution: Union[None, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None
     _encoderProfile: dai.VideoEncoderProperties.Profile = None
 
     def __init__(self,
@@ -54,35 +52,23 @@ class CameraComponent(Component):
         # Save passed settings
         self._source = source
         self._replay: Replay = replay
-        self._fps = fps
+
         self._args = args
         self._control = control
 
         self._create_node(pipeline, source.upper())
+
         if encode:
             self.encoder = pipeline.createVideoEncoder()
             # MJPEG by default
             self._encoderProfile = parseEncode(encode)
 
-        self._resolution = parseResolution(type(self.node), resolution)
+        self._resolution_forced: bool = resolution is not None
+        if resolution: self._setResolution(resolution)
+        if fps: self._setFps(fps)
 
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-        # Create the camera
-        self._createCam(pipeline, device)
-
-        if self._fps:
-            (self._replay if self._replay else self.node).setFps(self._fps)
-            # if self.camera:
-            #     self.camera.setFps(self._fps)
-            # elif self._replay:
-            #     self._replay.setFps(self._fps)
-
-    def _createCam(self, pipeline: dai.Pipeline, device: dai.Device) -> None:
-        """
-        Creates depthai camera node after we connect to OAK camera
-        @param pipeline: dai.Pipeline
-        """
         if self.isReplay():  # If replay, don't create camera node
             res = self._replay.getShape(self._source)
             resize = getResize(res, width=1200)
@@ -92,9 +78,6 @@ class CameraComponent(Component):
             self.out_size = resize
             self.out = self.node.out
             return
-
-        if self._resolution:  # Set sensor resolution as specified by user
-            self.node.setResolution(self._resolution)
 
         if isinstance(self.node, dai.node.ColorCamera):
             # DepthAI uses CHW (Planar) channel layout convention for NN inferencing
@@ -107,7 +90,7 @@ class CameraComponent(Component):
             # print('Available sensors on OAK:', cams)
             sensorName = cams[dai.CameraBoardSocket.RGB]
 
-            if self._resolution is None:  # Find the closest resolution
+            if self._resolution_forced is None:  # Find the closest resolution
                 self.node.setResolution(getClosesResolution(sensorName, width=1200))
 
             scale = getClosestIspScale(self.node.getIspSize(), width=1200)
@@ -119,6 +102,9 @@ class CameraComponent(Component):
         elif isinstance(self.node, dai.node.MonoCamera):
             self.out_size = self.node.getResolutionSize()
             self.out = self.node.out
+
+        if self._args:
+            self._config_camera_args(self._args)
 
     def _create_node(self, pipeline: dai.Pipeline, source: str) -> None:
         """
@@ -153,20 +139,18 @@ class CameraComponent(Component):
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def configure_camera(self,
-                         preview: Union[None, str, Tuple[int, int]] = None,  # Set preview size
-                         fps: Optional[float] = None  # Set fps
+                         preview: Union[None, str, Tuple[int, int]] = None,
+                         fps: Optional[float] = None,
+                        resolution: Union[
+                            None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                          ) -> None:
         """
         Configure resolution, scale, FPS, etc.
         """
-        return
+
         # TODO
-        if fps:
-            if self._replay:
-                print(
-                    "Setting FPS for depthai-recording isn't yet supported. This configuration attempt will be ignored.")
-            else:
-                self.node.setFps(fps)
+        if fps: self._setFps(fps)
+        if resolution: self._setResolution(resolution)
 
         if preview:
             from .parser import parseSize
@@ -180,23 +164,79 @@ class CameraComponent(Component):
                 # TODO: Use ImageManip to set mono frame size
                 raise NotImplementedError("Not yet implemented")
 
+    def _config_camera_args(self, args: Dict):
+        if not isinstance(args, Dict):
+            args = vars(args)  # Namespace -> Dict
+
+        if self.isColor():
+            self.configure_camera(
+                fps=args.get('rgbFps', None),
+                resolution=args.get('rgbResolution', None),
+            )
+            self.config_color_camera(
+                manulFocus=args.get('manualFocus', None),
+                afMode=args.get('afMode', None),
+                awbMode=args.get('awbMode', None),
+                sceneMode=args.get('sceneMode', None),
+                antiBandingMode=args.get('antiBandingMode', None),
+                effectMode=args.get('effectMode', None),
+                ispScale=args.get('ispScale', None),
+                sharpness=args.get('sharpness', None),
+                lumaDenoise=args.get('lumaDenoise', None),
+                chromaDenoise=args.get('chromaDenoise', None),
+            )
+        elif self.isMono():
+            self.configure_camera(
+                fps=args.get('monoFps', None),
+                resolution=args.get('monoResolution', None),
+            )
+        else: # Replay
+            self.configure_camera(fps=args.get('fps', None))
+
     def config_color_camera(self,
                             interleaved: Optional[bool] = None,
                             colorOrder: Union[None, dai.ColorCameraProperties.ColorOrder, str] = None,
+                            # Cam control
+                            manulFocus: Optional[int] = None,
+                            afMode: Optional[dai.CameraControl.AutoFocusMode] = None,
+                            awbMode: Optional[dai.CameraControl.AutoWhiteBalanceMode] = None,
+                            sceneMode: Optional[dai.CameraControl.SceneMode] = None,
+                            antiBandingMode: Optional[dai.CameraControl.AntiBandingMode] = None,
+                            effectMode: Optional[dai.CameraControl.EffectMode] = None,
+                            # IQ settings
+                            ispScale: Optional[Tuple[int,int]] = None,
+                            sharpness: Optional[int] = None,
+                            lumaDenoise: Optional[int] = None,
+                            chromaDenoise: Optional[int] = None,
                             ) -> None:
-        raise NotImplementedError()
-        # TODO: add option for other configs
         if not self.isColor():
             print("Attempted to configure ColorCamera, but this component doesn't have it. Config attempt ignored.")
             return
 
-        if interleaved is not None:
-            self.node.setInterleaved(interleaved)
+        self.node: dai.node.ColorCamera
+
+        if interleaved: self.node.setInterleaved(interleaved)
         if colorOrder:
             if isinstance(colorOrder, str):
                 colorOrder = getattr(dai.ColorCameraProperties.ColorOrder, colorOrder.upper())
-            self.node.getColorOrder(colorOrder)
+            self.node.setColorOrder(colorOrder)
 
+        if manulFocus: self.node.initialControl.setManualFocus(manulFocus)
+        if afMode: self.node.initialControl.setAutoFocusMode(afMode)
+        if awbMode: self.node.initialControl.setAutoWhiteBalanceMode(awbMode)
+        if sceneMode: self.node.initialControl.setSceneMode(sceneMode)
+        if antiBandingMode: self.node.initialControl.setAntiBandingMode(antiBandingMode)
+        if effectMode: self.node.initialControl.setEffectMode(effectMode)
+        # EQ settings
+        if ispScale: self.node.setIspScale(*ispScale)
+        if sharpness: self.node.initialControl.setSharpness(sharpness)
+        if lumaDenoise: self.node.initialControl.setLumaDenoise(lumaDenoise)
+        if chromaDenoise: self.node.initialControl.setChromaDenoise(chromaDenoise)
+
+    def _setResolution(self, resolution):
+        if not self.isReplay():
+            self.node.setResolution(parseResolution(type(self.node), resolution))
+        # TODO: support potentially downscaling depthai-recording
     def isReplay(self) -> bool:
         return self._replay is not None
 
@@ -206,8 +246,10 @@ class CameraComponent(Component):
     def isMono(self) -> bool:
         return isinstance(self.node, dai.node.MonoCamera)
 
-    def getFps(self):
+    def _getFps(self):
         return (self._replay if self.isReplay() else self.node).getFps()
+    def _setFps(self, fps: float):
+        (self._replay if self._replay else self.node).setFps(fps)
 
     def configure_encoder_h26x(self,
                        rate_control_mode: Optional[dai.VideoEncoderProperties.RateControlMode] = None,
@@ -268,7 +310,7 @@ class CameraComponent(Component):
 
     def out_encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         self.encoder = pipeline.createVideoEncoder()
-        self.encoder.setDefaultProfilePreset(self.getFps(), self._encoderProfile)
+        self.encoder.setDefaultProfilePreset(self._getFps(), self._encoderProfile)
 
         if self.isReplay():
             # Create ImageManip to convert to NV12

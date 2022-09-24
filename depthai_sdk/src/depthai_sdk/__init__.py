@@ -44,7 +44,7 @@ class OakCamera:
                  device: Optional[str] = None,  # MxId / IP / USB port
                  usb2: Optional[bool] = None,  # Auto by default
                  recording: Optional[str] = None,
-                 args: Union[None, bool, Dict] = None
+                 args: Union[None, bool, Dict] = True
                  ) -> None:
         """
         Args:
@@ -59,10 +59,12 @@ class OakCamera:
         self.pipeline = dai.Pipeline()
         self._pipeline_built = False
 
-        if args is not None:
-            if isinstance(args, bool) and args:
-                am = ArgsManager()
-                self.args = am.parseArgs()
+        if args:
+            if isinstance(args, bool):
+                if args:
+                    am = ArgsManager()
+                    self.args = am.parseArgs()
+                # else False - we don't want to parse user arguments
             else:  # Already parsed
                 self.args = args
 
