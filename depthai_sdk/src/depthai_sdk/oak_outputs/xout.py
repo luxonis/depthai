@@ -73,10 +73,7 @@ class XoutFrames(XoutBase):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
 
-        packet = FramePacket()
-        packet.imgFrame = msg
-        packet.frame = msg.getCvFrame()
-        packet.name = name
+        packet = FramePacket(name, msg, msg.getCvFrame())
 
         self.queue.put(packet, block=False)
 
@@ -364,12 +361,6 @@ class XoutTwoStage(XoutNnResults):
                 self.msgs[seq][self.second_nn.name],
                 self.whitelist_labels
             )
-            print('Adding TwoStagePacket to queue, seq', seq)
-
-            # for name in self.frame_names:
-            #     packet = dict()
-            #     packet[self.]
-
             self.queue.put(packet, block=False)
 
             # Throws RuntimeError: dictionary changed size during iteration

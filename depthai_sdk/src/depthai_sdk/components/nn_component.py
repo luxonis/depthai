@@ -133,7 +133,7 @@ class NNComponent(Component):
             scale = frameSize[0] / nnSize[0], frameSize[1] / nnSize[1]
             i = 0 if scale[0] < scale[1] else 1
             crop = int(scale[i] * nnSize[0]), int(scale[i] * nnSize[1])
-            # Crop the high-resolution frames so it matches object detection frame shape
+            # Crop the high-resolution frames so it matches object detection frame aspect ratio
             self.manip = pipeline.createImageManip()
             self.manip.setResize(*crop)
             self.manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
@@ -476,7 +476,7 @@ class NNComponent(Component):
         if not self._isMultiStage():
             raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
-        out = XoutFrames(StreamXout(self.manip.id, self.manip.out))
+        out = XoutFrames(StreamXout(self._multiStageNn.manip.id, self._multiStageNn.manip.out))
         return super()._create_xout(pipeline, out)
 
     """

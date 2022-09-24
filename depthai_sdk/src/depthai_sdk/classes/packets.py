@@ -95,7 +95,6 @@ class TwoStagePacket(DetectionPacket):
 
         # Append the second stage NN result to the detection
         if self.labels is None or img_det.label in self.labels:
-            print(self._cntr, self.nnData, len(self.imgDetections.detections))
             det.nn_data = self.nnData[self._cntr]
             self._cntr += 1
 

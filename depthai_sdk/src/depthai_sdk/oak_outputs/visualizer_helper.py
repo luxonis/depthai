@@ -238,7 +238,6 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
     @param callback: Callback that will be called on each object, with (frame, bbox) in arguments
     """
     for detection in packet.imgDetections.detections:
-        print('Drawing det', detection, len(packet.imgDetections.detections))
         bbox = norm.normalize(packet.frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
 
         if labelMap:
