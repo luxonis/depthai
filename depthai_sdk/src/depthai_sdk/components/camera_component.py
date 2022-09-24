@@ -251,22 +251,22 @@ class CameraComponent(Component):
     """
     Available outputs (to the host) of this component
     """
-    def out(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         if self.encoder:
-            return self.out_encoded(pipeline)
+            return self.out_encoded(pipeline, device)
         elif self.isReplay():
-            return self.out_replay(pipeline)
+            return self.out_replay(pipeline, device)
         else:
-            return self.out_camera(pipeline)
-    def out_camera(self, pipeline: dai.Pipeline) -> XoutBase:
+            return self.out_camera(pipeline, device)
+    def out_camera(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         out = XoutFrames(StreamXout(self.node.id, self.out))
         return super()._create_xout(pipeline, out)
 
-    def out_replay(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out_replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         out = XoutFrames(ReplayStream(self._source))
         return super()._create_xout(pipeline, out)
 
-    def out_encoded(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out_encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         self.encoder = pipeline.createVideoEncoder()
         self.encoder.setDefaultProfilePreset(self.getFps(), self._encoderProfile)
 

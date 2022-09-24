@@ -1,7 +1,7 @@
 import depthai as dai
 from typing import Type, Dict, List
 from .oak_outputs.xout_base import XoutBase, ReplayStream
-from .visualizing import FPS
+from .oak_outputs.visualizer_helper import FPS
 from .replay import Replay
 from .components.component import Component
 

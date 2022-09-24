@@ -22,7 +22,7 @@ class XoutBase(ABC):
     callback: Callable  # User defined callback. Called either after visualization (if vis=True) or after syncing.
     queue: Queue  # Queue to which synced Packets will be added. Main thread will get these
     _streams: List[str]  # Streams to listen for
-    vis: bool = False
+    _vis: bool = False
 
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
@@ -33,7 +33,7 @@ class XoutBase(ABC):
 
     def setup_base(self, callback: Callable):
         # Gets called when initializing
-        self.queue = Queue(maxsize=30)
+        self.queue = Queue(maxsize=10)
         self.callback = callback
 
     @abstractmethod
@@ -51,9 +51,12 @@ class XoutBase(ABC):
         Checks queue for any available messages. If available, call callback. Non-blocking by default.
         """
         try:
-            msgs = self.queue.get(block=block)
-            if msgs is not None:
-                for cb in self.callback:  # Call all callbacks
-                    cb(msgs)
+            packet = self.queue.get(block=block)
+            if packet is not None:
+                if self._vis:
+                    self.visualize(packet)
+                else:
+                    # User defined callback
+                    self.callback(packet)
         except Empty:  # Queue empty
             pass

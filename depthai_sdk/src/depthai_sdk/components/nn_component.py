@@ -431,7 +431,7 @@ class NNComponent(Component):
     """
     Available outputs (to the host) of this component
     """
-    def out(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         # Check if it's XoutNnResults or XoutTwoStage
 
         if self._isMultiStage():
@@ -446,7 +446,7 @@ class NNComponent(Component):
                                 StreamXout(self.node.id, self.node.out)) # NnComponent
         return super()._create_xout(pipeline, out)
 
-    def out_passthrough(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out_passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         if self._isMultiStage():
             out = XoutTwoStage(self._input, self,
                                StreamXout(self._input.node.id, self._input.node.passthrough), # Passthrough frame
@@ -461,16 +461,17 @@ class NNComponent(Component):
 
         return super()._create_xout(pipeline, out)
 
-    def out_spatials(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out_spatials(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         if not self.isSpatial():
             raise Exception('SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
 
-        out = XoutSpatialBbMappings(StreamXout(self.node.id, self.node.passthroughDepth),
+        out = XoutSpatialBbMappings(device,
+                                    StreamXout(self.node.id, self.node.passthroughDepth),
                                     StreamXout(self.node.id, self.node.boundingBoxMapping)
                                     )
         return super()._create_xout(pipeline, out)
 
-    def out_twostage_crops(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out_twostage_crops(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
 
         if not self._isMultiStage():
             raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')

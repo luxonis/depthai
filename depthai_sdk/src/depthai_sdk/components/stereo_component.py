@@ -138,13 +138,13 @@ class StereoComponent(Component):
     """
     Available outputs (to the host) of this component
     """
-    def out(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         # By default, we want to show disparity
-        return self.out_disparity(pipeline)
-    def out_disparity(self, pipeline: dai.Pipeline) -> XoutBase:
+        return self.out_disparity(pipeline, device)
+    def out_disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         out = XoutDisparity(StreamXout(self.node.id, self.disparity), self.node.getMaxDisparity())
         return super()._create_xout(pipeline, out)
 
-    def out_depth(self, pipeline: dai.Pipeline) -> XoutBase:
-        out = XoutDepth(StreamXout(self.node.id, self.depth))
+    def out_depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+        out = XoutDepth(device, StreamXout(self.node.id, self.depth))
         return super()._create_xout(pipeline, out)

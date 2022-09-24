@@ -1,5 +1,6 @@
 import math
 import time
+from enum import IntEnum
 from types import SimpleNamespace
 import numpy as np
 import depthai as dai
@@ -51,36 +52,36 @@ class Visualizer:
                     thickness=int(scale),
                     lineType=cls.line_type)
 
-        @classmethod
-        def print(cls, frame, text: str, position: FramePosition = FramePosition.BottomLeft, padPx=10):
-            """
-            Prints text on the frame.
-            @param frame: Frame
-            @param text: Text to be printed
-            @param position: Where on frame we want to print the text
-            @param padPx: Padding (in pixels)
-            """
-            textSize = cv2.getTextSize(text, Visualizer.text_type, fontScale=1.0, thickness=1)[0]
-            frameW = frame.shape[1]
-            frameH = frame.shape[0]
+    @classmethod
+    def print(cls, frame, text: str, position: FramePosition = FramePosition.BottomLeft, padPx=10):
+        """
+        Prints text on the frame.
+        @param frame: Frame
+        @param text: Text to be printed
+        @param position: Where on frame we want to print the text
+        @param padPx: Padding (in pixels)
+        """
+        textSize = cv2.getTextSize(text, Visualizer.text_type, fontScale=1.0, thickness=1)[0]
+        frameW = frame.shape[1]
+        frameH = frame.shape[0]
 
-            yPos = int(position) % 10
-            if yPos == 0:  # Y Top
-                y = textSize[1] + padPx
-            elif yPos == 1:  # Y Mid
-                y = int(frameH / 2) + int(textSize[1] / 2)
-            else:  # yPos == 2. Y Bottom
-                y = frameH - padPx
+        yPos = int(position) % 10
+        if yPos == 0:  # Y Top
+            y = textSize[1] + padPx
+        elif yPos == 1:  # Y Mid
+            y = int(frameH / 2) + int(textSize[1] / 2)
+        else:  # yPos == 2. Y Bottom
+            y = frameH - padPx
 
-            xPos = int(position) // 10
-            if xPos == 0:  # X Left
-                x = padPx
-            elif xPos == 1:  # X Mid
-                x = int(frameW / 2) - int(textSize[0] / 2)
-            else:  # xPos == 2  # X Right
-                x = frameW - textSize[0] - padPx
+        xPos = int(position) // 10
+        if xPos == 0:  # X Left
+            x = padPx
+        elif xPos == 1:  # X Mid
+            x = int(frameW / 2) - int(textSize[0] / 2)
+        else:  # xPos == 2  # X Right
+            x = frameW - textSize[0] - padPx
 
-            cls.putText(frame, text, (x, y))
+        cls.putText(frame, text, (x, y))
 
 class FPS:
     def __init__(self):
@@ -237,6 +238,7 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
     @param callback: Callback that will be called on each object, with (frame, bbox) in arguments
     """
     for detection in packet.imgDetections.detections:
+        print('Drawing det', detection, len(packet.imgDetections.detections))
         bbox = norm.normalize(packet.frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
 
         if labelMap:

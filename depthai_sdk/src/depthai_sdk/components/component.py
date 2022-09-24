@@ -25,7 +25,7 @@ class Component(ABC):
         return None
 
     @abstractmethod
-    def out(self, pipeline: dai.Pipeline) -> XoutBase:
+    def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         """
         Main XLink output (to the host) from the component. Component is already initialized (_update_device_info()
         is called).
