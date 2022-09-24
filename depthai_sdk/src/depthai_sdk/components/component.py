@@ -40,7 +40,7 @@ class Component(ABC):
         """
         raise NotImplementedError("Every component needs to include 'updateDeviceInfo()' method!")
 
-    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase):
+    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase) -> XoutBase:
         for xstream in xout.xstreams():
             if xstream.name in self.xouts:
                 continue
@@ -48,7 +48,9 @@ class Component(ABC):
             if isinstance(xstream, ReplayStream):
                 continue
 
-            xout = pipeline.createXLinkOut()
-            xout.setStreamName(xstream.name)
-            xstream.stream.link(xout.input)
+            xlink = pipeline.createXLinkOut()
+            xlink.setStreamName(xstream.name)
+            xstream.stream.link(xlink.input)
             self.xouts.append(xstream.name)
+
+        return xout

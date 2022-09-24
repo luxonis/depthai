@@ -38,7 +38,6 @@ class NNComponent(Component):
     size: Tuple[int, int]  # Input size to the NN
     _args: Dict = None
     _config: Dict = None
-    _tracker: bool = False
     _nodeType: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
 
     _multiStageNn: MultiStageNN = None
@@ -52,6 +51,7 @@ class NNComponent(Component):
     handler: Callable = None  # Custom model handler for decoding
 
     def __init__(self,
+                 pipeline: dai.Pipeline,
                  model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
                  input: Union[CameraComponent, 'NNComponent'],
                  nnType: Optional[str] = None, # Either 'yolo' or 'mobilenet'
@@ -78,12 +78,17 @@ class NNComponent(Component):
         self._input = input
         self._spatial = spatial
         self._args = args
-        self._tracker = tracker
+
+        if tracker:
+            self.tracker = pipeline.createObjectTracker()
 
         # Parse passed settings
-        self._parseModel(model)
+        self._parse_model(model)
         if nnType:
             self._parse_node_type(nnType)
+
+        # Create NN node
+        self.node = pipeline.create(self._nodeType)
 
     def _forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
@@ -99,8 +104,6 @@ class NNComponent(Component):
             self._blob = dai.OpenVINO.Blob(self._blobFromConfig(self._config['model'], version))
 
         # TODO: update NN input based on camera resolution
-
-        self.node = pipeline.create(self._nodeType)
         self.node.setBlob(self._blob)
         self._out = self.node.out
 
@@ -150,22 +153,21 @@ class NNComponent(Component):
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
-                self._spatial = StereoComponent(args=self._args)
+                self._spatial = StereoComponent(pipeline, args=self._args)
                 self._spatial._update_device_info(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
                 self._spatial.configure_stereo(align=self._input._source)
             # Configure Spatial Detection Network
-            self._update_spatial()
 
-        if self._tracker:
+        if self.tracker:
             if not self.isDetector():
                 raise ValueError('Currently, only object detector models (Yolo/MobileNet) can use tracker!')
             raise NotImplementedError()
             # self.tracker = pipeline.createObjectTracker()
             # self.out = self.tracker.out
 
-    def _parseModel(self, model):
+    def _parse_model(self, model):
         """
         Called when NNComponent is initialized. Parses "model" argument passed by user.
         """
@@ -202,9 +204,9 @@ class NNComponent(Component):
         self._nodeType = dai.node.NeuralNetwork
         if nnType:
             if nnType.upper() == 'YOLO':
-                self._nodeType = dai.node.YoloSpatialDetectionNetwork if self._spatial else dai.node.YoloDetectionNetwork
+                self._nodeType = dai.node.YoloSpatialDetectionNetwork if self.isSpatial() else dai.node.YoloDetectionNetwork
             elif nnType.upper() == 'MOBILENET':
-                self._nodeType = dai.node.MobileNetSpatialDetectionNetwork if self._spatial else dai.node.MobileNetDetectionNetwork
+                self._nodeType = dai.node.MobileNetSpatialDetectionNetwork if self.isSpatial() else dai.node.MobileNetDetectionNetwork
 
     def parse_config(self, modelConfig: Union[Path, str, Dict]):
         """
@@ -390,18 +392,19 @@ class NNComponent(Component):
         if confThreshold: self.node.setConfidenceThreshold(confThreshold)
 
     def config_nn(self,
+                  confThreshold: Optional[float] = None,
                   aspectRatioResizeMode: AspectRatioResizeMode = None,
                   ):
-
         if aspectRatioResizeMode:
             self.arResizeMode = aspectRatioResizeMode
+        if confThreshold and self.isDetector():
+            self.node.setConfidenceThreshold(confThreshold)
 
     def config_spatial(self,
                        bbScaleFactor: Optional[float] = None,
                        lowerThreshold: Optional[int] = None,
                        upperThreshold: Optional[int] = None,
                        calcAlgo: Optional[dai.SpatialLocationCalculatorAlgorithm] = None,
-                       out: bool = False
                        ):
         """
         Configures the Spatial NN network.
@@ -416,24 +419,14 @@ class NNComponent(Component):
             print('This is not a Spatial Detection network! This configuration attempt will be ignored.')
             return
 
-        config = SpatialConfig()
-        config.bbScaleFactor = bbScaleFactor
-        config.lowerThreshold = lowerThreshold
-        config.upperThreshold = upperThreshold
-        config.calcAlgo = calcAlgo
-        config.out = out
-        self._spatial_config = config
-
-    def _update_spatial(self):
-        # Nothing to configure
-        if self._spatial_config is None:
-            return
-
-        cfg = self._spatial_config
-        if cfg.bbScaleFactor: self.node.setBoundingBoxScaleFactor(cfg.bbScaleFactor)
-        if cfg.lowerThreshold: self.node.setDepthLowerThreshold(cfg.lowerThreshold)
-        if cfg.upperThreshold: self.node.setDepthUpperThreshold(cfg.upperThreshold)
-        if cfg.calcAlgo: self.node.setSpatialCalculationAlgorithm(cfg.calcAlgo)
+        if bbScaleFactor:
+            self.node.setBoundingBoxScaleFactor(bbScaleFactor)
+        if lowerThreshold:
+            self.node.setDepthLowerThreshold(lowerThreshold)
+        if upperThreshold:
+            self.node.setDepthUpperThreshold(upperThreshold)
+        if calcAlgo:
+            self.node.setSpatialCalculationAlgorithm(calcAlgo)
 
     """
     Available outputs (to the host) of this component
@@ -451,10 +444,9 @@ class NNComponent(Component):
             out = XoutNnResults(self, callback,
                                 self._input.get_stream_xout(), # CameraComponent
                                 StreamXout(self.node.id, self.node.out)) # NnComponent
-        super()._create_xout(pipeline, out)
-        return out
+        return super()._create_xout(pipeline, out)
 
-    def out_passthrough(self, pipeline: dai.Pipeline, callback: Callable) -> XoutNnResults:
+    def out_passthrough(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
         if self._isMultiStage():
             out = XoutTwoStage(self._input, self, callback,
                                StreamXout(self._input.node.id, self._input.node.passthrough), # Passthrough frame
@@ -466,10 +458,9 @@ class NNComponent(Component):
                                 StreamXout(self.node.id, self.node.passthrough),
                                 StreamXout(self.node.id, self.node.out))
 
-        super()._create_xout(pipeline, out)
-        return out
+        return super()._create_xout(pipeline, out)
 
-    def out_spatials(self, pipeline: dai.Pipeline, callback: Callable) -> XoutSpatialBbMappings:
+    def out_spatials(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
         if not self.isSpatial():
             raise ValueError('SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
 
@@ -477,14 +468,10 @@ class NNComponent(Component):
                                     StreamXout(self.node.id, self.node.passthroughDepth),
                                     StreamXout(self.node.id, self.node.boundingBoxMapping)
                                     )
-        super()._create_xout(pipeline, out)
-        return out
+        return super()._create_xout(pipeline, out)
 
     def isSpatial(self) -> bool:
-        return (
-                self._nodeType == dai.node.MobileNetSpatialDetectionNetwork or
-                self._nodeType == dai.node.YoloSpatialDetectionNetwork
-        )
+        return self._spatial is not None
 
     def _isYolo(self) -> bool:
         return (

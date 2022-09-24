@@ -137,6 +137,9 @@ class Replay:
         """
         self.fps = fps
 
+    def getFps(self) -> float:
+        return self.fps
+
     def setResizeColor(self, size: tuple):
         """
         Resize color frames prior to sending them to the device.

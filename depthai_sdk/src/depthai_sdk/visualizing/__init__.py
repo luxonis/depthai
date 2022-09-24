@@ -62,7 +62,7 @@ class VisualizerManager:
         elif isinstance(xout, XoutSpatialBbMappings):
             self._visualizer = SpatialBbMappingsVisualizer(device, xout)
         else:
-            raise NotImplementedError('Visualization of these components is not yet implemented!')
+            raise NotImplementedError(f'Visualization of {xout} output is not yet implemented!')
 
         self._visualizer.setBase(self._scale, self._fps, self._callback)
 

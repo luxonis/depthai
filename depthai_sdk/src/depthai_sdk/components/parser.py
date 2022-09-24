@@ -95,11 +95,9 @@ def parseColorCamControl(options: Dict[str, Any], cam: dai.node.ColorCamera):
                      )
 
 
-def parseEncode(encode = Union[None, str, bool, dai.VideoEncoderProperties.Profile]
-                ) -> Optional[dai.VideoEncoderProperties.Profile]:
-    if encode is None:
-        return None
-    elif isinstance(encode, dai.VideoEncoderProperties.Profile):
+def parseEncode(encode = Union[str, bool, dai.VideoEncoderProperties.Profile]
+                ) -> dai.VideoEncoderProperties.Profile:
+    if isinstance(encode, dai.VideoEncoderProperties.Profile):
         return encode
     elif isinstance(encode, bool) and encode:
         return dai.VideoEncoderProperties.Profile.MJPEG  # MJPEG by default

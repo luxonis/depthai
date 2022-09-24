@@ -26,7 +26,7 @@ class OakCamera:
     """
 
     # User should be able to access these:
-    _pipeline: dai.Pipeline = None
+    pipeline: dai.Pipeline = None
     oak: OakDevice  # Init this object by default
     args = None  # User defined arguments
     replay: Optional[Replay] = None
@@ -56,6 +56,8 @@ class OakCamera:
         self.deviceName = device
         self.usb2 = usb2
         self.oak = OakDevice()
+        self.pipeline = dai.Pipeline()
+        self._pipeline_built = False
 
         if args is not None:
             if isinstance(args, bool) and args:
@@ -85,6 +87,7 @@ class OakCamera:
         Create Color camera
         """
         return self._comp(CameraComponent(
+            self.pipeline,
             source=source,
             resolution=resolution,
             fps=fps,
@@ -112,6 +115,7 @@ class OakCamera:
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
         """
         return self._comp(NNComponent(
+            self.pipeline,
             model=model,
             input=input,
             nnType=type,
@@ -132,6 +136,7 @@ class OakCamera:
         Create Stereo camera component
         """
         return self._comp(StereoComponent(
+            self.pipeline,
             resolution=resolution,
             fps=fps,
             left=left,
@@ -152,7 +157,7 @@ class OakCamera:
             if not found:
                 raise Exception("No OAK device found to connect to!")
 
-        version = self._pipeline.getOpenVINOVersion()
+        version = self.pipeline.getOpenVINOVersion()
         if self.usb2:
             self.oak.device = dai.Device(
                 version=version,
@@ -172,7 +177,7 @@ class OakCamera:
                         tuningBlob: Optional[str] = None,
                         openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
                         ) -> None:
-        configPipeline(self._pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
+        configPipeline(self.pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
 
     def __enter__(self):
         return self
@@ -190,10 +195,10 @@ class OakCamera:
         """
         Start the application
         """
-        if self._pipeline is None:
+        if not self._pipeline_built:
             self.build() # Build the pipeline
 
-        self.oak.device.startPipeline(self._pipeline)
+        self.oak.device.startPipeline(self.pipeline)
 
         self.oak.initCallbacks(self.components)
 
@@ -235,26 +240,26 @@ class OakCamera:
 
         @return Built dai.Pipeline
         """
-        if self._pipeline is not None:
-            raise Exception('OakCamera.build() can only be called once!')
+        if self._pipeline_built:
+            raise Exception('Pipeline can be built only once!')
 
-        self._pipeline = dai.Pipeline()
+        self._pipeline_built = True
         if self.replay:
-            self.replay.initPipeline(self._pipeline)
+            self.replay.initPipeline(self.pipeline)
 
         # First go through each component to check whether any is forcing an OpenVINO version
         # TODO: check each component's SHAVE usage
         for c in self.components:
             ov = c._forced_openvino_version()
             if ov:
-                if self._pipeline.getRequiredOpenVINOVersion() and self._pipeline.getRequiredOpenVINOVersion() != ov:
+                if self.pipeline.getRequiredOpenVINOVersion() and self.pipeline.getRequiredOpenVINOVersion() != ov:
                     raise Exception(
                         'Two components forced two different OpenVINO version! Please make sure that all your models are compiled using the same OpenVINO version.')
-                self._pipeline.setOpenVINOVersion(ov)
+                self.pipeline.setOpenVINOVersion(ov)
 
-        if self._pipeline.getRequiredOpenVINOVersion() == None:
+        if self.pipeline.getRequiredOpenVINOVersion() == None:
             # Force 2021.4 as it's better supported (blobconverter, compile tool) for now.
-            self._pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
+            self.pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
         # Connect to the OAK camera
         self._init_device()
@@ -262,17 +267,17 @@ class OakCamera:
         # Go through each component
         for component in self.components:
             # Update the component now that we can query device info
-            component._update_device_info(self._pipeline, self.oak.device, self._pipeline.getOpenVINOVersion())
+            component._update_device_info(self.pipeline, self.oak.device, self.pipeline.getOpenVINOVersion())
 
         # Create XLinkOuts based on visualizers/callbacks enabled
         # TODO Refactor this, it's not clean at all
         for out in self.out_templates:
-            xoutbase = out.output(self._pipeline, out.callback)
+            xoutbase = out.output(self.pipeline, out.callback)
             out.vis.setup(self.device, xoutbase)
             self.oak.oak_out_streams.append(xoutbase)
 
 
-        return self._pipeline
+        return self.pipeline
 
 
     def show_graph(self) -> None:
@@ -280,10 +285,10 @@ class OakCamera:
         Show pipeline graph, useful for debugging.
         @return:
         """
-        if self._pipeline is None:
+        if not self._pipeline_built:
             self.build() # Build the pipeline
 
-        p = PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
+        PipelineGraph(self.pipeline.serializeToJson()['pipeline'])
 
 
     def visualize(self, output: Union[List, Callable, Component],
