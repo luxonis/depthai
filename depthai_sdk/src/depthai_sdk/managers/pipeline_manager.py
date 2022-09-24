@@ -418,11 +418,11 @@ class PipelineManager:
         self.nodes.stereo.setSubpixel(subpixel)
         if alignment is not None:
             self.nodes.stereo.setDepthAlign(alignment)
-            if alignment == dai.CameraBoardSocket.RGB:
+            if alignment == dai.CameraBoardSocket.RGB and 'camRgb' in dir(self.nodes):
                 self.nodes.stereo.setOutputSize(*self.nodes.camRgb.getPreviewSize())
-            elif alignment == dai.CameraBoardSocket.LEFT:
+            elif alignment == dai.CameraBoardSocket.LEFT and 'monoLeft' in dir(self.nodes):
                 self.nodes.stereo.setOutputSize(*self.nodes.monoLeft.getResolutionSize())
-            elif alignment == dai.CameraBoardSocket.RIGHT:
+            elif alignment == dai.CameraBoardSocket.RIGHT and 'monoRight' in dir(self.nodes):
                 self.nodes.stereo.setOutputSize(*self.nodes.monoRight.getResolutionSize())
 
         self._depthConfig = self.nodes.stereo.initialConfig.get()
