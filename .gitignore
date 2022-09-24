@@ -62,3 +62,4 @@ venv/
 
 # DepthAI recordings
 recordings/
+.pypirc
