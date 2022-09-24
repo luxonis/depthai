@@ -12,7 +12,7 @@ from .nn_helper import *
 from ..classes.nn_config import Config
 import json
 
-from ..classes.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings
+from ..classes.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames
 from ..classes.xout_base import StreamXout, XoutBase
 
 
@@ -27,9 +27,9 @@ class NNComponent(Component):
         dai.node.YoloSpatialDetectionNetwork,
     ] = None
     tracker: dai.node.ObjectTracker = None
-    arResizeMode: AspectRatioResizeMode = AspectRatioResizeMode.LETTERBOX  # Default
     manip: dai.node.ImageManip = None  # ImageManip used to resize the input to match the expected NN input size
 
+    arResizeMode: AspectRatioResizeMode = AspectRatioResizeMode.LETTERBOX  # Default
     _input: Union[CameraComponent, 'NNComponent'] # Input to the NNComponent node passed on initialization
     _stream_input: dai.Node.Output # Node Output that will be used as the input for this NNComponent
 
@@ -44,7 +44,6 @@ class NNComponent(Component):
     _multi_stage_config: MultiStageConfig = None
 
     _spatial: Union[None, bool, StereoComponent] = None
-    _spatial_config: SpatialConfig = None
 
     # For visualizer
     labels: List = None  # obj detector labels
@@ -127,7 +126,6 @@ class NNComponent(Component):
         if isinstance(self._input, CameraComponent):
             self._stream_input = self._input.out
             self._setupResizeManip(pipeline).link(self.node.input)
-
         elif self._isMultiStage():
             # Calculate crop shape of the object detector
             frameSize = self._input._input.out_size
@@ -136,20 +134,22 @@ class NNComponent(Component):
             i = 0 if scale[0] < scale[1] else 1
             crop = int(scale[i] * nnSize[0]), int(scale[i] * nnSize[1])
             # Crop the high-resolution frames so it matches object detection frame shape
-            crop_manip = pipeline.createImageManip()
-            crop_manip.setResize(*crop)
-            crop_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
-            crop_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
-            self._input._stream_input.link(crop_manip.inputImage)
+            self.manip = pipeline.createImageManip()
+            self.manip.setResize(*crop)
+            self.manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
+            self.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            self._input._stream_input.link(self.manip.inputImage)
 
             # Create script node, get HQ frames from input.
-            self._multiStageNn = MultiStageNN(pipeline, self._input.node, crop_manip.out, self.size)
+            self._multiStageNn = MultiStageNN(pipeline, self._input.node, self.manip.out, self.size)
             self._multiStageNn.configure(self._multi_stage_config)
             self._multiStageNn.out.link(self.node.input)  # Cropped frames
-            # For debugging, for intenral counter
+            # For debugging, for integral counter
             self.node.out.link(self._multiStageNn.script.inputs['recognition'])
             self.node.input.setBlocking(True)
             self.node.input.setQueueSize(15)
+        else:
+            raise ValueError("'input' argument passed on init isn't supported! You can only use NnComponent or CameraComponent as the input.")
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
@@ -237,7 +237,7 @@ class NNComponent(Component):
 
         # Parse OpenVINO version
         if "openvino_version" in self._config:
-            self._forcedVersion = parseOpenVinoVersion(self.conf.get("openvino_version"))
+            self._forcedVersion = parseOpenVinoVersion(self._config.get("openvino_version"))
 
         # Save for visualization
         self.labels = self._config.get("mappings", {}).get("labels", None)
@@ -362,7 +362,7 @@ class NNComponent(Component):
             self.tracker.setTrackerThreshold(threshold)
 
     def config_yolo_from_metadata(self, metadata: Dict):
-        return self._configYolo(
+        return self.config_yolo(
             numClasses=metadata['classes'],
             coordinateSize=metadata['coordinates'],
             anchors=metadata['anchors'],
@@ -371,7 +371,7 @@ class NNComponent(Component):
             confThreshold=metadata['confidence_threshold'],
         )
 
-    def _configYolo(self,
+    def config_yolo(self,
                     numClasses: int,
                     coordinateSize: int,
                     anchors: List[float],
@@ -462,7 +462,7 @@ class NNComponent(Component):
 
     def out_spatials(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
         if not self.isSpatial():
-            raise ValueError('SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
+            raise Exception('SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
 
         out = XoutSpatialBbMappings(callback,
                                     StreamXout(self.node.id, self.node.passthroughDepth),
@@ -470,6 +470,13 @@ class NNComponent(Component):
                                     )
         return super()._create_xout(pipeline, out)
 
+    def out_twostage_crops(self, pipeline: dai.Pipeline, callback: Callable) -> XoutBase:
+
+        if not self._isMultiStage():
+            raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
+
+        out = XoutFrames(callback, StreamXout(self.manip.id, self.manip.out))
+        return super()._create_xout(pipeline, out)
     def isSpatial(self) -> bool:
         return self._spatial is not None
 

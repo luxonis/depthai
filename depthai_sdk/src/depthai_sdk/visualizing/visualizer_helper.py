@@ -1,3 +1,6 @@
+import math
+from types import SimpleNamespace
+
 import numpy as np
 import depthai as dai
 from typing import Tuple, Union, List, Any, Callable
@@ -158,6 +161,14 @@ def drawMappings(packet: FramePacket, config: dai.SpatialLocationCalculatorConfi
         cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), bg_color, 3)
         cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), front_color, 1)
 
+def spatialsText(detection: dai.SpatialImgDetection):
+    spatials = detection.spatialCoordinates
+    return SimpleNamespace(
+        x = "X: " + ("{:.1f}m".format(spatials.x / 1000) if not math.isnan(spatials.x) else "--"),
+        y = "Y: " + ("{:.1f}m".format(spatials.y / 1000) if not math.isnan(spatials.y) else "--"),
+        z = "Z: " + ("{:.1f}m".format(spatials.z / 1000) if not math.isnan(spatials.z) else "--"),
+    )
+
 
 def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
                    norm: NormalizeBoundingBox,
@@ -182,9 +193,9 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
 
         Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
         if packet.isSpatialDetection():
-            Visualizer.putText(packet.frame, packet.spatialsText(detection).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
-            Visualizer.putText(packet.frame, packet.spatialsText(detection).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
-            Visualizer.putText(packet.frame, packet.spatialsText(detection).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
+            Visualizer.putText(packet.frame, spatialsText(detection).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
+            Visualizer.putText(packet.frame, spatialsText(detection).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
+            Visualizer.putText(packet.frame, spatialsText(detection).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
 
         rectangle(packet.frame, bbox, color=color, thickness=1, radius=0)
 

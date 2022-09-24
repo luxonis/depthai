@@ -9,12 +9,6 @@ import depthai as dai
 BLOBS_PATH = Path.home() / Path('.cache/blobs')
 
 
-class SpatialConfig:
-    bbScaleFactor: Optional[float] = None
-    lowerThreshold: Optional[int] = None
-    upperThreshold: Optional[int] = None
-    calcAlgo: Optional[dai.SpatialLocationCalculatorAlgorithm] = None
-
 class AspectRatioResizeMode(IntEnum):
     """
     If NN input frame is in different aspect ratio than what the model expect, we have 3 different
