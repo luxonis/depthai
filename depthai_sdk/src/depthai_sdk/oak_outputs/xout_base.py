@@ -3,6 +3,7 @@ from queue import Empty, Queue
 from abc import ABC, abstractmethod
 import depthai as dai
 
+from .visualizer_helper import FPS
 from ..classes.packets import FramePacket
 
 
@@ -23,7 +24,8 @@ class XoutBase(ABC):
     queue: Queue  # Queue to which synced Packets will be added. Main thread will get these
     _streams: List[str]  # Streams to listen for
     _vis: bool = False
-
+    _fps: FPS
+    name: str # Other Xouts will override this
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
 
@@ -35,6 +37,7 @@ class XoutBase(ABC):
         # Gets called when initializing
         self.queue = Queue(maxsize=10)
         self.callback = callback
+        self._fps = FPS()
 
     @abstractmethod
     def newMsg(self, name: str, msg) -> None:
@@ -53,6 +56,7 @@ class XoutBase(ABC):
         try:
             packet = self.queue.get(block=block)
             if packet is not None:
+                self._fps.next_iter()
                 if self._vis:
                     self.visualize(packet)
                 else:

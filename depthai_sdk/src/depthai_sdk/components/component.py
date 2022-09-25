@@ -7,15 +7,6 @@ class Component(ABC):
     """
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
-    xouts: List[str]
-
-    def __init__(self):
-        """
-        On init, components should only parse and save passed settings. Pipeline building process
-        should be done on when user starts the Camera.
-        """
-        self.xouts: List[str] = []
-
     def _forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
         """
         Checks whether the component forces a specific OpenVINO version. Only used by NNComponent (which overrides this
@@ -40,9 +31,15 @@ class Component(ABC):
         """
         raise NotImplementedError("Every component needs to include 'updateDeviceInfo()' method!")
 
+    def _stream_name_ok(self, pipeline: dai.Pipeline, name: str) -> bool:
+        # Check if there's already an XLinkOut stream with this name
+        for node in pipeline.getAllNodes():
+            if isinstance(node, dai.node.XLinkOut) and node.getStreamName() == name:
+                return False
+        return True
     def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase) -> XoutBase:
         for xstream in xout.xstreams():
-            if xstream.name in self.xouts:
+            if not self._stream_name_ok(pipeline, xstream.name):
                 continue
 
             if isinstance(xstream, ReplayStream):
@@ -51,6 +48,5 @@ class Component(ABC):
             xlink = pipeline.createXLinkOut()
             xlink.setStreamName(xstream.name)
             xstream.stream.link(xlink.input)
-            self.xouts.append(xstream.name)
 
         return xout

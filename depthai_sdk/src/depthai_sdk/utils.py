@@ -13,6 +13,19 @@ DEPTHAI_RECORDINGS_PATH = Path.home() / Path('.cache/depthai-recordings')
 DEPTHAI_RECORDINGS_URL = 'https://depthai-recordings.fra1.digitaloceanspaces.com/'
 
 
+def find_new_name(name: str, names: List[str]):
+    while True:
+        arr = name.split(' ')
+        print(arr)
+        num = arr[-1]
+        if num.isnumeric():
+            arr[-1] = str(int(num) + 1)
+            name = " ".join(arr)
+        else:
+            name = f"{name} 2"
+        if name not in names:
+            return name
+
 def cosDist(a, b):
     """
     Calculates cosine distance - https://en.wikipedia.org/wiki/Cosine_similarity

@@ -5,7 +5,7 @@ from ..replay import Replay
 from .camera_helper import *
 from .parser import parseResolution, parseEncode
 from ..oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
-from ..oak_outputs.xout import XoutFrames
+from ..oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
 
 
 class CameraComponent(Component):
@@ -90,11 +90,14 @@ class CameraComponent(Component):
             # print('Available sensors on OAK:', cams)
             sensorName = cams[dai.CameraBoardSocket.RGB]
 
-            if self._resolution_forced is None:  # Find the closest resolution
+            if not self._resolution_forced:  # Find the closest resolution
                 self.node.setResolution(getClosesResolution(sensorName, width=1200))
+                scale = getClosestIspScale(self.node.getIspSize(), width=1200, videoEncoder=(self.encoder is not None))
+                self.node.setIspScale(*scale)
 
-            scale = getClosestIspScale(self.node.getIspSize(), width=1200)
-            self.node.setIspScale(*scale)
+            self.node.setVideoSize(*getClosestVideoSize(*self.node.getIspSize()))
+            self.node.setVideoNumFramesPool(2) # We will increase it later if we are streaming to host
+
             self.node.setPreviewSize(*self.node.getIspSize())
             self.out_size = self.node.getPreviewSize()
             self.out = self.node.preview
@@ -138,12 +141,12 @@ class CameraComponent(Component):
             raise ValueError(f"Source name '{source}' not supported!")
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
-    def configure_camera(self,
-                         preview: Union[None, str, Tuple[int, int]] = None,
-                         fps: Optional[float] = None,
-                        resolution: Union[
+    def config_camera(self,
+                      preview: Union[None, str, Tuple[int, int]] = None,
+                      fps: Optional[float] = None,
+                      resolution: Union[
                             None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
-                         ) -> None:
+                      ) -> None:
         """
         Configure resolution, scale, FPS, etc.
         """
@@ -169,7 +172,7 @@ class CameraComponent(Component):
             args = vars(args)  # Namespace -> Dict
 
         if self.isColor():
-            self.configure_camera(
+            self.config_camera(
                 fps=args.get('rgbFps', None),
                 resolution=args.get('rgbResolution', None),
             )
@@ -186,12 +189,12 @@ class CameraComponent(Component):
                 chromaDenoise=args.get('chromaDenoise', None),
             )
         elif self.isMono():
-            self.configure_camera(
+            self.config_camera(
                 fps=args.get('monoFps', None),
                 resolution=args.get('monoResolution', None),
             )
         else: # Replay
-            self.configure_camera(fps=args.get('fps', None))
+            self.config_camera(fps=args.get('fps', None))
 
     def config_color_camera(self,
                             interleaved: Optional[bool] = None,
@@ -228,7 +231,9 @@ class CameraComponent(Component):
         if antiBandingMode: self.node.initialControl.setAntiBandingMode(antiBandingMode)
         if effectMode: self.node.initialControl.setEffectMode(effectMode)
         # EQ settings
-        if ispScale: self.node.setIspScale(*ispScale)
+        if ispScale:
+            self._resolution_forced = True
+            self.node.setIspScale(*ispScale)
         if sharpness: self.node.initialControl.setSharpness(sharpness)
         if lumaDenoise: self.node.initialControl.setLumaDenoise(lumaDenoise)
         if chromaDenoise: self.node.initialControl.setChromaDenoise(chromaDenoise)
@@ -251,12 +256,12 @@ class CameraComponent(Component):
     def _setFps(self, fps: float):
         (self._replay if self._replay else self.node).setFps(fps)
 
-    def configure_encoder_h26x(self,
-                       rate_control_mode: Optional[dai.VideoEncoderProperties.RateControlMode] = None,
-                       keyframe_freq: Optional[int ]= None,
-                       bitrate_kbps: Optional[int] = None,
-                       num_b_frames: Optional[int] = None,
-                       ):
+    def config_encoder_h26x(self,
+                            rate_control_mode: Optional[dai.VideoEncoderProperties.RateControlMode] = None,
+                            keyframe_freq: Optional[int ]= None,
+                            bitrate_kbps: Optional[int] = None,
+                            num_b_frames: Optional[int] = None,
+                            ):
         if self.encoder is None:
             raise Exception('Video encoder was not enabled!')
         if self._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
@@ -271,10 +276,10 @@ class CameraComponent(Component):
         if num_b_frames:
             self.encoder.setNumBFrames(num_b_frames)
 
-    def configure_encoder_mjpeg(self,
-                                quality: Optional[int] = None,
-                                lossless: bool = False
-                                ):
+    def config_encoder_mjpeg(self,
+                             quality: Optional[int] = None,
+                             lossless: bool = False
+                             ):
         if self.encoder is None:
             raise Exception('Video encoder was not enabled!')
         if self._encoderProfile != dai.VideoEncoderProperties.Profile.MJPEG:
@@ -286,13 +291,20 @@ class CameraComponent(Component):
             self.encoder.setLossless(lossless)
 
     def get_stream_xout(self) -> StreamXout:
-        # Used by NnComponent
-        return ReplayStream(self._source) if  self.isReplay() else StreamXout(self.node.id, self.out)
+        if self.isReplay():
+            return ReplayStream(self._source)
+        elif  self.isMono():
+            return StreamXout(self.node.id, self.out)
+        else: # ColorCamera
+            self.node.setVideoNumFramesPool(10)
+            return StreamXout(self.node.id, self.node.video)
+
 
 
     """
     Available outputs (to the host) of this component
     """
+
     def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         if self.encoder:
             return self.out_encoded(pipeline, device)
@@ -301,7 +313,7 @@ class CameraComponent(Component):
         else:
             return self.out_camera(pipeline, device)
     def out_camera(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        out = XoutFrames(StreamXout(self.node.id, self.out))
+        out = XoutFrames(self.get_stream_xout())
         return super()._create_xout(pipeline, out)
 
     def out_replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -326,5 +338,8 @@ class CameraComponent(Component):
         else:
             raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
 
-        out = XoutFrames(StreamXout(self.encoder.id, self.encoder.bitstream))
+        if self._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
+            out = XoutMjpeg(StreamXout(self.encoder.id, self.encoder.bitstream), self.isColor(), self.encoder.getLossless())
+        else:
+            out = XoutH26x(StreamXout(self.encoder.id, self.encoder.bitstream), self.isColor(), self._encoderProfile)
         return super()._create_xout(pipeline, out)

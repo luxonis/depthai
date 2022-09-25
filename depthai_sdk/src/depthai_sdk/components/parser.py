@@ -61,6 +61,18 @@ def parse_bool(value: str) -> bool:
     else:
         raise ValueError(f"Couldn't parse '{value}' to bool!")
 
+def parse_usb_speed(speed: Union[None, str, dai.UsbSpeed]) -> Optional[dai.UsbSpeed]:
+    if speed is None:
+        return None
+    elif isinstance(speed, dai.UsbSpeed):
+        return speed
+    elif isinstance(speed, str):
+        if speed.upper() in ['HIGH', '2', 'USB2']:
+            return dai.UsbSpeed.HIGH
+        elif speed.upper() in ['SUPER', '3', 'USB3']:
+            return dai.UsbSpeed.SUPER
+    raise ValueError(f"Could not parse USB speed '{speed}' to dai.UsbSpeed!")
+
 def parse_median_filter(filter: Union[int, dai.MedianFilter]) -> dai.MedianFilter:
     if isinstance(filter, dai.MedianFilter):
         return filter

@@ -1,4 +1,4 @@
-from .classes.output_temp import OutputTemplate, VisualizeTemplate
+from .classes.output_config import OutputConfig, VisualizeConfig
 from .fps import *
 from .previews import *
 from .utils import *
@@ -32,17 +32,17 @@ class OakCamera:
     replay: Optional[Replay] = None
     components: List[Component] = []  # List of components
 
-    _usb2: bool = False  # Whether to force USB2 mode
+    _usb_speed: Optional[dai.UsbSpeed] = None
     _device_name: str = None  # MxId / IP / USB port
 
-    _out_templates: List[OutputTemplate] = []
+    _out_templates: List[OutputConfig] = []
 
     # TODO: 
     # - available streams; query cameras, or Replay.getStreams(). Pass these to camera component
 
     def __init__(self,
                  device: Optional[str] = None,  # MxId / IP / USB port
-                 usb2: Optional[bool] = None,  # Auto by default
+                 usbSpeed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
                  recording: Optional[str] = None,
                  args: Union[bool, Dict] = True
                  ) -> None:
@@ -54,7 +54,7 @@ class OakCamera:
             args (None, bool, Dict): Use user defined arguments when constructing the pipeline
         """
         self._device_name = device
-        self._usb2 = usb2
+        self._usb_speed = parse_usb_speed(usbSpeed)
         self.oak = OakDevice()
         self._pipeline = dai.Pipeline()
         self._pipeline_built = False
@@ -69,7 +69,7 @@ class OakCamera:
                     if self.args.get('deviceId', None):
                         self._device_name = self.args.get('deviceId', None)
                     if self.args.get('usbSpeed', None):
-                        self._usb2 = self.args.get('usbSpeed', None) == 'usb2'
+                        self._usb_speed =  parse_usb_speed(self.args.get('usbSpeed', None))
 
                 # else False - we don't want to parse user arguments
             else:  # Already parsed
@@ -166,17 +166,17 @@ class OakCamera:
                 raise Exception("No OAK device found to connect to!")
 
         version = self._pipeline.getOpenVINOVersion()
-        if self._usb2:
+        if self._usb_speed == dai.UsbSpeed.SUPER:
             self.oak.device = dai.Device(
                 version=version,
                 deviceInfo=deviceInfo,
-                usb2Mode=self._usb2
+                usb2Mode=True
             )
         else:
             self.oak.device = dai.Device(
                 version=version,
                 deviceInfo=deviceInfo,
-                maxUsbSpeed=dai.UsbSpeed.SUPER
+                maxUsbSpeed=dai.UsbSpeed.SUPER if self._usb_speed is None else self._usb_speed
             )
 
     def config_pipeline(self,
@@ -192,7 +192,8 @@ class OakCamera:
 
     def __exit__(self, exc_type, exc_value, tb):
         print("Closing OAK camera")
-        self.oak.device.close()
+        if self.oak.device is not None:
+            self.oak.device.close()
         if self.replay:
             print("Closing replay")
             self.replay.close()
@@ -206,7 +207,7 @@ class OakCamera:
 
         self.oak.device.startPipeline(self._pipeline)
 
-        self.oak.initCallbacks(self.components)
+        self.oak.initCallbacks(self._pipeline)
 
         if self.replay:
             self.replay.createQueues(self.oak.device)
@@ -276,12 +277,17 @@ class OakCamera:
             component._update_device_info(self._pipeline, self.oak.device, self._pipeline.getOpenVINOVersion())
 
         # Create XLinkOuts based on visualizers/callbacks enabled
+        names = []
         for out in self._out_templates:
             xoutbase: XoutBase = out.output(self._pipeline, self.oak.device)
             xoutbase.setup_base(out.callback)
+
+            if xoutbase.name in names: # Stream name already exist, append a number to it
+                xoutbase.name = find_new_name(xoutbase.name, names)
+            names.append(xoutbase.name)
+
             if out.vis:
-                fps = self.oak.fpsHandlers if out.vis.fps else None
-                xoutbase.setup_visualize(out.vis.scale, fps)
+                xoutbase.setup_visualize(out.vis.scale, out.vis.fps)
             self.oak.oak_out_streams.append(xoutbase)
 
         # User-defined arguments
@@ -313,7 +319,7 @@ class OakCamera:
                   fps=False,
                   callback: Callable=None):
 
-        self.callback(output, callback, VisualizeTemplate(scale, fps))
+        self.callback(output, callback, VisualizeConfig(scale, fps))
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable, vis=None) -> None:
         if isinstance(output, List):
@@ -324,7 +330,7 @@ class OakCamera:
         if isinstance(output, Component):
             output = output.out
 
-        self._out_templates.append(OutputTemplate(output, callback, vis))
+        self._out_templates.append(OutputConfig(output, callback, vis))
 
     @property
     def device(self) -> dai.Device:

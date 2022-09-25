@@ -12,7 +12,7 @@ from .nn_helper import *
 from ..classes.nn_config import Config
 import json
 
-from ..oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames
+from ..oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker
 from ..oak_outputs.xout_base import StreamXout, XoutBase
 
 
@@ -160,15 +160,9 @@ class NNComponent(Component):
                 self._spatial.config_stereo(align=self._input._source)
             # Configure Spatial Detection Network
 
-        if self.tracker:
-            if not self.isDetector():
-                raise ValueError('Currently, only object detector models (Yolo/MobileNet) can use tracker!')
-            raise NotImplementedError()
-            # self.tracker = pipeline.createObjectTracker()
-            # self.out = self.tracker.out
-
         if self._args:
-            self._config_spatials_args(self._args)
+            if self.isSpatial():
+                self._config_spatials_args(self._args)
 
     def _parse_model(self, model):
         """
@@ -304,6 +298,9 @@ class NNComponent(Component):
             self._stream_input.link(self.manip.inputImage)
             self.manip.setMaxOutputFrameSize(self.size[0] * self.size[1] * 3)
             self.manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            # Set to non-blocking
+            self.manip.inputImage.setBlocking(False)
+            self.manip.inputImage.setQueueSize(2)
 
         # Set Aspect Ratio resizing mode
         if self.arResizeMode == AspectRatioResizeMode.CROP:
@@ -337,6 +334,18 @@ class NNComponent(Component):
 
         self._multi_stage_config = MultiStageConfig(debug, show_cropped_frames, labels, scaleBb)
 
+    def _parse_label(self, label:Union[str, int]) -> int:
+        if isinstance(label, int): return label
+        elif isinstance(label, str):
+            if not self.labels:
+                raise ValueError("Incorrect trackLabels type! Make sure to pass NN configuration to the NNComponent so it can deccode string labels!")
+            # Label map is Dict of either "name", or ["name", "color"]
+            labelStrs = [l.upper() if isinstance(l, str) else l[0].upper() for l in self.labels]
+
+            if label.upper() not in labelStrs: raise ValueError(f"String '{label}' wasn't found in passed labels!")
+            return labelStrs.index(label.upper())
+        else: raise Exception('_parse_label only accepts int or str')
+
     def config_tracker(self,
                        type: Optional[dai.TrackerType] = None,
                        trackLabels: Optional[List[int]] = None,
@@ -362,8 +371,9 @@ class NNComponent(Component):
 
         if type:
             self.tracker.setTrackerType(type=type)
-        if trackLabels:
-            self.tracker.setDetectionLabelsToTrack(trackLabels)
+        if trackLabels and 0 < len(trackLabels):
+            l = [self._parse_label(l) for l in trackLabels]
+            self.tracker.setDetectionLabelsToTrack(l)
         if assignmentPolicy:
             self.tracker.setTrackerIdAssignmentPolicy(assignmentPolicy)
         if maxObj:
@@ -484,18 +494,35 @@ class NNComponent(Component):
         return super()._create_xout(pipeline, out)
 
     def out_twostage_crops(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-
         if not self._isMultiStage():
             raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
         out = XoutFrames(StreamXout(self._multiStageNn.manip.id, self._multiStageNn.manip.out))
         return super()._create_xout(pipeline, out)
 
+    def out_tracker(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+        if not self.isTracker(): raise Exception('Tracker was not enabled! Enable with cam.create_nn("[model]", tracker=True)!')
+        self.node.passthrough.link(self.tracker.inputDetectionFrame)
+        self.node.out.link(self.tracker.inputDetections)
+        # TODO: add support for full frame tracking
+        self.node.passthrough.link(self.tracker.inputTrackerFrame)
+
+        out = XoutTracker(self,
+                          self._input.get_stream_xout(), # CameraComponent
+                          StreamXout(self.tracker.id, self.tracker.out)
+                          )
+        return super()._create_xout(pipeline, out)
+
+
     """
     Checks
     """
     def isSpatial(self) -> bool:
         return self._spatial is not None
+
+    def isTracker(self) -> bool:
+        # Currently, only object detectors are supported
+        return self.isDetector() and self.tracker is not None
 
     def _isYolo(self) -> bool:
         return (

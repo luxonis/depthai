@@ -4,8 +4,9 @@ opencv-python>4
 opencv-contrib-python>4
 blobconverter>=1.2.8
 pytube>=11.0.1
-depthai>2
+depthai>=2.17.3
 PyTurboJPEG==1.6.4
 marshmallow==3.17.0
 distinctipy
 xmltodict
+PySide2

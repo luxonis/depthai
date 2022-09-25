@@ -4,11 +4,12 @@ from enum import IntEnum
 from types import SimpleNamespace
 import numpy as np
 import depthai as dai
-from typing import Tuple, Union, List, Any, Callable
+from typing import Tuple, Union, List, Any, Callable, Dict
 import cv2
 import distinctipy
 from .normalize_bb import NormalizeBoundingBox
-from ..classes.packets import DetectionPacket, TwoStageDetection, FramePacket, SpatialBbMappingPacket
+from ..classes.packets import DetectionPacket, TwoStageDetection, FramePacket, SpatialBbMappingPacket, TrackerPacket, \
+    TrackingDetection
 
 
 class FramePosition(IntEnum):
@@ -53,6 +54,25 @@ class Visualizer:
                     lineType=cls.line_type)
 
     @classmethod
+    def line(cls, frame: np.ndarray,
+             p1: Tuple[int,int], p2: Tuple[int,int],
+             color = None,
+             thickness: int = 1) -> None:
+        cv2.line(frame, p1, p2,
+                 cls.bg_color,
+                 thickness * 3,
+                 cls.line_type)
+        cv2.line(frame, p1, p2,
+                 (int(color[0]), int(color[1]), int(color[2])) if color else cls.front_color,
+                 thickness,
+                 cls.line_type)
+
+    @classmethod
+    def print_on_roi(cls, frame, topLeft, bottomRight, text:str, position: FramePosition = FramePosition.BottomLeft, padPx=10):
+        frame_roi = frame[topLeft[1]:bottomRight[1],topLeft[0]:bottomRight[0]]
+        cls.print(frame=frame_roi, text=text, position=position, padPx=padPx)
+
+    @classmethod
     def print(cls, frame, text: str, position: FramePosition = FramePosition.BottomLeft, padPx=10):
         """
         Prints text on the frame.
@@ -80,7 +100,6 @@ class Visualizer:
             x = int(frameW / 2) - int(textSize[0] / 2)
         else:  # xPos == 2  # X Right
             x = frameW - textSize[0] - padPx
-
         cls.putText(frame, text, (x, y))
 
 class FPS:
@@ -216,16 +235,14 @@ def drawMappings(packet: SpatialBbMappingPacket):
         cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), Visualizer.bg_color, 3)
         cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), Visualizer.front_color, 1)
 
-def spatialsText(detection: dai.SpatialImgDetection):
-    spatials = detection.spatialCoordinates
+def spatialsText(spatials: dai.Point3f):
     return SimpleNamespace(
         x = "X: " + ("{:.1f}m".format(spatials.x / 1000) if not math.isnan(spatials.x) else "--"),
         y = "Y: " + ("{:.1f}m".format(spatials.y / 1000) if not math.isnan(spatials.y) else "--"),
         z = "Z: " + ("{:.1f}m".format(spatials.z / 1000) if not math.isnan(spatials.z) else "--"),
     )
 
-
-def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
+def drawDetections(packet: Union[DetectionPacket, TwoStageDetection, TrackerPacket],
                    norm: NormalizeBoundingBox,
                    labelMap: List[Tuple[str, Tuple]] = None):
     """
@@ -235,9 +252,14 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
     @param dets: dai.ImgDetections
     @param norm: Object that handles normalization of the bounding box
     @param labelMap: Label map for the detections
-    @param callback: Callback that will be called on each object, with (frame, bbox) in arguments
     """
-    for detection in packet.imgDetections.detections:
+    imgDets = []
+    if isinstance(packet, TrackerPacket):
+        imgDets = [t.srcImgDetection for t in packet.daiTracklets.tracklets]
+    elif isinstance(packet, DetectionPacket):
+        imgDets = [det for det in packet.imgDetections.detections]
+
+    for detection in imgDets:
         bbox = norm.normalize(packet.frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
 
         if labelMap:
@@ -248,13 +270,37 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection],
 
         Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
         if packet.isSpatialDetection():
-            Visualizer.putText(packet.frame, spatialsText(detection).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
-            Visualizer.putText(packet.frame, spatialsText(detection).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
-            Visualizer.putText(packet.frame, spatialsText(detection).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
+            point = packet.getSpatials(detection) if isinstance(packet, TrackerPacket) else detection.spatialCoordinates
+            Visualizer.putText(packet.frame, spatialsText(point).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
+            Visualizer.putText(packet.frame, spatialsText(point).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
+            Visualizer.putText(packet.frame, spatialsText(point).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
 
         rectangle(packet.frame, bbox, color=color, thickness=1, radius=0)
-
         packet.add_detection(detection, bbox, txt, color)
+
+def drawTrackletId(packet: TrackerPacket):
+    for det in packet.detections:
+        centroid = det.centroid()
+        Visualizer.print_on_roi(packet.frame, det.topLeft, det.bottomRight,
+                                f"Id: {str(det.tracklet.id)}",
+                                FramePosition.TopMid)
+def drawBreadcrumbTrail(packets: List[TrackerPacket]):
+    packet = packets[-1] # Current packet
+
+    dic: Dict[str, List[TrackingDetection]] = {}
+    validIds = [t.id for t in packet.daiTracklets.tracklets]
+    for id in validIds:
+        dic[str(id)] = []
+
+    for packet in packets:
+        for det in packet.detections:
+            if det.tracklet.id in validIds:
+                dic[str(det.tracklet.id)].append(det)
+
+    for id, list in dic.items():
+        for i in range(len(list) - 1):
+            Visualizer.line(packet.frame, list[i].centroid(), list[i+1].centroid(), color=list[i].color)
+
 
 def colorizeDepth(depthFrame: Union[dai.ImgFrame, Any], colorMap=None):
     if isinstance(depthFrame, dai.ImgFrame):
