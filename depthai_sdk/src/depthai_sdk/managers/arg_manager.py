@@ -46,7 +46,7 @@ try:
 except:
     _colorMaps = None
 _streamChoices = ("nnInput", "color", "left", "right", "depth", "depthRaw", "disparity", "disparityColor", "rectifiedLeft", "rectifiedRight")
-_openvinoVersions = list(map(lambda name: name.replace("VERSION_", ""), filter(lambda name: name.startswith("VERSION_"), vars(dai.OpenVINO.Version))))
+_openvinoVersions = [v.replace("VERSION_", "") for v in vars(dai.OpenVINO.Version) if v.startswith("VERSION_")]
 _orientationChoices = list(filter(lambda var: var[0].isupper(), vars(dai.CameraImageOrientation)))
 
 def _checkRange(minVal, maxVal):

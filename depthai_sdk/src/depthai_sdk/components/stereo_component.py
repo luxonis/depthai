@@ -96,6 +96,8 @@ class StereoComponent(Component):
             extended=args.get('extendedDisparity', None),
             subpixel=args.get('subpixel', None),
             lrCheck=args.get('lrCheck', None),
+            sigma=args.get('sigma', None),
+            lrCheckThreshold=args.get('lrcThreshold', None),
         )
 
     def config_stereo(self,
@@ -105,6 +107,8 @@ class StereoComponent(Component):
                       extended: Optional[bool] = None,
                       subpixel: Optional[bool] = None,
                       lrCheck: Optional[bool] = None,
+                      sigma: Optional[int] = None,
+                      lrCheckThreshold: Optional[int] = None,
                       ) -> None:
         """
         Configure StereoDepth modes, filters, etc.
@@ -115,6 +119,8 @@ class StereoComponent(Component):
         if extended: self.node.initialConfig.setExtendedDisparity(extended)
         if subpixel: self.node.initialConfig.setSubpixel(subpixel)
         if lrCheck: self.node.initialConfig.setLeftRightCheck(lrCheck)
+        if sigma: self.node.initialConfig.setBilateralFilterSigma(sigma)
+        if lrCheckThreshold: self.node.initialConfig.setLeftRightCheckThreshold(lrCheckThreshold)
 
 
     def get_disparity_factor(self, device: dai.Device) -> float:

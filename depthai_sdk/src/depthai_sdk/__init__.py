@@ -13,7 +13,7 @@ from .oak_device import OakDevice
 from typing import Optional
 import depthai as dai
 from pathlib import Path
-
+from .args_parser import ArgsParser
 
 class OakCamera:
     """
@@ -26,16 +26,16 @@ class OakCamera:
     """
 
     # User should be able to access these:
-    pipeline: dai.Pipeline = None
+    _pipeline: dai.Pipeline = None
     oak: OakDevice  # Init this object by default
-    args = None  # User defined arguments
+    args: Dict[str, Any] = None  # User defined arguments
     replay: Optional[Replay] = None
     components: List[Component] = []  # List of components
 
-    usb2: bool = False  # Whether to force USB2 mode
-    deviceName: str = None  # MxId / IP / USB port
+    _usb2: bool = False  # Whether to force USB2 mode
+    _device_name: str = None  # MxId / IP / USB port
 
-    out_templates: List[OutputTemplate] = []
+    _out_templates: List[OutputTemplate] = []
 
     # TODO: 
     # - available streams; query cameras, or Replay.getStreams(). Pass these to camera component
@@ -44,7 +44,7 @@ class OakCamera:
                  device: Optional[str] = None,  # MxId / IP / USB port
                  usb2: Optional[bool] = None,  # Auto by default
                  recording: Optional[str] = None,
-                 args: Union[None, bool, Dict] = True
+                 args: Union[bool, Dict] = True
                  ) -> None:
         """
         Args:
@@ -53,17 +53,24 @@ class OakCamera:
             recording (str, optional): Use depthai-recording - either local path, or from depthai-recordings repo
             args (None, bool, Dict): Use user defined arguments when constructing the pipeline
         """
-        self.deviceName = device
-        self.usb2 = usb2
+        self._device_name = device
+        self._usb2 = usb2
         self.oak = OakDevice()
-        self.pipeline = dai.Pipeline()
+        self._pipeline = dai.Pipeline()
         self._pipeline_built = False
 
         if args:
             if isinstance(args, bool):
                 if args:
-                    am = ArgsManager()
-                    self.args = am.parseArgs()
+                    self.args = ArgsParser.parseArgs()
+                    # Setup the OakCamera
+                    if self.args.get('recording', None):
+                        recording = self.args.get('recording', None)
+                    if self.args.get('deviceId', None):
+                        self._device_name = self.args.get('deviceId', None)
+                    if self.args.get('usbSpeed', None):
+                        self._usb2 = self.args.get('usbSpeed', None) == 'usb2'
+
                 # else False - we don't want to parse user arguments
             else:  # Already parsed
                 self.args = args
@@ -89,7 +96,7 @@ class OakCamera:
         Create Color camera
         """
         return self._comp(CameraComponent(
-            self.pipeline,
+            self._pipeline,
             source=source,
             resolution=resolution,
             fps=fps,
@@ -117,7 +124,7 @@ class OakCamera:
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
         """
         return self._comp(NNComponent(
-            self.pipeline,
+            self._pipeline,
             model=model,
             input=input,
             nnType=type,
@@ -131,14 +138,13 @@ class OakCamera:
                       fps: Optional[float] = None,
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
-                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                       control: bool = False,
                       ) -> StereoComponent:
         """
         Create Stereo camera component
         """
         return self._comp(StereoComponent(
-            self.pipeline,
+            self._pipeline,
             resolution=resolution,
             fps=fps,
             left=left,
@@ -152,19 +158,19 @@ class OakCamera:
         """
         Connect to the OAK camera
         """
-        if self.deviceName:
-            deviceInfo = dai.DeviceInfo(self.deviceName)
+        if self._device_name:
+            deviceInfo = dai.DeviceInfo(self._device_name)
         else:
-            (found, deviceInfo) = dai.DeviceBootloader.getFirstAvailableDevice()
+            (found, deviceInfo) = dai.Device.getFirstAvailableDevice()
             if not found:
                 raise Exception("No OAK device found to connect to!")
 
-        version = self.pipeline.getOpenVINOVersion()
-        if self.usb2:
+        version = self._pipeline.getOpenVINOVersion()
+        if self._usb2:
             self.oak.device = dai.Device(
                 version=version,
                 deviceInfo=deviceInfo,
-                usb2Mode=self.usb2
+                usb2Mode=self._usb2
             )
         else:
             self.oak.device = dai.Device(
@@ -179,7 +185,7 @@ class OakCamera:
                         tuningBlob: Optional[str] = None,
                         openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
                         ) -> None:
-        configPipeline(self.pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
+        configPipeline(self._pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
 
     def __enter__(self):
         return self
@@ -187,8 +193,6 @@ class OakCamera:
     def __exit__(self, exc_type, exc_value, tb):
         print("Closing OAK camera")
         self.oak.device.close()
-        print('Device closed')
-
         if self.replay:
             print("Closing replay")
             self.replay.close()
@@ -200,7 +204,7 @@ class OakCamera:
         if not self._pipeline_built:
             self.build() # Build the pipeline
 
-        self.oak.device.startPipeline(self.pipeline)
+        self.oak.device.startPipeline(self._pipeline)
 
         self.oak.initCallbacks(self.components)
 
@@ -247,21 +251,21 @@ class OakCamera:
 
         self._pipeline_built = True
         if self.replay:
-            self.replay.initPipeline(self.pipeline)
+            self.replay.initPipeline(self._pipeline)
 
         # First go through each component to check whether any is forcing an OpenVINO version
         # TODO: check each component's SHAVE usage
         for c in self.components:
             ov = c._forced_openvino_version()
             if ov:
-                if self.pipeline.getRequiredOpenVINOVersion() and self.pipeline.getRequiredOpenVINOVersion() != ov:
+                if self._pipeline.getRequiredOpenVINOVersion() and self._pipeline.getRequiredOpenVINOVersion() != ov:
                     raise Exception(
                         'Two components forced two different OpenVINO version! Please make sure that all your models are compiled using the same OpenVINO version.')
-                self.pipeline.setOpenVINOVersion(ov)
+                self._pipeline.setOpenVINOVersion(ov)
 
-        if self.pipeline.getRequiredOpenVINOVersion() == None:
+        if self._pipeline.getRequiredOpenVINOVersion() == None:
             # Force 2021.4 as it's better supported (blobconverter, compile tool) for now.
-            self.pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
+            self._pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
         # Connect to the OAK camera
         self._init_device()
@@ -269,19 +273,28 @@ class OakCamera:
         # Go through each component
         for component in self.components:
             # Update the component now that we can query device info
-            component._update_device_info(self.pipeline, self.oak.device, self.pipeline.getOpenVINOVersion())
+            component._update_device_info(self._pipeline, self.oak.device, self._pipeline.getOpenVINOVersion())
 
         # Create XLinkOuts based on visualizers/callbacks enabled
-        for out in self.out_templates:
-            xoutbase: XoutBase = out.output(self.pipeline, self.oak.device)
+        for out in self._out_templates:
+            xoutbase: XoutBase = out.output(self._pipeline, self.oak.device)
             xoutbase.setup_base(out.callback)
             if out.vis:
                 fps = self.oak.fpsHandlers if out.vis.fps else None
                 xoutbase.setup_visualize(out.vis.scale, fps)
             self.oak.oak_out_streams.append(xoutbase)
 
+        # User-defined arguments
+        if self.args:
+            self.config_pipeline(
+                xlinkChunk=self.args.get('xlinkChunkSize', None),
+                tuningBlob=self.args.get('cameraTuning', None),
+                openvinoVersion=self.args.get('openvinoVersion', None),
+            )
+            self.device.setIrLaserDotProjectorBrightness(self.args.get('irDotBrightness', None) or 0)
+            self.device.setIrFloodLightBrightness(self.args.get('irFloodBrightness', None) or 0)
 
-        return self.pipeline
+        return self._pipeline
 
 
     def show_graph(self) -> None:
@@ -292,7 +305,7 @@ class OakCamera:
         if not self._pipeline_built:
             self.build() # Build the pipeline
 
-        PipelineGraph(self.pipeline.serializeToJson()['pipeline'])
+        PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
 
 
     def visualize(self, output: Union[List, Callable, Component],
@@ -311,8 +324,10 @@ class OakCamera:
         if isinstance(output, Component):
             output = output.out
 
-        self.out_templates.append(OutputTemplate(output, callback, vis))
+        self._out_templates.append(OutputTemplate(output, callback, vis))
 
     @property
     def device(self) -> dai.Device:
+        if not self._pipeline_built:
+            raise Exception("OAK device wasn't booted yet, make sure to call oak.build() or oak.start()!")
         return self.oak.device

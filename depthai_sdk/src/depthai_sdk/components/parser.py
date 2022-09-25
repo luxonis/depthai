@@ -2,11 +2,11 @@ import depthai as dai
 from typing import Union, Tuple, Optional, Dict, Any, Type
 
 
-def rgbResolution(resolution: Union[str, dai.ColorCameraProperties.SensorResolution]) -> dai.ColorCameraProperties.SensorResolution:
+def rgbResolution(resolution: Union[None, str, dai.ColorCameraProperties.SensorResolution]) -> dai.ColorCameraProperties.SensorResolution:
     """
     Parses Color camera resolution based on the string
     """
-    if isinstance(resolution, dai.ColorCameraProperties.SensorResolution):
+    if isinstance(resolution, dai.ColorCameraProperties.SensorResolution) or resolution is None:
         return resolution
 
     resolution = str(resolution).upper()
@@ -25,11 +25,11 @@ def rgbResolution(resolution: Union[str, dai.ColorCameraProperties.SensorResolut
     else:  # Default
         return dai.ColorCameraProperties.SensorResolution.THE_1080_P
 
-def monoResolution(resolution: Union[str, dai.MonoCameraProperties.SensorResolution]) -> dai.MonoCameraProperties.SensorResolution:
+def monoResolution(resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution]) -> dai.MonoCameraProperties.SensorResolution:
     """
     Parses Mono camera resolution based on the string
     """
-    if isinstance(resolution, dai.MonoCameraProperties.SensorResolution):
+    if isinstance(resolution, dai.MonoCameraProperties.SensorResolution) or resolution is None:
         return resolution
 
     resolution = str(resolution).upper()
@@ -52,6 +52,14 @@ def parseResolution(
         return monoResolution(resolution)
     else:
         raise ValueError("camera must be either MonoCamera or ColorCamera!")
+
+def parse_bool(value: str) -> bool:
+    if value.upper() in ['1', 'TRUE', 'ON', 'YES']:
+        return True
+    elif value.upper() in ['0', 'FALSE', 'OFF', 'NO']:
+        return False
+    else:
+        raise ValueError(f"Couldn't parse '{value}' to bool!")
 
 def parse_median_filter(filter: Union[int, dai.MedianFilter]) -> dai.MedianFilter:
     if isinstance(filter, dai.MedianFilter):
