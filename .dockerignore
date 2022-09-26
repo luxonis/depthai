@@ -1,0 +1,64 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+
+# General
+.DS_Store
+.vscode
+*.log
+# Distribution / packaging
+.Python
+build/
+package/*.tar
+package/*.tar.gz
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*darwin.so
+MANIFEST
+*.idea
+# DepthAI-Specific
+dataset/
+.fw_cache/
+depthai.calib
+mesh_left.calib
+mesh_right.calib
+intrinsic.json
+intrinsic_calib_m2
+log_system_information.json
+resources/*.json
+*.h264
+*.h265
+*.mkv
+*.mp4
+*.blob*
+*.cmd
+*.mvcmd
+*.so
+*.prof
+*.calib
+*.csv
+*.img
+.aux_wheels
+*.whl
+
+*.orig
+
+# Virtual environment
+virtualenv/
+venv/
+
+# DepthAI recordings
+recordings/

@@ -21,7 +21,7 @@ from pathlib import Path
 
 ransacMethod = cv2.RANSAC
 if cv2.__version__ >= "4.5.4":
-    ransacMethod.cv2.USAC_MAGSAC
+    ransacMethod = cv2.USAC_MAGSAC
 
 epilog_text="Dynamic recalibration."
 parser = argparse.ArgumentParser(
@@ -87,6 +87,7 @@ def calculate_Rt_from_frames(frame1,frame2,k1,k2,d1,d2):
     return R_est, t_est, R1, R2, P1, P2, Q
 
 def calculate_epipolar_error(frame1, frame2):
+    minNrInliers = 10
     sift = cv2.SIFT_create()
     kp1, des1 = sift.detectAndCompute(frame1,None)
     kp2, des2 = sift.detectAndCompute(frame2,None)
@@ -103,6 +104,9 @@ def calculate_epipolar_error(frame1, frame2):
             pts2.append(kp2[m.trainIdx].pt)
             pts1.append(kp1[m.queryIdx].pt)
 
+    if len(pts1) < minNrInliers or len(pts2) < minNrInliers:
+        return math.inf
+
     pts1 = np.float32(pts1)
     pts2 = np.float32(pts2)
     # this is just to get inliers
@@ -117,7 +121,7 @@ def calculate_epipolar_error(frame1, frame2):
         pt1 = pts1[i]
 
         epi_error_sum += abs(pt1[1] - pt2[1])
-    if len(pts1) < 10:
+    if len(pts1) < minNrInliers:
         return math.inf
     return epi_error_sum / len(pts1)
 
