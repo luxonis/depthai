@@ -207,9 +207,9 @@ class XoutSpatialBbMappings(XoutFrames):
             self.depth_msg = None
 
 
-class XoutSeqSync(XoutFrames):
+class XoutSeqSync(XoutBase):
     msgs: Dict[str, Dict[str, dai.Buffer]]  # List of messages.
-    sync_stream: StreamXout
+    streams: List[StreamXout]
     """
     msgs = {seq: {stream_name: frame}}
     Example:
@@ -225,11 +225,13 @@ class XoutSeqSync(XoutFrames):
         }
     }
     """
+    def xstreams(self) -> List[StreamXout]:
+        return self.streams
 
-    def __init__(self, frames: StreamXout, stream: StreamXout):
-        self.sync_stream = stream
+    def __init__(self, streams: List[StreamXout]):
+        self.streams = streams
         # Save StreamXout before initializing super()!
-        super().__init__(frames)
+        XoutBase.__init__(self)
         self.msgs = dict()
 
     @abstractmethod
@@ -257,18 +259,20 @@ class XoutSeqSync(XoutFrames):
                     newMsgs[name] = msg
             self.msgs = newMsgs
 
-    def xstreams(self) -> List[StreamXout]:
-        return [self.frames, self.sync_stream]
-
-class XoutNnResults(XoutSeqSync):
+class XoutNnResults(XoutSeqSync, XoutFrames):
     name: str = "Object Detection"
     labels: List[Tuple[str, Tuple[int, int, int]]] = None
     normalizer: NormalizeBoundingBox
 
+    def xstreams(self) -> List[StreamXout]:
+        return [self.nn_results, self.frames]
+
     def __init__(self, detNn, frames: StreamXout, nn_results: StreamXout):
         self.nn_results = nn_results
+        # Multiple inheritance init
+        XoutFrames.__init__(self, frames)
+        XoutSeqSync.__init__(self, [frames, nn_results])
         # Save StreamXout before initializing super()!
-        super().__init__(frames, nn_results)
         self.detNn = detNn
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors

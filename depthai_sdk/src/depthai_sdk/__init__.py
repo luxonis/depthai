@@ -298,6 +298,18 @@ class OakCamera:
 
         return self._pipeline
 
+    def record(self, outputs: Union[Callable, List[Callable]], path: str, ):
+        """
+        Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
+        them to the computer in desired format (raw, mp4, mcap, bag..).
+
+        Args:
+            outputs (Component/Component output): Component output(s) to be recorded
+            path: Folder path where to save these streams
+
+        """
+        if isinstance(outputs, Component):
+            components = [outputs] # to list
 
     def show_graph(self) -> None:
         """
