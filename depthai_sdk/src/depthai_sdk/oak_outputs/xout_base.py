@@ -37,6 +37,8 @@ class XoutBase(ABC):
         # Gets called when initializing
         self.queue = Queue(maxsize=10)
         self.callback = callback
+
+    def start_fps(self):
         self._fps = FPS()
 
     @abstractmethod

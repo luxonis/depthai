@@ -16,10 +16,20 @@ class StereoComponent(Component):
     left: Union[None, dai.Node.Output, CameraComponent] = None
     right: Union[None, dai.Node.Output, CameraComponent] = None
 
+    @property
+    def depth(self) -> dai.Node.Output:
+        # Depth output from the StereoDepth node.
+        return self.node.depth
+
+    @property
+    def disparity(self) -> dai.Node.Output:
+        # Disparity output from the StereoDepth node.
+        return self.node.disparity
+
+
     _replay: Optional[Replay]  # Replay module
     _resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution]
     _fps: Optional[float]
-    _control: bool
     _args: Dict
 
     def __init__(self,
@@ -28,7 +38,6 @@ class StereoComponent(Component):
                  fps: Optional[float] = None,
                  left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                  right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
-                 control: bool = False,
                  replay: Optional[Replay] = None,
                  args: Any = None,
                  ):
@@ -38,7 +47,6 @@ class StereoComponent(Component):
             left (None / dai.None.Output / CameraComponent): Left mono camera source. Will get handled by Camera object.
             right (None / dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
             encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
-            control (bool, default False): control the camera from the host keyboard (via cv2.waitKey())
             replay (Replay object, optional): Replay
             args (Any, optional): Set the camera components based on user arguments
         """
@@ -47,7 +55,6 @@ class StereoComponent(Component):
         self._resolution = resolution
         self._fps = fps
         self._args = args
-        self._control = control
 
         self.left = left
         self.right = right
@@ -76,9 +83,9 @@ class StereoComponent(Component):
         # TODO: use self._args to setup the StereoDepth node
 
         if isinstance(self.left, CameraComponent):
-            self.left = self.left.out
+            self.left = self.left._out
         if isinstance(self.right, CameraComponent):
-            self.right = self.right.out
+            self.right = self.right._out
 
         # Connect Mono cameras to the StereoDepth node
         self.left.link(self.node.left)
@@ -111,7 +118,7 @@ class StereoComponent(Component):
                       lrCheckThreshold: Optional[int] = None,
                       ) -> None:
         """
-        Configure StereoDepth modes, filters, etc.
+        Configures StereoDepth modes and options.
         """
         if confidence: self.node.initialConfig.setConfidenceThreshold(confidence)
         if align: self.node.setDepthAlign(parse_cam_socket(align))
@@ -123,7 +130,7 @@ class StereoComponent(Component):
         if lrCheckThreshold: self.node.initialConfig.setLeftRightCheckThreshold(lrCheckThreshold)
 
 
-    def get_disparity_factor(self, device: dai.Device) -> float:
+    def _get_disparity_factor(self, device: dai.Device) -> float:
         """
         Calculates the disparity factor used to calculate depth from disparity.
         `depth = disparity_factor / disparity`
@@ -151,13 +158,3 @@ class StereoComponent(Component):
     def out_depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         out = XoutDepth(device, StreamXout(self.node.id, self.depth))
         return super()._create_xout(pipeline, out)
-
-    @property
-    def depth(self) -> dai.Node.Output:
-        # Depth output from the StereoDepth node.
-        return self.node.depth
-
-    @property
-    def disparity(self) -> dai.Node.Output:
-        # Disparity output from the StereoDepth node.
-        return self.node.disparity

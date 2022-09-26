@@ -13,8 +13,8 @@ class CameraComponent(Component):
     node: Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera] = None
     encoder: dai.node.VideoEncoder = None
 
-    out: dai.Node.Output = None  # Node output to be used as eg. an input into NN
-    out_size: Tuple[int, int]  # Output size
+    _out: dai.Node.Output = None  # Node output to be used as eg. an input into NN
+    _out_size: Tuple[int, int]  # Output size
 
     # Setting passed at init
     _replay: Replay  # Replay module
@@ -32,29 +32,25 @@ class CameraComponent(Component):
                      None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
                  encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-                 control: bool = False,
                  replay: Optional[Replay] = None,
-                 args: Any = None,
+                 args: Dict = None,
                  ):
         """
         Args:
             source (str): Source of the camera. Either color/rgb/right/left
-            resolution: Camera resolution
-            fps: Camera FPS
+            resolution (optional): Camera resolution, eg. '800p' or '4k'
+            fps (float, optional): Camera FPS
             out (bool, default False): Whether we want to stream frames to the host computer
             encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
-            control (bool, default False): control the camera from the host keyboard (via cv2.waitKey())
-            replay (Replay object, optional): Replay
-            args (Any, optional): Set the camera components based on user arguments
+            replay (Replay object): Replay
+            args (Dict): Set the camera component based on user-defined arguments
         """
         super().__init__()
 
         # Save passed settings
         self._source = source
         self._replay: Replay = replay
-
         self._args = args
-        self._control = control
 
         self._create_node(pipeline, source.upper())
 
@@ -75,8 +71,8 @@ class CameraComponent(Component):
             self._replay.setResizeColor(resize)
             self.node: dai.node.XLinkIn = getattr(self._replay, self._source)
             self.node.setMaxDataSize(resize[0] * resize[1] * 3)
-            self.out_size = resize
-            self.out = self.node.out
+            self._out_size = resize
+            self._out = self.node.out
             return
 
         if isinstance(self.node, dai.node.ColorCamera):
@@ -99,12 +95,12 @@ class CameraComponent(Component):
             self.node.setVideoNumFramesPool(2) # We will increase it later if we are streaming to host
 
             self.node.setPreviewSize(*self.node.getIspSize())
-            self.out_size = self.node.getPreviewSize()
-            self.out = self.node.preview
+            self._out_size = self.node.getPreviewSize()
+            self._out = self.node.preview
 
         elif isinstance(self.node, dai.node.MonoCamera):
-            self.out_size = self.node.getResolutionSize()
-            self.out = self.node.out
+            self._out_size = self.node.getResolutionSize()
+            self._out = self.node.out
 
         if self._args:
             self._config_camera_args(self._args)
@@ -115,8 +111,8 @@ class CameraComponent(Component):
                 # Create ImageManip to convert to NV12
                 type_manip = pipeline.createImageManip()
                 type_manip.setFrameType(dai.ImgFrame.Type.NV12)
-                type_manip.setMaxOutputFrameSize(self.out_size[0] * self.out_size[1] * 3)
-                self.out.link(type_manip.inputImage)
+                type_manip.setMaxOutputFrameSize(self._out_size[0] * self._out_size[1] * 3)
+                self._out.link(type_manip.inputImage)
                 type_manip.out.link(self.encoder.input)
             elif self.isMono():
                 self.node.out.link(self.encoder.input)
@@ -311,7 +307,7 @@ class CameraComponent(Component):
         if self.isReplay():
             return ReplayStream(self._source)
         elif  self.isMono():
-            return StreamXout(self.node.id, self.out)
+            return StreamXout(self.node.id, self._out)
         else: # ColorCamera
             self.node.setVideoNumFramesPool(10)
             return StreamXout(self.node.id, self.node.video)

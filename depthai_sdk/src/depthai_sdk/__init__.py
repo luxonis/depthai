@@ -90,7 +90,6 @@ class OakCamera:
                           None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-                      control: bool = False,
                       ) -> CameraComponent:
         """
         Create Color camera
@@ -101,7 +100,6 @@ class OakCamera:
             resolution=resolution,
             fps=fps,
             encode=encode,
-            control=control,
             replay=self.replay,
             args=self.args,
         ))
@@ -138,7 +136,6 @@ class OakCamera:
                       fps: Optional[float] = None,
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
-                      control: bool = False,
                       ) -> StereoComponent:
         """
         Create Stereo camera component
@@ -149,7 +146,6 @@ class OakCamera:
             fps=fps,
             left=left,
             right=right,
-            control=control,
             replay=self.replay,
             args=self.args,
         ))
@@ -209,6 +205,9 @@ class OakCamera:
 
         self.oak.initCallbacks(self._pipeline)
 
+        for xout in self.oak.oak_out_streams: # Start FPS counters
+            xout.start_fps()
+
         if self.replay:
             self.replay.createQueues(self.oak.device)
             # Called from Replay module on each new frame sent to the device.
@@ -217,8 +216,8 @@ class OakCamera:
         # Check if callbacks (sync/non-sync are set)
         if blocking:
             # Constant loop: get messages, call callbacks
-            while self.running():
-                time.sleep(0.0005)
+            while True:
+                time.sleep(0.001)
                 if not self.poll():
                     break
 
@@ -236,9 +235,6 @@ class OakCamera:
         self.oak.checkSync()
 
         return True # TODO: check whether OAK is connectednnComp
-
-    def running(self) -> bool:
-        return True
 
     def build(self) -> dai.Pipeline:
         """
@@ -305,8 +301,7 @@ class OakCamera:
 
     def show_graph(self) -> None:
         """
-        Show pipeline graph, useful for debugging.
-        @return:
+        Show DepthAI Pipeline graph, which is very useful for debugging.
         """
         if not self._pipeline_built:
             self.build() # Build the pipeline
@@ -314,23 +309,42 @@ class OakCamera:
         PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
 
 
-    def visualize(self, output: Union[List, Callable, Component],
-                  scale: Union[None, float, Tuple[int, int]] = None,
-                  fps=False,
-                  callback: Callable=None):
-
-        self.callback(output, callback, VisualizeConfig(scale, fps))
-
-    def callback(self, output: Union[List, Callable, Component], callback: Callable, vis=None) -> None:
+    def _callback(self, output: Union[List, Callable, Component], callback: Callable, vis=None):
         if isinstance(output, List):
             for element in output:
-                self.callback(element, callback, vis)
+                self._callback(element, callback, vis)
             return
 
         if isinstance(output, Component):
             output = output.out
 
         self._out_templates.append(OutputConfig(output, callback, vis))
+
+    def visualize(self, output: Union[List, Callable, Component],
+                  scale: Union[None, float, Tuple[int, int]] = None,
+                  fps=False,
+                  callback: Callable=None):
+        """
+        Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
+
+        Args:
+            output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
+            scale: Optionally scale the frame before it's displayed
+            fps: Show FPS of the output on the frame
+            callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
+        """
+
+        self._callback(output, callback, VisualizeConfig(scale, fps))
+
+    def callback(self, output: Union[List, Callable, Component], callback: Callable):
+        """
+        Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
+
+        Args:
+            output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
+            callback: Handler function to which the Packet will be sent
+        """
+        self._callback(output, callback)
 
     @property
     def device(self) -> dai.Device:

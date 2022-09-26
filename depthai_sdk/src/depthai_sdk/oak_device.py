@@ -8,9 +8,7 @@ from .components.component import Component
 
 class OakDevice:
     device: dai.Device = None
-    fpsHandlers: Dict[str, FPS] = dict()
-    # str: Name (XLinkOut stream name, or replay stream)
-    # Type: Component name, or Replay
+    # fpsHandlers: Dict[str, FPS] = dict()
     oak_out_streams: List[XoutBase] = []
 
     @property
@@ -28,7 +26,7 @@ class OakDevice:
         for node in pipeline.getAllNodes():
             if isinstance(node, dai.node.XLinkOut):
                 name = node.getStreamName()
-                self.fpsHandlers[name] = FPS()
+                # self.fpsHandlers[name] = FPS()
                 self.device.getOutputQueue(name, maxSize=4, blocking=False).addCallback(
                     lambda name, msg: self.newMsg(name, msg))
 
@@ -36,10 +34,10 @@ class OakDevice:
         for sync in self.oak_out_streams:
             sync.newMsg(name, msg)
 
-        if name not in self.fpsHandlers:
-            self.fpsHandlers[name] = FPS()
-        self.fpsHandlers[name].next_iter()
-        print(name,' fps', self.fpsHandlers[name].fps())
+        # if name not in self.fpsHandlers:
+        #     self.fpsHandlers[name] = FPS()
+        # self.fpsHandlers[name].next_iter()
+        # print(name,' fps', self.fpsHandlers[name].fps())
 
     def checkSync(self):
         """

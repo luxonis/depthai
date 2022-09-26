@@ -10,9 +10,8 @@ class MultiStageConfig:
     labels: Optional[List[int]]
     scaleBb: Optional[Tuple[int, int]]
 
-    def __init__(self, debug, show_cropped_frames=False, labels=None, scaleBb=None):
+    def __init__(self, debug, labels=None, scaleBb=None):
         self.debug = debug
-        self.show_cropped_frames = show_cropped_frames
         self.labels = labels
         self.scaleBb = scaleBb
 

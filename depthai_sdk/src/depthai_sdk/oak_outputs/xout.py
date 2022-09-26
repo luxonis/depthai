@@ -272,13 +272,13 @@ class XoutNnResults(XoutSeqSync):
         self.detNn = detNn
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
-        if detNn.labels:
+        if detNn._labels:
             self.labels = []
-            n_colors = [isinstance(label, str) for label in detNn.labels].count(True)
+            n_colors = [isinstance(label, str) for label in detNn._labels].count(True)
             # np.array of (b,g,r), 0..1
             colors = np.array(distinctipy.get_colors(n_colors=n_colors, rng=123123, pastel_factor=0.5))[..., ::-1]
             colors = [distinctipy.get_rgb256(clr) for clr in colors]  # List of (b,g,r), 0..255
-            for label in detNn.labels:
+            for label in detNn._labels:
                 if isinstance(label, str):
                     text = label
                     color = colors.pop(0)  # Take last row
@@ -290,7 +290,7 @@ class XoutNnResults(XoutSeqSync):
 
                 self.labels.append((text, color))
 
-        self.normalizer = NormalizeBoundingBox(detNn.size, detNn.arResizeMode)
+        self.normalizer = NormalizeBoundingBox(detNn._size, detNn._arResizeMode)
 
 
     def visualize(self, packet: Union[DetectionPacket, TrackerPacket]):
@@ -411,7 +411,7 @@ class XoutTwoStage(XoutNnResults):
 
         conf = detNn._multi_stage_config # No types due to circular import...
         if conf is not None:
-            self.labels = conf.labels
+            self.labels = conf._labels
             self.scaleBb = conf.scaleBb
 
     def xstreams(self) -> List[StreamXout]:

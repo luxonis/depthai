@@ -18,11 +18,7 @@ Installation
 To help you understand and learn how to use the package and how the manager classes work, we created a few simple tutorials:
 
 - :ref:`Getting started with DepthAI SDK`
-- :ref:`Pipeline manager`
-- :ref:`Preview manager`
-- :ref:`Encoding manager`
-- :ref:`Blob manager`
-- :ref:`Nnet manager`
+
 
 We recommend that you start with the :ref:`Getting started with DepthAI SDK`
 
@@ -35,33 +31,15 @@ We recommend that you start with the :ref:`Getting started with DepthAI SDK`
 
    self
    getting-started.rst
+   oak-camera.rst
 
 .. toctree::
    :maxdepth: 2
    :hidden:
-   :caption: Managers:
-
-   managers/pipeline_manager.rst
-   managers/preview_manager.rst
-   managers/encoding_manager.rst
-   managers/blob_manager.rst
-   managers/nnet_manager.rst
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Api:
-
-   api.rst
+   :caption: Components:
 
 
-
-
-
-
-
-
-
-
-
-
+   components/components.rst
+   components/nn_component.rst
+   components/camera_component.rst
+   components/stereo_component.rst

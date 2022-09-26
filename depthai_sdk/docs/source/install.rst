@@ -4,7 +4,7 @@ To install this package, run the following command in your terminal window
 
    python3 -m pip install depthai-sdk
 
-.. warning::
+.. note::
 
    If you're using Raspberry Pi, providing a Pi Wheels extra package url can significantly speed up the installation process by providing prebuilt binaries for OpenCV
 
