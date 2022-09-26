@@ -1,4 +1,3 @@
-import re
 from .component import Component
 from .camera_component import CameraComponent
 from .stereo_component import StereoComponent
@@ -179,13 +178,7 @@ class NNComponent(Component):
         if model.suffix in ['.blob', '.json']:
             if model.suffix == '.blob':
                 self._blob = dai.OpenVINO.Blob(model.resolve())
-                # BlobConverter sets name of the blob '[name]_openvino_[version]_[num]cores.blob'
-                # So we can parse this openvino version if it exists
-                match = re.search('_openvino_\d{4}.\d', str(model))
-                if match is not None:
-                    version = match.group().replace('_openvino_', '')
-                    # Will force specific OpenVINO version
-                    self._forcedVersion = parseOpenVinoVersion(version)
+                self._forcedVersion = self._blob.version
             elif model.suffix == '.json':  # json config file was passed
                 self.parse_config(model)
         else:  # SDK supported model

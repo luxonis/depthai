@@ -109,6 +109,23 @@ class CameraComponent(Component):
         if self._args:
             self._config_camera_args(self._args)
 
+        if self.encoder:
+            self.encoder.setDefaultProfilePreset(self._getFps(), self._encoderProfile)
+            if self.isReplay():
+                # Create ImageManip to convert to NV12
+                type_manip = pipeline.createImageManip()
+                type_manip.setFrameType(dai.ImgFrame.Type.NV12)
+                type_manip.setMaxOutputFrameSize(self.out_size[0] * self.out_size[1] * 3)
+                self.out.link(type_manip.inputImage)
+                type_manip.out.link(self.encoder.input)
+            elif self.isMono():
+                self.node.out.link(self.encoder.input)
+            elif self.isColor():
+                self.node.video.link(self.encoder.input)
+            else:
+                raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
+
+
     def _create_node(self, pipeline: dai.Pipeline, source: str) -> None:
         """
         Called from __init__ to parse passed `source` argument.
@@ -299,8 +316,6 @@ class CameraComponent(Component):
             self.node.setVideoNumFramesPool(10)
             return StreamXout(self.node.id, self.node.video)
 
-
-
     """
     Available outputs (to the host) of this component
     """
@@ -321,23 +336,6 @@ class CameraComponent(Component):
         return super()._create_xout(pipeline, out)
 
     def out_encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        self.encoder = pipeline.createVideoEncoder()
-        self.encoder.setDefaultProfilePreset(self._getFps(), self._encoderProfile)
-
-        if self.isReplay():
-            # Create ImageManip to convert to NV12
-            type_manip = pipeline.createImageManip()
-            type_manip.setFrameType(dai.ImgFrame.Type.NV12)
-            type_manip.setMaxOutputFrameSize(self.out_size[0] * self.out_size[1] * 3)
-            self.out.link(type_manip.inputImage)
-            type_manip.out.link(self.encoder.input)
-        elif self.isMono():
-            self.node.out.link(self.encoder.input)
-        elif self.isColor():
-            self.node.video.link(self.encoder.input)
-        else:
-            raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
-
         if self._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
             out = XoutMjpeg(StreamXout(self.encoder.id, self.encoder.bitstream), self.isColor(), self.encoder.getLossless())
         else:

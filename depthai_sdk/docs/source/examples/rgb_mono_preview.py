@@ -1,20 +1,8 @@
-from depthai_sdk import Previews
-from depthai_sdk.managers import PipelineManager, PreviewManager
-import depthai as dai
-import cv2
+from depthai_sdk import OakCamera
 
-pm = PipelineManager()
-pm.createColorCam(xout=True)
-pm.createLeftCam(xout=True)
-pm.createRightCam(xout=True)
-
-with dai.Device(pm.pipeline) as device:
-    pv = PreviewManager(display=[Previews.color.name, Previews.left.name, Previews.right.name])
-    pv.createQueues(device)
-
-    while True:
-        pv.prepareFrames()
-        pv.showFrames()
-
-        if cv2.waitKey(1) == ord('q'):
-            break
+with OakCamera() as oak:
+    color = oak.create_camera('color')
+    left = oak.create_camera('left')
+    right = oak.create_camera('right')
+    oak.visualize([color, left, right], fps=True)
+    oak.start(blocking=True)

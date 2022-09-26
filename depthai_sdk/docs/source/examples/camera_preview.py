@@ -1,33 +1,10 @@
-from depthai_sdk import Previews
-from depthai_sdk.managers import PipelineManager, PreviewManager
-import depthai as dai
-import cv2
+from depthai_sdk import OakCamera
 
+with OakCamera() as oak:
+    color = oak.create_camera('color')
+    left = oak.create_camera('left')
+    right = oak.create_camera('right')
+    stereo = oak.create_stereo(left=left, right=right)
 
-# create pipeline
-pm = PipelineManager()
-
-# define sources (color, left, right, depth)
-
-# creating color source
-pm.createColorCam(xout=True)
-pm.createLeftCam(xout=True)
-pm.createRightCam(xout=True)
-pm.createDepth(useDepth=True)
-
-# connecting to the device
-with dai.Device(pm.pipeline) as device:
-    # define configs for above sources
-    pv = PreviewManager(display=[Previews.color.name, Previews.left.name, Previews.right.name, Previews.depth.name])
-
-    # create stream queues
-    pv.createQueues(device)
-
-    while True:
-        # prepare and show streams
-        pv.prepareFrames()
-        pv.showFrames()
-
-        # end program with 'q'
-        if cv2.waitKey(1) == ord('q'):
-            break
+    oak.visualize([color, left, right, stereo.out_depth], fps=True, scale=2/3)
+    oak.start(blocking=True)
