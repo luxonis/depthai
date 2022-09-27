@@ -3,7 +3,6 @@ This is a helper class that let's you save frames into mcap (.mcap), which can b
 '''
 
 from pathlib import Path
-
 from mcap_ros1.writer import Writer as Ros1Writer
 from .abstract_recorder import Recorder
 from .depthai2ros import DepthAi2Ros1

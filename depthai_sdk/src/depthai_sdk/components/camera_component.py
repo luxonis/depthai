@@ -324,16 +324,16 @@ class CameraComponent(Component):
         else:
             return self.out_camera(pipeline, device)
     def out_camera(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        out = XoutFrames(self.get_stream_xout())
+        out = XoutFrames(self.get_stream_xout(), self._getFps())
         return super()._create_xout(pipeline, out)
 
     def out_replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        out = XoutFrames(ReplayStream(self._source))
+        out = XoutFrames(ReplayStream(self._source), self._getFps())
         return super()._create_xout(pipeline, out)
 
     def out_encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         if self._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
-            out = XoutMjpeg(StreamXout(self.encoder.id, self.encoder.bitstream), self.isColor(), self.encoder.getLossless())
+            out = XoutMjpeg(StreamXout(self.encoder.id, self.encoder.bitstream), self.isColor(), self.encoder.getLossless(), self.encoder.getFrameRate())
         else:
-            out = XoutH26x(StreamXout(self.encoder.id, self.encoder.bitstream), self.isColor(), self._encoderProfile)
+            out = XoutH26x(StreamXout(self.encoder.id, self.encoder.bitstream), self.isColor(), self._encoderProfile, self.encoder.getFrameRate())
         return super()._create_xout(pipeline, out)

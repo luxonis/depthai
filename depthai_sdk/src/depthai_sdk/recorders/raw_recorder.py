@@ -2,14 +2,13 @@
 from pathlib import Path
 from .abstract_recorder import Recorder
 import depthai as dai
+from ..record import Codec
 
 class RawRecorder(Recorder):
     _closed = False
-    def __init__(self, folder: Path, quality):
+    def __init__(self, folder: Path, codec: Codec):
         self.folder = folder
-        # Could also be "h264", but we don't support that
-        self.ext = "h265" if int(quality) == 4 else "mjpeg"
-
+        self.ext = Codec.fourcc(codec)
         self.files = {}
 
     def write(self, name: str, frame: dai.ImgFrame):

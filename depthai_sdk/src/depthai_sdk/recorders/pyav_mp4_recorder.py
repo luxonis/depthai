@@ -4,16 +4,15 @@ import time
 from pathlib import Path
 from .abstract_recorder import Recorder
 import depthai as dai
+from ..record import Codec
 
 class PyAvRecorder(Recorder):
     _closed = False
-    def __init__(self, folder: Path, quality, rgbFps: float, monoFps: float):
+    def __init__(self, folder: Path, codec: Codec, fps: float):
         self.folder = folder
-        # codec could also be "h264", but it's not (yet) supported
-        self.codec = "hevc" if int(quality) == 4 else "mjpeg"
-        self._monoFps = monoFps
-        self._rgbFps = rgbFps
+        self.codec = Codec.fourcc(codec)
         self.start = dict()
+        self.fps = fps
 
         self.files = {}
 
@@ -35,8 +34,7 @@ class PyAvRecorder(Recorder):
 
     def __create_file(self, name):
         self.files[name] = av.open(str(self.folder / f"{name}.mp4"), 'w')
-        fps = self._rgbFps if name == "color" else self._monoFps
-        stream = self.files[name].add_stream(self.codec, rate=int(fps))
+        stream = self.files[name].add_stream(self.codec, rate=int(self.fps))
         stream.time_base = Fraction(1, 1000 * 1000) # Microseconds
 
         # We need to set pixel format for MJEPG, for H264/H265 it's yuv420p by default

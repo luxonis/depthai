@@ -2,9 +2,7 @@ from typing import Union, List, Callable
 from queue import Empty, Queue
 from abc import ABC, abstractmethod
 import depthai as dai
-
-from .visualizer_helper import FPS
-from ..classes.packets import FramePacket
+from .fps import FPS
 
 
 class StreamXout:
@@ -46,7 +44,7 @@ class XoutBase(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def visualize(self, packet: FramePacket) -> None:
+    def visualize(self, packet) -> None:
         raise NotImplementedError()
 
     # This approach is used as some functions (eg. imshow()) need to be called from

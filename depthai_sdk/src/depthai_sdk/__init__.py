@@ -1,16 +1,21 @@
-from .classes.output_config import OutputConfig, VisualizeConfig
+from .classes.output_config import OutputConfig, VisualizeConfig, RecordConfig, BaseConfig
 from .fps import *
 from .previews import *
 from .utils import *
 from .managers import *
 from .record import *
 from .replay import *
-from .components import *
+from .components.component import Component
+from .components.stereo_component import StereoComponent
+from .components.nn_component import NNComponent
+from .components.camera_component import CameraComponent
+from .components.pipeline_graph import PipelineGraph
+from .components.parser import *
 from .classes import *
 from .oak_outputs import *
 from .oak_device import OakDevice
 
-from typing import Optional
+from typing import Optional, Callable
 import depthai as dai
 from pathlib import Path
 from .args_parser import ArgsParser
@@ -35,7 +40,7 @@ class OakCamera:
     _usb_speed: Optional[dai.UsbSpeed] = None
     _device_name: str = None  # MxId / IP / USB port
 
-    _out_templates: List[OutputConfig] = []
+    _out_templates: List[BaseConfig] = []
 
     # TODO: 
     # - available streams; query cameras, or Replay.getStreams(). Pass these to camera component
@@ -273,17 +278,12 @@ class OakCamera:
             component._update_device_info(self._pipeline, self.oak.device, self._pipeline.getOpenVINOVersion())
 
         # Create XLinkOuts based on visualizers/callbacks enabled
+
+        # TODO: clean this up and potentially move elsewhere
+
         names = []
         for out in self._out_templates:
-            xoutbase: XoutBase = out.output(self._pipeline, self.oak.device)
-            xoutbase.setup_base(out.callback)
-
-            if xoutbase.name in names: # Stream name already exist, append a number to it
-                xoutbase.name = find_new_name(xoutbase.name, names)
-            names.append(xoutbase.name)
-
-            if out.vis:
-                xoutbase.setup_visualize(out.vis.scale, out.vis.fps)
+            xoutbase = out.setup(self._pipeline, self.oak.device, names)
             self.oak.oak_out_streams.append(xoutbase)
 
         # User-defined arguments
@@ -298,7 +298,7 @@ class OakCamera:
 
         return self._pipeline
 
-    def record(self, outputs: Union[Callable, List[Callable]], path: str, ):
+    def record(self, outputs: Union[Callable, List[Callable]], path: str, type: RecordType = RecordType.MP4):
         """
         Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
         them to the computer in desired format (raw, mp4, mcap, bag..).
@@ -308,8 +308,10 @@ class OakCamera:
             path: Folder path where to save these streams
 
         """
-        if isinstance(outputs, Component):
-            components = [outputs] # to list
+        if isinstance(outputs, Callable):
+            outputs = [outputs] # to list
+
+        self._out_templates.append(RecordConfig(outputs, Record(Path(path).resolve(), type)))
 
     def show_graph(self) -> None:
         """

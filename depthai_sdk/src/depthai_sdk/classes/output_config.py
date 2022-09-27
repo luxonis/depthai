@@ -1,4 +1,10 @@
-from typing import Optional, Callable, Union, Tuple
+from abc import abstractmethod
+from typing import Optional, Callable, Union, Tuple, List
+import depthai as dai
+
+from ..record import Record
+from ..oak_outputs.xout_base import XoutBase, StreamXout
+from ..oak_outputs.xout import XoutFrames
 
 
 class VisualizeConfig:
@@ -10,7 +16,14 @@ class VisualizeConfig:
         self.scale = scale
         self.fps = fps
 
-class OutputConfig:
+
+class BaseConfig:
+    @abstractmethod
+    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> XoutBase:
+        raise NotImplementedError()
+
+
+class OutputConfig(BaseConfig):
     """
     Saves callbacks/visualizers until the device is fully initialized. I'll admit it's not the cleanest solution.
     """
@@ -22,3 +35,47 @@ class OutputConfig:
         self.output = output
         self.callback = callback
         self.vis = vis
+
+    def find_new_name(self, name: str, names: List[str]):
+        while True:
+            arr = name.split(' ')
+            num = arr[-1]
+            if num.isnumeric():
+                arr[-1] = str(int(num) + 1)
+                name = " ".join(arr)
+            else:
+                name = f"{name} 2"
+            if name not in names:
+                return name
+
+    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> XoutBase:
+        xoutbase: XoutBase = self.output(pipeline, device)
+        xoutbase.setup_base(self.callback)
+
+        if xoutbase.name in names:  # Stream name already exist, append a number to it
+            xoutbase.name = self.find_new_name(xoutbase.name, names)
+        names.append(xoutbase.name)
+
+        if self.vis:
+            xoutbase.setup_visualize(self.vis.scale, self.vis.fps)
+        return xoutbase
+
+class RecordConfig(BaseConfig):
+    rec: Record
+    outputs: List[Callable]
+    def __init__(self, outputs: List[Callable], rec: Record):
+        self.outputs = outputs
+        self.rec = rec
+
+    def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> XoutBase:
+        xouts: List[XoutFrames] = []
+        for output in self.outputs:
+            xoutbase: XoutFrames = output(pipeline, device)
+            xoutbase.setup_base(None)
+            xouts.append(xoutbase)
+
+        self.rec.start(device, xouts)
+
+        return self.rec
+
+

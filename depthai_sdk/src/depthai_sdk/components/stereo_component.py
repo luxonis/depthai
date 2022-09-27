@@ -13,8 +13,8 @@ class StereoComponent(Component):
     # Users should have access to these nodes
     node: dai.node.StereoDepth = None
 
-    left: Union[None, dai.Node.Output, CameraComponent] = None
-    right: Union[None, dai.Node.Output, CameraComponent] = None
+    left: Union[None, CameraComponent, dai.node.MonoCamera] = None
+    right: Union[None, CameraComponent, dai.node.MonoCamera] = None
 
     @property
     def depth(self) -> dai.Node.Output:
@@ -36,8 +36,8 @@ class StereoComponent(Component):
                  pipeline: dai.Pipeline,
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
-                 left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
-                 right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
+                 left: Union[None, dai.Node.Output, dai.node.MonoCamera] = None,  # Left mono camera
+                 right: Union[None, dai.Node.Output, dai.node.MonoCamera] = None,  # Right mono camera
                  replay: Optional[Replay] = None,
                  args: Any = None,
                  ):
@@ -83,13 +83,13 @@ class StereoComponent(Component):
         # TODO: use self._args to setup the StereoDepth node
 
         if isinstance(self.left, CameraComponent):
-            self.left = self.left._out
+            self.left = self.left.node # CameraComponent -> node
         if isinstance(self.right, CameraComponent):
-            self.right = self.right._out
+            self.right = self.right.node # CameraComponent -> node
 
         # Connect Mono cameras to the StereoDepth node
-        self.left.link(self.node.left)
-        self.right.link(self.node.right)
+        self.left.out.link(self.node.left)
+        self.right.out.link(self.node.right)
 
         if self._args:
             self._config_stereo_args(self._args)
@@ -149,12 +149,12 @@ class StereoComponent(Component):
 
     def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
         # By default, we want to show disparity
-        return self.out_disparity(pipeline, device)
+        return self.out_depth(pipeline, device)
 
     def out_disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        out = XoutDisparity(StreamXout(self.node.id, self.disparity), self.node.getMaxDisparity())
+        out = XoutDisparity(StreamXout(self.node.id, self.disparity), self.node.getMaxDisparity(), self.left.getFps())
         return super()._create_xout(pipeline, out)
 
     def out_depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        out = XoutDepth(device, StreamXout(self.node.id, self.depth))
+        out = XoutDepth(device, StreamXout(self.node.id, self.depth), self.left.getFps())
         return super()._create_xout(pipeline, out)

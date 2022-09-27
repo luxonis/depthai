@@ -9,8 +9,9 @@ from distinctipy import distinctipy
 
 from .xout_base import XoutBase, StreamXout
 from ..classes.packets import FramePacket, SpatialBbMappingPacket, DetectionPacket, TwoStagePacket, TrackerPacket
-from .visualizer_helper import Visualizer, FPS, colorizeDisparity, calc_disp_multiplier, drawMappings, drawDetections, \
+from .visualizer_helper import Visualizer, colorizeDisparity, calc_disp_multiplier, drawMappings, drawDetections, \
     hex_to_bgr, drawBreadcrumbTrail, drawTrackletId
+
 from .normalize_bb import NormalizeBoundingBox
 
 """
@@ -28,9 +29,11 @@ class XoutFrames(XoutBase):
     frames: StreamXout
     _scale: Union[None, float, Tuple[int, int]] = None
     _show_fps: bool = False
+    fps: float
 
-    def __init__(self, frames: StreamXout):
+    def __init__(self, frames: StreamXout, fps: float = 30):
         self.frames = frames
+        self.fps = fps
         super().__init__()
 
     def setup_visualize(self,
@@ -78,10 +81,14 @@ class XoutFrames(XoutBase):
 
 class XoutMjpeg(XoutFrames):
     name: str = "MJPEG Stream"
-    def __init__(self, frames: StreamXout, color: bool, lossless: bool):
+    lossless: bool
+    fps: float
+    def __init__(self, frames: StreamXout, color: bool, lossless: bool, fps: float):
         super().__init__(frames)
         # We could use cv2.IMREAD_UNCHANGED, but it produces 3 planes (RGB) for mono frame instead of a single plane
         self.flag = cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE
+        self.lossless = lossless
+        self.fps = fps
         if lossless and self._vis:
             raise ValueError('Visualizing Lossless MJPEG stream is not supported!')
     def visualize(self, packet: FramePacket):
@@ -92,10 +99,12 @@ class XoutMjpeg(XoutFrames):
 class XoutH26x(XoutFrames):
     name = "H26x Stream"
     color: bool
-    def __init__(self, frames: StreamXout, color: bool, profile: dai.VideoEncoderProperties.Profile):
+    fps: float
+    def __init__(self, frames: StreamXout, color: bool, profile: dai.VideoEncoderProperties.Profile, fps: float):
         super().__init__(frames)
         self.color = color
         fourcc = 'hevc' if profile == dai.VideoEncoderProperties.Profile.H265_MAIN else 'h264'
+        self.fps=fps
         import av
         self.codec = av.CodecContext.create(fourcc, "r")
     def visualize(self, packet: FramePacket):
@@ -116,9 +125,11 @@ class XoutH26x(XoutFrames):
 class XoutDisparity(XoutFrames):
     name: str = "Disparity"
     multiplier: float
-    def __init__(self, frames: StreamXout, max_disp: float):
+    fps: float
+    def __init__(self, frames: StreamXout, max_disp: float, fps: float):
         super().__init__(frames)
         self.multiplier = 255.0 / max_disp
+        self.fps = fps
 
     def visualize(self, packet: FramePacket):
         packet.frame = colorizeDisparity(packet.imgFrame, self.multiplier)
@@ -127,8 +138,9 @@ class XoutDisparity(XoutFrames):
 class XoutDepth(XoutFrames):
     name: str = "Depth"
     factor: float = None
-    def __init__(self, device: dai.Device, frames: StreamXout):
+    def __init__(self, device: dai.Device, frames: StreamXout, fps: float):
         super().__init__(frames)
+        self.fps = fps
         self.device = device
         self.multiplier = 255 / 95.0
 

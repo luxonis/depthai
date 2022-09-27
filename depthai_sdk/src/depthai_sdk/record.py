@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
-import array
 from pathlib import Path
 from queue import Queue
 from threading import Thread
+from typing import Dict, List
+
 import depthai as dai
 from enum import IntEnum
 
-def _run(recorders, frameQ):
+from .classes.packets import FramePacket
+from .recorders.abstract_recorder import Recorder
+from .oak_outputs.xout import XoutSeqSync, XoutFrames, XoutH26x, XoutMjpeg
+
+
+def _run(recorders, frameQ: Queue):
     """
     Start recording infinite loop
     """
@@ -25,98 +31,116 @@ def _run(recorders, frameQ):
         recorders[n].close()
     print('Exiting store frame thread')
 
-class Recorder(IntEnum):
+class RecordType(IntEnum):
     RAW = 1 # Save raw bitstream
     MP4 = 2 # Containerize into mp4 file, requires `av` library
     MCAP = 3 # To .mcap
     BAG = 4 # To ROS .bag
 
-class Record():
+class Codec(IntEnum):
+    NONE = 0
+    MJPEG = 1
+    H264 = 2
+    H265 = 3
+    @classmethod
+    def fourcc(cls, codec: 'Codec') -> str:
+        if codec == cls.MJPEG:
+            return 'mjpeg'
+        elif codec == cls.H264:
+            return 'h264'
+        elif codec == cls.H265:
+            return 'hevc'
+
+class Record(XoutSeqSync):
     """
     This class records depthai streams from OAK cameras into different formats.
     Available formats: .h265, .mjpeg, .mp4, .mcap, .bag
     It will also save calibration .json, so depth reconstruction will 
     """
 
-    _timelapse: int = -1
+    def package(self, msgs: Dict):
+        # Here we get sequence-num synced messages:)
+        pass
 
-    def __init__(self, path: Path, device: dai.Device):
+    def visualize(self, packet: FramePacket) -> None:
+        pass # No need.
+
+
+    def __init__(self, path: Path, type: RecordType):
         """
         Args:
             path (Path): Path to the recording folder
             device (dai.Device): OAK device object
         """
-        self.device = device
-        self.stereo = 1 < len(device.getConnectedCameras())
-        self.mxid = device.getMxId()
-        self.path = self._createFolder(path, self.mxid)
+        super().__init__([]) # We don't yet have streams, we will set it up later
+        self.folder = path
+        self.type = type
 
-        calibData = device.readCalibration()
-        calibData.eepromToJsonFile(str(self.path / "calib.json"))
-
-
-    def _getRecorders(self) -> dict:
-        """
-        Create recorders
-        """
-        recorders = dict()
-        save = self.save.copy()
-
-        if self._mcap:
-            if self.quality == EncodingQuality.LOW or self.quality == EncodingQuality.BEST:
-                raise Exception("MCAP only supports MEDIUM and HIGH quality!") # Foxglove Studio doesn't support Lossless MJPEG
-            from .recorders.mcap_recorder import McapRecorder
-            rec = McapRecorder(self.path, self.device)
-            rec.setPointcloud(self._pointcloud)
-            for name in save:
-                recorders[name] = rec
-            return recorders
-
-        if 'depth' in save:
-            from .recorders.rosbag_recorder import RosbagRecorder
-            recorders['depth'] = RosbagRecorder(self.path, self.device, self.getSizes())
-            save.remove('depth')
-
-        if len(save) == 0: return recorders
-
-        else:
-            try:
-                # Try importing av
-                from .recorders.pyav_mp4_recorder import PyAvRecorder
-                rec = PyAvRecorder(self.path, self.quality, self.args.rgbFps, self.args.monoFps)
-            except:
-                print("'av' library is not installed, depthai-record will save raw encoded streams.")
-                from .recorders.raw_recorder import RawRecorder
-                rec = RawRecorder(self.path, self.quality)
-        # All other streams ("color", "left", "right", "disparity") will use
-        # the same Raw/PyAv recorder
-        for name in save:
-            recorders[name] = rec
-        return recorders
-
-    def start(self):
+    def start(self, device: dai.Device, xouts: List[XoutFrames]):
         """
         Start recording process. This will create and start the pipeline,
         start recording threads, and initialize all queues.
         """
-        if not self.stereo: # If device doesn't have stereo camera pair
-            if "left" in self.save: self.save.remove("left")
-            if "right" in self.save: self.save.remove("right")
-            if "disparity" in self.save: self.save.remove("disparity")
-            if "depth" in self.save: self.save.remove("depth")
+        self.streams = [out.frames for out in xouts] # required by XoutSeqSync
 
-        if self._preview: self.save.append('preview')
+        self.mxid = device.getMxId()
+        self.path = self._createFolder(self.folder, self.mxid)
 
-        if 0 < self._timelapse:
-            self.args.monoFps = 5.0
-            self.args.rgbFps = 5.0
+        calibData = device.readCalibration()
+        calibData.eepromToJsonFile(str(self.path / "calib.json"))
 
+        self.frame_q = Queue(maxsize=20)
+        self.process = Thread(target=_run, args=(self._getRecorders(device, xouts), self.frame_q))
+        self.process.start()
 
-    def setTimelapse(self, timelapseSec: int):
+    def _getRecorders(self, device: dai.Device, xouts: List[XoutFrames]) -> Dict[str, Recorder]:
         """
-        Sets number of seconds between each frame for the timelapse mode.
+        Create recorders
         """
-        self._timelapse = timelapseSec
+        recorders = dict()
+
+        codecs: Dict[str, Codec] = {}
+        for xout in xouts:
+            if isinstance(xout, XoutH26x):
+            codecs[xout.frames.name]
+
+        if self.type == RecordType.MCAP:
+            from .recorders.mcap_recorder import McapRecorder
+            rec = McapRecorder(self.path, device)
+            for xout in xouts:
+                if isinstance(xout, XoutH26x):
+                    raise Exception("MCAP recording only supports MJPEG encoding!")
+                if isinstance(xout, XoutMjpeg) and xout.lossless:
+                    # Foxglove Studio doesn't support Lossless MJPEG
+                    raise Exception("MCAP recording doesn't support Lossless MJPEG encoding!")
+                # rec.setPointcloud(self._pointcloud)
+                recorders[xout.frames.name] = rec
+        if self.type == RecordType.MP4:
+            from .recorders.pyav_mp4_recorder import PyAvRecorder
+            rec = PyAvRecorder(self.path, )
+
+        # if 'depth' in save:
+        #     from .recorders.rosbag_recorder import RosbagRecorder
+        #     recorders['depth'] = RosbagRecorder(self.path, device, self.getSizes())
+        #     save.remove('depth')
+        #
+        # if len(save) == 0: return recorders
+
+        # else:
+        #     try:
+        #         # Try importing av
+        #         from .recorders.pyav_mp4_recorder import PyAvRecorder
+        #         rec = PyAvRecorder(self.path, self.quality, self.args.rgbFps, self.args.monoFps)
+        #     except:
+        #         print("'av' library is not installed, depthai-record will save raw encoded streams.")
+        #         from .recorders.raw_recorder import RawRecorder
+        #         rec = RawRecorder(self.path, self.quality)
+        # # All other streams ("color", "left", "right", "disparity") will use
+        # # the same Raw/PyAv recorder
+        # for name in save:
+        #     recorders[name] = rec
+        return recorders
+
 
     def _createFolder(self, path: Path, mxid: str) -> Path:
         """
