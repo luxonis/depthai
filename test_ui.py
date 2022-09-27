@@ -115,6 +115,13 @@ class DepthAICamera():
     def __init__(self):
         global update_res
         self.pipeline = dai.Pipeline()
+        if 'FFC-4P' in test_type:
+            imu = self.pipeline.create(dai.node.IMU)
+            imu.enableFirmwareUpdate(True)
+            imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
+            self.device = dai.Device(self.pipeline)
+            update_res = True
+            return
         self.camRgb = self.pipeline.create(dai.node.ColorCamera)
         self.xoutRgb = self.pipeline.create(dai.node.XLinkOut)
         self.xoutRgb.setStreamName("rgb")
@@ -698,7 +705,9 @@ class UiTests(QtWidgets.QMainWindow):
         # self.save_but.setObjectName("connect_but")
         # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
-        if 'OAK-1' in test_type:
+        if 'FFC-4P' in test_type:
+            self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 125))
+        elif 'OAK-1' in test_type:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 241))
         else:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 395))
@@ -767,6 +776,8 @@ class UiTests(QtWidgets.QMainWindow):
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 311))
         elif 'OAK-1' in test_type:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 190))
+        elif 'FFC-4P' in test_type:
+            self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 90))
         else:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 281))
         self.operator_tests.setObjectName("operator_tests")
@@ -1183,20 +1194,21 @@ class UiTests(QtWidgets.QMainWindow):
         self.connect_but.adjustSize()
         self.update_imu = True
         location = WIDTH, 0
-        self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
-        self.rgb.show()
-        location = WIDTH, prew_height + 80
-        self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
-        self.jpeg.show()
-        if 'OAK-1' not in test_type:
-            location = WIDTH + prew_width + 20, 0
-            self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
-                               'LEFT Preview', location)
-            self.left.show()
-            location = WIDTH + prew_width + 20, prew_height + 80
-            self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8,
-                                'RIGHT Preview', location)
-            self.right.show()
+        if 'FFC-4P' not in test_type:
+            self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
+            self.rgb.show()
+            location = WIDTH, prew_height + 80
+            self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
+            self.jpeg.show()
+            if 'OAK-1' not in test_type:
+                location = WIDTH + prew_width + 20, 0
+                self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
+                                   'LEFT Preview', location)
+                self.left.show()
+                location = WIDTH + prew_width + 20, prew_height + 80
+                self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8,
+                                    'RIGHT Preview', location)
+                self.right.show()
         self.print_logs('EEPROM backup saved at')
         self.print_logs(CALIB_BACKUP_FILE)
         if not eeprom_written:
@@ -1413,6 +1425,8 @@ class UiTests(QtWidgets.QMainWindow):
             return False
 
     def save_csv(self):
+        if 'FFC-4P' in test_type:
+            return
         path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/tests_result/' + eepromDataJson['productName'] + '.csv'
         print(path)
         if os.path.exists(path):
@@ -1461,11 +1475,12 @@ class UiTests(QtWidgets.QMainWindow):
 
     def disconnect(self):
         if hasattr(self, 'depth_camera'):
-            del self.rgb
-            del self.jpeg
-            if 'OAK-1' not in test_type:
-                del self.left
-                del self.right
+            if 'FFC-4P' not in test_type:
+                del self.rgb
+                del self.jpeg
+                if 'OAK-1' not in test_type:
+                    del self.left
+                    del self.right
             del self.depth_camera
 
     def device_changed(self):
