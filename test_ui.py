@@ -182,21 +182,46 @@ class DepthAICamera():
             self.imu.out.link(self.xoutIMU.input)
 
         if 'OAK-1' not in test_type:
-            self.camLeft = self.pipeline.create(dai.node.MonoCamera)
-            self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
-            self.xoutLeft.setStreamName("left")
-            self.camLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
-            self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
-            self.camLeft.out.link(self.xoutLeft.input)
-            self.camLeft.setFps(FPS)
-
-            self.camRight = self.pipeline.create(dai.node.MonoCamera)
-            self.xoutRight = self.pipeline.create(dai.node.XLinkOut)
-            self.xoutRight.setStreamName("right")
-            self.camRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-            self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
-            self.camRight.out.link(self.xoutRight.input)
-            self.camRight.setFps(10)
+            if 'SR' in test_type:
+                self.camLeft = self.pipeline.create(dai.node.ColorCamera)
+                self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
+                self.xoutLeft.setStreamName("left")
+                # self.camLeft.setPreviewSize(300, 300)
+                # self.camLeft.setPreviewKeepAspectRatio(True)
+                self.camLeft.setInterleaved(False)
+                self.camLeft.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+                self.camLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+                self.camLeft.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+                self.camLeft.preview.link(self.xoutLeft.input)
+                self.camLeft.setFps(FPS)
+            else:
+                self.camLeft = self.pipeline.create(dai.node.MonoCamera)
+                self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
+                self.xoutLeft.setStreamName("left")
+                self.camLeft.setBoardSocket(dai.CameraBoardSocket.LEFT)
+                self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+                self.camLeft.out.link(self.xoutLeft.input)
+                self.camLeft.setFps(FPS)
+            if 'SR' in test_type:
+                self.camRight = self.pipeline.create(dai.node.ColorCamera)
+                self.xoutRight = self.pipeline.create(dai.node.XLinkOut)
+                self.xoutRight.setStreamName("right")
+                # self.camRight.setPreviewSize(300, 300)
+                # self.camRight.setPreviewKeepAspectRatio(True)
+                self.camRight.setInterleaved(False)
+                self.camRight.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+                self.camRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+                self.camRight.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+                self.camRight.preview.link(self.xoutRight.input)
+                self.camRight.setFps(FPS)
+            else:
+                self.camRight = self.pipeline.create(dai.node.MonoCamera)
+                self.xoutRight = self.pipeline.create(dai.node.XLinkOut)
+                self.xoutRight.setStreamName("right")
+                self.camRight.setBoardSocket(dai.CameraBoardSocket.RIGHT)
+                self.camRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+                self.camRight.out.link(self.xoutRight.input)
+                self.camRight.setFps(10)
 
         usb_speed = dai.UsbSpeed.SUPER
         if 'POE' in test_type:
@@ -334,9 +359,9 @@ class DepthAICamera():
                     in_left = self.qLeft.tryGet()
                     if in_left is not None:
                         image = in_left.getCvFrame()
-                        # if 'SR' in test_type:
-                        #     if colorMode == QtGui.QImage.Format_RGB888:
-                        #         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                        if 'SR' in test_type:
+                            if colorMode == QtGui.QImage.Format_RGB888:
+                                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     if test_result['left_strm_res'] == '':
                         if (self._left_timer > self._FRAME_WAIT) or (self._left_timer > self._FRAME_WAIT and self._left_pass == 0):
                             test_result['left_strm_res'] = 'FAIL'
@@ -351,9 +376,9 @@ class DepthAICamera():
                     in_right = self.qRight.tryGet()
                     if in_right is not None:
                         image = in_right.getCvFrame()
-                        # if 'SR' in test_type:
-                        #     if colorMode == QtGui.QImage.Format_RGB888:
-                        #         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                        if 'SR' in test_type:
+                            if colorMode == QtGui.QImage.Format_RGB888:
+                                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     if test_result['right_strm_res'] == '':
                         if (self._right_timer > self._FRAME_WAIT) or (self._right_timer > self._FRAME_WAIT and self._right_pass == 0):
                             test_result['right_strm_res'] = 'FAIL'
@@ -577,8 +602,8 @@ class Camera(QtWidgets.QWidget):
             else:
                 pixmap = QtGui.QPixmap()
                 pixmap.loadFromData(image)
-            if 'SR' not in test_type:
-                pixmap = pixmap.scaled(prew_width, prew_height, QtCore.Qt.KeepAspectRatio)
+            # if 'SR' not in test_type:
+            pixmap = pixmap.scaled(prew_width, prew_height, QtCore.Qt.KeepAspectRatio)
             self.camera.setPixmap(pixmap)
         # else:
         #     # print('im hiding')
@@ -1218,12 +1243,19 @@ class UiTests(QtWidgets.QMainWindow):
                 self.jpeg.show()
             if 'OAK-1' not in test_type:
                 location = WIDTH + prew_width + 20, 0
-                self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
-                                   'LEFT Preview', location)
+                if 'SR' in test_type:
+                    self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), colorMode, 'LEFT Preview', location)
+                else:
+                    self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
+                                       'LEFT Preview', location)
                 self.left.show()
                 location = WIDTH + prew_width + 20, prew_height + 80
-                self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8,
-                                    'RIGHT Preview', location)
+                if 'SR' in test_type:
+                    self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), colorMode, 'RIGHT Preview',
+                                        location)
+                else:
+                    self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), QtGui.QImage.Format_Grayscale8,
+                                        'RIGHT Preview', location)
                 self.right.show()
         self.print_logs('EEPROM backup saved at')
         self.print_logs(CALIB_BACKUP_FILE)
