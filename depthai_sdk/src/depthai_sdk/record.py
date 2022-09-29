@@ -8,11 +8,10 @@ import depthai as dai
 from enum import IntEnum
 
 from .classes.packets import FramePacket
-from .recorders.abstract_recorder import Recorder
+from .recorders.abstract_recorder import Recorder, OakStream
 from .oak_outputs.xout import XoutSeqSync, XoutFrames, XoutH26x, XoutMjpeg
 
-
-def _run(recorders, frameQ: Queue):
+def _run(recorder, frameQ: Queue):
     """
     Start recording infinite loop
     """
@@ -21,35 +20,20 @@ def _run(recorders, frameQ: Queue):
             frames = frameQ.get()
             if frames is None: # Terminate app
                 break
+
             for name in frames:
                 # Save all synced frames into files
-                recorders[name].write(name, frames[name])
+                recorder.write(name, frames[name])
         except KeyboardInterrupt:
             break
     # Close all recorders - Can't use ExitStack with VideoWriter
-    for n in recorders:
-        recorders[n].close()
+    recorder.close()
     print('Exiting store frame thread')
 
 class RecordType(IntEnum):
-    RAW = 1 # Save raw bitstream
-    MP4 = 2 # Containerize into mp4 file, requires `av` library
+    VIDEO = 1 # Save to video file
     MCAP = 3 # To .mcap
     BAG = 4 # To ROS .bag
-
-class Codec(IntEnum):
-    NONE = 0
-    MJPEG = 1
-    H264 = 2
-    H265 = 3
-    @classmethod
-    def fourcc(cls, codec: 'Codec') -> str:
-        if codec == cls.MJPEG:
-            return 'mjpeg'
-        elif codec == cls.H264:
-            return 'h264'
-        elif codec == cls.H265:
-            return 'hevc'
 
 class Record(XoutSeqSync):
     """
@@ -60,7 +44,7 @@ class Record(XoutSeqSync):
 
     def package(self, msgs: Dict):
         # Here we get sequence-num synced messages:)
-        pass
+        self.frame_q.put(msgs)
 
     def visualize(self, packet: FramePacket) -> None:
         pass # No need.
@@ -81,7 +65,7 @@ class Record(XoutSeqSync):
         Start recording process. This will create and start the pipeline,
         start recording threads, and initialize all queues.
         """
-        self.streams = [out.frames for out in xouts] # required by XoutSeqSync
+        self._streams = [out.frames.name for out in xouts] # required by XoutSeqSync
 
         self.mxid = device.getMxId()
         self.path = self._createFolder(self.folder, self.mxid)
@@ -90,34 +74,24 @@ class Record(XoutSeqSync):
         calibData.eepromToJsonFile(str(self.path / "calib.json"))
 
         self.frame_q = Queue(maxsize=20)
-        self.process = Thread(target=_run, args=(self._getRecorders(device, xouts), self.frame_q))
+        self.process = Thread(target=_run, args=(self._get_recorder(device, xouts), self.frame_q))
         self.process.start()
 
-    def _getRecorders(self, device: dai.Device, xouts: List[XoutFrames]) -> Dict[str, Recorder]:
+    def _get_recorder(self, device: dai.Device, xouts:  List[XoutFrames]) -> Recorder:
         """
-        Create recorders
+        Create recorder
         """
-        recorders = dict()
-
-        codecs: Dict[str, Codec] = {}
-        for xout in xouts:
-            if isinstance(xout, XoutH26x):
-            codecs[xout.frames.name]
-
         if self.type == RecordType.MCAP:
             from .recorders.mcap_recorder import McapRecorder
-            rec = McapRecorder(self.path, device)
-            for xout in xouts:
-                if isinstance(xout, XoutH26x):
-                    raise Exception("MCAP recording only supports MJPEG encoding!")
-                if isinstance(xout, XoutMjpeg) and xout.lossless:
-                    # Foxglove Studio doesn't support Lossless MJPEG
-                    raise Exception("MCAP recording doesn't support Lossless MJPEG encoding!")
-                # rec.setPointcloud(self._pointcloud)
-                recorders[xout.frames.name] = rec
-        if self.type == RecordType.MP4:
-            from .recorders.pyav_mp4_recorder import PyAvRecorder
-            rec = PyAvRecorder(self.path, )
+            return McapRecorder(self.path, device, xouts)
+        elif self.type == RecordType.VIDEO:
+            from .recorders.video_recorder import VideoRecorder
+            return VideoRecorder(self.path, xouts)
+        elif self.type == RecordType.BAG:
+            from .recorders.rosbag_recorder import RosbagRecorder
+            return RosbagRecorder(self.path, device, )
+        else:
+            raise ValueError(f"Recording type '{self.type}' isn't supported!")
 
         # if 'depth' in save:
         #     from .recorders.rosbag_recorder import RosbagRecorder
@@ -125,21 +99,6 @@ class Record(XoutSeqSync):
         #     save.remove('depth')
         #
         # if len(save) == 0: return recorders
-
-        # else:
-        #     try:
-        #         # Try importing av
-        #         from .recorders.pyav_mp4_recorder import PyAvRecorder
-        #         rec = PyAvRecorder(self.path, self.quality, self.args.rgbFps, self.args.monoFps)
-        #     except:
-        #         print("'av' library is not installed, depthai-record will save raw encoded streams.")
-        #         from .recorders.raw_recorder import RawRecorder
-        #         rec = RawRecorder(self.path, self.quality)
-        # # All other streams ("color", "left", "right", "disparity") will use
-        # # the same Raw/PyAv recorder
-        # for name in save:
-        #     recorders[name] = rec
-        return recorders
 
 
     def _createFolder(self, path: Path, mxid: str) -> Path:
@@ -153,3 +112,6 @@ class Record(XoutSeqSync):
             if not recordings_path.is_dir():
                 recordings_path.mkdir(parents=True, exist_ok=False)
                 return recordings_path
+
+    def close(self):
+        self.frame_q.put(None) # Close recorder and stop the thread

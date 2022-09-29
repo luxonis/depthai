@@ -199,6 +199,10 @@ class OakCamera:
             print("Closing replay")
             self.replay.close()
 
+        for out in self._out_templates:
+            if isinstance(out, RecordConfig):
+                out.rec.close()
+
     def start(self, blocking=False) -> None:
         """
         Start the application
@@ -298,7 +302,7 @@ class OakCamera:
 
         return self._pipeline
 
-    def record(self, outputs: Union[Callable, List[Callable]], path: str, type: RecordType = RecordType.MP4):
+    def record(self, outputs: Union[Callable, List[Callable]], path: str, type: RecordType = RecordType.VIDEO):
         """
         Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
         them to the computer in desired format (raw, mp4, mcap, bag..).

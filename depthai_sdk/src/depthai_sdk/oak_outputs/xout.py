@@ -100,11 +100,13 @@ class XoutH26x(XoutFrames):
     name = "H26x Stream"
     color: bool
     fps: float
+    profile: dai.VideoEncoderProperties.Profile
     def __init__(self, frames: StreamXout, color: bool, profile: dai.VideoEncoderProperties.Profile, fps: float):
         super().__init__(frames)
         self.color = color
-        fourcc = 'hevc' if profile == dai.VideoEncoderProperties.Profile.H265_MAIN else 'h264'
+        self.profile = profile
         self.fps=fps
+        fourcc = 'hevc' if profile == dai.VideoEncoderProperties.Profile.H265_MAIN else 'h264'
         import av
         self.codec = av.CodecContext.create(fourcc, "r")
     def visualize(self, packet: FramePacket):

@@ -139,7 +139,7 @@ def parseEncode(encode = Union[str, bool, dai.VideoEncoderProperties.Profile]
         elif encode in ['H265', '.H265', 'H.265', 'HEVC', '.HEVC']:
             return dai.VideoEncoderProperties.Profile.H265_MAIN
         elif encode in ['H264', '.H264', 'H.264', 'MPEG-4', 'MPEG', 'AVC']:
-            return dai.VideoEncoderProperties.Profile.H265_MAIN
+            return dai.VideoEncoderProperties.Profile.H264_MAIN
     raise ValueError(f"Parsing user-defined encode value '{encode}' failed!")
 
 def parse_cam_socket(socket = Union[str, dai.CameraBoardSocket]) -> dai.CameraBoardSocket:

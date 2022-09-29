@@ -74,6 +74,7 @@ class RecordConfig(BaseConfig):
             xoutbase.setup_base(None)
             xouts.append(xoutbase)
 
+        self.rec.setup_base(None)
         self.rec.start(device, xouts)
 
         return self.rec
