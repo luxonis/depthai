@@ -5,7 +5,7 @@
     "test_type": "OAK-D-SR",
     "variants": [
         {
-            "title":"OAK-D SR (DM2080 R0M0E0)",
+            "title":"OAK-D SR (DM2080 R0M0E0) (2x OV9782)",
             "description": "OAK-D SR, based on DM2080 R0M0E0 board",
             "eeprom":"eeprom/DM2080_R0M0E0_oak_d_sr.json"
         }
