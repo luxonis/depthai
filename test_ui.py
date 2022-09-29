@@ -1202,7 +1202,7 @@ class UiTests(QtWidgets.QMainWindow):
                 self.print_logs("Writing EEPROM... ")
                 eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                 eeprom_written = True
-        elif not ('LITE' in test_type or '1' in test_type or 'SR' in test_type):
+        elif not ('LITE' in test_type or '1' in test_type):
             # Flash EEPROM and boot header, then reboot for boot header to take effect
             with dai.Device() as device:
                 usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
