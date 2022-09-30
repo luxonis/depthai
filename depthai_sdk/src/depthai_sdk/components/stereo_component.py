@@ -36,8 +36,8 @@ class StereoComponent(Component):
                  pipeline: dai.Pipeline,
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
-                 left: Union[None, dai.Node.Output, dai.node.MonoCamera] = None,  # Left mono camera
-                 right: Union[None, dai.Node.Output, dai.node.MonoCamera] = None,  # Right mono camera
+                 left: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Left mono camera
+                 right: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Right mono camera
                  replay: Optional[Replay] = None,
                  args: Any = None,
                  ):

@@ -8,8 +8,8 @@ import depthai as dai
 from enum import IntEnum
 
 from .classes.packets import FramePacket
-from .recorders.abstract_recorder import Recorder, OakStream
-from .oak_outputs.xout import XoutSeqSync, XoutFrames, XoutH26x, XoutMjpeg
+from .recorders.abstract_recorder import Recorder
+from .oak_outputs.xout import XoutSeqSync, XoutFrames
 
 def _run(recorder, frameQ: Queue):
     """
@@ -32,14 +32,14 @@ def _run(recorder, frameQ: Queue):
 
 class RecordType(IntEnum):
     VIDEO = 1 # Save to video file
-    MCAP = 3 # To .mcap
-    BAG = 4 # To ROS .bag
+    BAG = 2 # To ROS .bag
+    # MCAP = 3 # To .mcap
 
 class Record(XoutSeqSync):
     """
     This class records depthai streams from OAK cameras into different formats.
     Available formats: .h265, .mjpeg, .mp4, .mcap, .bag
-    It will also save calibration .json, so depth reconstruction will 
+    It will also save calibration .json, so depth reconstruction will
     """
 
     def package(self, msgs: Dict):
@@ -92,13 +92,6 @@ class Record(XoutSeqSync):
             return RosbagRecorder(self.path, device, )
         else:
             raise ValueError(f"Recording type '{self.type}' isn't supported!")
-
-        # if 'depth' in save:
-        #     from .recorders.rosbag_recorder import RosbagRecorder
-        #     recorders['depth'] = RosbagRecorder(self.path, device, self.getSizes())
-        #     save.remove('depth')
-        #
-        # if len(save) == 0: return recorders
 
 
     def _createFolder(self, path: Path, mxid: str) -> Path:
