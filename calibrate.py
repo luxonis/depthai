@@ -872,7 +872,7 @@ class Main:
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
         dest_path = str(Path('resources').absolute())
-        self.args.cameraMode = 'perspective' # hardcoded for now
+        # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
 
             # stereo_calib = StereoCalibration()
@@ -893,7 +893,11 @@ class Main:
                 if self.empty_calibration(calibration_handler):
                     calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
             except:
-                pass
+                print('Device closed in exception..' )
+                self.device.close()
+                print(e)
+                print(traceback.format_exc())
+                raise SystemExit(1)
 
             # calibration_handler.set
             error_text = []
@@ -1027,6 +1031,8 @@ class Main:
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
         except Exception as e:
+            self.device.close()
+            print('Device closed in exception..' )
             print(e)
             print(traceback.format_exc())
             raise SystemExit(1)
