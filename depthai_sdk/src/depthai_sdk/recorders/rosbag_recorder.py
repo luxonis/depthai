@@ -1,6 +1,7 @@
 '''
 This is a helper class that let's you save depth frames into rosbag (.bag), which can be replayed using RealSense Viewer app.
 '''
+from typing import List
 
 from rosbags.rosbag1 import Writer
 from rosbags.serde import cdr_to_ros1, serialize_cdr
@@ -202,23 +203,25 @@ bool is_recommended # Is this stream recommended by RealSense SDK
 """
 
 class RosbagRecorder(Recorder):
-    closed = False
-    '''
-    path: Path to the folder where rosbag will be saved
-    resolutions: dict of resolutions ('depth', 'color')
-    rgb: Whether to save color stream as well
-    overwrite: Whether to overwrite existing rosbag (if it exists)
-    '''
-    def __init__(self, path: Path, device: dai.Device, resolutions, overwrite = True):
-        rgb = False
+    _closed = False
+    _frame_init: List[str]
+
+    def __init__(self, path: Path, device: dai.Device):
+        '''
+        Args:
+            path: Path to the folder where rosbag will be saved
+            device: depthai.Device object
+        '''
+
+        rgb = False # TODO: support rgb/mono recording as well
+        self._frame_init = []
+
         if not str(path).endswith('.bag'):
-            path = path / 'depth.bag'
+            path = path / 'recording.bag'
 
         if path.exists():
-            if overwrite:
-                os.remove(str(path))
-            else:
-                raise Exception('Specified path already exists. Set argument overwrite=True to delete the bag at that path')
+            os.remove(str(path))
+
         self.path = path
         self.start_nanos = 0
         self.writer = Writer(self.path)
@@ -238,7 +241,7 @@ class RosbagRecorder(Recorder):
 
         self.write_uint32('/file_version', 2)
         self.write_keyvalues('/device_0/info', {
-            'Name': 'OAK-D',
+            'Name': 'OAK camera',
             'Location': '',
             'Debug Op Code': 0,
             'Advanced Mode': 'YES',
@@ -264,8 +267,7 @@ class RosbagRecorder(Recorder):
         })
         self.write_transform('/device_0/sensor_0/Depth_0/tf/0')
 
-        calibData = device.readCalibration()
-        self.write_depthInfo('/device_0/sensor_0/Depth_0/info/camera_info', resolutions['depth'], calibData)
+        self.calib = device.readCalibration()
 
         if rgb:
             # Color recording isn't yet possible.
@@ -287,12 +289,31 @@ class RosbagRecorder(Recorder):
                 # 'Power Line Frequency': '3.000000',
             })
             self.write_transform('/device_0/sensor_1/Color_0/tf/0')
-            self.write_colorInfo('/device_0/sensor_1/Color_0/info/camera_info', resolutions['color'], calibData)
 
             self.rgb_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/data', Image.__msgtype__, latching=1)
             self.rgb_meta_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/metadata', KeyValue.__msgtype__, latching=1)
 
+    def _init_stream(self, frame: dai.ImgFrame):
+        resolution = (frame.getWidth(), frame.getHeight())
+
+        if frame.getType() == dai.ImgFrame.Type.RAW16: # Depth
+            self.write_depthInfo('/device_0/sensor_0/Depth_0/info/camera_info', resolution, self.calib)
+        else:
+            raise NotImplementedError('RosBags currently only support recording of depth!')
+        #
+        # elif frame.getType() == dai.ImgFrame.Type.RAW8: # Mono Cams
+        #     pass
+        # else: # Color
+        #     fourcc = "I420"
+        #     self.write_colorInfo('/device_0/sensor_1/Color_0/info/camera_info', resolution, self.calib)
+
+
     def write(self, name: str, imgFrame: dai.ImgFrame):
+        if name not in self._frame_init:
+            self._init_stream(imgFrame)
+            self._frame_init.append(name)
+
+
         frame = imgFrame.getCvFrame()
         # First frames
         if self.start_nanos == 0: self.start_nanos = time.time_ns()
@@ -318,8 +339,8 @@ class RosbagRecorder(Recorder):
         }, connection=True)
 
     def close(self):
-        if self.closed: return
-        self.closed = True
+        if self._closed: return
+        self._closed = True
         print("ROS .bag saved at: ", str(self.path))
         self.writer.close()
 
