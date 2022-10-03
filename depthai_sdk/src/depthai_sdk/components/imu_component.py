@@ -45,8 +45,4 @@ class IMUComponent(Component):
         return super()._create_xout(pipeline, imu_out)
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-        # Default settings
-        self.config_imu(sensors=[dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW],
-                        report_rate=100,
-                        batch_report_threshold=1,
-                        max_batch_reports=10)
+        pass
