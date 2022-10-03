@@ -5,6 +5,7 @@ from .multi_stage_nn import MultiStageNN, MultiStageConfig
 from pathlib import Path
 from typing import Callable, Union, List, Dict
 
+from ..replay import Replay
 import blobconverter
 from .parser import *
 from .nn_helper import *
@@ -45,6 +46,7 @@ class NNComponent(Component):
     _multi_stage_config: MultiStageConfig = None
 
     _spatial: Union[None, bool, StereoComponent] = None
+    _replay: Replay  # Replay module
 
     # For visualizer
     _labels: List = None  # obj detector labels
@@ -57,6 +59,7 @@ class NNComponent(Component):
                  nnType: Optional[str] = None, # Either 'yolo' or 'mobilenet'
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
                  spatial: Union[None, bool, StereoComponent] = None,
+                 replay: Optional[Replay] = None,
                  args: Dict = None  # User defined args
                  ) -> None:
         """
@@ -72,14 +75,17 @@ class NNComponent(Component):
             nnType (str, optional): Type of the NN - Either 'Yolo' or 'MobileNet'
             tracker (bool, default False): Enable object tracker - only for Object detection models
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
-            args (Any, optional): Set the camera components based on user arguments
+            replay (Replay object): Replay
+            args (Any, optional): Use user defined arguments when constructing the pipeline
         """
         super().__init__()
+        self.out = self.Out(self)
 
         # Save passed settings
         self._input = input
         self._spatial = spatial
         self._args = args
+        self._replay = replay
 
         self.tracker = pipeline.createObjectTracker() if tracker else None
 
@@ -155,7 +161,7 @@ class NNComponent(Component):
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
-                self._spatial = StereoComponent(pipeline, args=self._args)
+                self._spatial = StereoComponent(pipeline, args=self._args, replay=self._replay)
                 self._spatial._update_device_info(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
@@ -267,7 +273,7 @@ class NNComponent(Component):
         versionStr = f"{vals[1]}.{vals[2]}"
 
         if 'model_name' in model:  # Use blobconverter to download the model
-            zoo_type = model.get("zoo_type", 'intel')
+            zoo_type = model.get("zoo", 'intel')
             return blobconverter.from_zoo(model['model_name'],
                                           zoo_type=zoo_type,
                                           shaves=6,  # TODO: Calculate ideal shave amount
@@ -463,70 +469,90 @@ class NNComponent(Component):
     """
     Available outputs (to the host) of this component
     """
-    def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        # Check if it's XoutNnResults or XoutTwoStage
+    class Out:
+        _comp: 'NNComponent'
+        def __init__(self, nnComponent: 'NNComponent'):
+            self._comp = nnComponent
 
-        if self._isMultiStage():
-            out = XoutTwoStage(self._input, self,
-                               self._input._input.get_stream_xout(), # CameraComponent
-                               StreamXout(self._input.node.id, self._input.node.out), # NnComponent (detections)
-                               StreamXout(self.node.id, self.node.out), # This NnComponent (2nd stage NN)
-                               )
-        else:
-            out = XoutNnResults(self,
-                                self._input.get_stream_xout(), # CameraComponent
-                                StreamXout(self.node.id, self.node.out)) # NnComponent
-        return super()._create_xout(pipeline, out)
+        def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            """
+            Default output. Streams NN results and high-res frames that were downscaled and used for inferencing.
+            Produces DetectionPacket or TwoStagePacket.
+            """
 
-    def out_passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        if self._isMultiStage():
-            out = XoutTwoStage(self._input, self,
-                               StreamXout(self._input.node.id, self._input.node.passthrough), # Passthrough frame
-                               StreamXout(self._input.node.id, self._input.node.out), # NnComponent (detections)
-                               StreamXout(self.node.id, self.node.out), # This NnComponent (2nd stage NN)
-                               )
-        else:
-            out = XoutNnResults(self,
-                                StreamXout(self.node.id, self.node.passthrough),
-                                StreamXout(self.node.id, self.node.out)
-                                )
+            if self._comp._isMultiStage():
+                out = XoutTwoStage(self._comp._input, self._comp,
+                                   self._comp._input._input.get_stream_xout(),  # CameraComponent
+                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),  # NnComponent (detections)
+                                   StreamXout(self._comp.node.id, self._comp.node.out),  # This NnComponent (2nd stage NN)
+                                   )
+            else:
+                out = XoutNnResults(self._comp,
+                                    self._comp._input.get_stream_xout(),  # CameraComponent
+                                    StreamXout(self._comp.node.id, self._comp.node.out)) # NnComponent
+            return self._comp._create_xout(pipeline, out)
 
-        return super()._create_xout(pipeline, out)
-
-    def out_spatials(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        if not self._isSpatial():
-            raise Exception('SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
-
-        out = XoutSpatialBbMappings(device,
-                                    StreamXout(self.node.id, self.node.passthroughDepth),
-                                    StreamXout(self.node.id, self.node.boundingBoxMapping)
+        def passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            """
+            Default output. Streams NN results and passthrough frames (frames used for inferencing)
+            Produces DetectionPacket or TwoStagePacket.
+            """
+            if self._comp._isMultiStage():
+                out = XoutTwoStage(self._comp._input, self._comp,
+                                   StreamXout(self._comp._input.node.id, self._comp._input.node.passthrough),  # Passthrough frame
+                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),  # NnComponent (detections)
+                                   StreamXout(self._comp.node.id, self._comp.node.out),  # This NnComponent (2nd stage NN)
+                                   )
+            else:
+                out = XoutNnResults(self._comp,
+                                    StreamXout(self._comp.node.id, self._comp.node.passthrough),
+                                    StreamXout(self._comp.node.id, self._comp.node.out)
                                     )
-        return super()._create_xout(pipeline, out)
 
-    def out_twostage_crops(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        if not self._isMultiStage():
-            raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
+            return self._comp._create_xout(pipeline, out)
 
-        out = XoutFrames(StreamXout(self._multiStageNn.manip.id, self._multiStageNn.manip.out))
-        return super()._create_xout(pipeline, out)
+        def spatials(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutSpatialBbMappings:
+            """
+            Streams depth and bounding box mappings (``SpatialDetectionNework.boundingBoxMapping``). Produces SpatialBbMappingPacket.
+            """
+            if not self._comp._isSpatial():
+                raise Exception('SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
 
-    def out_tracker(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        if not self._isTracker(): raise Exception('Tracker was not enabled! Enable with cam.create_nn("[model]", tracker=True)!')
-        self.node.passthrough.link(self.tracker.inputDetectionFrame)
-        self.node.out.link(self.tracker.inputDetections)
-        # TODO: add support for full frame tracking
-        self.node.passthrough.link(self.tracker.inputTrackerFrame)
+            out = XoutSpatialBbMappings(device,
+                                        StreamXout(self._comp.node.id, self._comp.node.passthroughDepth),
+                                        StreamXout(self._comp.node.id, self._comp.node.boundingBoxMapping)
+                                        )
+            return self._comp._create_xout(pipeline, out)
 
-        out = XoutTracker(self,
-                          self._input.get_stream_xout(), # CameraComponent
-                          StreamXout(self.tracker.id, self.tracker.out)
-                          )
-        return super()._create_xout(pipeline, out)
+        def twostage_crops(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutFrames:
+            """
+            Streams two-stage cropped frames to the device. Produces FramePacket.
+            """
+            if not self._comp._isMultiStage():
+                raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
+            out = XoutFrames(StreamXout(self._comp._multiStageNn.manip.id, self._comp._multiStageNn.manip.out))
+            return self._comp._create_xout(pipeline, out)
 
-    """
-    Checks
-    """
+        def tracker(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutTracker:
+            """
+            Streams ObjectTracker tracklets and high-res frames that were downscaled and used for inferencing. Produces TrackerPacket.
+            """
+            if not self._comp._isTracker(): raise Exception('Tracker was not enabled! Enable with cam.create_nn("[model]", tracker=True)!')
+            self._comp.node.passthrough.link(self._comp.tracker.inputDetectionFrame)
+            self._comp.node.out.link(self._comp.tracker.inputDetections)
+            # TODO: add support for full frame tracking
+            self._comp.node.passthrough.link(self._comp.tracker.inputTrackerFrame)
+
+            out = XoutTracker(self._comp,
+                              self._comp._input.get_stream_xout(),  # CameraComponent
+                              StreamXout(self._comp.tracker.id, self._comp.tracker.out)
+                              )
+            return self._comp._create_xout(pipeline, out)
+
+    out: Out
+
+    # Checks
     def _isSpatial(self) -> bool:
         return self._spatial is not None  # TODO isnt here an error? returns true when self._spatial is false
 

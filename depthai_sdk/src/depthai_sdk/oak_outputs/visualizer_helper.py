@@ -8,8 +8,8 @@ from typing import Tuple, Union, List, Any, Callable, Dict
 import cv2
 import distinctipy
 from .normalize_bb import NormalizeBoundingBox
-from ..classes.packets import DetectionPacket, TwoStageDetection, FramePacket, SpatialBbMappingPacket, TrackerPacket, \
-    TrackingDetection
+from ..classes.packets import DetectionPacket, _TwoStageDetection, FramePacket, SpatialBbMappingPacket, TrackerPacket, \
+    _TrackingDetection
 
 
 class FramePosition(IntEnum):
@@ -101,20 +101,6 @@ class Visualizer:
         else:  # xPos == 2  # X Right
             x = frameW - textSize[0] - padPx
         cls.putText(frame, text, (x, y))
-
-class FPS:
-    def __init__(self):
-        self.timestamp = time.time() + 1
-        self.start = time.time()
-        self.frame_cnt = 0
-
-    def next_iter(self):
-        self.timestamp = time.time()
-        self.frame_cnt += 1
-
-    def fps(self) -> float:
-        diff = self.timestamp - self.start
-        return self.frame_cnt / diff if diff != 0 else 0.0
 
 # def rectangle(frame, bbox, color: Tuple[int, int, int] = None):
 #     x1, y1, x2, y2 = bbox
@@ -242,7 +228,7 @@ def spatialsText(spatials: dai.Point3f):
         z = "Z: " + ("{:.1f}m".format(spatials.z / 1000) if not math.isnan(spatials.z) else "--"),
     )
 
-def drawDetections(packet: Union[DetectionPacket, TwoStageDetection, TrackerPacket],
+def drawDetections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPacket],
                    norm: NormalizeBoundingBox,
                    labelMap: List[Tuple[str, Tuple]] = None):
     """
@@ -269,14 +255,14 @@ def drawDetections(packet: Union[DetectionPacket, TwoStageDetection, TrackerPack
             color = Visualizer.front_color
 
         Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
-        if packet.isSpatialDetection():
-            point = packet.getSpatials(detection) if isinstance(packet, TrackerPacket) else detection.spatialCoordinates
+        if packet._isSpatialDetection():
+            point = packet._get_spatials(detection) if isinstance(packet, TrackerPacket) else detection.spatialCoordinates
             Visualizer.putText(packet.frame, spatialsText(point).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
             Visualizer.putText(packet.frame, spatialsText(point).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
             Visualizer.putText(packet.frame, spatialsText(point).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
 
         rectangle(packet.frame, bbox, color=color, thickness=1, radius=0)
-        packet.add_detection(detection, bbox, txt, color)
+        packet._add_detection(detection, bbox, txt, color)
 
 def drawTrackletId(packet: TrackerPacket):
     for det in packet.detections:
@@ -287,7 +273,7 @@ def drawTrackletId(packet: TrackerPacket):
 def drawBreadcrumbTrail(packets: List[TrackerPacket]):
     packet = packets[-1] # Current packet
 
-    dic: Dict[str, List[TrackingDetection]] = {}
+    dic: Dict[str, List[_TrackingDetection]] = {}
     validIds = [t.id for t in packet.daiTracklets.tracklets]
     for id in validIds:
         dic[str(id)] = []

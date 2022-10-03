@@ -24,7 +24,6 @@ class Replay:
     left: dai.node.XLinkIn = None
     right: dai.node.XLinkIn = None
     color: dai.node.XLinkIn = None
-    stereo: dai.node.StereoDepth = None
 
     _inputQueues = dict()  # dai.InputQueue dictionary for each stream
     _seqNum = 0  # Frame sequence number, added to each imgFrame
@@ -104,7 +103,7 @@ class Replay:
                 # TODO: download video/image(s) from the internet
                 raise NotImplementedError("Only YouTube video download is currently supported!")
 
-        if Path(path).exists():
+        if Path(path).resolve().exists():
             return Path(path).resolve()
 
         recordingName: str = path
@@ -230,22 +229,20 @@ class Replay:
                 else:
                     pass  # Not implemented
 
-        # Create StereoDepth node
-        if self.left and self.right:
-            self.stereo = pipeline.create(dai.node.StereoDepth)
-            self.stereo.setInputResolution(self.getShape('left'))
-
-            if self.color:  # Enable RGB-depth alignment
-                self.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-                if self._colorSize is not None:
-                    self.stereo.setOutputSize(*self._colorSize)
-                else:
-                    self.stereo.setOutputSize(*self.getShape('color'))
-
-            self.left.out.link(self.stereo.left)
-            self.right.out.link(self.stereo.right)
-
         return pipeline
+
+    def initStereoDepth(self, stereo: dai.node.StereoDepth):
+        stereo.setInputResolution(self.getShape('left'))
+
+        if self.color:  # Enable RGB-depth alignment
+            stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+            if self._colorSize is not None:
+                stereo.setOutputSize(*self._colorSize)
+            else:
+                stereo.setOutputSize(*self.getShape('color'))
+
+        self.left.out.link(stereo.left)
+        self.right.out.link(stereo.right)
 
     def start(self, cb):
         """
@@ -261,6 +258,7 @@ class Replay:
             time.sleep(delay)
             if self._stop: break
         print('Replay `run` thread stopped')
+        self._stop = True
 
     def createQueues(self, device: dai.Device):
         """
@@ -300,7 +298,7 @@ class Replay:
         return imgFrame
 
     def _createImgFrame(self, name: str, cvFrame) -> dai.ImgFrame:
-        imgFrame: dai.ImgFrame = None
+        imgFrame: dai.ImgFrame
         if name == 'color':
             # Resize/crop color frame as specified by the user
             cvFrame = self._resizeColor(cvFrame)
@@ -328,15 +326,16 @@ class Replay:
         """
         self.frames = dict()
         frames = self.reader.read()
-        if frames is None:
+        if not frames:
             return False  # No more frames!
 
         for name, frame in frames.items():
             self.frames[name] = frame
 
         # Compress 3-plane frame to a single plane
-        if name in ["left", "right", "disparity"] and len(self.frames[name].shape) == 3:
-            self.frames[name] = self.frames[name][:, :, 0]  # All 3 planes are the same
+        for name, frame in self.frames.items():
+            if name in ["left", "right", "disparity"] and len(frame.shape) == 3:
+                self.frames[name] = frame[:, :, 0]  # All 3 planes are the same
         return True
 
     def _getMaxSize(self, name: str) -> int:

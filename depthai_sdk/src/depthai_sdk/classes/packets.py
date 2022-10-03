@@ -3,7 +3,7 @@ import depthai as dai
 import numpy as np
 
 
-class Detection:
+class _Detection:
     def __init__(self):
         pass
 
@@ -22,15 +22,19 @@ class Detection:
         )
 
 
-class TrackingDetection(Detection):
+class _TrackingDetection(_Detection):
     tracklet: dai.Tracklet
 
 
-class TwoStageDetection(Detection):
+class _TwoStageDetection(_Detection):
     nn_data: dai.NNData
 
 
 class FramePacket:
+    """
+    Contains only dai.ImgFrame message and cv2 frame, which is used by visualization logic.
+    """
+
     name: str  # ImgFrame stream name
     imgFrame: dai.ImgFrame  # Original depthai message
     frame: np.ndarray  # cv2 frame for visualization
@@ -42,6 +46,9 @@ class FramePacket:
 
 
 class SpatialBbMappingPacket(FramePacket):
+    """
+    Output from Spatial Detection nodes - depth frame + bounding box mappings. Inherits FramePacket.
+    """
     config: dai.SpatialLocationCalculatorConfig
 
     def __init__(self, name: str, imgFrame: dai.ImgFrame, config: dai.SpatialLocationCalculatorConfig):
@@ -50,9 +57,11 @@ class SpatialBbMappingPacket(FramePacket):
 
 
 class DetectionPacket(FramePacket):
-    # Original depthai messages
+    """
+    Output from Detection Network nodes - image frame + image detections. Inherits FramePacket.
+    """
     imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]
-    detections: List[Detection]
+    detections: List[_Detection]
 
     def __init__(self,
                  name: str,
@@ -62,11 +71,11 @@ class DetectionPacket(FramePacket):
         self.imgDetections = imgDetections
         self.detections = []
 
-    def isSpatialDetection(self) -> bool:
+    def _isSpatialDetection(self) -> bool:
         return isinstance(self.imgDetections, dai.SpatialImgDetections)
 
-    def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
-        det = Detection()
+    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
+        det = _Detection()
         det.imgDetection = img_det
         det.label_str = txt
         det.color = color
@@ -76,9 +85,11 @@ class DetectionPacket(FramePacket):
 
 
 class TrackerPacket(FramePacket):
-    # Original depthai messages
+    """
+    Output of Object Tracker node. Tracklets + Image frame. Inherits FramePacket.
+    """
     daiTracklets: dai.Tracklets
-    detections: List[TrackingDetection]
+    detections: List[_TrackingDetection]
 
     def __init__(self,
                  name: str,
@@ -88,8 +99,8 @@ class TrackerPacket(FramePacket):
         self.daiTracklets = tracklets
         self.detections = []
 
-    def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
-        det = TrackingDetection()
+    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
+        det = _TrackingDetection()
         det.imgDetection = img_det
         det.label_str = txt
         det.color = color
@@ -97,11 +108,11 @@ class TrackerPacket(FramePacket):
         det.bottomRight = (bbox[2], bbox[3])
         self.detections.append(det)
 
-    def isSpatialDetection(self) -> bool:
+    def _isSpatialDetection(self) -> bool:
         coords = self.daiTracklets.tracklets[0].spatialCoordinates
         return coords.x != 0.0 or coords.y != 0.0 or coords.z != 0.0
 
-    def getSpatials(self, det: dai.ImgDetection) -> dai.Point3f:
+    def _get_spatials(self, det: dai.ImgDetection) -> dai.Point3f:
         # Not the cleanest solution, but oh well
         for t in self.daiTracklets.tracklets:
             if t.srcImgDetection == det:
@@ -109,7 +120,9 @@ class TrackerPacket(FramePacket):
 
 
 class TwoStagePacket(DetectionPacket):
-    # Original depthai messages
+    """
+    Output of 2-stage NN pipeline; Image frame, Image detections and multiple NNData results. Inherits DetectionPacket.
+    """
     nnData: List[dai.NNData]
     labels: List[int] = None
     _cntr: int = 0  # Label counter
@@ -125,8 +138,8 @@ class TwoStagePacket(DetectionPacket):
         self.labels = labels
         self._cntr = 0
 
-    def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
-        det = TwoStageDetection()
+    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
+        det = _TwoStageDetection()
         det.imgDetection = img_det
         det.color = color
         det.topLeft = (bbox[0], bbox[1])

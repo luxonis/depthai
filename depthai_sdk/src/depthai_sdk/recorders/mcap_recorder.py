@@ -1,20 +1,22 @@
-'''
-This is a helper class that let's you save frames into mcap (.mcap), which can be replayed using Foxglove studio app.
-'''
-
 from pathlib import Path
-
 from mcap_ros1.writer import Writer as Ros1Writer
-from .abstract_recorder import Recorder
+from .abstract_recorder import *
 from .depthai2ros import DepthAi2Ros1
 
 import depthai as dai
+from typing import List, Dict
 
 
 class McapRecorder(Recorder):
+    '''
+    This is a helper class that lets you save frames into mcap (.mcap), which can be replayed using Foxglove studio app.
+    '''
+
     _closed = False
     _pcl = False
-    def __init__(self, path: Path, device: dai.Device):
+    _stream_type: Dict[str, OakStream]
+
+    def __init__(self, path: Path, device: dai.Device, xouts: List[XoutFrames]):
         """
         
         Args:
@@ -25,6 +27,21 @@ class McapRecorder(Recorder):
         self.path = str(path / "recordings.mcap")
         self.stream = open(self.path, "w+b")
         self.ros_writer = Ros1Writer(output=self.stream)
+
+        self._stream_type = dict()
+        for xout in xouts:
+            codec = OakStream(xout)
+            self._stream_type[xout.frames.name] = codec
+
+            if codec == codec.isH26x():
+                raise Exception("MCAP recording only supports MJPEG encoding!")
+            if codec.isMjpeg() and xout.lossless:
+                # Foxglove Studio doesn't (yet?) support Lossless MJPEG
+                raise Exception("MCAP recording doesn't support Lossless MJPEG encoding!")
+            # rec.setPointcloud(self._pointcloud)
+
+
+
     
     def setPointcloud(self, enable: bool):
         """
@@ -33,14 +50,14 @@ class McapRecorder(Recorder):
         self._pcl = enable
 
     def write(self, name: str, frame: dai.ImgFrame):
-        if name == "depth":
+        if self._stream_type[name].isDepth():
             if self._pcl: # Generate pointcloud from depth and save it
                 msg = self.converter.PointCloud2(frame)
                 self.ros_writer.write_message(f"pointcloud/raw", msg)
             else: # Save raw depth frame
                 msg = self.converter.Image(frame)
                 self.ros_writer.write_message(f"depth/raw", msg)
-        else:
+        elif self._stream_type[name].isMjpeg():
             msg = self.converter.CompressedImage(frame)
             self.ros_writer.write_message(f"{name}/compressed", msg)
         

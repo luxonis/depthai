@@ -1,19 +1,20 @@
 {
-    "model":{
-        "model_name": "face-detection-adas-0001"
+    "model":
+    {
+        "model_name": "vehicle-detection-0202"
     },
     "nn_config":
     {
         "output_format" : "detection",
         "NN_family" : "mobilenet",
-        "confidence_threshold" : 0.5
+        "confidence_threshold" : 0.4
     },
     "mappings":
     {
         "labels":
         [
-            "unknown",
-            "face"
+            "",
+            ["","#38FF4C"]
         ]
     },
     "version": 1

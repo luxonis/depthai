@@ -2,18 +2,17 @@ from typing import Union, List, Callable
 from queue import Empty, Queue
 from abc import ABC, abstractmethod
 import depthai as dai
-
-from .visualizer_helper import FPS
-from ..classes.packets import FramePacket
+from .fps import FPS
 
 
 class StreamXout:
     stream: dai.Node.Output
     name: str  # XLinkOut stream name
-
+    friendly_name: str = None  # Used for eg. recording to a file
     def __init__(self, id: int, out: dai.Node.Output):
         self.stream = out
         self.name = f"{str(id)}_{out.name}"
+        self.friendly_name = None
 
 
 class ReplayStream(StreamXout):
@@ -49,7 +48,7 @@ class XoutBase(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def visualize(self, packet: FramePacket) -> None:
+    def visualize(self, packet) -> None:
         raise NotImplementedError()
 
     # This approach is used as some functions (eg. imshow()) need to be called from
