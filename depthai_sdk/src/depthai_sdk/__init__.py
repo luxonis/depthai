@@ -1,3 +1,5 @@
+import functools
+
 from .classes.output_config import OutputConfig, VisualizeConfig
 from .components.imu_component import IMUComponent
 from .fps import *
@@ -15,6 +17,20 @@ from typing import Optional
 import depthai as dai
 from pathlib import Path
 from .args_parser import ArgsParser
+
+
+def _add_to_components(func) -> Callable:
+    """
+    Decorator to add created component to the components list.
+    """
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs) -> Component:
+        comp = func(self, *args, **kwargs)
+        self.components.append(comp)
+        return comp
+
+    return wrapper
 
 
 class OakCamera:
@@ -81,10 +97,7 @@ class OakCamera:
             self.replay = Replay(recording)
             print('available streams from recording', self.replay.getStreams())
 
-    def _comp(self, comp: Component) -> Union[CameraComponent, NNComponent, StereoComponent, IMUComponent]:
-        self.components.append(comp)
-        return comp
-
+    @_add_to_components
     def create_camera(self,
                       source: str,
                       resolution: Union[
@@ -95,7 +108,7 @@ class OakCamera:
         """
         Create Color camera
         """
-        return self._comp(CameraComponent(
+        return CameraComponent(
             self._pipeline,
             source=source,
             resolution=resolution,
@@ -103,8 +116,9 @@ class OakCamera:
             encode=encode,
             replay=self.replay,
             args=self.args,
-        ))
+        )
 
+    @_add_to_components
     def create_nn(self,
                   model: Union[str, Path],
                   input: Union[CameraComponent, NNComponent, dai.Node.Output],
@@ -122,7 +136,7 @@ class OakCamera:
             tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
         """
-        return self._comp(NNComponent(
+        return NNComponent(
             self._pipeline,
             model=model,
             input=input,
@@ -130,8 +144,9 @@ class OakCamera:
             tracker=tracker,
             spatial=spatial,
             args=self.args
-        ))
+        )
 
+    @_add_to_components
     def create_stereo(self,
                       resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
@@ -141,7 +156,7 @@ class OakCamera:
         """
         Create Stereo camera component
         """
-        return self._comp(StereoComponent(
+        return StereoComponent(
             self._pipeline,
             resolution=resolution,
             fps=fps,
@@ -149,15 +164,15 @@ class OakCamera:
             right=right,
             replay=self.replay,
             args=self.args,
-        ))
+        )
 
     def create_imu(self) -> IMUComponent:
         """
         Create IMU component
         """
-        return self._comp(IMUComponent(
+        return IMUComponent(
             pipeline=self._pipeline
-        ))
+        )
 
     def _init_device(self) -> None:
         """
