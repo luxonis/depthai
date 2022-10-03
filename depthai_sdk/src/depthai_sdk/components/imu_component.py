@@ -13,7 +13,7 @@ class IMUComponent(Component):
 
         super().__init__()
         self.node = pipeline.createIMU()
-        self.config_imu()
+        self.config_imu()  # Default settings, component won't work without them
 
     def config_imu(self,
                    sensors: list[dai.IMUSensor] = None,
