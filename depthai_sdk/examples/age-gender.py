@@ -28,5 +28,5 @@ with OakCamera() as oak:
     # to the callback function (where it will be displayed)
     oak.visualize(age_gender, fps=True, callback=cb)
 
-    oak.show_graph() # Show pipeline graph, no need for now
+    # oak.show_graph() # Show pipeline graph, no need for now
     oak.start(blocking=True) # This call will block until the app is stopped (by pressing 'Q' button)
