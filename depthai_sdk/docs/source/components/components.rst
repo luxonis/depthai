@@ -4,8 +4,10 @@ Components
 SDK components abstract `DepthAI API nodes <https://docs.luxonis.com/projects/api/en/latest/components/nodes/>`__; their initialization, configuration,
 and linking.
 
+Reference
+#########
 
-.. autoclass:: depthai_sdk.components.Component
+.. autoclass:: depthai_sdk.Component
     :members:
     :undoc-members:
 

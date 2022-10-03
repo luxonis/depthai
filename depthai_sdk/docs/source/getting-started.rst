@@ -4,19 +4,6 @@ Getting started with DepthAI SDK
 In this tutorial, we'll show you how to use DepthAI SDK for a couple of basic use cases, that can give you an overall
 idea how to use it and in which cases it might be useful.
 
-What is DepthAI SDK?
---------------------
-
-DepthAI SDK was created on top of the regular DepthAI API. Originally, it was a part of the `demo script <https://github.com/luxonis/depthai/blob/main/depthai_demo.py>`__,
-but over time it evolved to become a package containing many convenience methods and classes that aim to help in development process with OAK cameras.
-
-Package is mainly made of **managers**, which handle different aspects of development:
-
-.. include::  modules-list.rst
-
-In some places, code is also adjusted for modifications - e.g. you can set up a custom handler file for neural network
-or pass a callback argument to a function to perform additional modifications
-
 Example usages
 --------------
 
@@ -30,13 +17,10 @@ Below, you can find a list of other projects that also use the SDK and are avail
 Installation
 ------------
 
-.. include::  install.rst
+.. include::  includes/install-long.rst
 
-For more in-depth informations about the classes and methods, please visit :ref:`DepthAI SDK API`
-
-Cookbook
---------
-Below you can find various basic usages of DepthAI SDK that can be used as a starting point.
+SDK examples
+------------
 
 Preview color camera
 ********************

@@ -2,14 +2,15 @@
 DepthAI SDK
 ===========
 
+DepthAI SDK is a Python package built on top of the `depthai-python <https://github.com/luxonis/depthai-python>`__ API library that **improves
+ease of use when developing apps for OAK devices**.
+
+It abstracts DepthAI API pipeline building, different camera permutations, stream :ref:`recording <Recording>`/:ref:`replaying <Replaying>`, adds
+debugging features, handles :ref:`AI model <AI models>` sourcing and decoding, does message syncing & visualization, and much more.
+
 .. image:: https://user-images.githubusercontent.com/18037362/142909472-eae7bed1-695b-48ec-8895-76982989de11.png
 
 
-DepthAI SDK is a Python package, containing convenience classes and functions that help in most common tasks while using DepthAI API.
-It is created on top of the regular DepthAI API.
-The package was created to make your use of DepthAI easier. It consists of managers, which handle different aspects of development:
-
-.. include::  modules-list.rst
 
 Installation
 ------------
@@ -32,6 +33,14 @@ We recommend that you start with the :ref:`Getting started with DepthAI SDK`
    self
    getting-started.rst
    oak-camera.rst
+
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+   :caption: Features
+
+   features/ai_models.rst
+   features/packets.rst
 
 .. toctree::
    :maxdepth: 2
