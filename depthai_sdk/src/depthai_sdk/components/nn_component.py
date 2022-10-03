@@ -528,7 +528,7 @@ class NNComponent(Component):
     Checks
     """
     def _isSpatial(self) -> bool:
-        return self._spatial is not None
+        return self._spatial is not None  # TODO isnt here an error? returns true when self._spatial is false
 
     def _isTracker(self) -> bool:
         # Currently, only object detectors are supported
