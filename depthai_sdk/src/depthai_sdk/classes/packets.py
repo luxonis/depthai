@@ -175,7 +175,7 @@ class IMUPacket:
                 imu_data.gyroscope.y,
                 imu_data.gyroscope.z
             )
-            dai.IMUPacket
+
             packet_details.append(f'{accelerometer_str}, {gyroscope_str})')
 
         return f'IMU Packet: {packet_details}'
