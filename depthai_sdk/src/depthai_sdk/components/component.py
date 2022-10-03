@@ -3,10 +3,12 @@ from typing import Optional, List, Callable
 from ..oak_outputs.xout_base import XoutBase, ReplayStream
 from abc import ABC, abstractmethod
 
+
 class Component(ABC):
     """
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
+
     def _forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
         """
         Checks whether the component forces a specific OpenVINO version. Only used by NNComponent (which overrides this
@@ -37,6 +39,7 @@ class Component(ABC):
             if isinstance(node, dai.node.XLinkOut) and node.getStreamName() == name:
                 return False
         return True
+
     def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase) -> XoutBase:
         for xstream in xout.xstreams():
             if not self._stream_name_ok(pipeline, xstream.name):
