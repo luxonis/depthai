@@ -41,7 +41,7 @@ class FramePacket:
 
 class SpatialBbMappingPacket(FramePacket):
     """
-    Output from Spatial Detection nodes - depth frame + bounding box mappings.
+    Output from Spatial Detection nodes - depth frame + bounding box mappings. Inherits FramePacket.
     """
     config: dai.SpatialLocationCalculatorConfig
 
@@ -52,7 +52,7 @@ class SpatialBbMappingPacket(FramePacket):
 
 class DetectionPacket(FramePacket):
     """
-    Output from Detection Network nodes - image frame + image detections.
+    Output from Detection Network nodes - image frame + image detections. Inherits FramePacket.
     """
     imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]
     detections: List[_Detection]
@@ -65,10 +65,10 @@ class DetectionPacket(FramePacket):
         self.imgDetections = imgDetections
         self.detections = []
 
-    def isSpatialDetection(self) -> bool:
+    def _isSpatialDetection(self) -> bool:
         return isinstance(self.imgDetections, dai.SpatialImgDetections)
 
-    def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
+    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
         det = _Detection()
         det.imgDetection = img_det
         det.label_str = txt
@@ -80,7 +80,7 @@ class DetectionPacket(FramePacket):
 
 class TrackerPacket(FramePacket):
     """
-    Output of Object Tracker node. Tracklets + Image frame.
+    Output of Object Tracker node. Tracklets + Image frame. Inherits FramePacket.
     """
     daiTracklets: dai.Tracklets
     detections: List[_TrackingDetection]
@@ -93,7 +93,7 @@ class TrackerPacket(FramePacket):
         self.daiTracklets = tracklets
         self.detections = []
 
-    def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
+    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
         det = _TrackingDetection()
         det.imgDetection = img_det
         det.label_str = txt
@@ -102,11 +102,11 @@ class TrackerPacket(FramePacket):
         det.bottomRight = (bbox[2], bbox[3])
         self.detections.append(det)
 
-    def isSpatialDetection(self) -> bool:
+    def _isSpatialDetection(self) -> bool:
         coords = self.daiTracklets.tracklets[0].spatialCoordinates
         return coords.x != 0.0 or coords.y != 0.0 or coords.z != 0.0
 
-    def getSpatials(self, det: dai.ImgDetection) -> dai.Point3f:
+    def _get_spatials(self, det: dai.ImgDetection) -> dai.Point3f:
         # Not the cleanest solution, but oh well
         for t in self.daiTracklets.tracklets:
             if t.srcImgDetection == det:
@@ -115,7 +115,7 @@ class TrackerPacket(FramePacket):
 
 class TwoStagePacket(DetectionPacket):
     """
-    Output of 2-stage NN pipeline; Image frame, Image detections and multiple NNData results.
+    Output of 2-stage NN pipeline; Image frame, Image detections and multiple NNData results. Inherits DetectionPacket.
     """
     nnData: List[dai.NNData]
     labels: List[int] = None
@@ -132,7 +132,7 @@ class TwoStagePacket(DetectionPacket):
         self.labels = labels
         self._cntr = 0
 
-    def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
+    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
         det = _TwoStageDetection()
         det.imgDetection = img_det
         det.color = color

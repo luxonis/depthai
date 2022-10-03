@@ -255,14 +255,14 @@ def drawDetections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPac
             color = Visualizer.front_color
 
         Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
-        if packet.isSpatialDetection():
-            point = packet.getSpatials(detection) if isinstance(packet, TrackerPacket) else detection.spatialCoordinates
+        if packet._isSpatialDetection():
+            point = packet._get_spatials(detection) if isinstance(packet, TrackerPacket) else detection.spatialCoordinates
             Visualizer.putText(packet.frame, spatialsText(point).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
             Visualizer.putText(packet.frame, spatialsText(point).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
             Visualizer.putText(packet.frame, spatialsText(point).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
 
         rectangle(packet.frame, bbox, color=color, thickness=1, radius=0)
-        packet.add_detection(detection, bbox, txt, color)
+        packet._add_detection(detection, bbox, txt, color)
 
 def drawTrackletId(packet: TrackerPacket):
     for det in packet.detections:

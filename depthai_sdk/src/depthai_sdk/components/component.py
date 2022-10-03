@@ -16,15 +16,6 @@ class Component(ABC):
         return None
 
     @abstractmethod
-    def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        """
-        Main XLink output (to the host) from the component. Component is already initialized (_update_device_info()
-        is called).
-        @return:
-        """
-        raise NotImplementedError("Every component needs to include 'out()' method!")
-
-    @abstractmethod
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         """
         This function will be called after the app connects to the Device

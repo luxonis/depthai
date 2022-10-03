@@ -8,6 +8,7 @@ from ..oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
 from ..oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
 
 
+
 class CameraComponent(Component):
     # Users should have access to these nodes
     node: Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera] = None
@@ -36,6 +37,10 @@ class CameraComponent(Component):
                  args: Dict = None,
                  ):
         """
+        Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
+        recording is passed during OakCamera initialization. Mocking the camera will send frames from the host to the
+        OAK device (via XLinkIn node).
+
         Args:
             source (str): Source of the camera. Either color/rgb/right/left
             resolution (optional): Camera resolution, eg. '800p' or '4k'
@@ -43,9 +48,10 @@ class CameraComponent(Component):
             out (bool, default False): Whether we want to stream frames to the host computer
             encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
             replay (Replay object): Replay
-            args (Dict): Set the camera component based on user-defined arguments
+            args (Dict): Use user defined arguments when constructing the pipeline
         """
         super().__init__()
+        self.out = self.Out(self)
 
         # Save passed settings
         self._source = source
@@ -313,27 +319,60 @@ class CameraComponent(Component):
             return StreamXout(self.node.id, self.node.video)
 
     """
-    Available outputs (to the host) of this component
-    """
+        Available outputs (to the host) of this component
+        """
 
-    def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        if self.encoder:
-            return self.out_encoded(pipeline, device)
-        elif self.isReplay():
-            return self.out_replay(pipeline, device)
-        else:
-            return self.out_camera(pipeline, device)
-    def out_camera(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        out = XoutFrames(self.get_stream_xout(), self._getFps())
-        return super()._create_xout(pipeline, out)
+    class Out:
+        _comp: 'CameraComponent'
 
-    def out_replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        out = XoutFrames(ReplayStream(self._source), self._getFps())
-        return super()._create_xout(pipeline, out)
+        def __init__(self, cameraComponent: 'CameraComponent'):
+            self._comp = cameraComponent
 
-    def out_encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        if self._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
-            out = XoutMjpeg(StreamXout(self.encoder.id, self.encoder.bitstream), self.isColor(), self.encoder.getLossless(), self.encoder.getFrameRate())
-        else:
-            out = XoutH26x(StreamXout(self.encoder.id, self.encoder.bitstream), self.isColor(), self._encoderProfile, self.encoder.getFrameRate())
-        return super()._create_xout(pipeline, out)
+        def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            """
+            Default output. Uses either camera(), replay(), or encoded() depending on the component settings.
+            """
+            if self._comp.encoder:
+                return self.encoded(pipeline, device)
+            elif self._comp.isReplay():
+                return self.replay(pipeline, device)
+            else:
+                return self.camera(pipeline, device)
+
+        def camera(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutFrames:
+            """
+            Streams camera output to the OAK camera. Produces FramePacket.
+            """
+            out = XoutFrames(self._comp.get_stream_xout(), self._comp._getFps())
+            out.frames.name = self._comp._source
+            return self._comp._create_xout(pipeline, out)
+
+        def replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            """
+            If depthai-recording was used, it won't stream anything, but it will instead use frames that were sent to the OAK. Produces FramePacket.
+            """
+            out = XoutFrames(ReplayStream(self._comp._source), self._comp._getFps())
+            return self._comp._create_xout(pipeline, out)
+
+        def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            """
+            If encoding was enabled, it will stream bitstream from VideoEncoder node to the host. Produces FramePacket.
+            """
+            if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
+                out = XoutMjpeg(
+                    StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                    self._comp.isColor(),
+                    self._comp.encoder.getLossless(),
+                    self._comp.encoder.getFrameRate()
+                )
+            else:
+                out = XoutH26x(
+                    StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                    self._comp.isColor(),
+                    self._comp._encoderProfile,
+                    self._comp.encoder.getFrameRate()
+                )
+            out.frames.name = self._comp._source
+            return self._comp._create_xout(pipeline, out)
+
+    out: Out

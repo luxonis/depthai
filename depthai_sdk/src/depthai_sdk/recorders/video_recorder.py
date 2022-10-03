@@ -1,13 +1,8 @@
-
 from pathlib import Path
-from .abstract_recorder import Recorder
+from .abstract_recorder import *
 import depthai as dai
-from ..record import OakStream
 from typing import List, Dict, Any
 from ..oak_outputs.xout import XoutFrames
-
-
-
 
 class VideoRecorder(Recorder):
     """
@@ -38,7 +33,6 @@ class VideoRecorder(Recorder):
                     print("'av' library is not installed, depthai-record will save uncontainerized encoded streams.")
                     from .video_writers.file_writer import FileWriter
                     self._writer[name] = FileWriter(folder, name, stream.fourcc())
-
 
     def write(self, name: str, frame: dai.ImgFrame):
         self._writer[name].write(frame)

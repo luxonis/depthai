@@ -81,10 +81,10 @@ class Record(XoutSeqSync):
         """
         Create recorder
         """
-        if self.type == RecordType.MCAP:
-            from .recorders.mcap_recorder import McapRecorder
-            return McapRecorder(self.path, device, xouts)
-        elif self.type == RecordType.VIDEO:
+        # if self.type == RecordType.MCAP:
+        #     from .recorders.mcap_recorder import McapRecorder
+        #     return McapRecorder(self.path, device, xouts)
+        if self.type == RecordType.VIDEO:
             from .recorders.video_recorder import VideoRecorder
             return VideoRecorder(self.path, xouts)
         elif self.type == RecordType.BAG:

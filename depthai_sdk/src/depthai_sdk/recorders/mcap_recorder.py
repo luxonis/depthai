@@ -1,5 +1,3 @@
-
-
 from pathlib import Path
 from mcap_ros1.writer import Writer as Ros1Writer
 from .abstract_recorder import *

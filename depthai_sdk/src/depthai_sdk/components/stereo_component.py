@@ -43,14 +43,17 @@ class StereoComponent(Component):
                  ):
         """
         Args:
-            out (str, optional): 'depth', 'disparity', both seperated by comma? TBD
+            pipeline (dai.Pipeline): DepthAI pipeline
+            resolution (str/SensorResolution): If monochrome cameras aren't already passed, create them and set specified resolution
+            fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
             left (None / dai.None.Output / CameraComponent): Left mono camera source. Will get handled by Camera object.
             right (None / dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
-            encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
             replay (Replay object, optional): Replay
-            args (Any, optional): Set the camera components based on user arguments
+            args (Any, optional): Use user defined arguments when constructing the pipeline
         """
         super().__init__()
+        self.out = self.Out(self)
+
         self._replay = replay
         self._resolution = resolution
         self._fps = fps
@@ -64,32 +67,29 @@ class StereoComponent(Component):
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._replay:
-            print('Replay found, using that')
-            if not self._replay.stereo:
-                raise Exception('Stereo stream was not found in specified depthai-recording!')
-            self.node = self._replay.stereo
+            self._replay.initStereoDepth(self.node)
+        else:
+            # TODO: check sensor names / device name whether it has stereo camera pair (or maybe calibration?)
+            if len(device.getCameraSensorNames()) == 1:
+                raise Exception('OAK-1 camera does not have Stereo camera pair!')
 
-        # TODO: check sensor names / device name whether it has stereo camera pair (or maybe calibration?)
-        if len(device.getCameraSensorNames()) == 1:
-            raise Exception('OAK-1 camera does not have Stereo camera pair!')
+            if not self.left:
+                self.left = CameraComponent(pipeline, 'left', self._resolution, self._fps, replay=self._replay)
+                self.left._update_device_info(pipeline, device, version)
+            if not self.right:
+                self.right = CameraComponent(pipeline, 'right', self._resolution, self._fps, replay=self._replay)
+                self.right._update_device_info(pipeline, device, version)
 
-        if not self.left:
-            self.left = CameraComponent(pipeline, 'left', self._resolution, self._fps)
-            self.left._update_device_info(pipeline, device, version)
-        if not self.right:
-            self.right = CameraComponent(pipeline, 'right', self._resolution, self._fps)
-            self.right._update_device_info(pipeline, device, version)
+            # TODO: use self._args to setup the StereoDepth node
 
-        # TODO: use self._args to setup the StereoDepth node
+            if isinstance(self.left, CameraComponent):
+                self.left = self.left.node # CameraComponent -> node
+            if isinstance(self.right, CameraComponent):
+                self.right = self.right.node # CameraComponent -> node
 
-        if isinstance(self.left, CameraComponent):
-            self.left = self.left.node # CameraComponent -> node
-        if isinstance(self.right, CameraComponent):
-            self.right = self.right.node # CameraComponent -> node
-
-        # Connect Mono cameras to the StereoDepth node
-        self.left.out.link(self.node.left)
-        self.right.out.link(self.node.right)
+            # Connect Mono cameras to the StereoDepth node
+            self.left.out.link(self.node.left)
+            self.right.out.link(self.node.right)
 
         if self._args:
             self._config_stereo_args(self._args)
@@ -146,15 +146,26 @@ class StereoComponent(Component):
     """
     Available outputs (to the host) of this component
     """
+    class Out:
+        _comp: 'StereoComponent'
+        def __init__(self, stereoComponent: 'StereoComponent'):
+            self._comp = stereoComponent
+        def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            # By default, we want to show disparity
+            return self.depth(pipeline, device)
 
-    def out(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        # By default, we want to show disparity
-        return self.out_depth(pipeline, device)
+        def disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            fps = self._comp.left.getFps() if self._comp._replay is None else self._comp._replay.getFps()
+            out = XoutDisparity(
+                StreamXout(self._comp.node.id, self._comp.disparity),
+                self._comp.node.getMaxDisparity(),
+                fps
+            )
+            return self._comp._create_xout(pipeline, out)
 
-    def out_disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        out = XoutDisparity(StreamXout(self.node.id, self.disparity), self.node.getMaxDisparity(), self.left.getFps())
-        return super()._create_xout(pipeline, out)
+        def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            fps = self._comp.left.getFps() if self._comp._replay is None else self._comp._replay.getFps()
+            out = XoutDepth(device, StreamXout(self._comp.node.id, self._comp.depth), fps)
+            return self._comp._create_xout(pipeline, out)
 
-    def out_depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-        out = XoutDepth(device, StreamXout(self.node.id, self.depth), self.left.getFps())
-        return super()._create_xout(pipeline, out)
+    out: Out

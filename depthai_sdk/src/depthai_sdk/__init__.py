@@ -268,6 +268,10 @@ class OakCamera:
 
         self._oak.checkSync()
 
+        if self._replay:
+            if self._replay._stop:
+                return False
+
         return True # TODO: check whether OAK is connected
 
     def build(self) -> dai.Pipeline:
@@ -360,7 +364,7 @@ class OakCamera:
             return
 
         if isinstance(output, Component):
-            output = output.out
+            output = output.out.main
 
         self._out_templates.append(OutputConfig(output, callback, vis))
 
