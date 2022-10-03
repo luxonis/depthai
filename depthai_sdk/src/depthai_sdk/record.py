@@ -41,10 +41,18 @@ class Record(XoutSeqSync):
     Available formats: .h265, .mjpeg, .mp4, .mcap, .bag
     It will also save calibration .json, so depth reconstruction will
     """
+    name_mapping: Dict[str, str] # XLinkOut stream name -> Friendly name mapping
 
     def package(self, msgs: Dict):
         # Here we get sequence-num synced messages:)
-        self.frame_q.put(msgs)
+        mapped = dict()
+        for name, msg in msgs.items():
+            if name in self.name_mapping: # Map to friendly name
+                mapped[self.name_mapping[name]] = msg
+            else:
+                mapped[name] = msg
+
+        self.frame_q.put(mapped)
 
     def visualize(self, packet: FramePacket) -> None:
         pass # No need.
@@ -66,6 +74,13 @@ class Record(XoutSeqSync):
         start recording threads, and initialize all queues.
         """
         self._streams = [out.frames.name for out in xouts] # required by XoutSeqSync
+
+
+        self.name_mapping = dict()
+        for xout in xouts:
+            if xout.frames.friendly_name:
+                self.name_mapping[xout.frames.name] = xout.frames.friendly_name
+
 
         self.mxid = device.getMxId()
         self.path = self._createFolder(self.folder, self.mxid)

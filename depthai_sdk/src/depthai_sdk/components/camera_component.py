@@ -344,7 +344,7 @@ class CameraComponent(Component):
             Streams camera output to the OAK camera. Produces FramePacket.
             """
             out = XoutFrames(self._comp.get_stream_xout(), self._comp._getFps())
-            out.frames.name = self._comp._source
+            out.frames.friendly_name = self._comp._source
             return self._comp._create_xout(pipeline, out)
 
         def replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -372,7 +372,7 @@ class CameraComponent(Component):
                     self._comp._encoderProfile,
                     self._comp.encoder.getFrameRate()
                 )
-            out.frames.name = self._comp._source
+            out.frames.friendly_name = self._comp._source
             return self._comp._create_xout(pipeline, out)
 
     out: Out

@@ -8,9 +8,11 @@ from .fps import FPS
 class StreamXout:
     stream: dai.Node.Output
     name: str # XLinkOut stream name
+    friendly_name: str = None # Used for eg. recording to a file
     def __init__(self, id: int, out: dai.Node.Output):
         self.stream = out
         self.name = f"{str(id)}_{out.name}"
+        self.friendly_name = None
 
 class ReplayStream(StreamXout):
     def __init__(self, name: str):
