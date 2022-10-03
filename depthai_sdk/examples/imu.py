@@ -1,6 +1,4 @@
-from depthai_sdk.classes.packets import IMUPacket
-
-from depthai_sdk import OakCamera
+from depthai_sdk import IMUPacket, OakCamera
 
 
 def callback(packet: IMUPacket):
