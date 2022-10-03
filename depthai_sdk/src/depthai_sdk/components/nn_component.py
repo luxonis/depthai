@@ -267,7 +267,7 @@ class NNComponent(Component):
         versionStr = f"{vals[1]}.{vals[2]}"
 
         if 'model_name' in model:  # Use blobconverter to download the model
-            zoo_type = model.get("zoo_type", 'intel')
+            zoo_type = model.get("zoo", 'intel')
             return blobconverter.from_zoo(model['model_name'],
                                           zoo_type=zoo_type,
                                           shaves=6,  # TODO: Calculate ideal shave amount

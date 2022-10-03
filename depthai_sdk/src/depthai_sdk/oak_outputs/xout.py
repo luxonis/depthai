@@ -312,6 +312,10 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
 
     def visualize(self, packet: Union[DetectionPacket, TrackerPacket]):
+        # We can't visualize NNData (not decoded)
+        if isinstance(packet.imgDetections, dai.NNData):
+            raise Exception("Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead.")
+
         if isinstance(packet, TrackerPacket):
             pass
         else:
@@ -363,7 +367,7 @@ class XoutTracker(XoutNnResults):
         packet = TrackerPacket(
             self.frames.name,
             msgs[self.frames.name],
-            msgs[self.sync_stream.name],
+            msgs[self.nn_results.name],
         )
         self.queue.put(packet, block=False)
 

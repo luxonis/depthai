@@ -8,11 +8,12 @@ from .replay import *
 from .components.component import Component
 from .components.stereo_component import StereoComponent
 from .components.nn_component import NNComponent
+from .components.nn_helper import  AspectRatioResizeMode
 from .components.camera_component import CameraComponent
 from .components.pipeline_graph import PipelineGraph
 from .components.parser import *
 from .classes import *
-from .oak_outputs import *
+from .oak_outputs.fps import FPS
 from .oak_device import OakDevice
 
 from typing import Optional, Callable
@@ -47,7 +48,7 @@ class OakCamera:
                  usbSpeed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
                  recording: Optional[str] = None,
                  args: Union[bool, Dict] = True
-                 ) -> None:
+                 ):
         """
         Initializes OakCamera
 
@@ -198,7 +199,7 @@ class OakCamera:
                         calib: Optional[dai.CalibrationHandler] = None,
                         tuningBlob: Optional[str] = None,
                         openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
-                        ) -> None:
+                        ):
         """
         Configures DepthAI pipeline.
 
@@ -224,9 +225,12 @@ class OakCamera:
             if isinstance(out, RecordConfig):
                 out.rec.close()
 
-    def start(self, blocking=False) -> None:
+    def start(self, blocking=False):
         """
-        Start the application
+        Start the application - upload the pipeline to the OAK device.
+
+        Args:
+            blocking (bool):  Continuously loop and call oak.poll() until program exits
         """
         if not self._pipeline_built:
             self.build() # Build the pipeline
@@ -271,7 +275,8 @@ class OakCamera:
         Connect to the device and build the pipeline based on previously provided configuration. Configure XLink queues,
         upload the pipeline to the device. This function must only be called once!  build() is also called by start().
 
-        @return Built dai.Pipeline
+        Return:
+            Built dai.Pipeline
         """
         if self._pipeline_built:
             raise Exception('Pipeline can be built only once!')
@@ -338,7 +343,7 @@ class OakCamera:
 
         self._out_templates.append(RecordConfig(outputs, Record(Path(path).resolve(), type)))
 
-    def show_graph(self) -> None:
+    def show_graph(self):
         """
         Shows DepthAI Pipeline graph, which can be useful when debugging. Builds the pipeline (oak.build()).
         """
@@ -387,6 +392,9 @@ class OakCamera:
 
     @property
     def device(self) -> dai.Device:
+        """
+        Returns dai.Device object. oak.built() has to be called before querying this property!
+        """
         if not self._pipeline_built:
             raise Exception("OAK device wasn't booted yet, make sure to call oak.build() or oak.start()!")
         return self._oak.device

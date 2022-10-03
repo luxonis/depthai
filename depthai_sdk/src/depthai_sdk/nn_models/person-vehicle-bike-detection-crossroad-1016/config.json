@@ -1,4 +1,8 @@
 {
+    "model":
+    {
+        "model_name": "person-vehicle-bike-detection-crossroad-1016"
+    },
     "nn_config":
     {
         "output_format" : "detection",

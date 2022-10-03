@@ -2,7 +2,7 @@ from typing import Tuple, List, Union
 import depthai as dai
 import numpy as np
 
-class Detection():
+class _Detection():
     def __init__(self):
         pass
 
@@ -19,14 +19,17 @@ class Detection():
             int((self.bottomRight[0]+self.topLeft[0]) / 2),
             int((self.bottomRight[1]+self.topLeft[1]) / 2),
         )
-class TrackingDetection(Detection):
+class _TrackingDetection(_Detection):
     tracklet: dai.Tracklet
-class TwoStageDetection(Detection):
+class _TwoStageDetection(_Detection):
     nn_data: dai.NNData
 
 
-
 class FramePacket:
+    """
+    Contains only dai.ImgFrame message and cv2 frame, which is used by visualization logic.
+    """
+
     name: str  # ImgFrame stream name
     imgFrame: dai.ImgFrame  # Original depthai message
     frame: np.ndarray  # cv2 frame for visualization
@@ -37,6 +40,9 @@ class FramePacket:
 
 
 class SpatialBbMappingPacket(FramePacket):
+    """
+    Output from Spatial Detection nodes - depth frame + bounding box mappings.
+    """
     config: dai.SpatialLocationCalculatorConfig
 
     def __init__(self, name: str, imgFrame: dai.ImgFrame, config: dai.SpatialLocationCalculatorConfig):
@@ -45,9 +51,11 @@ class SpatialBbMappingPacket(FramePacket):
 
 
 class DetectionPacket(FramePacket):
-    # Original depthai messages
+    """
+    Output from Detection Network nodes - image frame + image detections.
+    """
     imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]
-    detections: List[Detection]
+    detections: List[_Detection]
 
     def __init__(self,
                  name: str,
@@ -61,7 +69,7 @@ class DetectionPacket(FramePacket):
         return isinstance(self.imgDetections, dai.SpatialImgDetections)
 
     def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
-        det = Detection()
+        det = _Detection()
         det.imgDetection = img_det
         det.label_str = txt
         det.color = color
@@ -71,9 +79,11 @@ class DetectionPacket(FramePacket):
 
 
 class TrackerPacket(FramePacket):
-    # Original depthai messages
+    """
+    Output of Object Tracker node. Tracklets + Image frame.
+    """
     daiTracklets: dai.Tracklets
-    detections: List[TrackingDetection]
+    detections: List[_TrackingDetection]
 
     def __init__(self,
                  name: str,
@@ -84,7 +94,7 @@ class TrackerPacket(FramePacket):
         self.detections = []
 
     def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
-        det = TrackingDetection()
+        det = _TrackingDetection()
         det.imgDetection = img_det
         det.label_str = txt
         det.color = color
@@ -104,7 +114,9 @@ class TrackerPacket(FramePacket):
 
 
 class TwoStagePacket(DetectionPacket):
-    # Original depthai messages
+    """
+    Output of 2-stage NN pipeline; Image frame, Image detections and multiple NNData results.
+    """
     nnData: List[dai.NNData]
     labels: List[int] = None
     _cntr: int = 0 # Label counter
@@ -121,7 +133,7 @@ class TwoStagePacket(DetectionPacket):
         self._cntr = 0
 
     def add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt:str, color):
-        det = TwoStageDetection()
+        det = _TwoStageDetection()
         det.imgDetection = img_det
         det.color = color
         det.topLeft = (bbox[0], bbox[1])

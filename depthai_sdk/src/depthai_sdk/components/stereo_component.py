@@ -11,10 +11,10 @@ from .parser import parse_cam_socket, parse_median_filter
 
 class StereoComponent(Component):
     # Users should have access to these nodes
-    node: dai.node.StereoDepth = None
+    node: dai.node.StereoDepth
 
-    left: Union[None, CameraComponent, dai.node.MonoCamera] = None
-    right: Union[None, CameraComponent, dai.node.MonoCamera] = None
+    left: Union[None, CameraComponent, dai.node.MonoCamera]
+    right: Union[None, CameraComponent, dai.node.MonoCamera]
 
     @property
     def depth(self) -> dai.Node.Output:

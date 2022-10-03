@@ -8,8 +8,8 @@ from typing import Tuple, Union, List, Any, Callable, Dict
 import cv2
 import distinctipy
 from .normalize_bb import NormalizeBoundingBox
-from ..classes.packets import DetectionPacket, TwoStageDetection, FramePacket, SpatialBbMappingPacket, TrackerPacket, \
-    TrackingDetection
+from ..classes.packets import DetectionPacket, _TwoStageDetection, FramePacket, SpatialBbMappingPacket, TrackerPacket, \
+    _TrackingDetection
 
 
 class FramePosition(IntEnum):
@@ -228,7 +228,7 @@ def spatialsText(spatials: dai.Point3f):
         z = "Z: " + ("{:.1f}m".format(spatials.z / 1000) if not math.isnan(spatials.z) else "--"),
     )
 
-def drawDetections(packet: Union[DetectionPacket, TwoStageDetection, TrackerPacket],
+def drawDetections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPacket],
                    norm: NormalizeBoundingBox,
                    labelMap: List[Tuple[str, Tuple]] = None):
     """
@@ -273,7 +273,7 @@ def drawTrackletId(packet: TrackerPacket):
 def drawBreadcrumbTrail(packets: List[TrackerPacket]):
     packet = packets[-1] # Current packet
 
-    dic: Dict[str, List[TrackingDetection]] = {}
+    dic: Dict[str, List[_TrackingDetection]] = {}
     validIds = [t.id for t in packet.daiTracklets.tracklets]
     for id in validIds:
         dic[str(id)] = []
