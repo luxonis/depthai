@@ -1,23 +1,22 @@
-from .component import Component
-from .camera_component import CameraComponent
-from .stereo_component import StereoComponent
-from .multi_stage_nn import MultiStageNN, MultiStageConfig
+import json
 from pathlib import Path
 from typing import Callable, Union, List, Dict
 
-from ..replay import Replay
 import blobconverter
-from .parser import *
-from .nn_helper import *
-from ..classes.nn_config import Config
-import json
 
+from .camera_component import CameraComponent
+from .component import Component
+from .multi_stage_nn import MultiStageNN, MultiStageConfig
+from .nn_helper import *
+from .parser import *
+from .stereo_component import StereoComponent
+from ..classes.nn_config import Config
 from ..oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker
 from ..oak_outputs.xout_base import StreamXout, XoutBase
+from ..replay import Replay
 
 
 class NNComponent(Component):
-
     # Public properties
     node: Union[
         None,
@@ -32,8 +31,8 @@ class NNComponent(Component):
 
     # Private properties
     _arResizeMode: AspectRatioResizeMode = AspectRatioResizeMode.LETTERBOX  # Default
-    _input: Union[CameraComponent, 'NNComponent'] # Input to the NNComponent node passed on initialization
-    _stream_input: dai.Node.Output # Node Output that will be used as the input for this NNComponent
+    _input: Union[CameraComponent, 'NNComponent']  # Input to the NNComponent node passed on initialization
+    _stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
 
     _blob: dai.OpenVINO.Blob = None
     _forcedVersion: Optional[dai.OpenVINO.Version] = None  # Forced OpenVINO version
@@ -56,7 +55,7 @@ class NNComponent(Component):
                  pipeline: dai.Pipeline,
                  model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
                  input: Union[CameraComponent, 'NNComponent'],
-                 nnType: Optional[str] = None, # Either 'yolo' or 'mobilenet'
+                 nnType: Optional[str] = None,  # Either 'yolo' or 'mobilenet'
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
                  spatial: Union[None, bool, StereoComponent] = None,
                  replay: Optional[Replay] = None,
@@ -157,7 +156,8 @@ class NNComponent(Component):
             self.node.input.setBlocking(True)
             self.node.input.setQueueSize(15)
         else:
-            raise ValueError("'input' argument passed on init isn't supported! You can only use NnComponent or CameraComponent as the input.")
+            raise ValueError(
+                "'input' argument passed on init isn't supported! You can only use NnComponent or CameraComponent as the input.")
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
@@ -207,15 +207,15 @@ class NNComponent(Component):
             elif nnType.upper() == 'MOBILENET':
                 self._nodeType = dai.node.MobileNetSpatialDetectionNetwork if self._isSpatial() else dai.node.MobileNetDetectionNetwork
 
-
     def _config_spatials_args(self, args):
         if not isinstance(args, Dict):
             args = vars(args)  # Namespace -> Dict
         self.config_spatial(
-            bbScaleFactor=args.get('sbbScaleFactor',None),
+            bbScaleFactor=args.get('sbbScaleFactor', None),
             lowerThreshold=args.get('minDepth', None),
             upperThreshold=args.get('maxDepth', None),
         )
+
     def _parse_config(self, modelConfig: Union[Path, str, Dict]):
         """
         Called when NNComponent is initialized. Reads config.json file and parses relevant setting from there
@@ -261,7 +261,6 @@ class NNComponent(Component):
         nnFamily = self._config.get("nn_config", {}).get("NN_family", None)
         if nnFamily:
             self._parse_node_type(nnFamily)
-
 
     def _blobFromConfig(self, model: Dict, version: dai.OpenVINO.Version) -> str:
         """
@@ -330,22 +329,26 @@ class NNComponent(Component):
             scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
         """
         if self._isMultiStage():
-            print("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
+            print(
+                "Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
 
         self._multi_stage_config = MultiStageConfig(debug, labels, scaleBb)
 
-    def _parse_label(self, label:Union[str, int]) -> int:
-        if isinstance(label, int): return label
+    def _parse_label(self, label: Union[str, int]) -> int:
+        if isinstance(label, int):
+            return label
         elif isinstance(label, str):
             if not self._labels:
-                raise ValueError("Incorrect trackLabels type! Make sure to pass NN configuration to the NNComponent so it can deccode string labels!")
+                raise ValueError(
+                    "Incorrect trackLabels type! Make sure to pass NN configuration to the NNComponent so it can deccode string labels!")
             # Label map is Dict of either "name", or ["name", "color"]
             labelStrs = [l.upper() if isinstance(l, str) else l[0].upper() for l in self._labels]
 
             if label.upper() not in labelStrs: raise ValueError(f"String '{label}' wasn't found in passed labels!")
             return labelStrs.index(label.upper())
-        else: raise Exception('_parse_label only accepts int or str')
+        else:
+            raise Exception('_parse_label only accepts int or str')
 
     def config_tracker(self,
                        type: Optional[dai.TrackerType] = None,
@@ -469,8 +472,10 @@ class NNComponent(Component):
     """
     Available outputs (to the host) of this component
     """
+
     class Out:
         _comp: 'NNComponent'
+
         def __init__(self, nnComponent: 'NNComponent'):
             self._comp = nnComponent
 
@@ -483,13 +488,15 @@ class NNComponent(Component):
             if self._comp._isMultiStage():
                 out = XoutTwoStage(self._comp._input, self._comp,
                                    self._comp._input._input.get_stream_xout(),  # CameraComponent
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),  # NnComponent (detections)
-                                   StreamXout(self._comp.node.id, self._comp.node.out),  # This NnComponent (2nd stage NN)
+                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),
+                                   # NnComponent (detections)
+                                   StreamXout(self._comp.node.id, self._comp.node.out),
+                                   # This NnComponent (2nd stage NN)
                                    )
             else:
                 out = XoutNnResults(self._comp,
                                     self._comp._input.get_stream_xout(),  # CameraComponent
-                                    StreamXout(self._comp.node.id, self._comp.node.out)) # NnComponent
+                                    StreamXout(self._comp.node.id, self._comp.node.out))  # NnComponent
             return self._comp._create_xout(pipeline, out)
 
         def passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -499,9 +506,12 @@ class NNComponent(Component):
             """
             if self._comp._isMultiStage():
                 out = XoutTwoStage(self._comp._input, self._comp,
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.passthrough),  # Passthrough frame
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),  # NnComponent (detections)
-                                   StreamXout(self._comp.node.id, self._comp.node.out),  # This NnComponent (2nd stage NN)
+                                   StreamXout(self._comp._input.node.id, self._comp._input.node.passthrough),
+                                   # Passthrough frame
+                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),
+                                   # NnComponent (detections)
+                                   StreamXout(self._comp.node.id, self._comp.node.out),
+                                   # This NnComponent (2nd stage NN)
                                    )
             else:
                 out = XoutNnResults(self._comp,
@@ -516,7 +526,8 @@ class NNComponent(Component):
             Streams depth and bounding box mappings (``SpatialDetectionNework.boundingBoxMapping``). Produces SpatialBbMappingPacket.
             """
             if not self._comp._isSpatial():
-                raise Exception('SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
+                raise Exception(
+                    'SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
 
             out = XoutSpatialBbMappings(device,
                                         StreamXout(self._comp.node.id, self._comp.node.passthroughDepth),
@@ -538,7 +549,8 @@ class NNComponent(Component):
             """
             Streams ObjectTracker tracklets and high-res frames that were downscaled and used for inferencing. Produces TrackerPacket.
             """
-            if not self._comp._isTracker(): raise Exception('Tracker was not enabled! Enable with cam.create_nn("[model]", tracker=True)!')
+            if not self._comp._isTracker(): raise Exception(
+                'Tracker was not enabled! Enable with cam.create_nn("[model]", tracker=True)!')
             self._comp.node.passthrough.link(self._comp.tracker.inputDetectionFrame)
             self._comp.node.out.link(self._comp.tracker.inputDetections)
             # TODO: add support for full frame tracking
@@ -554,7 +566,7 @@ class NNComponent(Component):
 
     # Checks
     def _isSpatial(self) -> bool:
-        return self._spatial is not None
+        return self._spatial is not None  # todo fix if spatial is bool and equals to False
 
     def _isTracker(self) -> bool:
         # Currently, only object detectors are supported

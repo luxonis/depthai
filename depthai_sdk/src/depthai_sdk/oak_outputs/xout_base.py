@@ -7,12 +7,13 @@ from .fps import FPS
 
 class StreamXout:
     stream: dai.Node.Output
-    name: str # XLinkOut stream name
-    friendly_name: str = None # Used for eg. recording to a file
+    name: str  # XLinkOut stream name
+    friendly_name: str = None  # Used for eg. recording to a file
     def __init__(self, id: int, out: dai.Node.Output):
         self.stream = out
         self.name = f"{str(id)}_{out.name}"
         self.friendly_name = None
+
 
 class ReplayStream(StreamXout):
     def __init__(self, name: str):
@@ -25,7 +26,8 @@ class XoutBase(ABC):
     _streams: List[str]  # Streams to listen for
     _vis: bool = False
     _fps: FPS
-    name: str # Other Xouts will override this
+    name: str  # Other Xouts will override this
+
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
 
