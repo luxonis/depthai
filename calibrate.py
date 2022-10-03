@@ -177,7 +177,7 @@ class Main:
             frame_r, self.aruco_dictionary)
 
         for i, left_id in enumerate(id_l):
-            idx = np.where(id_r == left_id)
+            idx = np.where(id_r[i] == left_id)
             # print(idx)
             if idx[0].size == 0:
                 continue
