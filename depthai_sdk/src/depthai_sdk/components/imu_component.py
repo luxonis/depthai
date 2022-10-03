@@ -35,6 +35,8 @@ class IMUComponent(Component):
         """
         sensors = sensors or [dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW]
 
+        # TODO: check whether we have IMU (and which sensors are supported) once API supports it
+
         self.node.enableIMUSensor(sensors=sensors, reportRate=report_rate)
         self.node.setBatchReportThreshold(batchReportThreshold=batch_report_threshold)
         self.node.setMaxBatchReports(maxBatchReports=max_batch_reports)
