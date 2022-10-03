@@ -8,7 +8,8 @@ import numpy as np
 from distinctipy import distinctipy
 
 from .xout_base import XoutBase, StreamXout
-from ..classes.packets import FramePacket, SpatialBbMappingPacket, DetectionPacket, TwoStagePacket, TrackerPacket
+from ..classes.packets import FramePacket, SpatialBbMappingPacket, DetectionPacket, TwoStagePacket, TrackerPacket, \
+    IMUPacket
 from .visualizer_helper import Visualizer, FPS, colorizeDisparity, calc_disp_multiplier, drawMappings, drawDetections, \
     hex_to_bgr, drawBreadcrumbTrail, drawTrackletId
 from .normalize_bb import NormalizeBoundingBox
@@ -19,6 +20,7 @@ on the host side before sending (synced) messages to message sinks (eg. visualiz
 TODO:
 - separate syncing logic from the class. XoutTwoStage should extend the XoutNnResults (currently can't as syncing logic is not separated)
 """
+
 
 class XoutFrames(XoutBase):
     """
@@ -34,9 +36,9 @@ class XoutFrames(XoutBase):
         super().__init__()
 
     def setup_visualize(self,
-                scale: Union[None, float, Tuple[int, int]] = None,
-                fps: bool = None,
-                ):
+                        scale: Union[None, float, Tuple[int, int]] = None,
+                        fps: bool = None,
+                        ):
         self._scale = scale
         self._show_fps = fps
         self._vis = True
@@ -76,28 +78,34 @@ class XoutFrames(XoutBase):
 
         self.queue.put(packet, block=False)
 
+
 class XoutMjpeg(XoutFrames):
     name: str = "MJPEG Stream"
+
     def __init__(self, frames: StreamXout, color: bool, lossless: bool):
         super().__init__(frames)
         # We could use cv2.IMREAD_UNCHANGED, but it produces 3 planes (RGB) for mono frame instead of a single plane
         self.flag = cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE
         if lossless and self._vis:
             raise ValueError('Visualizing Lossless MJPEG stream is not supported!')
+
     def visualize(self, packet: FramePacket):
         # TODO use PyTurbo
         packet.frame = cv2.imdecode(packet.imgFrame.getData(), self.flag)
         super().visualize(packet)
 
+
 class XoutH26x(XoutFrames):
     name = "H26x Stream"
     color: bool
+
     def __init__(self, frames: StreamXout, color: bool, profile: dai.VideoEncoderProperties.Profile):
         super().__init__(frames)
         self.color = color
         fourcc = 'hevc' if profile == dai.VideoEncoderProperties.Profile.H265_MAIN else 'h264'
         import av
         self.codec = av.CodecContext.create(fourcc, "r")
+
     def visualize(self, packet: FramePacket):
         encPackets = self.codec.parse(packet.imgFrame.getData())
 
@@ -113,9 +121,11 @@ class XoutH26x(XoutFrames):
 
         super().visualize(packet)
 
+
 class XoutDisparity(XoutFrames):
     name: str = "Disparity"
     multiplier: float
+
     def __init__(self, frames: StreamXout, max_disp: float):
         super().__init__(frames)
         self.multiplier = 255.0 / max_disp
@@ -124,9 +134,11 @@ class XoutDisparity(XoutFrames):
         packet.frame = colorizeDisparity(packet.imgFrame, self.multiplier)
         super().visualize(packet)
 
+
 class XoutDepth(XoutFrames):
     name: str = "Depth"
     factor: float = None
+
     def __init__(self, device: dai.Device, frames: StreamXout):
         super().__init__(frames)
         self.device = device
@@ -143,6 +155,7 @@ class XoutDepth(XoutFrames):
 
         packet.frame = colorizeDisparity(disp, multiplier=self.multiplier)
         super().visualize(packet)
+
 
 class XoutSpatialBbMappings(XoutFrames):
     name: str = "Depth & Bounding Boxes"
@@ -225,6 +238,7 @@ class XoutSeqSync(XoutBase):
         }
     }
     """
+
     def xstreams(self) -> List[StreamXout]:
         return self.streams
 
@@ -258,6 +272,7 @@ class XoutSeqSync(XoutBase):
                 if int(name) > int(seq):
                     newMsgs[name] = msg
             self.msgs = newMsgs
+
 
 class XoutNnResults(XoutSeqSync, XoutFrames):
     name: str = "Object Detection"
@@ -296,7 +311,6 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         self.normalizer = NormalizeBoundingBox(detNn._size, detNn._arResizeMode)
 
-
     def visualize(self, packet: Union[DetectionPacket, TrackerPacket]):
         if isinstance(packet, TrackerPacket):
             pass
@@ -319,6 +333,7 @@ class XoutTracker(XoutNnResults):
     name: str = "Object Tracker"
     # TODO: hold tracklets for a few frames so we can draw breadcrumb trail
     packets: List[TrackerPacket]
+
     def __init__(self, detNn, frames: StreamXout, tracklets: StreamXout):
         super().__init__(detNn, frames, tracklets)
         self.packets = []
@@ -413,7 +428,7 @@ class XoutTwoStage(XoutNnResults):
         self.detNn = detNn
         self.secondNn = secondNn
 
-        conf = detNn._multi_stage_config # No types due to circular import...
+        conf = detNn._multi_stage_config  # No types due to circular import...
         if conf is not None:
             self.labels = conf._labels
             self.scaleBb = conf.scaleBb
@@ -514,3 +529,30 @@ class XoutTwoStage(XoutNnResults):
             return len([det for det in dets if det.label in self.whitelist_labels])
         else:
             return len(dets)
+
+
+class XoutIMU(XoutBase):
+    name: str = 'IMU'
+    imu_out: StreamXout
+
+    def __init__(self, imu_xout: StreamXout):
+        self.imu_out = imu_xout
+
+        super().__init__()
+
+    def visualize(self, packet: TrackerPacket):
+        raise NotImplementedError('IMU visualization not implemented')
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.imu_out]
+
+    def newMsg(self, name: str, msg: dai.IMUData) -> None:
+        if name not in self._streams:
+            return
+
+        if self.queue.full():
+            self.queue.get()  # Get one, so queue isn't full
+
+        packet = IMUPacket(msg.packets)
+
+        self.queue.put(packet, block=False)
