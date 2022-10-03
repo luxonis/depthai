@@ -62,17 +62,27 @@ def getAvailableRecordings() -> Dict[str, Tuple[List[str], int]]:
     return recordings
 
 
-def downloadRecording(name: str, keys: List[str]) -> Path:
-    for key in keys:
-        r = requests.get(DEPTHAI_RECORDINGS_URL + key)
-        if r.status_code != 200:
-            raise ValueError(f"depthai-recording '{name}' isn't available on our server!")
+def _downloadFile(path: str, url: str):
+    r = requests.get(url)
+    if r.status_code != 200:
+        raise ValueError(f"Could download file from {url}!")
 
-        (DEPTHAI_RECORDINGS_PATH / name).mkdir(parents=True, exist_ok=True)
-        # retrieving data from the URL using get method
-        with open(DEPTHAI_RECORDINGS_PATH / key, 'wb') as f:
-            f.write(r.content)
-            print('Downloaded', key)
+    # retrieving data from the URL using get method
+    with open(path, 'wb') as f:
+        f.write(r.content)
+
+def downloadContent(url: str) -> Path:
+    # Remove url arguments eg. `img.jpeg?w=800&h=600`
+    file = Path(url).name.split('?')[0]
+    _downloadFile(str(DEPTHAI_RECORDINGS_PATH / file), url)
+    return DEPTHAI_RECORDINGS_PATH / file
+
+def downloadRecording(name: str, keys: List[str]) -> Path:
+    (DEPTHAI_RECORDINGS_PATH / name).mkdir(parents=True, exist_ok=True)
+    for key in keys:
+        url = DEPTHAI_RECORDINGS_URL + key
+        _downloadFile(str(DEPTHAI_RECORDINGS_PATH / key), url)
+        print('Downloaded', key)
 
     return DEPTHAI_RECORDINGS_PATH / name
 
@@ -268,6 +278,8 @@ def downloadYTVideo(video: str, output_dir: Optional[Path] = None) -> Path:
     """
     if output_dir is None:
         output_dir = DEPTHAI_RECORDINGS_PATH
+
+    # TODO: check whether we have video cached (by url?)
 
     def progressFunc(stream, chunk, bytesRemaining):
         showProgress(stream.filesize - bytesRemaining, stream.filesize)
