@@ -73,11 +73,13 @@ class CameraComponent(Component):
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self.isReplay():  # If replay, don't create camera node
             res = self._replay.getShape(self._source)
-            resize = getResize(res, width=1200)
-            self._replay.setResizeColor(resize)
+            # print('resolution', res)
+            # resize = getResize(res, width=1200)
+            # self._replay.setResizeColor(resize)
             self.node: dai.node.XLinkIn = getattr(self._replay, self._source)
-            self.node.setMaxDataSize(resize[0] * resize[1] * 3)
-            self._out_size = resize
+            # print('resize', resize)
+            self.node.setMaxDataSize(res[0] * res[1] * 3)
+            self._out_size = res
             self._out = self.node.out
             return
 
@@ -233,6 +235,10 @@ class CameraComponent(Component):
                             ) -> None:
         if not self.isColor():
             print("Attempted to configure ColorCamera, but this component doesn't have it. Config attempt ignored.")
+            return
+
+        if self._replay is not None:
+            print('Tried configuring ColorCamera, but replaying is enabled. Config attempt ignored.')
             return
 
         self.node: dai.node.ColorCamera

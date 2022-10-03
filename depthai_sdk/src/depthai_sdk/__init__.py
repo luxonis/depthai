@@ -35,7 +35,7 @@ class OakCamera:
     _pipeline: dai.Pipeline = None
     _oak: OakDevice  # Init this object by default
     _args: Dict[str, Any] = None  # User defined arguments
-    _replay: Optional[Replay] = None
+    replay: Optional[Replay] = None
     _components: List[Component] = []  # List of components
 
     _usb_speed: Optional[dai.UsbSpeed] = None
@@ -81,8 +81,8 @@ class OakCamera:
                 self._args = args
 
         if recording:
-            self._replay = Replay(recording)
-            print('Available streams from recording:', self._replay.getStreams())
+            self.replay = Replay(recording)
+            print('Available streams from recording:', self.replay.getStreams())
 
 
     def _comp(self, comp: Component) -> Union[CameraComponent, NNComponent, StereoComponent]:
@@ -113,7 +113,7 @@ class OakCamera:
             resolution=resolution,
             fps=fps,
             encode=encode,
-            replay=self._replay,
+            replay=self.replay,
             args=self._args,
         ))
 
@@ -141,6 +141,7 @@ class OakCamera:
             nnType=type,
             tracker=tracker,
             spatial=spatial,
+            replay=self.replay,
             args=self._args
         ))
 
@@ -165,7 +166,7 @@ class OakCamera:
             fps=fps,
             left=left,
             right=right,
-            replay=self._replay,
+            replay=self.replay,
             args=self._args,
         ))
 
@@ -217,9 +218,9 @@ class OakCamera:
         print("Closing OAK camera")
         if self._oak.device is not None:
             self._oak.device.close()
-        if self._replay:
+        if self.replay:
             print("Closing replay")
-            self._replay.close()
+            self.replay.close()
 
         for out in self._out_templates:
             if isinstance(out, RecordConfig):
@@ -242,10 +243,10 @@ class OakCamera:
         for xout in self._oak.oak_out_streams: # Start FPS counters
             xout.start_fps()
 
-        if self._replay:
-            self._replay.createQueues(self._oak.device)
+        if self.replay:
+            self.replay.createQueues(self._oak.device)
             # Called from Replay module on each new frame sent to the device.
-            self._replay.start(self._oak.newMsg)
+            self.replay.start(self._oak.newMsg)
 
         # Check if callbacks (sync/non-sync are set)
         if blocking:
@@ -268,8 +269,8 @@ class OakCamera:
 
         self._oak.checkSync()
 
-        if self._replay:
-            if self._replay._stop:
+        if self.replay:
+            if self.replay._stop:
                 return False
 
         return True # TODO: check whether OAK is connected
@@ -286,8 +287,8 @@ class OakCamera:
             raise Exception('Pipeline can be built only once!')
 
         self._pipeline_built = True
-        if self._replay:
-            self._replay.initPipeline(self._pipeline)
+        if self.replay:
+            self.replay.initPipeline(self._pipeline)
 
         # First go through each component to check whether any is forcing an OpenVINO version
         # TODO: check each component's SHAVE usage

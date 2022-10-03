@@ -5,6 +5,7 @@ from .multi_stage_nn import MultiStageNN, MultiStageConfig
 from pathlib import Path
 from typing import Callable, Union, List, Dict
 
+from ..replay import Replay
 import blobconverter
 from .parser import *
 from .nn_helper import *
@@ -45,6 +46,7 @@ class NNComponent(Component):
     _multi_stage_config: MultiStageConfig = None
 
     _spatial: Union[None, bool, StereoComponent] = None
+    _replay: Replay  # Replay module
 
     # For visualizer
     _labels: List = None  # obj detector labels
@@ -57,6 +59,7 @@ class NNComponent(Component):
                  nnType: Optional[str] = None, # Either 'yolo' or 'mobilenet'
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
                  spatial: Union[None, bool, StereoComponent] = None,
+                 replay: Optional[Replay] = None,
                  args: Dict = None  # User defined args
                  ) -> None:
         """
@@ -72,6 +75,7 @@ class NNComponent(Component):
             nnType (str, optional): Type of the NN - Either 'Yolo' or 'MobileNet'
             tracker (bool, default False): Enable object tracker - only for Object detection models
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
+            replay (Replay object): Replay
             args (Any, optional): Use user defined arguments when constructing the pipeline
         """
         super().__init__()
@@ -81,6 +85,7 @@ class NNComponent(Component):
         self._input = input
         self._spatial = spatial
         self._args = args
+        self._replay = replay
 
         self.tracker = pipeline.createObjectTracker() if tracker else None
 
@@ -156,7 +161,7 @@ class NNComponent(Component):
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
-                self._spatial = StereoComponent(pipeline, args=self._args)
+                self._spatial = StereoComponent(pipeline, args=self._args, replay=self._replay)
                 self._spatial._update_device_info(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)

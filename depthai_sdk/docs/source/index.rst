@@ -37,10 +37,10 @@ We recommend that you start with the :ref:`Getting started with DepthAI SDK`
 .. toctree::
    :maxdepth: 2
    :hidden:
+   :glob:
    :caption: Features
 
-   features/ai_models.rst
-   features/packets.rst
+   features/*
 
 .. toctree::
    :maxdepth: 2
