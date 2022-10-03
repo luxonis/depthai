@@ -1,5 +1,6 @@
 from .args_parser import ArgsParser
 from .classes import *
+from .classes.packets import *
 from .components import *
 from .components.nn_helper import AspectRatioResizeMode
 from .fps import *
