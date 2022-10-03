@@ -1,4 +1,5 @@
 from .classes.output_config import OutputConfig, VisualizeConfig
+from .components.imu_component import IMUComponent
 from .fps import *
 from .previews import *
 from .utils import *
@@ -14,6 +15,7 @@ from typing import Optional
 import depthai as dai
 from pathlib import Path
 from .args_parser import ArgsParser
+
 
 class OakCamera:
     """
@@ -69,7 +71,7 @@ class OakCamera:
                     if self.args.get('deviceId', None):
                         self._device_name = self.args.get('deviceId', None)
                     if self.args.get('usbSpeed', None):
-                        self._usb_speed =  parse_usb_speed(self.args.get('usbSpeed', None))
+                        self._usb_speed = parse_usb_speed(self.args.get('usbSpeed', None))
 
                 # else False - we don't want to parse user arguments
             else:  # Already parsed
@@ -79,8 +81,7 @@ class OakCamera:
             self.replay = Replay(recording)
             print('available streams from recording', self.replay.getStreams())
 
-
-    def _comp(self, comp: Component) -> Union[CameraComponent, NNComponent, StereoComponent]:
+    def _comp(self, comp: Component) -> Union[CameraComponent, NNComponent, StereoComponent, IMUComponent]:
         self.components.append(comp)
         return comp
 
@@ -150,6 +151,14 @@ class OakCamera:
             args=self.args,
         ))
 
+    def create_imu(self) -> IMUComponent:
+        """
+        Create IMU component
+        """
+        return self._comp(IMUComponent(
+            pipeline=self._pipeline
+        ))
+
     def _init_device(self) -> None:
         """
         Connect to the OAK camera
@@ -199,13 +208,13 @@ class OakCamera:
         Start the application
         """
         if not self._pipeline_built:
-            self.build() # Build the pipeline
+            self.build()  # Build the pipeline
 
         self.oak.device.startPipeline(self._pipeline)
 
         self.oak.initCallbacks(self._pipeline)
 
-        for xout in self.oak.oak_out_streams: # Start FPS counters
+        for xout in self.oak.oak_out_streams:  # Start FPS counters
             xout.start_fps()
 
         if self.replay:
@@ -234,7 +243,7 @@ class OakCamera:
 
         self.oak.checkSync()
 
-        return True # TODO: check whether OAK is connectednnComp
+        return True  # TODO: check whether OAK is connectednnComp
 
     def build(self) -> dai.Pipeline:
         """
@@ -278,7 +287,7 @@ class OakCamera:
             xoutbase: XoutBase = out.output(self._pipeline, self.oak.device)
             xoutbase.setup_base(out.callback)
 
-            if xoutbase.name in names: # Stream name already exist, append a number to it
+            if xoutbase.name in names:  # Stream name already exist, append a number to it
                 xoutbase.name = find_new_name(xoutbase.name, names)
             names.append(xoutbase.name)
 
@@ -309,17 +318,16 @@ class OakCamera:
 
         """
         if isinstance(outputs, Component):
-            components = [outputs] # to list
+            components = [outputs]  # to list
 
     def show_graph(self) -> None:
         """
         Show DepthAI Pipeline graph, which is very useful for debugging.
         """
         if not self._pipeline_built:
-            self.build() # Build the pipeline
+            self.build()  # Build the pipeline
 
         PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
-
 
     def _callback(self, output: Union[List, Callable, Component], callback: Callable, vis=None):
         if isinstance(output, List):
@@ -335,7 +343,7 @@ class OakCamera:
     def visualize(self, output: Union[List, Callable, Component],
                   scale: Union[None, float, Tuple[int, int]] = None,
                   fps=False,
-                  callback: Callable=None):
+                  callback: Callable = None):
         """
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
 
