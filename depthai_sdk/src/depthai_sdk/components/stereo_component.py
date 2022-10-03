@@ -26,7 +26,6 @@ class StereoComponent(Component):
         # Disparity output from the StereoDepth node.
         return self.node.disparity
 
-
     _replay: Optional[Replay]  # Replay module
     _resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution]
     _fps: Optional[float]
@@ -128,7 +127,6 @@ class StereoComponent(Component):
         if lrCheck: self.node.initialConfig.setLeftRightCheck(lrCheck)
         if sigma: self.node.initialConfig.setBilateralFilterSigma(sigma)
         if lrCheckThreshold: self.node.initialConfig.setLeftRightCheckThreshold(lrCheckThreshold)
-
 
     def _get_disparity_factor(self, device: dai.Device) -> float:
         """
