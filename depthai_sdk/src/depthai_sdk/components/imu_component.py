@@ -1,3 +1,5 @@
+from typing import List
+
 import depthai as dai
 
 from .component import Component, XoutBase
@@ -16,7 +18,7 @@ class IMUComponent(Component):
         self.config_imu()  # Default settings, component won't work without them
 
     def config_imu(self,
-                   sensors: list[dai.IMUSensor] = None,
+                   sensors: List[dai.IMUSensor] = None,
                    report_rate: int = 100,
                    batch_report_threshold: int = 1,
                    max_batch_reports: int = 10,
