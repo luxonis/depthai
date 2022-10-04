@@ -6,7 +6,7 @@ with OakCamera() as oak:
     nn = oak.create_nn('mobilenet-ssd', color)
 
     def cb(packet: DetectionPacket):
-        print('Detections:', packet.imgDetections.detections)
+        print('Detections:', packet.img_detections.detections)
         Visualizer.print(packet.frame, 'BottomRight!', FramePosition.BottomRight)
         cv2.imshow('frame', packet.frame)
 
