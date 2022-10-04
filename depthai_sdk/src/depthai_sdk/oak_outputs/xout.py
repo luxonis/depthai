@@ -1,12 +1,14 @@
 from abc import abstractmethod
+from typing import Dict, List, Any, Optional, Tuple, Union
 
 import cv2
 import depthai as dai
-from typing import Dict, List, Any, Optional, Tuple, Callable, Union
-
 import numpy as np
 from distinctipy import distinctipy
 
+from .normalize_bb import NormalizeBoundingBox
+from .visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, draw_detections, \
+    hex_to_bgr, draw_breadcrumb_trail, draw_tracklet_id
 from .xout_base import XoutBase, StreamXout
 from ..classes.packets import (
     FramePacket,
@@ -16,10 +18,7 @@ from ..classes.packets import (
     TrackerPacket,
     IMUPacket
 )
-from .visualizer_helper import Visualizer, colorizeDisparity, calc_disp_multiplier, drawMappings, drawDetections, \
-    hex_to_bgr, drawBreadcrumbTrail, drawTrackletId
-
-from .normalize_bb import NormalizeBoundingBox
+from ..visualize import NewVisualizer
 
 """
 Xout classes are abstracting streaming messages to the host computer (via XLinkOut) and syncing those messages
@@ -42,43 +41,47 @@ class XoutFrames(XoutBase):
     def __init__(self, frames: StreamXout, fps: float = 30):
         self.frames = frames
         self.fps = fps
+        self._visualizer = None
         super().__init__()
 
-    def setup_visualize(self,
-                        scale: Union[None, float, Tuple[int, int]] = None,
-                        fps: bool = None,
-                        ):
-        self._scale = scale
-        self._show_fps = fps
-        self._vis = True
+    def setup_visualize(self, visualizer: NewVisualizer, name: str = None):
+        self._visualizer = visualizer
+        self.name = name or self.name
 
     def visualize(self, packet: FramePacket) -> None:
         """
-        Called from main thread if vis=True
+        Called from main thread if visualizer is not None
         """
 
-        if self._show_fps:
-            Visualizer.putText(packet.frame, "FPS: {:.1f}".format(self._fps.fps()), (10, 20), scale=0.7)
+        if self._visualizer.config.show_fps:
+            self._visualizer.add_text(
+                text=f'FPS: {self._fps.get_fps():.2f}',
+                coords=(10, 20),
+                scale=0.7
+            )
+            # Visualizer.putText(packet.frame, "FPS: {:.1f}".format(self._fps.fps()), (10, 20), scale=0.7)
 
-        if self._scale:
-            if isinstance(self._scale, Tuple):
-                packet.frame = cv2.resize(packet.frame, self._scale)  # Resize frame
-            elif isinstance(self._scale, float):
+        img_scale = self._visualizer.config.img_scale
+        if img_scale:
+            if isinstance(img_scale, Tuple):
+                packet.frame = cv2.resize(packet.frame, img_scale)  # Resize frame
+            elif isinstance(img_scale, float):
                 packet.frame = cv2.resize(packet.frame, (
-                    int(packet.frame.shape[1] * self._scale),
-                    int(packet.frame.shape[0] * self._scale)
+                    int(packet.frame.shape[1] * img_scale),
+                    int(packet.frame.shape[0] * img_scale)
                 ))
 
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet)
         else:
-            cv2.imshow(self.name, packet.frame)
+            self._visualizer.draw(packet.frame, self.name)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
 
     def newMsg(self, name: str, msg) -> None:
-        if name not in self._streams: return
+        if name not in self._streams:
+            return
 
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
@@ -118,24 +121,29 @@ class XoutH26x(XoutFrames):
         super().__init__(frames)
         self.color = color
         self.profile = profile
-        self.fps=fps
+        self.fps = fps
         fourcc = 'hevc' if profile == dai.VideoEncoderProperties.Profile.H265_MAIN else 'h264'
         import av
         self.codec = av.CodecContext.create(fourcc, "r")
 
     def visualize(self, packet: FramePacket):
-        encPackets = self.codec.parse(packet.imgFrame.getData())
+        enc_packets = self.codec.parse(packet.imgFrame.getData())
 
-        if len(encPackets) == 0: return
-        frames = self.codec.decode(encPackets[-1])
-        if not frames: return
+        if len(enc_packets) == 0:
+            return
+
+        frames = self.codec.decode(enc_packets[-1])
+
+        if not frames:
+            return
 
         frame = frames[0].to_ndarray(format='bgr24')
+
         # If it's Mono, squeeze from 3 planes (height, width, 3) to single plane (height, width)
         if not self.color:
             frame = frame[:, :, 0]
-        packet.frame = frame
 
+        packet.frame = frame
         super().visualize(packet)
 
 
@@ -150,7 +158,7 @@ class XoutDisparity(XoutFrames):
         self.fps = fps
 
     def visualize(self, packet: FramePacket):
-        packet.frame = colorizeDisparity(packet.imgFrame, self.multiplier)
+        packet.frame = colorize_disparity(packet.imgFrame, self.multiplier)
         super().visualize(packet)
 
 
@@ -173,7 +181,7 @@ class XoutDepth(XoutFrames):
         with np.errstate(divide='ignore'):
             disp = (self.factor / depth).astype(np.uint8)
 
-        packet.frame = colorizeDisparity(disp, multiplier=self.multiplier)
+        packet.frame = colorize_disparity(disp, multiplier=self.multiplier)
         super().visualize(packet)
 
 
@@ -208,8 +216,8 @@ class XoutSpatialBbMappings(XoutFrames):
         with np.errstate(divide='ignore'):
             disp = (self.factor / depth).astype(np.uint8)
 
-        packet.frame = colorizeDisparity(disp, multiplier=self.multiplier)
-        drawMappings(packet)
+        packet.frame = colorize_disparity(disp, multiplier=self.multiplier)
+        draw_mappings(packet)
 
         super().visualize(packet)
 
@@ -302,22 +310,22 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
     def xstreams(self) -> List[StreamXout]:
         return [self.nn_results, self.frames]
 
-    def __init__(self, detNn, frames: StreamXout, nn_results: StreamXout):
+    def __init__(self, det_nn, frames: StreamXout, nn_results: StreamXout):
         self.nn_results = nn_results
         # Multiple inheritance init
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, nn_results])
         # Save StreamXout before initializing super()!
-        self.detNn = detNn
+        self.det_nn = det_nn
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
-        if detNn._labels:
+        if det_nn._labels:
             self.labels = []
-            n_colors = [isinstance(label, str) for label in detNn._labels].count(True)
+            n_colors = [isinstance(label, str) for label in det_nn._labels].count(True)
             # np.array of (b,g,r), 0..1
             colors = np.array(distinctipy.get_colors(n_colors=n_colors, rng=123123, pastel_factor=0.5))[..., ::-1]
             colors = [distinctipy.get_rgb256(clr) for clr in colors]  # List of (b,g,r), 0..255
-            for label in detNn._labels:
+            for label in det_nn._labels:
                 if isinstance(label, str):
                     text = label
                     color = colors.pop(0)  # Take last row
@@ -329,17 +337,24 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
                 self.labels.append((text, color))
 
-        self.normalizer = NormalizeBoundingBox(detNn._size, detNn._arResizeMode)
+        self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._arResizeMode)
 
     def visualize(self, packet: Union[DetectionPacket, TrackerPacket]):
         # We can't visualize NNData (not decoded)
-        if isinstance(packet, DetectionPacket) and isinstance(packet.imgDetections, dai.NNData):
-            raise Exception("Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead.")
+        if isinstance(packet, DetectionPacket) and isinstance(packet.img_detections, dai.NNData):
+            raise Exception(
+                "Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead."
+            )
 
+        # TODO add support for packet._is_spatial_detection() == True case
         if isinstance(packet, TrackerPacket):
             pass
         else:
-            drawDetections(packet, self.normalizer, self.labels)
+            # draw_detections(packet, self.normalizer, self.labels)
+            self._visualizer.add_detections(packet.img_detections.detections,
+                                            self.normalizer,
+                                            self.labels)
+
         super().visualize(packet)
 
     def package(self, msgs: Dict):
@@ -358,17 +373,17 @@ class XoutTracker(XoutNnResults):
     # TODO: hold tracklets for a few frames so we can draw breadcrumb trail
     packets: List[TrackerPacket]
 
-    def __init__(self, detNn, frames: StreamXout, tracklets: StreamXout):
-        super().__init__(detNn, frames, tracklets)
+    def __init__(self, det_nn, frames: StreamXout, tracklets: StreamXout):
+        super().__init__(det_nn, frames, tracklets)
         self.packets = []
 
     def visualize(self, packet: TrackerPacket):
-        drawDetections(packet, self.normalizer, self.labels)
+        draw_detections(packet, self.normalizer, self.labels)
 
         # Map tracklet to the TrackingDetection
         for tracklet in packet.daiTracklets.tracklets:
             for det in packet.detections:
-                if tracklet.srcImgDetection == det.imgDetection:
+                if tracklet.srcImgDetection == det.img_detection:
                     det.tracklet = tracklet
                     break
 
@@ -377,8 +392,8 @@ class XoutTracker(XoutNnResults):
         if 20 < len(self.packets):
             self.packets.pop(0)
 
-        drawBreadcrumbTrail(self.packets)
-        drawTrackletId(packet)
+        draw_breadcrumb_trail(self.packets)
+        draw_tracklet_id(packet)
 
         super().visualize(packet)
 
@@ -444,15 +459,15 @@ class XoutTwoStage(XoutNnResults):
 
     second_nn: StreamXout
 
-    def __init__(self, detNn, secondNn, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
+    def __init__(self, det_nn, secondNn, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
         self.second_nn = second_nn
         # Save StreamXout before initializing super()!
-        super().__init__(detNn, frames, detections)
+        super().__init__(det_nn, frames, detections)
 
-        self.detNn = detNn
+        self.detNn = det_nn
         self.secondNn = secondNn
 
-        conf = detNn._multi_stage_config  # No types due to circular import...
+        conf = det_nn._multi_stage_config  # No types due to circular import...
         if conf is not None:
             self.labels = conf._labels
             self.scaleBb = conf.scaleBb

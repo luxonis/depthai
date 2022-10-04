@@ -12,3 +12,4 @@ from .previews import *
 from .record import *
 from .replay import *
 from .utils import *
+from .visualize import *

@@ -6,8 +6,9 @@ from typing import Dict, Any, Optional, List, Union, Callable, Tuple
 import cv2
 import depthai as dai
 
+from .visualize import NewVisualizer
 from .args_parser import ArgsParser
-from .classes.output_config import BaseConfig, RecordConfig, OutputConfig, VisualizeConfig
+from .classes.output_config import BaseConfig, RecordConfig, OutputConfig
 from .components.camera_component import CameraComponent
 from .components.component import Component
 from .components.imu_component import IMUComponent
@@ -377,18 +378,22 @@ class OakCamera:
 
         PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
 
-    def _callback(self, output: Union[List, Callable, Component], callback: Callable, vis=None):
+    def _callback(self,
+                  output: Union[List, Callable, Component],
+                  callback: Callable,
+                  visualizer: NewVisualizer = None):
         if isinstance(output, List):
             for element in output:
-                self._callback(element, callback, vis)
+                self._callback(element, callback, visualizer)
             return
 
         if isinstance(output, Component):
             output = output.out.main
 
-        self._out_templates.append(OutputConfig(output, callback, vis))
+        self._out_templates.append(OutputConfig(output, callback, visualizer))
 
-    def visualize(self, output: Union[List, Callable, Component],
+    def visualize(self,
+                  output: Union[List, Callable, Component],
                   scale: Union[None, float, Tuple[int, int]] = None,
                   fps=False,
                   callback: Callable = None):
@@ -400,8 +405,10 @@ class OakCamera:
             fps: Show FPS of the output on the frame
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
+        visualizer = NewVisualizer()
 
-        self._callback(output, callback, VisualizeConfig(scale, fps))
+        self._callback(output, callback, visualizer)
+        return visualizer
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):
         """
