@@ -1,14 +1,15 @@
 import math
-import time
 from enum import IntEnum
 from types import SimpleNamespace
-import numpy as np
-import depthai as dai
-from typing import Tuple, Union, List, Any, Callable, Dict
+from typing import Tuple, Union, List, Any, Dict
+
 import cv2
+import depthai as dai
 import distinctipy
+import numpy as np
+
 from .normalize_bb import NormalizeBoundingBox
-from ..classes.packets import DetectionPacket, _TwoStageDetection, FramePacket, SpatialBbMappingPacket, TrackerPacket, \
+from ..classes.packets import DetectionPacket, _TwoStageDetection, SpatialBbMappingPacket, TrackerPacket, \
     _TrackingDetection
 
 
@@ -26,8 +27,10 @@ class FramePosition(IntEnum):
     MidRight = 21
     BottomRight = 22
 
-color_map = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_TURBO)
-color_map[0] = [0, 0, 0]
+
+default_color_map = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_TURBO)
+default_color_map[0] = [0, 0, 0]
+
 
 class Visualizer:
     bg_color = (0, 0, 0)
@@ -38,9 +41,9 @@ class Visualizer:
     @classmethod
     def putText(cls, frame: np.ndarray,
                 text: str,
-                coords: Tuple[int,int],
+                coords: Tuple[int, int],
                 scale: float = 1.0,
-                backColor: Tuple[int,int,int] = None,
+                backColor: Tuple[int, int, int] = None,
                 color: Tuple[int, int, int] = None):
         # Background text
         cv2.putText(frame, text, coords, cls.text_type, scale,
@@ -55,8 +58,8 @@ class Visualizer:
 
     @classmethod
     def line(cls, frame: np.ndarray,
-             p1: Tuple[int,int], p2: Tuple[int,int],
-             color = None,
+             p1: Tuple[int, int], p2: Tuple[int, int],
+             color=None,
              thickness: int = 1) -> None:
         cv2.line(frame, p1, p2,
                  cls.bg_color,
@@ -68,8 +71,9 @@ class Visualizer:
                  cls.line_type)
 
     @classmethod
-    def print_on_roi(cls, frame, topLeft, bottomRight, text:str, position: FramePosition = FramePosition.BottomLeft, padPx=10):
-        frame_roi = frame[topLeft[1]:bottomRight[1],topLeft[0]:bottomRight[0]]
+    def print_on_roi(cls, frame, topLeft, bottomRight, text: str, position: FramePosition = FramePosition.BottomLeft,
+                     padPx=10):
+        frame_roi = frame[topLeft[1]:bottomRight[1], topLeft[0]:bottomRight[0]]
         cls.print(frame=frame_roi, text=text, position=position, padPx=padPx)
 
     @classmethod
@@ -81,26 +85,27 @@ class Visualizer:
         @param position: Where on frame we want to print the text
         @param padPx: Padding (in pixels)
         """
-        textSize = cv2.getTextSize(text, Visualizer.text_type, fontScale=1.0, thickness=1)[0]
-        frameW = frame.shape[1]
-        frameH = frame.shape[0]
+        text_size = cv2.getTextSize(text, Visualizer.text_type, fontScale=1.0, thickness=1)[0]
+        frame_w = frame.shape[1]
+        frame_h = frame.shape[0]
 
-        yPos = int(position) % 10
-        if yPos == 0:  # Y Top
-            y = textSize[1] + padPx
-        elif yPos == 1:  # Y Mid
-            y = int(frameH / 2) + int(textSize[1] / 2)
-        else:  # yPos == 2. Y Bottom
-            y = frameH - padPx
+        y_pos = int(position) % 10
+        if y_pos == 0:  # Y Top
+            y = text_size[1] + padPx
+        elif y_pos == 1:  # Y Mid
+            y = int(frame_h / 2) + int(text_size[1] / 2)
+        else:  # y_pos == 2. Y Bottom
+            y = frame_h - padPx
 
-        xPos = int(position) // 10
-        if xPos == 0:  # X Left
+        x_pos = int(position) // 10
+        if x_pos == 0:  # X Left
             x = padPx
-        elif xPos == 1:  # X Mid
-            x = int(frameW / 2) - int(textSize[0] / 2)
-        else:  # xPos == 2  # X Right
-            x = frameW - textSize[0] - padPx
+        elif x_pos == 1:  # X Mid
+            x = int(frame_w / 2) - int(text_size[0] / 2)
+        else:  # x_pos == 2  # X Right
+            x = frame_w - text_size[0] - padPx
         cls.putText(frame, text, (x, y))
+
 
 # def rectangle(frame, bbox, color: Tuple[int, int, int] = None):
 #     x1, y1, x2, y2 = bbox
@@ -111,7 +116,7 @@ class Visualizer:
 
 def rectangle(src,
               bbox: np.ndarray,
-              color: Tuple[int,int,int],
+              color: Tuple[int, int, int],
               thickness=-1,
               radius=0.1,
               line_type=cv2.LINE_AA,
@@ -128,12 +133,12 @@ def rectangle(src,
     @param alpha: Alpha for colorizing of the rectangle
     @return: Frame
     """
-    topLeft = (bbox[0], bbox[1])
-    bottomRight = (bbox[2], bbox[3])
-    topRight = (bottomRight[0], topLeft[1])
-    bottomLeft = (topLeft[0], bottomRight[1])
+    top_left = (bbox[0], bbox[1])
+    bottom_right = (bbox[2], bbox[3])
+    top_right = (bottom_right[0], top_left[1])
+    bottom_left = (top_left[0], bottom_right[1])
 
-    height = abs(bottomRight[1] - topLeft[1])
+    height = abs(bottom_right[1] - top_left[1])
 
     if radius > 1:
         radius = 1
@@ -144,56 +149,78 @@ def rectangle(src,
         overlay = src.copy()
 
         # big rect
-        top_left_main_rect = (int(topLeft[0] + corner_radius), int(topLeft[1]))
-        bottom_right_main_rect = (int(bottomRight[0] - corner_radius), int(bottomRight[1]))
+        top_left_main_rect = (int(top_left[0] + corner_radius), int(top_left[1]))
+        bottom_right_main_rect = (int(bottom_right[0] - corner_radius), int(bottom_right[1]))
 
-        top_left_rect_left = (topLeft[0], topLeft[1] + corner_radius)
-        bottom_right_rect_left = (bottomLeft[0] + corner_radius, bottomLeft[1] - corner_radius)
+        top_left_rect_left = (top_left[0], top_left[1] + corner_radius)
+        bottom_right_rect_left = (bottom_left[0] + corner_radius, bottom_left[1] - corner_radius)
 
-        top_left_rect_right = (topRight[0] - corner_radius, topRight[1] + corner_radius)
-        bottom_right_rect_right = (bottomRight[0], bottomRight[1] - corner_radius)
+        top_left_rect_right = (top_right[0] - corner_radius, top_right[1] + corner_radius)
+        bottom_right_rect_right = (bottom_right[0], bottom_right[1] - corner_radius)
 
         all_rects = [
             [top_left_main_rect, bottom_right_main_rect],
             [top_left_rect_left, bottom_right_rect_left],
-            [top_left_rect_right, bottom_right_rect_right]]
+            [top_left_rect_right, bottom_right_rect_right]
+        ]
 
         [cv2.rectangle(overlay, pt1=rect[0], pt2=rect[1], color=color, thickness=thickness) for rect in all_rects]
 
-        cv2.ellipse(overlay, (topLeft[0] + corner_radius, topLeft[1] + corner_radius), (corner_radius, corner_radius), 180.0, 0,
+        cv2.ellipse(overlay, (top_left[0] + corner_radius, top_left[1] + corner_radius), (corner_radius, corner_radius),
+                    180.0, 0,
                     90, color, thickness, line_type)
-        cv2.ellipse(overlay, (topRight[0] - corner_radius, topRight[1] + corner_radius), (corner_radius, corner_radius), 270.0, 0,
+        cv2.ellipse(overlay, (top_right[0] - corner_radius, top_right[1] + corner_radius),
+                    (corner_radius, corner_radius),
+                    270.0, 0,
                     90, color, thickness, line_type)
-        cv2.ellipse(overlay, (bottomRight[0] - corner_radius, bottomRight[1] - corner_radius), (corner_radius, corner_radius), 0.0, 0, 90,
+        cv2.ellipse(overlay, (bottom_right[0] - corner_radius, bottom_right[1] - corner_radius),
+                    (corner_radius, corner_radius), 0.0, 0, 90,
                     color, thickness, line_type)
-        cv2.ellipse(overlay, (bottomLeft[0] + corner_radius, bottomLeft[1] - corner_radius), (corner_radius, corner_radius), 90.0, 0,
+        cv2.ellipse(overlay, (bottom_left[0] + corner_radius, bottom_left[1] - corner_radius),
+                    (corner_radius, corner_radius), 90.0, 0,
                     90, color, thickness, line_type)
 
-        cv2.ellipse(src, (topLeft[0] + corner_radius, topLeft[1] + corner_radius), (corner_radius, corner_radius), 180.0, 0, 90,
+        cv2.ellipse(src, (top_left[0] + corner_radius, top_left[1] + corner_radius), (corner_radius, corner_radius),
+                    180.0, 0, 90,
                     color, 2, line_type)
-        cv2.ellipse(src, (topRight[0] - corner_radius, topRight[1] + corner_radius), (corner_radius, corner_radius), 270.0, 0, 90,
+        cv2.ellipse(src, (top_right[0] - corner_radius, top_right[1] + corner_radius), (corner_radius, corner_radius),
+                    270.0, 0, 90,
                     color, 2, line_type)
-        cv2.ellipse(src, (bottomRight[0] - corner_radius, bottomRight[1] - corner_radius), (corner_radius, corner_radius), 0.0, 0, 90,
+        cv2.ellipse(src, (bottom_right[0] - corner_radius, bottom_right[1] - corner_radius),
+                    (corner_radius, corner_radius), 0.0, 0, 90,
                     color, 2, line_type)
-        cv2.ellipse(src, (bottomLeft[0] + corner_radius, bottomLeft[1] - corner_radius), (corner_radius, corner_radius), 90.0, 0, 90,
+        cv2.ellipse(src, (bottom_left[0] + corner_radius, bottom_left[1] - corner_radius),
+                    (corner_radius, corner_radius),
+                    90.0, 0, 90,
                     color, 2, line_type)
 
         cv2.addWeighted(overlay, alpha, src, 1 - alpha, 0, src)
     else:  # Don't fill the rectangle
         # draw straight lines
-        cv2.line(src, (topLeft[0] + corner_radius, topLeft[1]), (topRight[0] - corner_radius, topRight[1]), color, abs(thickness), line_type)
-        cv2.line(src, (topRight[0], topRight[1] + corner_radius), (bottomRight[0], bottomRight[1] - corner_radius), color, abs(thickness), line_type)
-        cv2.line(src, (bottomRight[0] - corner_radius, bottomLeft[1]), (bottomLeft[0] + corner_radius, bottomRight[1]), color, abs(thickness), line_type)
-        cv2.line(src, (bottomLeft[0], bottomLeft[1] - corner_radius), (topLeft[0], topLeft[1] + corner_radius), color, abs(thickness), line_type)
+        cv2.line(src, (top_left[0] + corner_radius, top_left[1]), (top_right[0] - corner_radius, top_right[1]), color,
+                 abs(thickness), line_type)
+        cv2.line(src, (top_right[0], top_right[1] + corner_radius), (bottom_right[0], bottom_right[1] - corner_radius),
+                 color, abs(thickness), line_type)
+        cv2.line(src, (bottom_right[0] - corner_radius, bottom_left[1]),
+                 (bottom_left[0] + corner_radius, bottom_right[1]),
+                 color, abs(thickness), line_type)
+        cv2.line(src, (bottom_left[0], bottom_left[1] - corner_radius), (top_left[0], top_left[1] + corner_radius),
+                 color,
+                 abs(thickness), line_type)
 
         # draw arcs
-        cv2.ellipse(src, (topLeft[0] + corner_radius, topLeft[1] + corner_radius), (corner_radius, corner_radius), 180.0, 0, 90,
+        cv2.ellipse(src, (top_left[0] + corner_radius, top_left[1] + corner_radius), (corner_radius, corner_radius),
+                    180.0, 0, 90,
                     color, thickness, line_type)
-        cv2.ellipse(src, (topRight[0] - corner_radius, topRight[1] + corner_radius), (corner_radius, corner_radius), 270.0, 0, 90,
+        cv2.ellipse(src, (top_right[0] - corner_radius, top_right[1] + corner_radius), (corner_radius, corner_radius),
+                    270.0, 0, 90,
                     color, thickness, line_type)
-        cv2.ellipse(src, (bottomRight[0] - corner_radius, bottomRight[1] - corner_radius), (corner_radius, corner_radius), 0.0, 0, 90,
+        cv2.ellipse(src, (bottom_right[0] - corner_radius, bottom_right[1] - corner_radius),
+                    (corner_radius, corner_radius), 0.0, 0, 90,
                     color, thickness, line_type)
-        cv2.ellipse(src, (bottomLeft[0] + corner_radius, bottomLeft[1] - corner_radius), (corner_radius, corner_radius), 90.0, 0, 90,
+        cv2.ellipse(src, (bottom_left[0] + corner_radius, bottom_left[1] - corner_radius),
+                    (corner_radius, corner_radius),
+                    90.0, 0, 90,
                     color, thickness, line_type)
 
     return src
@@ -206,122 +233,138 @@ def get_text_color(background, threshold=0.6):
     return (clr[2], clr[1], clr[0])
 
 
-def drawMappings(packet: SpatialBbMappingPacket):
-    roiDatas = packet.config.getConfigData()
-    for roiData in roiDatas:
-        roi = roiData.roi
+def draw_mappings(packet: SpatialBbMappingPacket):
+    roi_datas = packet.config.getConfigData()
+    for roi_data in roi_datas:
+        roi = roi_data.roi
         roi = roi.denormalize(packet.frame.shape[1], packet.frame.shape[0])
-        topLeft = roi.topLeft()
-        bottomRight = roi.bottomRight()
-        xmin = int(topLeft.x)
-        ymin = int(topLeft.y)
-        xmax = int(bottomRight.x)
-        ymax = int(bottomRight.y)
+        top_left = roi.topLeft()
+        bottom_right = roi.bottomRight()
+        x_min = int(top_left.x)
+        y_min = int(top_left.y)
+        x_max = int(bottom_right.x)
+        y_max = int(bottom_right.y)
 
-        cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), Visualizer.bg_color, 3)
-        cv2.rectangle(packet.frame, (xmin, ymin), (xmax, ymax), Visualizer.front_color, 1)
+        cv2.rectangle(packet.frame, (x_min, y_min), (x_max, y_max), Visualizer.bg_color, 3)
+        cv2.rectangle(packet.frame, (x_min, y_min), (x_max, y_max), Visualizer.front_color, 1)
 
-def spatialsText(spatials: dai.Point3f):
+
+def spatials_text(spatials: dai.Point3f):
     return SimpleNamespace(
-        x = "X: " + ("{:.1f}m".format(spatials.x / 1000) if not math.isnan(spatials.x) else "--"),
-        y = "Y: " + ("{:.1f}m".format(spatials.y / 1000) if not math.isnan(spatials.y) else "--"),
-        z = "Z: " + ("{:.1f}m".format(spatials.z / 1000) if not math.isnan(spatials.z) else "--"),
+        x="X: " + ("{:.1f}m".format(spatials.x / 1000) if not math.isnan(spatials.x) else "--"),
+        y="Y: " + ("{:.1f}m".format(spatials.y / 1000) if not math.isnan(spatials.y) else "--"),
+        z="Z: " + ("{:.1f}m".format(spatials.z / 1000) if not math.isnan(spatials.z) else "--"),
     )
 
-def drawDetections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPacket],
-                   norm: NormalizeBoundingBox,
-                   labelMap: List[Tuple[str, Tuple]] = None):
+
+def draw_detections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPacket],
+                    norm: NormalizeBoundingBox,
+                    label_map: List[Tuple[str, Tuple]] = None):
     """
     Draw object detections to the frame.
 
     @param frame: np.ndarray frame
     @param dets: dai.ImgDetections
     @param norm: Object that handles normalization of the bounding box
-    @param labelMap: Label map for the detections
+    @param label_map: Label map for the detections
     """
-    imgDets = []
+    img_detections = []
     if isinstance(packet, TrackerPacket):
-        imgDets = [t.srcImgDetection for t in packet.daiTracklets.tracklets]
+        img_detections = [t.srcImgDetection for t in packet.daiTracklets.tracklets]
     elif isinstance(packet, DetectionPacket):
-        imgDets = [det for det in packet.imgDetections.detections]
+        img_detections = [det for det in packet.img_detections.detections]
 
-    for detection in imgDets:
+    for detection in img_detections:
         bbox = norm.normalize(packet.frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
 
-        if labelMap:
-            txt, color = labelMap[detection.label]
+        if label_map:
+            txt, color = label_map[detection.label]
         else:
             txt = str(detection.label)
             color = Visualizer.front_color
 
         Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
-        if packet._isSpatialDetection():
-            point = packet._get_spatials(detection) if isinstance(packet, TrackerPacket) else detection.spatialCoordinates
-            Visualizer.putText(packet.frame, spatialsText(point).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
-            Visualizer.putText(packet.frame, spatialsText(point).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
-            Visualizer.putText(packet.frame, spatialsText(point).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
+        if packet._is_spatial_detection():
+            point = packet._get_spatials(detection) \
+                if isinstance(packet, TrackerPacket) \
+                else detection.spatialCoordinates
+            Visualizer.putText(packet.frame, spatials_text(point).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
+            Visualizer.putText(packet.frame, spatials_text(point).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
+            Visualizer.putText(packet.frame, spatials_text(point).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
 
         rectangle(packet.frame, bbox, color=color, thickness=1, radius=0)
         packet._add_detection(detection, bbox, txt, color)
 
-def drawTrackletId(packet: TrackerPacket):
+
+def draw_tracklet_id(packet: TrackerPacket):
     for det in packet.detections:
-        centroid = det.centroid()
-        Visualizer.print_on_roi(packet.frame, det.topLeft, det.bottomRight,
+        # centroid = det.centroid()
+        Visualizer.print_on_roi(packet.frame, det.top_left, det.bottom_right,
                                 f"Id: {str(det.tracklet.id)}",
                                 FramePosition.TopMid)
-def drawBreadcrumbTrail(packets: List[TrackerPacket]):
-    packet = packets[-1] # Current packet
 
-    dic: Dict[str, List[_TrackingDetection]] = {}
-    validIds = [t.id for t in packet.daiTracklets.tracklets]
-    for id in validIds:
-        dic[str(id)] = []
+
+def draw_breadcrumb_trail(packets: List[TrackerPacket]):
+    packet = packets[-1]  # Current packet
+
+    dict_: Dict[str, List[_TrackingDetection]] = {}
+    valid_ids = [t.id for t in packet.daiTracklets.tracklets]
+    for idx in valid_ids:
+        dict_[str(idx)] = []
 
     for packet in packets:
         for det in packet.detections:
-            if det.tracklet.id in validIds:
-                dic[str(det.tracklet.id)].append(det)
+            if det.tracklet.id in valid_ids:
+                dict_[str(det.tracklet.id)].append(det)
 
-    for id, list in dic.items():
-        for i in range(len(list) - 1):
-            Visualizer.line(packet.frame, list[i].centroid(), list[i+1].centroid(), color=list[i].color)
+    for idx, list_ in dict_.items():
+        for i in range(len(list_) - 1):
+            Visualizer.line(packet.frame, list_[i].centroid(), list_[i + 1].centroid(), color=list_[i].color)
 
 
-def colorizeDepth(depthFrame: Union[dai.ImgFrame, Any], colorMap=None):
-    if isinstance(depthFrame, dai.ImgFrame):
-        depthFrame = depthFrame.getFrame()
-    depthFrameColor = cv2.normalize(depthFrame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
-    depthFrameColor = cv2.equalizeHist(depthFrameColor)
-    return cv2.applyColorMap(depthFrameColor, colorMap if colorMap else color_map)
+def colorize_depth(depth_frame: Union[dai.ImgFrame, Any], color_map=None):
+    if isinstance(depth_frame, dai.ImgFrame):
+        depth_frame = depth_frame.getFrame()
 
-def colorizeDisparity(frame: Union[dai.ImgFrame, Any], multiplier: float, colorMap=None):
+    depth_frame_color = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
+    depth_frame_color = cv2.equalizeHist(depth_frame_color)
+
+    return cv2.applyColorMap(depth_frame_color, color_map or default_color_map)
+
+
+def colorize_disparity(frame: Union[dai.ImgFrame, Any], multiplier: float, color_map=None):
     if isinstance(frame, dai.ImgFrame):
         frame = frame.getFrame()
+
     frame = (frame * multiplier).astype(np.uint8)
-    return cv2.applyColorMap(frame, colorMap if colorMap else color_map)
 
-def drawBbMappings(depthFrame: Union[dai.ImgFrame, Any], bbMappings: dai.SpatialLocationCalculatorConfig):
-    depthFrameColor = colorizeDepth(depthFrame)
-    roiDatas = bbMappings.getConfigData()
-    for roiData in roiDatas:
-        roi = roiData.roi
-        roi = roi.denormalize(depthFrameColor.shape[1], depthFrameColor.shape[0])
-        topLeft = roi.topLeft()
-        bottomRight = roi.bottomRight()
-        xmin = int(topLeft.x)
-        ymin = int(topLeft.y)
-        xmax = int(bottomRight.x)
-        ymax = int(bottomRight.y)
+    return cv2.applyColorMap(frame, color_map or default_color_map)
 
-        rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), 255, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
 
-def calc_disp_multiplier(device: dai.Device, size: Tuple[int,int]) -> float:
+def draw_bb_mappings(depth_frame: Union[dai.ImgFrame, Any], bb_mappings: dai.SpatialLocationCalculatorConfig):
+    depth_frame_color = colorize_depth(depth_frame)
+    roi_datas = bb_mappings.getConfigData()
+    for roi_data in roi_datas:
+        roi = roi_data.roi
+        roi = roi.denormalize(depth_frame_color.shape[1], depth_frame_color.shape[0])
+        top_left = roi.topLeft()
+        bottom_right = roi.bottomRight()
+        xmin = int(top_left.x)
+        ymin = int(top_left.y)
+        xmax = int(bottom_right.x)
+        ymax = int(bottom_right.y)
+
+        # TODO may be an error? Does it call correct method?
+        rectangle(depth_frame_color, (xmin, ymin), (xmax, ymax), 255, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+
+
+def calc_disp_multiplier(device: dai.Device, size: Tuple[int, int]) -> float:
     calib = device.readCalibration()
     baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
     intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, size)
-    focalLength = intrinsics[0][0]
-    return baseline * focalLength
+    focal_length = intrinsics[0][0]
+    return baseline * focal_length
+
 
 def hex_to_bgr(hex: str) -> Tuple[int, int, int]:
     """
