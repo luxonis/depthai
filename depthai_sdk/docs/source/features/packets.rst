@@ -52,22 +52,46 @@ on the frame, so you can draw detections on the frame yourself.
 Reference
 #########
 
+FramePacket
+-----------
+
 .. autoclass:: depthai_sdk.FramePacket
     :members:
     :undoc-members:
+
+SpatialBbMappingPacket
+----------------------
 
 .. autoclass:: depthai_sdk.SpatialBbMappingPacket
     :members:
     :undoc-members:
 
+DetectionPacket
+---------------
+
 .. autoclass:: depthai_sdk.DetectionPacket
     :members:
     :undoc-members:
+
+TrackerPacket
+-------------
 
 .. autoclass:: depthai_sdk.TrackerPacket
     :members:
     :undoc-members:
 
+
+TwoStagePacket
+--------------
+
 .. autoclass:: depthai_sdk.TwoStagePacket
+    :members:
+    :undoc-members:
+
+
+IMUPacket
+---------
+
+.. autoclass:: depthai_sdk.IMUPacket
     :members:
     :undoc-members:

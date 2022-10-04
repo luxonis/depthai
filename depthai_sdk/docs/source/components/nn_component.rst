@@ -1,5 +1,5 @@
-NN Component
-============
+NNComponent
+===========
 
 Usage
 #####
@@ -17,6 +17,15 @@ Usage
         oak.visualize([nn.out.main, nn.out.passthrough], fps=True)
         # Start the pipeline, continuously poll
         oak.start(blocking=True)
+
+Component outputs
+#################
+
+- ``out.main`` - Default output. Streams NN results and high-res frames that were downscaled and used for inferencing. Produces :ref:`DetectionPacket` or :ref:`TwoStagePacket` (if it's 2. stage NNComponent).
+- ``out.passthrough`` - Default output. Streams NN results and passthrough frames (frames used for inferencing). Produces :ref:`DetectionPacket` or :ref:`TwoStagePacket` (if it's 2. stage NNComponent).
+- ``out.spatials`` - Streams depth and bounding box mappings (``SpatialDetectionNework.boundingBoxMapping``). Produces :ref:`SpatialBbMappingPacket`.
+- ``out.twostage_crops`` - Streams 2. stage cropped frames to the host. Produces :ref:`FramePacket`.
+- ``out.tracker`` - Streams `ObjectTracker's <https://docs.luxonis.com/projects/api/en/latest/components/nodes/object_tracker/>`__ tracklets and high-res frames that were downscaled and used for inferencing. Produces :ref:`TrackerPacket`.
 
 Reference
 #########

@@ -41,14 +41,3 @@ We recommend that you start with the :ref:`Getting started with DepthAI SDK`
    :caption: Features
 
    features/*
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Components:
-
-
-   components/components.rst
-   components/nn_component.rst
-   components/camera_component.rst
-   components/stereo_component.rst
