@@ -394,19 +394,14 @@ class OakCamera:
 
     def visualize(self,
                   output: Union[List, Callable, Component],
-                  scale: Union[None, float, Tuple[int, int]] = None,
-                  fps=False,
                   callback: Callable = None):
         """
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
         Args:
             output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
-            scale: Optionally scale the frame before it's displayed
-            fps: Show FPS of the output on the frame
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
         visualizer = NewVisualizer()
-
         self._callback(output, callback, visualizer)
         return visualizer
 
