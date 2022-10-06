@@ -1,6 +1,5 @@
-from depthai_sdk.visualize.configs import BboxStyle
-
 from depthai_sdk import OakCamera
+from depthai_sdk.visualize.configs import BboxStyle, TextPosition
 
 with OakCamera() as oak:
     camera = oak.create_camera('color')
@@ -11,8 +10,9 @@ with OakCamera() as oak:
         color=(0, 255, 0),
         thickness=2,
         bbox_style=BboxStyle.RECTANGLE,
+        label_position=TextPosition.MID,
     ).configure_text(
-        font_color=(0, 255, 0)
+        font_color=(255, 255, 0)
     )
 
     visualizer2 = oak.visualize(det.out.main)
@@ -20,26 +20,11 @@ with OakCamera() as oak:
         fill_transparency=0.7,
         thickness=3,
         bbox_style=BboxStyle.CORNERS,
-        hide_label=True
-    )
-
-    visualizer3 = oak.visualize(det.out.main)
-    visualizer3.configure_bbox(
-        fill_transparency=0.5,
-        box_roundness=25,
-        thickness=1,
-        bbox_style=BboxStyle.ROUNDED_RECTANGLE,
-        hide_label=True
-    )
-
-    visualizer4 = oak.visualize(det.out.main)
-    visualizer4.configure_bbox(
-        fill_transparency=0,
-        box_roundness=15,
-        thickness=1,
-        bbox_style=BboxStyle.ROUNDED_CORNERS,
+        label_position=TextPosition.BOTTOM_RIGHT,
     ).configure_text(
-        font_color=(0, 255, 255)
+        font_color=(0, 0, 0),
+        font_scale=2.0,
+        font_thickness=3
     )
 
     oak.start(blocking=True)
