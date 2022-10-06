@@ -5,19 +5,19 @@ from typing import Tuple
 import cv2
 
 
-class LabelPosition(IntEnum):
+class TextPosition(IntEnum):
     """Where on frame do we want to print text."""
-    TopLeft = 0
-    MidLeft = 1
-    BottomLeft = 2
+    TOP_LEFT = 0
+    MID_LEFT = 1
+    BOTTOM_LEFT = 2
 
-    TopMid = 10
-    Mid = 11
-    BottomMid = 12
+    TOP_MID = 10
+    MID = 11
+    BOTTOM_MID = 12
 
-    TopRight = 20
-    MidRight = 21
-    BottomRight = 22
+    TOP_RIGHT = 20
+    MID_RIGHT = 21
+    BOTTOM_RIGHT = 22
 
 
 class BboxStyle(IntEnum):
@@ -40,6 +40,7 @@ class DetectionConfig:
     line_width: float = 0.5
     line_height: float = 0.5
     hide_label: bool = False
+    label_position: TextPosition = TextPosition.TOP_LEFT
 
 
 @dataclass
@@ -50,7 +51,7 @@ class TextConfig:
     font_transparency: float = 0.5
     font_scale: float = 1.0
     font_thickness: int = 2
-    font_position: LabelPosition = LabelPosition.TopLeft
+    font_position: TextPosition = TextPosition.TOP_LEFT
 
     bg_transparency: float = 0.5
     bg_color: Tuple[int, int, int] = (0, 0, 0)

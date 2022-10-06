@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-from typing import Tuple, List
+from typing import Tuple, List, Union
 
 import cv2
 import numpy as np
 from depthai import ImgDetection
 
-from .configs import VisConfig, BboxStyle
+from .configs import VisConfig, BboxStyle, TextPosition
 from ..oak_outputs.normalize_bb import NormalizeBoundingBox
 
 
@@ -147,8 +147,8 @@ class VisDetections(VisObject):
             )
 
             if not self.config.detection.hide_label:
-                # Place label in the bounding box (top left corner)
-                VisText(text=label, coords=(normalized_bbox[0] + 5, normalized_bbox[1] + 25)) \
+                # Place label in the bounding box
+                VisText(text=label, bbox=normalized_bbox, position=self.config.detection.label_position) \
                     .set_config(self.config) \
                     .draw(frame)
 
@@ -165,33 +165,31 @@ class VisDetections(VisObject):
         roundness = int(self.config.detection.box_roundness)
 
         if self.config.detection.bbox_style == BboxStyle.RECTANGLE:
-            self.draw_bbox(img, pt1, pt2, color, thickness, 0,
-                           line_width=0,
-                           line_height=0)
+            self.draw_bbox(img, pt1, pt2, color, thickness, 0, line_width=0, line_height=0)
         elif self.config.detection.bbox_style == BboxStyle.CORNERS:
-            self.draw_bbox(img, pt1, pt2, color, thickness, 0,
-                           line_width=line_width,
-                           line_height=line_height)
+            self.draw_bbox(img, pt1, pt2, color, thickness, 0, line_width=line_width, line_height=line_height)
         elif self.config.detection.bbox_style == BboxStyle.ROUNDED_RECTANGLE:
-            self.draw_bbox(img, pt1, pt2, color, thickness, roundness,
-                           line_width=0,
-                           line_height=0)
+            self.draw_bbox(img, pt1, pt2, color, thickness, roundness, line_width=0, line_height=0)
         elif self.config.detection.bbox_style == BboxStyle.ROUNDED_CORNERS:
-            self.draw_bbox(img, pt1, pt2, color, thickness, roundness,
-                           line_width=line_width,
-                           line_height=line_height)
+            self.draw_bbox(img, pt1, pt2, color, thickness, roundness, line_width=line_width, line_height=line_height)
 
 
 class VisText(VisObject):
     def __init__(self,
                  text: str,
-                 coords: Tuple[int, int],
+                 coords: Tuple[int, int] = None,
+                 bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
+                 position: TextPosition = TextPosition.TOP_LEFT,
+                 padding: int = 10
                  ):
         super().__init__()
         self.text = text
         self.coords = coords
+        self.bbox = bbox
+        self.position = position
+        self.padding = padding
 
-    def draw(self, frame):
+    def draw(self, frame: np.ndarray) -> None:
         """
         Draw text on the frame.
 
@@ -202,6 +200,11 @@ class VisText(VisObject):
             None
         """
         text_config = self.config.text
+
+        self.coords = self.coords or self.get_relative_position(frame=frame,
+                                                                bbox=self.bbox,
+                                                                position=self.position,
+                                                                padding=self.padding)
 
         # Background
         cv2.putText(img=frame,
@@ -222,6 +225,45 @@ class VisText(VisObject):
                     color=text_config.font_color,
                     thickness=int(text_config.font_thickness),
                     lineType=text_config.line_type)
+
+    def get_relative_position(self,
+                              frame: np.ndarray,
+                              bbox: Union[np.ndarray, Tuple[int, int, int, int]],
+                              position: TextPosition,
+                              padding: int):
+        """
+        Get relative position of the text.
+        """
+        frame_h, frame_w = frame.shape[0], frame.shape[1]
+
+        if bbox is None:
+            bbox = (0, 0, frame_w, frame_h)
+
+        text_config = self.config.text
+        text_size = cv2.getTextSize(text=self.text,
+                                    fontFace=text_config.font_face,
+                                    fontScale=text_config.font_scale,
+                                    thickness=text_config.font_thickness)[0]
+
+        x, y = bbox[0], bbox[1]
+
+        y_pos = position.value % 10
+        if y_pos == 0:  # Y top
+            y = bbox[1] + text_size[1] + padding
+        elif y_pos == 1:  # Y mid
+            y = (bbox[1] + bbox[3]) // 2 + text_size[1] // 2
+        elif y_pos == 2:  # Y bottom
+            y = bbox[3] - padding
+
+        x_pos = position.value // 10
+        if x_pos == 0:  # X Left
+            x = bbox[0] + padding
+        elif x_pos == 1:  # X mid
+            x = (bbox[0] + bbox[2]) // 2 - text_size[0] // 2
+        elif x_pos == 2:  # X right
+            x = bbox[2] - text_size[0] - padding
+
+        return x, y
 
 
 class VisPolygon(VisObject):
