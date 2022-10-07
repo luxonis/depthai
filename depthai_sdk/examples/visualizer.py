@@ -3,9 +3,9 @@ from depthai_sdk.visualize.configs import BboxStyle, TextPosition
 
 with OakCamera() as oak:
     camera = oak.create_camera('color')
-    det = oak.create_nn('face-detection-retail-0004', camera)
+    det = oak.create_nn('face-detection-retail-0004', camera, tracker=True, spatial=True)
 
-    visualizer = oak.visualize(det.out.main)
+    visualizer = oak.visualize(det.out.tracker)
     visualizer.configure_bbox(
         color=(0, 255, 0),
         thickness=2,
@@ -13,18 +13,10 @@ with OakCamera() as oak:
         label_position=TextPosition.MID,
     ).configure_text(
         font_color=(255, 255, 0)
-    )
-
-    visualizer2 = oak.visualize(det.out.main)
-    visualizer2.configure_bbox(
-        fill_transparency=0.7,
-        thickness=3,
-        bbox_style=BboxStyle.CORNERS,
-        label_position=TextPosition.BOTTOM_RIGHT,
-    ).configure_text(
-        font_color=(0, 0, 0),
-        font_scale=2.0,
-        font_thickness=3
+    ).configure_output(
+        show_fps=True,
+    ).configure_tracking(
+        line_thickness=5
     )
 
     oak.start(blocking=True)
