@@ -1,6 +1,9 @@
 from typing import Tuple
-from ..components.nn_helper import AspectRatioResizeMode
+
 import numpy as np
+
+from ..components.nn_helper import AspectRatioResizeMode
+
 
 class NormalizeBoundingBox:
     """
@@ -20,6 +23,7 @@ class NormalizeBoundingBox:
         self.arResizeMode = arResizeMode
 
         pass
+
     def normalize(self, frame, bbox: Tuple[float, float, float, float]) -> np.ndarray:
         """
         Mapps bounding box coordinates (0..1) to pixel values on frame
