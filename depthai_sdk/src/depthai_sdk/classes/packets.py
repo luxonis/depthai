@@ -67,10 +67,10 @@ class DetectionPacket(FramePacket):
 
     def __init__(self,
                  name: str,
-                 imgFrame: dai.ImgFrame,
-                 imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]):
-        super().__init__(name, imgFrame, imgFrame.getCvFrame())
-        self.img_detections = imgDetections
+                 img_frame: dai.ImgFrame,
+                 img_detections: Union[dai.ImgDetections, dai.SpatialImgDetections]):
+        super().__init__(name, img_frame, img_frame.getCvFrame())
+        self.img_detections = img_detections
         self.detections = []
 
     def _is_spatial_detection(self) -> bool:
@@ -95,9 +95,9 @@ class TrackerPacket(FramePacket):
 
     def __init__(self,
                  name: str,
-                 imgFrame: dai.ImgFrame,
+                 img_frame: dai.ImgFrame,
                  tracklets: dai.Tracklets):
-        super().__init__(name, imgFrame, imgFrame.getCvFrame())
+        super().__init__(name, img_frame, img_frame.getCvFrame())
         self.daiTracklets = tracklets
         self.detections = []
 
@@ -110,7 +110,7 @@ class TrackerPacket(FramePacket):
         det.bottom_right = (bbox[2], bbox[3])
         self.detections.append(det)
 
-    def _isSpatialDetection(self) -> bool:
+    def _is_spatial_detection(self) -> bool:
         coords = self.daiTracklets.tracklets[0].spatialCoordinates
         return coords.x != 0.0 or coords.y != 0.0 or coords.z != 0.0
 
@@ -130,13 +130,13 @@ class TwoStagePacket(DetectionPacket):
     _cntr: int = 0  # Label counter
 
     def __init__(self, name: str,
-                 imgFrame: dai.ImgFrame,
-                 imgDetections: dai.ImgDetections,
-                 nnData: List[dai.NNData],
+                 img_frame: dai.ImgFrame,
+                 img_detections: dai.ImgDetections,
+                 nn_data: List[dai.NNData],
                  labels: List[int]):
-        super().__init__(name, imgFrame, imgDetections)
+        super().__init__(name, img_frame, img_detections)
         self.frame = self.imgFrame.getCvFrame()
-        self.nnData = nnData
+        self.nnData = nn_data
         self.labels = labels
         self._cntr = 0
 

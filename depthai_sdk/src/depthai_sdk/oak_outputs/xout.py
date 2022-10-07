@@ -7,8 +7,7 @@ import numpy as np
 from distinctipy import distinctipy
 
 from .normalize_bb import NormalizeBoundingBox
-from .visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, draw_detections, \
-    hex_to_bgr, draw_breadcrumb_trail, draw_tracklet_id
+from .visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 from .xout_base import XoutBase, StreamXout
 from ..classes.packets import (
     FramePacket,
@@ -19,6 +18,7 @@ from ..classes.packets import (
     IMUPacket
 )
 from ..visualize import NewVisualizer
+from ..visualize.configs import TextPosition
 
 """
 Xout classes are abstracting streaming messages to the host computer (via XLinkOut) and syncing those messages
@@ -55,21 +55,9 @@ class XoutFrames(XoutBase):
 
         if self._visualizer.config.show_fps:
             self._visualizer.add_text(
-                text=f'FPS: {self._fps.get_fps():.2f}',
-                coords=(10, 20),
-                scale=0.7
+                text=f'FPS: {self._fps.fps():.1f}',
+                position=TextPosition.TOP_LEFT
             )
-            # Visualizer.putText(packet.frame, "FPS: {:.1f}".format(self._fps.fps()), (10, 20), scale=0.7)
-
-        img_scale = self._visualizer.config.img_scale
-        if img_scale:
-            if isinstance(img_scale, Tuple):
-                packet.frame = cv2.resize(packet.frame, img_scale)  # Resize frame
-            elif isinstance(img_scale, float):
-                packet.frame = cv2.resize(packet.frame, (
-                    int(packet.frame.shape[1] * img_scale),
-                    int(packet.frame.shape[0] * img_scale)
-                ))
 
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet)
@@ -350,10 +338,12 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if isinstance(packet, TrackerPacket):
             pass
         else:
-            # draw_detections(packet, self.normalizer, self.labels)
-            self._visualizer.add_detections(packet.img_detections.detections,
+
+            self._visualizer.add_detections(packet.frame.shape,
+                                            packet.img_detections.detections,
                                             self.normalizer,
-                                            self.labels)
+                                            self.labels,
+                                            packet._is_spatial_detection())
 
         super().visualize(packet)
 
@@ -378,7 +368,22 @@ class XoutTracker(XoutNnResults):
         self.packets = []
 
     def visualize(self, packet: TrackerPacket):
-        draw_detections(packet, self.normalizer, self.labels)
+        try:
+            spatial_points = [packet._get_spatials(det.srcImgDetection)
+                                  for det in
+                                  packet.daiTracklets.tracklets]
+        except IndexError:
+            spatial_points = None
+
+        self._visualizer.add_detections(packet.frame.shape,
+                                        packet.daiTracklets.tracklets,
+                                        self.normalizer,
+                                        self.labels,
+                                        spatial_points=spatial_points)
+
+        # TODO accessing object like that is not good, further rework needed
+        for detection in self._visualizer.objects[-1].get_detections():
+            packet._add_detection(*detection)
 
         # Map tracklet to the TrackingDetection
         for tracklet in packet.daiTracklets.tracklets:
@@ -392,8 +397,18 @@ class XoutTracker(XoutNnResults):
         if 20 < len(self.packets):
             self.packets.pop(0)
 
-        draw_breadcrumb_trail(self.packets)
-        draw_tracklet_id(packet)
+        self._visualizer.add_trail(
+            detections=[p.detections for p in self.packets],
+            tracklets=[p.daiTracklets.tracklets for p in self.packets]
+        )
+
+        # Add trail id
+        for det in packet.detections:
+            self._visualizer.add_text(
+                f'ID: {det.tracklet.id}',
+                bbox=(*det.top_left, *det.bottom_right),
+                position=TextPosition.BOTTOM_RIGHT
+            )
 
         super().visualize(packet)
 

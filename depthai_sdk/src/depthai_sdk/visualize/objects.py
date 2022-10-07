@@ -1,12 +1,16 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Tuple, List, Union
 
 import cv2
+import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
 from .configs import VisConfig, BboxStyle, TextPosition
+from ..classes.packets import _TrackingDetection
 from ..oak_outputs.normalize_bb import NormalizeBoundingBox
+from ..oak_outputs.visualizer_helper import spatials_text
 
 
 class VisObject(ABC):
@@ -18,7 +22,7 @@ class VisObject(ABC):
         return self
 
     @abstractmethod
-    def draw(self, frame) -> None:
+    def draw(self, frame: np.ndarray) -> None:
         pass
 
     def draw_bbox(self,
@@ -114,19 +118,94 @@ class VisObject(ABC):
 
             cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
 
+    def draw_line(self,
+                  img: np.ndarray,
+                  pt1: Tuple[int, int],
+                  pt2: Tuple[int, int],
+                  color: Tuple[int, int, int],
+                  thickness: int,
+                  alpha: float = 0.0) -> None:
+        """
+        Draw a line on the image (in-place).
+
+        Args:
+            img: Image to draw on.
+            pt1: Start point of the line.
+            pt2: End point of the line.
+            color: Line color.
+            thickness: Line thickness.
+            alpha: Line transparency.
+
+        Returns:
+            None
+        """
+        tracking_config = self.config.tracking
+
+        # overlay = img.copy()
+
+        cv2.line(img, pt1, pt2,
+                 color or tracking_config.line_color,
+                 thickness or tracking_config.line_thickness,
+                 tracking_config.line_type)
+
+        # cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
+
 
 class VisDetections(VisObject):
     def __init__(self,
-                 detections: List[ImgDetection],
+                 frame_shape: Tuple[int, ...],
+                 detections: List[Union[ImgDetection, dai.Tracklet]],
                  normalizer: NormalizeBoundingBox,
-                 label_map: List[Tuple[str, Tuple]] = None):
+                 label_map: List[Tuple[str, Tuple]] = None,
+                 spatial_points: List[dai.Point3f] = None,
+                 is_spatial=False):
         super().__init__()
+        self.frame_shape = frame_shape
         self.detections = detections
         self.normalizer = normalizer
         self.label_map = label_map
+        self.spatial_points = spatial_points
+        self.is_spatial = is_spatial
 
-    def draw(self, frame):
+        self.bboxes = []
+        self.labels = []
+        self.colors = []
+
+        try:  # Check if the detections are of type _TrackingDetection
+            self.detections = [t.srcImgDetection for t in self.detections]
+        except AttributeError:
+            pass
+
+        self.process_detections()
+
+    def register_detection(self,
+                           bbox: Union[np.ndarray[Tuple[int, int, int, int]]],
+                           label: str,
+                           color: Tuple[int, int, int]) -> None:
+        self.bboxes.append(bbox)
+        self.labels.append(label)
+        self.colors.append(color)
+
+    def process_detections(self) -> None:
         for detection in self.detections:
+            # Get normalized bounding box
+            bbox = detection.xmin, detection.ymin, detection.xmax, detection.ymax
+            mock_frame = np.zeros(self.frame_shape, dtype=np.uint8)
+            normalized_bbox = self.normalizer.normalize(mock_frame, bbox)  # TODO can normalize accept frame shape?
+
+            if self.label_map:
+                label, color = self.label_map[detection.label]
+            else:
+                label = str(detection.label)
+                color = self.config.detection.color
+
+            self.register_detection(normalized_bbox, label, color)
+
+    def get_detections(self):
+        return zip(self.detections, self.bboxes, self.labels, self.colors)
+
+    def draw(self, frame: np.ndarray) -> None:
+        for i, detection in enumerate(self.detections):
             # Get normalized bounding box
             bbox = detection.xmin, detection.ymin, detection.xmax, detection.ymax
             normalized_bbox = self.normalizer.normalize(frame, bbox)
@@ -146,11 +225,28 @@ class VisDetections(VisObject):
                 thickness=self.config.detection.thickness
             )
 
+            self.register_detection(normalized_bbox, label, color)
+
+            if self.is_spatial or self.spatial_points:
+                try:
+                    spatial_point = detection.spatialCoordinates
+                except AttributeError:
+                    spatial_point = self.spatial_points[i]
+
+                spatial_coords = spatials_text(spatial_point)
+                VisText(spatial_coords.x, (normalized_bbox[0] + 5, normalized_bbox[1] + 50)) \
+                    .set_config(self.config).draw(frame)
+                VisText(spatial_coords.y, (normalized_bbox[0] + 5, normalized_bbox[1] + 75)) \
+                    .set_config(self.config).draw(frame)
+                VisText(spatial_coords.z, (normalized_bbox[0] + 5, normalized_bbox[1] + 100)) \
+                    .set_config(self.config).draw(frame)
+
             if not self.config.detection.hide_label:
                 # Place label in the bounding box
-                VisText(text=label, bbox=normalized_bbox, position=self.config.detection.label_position) \
-                    .set_config(self.config) \
-                    .draw(frame)
+                VisText(text=label,
+                        bbox=normalized_bbox,
+                        position=self.config.detection.label_position,
+                        padding=self.config.detection.label_padding).set_config(self.config).draw(frame)
 
     def draw_stylized_bbox(self,
                            img: np.ndarray,
@@ -230,7 +326,7 @@ class VisText(VisObject):
                               frame: np.ndarray,
                               bbox: Union[np.ndarray, Tuple[int, int, int, int]],
                               position: TextPosition,
-                              padding: int):
+                              padding: int) -> Tuple[int, int]:
         """
         Get relative position of the text.
         """
@@ -264,6 +360,40 @@ class VisText(VisObject):
             x = bbox[2] - text_size[0] - padding
 
         return x, y
+
+
+class VisTrail(VisObject):
+    def __init__(self,
+                 detections: List[List[_TrackingDetection]],
+                 tracklets: List[List[dai.Tracklet]]):
+        super().__init__()
+        self.detections = detections
+        self.tracklets = tracklets
+
+    def draw(self, frame: np.ndarray) -> None:
+        tracklet2detections = defaultdict(list)
+        valid_ids = [t.id for t in self.tracklets[-1]]
+
+        # Get detections for each ID
+        for detections in self.detections:
+            for detection in detections:
+                tracklet_id = detection.tracklet.id
+                if tracklet_id in valid_ids:
+                    tracklet2detections[tracklet_id].append(detection)
+
+        # Draw trails
+        for detections in tracklet2detections.values():
+            thicknesses = np.linspace(start=1,
+                                      stop=self.config.tracking.line_thickness,
+                                      num=len(detections)).astype(np.int16)
+
+            for i in range(len(detections) - 1):
+                pt1, pt2 = detections[i].centroid(), detections[i + 1].centroid()
+                self.draw_line(frame,
+                               pt1, pt2,
+                               color=detections[i].color,
+                               thickness=thicknesses[i],
+                               alpha=1.0)
 
 
 class VisPolygon(VisObject):

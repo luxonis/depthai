@@ -41,6 +41,7 @@ class DetectionConfig:
     line_height: float = 0.5
     hide_label: bool = False
     label_position: TextPosition = TextPosition.TOP_LEFT
+    label_padding: int = 10
 
 
 @dataclass
@@ -60,6 +61,15 @@ class TextConfig:
 
 
 @dataclass
+class TrackingConfig:
+    """Configuration for drawing tracking bounding boxes."""
+    line_thickness: int = 1
+    line_color: Tuple[int, int, int] = (255, 255, 255)
+    line_type = cv2.LINE_AA
+    bg_color: Tuple[int, int, int] = (0, 0, 0)
+
+
+@dataclass
 class VisConfig:
     """Configuration for visualizer."""
     img_scale: float = 1.0
@@ -67,3 +77,4 @@ class VisConfig:
 
     detection: DetectionConfig = field(default_factory=DetectionConfig)
     text: TextConfig = field(default_factory=TextConfig)
+    tracking: TrackingConfig = field(default_factory=TrackingConfig)
