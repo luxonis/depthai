@@ -53,6 +53,8 @@ class XoutFrames(XoutBase):
         Called from main thread if visualizer is not None
         """
 
+        self._visualizer.frame_shape = packet.frame.shape
+
         if self._visualizer.config.show_fps:
             self._visualizer.add_text(
                 text=f'FPS: {self._fps.fps():.1f}',
@@ -339,8 +341,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             pass
         else:
 
-            self._visualizer.add_detections(packet.frame.shape,
-                                            packet.img_detections.detections,
+            self._visualizer.add_detections(packet.img_detections.detections,
                                             self.normalizer,
                                             self.labels,
                                             packet._is_spatial_detection())
@@ -369,28 +370,30 @@ class XoutTracker(XoutNnResults):
 
     def visualize(self, packet: TrackerPacket):
         try:
-            spatial_points = [packet._get_spatials(det.srcImgDetection)
+            if packet._is_spatial_detection():
+                spatial_points = [packet._get_spatials(det.srcImgDetection)
                                   for det in
                                   packet.daiTracklets.tracklets]
+            else:
+                spatial_points = None
         except IndexError:
             spatial_points = None
 
-        self._visualizer.add_detections(packet.frame.shape,
-                                        packet.daiTracklets.tracklets,
+        self._visualizer.add_detections(packet.daiTracklets.tracklets,
                                         self.normalizer,
                                         self.labels,
                                         spatial_points=spatial_points)
 
         # TODO accessing object like that is not good, further rework needed
-        for detection in self._visualizer.objects[-1].get_detections():
-            packet._add_detection(*detection)
+        # for detection in self._visualizer.objects[-1].get_detections():
+        #     packet._add_detection(*detection)
 
         # Map tracklet to the TrackingDetection
-        for tracklet in packet.daiTracklets.tracklets:
-            for det in packet.detections:
-                if tracklet.srcImgDetection == det.img_detection:
-                    det.tracklet = tracklet
-                    break
+        # for tracklet in packet.daiTracklets.tracklets:
+        #     for det in packet.detections:
+        #         if tracklet.srcImgDetection == det.img_detection:
+        #             det.tracklet = tracklet
+        #             break
 
         # Add to local storage
         self.packets.append(packet)
@@ -398,15 +401,19 @@ class XoutTracker(XoutNnResults):
             self.packets.pop(0)
 
         self._visualizer.add_trail(
-            detections=[p.detections for p in self.packets],
-            tracklets=[p.daiTracklets.tracklets for p in self.packets]
+            tracklets=[t for p in self.packets for t in p.daiTracklets.tracklets],
+            label_map=self.labels
         )
 
         # Add trail id
-        for det in packet.detections:
+        h, w = packet.frame.shape[:2]
+        for tracklet in packet.daiTracklets.tracklets:
+            det = tracklet.srcImgDetection
+            bbox = (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)
+            bbox = tuple(map(int, bbox))
             self._visualizer.add_text(
-                f'ID: {det.tracklet.id}',
-                bbox=(*det.top_left, *det.bottom_right),
+                f'ID: {tracklet.id}',
+                bbox=bbox,
                 position=TextPosition.BOTTOM_RIGHT
             )
 

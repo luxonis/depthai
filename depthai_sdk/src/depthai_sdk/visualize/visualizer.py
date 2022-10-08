@@ -1,3 +1,4 @@
+import json
 import os
 from dataclasses import replace
 from enum import Enum
@@ -9,8 +10,8 @@ import numpy as np
 from depthai import ImgDetection
 
 from .configs import VisConfig, TextPosition
+from .encoder import JSONEncoder
 from .objects import VisDetections, VisObject, VisText, VisTrail
-from ..classes.packets import _TrackingDetection
 from ..oak_outputs.normalize_bb import NormalizeBoundingBox
 
 
@@ -31,10 +32,13 @@ class NewVisualizer:
 
     # Fields
     objects: List[VisObject]
+    config: VisConfig
+    _frame_shape: Optional[Tuple[int, ...]]
 
     def __init__(self):
         self.platform: Platform = self._detect_platform()
         self.objects: List[VisObject] = []
+        self._frame_shape = None
 
         self.config = VisConfig()
 
@@ -42,18 +46,20 @@ class NewVisualizer:
         return Platform.ROBOTHUB if self.IS_INTERACTIVE else Platform.PC
 
     def add_object(self, obj: VisObject) -> 'NewVisualizer':
+        obj = obj.set_config(self.config).set_frame_shape(self.frame_shape).prepare()
         self.objects.append(obj)
         return self
 
     def add_detections(self,
-                       frame_shape: Tuple[int, ...],
                        detections: List[Union[ImgDetection, dai.Tracklet]],
                        normalizer: NormalizeBoundingBox,
                        label_map: List[Tuple[str, Tuple]] = None,
                        spatial_points: List[dai.Point3f] = None,
                        is_spatial=False) -> 'NewVisualizer':
-        detection_overlay = VisDetections(frame_shape, detections, normalizer,
-                                          label_map, spatial_points, is_spatial)
+        detection_overlay = VisDetections(
+            detections, normalizer, label_map, spatial_points, is_spatial
+        )
+
         self.add_object(detection_overlay)
         return self
 
@@ -68,16 +74,16 @@ class NewVisualizer:
         return self
 
     def add_trail(self,
-                  detections: List[List[_TrackingDetection]],
-                  tracklets: List[List[dai.Tracklet]]) -> 'NewVisualizer':
-        trail = VisTrail(detections, tracklets)
+                  tracklets: List[dai.Tracklet],
+                  label_map: List[Tuple[str, Tuple]]) -> 'NewVisualizer':
+        trail = VisTrail(tracklets, label_map)
         self.add_object(trail)
         return self
 
     def draw(self, frame: np.ndarray, name: Optional[str] = 'Frames') -> None:
         if self.IS_INTERACTIVE:
             for obj in self.objects:
-                obj.set_config(self.config).draw(frame)
+                obj.draw(frame)
 
             img_scale = self.config.img_scale
             if img_scale:
@@ -91,9 +97,11 @@ class NewVisualizer:
 
             cv2.imshow(name, frame)
 
-            self.objects.clear()  # Clear objects after drawing
         else:
-            pass  # TODO encode/serialize and send everything to robothub
+            print(json.dumps(self.serialize()))
+
+        self.objects.clear()  # Clear objects
+        # pass  # TODO encode/serialize and send everything to robothub
 
     def configure_output(self, **kwargs: dict) -> 'NewVisualizer':
         self.config = replace(self.config, **kwargs)
@@ -116,6 +124,20 @@ class NewVisualizer:
         overlays = sorted(self.objects, key=lambda overlay: overlay_priority[type(overlay)])
         self.objects = overlays
 
-    def serialize(self) -> dict:
-        # TODO serialization
-        pass
+    @property
+    def frame_shape(self) -> Tuple[int, ...]:
+        return self._frame_shape
+
+    @frame_shape.setter
+    def frame_shape(self, shape: Tuple[int, ...]) -> None:
+        self._frame_shape = shape
+
+    def serialize(self):
+        parent = {'platform': self.platform.value,
+                  'frame_shape': self.frame_shape,
+                  'config': self.config,
+                  'objects': [obj.serialize() for obj in self.objects]}
+        with open('vis.json', 'w') as f:
+            json.dump(parent, f, cls=JSONEncoder)
+
+        return json.dumps(parent, cls=JSONEncoder)
