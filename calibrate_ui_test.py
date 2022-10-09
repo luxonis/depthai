@@ -1,47 +1,3 @@
-import cv2
-from multiprocessing import Process, Pipe
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt, QTimer
-import time
-
-import calibrate
-
-
-# wrapper to run the camera in another process
-def run_main_camera(options, show_img=cv2.imshow, wait_key=cv2.waitKey):
-    main = calibrate.Main(options, show_img, wait_key)
-    main.run()
-
-
-class MyImage(QtWidgets.QWidget):
-    def __init__(self, title='Charuco', location=(0, 0), prew_width=1280, prew_height=800):
-        super().__init__()
-        border = 52
-        layout = QtWidgets.QVBoxLayout()
-        self.setWindowTitle(title)
-        self.setWindowIcon(QtGui.QIcon('Assets/logo.png'))
-        width, height = location
-        self.move(width, height)
-        self.image = QtWidgets.QLabel('Camera')
-        self.image.resize(prew_width - border, prew_height - border)
-        layout.addWidget(self.image)
-        self.setLayout(layout)
-        self.pixmap = QtGui.QPixmap("Assets/charuco.png")
-        self.pixmap = self.pixmap.scaled(prew_width-border, prew_height-border,
-                                         QtCore.Qt.KeepAspectRatio)
-        self.image.setPixmap(self.pixmap)
-
-    def resizeEvent(self, a0: QtGui.QResizeEvent) -> None:
-        border = 52
-        print(self.geometry())
-        self.pixmap = QtGui.QPixmap("Assets/charuco.png")
-        self.pixmap = self.pixmap.scaled(self.frameGeometry().width()-border, self.frameGeometry().height()-border,
-                                         QtCore.Qt.KeepAspectRatio)
-        self.image.setPixmap(self.pixmap)
-        self.image.resize(self.geometry().width()-border, self.geometry().height()-border)
-
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
@@ -363,95 +319,11 @@ class Ui_MainWindow(object):
         self.connect_but.setText(_translate("MainWindow", "Connect"))
 
 
-    def show_charuco(self):
-        if self.charuco_check.isChecked():
-            if not hasattr(self, 'charuco'):
-                self.charuco = MyImage()
-            self.charuco.show()
-        else:
-            if hasattr(self, 'charuco'):
-                self.charuco.hide()
-
-    def convert_cv_qt(self, cv_img):
-        """Convert from an opencv image to QPixmap"""
-        rgb_image = cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)
-        h, w, ch = rgb_image.shape
-        bytes_per_line = ch * w
-        convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(self.display_width, self.display_height, Qt.KeepAspectRatio)
-        return QPixmap.fromImage(p)
-
-    def update_image(self):
-        self.image.setScaledContents(True)
-        result = self.image_in.poll(2 / self.options['fps'])
-        if self.camera.is_alive():
-            if result:
-                if not hasattr(self, 'camera'):
-                    self.image.setPixmap(self.camera_pixmap)
-                    return
-                if not self.connect_but.isEnabled():
-                    self.connect_but.setEnabled(True)
-                    self.connect_but.setText("Disconnect")
-                capture = self.image_in.recv()
-                capture = self.convert_cv_qt(capture)
-                self.image.setPixmap(capture)
-                if self.old_display_width != capture.width() or self.old_display_height != capture.height():
-                    self.image.resize(capture.width(), capture.height())
-                    self.old_display_width = capture.width()
-                    self.old_display_height = capture.height()
-        else:
-            if not self.connect_but.isEnabled():
-                self.connect_but.setEnabled(True)
-
-    def resize_call(self, a0: QtGui.QResizeEvent) -> None:
-        border = 52
-        self.logs_box.setGeometry(QtCore.QRect(20, self.mainWindow.geometry().height()-border-191, 901, 191))
-        self.display_width = self.mainWindow.geometry().width() - border - 280
-        self.display_height = self.mainWindow.geometry().height() - border - 191
-        if not hasattr(self, 'camera'):
-            self.camera_pixmap = self.camera_pixmap.scaled(self.display_width, self.display_height, Qt.KeepAspectRatio)
-            self.image.resize(self.camera_pixmap.size().width(), self.camera_pixmap.size().height())
-
-    def camera_connect(self):
-        self.connect_but.setDisabled(True)
-        self.mainWindow.repaint()
-        if not hasattr(self, 'camera'):
-            self.options['squareSizeCm'] = self.square_size_in.value()
-            self.options['invert_h'] = self.mirror_check.isChecked()
-            self.key_out, self.key_in = Pipe()
-            self.image_in, self.image_out = Pipe()
-            self.camera = Process(target=run_main_camera, args=(self.options, self.image_out, self.key_in,))
-            self.camera.start()
-            self.timer.start(1000 // self.options['fps'])
-        else:
-            self.connect_but.setDisabled(True)
-            time.sleep(0.5)
-            self.camera.terminate()
-            self.image_in.close()
-            self.image_out.close()
-            self.key_out.close()
-            self.key_in.close()
-            del self.image_in
-            del self.image_out
-            del self.key_out
-            del self.key_in
-            self.camera.join()
-            self.camera.close()
-            del self.camera
-            self.image.setPixmap(self.camera_pixmap)
-            self.connect_but.setText("Connect")
-            self.connect_but.setEnabled(True)
-            self.timer.stop()
-
-    def capture(self):
-        self.key_out.send(' ')
-
-
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
-    ui.retranslateUi(MainWindow)
+    ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
