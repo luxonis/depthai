@@ -82,9 +82,9 @@ class StereoComponent(Component):
             # TODO: use self._args to setup the StereoDepth node
 
             if isinstance(self.left, CameraComponent):
-                self.left = self.left.node # CameraComponent -> node
+                self.left = self.left.node  # CameraComponent -> node
             if isinstance(self.right, CameraComponent):
-                self.right = self.right.node # CameraComponent -> node
+                self.right = self.right.node  # CameraComponent -> node
 
             # Connect Mono cameras to the StereoDepth node
             self.left.out.link(self.node.left)
@@ -144,10 +144,13 @@ class StereoComponent(Component):
     """
     Available outputs (to the host) of this component
     """
+
     class Out:
         _comp: 'StereoComponent'
+
         def __init__(self, stereoComponent: 'StereoComponent'):
             self._comp = stereoComponent
+
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             # By default, we want to show disparity
             return self.depth(pipeline, device)
