@@ -20,12 +20,6 @@ class Platform(Enum):
     PC = 'pc'
 
 
-overlay_priority = {
-    VisDetections: 0,
-    VisText: 1
-}
-
-
 class NewVisualizer:
     # Constants
     IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt'
@@ -41,9 +35,6 @@ class NewVisualizer:
         self._frame_shape = None
 
         self.config = VisConfig()
-
-    def _detect_platform(self) -> Platform:
-        return Platform.ROBOTHUB if self.IS_INTERACTIVE else Platform.PC
 
     def add_object(self, obj: VisObject) -> 'NewVisualizer':
         obj = obj.set_config(self.config).set_frame_shape(self.frame_shape).prepare()
@@ -81,14 +72,27 @@ class NewVisualizer:
         return self
 
     def draw(self, frame: np.ndarray, name: Optional[str] = 'Frames') -> None:
+        """
+        Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
+        and #TODO finish docstring.
+
+        Args:
+            frame: The frame to draw on.
+            name: The name of the displayed window.
+
+        Returns:
+            None
+        """
         if self.IS_INTERACTIVE:
+            # Draw overlays
             for obj in self.objects:
                 obj.draw(frame)
 
+            # Resize frame if needed
             img_scale = self.config.img_scale
             if img_scale:
                 if isinstance(img_scale, Tuple):
-                    frame = cv2.resize(frame, img_scale)  # Resize frame
+                    frame = cv2.resize(frame, img_scale)
                 elif isinstance(img_scale, float) and img_scale != 1.0:
                     frame = cv2.resize(frame, (
                         int(frame.shape[1] * img_scale),
@@ -96,12 +100,23 @@ class NewVisualizer:
                     ))
 
             cv2.imshow(name, frame)
-
         else:
             print(json.dumps(self.serialize()))
+            # TODO encode/serialize and send everything to robothub
 
         self.objects.clear()  # Clear objects
-        # pass  # TODO encode/serialize and send everything to robothub
+
+    def serialize(self) -> str:
+        parent = {
+            'platform': self.platform.value,
+            'frame_shape': self.frame_shape,
+            'config': self.config,
+            'objects': [obj.serialize() for obj in self.objects]
+        }
+        # with open('vis.json', 'w') as f:
+        #     json.dump(parent, f, cls=JSONEncoder)
+
+        return json.dumps(parent, cls=JSONEncoder)
 
     def configure_output(self, **kwargs: dict) -> 'NewVisualizer':
         self.config = replace(self.config, **kwargs)
@@ -119,10 +134,8 @@ class NewVisualizer:
         self.config.tracking = replace(self.config.tracking, **kwargs)
         return self
 
-    def sort_objects(self) -> None:
-        """Sort overlays by priority (in-place)."""
-        overlays = sorted(self.objects, key=lambda overlay: overlay_priority[type(overlay)])
-        self.objects = overlays
+    def _detect_platform(self) -> Platform:
+        return Platform.PC if self.IS_INTERACTIVE else Platform.ROBOTHUB
 
     @property
     def frame_shape(self) -> Tuple[int, ...]:
@@ -131,13 +144,3 @@ class NewVisualizer:
     @frame_shape.setter
     def frame_shape(self, shape: Tuple[int, ...]) -> None:
         self._frame_shape = shape
-
-    def serialize(self):
-        parent = {'platform': self.platform.value,
-                  'frame_shape': self.frame_shape,
-                  'config': self.config,
-                  'objects': [obj.serialize() for obj in self.objects]}
-        with open('vis.json', 'w') as f:
-            json.dump(parent, f, cls=JSONEncoder)
-
-        return json.dumps(parent, cls=JSONEncoder)
