@@ -13,7 +13,7 @@ and linking. This improves ease of use when developing OAK aplications.
 
 **Reference**
 
-.. autoclass:: depthai_sdk.components.Component
+.. autoclass:: depthai_sdk.Component
     :members:
     :undoc-members:
 

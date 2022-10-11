@@ -22,7 +22,6 @@ Component outputs
 - ``out.disparity`` - Streams `StereoDepth's <https://docs.luxonis.com/projects/api/en/latest/components/nodes/stereo_depth/>`__ disparity frames to the host. When visualized, these get normalized and colorized. Produces :ref:`FramePacket`.
 - ``out.depth`` - Streams `StereoDepth's <https://docs.luxonis.com/projects/api/en/latest/components/nodes/stereo_depth/>`__ depth frames to the host. When visualized, depth gets converted to disparity (for nicer visualization), normalized and colorized. Produces :ref:`FramePacket`.
 
-
 Reference
 #########
 
