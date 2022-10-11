@@ -59,6 +59,8 @@ class TextConfig:
 
     line_type = cv2.LINE_AA
 
+    auto_scale: bool = True
+
 
 @dataclass
 class TrackingConfig:

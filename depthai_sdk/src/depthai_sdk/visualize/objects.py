@@ -317,12 +317,20 @@ class VisText(VisObject):
 
         text_config = self.config.text
 
+        # Extract shape of the bbox if exists
+        if self.bbox is not None:
+            shape = self.bbox[2] - self.bbox[0], self.bbox[3] - self.bbox[1]
+        else:
+            shape = frame.shape[:2]
+
+        font_scale = min(shape) / (1000 if self.bbox is None else 200) if text_config.auto_scale else text_config.font_scale
+
         # Background
         cv2.putText(img=frame,
                     text=self.text,
                     org=self.coords,
                     fontFace=text_config.font_face,
-                    fontScale=text_config.font_scale,
+                    fontScale=font_scale,
                     color=text_config.bg_color,
                     thickness=int(text_config.font_scale * 3),
                     lineType=text_config.line_type)
@@ -332,7 +340,7 @@ class VisText(VisObject):
                     text=self.text,
                     org=self.coords,
                     fontFace=text_config.font_face,
-                    fontScale=text_config.font_scale,
+                    fontScale=font_scale,
                     color=text_config.font_color,
                     thickness=int(text_config.font_thickness),
                     lineType=text_config.line_type)
@@ -350,9 +358,18 @@ class VisText(VisObject):
             bbox = (0, 0, frame_w, frame_h)
 
         text_config = self.config.text
+
+        # Extract shape of the bbox if exists
+        if self.bbox is not None:
+            shape = self.bbox[2] - self.bbox[0], self.bbox[3] - self.bbox[1]
+        else:
+            shape = self.frame_shape[:2]
+
+        font_scale = min(shape) / (1000 if self.bbox is None else 200) if text_config.auto_scale else text_config.font_scale
+
         text_size = cv2.getTextSize(text=self.text,
                                     fontFace=text_config.font_face,
-                                    fontScale=text_config.font_scale,
+                                    fontScale=font_scale,
                                     thickness=text_config.font_thickness)[0]
 
         x, y = bbox[0], bbox[1]
