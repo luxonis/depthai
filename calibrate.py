@@ -77,7 +77,7 @@ def parse_args():
     parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
                         help="Disable rgb camera Calibration")
     parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
-                        help="Interchange Left and right camera port.")
+                        help="Interchange Left and right camera port. This supersedes the setting in your board file")
     parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
@@ -195,7 +195,7 @@ class Main:
         xout_left = pipeline.createXLinkOut()
         xout_right = pipeline.createXLinkOut()
 
-        if self.args.swapLR:
+        if self.args.swapLR or self.board_config['board_config']['swap_left_and_right_cameras']:
             cam_left.setBoardSocket(dai.CameraBoardSocket.RIGHT)
             cam_right.setBoardSocket(dai.CameraBoardSocket.LEFT)
         else:
@@ -553,7 +553,8 @@ class Main:
 
             left = dai.CameraBoardSocket.LEFT
             right = dai.CameraBoardSocket.RIGHT
-            if self.args.swapLR:
+
+            if self.args.swapLR or self.board_config['board_config']['swap_left_and_right_cameras']:
                 left = dai.CameraBoardSocket.RIGHT
                 right = dai.CameraBoardSocket.LEFT
 
