@@ -47,6 +47,14 @@ class FramePacket:
         self.frame = frame
 
 
+class DisparityPacket(FramePacket):
+    mono_frame: dai.ImgFrame
+
+    def __init__(self, name: str, disparity_frame: dai.ImgFrame, mono_frame: dai.ImgFrame):
+        super().__init__(name, disparity_frame, disparity_frame.getCvFrame())
+        self.mono_frame = mono_frame
+
+
 class SpatialBbMappingPacket(FramePacket):
     """
     Output from Spatial Detection nodes - depth frame + bounding box mappings. Inherits FramePacket.

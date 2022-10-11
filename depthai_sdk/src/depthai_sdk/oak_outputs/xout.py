@@ -23,7 +23,7 @@ from ..classes.packets import (
     DetectionPacket,
     TwoStagePacket,
     TrackerPacket,
-    IMUPacket
+    IMUPacket, DisparityPacket
 )
 from ..visualize import NewVisualizer
 from ..visualize.configs import TextPosition
@@ -149,14 +149,100 @@ class XoutDisparity(XoutFrames):
     multiplier: float
     fps: float
 
-    def __init__(self, frames: StreamXout, max_disp: float, fps: float):
-        super().__init__(frames)
+    def __init__(self,
+                 disparity_frames: StreamXout,
+                 mono_frames: StreamXout,
+                 max_disp: float,
+                 fps: float,
+                 colorize: bool = False,
+                 use_wls_filter: bool = None,
+                 wls_lambda: float = None,
+                 wls_sigma: float = None):
+        self.mono_frames = mono_frames
+
         self.multiplier = 255.0 / max_disp
         self.fps = fps
 
-    def visualize(self, packet: FramePacket):
-        packet.frame = colorize_disparity(packet.imgFrame, self.multiplier)
+        self.colorize = colorize
+        self.use_wls_filter = use_wls_filter
+        if use_wls_filter:
+            self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
+            self.wls_filter.setLambda(wls_lambda)
+            self.wls_filter.setSigmaColor(wls_sigma)
+
+        self.msgs = dict()
+
+        super().__init__(disparity_frames)
+
+    def visualize(self, packet: DisparityPacket):
+        # ref https://github.com/luxonis/depthai-experiments/blob/master/gen2-wls-filter/main.py
+        # todo remove hardcoded values
+        frame = packet.frame
+        mono_frame = packet.mono_frame.getCvFrame()
+
+        if self.use_wls_filter:
+            # baseline = 75
+            # fov = 71.86
+            #
+            # focal = frame.shape[1] / (2. * np.tan(np.radians(fov / 2)))
+            # depth_scale_factor = baseline * focal
+
+            frame = (frame * self.multiplier).astype(np.uint8)
+            filtered_disp = self.wls_filter.filter(frame, mono_frame)
+
+            # # Compute depth from disparity (32 levels)
+            # with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
+            #     # raw depth values
+            #     depth_frame = (depth_scale_factor / filtered_disp).astype(np.uint16)
+
+            packet.frame = filtered_disp
+        else:
+            packet.frame = (frame * self.multiplier).astype(np.uint8)
+
+        if self.colorize:
+            packet.frame = cv2.applyColorMap(packet.frame, cv2.COLORMAP_TURBO)
+
         super().visualize(packet)
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames, self.mono_frames]
+
+    def newMsg(self, name: str, msg: dai.Buffer) -> None:
+        if name not in self._streams:
+            return  # From Replay modules. TODO: better handling?
+
+        # TODO: what if msg doesn't have sequence num?
+        seq = str(msg.getSequenceNum())
+
+        if seq not in self.msgs:
+            self.msgs[seq] = dict()
+            # self.msgs[seq][self.frames.name] = []
+            # self.msgs[seq][self.mono_frames.name] = None
+
+        if name == self.frames.name:
+            self.msgs[seq][name] = msg
+            # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
+        elif name == self.mono_frames.name:
+            self.msgs[seq][name] = msg
+        else:
+            raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
+        if len(self.msgs[seq]) == len(self.xstreams()):
+            # Frames synced!
+            if self.queue.full():
+                self.queue.get()  # Get one, so queue isn't full
+
+            packet = DisparityPacket(
+                self.frames.name,
+                self.msgs[seq][self.frames.name],
+                self.msgs[seq][self.mono_frames.name],
+            )
+            self.queue.put(packet, block=False)
+
+            newMsgs = {}
+            for name, msg in self.msgs.items():
+                if int(name) > int(seq):
+                    newMsgs[name] = msg
+            self.msgs = newMsgs
 
 
 class XoutDepth(XoutFrames):
@@ -385,10 +471,10 @@ class XoutTracker(XoutNnResults):
         except IndexError:
             spatial_points = None
 
-        self._visualizer.add_detections(packet.daiTracklets.tracklets,
-                                        self.normalizer,
-                                        self.labels,
-                                        spatial_points=spatial_points)
+        # self._visualizer.add_detections(packet.daiTracklets.tracklets,
+        #                                 self.normalizer,
+        #                                 self.labels,
+        #                                 spatial_points=spatial_points)
 
         # Add to local storage
         self.packets.append(packet)
@@ -406,11 +492,14 @@ class XoutTracker(XoutNnResults):
             det = tracklet.srcImgDetection
             bbox = (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)
             bbox = tuple(map(int, bbox))
+            print(bbox)
             self._visualizer.add_text(
                 f'ID: {tracklet.id}',
                 bbox=bbox,
-                position=TextPosition.BOTTOM_RIGHT
+                position=TextPosition.MID
             )
+
+            cv2.rectangle(packet.frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
 
         super().visualize(packet)
 

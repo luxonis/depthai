@@ -64,6 +64,12 @@ class StereoComponent(Component):
         self.node = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
+        # Configuration variables
+        self._colorize = False
+        self._use_wls_filter = False
+        self._wls_lambda = 8000
+        self._wls_sigma = 1.5
+
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._replay:
             self._replay.initStereoDepth(self.node)
@@ -128,6 +134,16 @@ class StereoComponent(Component):
         if sigma: self.node.initialConfig.setBilateralFilterSigma(sigma)
         if lrCheckThreshold: self.node.initialConfig.setLeftRightCheckThreshold(lrCheckThreshold)
 
+    def configure_postprocessing(self,
+                                 colorize: bool = None,
+                                 wls_filter: bool = None,
+                                 wls_lambda: float = None,
+                                 wls_sigma: float = None) -> None:
+        self._colorize = colorize or self._colorize
+        self._use_wls_filter = wls_filter or self._use_wls_filter
+        self._wls_lambda = wls_lambda or self._wls_lambda
+        self._wls_sigma = wls_sigma or self._wls_sigma
+
     def _get_disparity_factor(self, device: dai.Device) -> float:
         """
         Calculates the disparity factor used to calculate depth from disparity.
@@ -157,11 +173,26 @@ class StereoComponent(Component):
 
         def disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             fps = self._comp.left.getFps() if self._comp._replay is None else self._comp._replay.getFps()
+
             out = XoutDisparity(
                 StreamXout(self._comp.node.id, self._comp.disparity),
+                StreamXout(self._comp.node.id, self._comp.right.out),
                 self._comp.node.getMaxDisparity(),
-                fps
+                fps,
+                colorize=self._comp._colorize,
+                use_wls_filter=self._comp._use_wls_filter,
+                wls_lambda=self._comp._wls_lambda,
+                wls_sigma=self._comp._wls_sigma
             )
+
+            # out = XoutDisparity(
+            #     StreamXout(self._comp.node.id, self._comp.disparity),
+            #     self._comp.node.getMaxDisparity(),
+            #     fps,
+            #     use_wls_filter=self._comp._wls_filter,
+            #     wls_lambda=self._comp._wls_lambda,
+            #     wls_sigma=self._comp._wls_sigma
+            # )
             return self._comp._create_xout(pipeline, out)
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
