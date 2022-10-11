@@ -1,10 +1,18 @@
+import sys
+import time
 from abc import abstractmethod
+from threading import Thread
 from typing import Dict, List, Any, Optional, Tuple, Union
 
 import cv2
 import depthai as dai
 import numpy as np
+
 from distinctipy import distinctipy
+
+import PyQt5
+import pyqtgraph as pg
+from matplotlib import pyplot as plt
 
 from .normalize_bb import NormalizeBoundingBox
 from .visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
@@ -41,7 +49,6 @@ class XoutFrames(XoutBase):
     def __init__(self, frames: StreamXout, fps: float = 30):
         self.frames = frames
         self.fps = fps
-        self._visualizer = None
         super().__init__()
 
     def setup_visualize(self, visualizer: NewVisualizer, name: str = None):
@@ -338,13 +345,12 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         # TODO add support for packet._is_spatial_detection() == True case
         if isinstance(packet, TrackerPacket):
-            pass
+            pass  # TrackerPacket draws detection boxes itself
         else:
-
             self._visualizer.add_detections(packet.img_detections.detections,
                                             self.normalizer,
                                             self.labels,
-                                            packet._is_spatial_detection())
+                                            is_spatial=packet._is_spatial_detection())
 
         super().visualize(packet)
 
@@ -383,17 +389,6 @@ class XoutTracker(XoutNnResults):
                                         self.normalizer,
                                         self.labels,
                                         spatial_points=spatial_points)
-
-        # TODO accessing object like that is not good, further rework needed
-        # for detection in self._visualizer.objects[-1].get_detections():
-        #     packet._add_detection(*detection)
-
-        # Map tracklet to the TrackingDetection
-        # for tracklet in packet.daiTracklets.tracklets:
-        #     for det in packet.detections:
-        #         if tracklet.srcImgDetection == det.img_detection:
-        #             det.tracklet = tracklet
-        #             break
 
         # Add to local storage
         self.packets.append(packet)
@@ -596,13 +591,97 @@ class XoutIMU(XoutBase):
     name: str = 'IMU'
     imu_out: StreamXout
 
+    packets: List[IMUPacket]
+    start_time: float
+
     def __init__(self, imu_xout: StreamXout):
         self.imu_out = imu_xout
+        self.packets = []
+        self.start_time = 0.0
+
+        self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
+        labels = ['x', 'y', 'z']
+
+        self.acceleration_lines = []
+        for i in range(3):
+            self.acceleration_lines.append(self.axes[0].plot([], [], label=f'Acceleration {labels[i]}')[0])
+            self.axes[0].set_ylabel('Acceleration (m/s^2)')
+            self.axes[0].set_xlabel('Time (s)')
+            self.axes[0].legend()
+
+        self.gyroscope_lines = []
+        for i in range(3):
+            self.gyroscope_lines.append(self.axes[1].plot([], [], label=f'Gyroscope {labels[i]}')[0])
+            self.axes[1].set_ylabel('Gyroscope (rad/s)')
+            self.axes[1].set_xlabel('Time (s)')
+            self.axes[1].legend()
+
+        self.acceleration_buffer = []
+        self.gyroscope_buffer = []
 
         super().__init__()
 
-    def visualize(self, packet: TrackerPacket):
-        raise NotImplementedError('IMU visualization not implemented')
+    def setup_visualize(self, visualizer: NewVisualizer, name: str = None):
+        self._visualizer = visualizer
+        self.name = name or self.name
+
+    def visualize(self, packet: IMUPacket):
+        if self.start_time == 0.0:
+            self.start_time = packet.data[0].acceleroMeter.timestamp.get()
+
+        acceleration_x = [el.acceleroMeter.x for el in packet.data]
+        acceleration_z = [el.acceleroMeter.y for el in packet.data]
+        acceleration_y = [el.acceleroMeter.z for el in packet.data]
+
+        t_acceleration = [(el.acceleroMeter.timestamp.get() - self.start_time).total_seconds() for el in packet.data]
+
+        # Keep only last 100 values
+        if len(self.acceleration_buffer) > 100:
+            self.acceleration_buffer.pop(0)
+
+        self.acceleration_buffer.append([t_acceleration, acceleration_x, acceleration_y, acceleration_z])
+
+        gyroscope_x = [el.gyroscope.x for el in packet.data]
+        gyroscope_y = [el.gyroscope.y for el in packet.data]
+        gyroscope_z = [el.gyroscope.z for el in packet.data]
+
+        t_gyroscope = [(el.gyroscope.timestamp.get() - self.start_time).total_seconds() for el in packet.data]
+
+        # Keep only last 100 values
+        if len(self.gyroscope_buffer) > 100:
+            self.gyroscope_buffer.pop(0)
+
+        self.gyroscope_buffer.append([t_gyroscope, gyroscope_x, gyroscope_y, gyroscope_z])
+
+        # Plot acceleration
+        for i in range(3):
+            self.acceleration_lines[i].set_xdata([el[0] for el in self.acceleration_buffer])
+            self.acceleration_lines[i].set_ydata([el[i + 1] for el in self.acceleration_buffer])
+
+        self.axes[0].set_xlim(self.acceleration_buffer[0][0][0], t_acceleration[-1])
+        self.axes[0].set_ylim(-20, 20)
+
+        # Plot gyroscope
+        for i in range(3):
+            self.gyroscope_lines[i].set_xdata([el[0] for el in self.gyroscope_buffer])
+            self.gyroscope_lines[i].set_ydata([el[i + 1] for el in self.gyroscope_buffer])
+
+        self.axes[1].set_xlim(self.gyroscope_buffer[0][0][0], t_acceleration[-1])
+        self.axes[1].set_ylim(-20, 20)
+
+        self.fig.canvas.draw()
+
+        # Convert plot to numpy array
+        img = np.fromstring(self.fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+        img = img.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
+        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+        packet.frame = img
+
+        if self.callback:  # Don't display frame, call the callback
+            self.callback(packet)
+        else:
+            self._visualizer.draw(packet.frame, self.name)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.imu_out]

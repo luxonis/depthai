@@ -66,7 +66,11 @@ class XoutBase(ABC):
             if packet is not None:
                 self._fps.next_iter()
                 if self._visualizer:
-                    self._visualizer.frame_shape = packet.frame.shape
+                    try:
+                        self._visualizer.frame_shape = packet.frame.shape
+                    except AttributeError:
+                        pass  # Not all packets have frame attribute
+
                     self.visualize(packet)
                 else:
                     # User defined callback
