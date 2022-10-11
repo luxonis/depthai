@@ -354,8 +354,7 @@ def draw_bb_mappings(depth_frame: Union[dai.ImgFrame, Any], bb_mappings: dai.Spa
         xmax = int(bottom_right.x)
         ymax = int(bottom_right.y)
 
-        # TODO may be an error? Does it call correct method?
-        rectangle(depth_frame_color, (xmin, ymin), (xmax, ymax), 255, cv2.FONT_HERSHEY_SCRIPT_SIMPLEX)
+        rectangle(depth_frame_color, (xmin, ymin, xmax, ymax), (255, 255, 255), 1)
 
 
 def calc_disp_multiplier(device: dai.Device, size: Tuple[int, int]) -> float:
