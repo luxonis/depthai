@@ -13,6 +13,8 @@ with OakCamera(recording='cars-tracking-above-01') as oak:
         img_scale=1.0,
     ).configure_tracking(
         line_thickness=5
+    ).configure_text(
+        font_thickness=1,
     )
 
     oak.start(blocking=True)
