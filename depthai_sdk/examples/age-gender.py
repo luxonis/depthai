@@ -3,6 +3,8 @@ import depthai as dai
 import numpy as np
 import cv2
 
+from depthai_sdk.visualize.objects import VisText
+
 with OakCamera() as oak:
     color = oak.create_camera('color')
 
@@ -14,19 +16,20 @@ with OakCamera() as oak:
     # age_gender.config_multistage_nn(show_cropped_frames=True) # For debugging
 
     def cb(packet: TwoStagePacket):
-        for det in packet.detections:
-            rec = det.nn_data
+        for det, rec in zip(packet.img_detections.detections, packet.nnData):
             age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
             gender = np.squeeze(np.array(rec.getLayerFp16('prob')))
             gender_str = "woman" if gender[0] > gender[1] else "man"
-            Visualizer.putText(packet.frame, f"{gender_str}, age: {age}", (det.topLeft[0]+5, det.topLeft[1]+45), scale=0.8)
+            h, w = packet.frame.shape[:2]
+            box = tuple(map(int, (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)))
+            VisText(f'{gender_str}, age: {age}', bbox=box).set_frame_shape((h, w)).prepare().draw(packet.frame)
 
         cv2.imshow(packet.name, packet.frame)
 
 
-    # Visualize detections on the frame. Also display FPS on the frame. Don't show the frame but send the packet
+    # Visualize detections on the frame. Don't show the frame but send the packet
     # to the callback function (where it will be displayed)
-    oak.visualize(age_gender, fps=True, callback=cb)
+    oak.visualize(age_gender, callback=cb)
 
     # oak.show_graph() # Show pipeline graph, no need for now
-    oak.start(blocking=True) # This call will block until the app is stopped (by pressing 'Q' button)
+    oak.start(blocking=True)  # This call will block until the app is stopped (by pressing 'Q' button)
