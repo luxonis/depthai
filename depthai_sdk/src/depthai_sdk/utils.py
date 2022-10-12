@@ -65,7 +65,7 @@ def getAvailableRecordings() -> Dict[str, Tuple[List[str], int]]:
 def _downloadFile(path: str, url: str):
     r = requests.get(url)
     if r.status_code != 200:
-        raise ValueError(f"Could download file from {url}!")
+        raise ValueError(f"Could not download file from {url}!")
 
     # retrieving data from the URL using get method
     with open(path, 'wb') as f:
