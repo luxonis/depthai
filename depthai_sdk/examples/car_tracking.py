@@ -1,5 +1,3 @@
-from depthai import UsbSpeed
-
 from depthai_sdk import OakCamera, AspectRatioResizeMode
 
 with OakCamera(recording='cars-tracking-above-01') as oak:
@@ -9,12 +7,12 @@ with OakCamera(recording='cars-tracking-above-01') as oak:
 
     visualizer = oak.visualize(nn.out.tracker)
     visualizer.configure_output(
-        show_fps=True,
-        img_scale=1.0,
+        show_fps=True
     ).configure_tracking(
         line_thickness=5
     ).configure_text(
         font_thickness=1,
+        auto_scale=True
     )
 
     oak.start(blocking=True)
