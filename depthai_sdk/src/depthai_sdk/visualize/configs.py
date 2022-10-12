@@ -57,7 +57,7 @@ class TextConfig:
     bg_transparency: float = 0.5
     bg_color: Tuple[int, int, int] = (0, 0, 0)
 
-    line_type = cv2.LINE_AA
+    line_type: int = cv2.LINE_AA
 
     auto_scale: bool = True
 

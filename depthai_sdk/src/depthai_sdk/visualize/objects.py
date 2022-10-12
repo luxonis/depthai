@@ -13,22 +13,53 @@ from ..oak_outputs.normalize_bb import NormalizeBoundingBox
 from ..oak_outputs.visualizer_helper import spatials_text
 
 
-class VisObject(ABC):
+class GenericObject(ABC):
+    """
+    Generic object used by visualizer.
+    """
+
     def __init__(self, config=VisConfig(), frame_shape: Tuple[int, ...] = None):
         self.config = config
         self.frame_shape = frame_shape
-        self._children: List['VisObject'] = []
+        self._children: List['GenericObject'] = []
 
-    def set_config(self, config: VisConfig) -> 'VisObject':
+    def set_config(self, config: VisConfig) -> 'GenericObject':
+        """
+        Set the configuration for the current object.
+
+        Args:
+            config: instance of VisConfig.
+
+        Returns:
+            self
+        """
         self.config = config
         return self
 
-    def set_frame_shape(self, frame_shape: Tuple[int, ...]) -> 'VisObject':
+    def set_frame_shape(self, frame_shape: Tuple[int, ...]) -> 'GenericObject':
+        """
+        Set the incoming frame shape for the current object.
+
+        Args:
+            frame_shape: frame shape as a tuple of (height, width, channels).
+
+        Returns:
+            self
+        """
         self.frame_shape = frame_shape
         return self
 
     @abstractmethod
     def draw(self, frame: np.ndarray) -> None:
+        """
+        Draw the object on the frame.
+
+        Args:
+            frame: frame to draw on.
+
+        Returns:
+            None
+        """
         raise NotImplementedError
 
     def draw_children(self, frame: np.ndarray) -> None:
@@ -36,19 +67,46 @@ class VisObject(ABC):
             child.draw(frame)
 
     @abstractmethod
-    def prepare(self) -> 'VisObject':
+    def prepare(self) -> 'GenericObject':
+        """
+        Prepare necessary data for drawing.
+
+        Returns:
+            self
+        """
         raise NotImplementedError
 
     @abstractmethod
-    def serialize(self):
+    def serialize(self) -> dict:
+        """
+        Serialize the object to dict.
+
+        Returns:
+            dict
+        """
         raise NotImplementedError
 
-    def add_child(self, child: 'VisObject') -> 'VisObject':
+    def add_child(self, child: 'GenericObject') -> 'GenericObject':
+        """
+        Add a child object to the current object.
+
+        Args:
+            child: instance derived from GenericObject.
+
+        Returns:
+            self
+        """
         self._children.append(child.set_config(self.config).set_frame_shape(self.frame_shape).prepare())
         return self
 
     @property
-    def children(self) -> List['VisObject']:
+    def children(self) -> List['GenericObject']:
+        """
+        Get the children of the current object.
+
+        Returns:
+            List of children.
+        """
         return self._children
 
     def draw_bbox(self,
@@ -145,7 +203,7 @@ class VisObject(ABC):
             cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
 
 
-class VisImage(VisObject):
+class VisImage(GenericObject):
     def __init__(self, image: np.ndarray, frame_shape: Tuple[int, ...]):
         super().__init__(frame_shape=frame_shape)
         self.image = image
@@ -160,13 +218,25 @@ class VisImage(VisObject):
         pass
 
 
-class VisDetections(VisObject):
+class VisDetections(GenericObject):
+    """
+    Object that represents detections.
+    """
+
     def __init__(self,
                  detections: List[Union[ImgDetection, dai.Tracklet]],
                  normalizer: NormalizeBoundingBox,
                  label_map: List[Tuple[str, Tuple]] = None,
                  spatial_points: List[dai.Point3f] = None,
                  is_spatial=False):
+        """
+        Args:
+            detections: List of detections.
+            normalizer: Normalizer object.
+            label_map: List of tuples (label, color).
+            spatial_points: List of spatial points. None if not spatial.
+            is_spatial: Flag that indicates if the detections are spatial.
+        """
         super().__init__()
         self.detections = detections
         self.normalizer = normalizer
@@ -183,7 +253,7 @@ class VisDetections(VisObject):
         except AttributeError:
             pass
 
-    def serialize(self):
+    def serialize(self) -> dict:
         parent = {
             'type': 'detections',
             'detections': [
@@ -201,6 +271,17 @@ class VisDetections(VisObject):
                            bbox: Union[np.ndarray[Tuple[int, int, int, int]]],
                            label: str,
                            color: Tuple[int, int, int]) -> None:
+        """
+        Register a detection.
+
+        Args:
+            bbox: Bounding box.
+            label: Label.
+            color: Color.
+
+        Returns:
+            None
+        """
         self.bboxes.append(bbox)
         self.labels.append(label)
         self.colors.append(color)
@@ -242,8 +323,14 @@ class VisDetections(VisObject):
 
         return self
 
-    def get_detections(self):
-        return zip(self.bboxes, self.labels, self.colors)
+    def get_detections(self) -> List[Tuple[np.ndarray, str, Tuple[int, int, int]]]:
+        """
+        Get detections.
+
+        Returns:
+            List of tuples (bbox, label, color).
+        """
+        return list(zip(self.bboxes, self.labels, self.colors))
 
     def draw(self, frame: np.ndarray) -> None:
         if self.frame_shape is None:
@@ -268,6 +355,19 @@ class VisDetections(VisObject):
                            pt2: Tuple[int, int],
                            color: Tuple[int, int, int],
                            thickness: int) -> None:
+        """
+        Draw a stylized bounding box. The style is defined in the config.
+
+        Args:
+            img: Image.
+            pt1: Top left corner.
+            pt2: Bottom right corner.
+            color: Color.
+            thickness: Thickness.
+
+        Returns:
+            None
+        """
         box_w = pt2[0] - pt1[0]
         box_h = pt2[1] - pt1[1]
         line_width = int(box_w * self.config.detection.line_width) // 2
@@ -284,13 +384,32 @@ class VisDetections(VisObject):
             self.draw_bbox(img, pt1, pt2, color, thickness, roundness, line_width=line_width, line_height=line_height)
 
 
-class VisText(VisObject):
+class VisText(GenericObject):
+    """
+    Object that represents a text.
+    """
+
     def __init__(self,
                  text: str,
                  coords: Tuple[int, int] = None,
                  bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10):
+        """
+        If you want to place the text in a bounding box, you can specify the bounding box and the position of the text.
+        Please be aware, that in this case the coords must be equal to None, since the coords are calculated based on the
+        bounding box and the position.
+
+        .. note::
+            `coords` and `bbox` arguments are mutually exclusive. If you specify `coords`, `bbox` will be ignored.
+
+        Args:
+            text: Text.
+            coords: Coordinates.
+            bbox: Bounding box.
+            position: Position.
+            padding: Padding.
+        """
         super().__init__()
         self.text = text
         self.coords = coords
@@ -323,7 +442,8 @@ class VisText(VisObject):
         else:
             shape = frame.shape[:2]
 
-        font_scale = min(shape) / (1000 if self.bbox is None else 200) if text_config.auto_scale else text_config.font_scale
+        font_scale = min(shape) / (
+            1000 if self.bbox is None else 200) if text_config.auto_scale else text_config.font_scale
 
         # Background
         cv2.putText(img=frame,
@@ -350,7 +470,8 @@ class VisText(VisObject):
                               position: TextPosition,
                               padding: int) -> Tuple[int, int]:
         """
-        Get relative position of the text.
+        Get relative position of the text w.r.t. the bounding box.
+        If bbox is None,the position is relative to the frame.
         """
         frame_h, frame_w = self.frame_shape[:2]
 
@@ -365,7 +486,8 @@ class VisText(VisObject):
         else:
             shape = self.frame_shape[:2]
 
-        font_scale = min(shape) / (1000 if self.bbox is None else 200) if text_config.auto_scale else text_config.font_scale
+        font_scale = min(shape) / (
+            1000 if self.bbox is None else 200) if text_config.auto_scale else text_config.font_scale
 
         text_size = cv2.getTextSize(text=self.text,
                                     fontFace=text_config.font_face,
@@ -393,10 +515,18 @@ class VisText(VisObject):
         return x, y
 
 
-class VisTrail(VisObject):
+class VisTrail(GenericObject):
+    """
+    Object that represents a trail.
+    """
     def __init__(self,
                  tracklets: List[dai.Tracklet],
                  label_map: List[Tuple[str, Tuple]]):
+        """
+        Args:
+            tracklets: List of tracklets.
+            label_map: List of tuples (label, color).
+        """
         super().__init__()
 
         self.tracklets = tracklets
@@ -433,6 +563,12 @@ class VisTrail(VisObject):
         return self
 
     def groupby_tracklet(self):
+        """
+        Group tracklets by tracklet id.
+
+        Returns:
+            Dictionary of tracklets grouped by tracklet id.
+        """
         grouped = defaultdict(list)
 
         for tracklet in self.tracklets:
@@ -441,7 +577,10 @@ class VisTrail(VisObject):
         return grouped
 
     @staticmethod
-    def get_rect_centroid(rect, w, h):
+    def get_rect_centroid(rect: dai.Rect, w, h) -> Tuple[int, int]:
+        """
+        Get centroid of a rectangle.
+        """
         return int(w * (rect.x + rect.width) // 2), int(h * (rect.y + rect.height) // 2)
 
     def draw(self, frame: np.ndarray) -> None:
@@ -451,20 +590,29 @@ class VisTrail(VisObject):
         self.draw_children(frame)
 
 
-class VisLine(VisObject):
+class VisLine(GenericObject):
+    """
+    Object that represents a line.
+    """
     def __init__(self,
                  pt1: Tuple[int, int],
                  pt2: Tuple[int, int],
                  color: Tuple[int, int, int] = None,
-                 thickness: int = None,
-                 alpha: float = None):
+                 thickness: int = None):
+        """
+
+        Args:
+            pt1: Starting point.
+            pt2: Ending point.
+            color: Color of the line.
+            thickness: Thickness of the line.
+        """
         super().__init__()
 
         self.pt1 = pt1
         self.pt2 = pt2
         self.color = color
         self.thickness = thickness
-        self.alpha = alpha
 
     def serialize(self):
         parent = {
@@ -493,7 +641,7 @@ class VisLine(VisObject):
                  tracking_config.line_type)
 
 
-class VisPolygon(VisObject):
+class VisPolygon(GenericObject):
     def __init__(self, polygon):
         super().__init__()
         self.polygon = polygon
