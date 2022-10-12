@@ -7,7 +7,7 @@ and linking.
 Reference
 #########
 
-.. autoclass:: depthai_sdk.Component
+.. autoclass:: depthai_sdk.components.Component
     :members:
     :undoc-members:
 
