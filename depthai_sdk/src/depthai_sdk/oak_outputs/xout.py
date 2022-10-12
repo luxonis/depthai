@@ -15,7 +15,7 @@ import pyqtgraph as pg
 from matplotlib import pyplot as plt
 
 from .normalize_bb import NormalizeBoundingBox
-from .visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
+from .visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr, colorize_depth
 from .xout_base import XoutBase, StreamXout
 from ..classes.packets import (
     FramePacket,
@@ -23,7 +23,7 @@ from ..classes.packets import (
     DetectionPacket,
     TwoStagePacket,
     TrackerPacket,
-    IMUPacket, DisparityPacket
+    IMUPacket, DepthPacket
 )
 from ..visualize import NewVisualizer
 from ..visualize.configs import TextPosition
@@ -144,7 +144,27 @@ class XoutH26x(XoutFrames):
         super().visualize(packet)
 
 
-class XoutDisparity(XoutFrames):
+class XoutClickable:
+    buffer: List[Tuple[int, int, List[int]]]  # Decay counter, value, (x, y) coordinates
+    decay_step: int
+
+    def __init__(self, decay_step: int = 30):
+        super().__init__()
+        self.buffer = []
+        self.decay_step = decay_step
+
+    def on_click_callback(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN or event == cv2.EVENT_RBUTTONDOWN:
+            self.buffer.append([self.decay_step, param[0][y, x], [x, y]])
+
+    def decay_buffer(self):
+        for i in range(len(self.buffer)):
+            self.buffer[i] = (self.buffer[i][0] - 1, self.buffer[i][1], self.buffer[i][2])
+
+        self.buffer = [x for x in self.buffer if x[0] > 0]
+
+
+class XoutDisparity(XoutFrames, XoutClickable):
     name: str = "Disparity"
     multiplier: float
     fps: float
@@ -154,6 +174,7 @@ class XoutDisparity(XoutFrames):
                  mono_frames: StreamXout,
                  max_disp: float,
                  fps: float,
+                 clickable: bool = False,
                  colorize: bool = False,
                  use_wls_filter: bool = None,
                  wls_lambda: float = None,
@@ -162,6 +183,7 @@ class XoutDisparity(XoutFrames):
 
         self.multiplier = 255.0 / max_disp
         self.fps = fps
+        self.clickable = clickable
 
         self.colorize = colorize
         self.use_wls_filter = use_wls_filter
@@ -172,35 +194,31 @@ class XoutDisparity(XoutFrames):
 
         self.msgs = dict()
 
-        super().__init__(disparity_frames)
+        XoutFrames.__init__(self, frames=disparity_frames, fps=fps)
+        XoutClickable.__init__(self, decay_step=int(self.fps))
 
-    def visualize(self, packet: DisparityPacket):
+    def visualize(self, packet: DepthPacket):
         # ref https://github.com/luxonis/depthai-experiments/blob/master/gen2-wls-filter/main.py
-        # todo remove hardcoded values
+
         frame = packet.frame
-        mono_frame = packet.mono_frame.getCvFrame()
+        disparity_frame = (frame * self.multiplier).astype(np.uint8)
 
         if self.use_wls_filter:
-            # baseline = 75
-            # fov = 71.86
-            #
-            # focal = frame.shape[1] / (2. * np.tan(np.radians(fov / 2)))
-            # depth_scale_factor = baseline * focal
-
-            frame = (frame * self.multiplier).astype(np.uint8)
-            filtered_disp = self.wls_filter.filter(frame, mono_frame)
-
-            # # Compute depth from disparity (32 levels)
-            # with np.errstate(divide='ignore'):  # Should be safe to ignore div by zero here
-            #     # raw depth values
-            #     depth_frame = (depth_scale_factor / filtered_disp).astype(np.uint16)
-
-            packet.frame = filtered_disp
-        else:
-            packet.frame = (frame * self.multiplier).astype(np.uint8)
+            disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
         if self.colorize:
-            packet.frame = cv2.applyColorMap(packet.frame, cv2.COLORMAP_TURBO)
+            packet.frame = cv2.applyColorMap(disparity_frame, cv2.COLORMAP_TURBO)
+        else:
+            packet.frame = disparity_frame
+
+        if self.clickable:
+            cv2.namedWindow(self.name)
+            cv2.setMouseCallback(self.name, self.on_click_callback, param=[disparity_frame])
+
+            for i in range(len(self.buffer)):
+                self._visualizer.add_text(text=f'{self.buffer[i][1]}',
+                                          coords=tuple(self.buffer[i][2]))
+            self.decay_buffer()
 
         super().visualize(packet)
 
@@ -216,22 +234,20 @@ class XoutDisparity(XoutFrames):
 
         if seq not in self.msgs:
             self.msgs[seq] = dict()
-            # self.msgs[seq][self.frames.name] = []
-            # self.msgs[seq][self.mono_frames.name] = None
 
         if name == self.frames.name:
             self.msgs[seq][name] = msg
-            # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
         elif name == self.mono_frames.name:
             self.msgs[seq][name] = msg
         else:
             raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
+
         if len(self.msgs[seq]) == len(self.xstreams()):
             # Frames synced!
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
 
-            packet = DisparityPacket(
+            packet = DepthPacket(
                 self.frames.name,
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.mono_frames.name],
@@ -245,27 +261,107 @@ class XoutDisparity(XoutFrames):
             self.msgs = newMsgs
 
 
-class XoutDepth(XoutFrames):
+# TODO can we merge XoutDispariry and XoutDepth?
+class XoutDepth(XoutFrames, XoutClickable):
     name: str = "Depth"
     factor: float = None
 
-    def __init__(self, device: dai.Device, frames: StreamXout, fps: float):
-        super().__init__(frames)
+    def __init__(self,
+                 device: dai.Device,
+                 frames: StreamXout,
+                 fps: float,
+                 mono_frames: StreamXout,
+                 clickable: bool = False,
+                 colorize: bool = False,
+                 use_wls_filter: bool = None,
+                 wls_lambda: float = None,
+                 wls_sigma: float = None):
+        self.mono_frames = mono_frames
+
         self.fps = fps
         self.device = device
         self.multiplier = 255 / 95.0
 
-    def visualize(self, packet: FramePacket):
-        if not self.factor:
-            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
-            self.factor = calc_disp_multiplier(self.device, size)
+        self.clickable = clickable
+        self.colorize = colorize
 
-        depth = np.array(packet.imgFrame.getFrame())
-        with np.errstate(divide='ignore'):
-            disp = (self.factor / depth).astype(np.uint8)
+        self.use_wls_filter = use_wls_filter
+        if use_wls_filter:
+            self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
+            self.wls_filter.setLambda(wls_lambda)
+            self.wls_filter.setSigmaColor(wls_sigma)
 
-        packet.frame = colorize_disparity(disp, multiplier=self.multiplier)
+        self.msgs = dict()
+
+        XoutFrames.__init__(self, frames=frames, fps=fps)
+        XoutClickable.__init__(self, decay_step=int(self.fps))
+
+    def visualize(self, packet: DepthPacket):
+        # if not self.factor:
+        #     size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
+        #     self.factor = calc_disp_multiplier(self.device, size)
+
+        depth_frame = packet.imgFrame.getFrame()
+
+        if self.use_wls_filter:
+            depth_frame = self.wls_filter.filter(depth_frame, packet.mono_frame.getCvFrame())
+
+        depth_frame_color = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
+        depth_frame_color = cv2.equalizeHist(depth_frame_color)
+
+        if self.colorize:
+            packet.frame = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET)
+        else:
+            packet.frame = depth_frame_color
+
+        if self.clickable:
+            cv2.namedWindow(self.name)
+            cv2.setMouseCallback(self.name, self.on_click_callback, param=[depth_frame])
+
+            for i in range(len(self.buffer)):
+                self._visualizer.add_text(text=f'{self.buffer[i][1]}',
+                                          coords=tuple(self.buffer[i][2]))
+            self.decay_buffer()
+
         super().visualize(packet)
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames, self.mono_frames]
+
+    def newMsg(self, name: str, msg: dai.Buffer) -> None:
+        if name not in self._streams:
+            return  # From Replay modules. TODO: better handling?
+
+        # TODO: what if msg doesn't have sequence num?
+        seq = str(msg.getSequenceNum())
+
+        if seq not in self.msgs:
+            self.msgs[seq] = dict()
+
+        if name == self.frames.name:
+            self.msgs[seq][name] = msg
+        elif name == self.mono_frames.name:
+            self.msgs[seq][name] = msg
+        else:
+            raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
+
+        if len(self.msgs[seq]) == len(self.xstreams()):
+            # Frames synced!
+            if self.queue.full():
+                self.queue.get()  # Get one, so queue isn't full
+
+            packet = DepthPacket(
+                self.frames.name,
+                self.msgs[seq][self.frames.name],
+                self.msgs[seq][self.mono_frames.name],
+            )
+            self.queue.put(packet, block=False)
+
+            newMsgs = {}
+            for name, msg in self.msgs.items():
+                if int(name) > int(seq):
+                    newMsgs[name] = msg
+            self.msgs = newMsgs
 
 
 class XoutSpatialBbMappings(XoutFrames):
@@ -471,10 +567,10 @@ class XoutTracker(XoutNnResults):
         except IndexError:
             spatial_points = None
 
-        # self._visualizer.add_detections(packet.daiTracklets.tracklets,
-        #                                 self.normalizer,
-        #                                 self.labels,
-        #                                 spatial_points=spatial_points)
+        self._visualizer.add_detections(packet.daiTracklets.tracklets,
+                                        self.normalizer,
+                                        self.labels,
+                                        spatial_points=spatial_points)
 
         # Add to local storage
         self.packets.append(packet)
@@ -492,14 +588,11 @@ class XoutTracker(XoutNnResults):
             det = tracklet.srcImgDetection
             bbox = (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)
             bbox = tuple(map(int, bbox))
-            print(bbox)
             self._visualizer.add_text(
                 f'ID: {tracklet.id}',
                 bbox=bbox,
                 position=TextPosition.MID
             )
-
-            cv2.rectangle(packet.frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
 
         super().visualize(packet)
 

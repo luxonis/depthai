@@ -170,6 +170,7 @@ class OakCamera:
     def create_stereo(self,
                       resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
+                      clickable: bool = False,
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
                       ) -> StereoComponent:
@@ -179,6 +180,7 @@ class OakCamera:
         Args:
             resolution (str/SensorResolution): If monochrome cameras aren't already passed, create them and set specified resolution
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
+            clickable (bool): Whether we want to enable clicking on the depth map to show it's Z coordinate
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
         """
@@ -186,6 +188,7 @@ class OakCamera:
             self._pipeline,
             resolution=resolution,
             fps=fps,
+            clickable=clickable,
             left=left,
             right=right,
             replay=self.replay,

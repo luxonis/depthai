@@ -47,7 +47,7 @@ class FramePacket:
         self.frame = frame
 
 
-class DisparityPacket(FramePacket):
+class DepthPacket(FramePacket):
     mono_frame: dai.ImgFrame
 
     def __init__(self, name: str, disparity_frame: dai.ImgFrame, mono_frame: dai.ImgFrame):

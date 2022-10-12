@@ -35,6 +35,7 @@ class StereoComponent(Component):
                  pipeline: dai.Pipeline,
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
+                 clickable: bool = None,
                  left: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Left mono camera
                  right: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Right mono camera
                  replay: Optional[Replay] = None,
@@ -63,6 +64,8 @@ class StereoComponent(Component):
 
         self.node = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+
+        self._clickable = clickable
 
         # Configuration variables
         self._colorize = False
@@ -95,6 +98,10 @@ class StereoComponent(Component):
             # Connect Mono cameras to the StereoDepth node
             self.left.out.link(self.node.left)
             self.right.out.link(self.node.right)
+
+            if len(device.getIrDrivers()) > 0:
+                print('IR driver detected, setting IR laser dot projector brightness to 800mA')
+                device.setIrLaserDotProjectorBrightness(800)
 
         if self._args:
             self._config_stereo_args(self._args)
@@ -175,29 +182,32 @@ class StereoComponent(Component):
             fps = self._comp.left.getFps() if self._comp._replay is None else self._comp._replay.getFps()
 
             out = XoutDisparity(
-                StreamXout(self._comp.node.id, self._comp.disparity),
-                StreamXout(self._comp.node.id, self._comp.right.out),
-                self._comp.node.getMaxDisparity(),
-                fps,
+                disparity_frames=StreamXout(self._comp.node.id, self._comp.disparity),
+                mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
+                max_disp=self._comp.node.getMaxDisparity(),
+                fps=fps,
+                clickable=self._comp._clickable,
                 colorize=self._comp._colorize,
                 use_wls_filter=self._comp._use_wls_filter,
                 wls_lambda=self._comp._wls_lambda,
                 wls_sigma=self._comp._wls_sigma
             )
 
-            # out = XoutDisparity(
-            #     StreamXout(self._comp.node.id, self._comp.disparity),
-            #     self._comp.node.getMaxDisparity(),
-            #     fps,
-            #     use_wls_filter=self._comp._wls_filter,
-            #     wls_lambda=self._comp._wls_lambda,
-            #     wls_sigma=self._comp._wls_sigma
-            # )
             return self._comp._create_xout(pipeline, out)
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             fps = self._comp.left.getFps() if self._comp._replay is None else self._comp._replay.getFps()
-            out = XoutDepth(device, StreamXout(self._comp.node.id, self._comp.depth), fps)
+            out = XoutDepth(
+                device=device,
+                frames=StreamXout(self._comp.node.id, self._comp.depth),
+                mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
+                fps=fps,
+                clickable=self._comp._clickable,
+                colorize=self._comp._colorize,
+                use_wls_filter=self._comp._use_wls_filter,
+                wls_lambda=self._comp._wls_lambda,
+                wls_sigma=self._comp._wls_sigma
+            )
             return self._comp._create_xout(pipeline, out)
 
     out: Out
