@@ -7,7 +7,7 @@ from typing import Dict, Any, Optional, List, Union, Callable, Tuple
 import cv2
 import depthai as dai
 
-from .visualize import NewVisualizer
+from .visualize import Visualizer
 from .args_parser import ArgsParser
 from .classes.output_config import BaseConfig, RecordConfig, OutputConfig
 from .components.camera_component import CameraComponent
@@ -396,7 +396,7 @@ class OakCamera:
     def _callback(self,
                   output: Union[List, Callable, Component],
                   callback: Callable,
-                  visualizer: NewVisualizer = None):
+                  visualizer: Visualizer = None):
         if isinstance(output, List):
             for element in output:
                 self._callback(element, callback, visualizer)
@@ -416,7 +416,7 @@ class OakCamera:
             output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
-        visualizer = NewVisualizer()
+        visualizer = Visualizer()
         self._callback(output, callback, visualizer)
         return visualizer
 

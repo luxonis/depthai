@@ -1,4 +1,4 @@
-from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, Visualizer
+from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, VisualizerHelper
 import depthai as dai
 import numpy as np
 import cv2
@@ -19,7 +19,7 @@ with OakCamera() as oak:
         for det in packet.detections:
             emotion_results = np.array(det.nn_data.getFirstLayerFp16())
             emotion_name = emotions[np.argmax(emotion_results)]
-            Visualizer.putText(packet.frame, emotion_name, (det.topLeft[0]+5, det.topLeft[1]+45), scale=0.8)
+            VisualizerHelper.putText(packet.frame, emotion_name, (det.topLeft[0] + 5, det.topLeft[1] + 45), scale=0.8)
         cv2.imshow(packet.name, packet.frame)
 
 

@@ -3,7 +3,7 @@ from typing import Optional, Callable, Union, Tuple, List
 
 import depthai as dai
 
-from ..visualize import NewVisualizer
+from ..visualize import Visualizer
 from ..oak_outputs.xout import XoutFrames
 from ..oak_outputs.xout_base import XoutBase
 from ..record import Record
@@ -30,11 +30,11 @@ class OutputConfig(BaseConfig):
     """
     Saves callbacks/visualizers until the device is fully initialized. I'll admit it's not the cleanest solution.
     """
-    visualizer: Optional[NewVisualizer]  # Visualization
+    visualizer: Optional[Visualizer]  # Visualization
     output: Callable  # Output of the component (a callback)
     callback: Callable  # Callback that gets called after syncing
 
-    def __init__(self, output: Callable, callback: Callable, visualizer: NewVisualizer = None):
+    def __init__(self, output: Callable, callback: Callable, visualizer: Visualizer = None):
         self.output = output
         self.callback = callback
         self.visualizer = visualizer

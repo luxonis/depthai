@@ -24,7 +24,7 @@ class Platform(Enum):
     PC = 'pc'
 
 
-class NewVisualizer:
+class Visualizer:
     # Constants
     IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt'
 
@@ -40,7 +40,7 @@ class NewVisualizer:
 
         self.config = VisConfig()
 
-    def add_object(self, obj: GenericObject) -> 'NewVisualizer':
+    def add_object(self, obj: GenericObject) -> 'Visualizer':
         """
         Call `set_config`, `set_frame_shape` and `prepare` for the object and add it to the list of objects.
         Args:
@@ -58,7 +58,7 @@ class NewVisualizer:
                        normalizer: NormalizeBoundingBox,
                        label_map: List[Tuple[str, Tuple]] = None,
                        spatial_points: List[dai.Point3f] = None,
-                       is_spatial=False) -> 'NewVisualizer':
+                       is_spatial=False) -> 'Visualizer':
         """
         Add detections to the visualizer.
 
@@ -83,7 +83,7 @@ class NewVisualizer:
                  coords: Tuple[int, int] = None,
                  bbox: Tuple[int, int, int, int] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
-                 padding: int = 10) -> 'NewVisualizer':
+                 padding: int = 10) -> 'Visualizer':
         """
         Add text to the visualizer.
 
@@ -103,7 +103,7 @@ class NewVisualizer:
 
     def add_trail(self,
                   tracklets: List[dai.Tracklet],
-                  label_map: List[Tuple[str, Tuple]]) -> 'NewVisualizer':
+                  label_map: List[Tuple[str, Tuple]]) -> 'Visualizer':
         """
         Add a trail to the visualizer.
 
@@ -122,7 +122,7 @@ class NewVisualizer:
                    coords: Tuple[int, int],
                    radius: int,
                    color: Tuple[int, int, int] = None,
-                   thickness: int = None) -> 'NewVisualizer':
+                   thickness: int = None) -> 'Visualizer':
         """
         Add a circle to the visualizer.
 
@@ -162,7 +162,7 @@ class NewVisualizer:
                 obj.draw(frame)
 
             # Resize frame if needed
-            img_scale = self.config.img_scale
+            img_scale = self.config.output.img_scale
             if img_scale:
                 if isinstance(img_scale, Tuple):
                     frame = cv2.resize(frame, img_scale)
@@ -196,7 +196,7 @@ class NewVisualizer:
 
         return json.dumps(parent, cls=JSONEncoder)
 
-    def configure_output(self, **kwargs: dict) -> 'NewVisualizer':
+    def configure_output(self, **kwargs: dict) -> 'Visualizer':
         """
         Configure the output of the visualizer.
 
@@ -206,10 +206,10 @@ class NewVisualizer:
         Returns:
             self
         """
-        self.config = replace(self.config, **kwargs)
+        self.config.output = replace(self.config.output, **kwargs)
         return self
 
-    def configure_detections(self, **kwargs: dict) -> 'NewVisualizer':
+    def configure_detections(self, **kwargs: dict) -> 'Visualizer':
         """
         Configure how bounding boxes will look like.
         Args:
@@ -221,7 +221,7 @@ class NewVisualizer:
         self.config.detection = replace(self.config.detection, **kwargs)
         return self
 
-    def configure_text(self, **kwargs: dict) -> 'NewVisualizer':
+    def configure_text(self, **kwargs: dict) -> 'Visualizer':
         """
         Configure how text will look like.
 
@@ -234,7 +234,7 @@ class NewVisualizer:
         self.config.text = replace(self.config.text, **kwargs)
         return self
 
-    def configure_tracking(self, **kwargs: dict) -> 'NewVisualizer':
+    def configure_tracking(self, **kwargs: dict) -> 'Visualizer':
         """
         Configure how tracking trails will look like.
 

@@ -25,7 +25,7 @@ from ..classes.packets import (
     TrackerPacket,
     IMUPacket, DepthPacket
 )
-from ..visualize import NewVisualizer
+from ..visualize import Visualizer
 from ..visualize.configs import TextPosition
 
 """
@@ -51,7 +51,7 @@ class XoutFrames(XoutBase):
         self.fps = fps
         super().__init__()
 
-    def setup_visualize(self, visualizer: NewVisualizer, name: str = None):
+    def setup_visualize(self, visualizer: Visualizer, name: str = None):
         self._visualizer = visualizer
         self.name = name or self.name
 
@@ -62,7 +62,7 @@ class XoutFrames(XoutBase):
 
         self._visualizer.frame_shape = packet.frame.shape
 
-        if self._visualizer.config.show_fps:
+        if self._visualizer.config.output.show_fps:
             self._visualizer.add_text(
                 text=f'FPS: {self._fps.fps():.1f}',
                 position=TextPosition.TOP_LEFT
@@ -791,7 +791,7 @@ class XoutIMU(XoutBase):
 
         super().__init__()
 
-    def setup_visualize(self, visualizer: NewVisualizer, name: str = None):
+    def setup_visualize(self, visualizer: Visualizer, name: str = None):
         self._visualizer = visualizer
         self.name = name or self.name
 

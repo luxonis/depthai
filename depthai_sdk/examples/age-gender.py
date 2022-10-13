@@ -1,4 +1,4 @@
-from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, Visualizer
+from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, VisualizerHelper
 import depthai as dai
 import numpy as np
 import cv2

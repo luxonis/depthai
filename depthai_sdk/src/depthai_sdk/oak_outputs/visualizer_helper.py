@@ -32,7 +32,7 @@ default_color_map = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORM
 default_color_map[0] = [0, 0, 0]
 
 
-class Visualizer:
+class VisualizerHelper:
     bg_color = (0, 0, 0)
     front_color = (255, 255, 255)
     text_type = cv2.FONT_HERSHEY_SIMPLEX
@@ -85,7 +85,7 @@ class Visualizer:
         @param position: Where on frame we want to print the text
         @param padPx: Padding (in pixels)
         """
-        text_size = cv2.getTextSize(text, Visualizer.text_type, fontScale=1.0, thickness=1)[0]
+        text_size = cv2.getTextSize(text, VisualizerHelper.text_type, fontScale=1.0, thickness=1)[0]
         frame_w = frame.shape[1]
         frame_h = frame.shape[0]
 
@@ -245,8 +245,8 @@ def draw_mappings(packet: SpatialBbMappingPacket):
         x_max = int(bottom_right.x)
         y_max = int(bottom_right.y)
 
-        cv2.rectangle(packet.frame, (x_min, y_min), (x_max, y_max), Visualizer.bg_color, 3)
-        cv2.rectangle(packet.frame, (x_min, y_min), (x_max, y_max), Visualizer.front_color, 1)
+        cv2.rectangle(packet.frame, (x_min, y_min), (x_max, y_max), VisualizerHelper.bg_color, 3)
+        cv2.rectangle(packet.frame, (x_min, y_min), (x_max, y_max), VisualizerHelper.front_color, 1)
 
 
 def spatials_text(spatials: dai.Point3f):
@@ -281,16 +281,16 @@ def draw_detections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPa
             txt, color = label_map[detection.label]
         else:
             txt = str(detection.label)
-            color = Visualizer.front_color
+            color = VisualizerHelper.front_color
 
-        Visualizer.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
+        VisualizerHelper.putText(packet.frame, txt, (bbox[0] + 5, bbox[1] + 25), scale=0.9)
         if packet._is_spatial_detection():
             point = packet._get_spatials(detection) \
                 if isinstance(packet, TrackerPacket) \
                 else detection.spatialCoordinates
-            Visualizer.putText(packet.frame, spatials_text(point).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
-            Visualizer.putText(packet.frame, spatials_text(point).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
-            Visualizer.putText(packet.frame, spatials_text(point).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
+            VisualizerHelper.putText(packet.frame, spatials_text(point).x, (bbox[0] + 5, bbox[1] + 50), scale=0.7)
+            VisualizerHelper.putText(packet.frame, spatials_text(point).y, (bbox[0] + 5, bbox[1] + 75), scale=0.7)
+            VisualizerHelper.putText(packet.frame, spatials_text(point).z, (bbox[0] + 5, bbox[1] + 100), scale=0.7)
 
         rectangle(packet.frame, bbox, color=color, thickness=1, radius=0)
         packet._add_detection(detection, bbox, txt, color)
@@ -299,9 +299,9 @@ def draw_detections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPa
 def draw_tracklet_id(packet: TrackerPacket):
     for det in packet.detections:
         # centroid = det.centroid()
-        Visualizer.print_on_roi(packet.frame, det.top_left, det.bottom_right,
+        VisualizerHelper.print_on_roi(packet.frame, det.top_left, det.bottom_right,
                                 f"Id: {str(det.tracklet.id)}",
-                                FramePosition.TopMid)
+                                      FramePosition.TopMid)
 
 
 def draw_breadcrumb_trail(packets: List[TrackerPacket]):
@@ -319,7 +319,7 @@ def draw_breadcrumb_trail(packets: List[TrackerPacket]):
 
     for idx, list_ in dict_.items():
         for i in range(len(list_) - 1):
-            Visualizer.line(packet.frame, list_[i].centroid(), list_[i + 1].centroid(), color=list_[i].color)
+            VisualizerHelper.line(packet.frame, list_[i].centroid(), list_[i + 1].centroid(), color=list_[i].color)
 
 
 def colorize_depth(depth_frame: Union[dai.ImgFrame, Any], color_map=None):

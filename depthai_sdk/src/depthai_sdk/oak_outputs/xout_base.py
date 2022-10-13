@@ -5,7 +5,7 @@ from typing import List, Callable
 import depthai as dai
 
 from .fps import FPS
-from ..visualize import NewVisualizer
+from ..visualize import Visualizer
 
 
 class StreamXout:
@@ -28,7 +28,7 @@ class XoutBase(ABC):
     callback: Callable  # User defined callback. Called either after visualization (if vis=True) or after syncing.
     queue: Queue  # Queue to which synced Packets will be added. Main thread will get these
     _streams: List[str]  # Streams to listen for
-    _visualizer: NewVisualizer = None
+    _visualizer: Visualizer = None
     _fps: FPS
     name: str  # Other Xouts will override this
 
