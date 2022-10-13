@@ -30,6 +30,13 @@ class BboxStyle(IntEnum):
 
 
 @dataclass
+class OutputConfig:
+    """Configuration for output of the visualizer."""
+    img_scale: float = 1.0
+    show_fps: bool = False
+
+
+@dataclass
 class DetectionConfig:
     """Configuration for drawing bounding boxes."""
     thickness: int = 1
@@ -67,7 +74,7 @@ class TrackingConfig:
     """Configuration for drawing tracking bounding boxes."""
     line_thickness: int = 1
     line_color: Tuple[int, int, int] = (255, 255, 255)
-    line_type = cv2.LINE_AA
+    line_type: int = cv2.LINE_AA
     bg_color: Tuple[int, int, int] = (0, 0, 0)
 
 
@@ -76,15 +83,14 @@ class CircleConfig:
     """Configuration for drawing circles."""
     thickness: int = 1
     color: Tuple[int, int, int] = (255, 255, 255)
-    line_type = cv2.LINE_AA
+    line_type: int = cv2.LINE_AA
 
 
 @dataclass
 class VisConfig:
     """Configuration for visualizer."""
-    img_scale: float = 1.0
-    show_fps: bool = False
 
+    output: OutputConfig = field(default_factory=OutputConfig)
     detection: DetectionConfig = field(default_factory=DetectionConfig)
     text: TextConfig = field(default_factory=TextConfig)
     tracking: TrackingConfig = field(default_factory=TrackingConfig)
