@@ -1,4 +1,4 @@
-.. include:: install-short.rst
+.. include:: ./install-short.rst
 
 .. note::
 

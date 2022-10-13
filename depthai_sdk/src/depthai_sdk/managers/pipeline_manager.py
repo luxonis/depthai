@@ -445,8 +445,8 @@ class PipelineManager:
         if not hasattr(self.nodes, 'monoRight'):
             raise RuntimeError("Right mono camera not initialized. Call createRightCam(res, fps) first!")
 
-        self.nodes.monoLeft._out.link(self.nodes.stereo.left)
-        self.nodes.monoRight._out.link(self.nodes.stereo.right)
+        self.nodes.monoLeft.out.link(self.nodes.stereo.left)
+        self.nodes.monoRight.out.link(self.nodes.stereo.right)
 
         if control:
             self.nodes.xinStereoConfig = pipeline.createXLinkIn()

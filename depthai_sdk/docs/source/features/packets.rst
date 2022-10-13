@@ -26,10 +26,10 @@ Example
             print(packet.imgDetections)
             cv2.imshow(packet.name, packet.frame)
 
-        # Callback after visualization:
+        # 1. Callback after visualization:
         oak.visualize(nn.out.main, fps=True, callback=cb)
 
-        # Callback:
+        # 2. Callback:
         oak.callback(nn.out.main, callback=cb)
 
         oak.start(blocking=True)

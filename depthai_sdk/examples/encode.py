@@ -1,17 +1,15 @@
 from depthai_sdk import OakCamera, RecordType
 
-
 with OakCamera() as oak:
-    # color = oak.create_camera('color', fps=15)
-    # left = oak.create_camera('left', fps=15)
-    # right = oak.create_camera('right', fps=15)
-    stereo = oak.create_stereo(resolution='800P')
+    color = oak.create_camera('color', resolution='1080P', fps=20, encode='H265')
+    left = oak.create_camera('left', resolution='800p', fps=20, encode='H265')
+    right = oak.create_camera('right', resolution='800p', fps=20, encode='H265')
 
-    oak.visualize(stereo.out_depth, scale=2/3, fps=True)
-    oak.record(stereo.out_depth, './', RecordType.MCAP)
+    stereo = oak.create_stereo(left=left, right=right)
+    nn = oak.create_nn('mobilenet-ssd', color, spatial=stereo)
 
-    oak.build() # Required to access oak.device
-    oak.device.setIrLaserDotProjectorBrightness(1000)
+    # Sync & save all (encoded) streams
+    oak.record([color.out.encoded, left.out.encoded, right.out.encoded], './', RecordType.VIDEO)
+    oak.visualize([nn], scale=2/3, fps=True)
 
-    # oak.show_graph()
     oak.start(blocking=True)

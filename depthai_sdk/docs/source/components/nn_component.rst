@@ -21,16 +21,14 @@ Usage
 
 .. code-block:: python
 
-    with OakCamera() as oak:
-        # Create color camera
+    from depthai_sdk import OakCamera, AspectRatioResizeMode
+
+    with OakCamera(recording='cars-tracking-above-01') as oak:
         color = oak.create_camera('color')
-
-        # Create NN component, use pretrained yolov6n from model zoo
-        nn = oak.create_nn('yolov6n_coco_640x640', color)
-
-        # Visualize object detections (bounding boxes) with high-res / passthrough frames and show their FPS
-        oak.visualize([nn.out.main, nn.out.passthrough], fps=True)
-        # Start the pipeline, continuously poll
+        nn = oak.create_nn('vehicle-detection-0202', color, tracker=True)
+        nn.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.STRETCH)
+        oak.visualize([nn.out_tracker, nn.out_passthrough], fps=True)
+        # oak.show_graph()
         oak.start(blocking=True)
 
 Component outputs
