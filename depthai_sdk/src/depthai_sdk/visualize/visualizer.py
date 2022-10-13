@@ -1,3 +1,4 @@
+import functools
 import json
 import os
 from dataclasses import replace
@@ -11,7 +12,7 @@ from depthai import ImgDetection
 
 from .configs import VisConfig, TextPosition
 from .encoder import JSONEncoder
-from .objects import VisDetections, GenericObject, VisText, VisTrail
+from .objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle
 from ..oak_outputs.normalize_bb import NormalizeBoundingBox
 
 
@@ -117,6 +118,32 @@ class NewVisualizer:
         self.add_object(trail)
         return self
 
+    def add_circle(self,
+                   coords: Tuple[int, int],
+                   radius: int,
+                   color: Tuple[int, int, int] = None,
+                   thickness: int = None) -> 'NewVisualizer':
+        """
+        Add a circle to the visualizer.
+
+        Args:
+            coords: Center of the circle.
+            radius: Radius of the circle.
+            color: Color of the circle.
+            thickness: Thickness of the circle.
+
+        Returns:
+            self
+        """
+        circle = VisCircle(
+            coords=coords,
+            radius=radius,
+            color=color,
+            thickness=thickness
+        )
+        self.objects.append(circle)
+        return self
+
     def draw(self, frame: np.ndarray, name: Optional[str] = 'Frames') -> None:
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
@@ -182,7 +209,7 @@ class NewVisualizer:
         self.config = replace(self.config, **kwargs)
         return self
 
-    def configure_bbox(self, **kwargs: dict) -> 'NewVisualizer':
+    def configure_detections(self, **kwargs: dict) -> 'NewVisualizer':
         """
         Configure how bounding boxes will look like.
         Args:

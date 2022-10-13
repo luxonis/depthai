@@ -7,7 +7,7 @@ with OakCamera() as oak:
     det = oak.create_nn('face-detection-retail-0004', camera)
 
     visualizer = oak.visualize(det.out.main)
-    visualizer.configure_bbox(
+    visualizer.configure_detections(
         color=(0, 255, 0),
         thickness=2,
         bbox_style=BboxStyle.RECTANGLE,

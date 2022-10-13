@@ -442,8 +442,9 @@ class VisText(GenericObject):
         else:
             shape = frame.shape[:2]
 
-        font_scale = min(shape) / (
-            1000 if self.bbox is None else 200) if text_config.auto_scale else text_config.font_scale
+        font_scale = min(shape) / (1000 if self.bbox is None else 200) \
+            if text_config.auto_scale \
+            else text_config.font_scale
 
         # Background
         cv2.putText(img=frame,
@@ -486,8 +487,9 @@ class VisText(GenericObject):
         else:
             shape = self.frame_shape[:2]
 
-        font_scale = min(shape) / (
-            1000 if self.bbox is None else 200) if text_config.auto_scale else text_config.font_scale
+        font_scale = min(shape) / (1000 if self.bbox is None else 200) \
+            if text_config.auto_scale \
+            else text_config.font_scale
 
         text_size = cv2.getTextSize(text=self.text,
                                     fontFace=text_config.font_face,
@@ -519,6 +521,7 @@ class VisTrail(GenericObject):
     """
     Object that represents a trail.
     """
+
     def __init__(self,
                  tracklets: List[dai.Tracklet],
                  label_map: List[Tuple[str, Tuple]]):
@@ -594,6 +597,7 @@ class VisLine(GenericObject):
     """
     Object that represents a line.
     """
+
     def __init__(self,
                  pt1: Tuple[int, int],
                  pt2: Tuple[int, int],
@@ -639,6 +643,54 @@ class VisLine(GenericObject):
                  self.color or tracking_config.line_color,
                  self.thickness or tracking_config.line_thickness,
                  tracking_config.line_type)
+
+
+class VisCircle(GenericObject):
+    def __init__(self,
+                 coords: Tuple[int, int],
+                 radius: int,
+                 color: Tuple[int, int, int] = None,
+                 thickness: int = None):
+        """
+        Args:
+            coords: Center of the circle.
+            radius: Radius of the circle.
+            color: Color of the circle.
+            thickness: Thickness of the circle.
+        """
+        super().__init__()
+
+        self.coords = coords
+        self.radius = radius
+        self.color = color
+        self.thickness = thickness
+
+    def prepare(self) -> 'VisCircle':
+        return self
+
+    def serialize(self):
+        parent = {
+            'type': 'circle',
+            'center': self.coords,
+            'radius': self.radius
+        }
+        if len(self.children) > 0:
+            children = [c.serialize() for c in self.children]
+            parent['children'] = children
+
+        return parent
+
+    def draw(self, frame: np.ndarray) -> None:
+        if self.frame_shape is None:
+            self.frame_shape = frame.shape
+
+        circle_config = self.config.circle
+        cv2.circle(frame,
+                   self.coords,
+                   self.radius,
+                   self.color or circle_config.color,
+                   self.thickness or circle_config.thickness,
+                   circle_config.line_type)
 
 
 class VisPolygon(GenericObject):

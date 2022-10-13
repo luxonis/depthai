@@ -72,6 +72,14 @@ class TrackingConfig:
 
 
 @dataclass
+class CircleConfig:
+    """Configuration for drawing circles."""
+    thickness: int = 1
+    color: Tuple[int, int, int] = (255, 255, 255)
+    line_type = cv2.LINE_AA
+
+
+@dataclass
 class VisConfig:
     """Configuration for visualizer."""
     img_scale: float = 1.0
@@ -80,3 +88,4 @@ class VisConfig:
     detection: DetectionConfig = field(default_factory=DetectionConfig)
     text: TextConfig = field(default_factory=TextConfig)
     tracking: TrackingConfig = field(default_factory=TrackingConfig)
+    circle: CircleConfig = field(default_factory=CircleConfig)

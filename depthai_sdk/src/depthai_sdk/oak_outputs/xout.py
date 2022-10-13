@@ -145,23 +145,17 @@ class XoutH26x(XoutFrames):
 
 
 class XoutClickable:
-    buffer: List[Tuple[int, int, List[int]]]  # Decay counter, value, (x, y) coordinates
-    decay_step: int
+    decay_step: int  # How many packets to wait before text disappears
+    buffer: Tuple[int, int, List[int]]
 
     def __init__(self, decay_step: int = 30):
         super().__init__()
-        self.buffer = []
+        self.buffer = None
         self.decay_step = decay_step
 
-    def on_click_callback(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN or event == cv2.EVENT_RBUTTONDOWN:
-            self.buffer.append([self.decay_step, param[0][y, x], [x, y]])
-
-    def decay_buffer(self):
-        for i in range(len(self.buffer)):
-            self.buffer[i] = (self.buffer[i][0] - 1, self.buffer[i][1], self.buffer[i][2])
-
-        self.buffer = [x for x in self.buffer if x[0] > 0]
+    def on_click_callback(self, event, x, y, flags, param) -> None:
+        if event == cv2.EVENT_MOUSEMOVE:
+            self.buffer = ([0, param[0][y, x], [x, y]])
 
 
 class XoutDisparity(XoutFrames, XoutClickable):
@@ -198,27 +192,25 @@ class XoutDisparity(XoutFrames, XoutClickable):
         XoutClickable.__init__(self, decay_step=int(self.fps))
 
     def visualize(self, packet: DepthPacket):
-        # ref https://github.com/luxonis/depthai-experiments/blob/master/gen2-wls-filter/main.py
-
         frame = packet.frame
         disparity_frame = (frame * self.multiplier).astype(np.uint8)
 
         if self.use_wls_filter:
             disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
-        if self.colorize:
-            packet.frame = cv2.applyColorMap(disparity_frame, cv2.COLORMAP_TURBO)
-        else:
-            packet.frame = disparity_frame
+        packet.frame = cv2.applyColorMap(disparity_frame, cv2.COLORMAP_TURBO) if self.colorize else disparity_frame
 
         if self.clickable:
             cv2.namedWindow(self.name)
             cv2.setMouseCallback(self.name, self.on_click_callback, param=[disparity_frame])
 
-            for i in range(len(self.buffer)):
-                self._visualizer.add_text(text=f'{self.buffer[i][1]}',
-                                          coords=tuple(self.buffer[i][2]))
-            self.decay_buffer()
+            if self.buffer:
+                x, y = self.buffer[2]
+                self._visualizer.add_circle(coords=(x, y), radius=3, color=(255, 255, 255), thickness=-1)
+                self._visualizer.add_text(
+                    text=f'{self.buffer[1]}',
+                    coords=(x, y - 10)
+                )
 
         super().visualize(packet)
 
@@ -297,10 +289,6 @@ class XoutDepth(XoutFrames, XoutClickable):
         XoutClickable.__init__(self, decay_step=int(self.fps))
 
     def visualize(self, packet: DepthPacket):
-        # if not self.factor:
-        #     size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
-        #     self.factor = calc_disp_multiplier(self.device, size)
-
         depth_frame = packet.imgFrame.getFrame()
 
         if self.use_wls_filter:
@@ -309,19 +297,19 @@ class XoutDepth(XoutFrames, XoutClickable):
         depth_frame_color = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
         depth_frame_color = cv2.equalizeHist(depth_frame_color)
 
-        if self.colorize:
-            packet.frame = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET)
-        else:
-            packet.frame = depth_frame_color
+        packet.frame = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET) if self.colorize else depth_frame_color
 
         if self.clickable:
             cv2.namedWindow(self.name)
             cv2.setMouseCallback(self.name, self.on_click_callback, param=[depth_frame])
 
-            for i in range(len(self.buffer)):
-                self._visualizer.add_text(text=f'{self.buffer[i][1]}',
-                                          coords=tuple(self.buffer[i][2]))
-            self.decay_buffer()
+            if self.buffer:
+                x, y = self.buffer[2]
+                self._visualizer.add_circle(coords=(x, y), radius=3, color=(255, 255, 255), thickness=-1)
+                self._visualizer.add_text(
+                    text=f'{self.buffer[1] / 10} cm',
+                    coords=(x, y - 10)
+                )
 
         super().visualize(packet)
 

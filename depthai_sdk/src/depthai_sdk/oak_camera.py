@@ -170,7 +170,7 @@ class OakCamera:
     def create_stereo(self,
                       resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
-                      clickable: bool = False,
+                      clickable: bool = True,
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
                       ) -> StereoComponent:
