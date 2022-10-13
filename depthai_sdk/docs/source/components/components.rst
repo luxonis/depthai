@@ -16,6 +16,6 @@ Reference
    :hidden:
    :caption: Components:
 
-   components/nn_component.rst
-   components/camera_component.rst
-   components/stereo_component.rst
+   ./nn_component.rst
+   ./camera_component.rst
+   ./stereo_component.rst
