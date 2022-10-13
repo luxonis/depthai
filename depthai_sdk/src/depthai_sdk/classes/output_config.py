@@ -12,9 +12,11 @@ class VisualizeConfig:
     # BB rectangle config (transparency, rounded edges etc.)
     scale: Union[None, float, Tuple[int, int]]
     fps: bool
-    def __init__(self, scale, fps):
+    record: Union[None, str]
+    def __init__(self, scale, fps, recording_path):
         self.scale = scale
         self.fps = fps
+        self.recording_path = recording_path
 
 
 class BaseConfig:
@@ -57,7 +59,7 @@ class OutputConfig(BaseConfig):
         names.append(xoutbase.name)
 
         if self.vis:
-            xoutbase.setup_visualize(self.vis.scale, self.vis.fps)
+            xoutbase.setup_visualize(self.vis.scale, self.vis.fps, self.vis.recording_path)
         return xoutbase
 
 class RecordConfig(BaseConfig):
@@ -78,5 +80,3 @@ class RecordConfig(BaseConfig):
         self.rec.start(device, xouts)
 
         return self.rec
-
-
