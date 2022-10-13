@@ -30,7 +30,7 @@ share/python-wheels/
 MANIFEST
 *.idea
 # DepthAI-Specific
-dataset/
+dataset*
 .fw_cache/
 depthai.calib
 mesh_left.calib
@@ -58,3 +58,7 @@ resources/*.json
 
 # Virtual environment
 virtualenv/
+venv/
+
+# DepthAI recordings
+recordings/

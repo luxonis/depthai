@@ -57,22 +57,28 @@ class App:
         subprocess.check_call(' '.join([quoted(self.appInterpreter), '-m', 'pip', 'install', '--prefer-binary', '-r', quoted(str(self.appRequirements))]), env=initEnv, shell=True, cwd=self.appPath)
 
     def runApp(self, shouldRun = lambda: True):
+        # Passthrough args to the app
+        args = [quoted(arg) for arg in sys.argv[1:]]
+        args.insert(0, quoted(str(self.appEntrypoint)))
+        args.insert(0, quoted(self.appInterpreter))
         if os.name == 'nt':
-            pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), quoted(str(self.appEntrypoint))]), env=initEnv, shell=True, cwd=self.appPath)
+            pro = subprocess.Popen(' '.join(args), env=initEnv, shell=True, cwd=self.appPath)
         else:
-            pro = subprocess.Popen(' '.join([quoted(self.appInterpreter), quoted(str(self.appEntrypoint))]), env=initEnv, shell=True, cwd=self.appPath, preexec_fn=os.setsid)
+            pro = subprocess.Popen(' '.join(args), env=initEnv, shell=True, cwd=self.appPath, preexec_fn=os.setsid)
         while shouldRun() and pro.poll() is None:
             try:
                 time.sleep(1)
             except KeyboardInterrupt:
                 break
-        if pro.poll() is not None:
-            try:
-                if os.name == 'nt':
-                    subprocess.call(['taskkill', '/F', '/T', '/PID', str(pro.pid)])
-                else:
-                    os.kill(pro.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
+
+        # if pro.poll() is not None:
+        try:
+            if os.name == 'nt':
+                subprocess.call(['taskkill', '/F', '/T', '/PID', str(pro.pid)])
+            else:
+                os.killpg(os.getpgid(pro.pid), signal.SIGTERM)
+
+        except ProcessLookupError:
+            pass
 
 

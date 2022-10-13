@@ -1,2 +1,4 @@
 include src/depthai_sdk/managers/*.py
+include src/depthai_sdk/readers/*.py
+include src/depthai_sdk/recorders/*.py
 include requirements.txt

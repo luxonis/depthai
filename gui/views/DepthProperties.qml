@@ -92,7 +92,6 @@ ListView {
         }
 
         Switch {
-            enabled: false
             id: switch2
             x: 0
             y: 233

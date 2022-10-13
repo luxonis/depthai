@@ -1,0 +1,10 @@
+depthai==2.17.0.0
+-e ../../depthai_sdk
+av==9.2.0
+mcap==0.0.10
+mcap-ros1-support==0.0.8
+rosbags==0.9.11
+--extra-index-url https://rospypi.github.io/simple/
+sensor_msgs
+geometry_msgs
+genpy

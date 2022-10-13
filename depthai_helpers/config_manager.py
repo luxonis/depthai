@@ -20,15 +20,32 @@ class ConfigManager:
     customFwCommit = ''
 
     def __init__(self, args):
-        self.args = args
+        self.args = args 
+
+        # Get resolution width as it's required by some functions
+        self.rgbResWidth = self.rgbResolutionWidth(self.args.rgbResolution)
+
         self.args.encode = dict(self.args.encode)
         self.args.cameraOrientation = dict(self.args.cameraOrientation)
-        if self.args.scale is None:
-            self.args.scale = {"color": 0.37}
-        else:
-            self.args.scale = dict(self.args.scale)
         if (Previews.left.name in self.args.cameraOrientation or Previews.right.name in self.args.cameraOrientation) and self.useDepth:
             print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
+
+    def rgbResolutionWidth(self, res: dai.ColorCameraProperties.SensorResolution) -> int:
+        if res == dai.ColorCameraProperties.SensorResolution.THE_720_P: return 720
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_800_P: return 800
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_1080_P: return 1080
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_4_K: return 2160
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_12_MP: return 3040
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_13_MP: return 3120
+        else: raise Exception('Resolution not supported!')
+
+    # Not needed, but might be useful for SDK in the future
+    # def _monoResWidth(self, res: dai.MonoCameraProperties.SensorResolution) -> int:
+    #     if res == dai.MonoCameraProperties.SensorResolution.THE_400_P: return 400
+    #     elif res == dai.MonoCameraProperties.SensorResolution.THE_480_P: return 480
+    #     elif res == dai.MonoCameraProperties.SensorResolution.THE_720_P: return 720
+    #     elif res == dai.MonoCameraProperties.SensorResolution.THE_800_P: return 800
+    #     else: raise Exception('Resolution not supported!')
 
     @property
     def debug(self):
@@ -104,32 +121,6 @@ class ConfigManager:
         cvColorMap[0] = [0, 0, 0]
         return cvColorMap
 
-    def getRgbResolution(self):
-        if self.args.rgbResolution == 2160:
-            return dai.ColorCameraProperties.SensorResolution.THE_4_K
-        elif self.args.rgbResolution == 3040:
-            return dai.ColorCameraProperties.SensorResolution.THE_12_MP
-        else:
-            return dai.ColorCameraProperties.SensorResolution.THE_1080_P
-
-    def getMonoResolution(self):
-        if self.args.monoResolution == 720:
-            return dai.MonoCameraProperties.SensorResolution.THE_720_P
-        elif self.args.monoResolution == 800:
-            return dai.MonoCameraProperties.SensorResolution.THE_800_P
-        else:
-            return dai.MonoCameraProperties.SensorResolution.THE_400_P
-
-    def getMedianFilter(self):
-        if self.args.stereoMedianSize == 3:
-            return dai.MedianFilter.KERNEL_3x3
-        elif self.args.stereoMedianSize == 5:
-            return dai.MedianFilter.KERNEL_5x5
-        elif self.args.stereoMedianSize == 7:
-            return dai.MedianFilter.KERNEL_7x7
-        else:
-            return dai.MedianFilter.MEDIAN_OFF
-
     def getUsb2Mode(self):
         if self.args['forceUsb2']:
             cliPrint("FORCE USB2 MODE", PrintColors.WARNING)
@@ -175,6 +166,20 @@ class ConfigManager:
         cams = device.getConnectedCameras()
         depthEnabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
 
+        sensorNames = device.getCameraSensorNames()
+        if dai.CameraBoardSocket.RGB in cams:
+            name = sensorNames[dai.CameraBoardSocket.RGB]
+            if name == 'OV9782':
+                if self.rgbResWidth not in [720, 800]:
+                    self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_800_P
+                    cliPrint(f'{name} requires 720 or 800 resolution, defaulting to {self.args.rgbResolution}', 
+                             PrintColors.RED)
+            else:
+                if self.rgbResWidth in [720, 800]:
+                    self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+                    cliPrint(f'{name} doesn\'t support 720 / 800 resolutions, defaulting to {self.args.rgbResolution}', 
+                             PrintColors.RED)
+
         if not depthEnabled:
             if not self.args.disableDepth:
                 print("Disabling depth...")
@@ -199,8 +204,8 @@ class ConfigManager:
             self.args.show = updatedShowArg
 
         if self.args.bandwidth == "auto":
-            if deviceInfo.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
-                print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(deviceInfo.desc.protocol))
+            if deviceInfo.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
+                print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(deviceInfo.protocol))
                 self.args.bandwidth = "low"
                 print("Setting PoE video quality to 50 to reduce latency...")
                 self.args.poeQuality = 50
@@ -275,7 +280,7 @@ After executing these commands, disconnect and reconnect USB cable to your OAK d
             return self.args.shaves
         if not self.useCamera:
             return 8
-        if self.args.rgbResolution > 1080:
+        if self.rgbResWidth > 1080:
             return 5
         return 6
 

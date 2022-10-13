@@ -43,7 +43,7 @@ class Supervisor:
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
             try:
                 cmd = ' '.join([f'"{sys.executable}"', "depthai_demo.py"] + new_args)
-                self.child = subprocess.Popen(cmd, shell=True, env=new_env, cwd=repo_root)
+                self.child = subprocess.Popen(cmd, shell=True, env=new_env, cwd=str(repo_root.resolve()))
                 self.child.communicate()
                 if self.child.returncode != 0:
                     raise subprocess.CalledProcessError(self.child.returncode, cmd)
@@ -57,7 +57,7 @@ class Supervisor:
             new_env["DEPTHAI_INSTALL_SIGNAL_HANDLER"] = "0"
             new_args = createNewArgs(args)
             cmd = ' '.join([f'"{sys.executable}"', "depthai_demo.py"] + new_args)
-            self.child = subprocess.Popen(cmd, shell=True, env=new_env, cwd=repo_root)
+            self.child = subprocess.Popen(cmd, shell=True, env=new_env, cwd=str(repo_root.resolve()))
             self.child.communicate()
 
     def checkQtAvailability(self):
