@@ -891,8 +891,8 @@ class Main:
             calibration_handler = self.device.readCalibration()
             try:
                 if self.empty_calibration(calibration_handler):
-                    calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
-            except:
+                    calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
+            except Exception as e:
                 print('Device closed in exception..' )
                 self.device.close()
                 print(e)
