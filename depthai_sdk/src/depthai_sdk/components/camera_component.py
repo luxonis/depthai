@@ -1,6 +1,5 @@
 from .component import Component
-from typing import Optional, Union, Tuple, Any, Dict
-import depthai as dai
+from typing import Dict
 from ..replay import Replay
 from .camera_helper import *
 from .parser import parseResolution, parseEncode
