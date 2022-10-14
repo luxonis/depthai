@@ -384,8 +384,8 @@ class Demo:
 
                     for roiData in self._sbbRois:
                         roi = roiData.roi.denormalize(depthFrame.shape[1], depthFrame.shape[0])
-                        topLeft = roi.top_left()
-                        bottomRight = roi.bottom_right()
+                        topLeft = roi.topLeft()
+                        bottomRight = roi.bottomRight()
                         # Display SBB on the disparity map
                         cv2.rectangle(depthFrame, (int(topLeft.x), int(topLeft.y)), (int(bottomRight.x), int(bottomRight.y)), self._nnManager._bboxColors[0], 2)
         else:
