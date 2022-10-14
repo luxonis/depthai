@@ -12,6 +12,16 @@ from pathlib import Path
 _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '.pbm', '.pgm', '.ppm', '.pxm',
              '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
 
+
+def get_name_flag(name: str) -> Tuple:
+    stream = 'color'
+    flag = cv2.IMREAD_COLOR
+    if name == 'left' or name == 'right':
+        flag = cv2.IMREAD_GRAYSCALE
+        stream = name
+    return (stream, flag)
+
+
 class ImageReader(AbstractReader):
     """
     Reads image(s) in the file. If file name is 'left'/'right', it will take those as the stereo camera pair, otherwise
@@ -25,18 +35,16 @@ class ImageReader(AbstractReader):
     }
     cntr: Dict[str, int] = dict()
 
-    def __init__(self, folder: Path) -> None:
-        for fileName in os.listdir(str(folder)):
-            f_name, ext = os.path.splitext(fileName)
-            if ext not in _imageExt: continue
-
-            stream = 'color'
-            flag = cv2.IMREAD_COLOR
-            if f_name == 'left' or f_name == 'right':
-                flag = cv2.IMREAD_GRAYSCALE
-                stream = f_name
-
-            self.frames[stream].append(cv2.imread(str(folder / fileName), flag))
+    def __init__(self, path: Path) -> None:
+        if path.is_file():
+            stream, flag = get_name_flag(path.stem)
+            self.frames[stream].append(cv2.imread(str(path), flag))
+        else:
+            for fileName in os.listdir(str(path)):
+                f_name, ext = os.path.splitext(fileName)
+                if ext not in _imageExt: continue
+                stream, flag = get_name_flag(f_name)
+                self.frames[stream].append(cv2.imread(str(path / fileName), flag))
 
         for name, arr in self.frames.items():
             self.cntr[name] = 0

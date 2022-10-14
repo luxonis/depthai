@@ -482,7 +482,7 @@ class NNComponent(Component):
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
             Default output. Streams NN results and high-res frames that were downscaled and used for inferencing.
-            Produces DetectionPacket or TwoStagePacket.
+            Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
 
             if self._comp._isMultiStage():
@@ -502,7 +502,7 @@ class NNComponent(Component):
         def passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
             Default output. Streams NN results and passthrough frames (frames used for inferencing)
-            Produces DetectionPacket or TwoStagePacket.
+            Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
             if self._comp._isMultiStage():
                 out = XoutTwoStage(self._comp._input, self._comp,
@@ -537,7 +537,7 @@ class NNComponent(Component):
 
         def twostage_crops(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutFrames:
             """
-            Streams two-stage cropped frames to the device. Produces FramePacket.
+            Streams 2. stage cropped frames to the host. Produces FramePacket.
             """
             if not self._comp._isMultiStage():
                 raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')

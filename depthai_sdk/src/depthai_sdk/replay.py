@@ -14,7 +14,7 @@ from .utils import *
 from .readers.abstract_reader import AbstractReader
 
 _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
-_videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264']
+_videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.webm']
 _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '.pbm', '.pgm', '.ppm', '.pxm',
              '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
 
@@ -89,6 +89,18 @@ class Replay:
             if calibFile.exists():
                 self._calibData = dai.CalibrationHandler(str(calibFile))
 
+        else:  # Provided path is a file
+            if self.path.suffix in _videoExt:
+                from .readers.videocap_reader import VideoCapReader
+                self.reader = VideoCapReader(self.path)
+            elif self.path.suffix in _imageExt:
+                from .readers.image_reader import ImageReader
+                self.reader = ImageReader(self.path)
+            else:
+                raise NotImplementedError('Please select folder')
+
+
+
     def _get_path(self, path: str) -> Path:
         """
         Either use local depthai-recording, YT link, mp4 url
@@ -100,8 +112,7 @@ class Replay:
                 # Overwrite source - so Replay class can use it
                 return downloadYTVideo(path)
             else:
-                # TODO: download video/image(s) from the internet
-                raise NotImplementedError("Only YouTube video download is currently supported!")
+                return downloadContent(path)
 
         if Path(path).resolve().exists():
             return Path(path).resolve()
@@ -232,6 +243,9 @@ class Replay:
         return pipeline
 
     def initStereoDepth(self, stereo: dai.node.StereoDepth):
+        streams = self.reader.getStreams()
+        if 'left' not in streams or 'right' not in streams:
+            raise Exception("Tried to init StereoDepth, but left/right streams aren't available!")
         stereo.setInputResolution(self.getShape('left'))
 
         if self.color:  # Enable RGB-depth alignment

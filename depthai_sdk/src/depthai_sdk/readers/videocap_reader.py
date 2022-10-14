@@ -7,6 +7,8 @@ from pathlib import Path
 
 _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264']
 
+
+
 class VideoCapReader(AbstractReader):
     """
     Reads stream from mp4, mjpeg, h264, h265
@@ -15,13 +17,16 @@ class VideoCapReader(AbstractReader):
     shapes: Dict[str, Tuple[int, int]] = dict()
     readers: Dict[str, cv2.VideoCapture] = dict()
 
-    def __init__(self, folder: Path) -> None:
-        for fileName in os.listdir(str(folder)):
-            f_name, ext = os.path.splitext(fileName)
-            if ext not in _videoExt: continue
-
-            stream = f_name if (f_name == 'left' or f_name == 'right') else 'color'
-            self.readers[stream] = cv2.VideoCapture(str(folder / fileName))
+    def __init__(self, path: Path) -> None:
+        if path.is_file():
+            stream = path.stem if (path.stem in ['left', 'right']) else 'color'
+            self.readers[stream] = cv2.VideoCapture(str(path))
+        else:
+            for fileName in os.listdir(str(path)):
+                f_name, ext = os.path.splitext(fileName)
+                if ext not in _videoExt: continue
+                stream = f_name if (f_name == 'left' or f_name == 'right') else 'color'
+                self.readers[stream] = cv2.VideoCapture(str(path / fileName))
 
         for name, reader in self.readers.items():
             ok, f = reader.read()

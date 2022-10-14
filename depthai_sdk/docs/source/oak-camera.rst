@@ -6,7 +6,6 @@ OakCamera
 Reference
 #########
 
-
-.. autoclass:: depthai_sdk.OakCamera
+.. autoclass:: depthai_sdk.oak_camera.OakCamera
     :members:
     :undoc-members:
