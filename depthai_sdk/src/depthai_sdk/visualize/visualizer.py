@@ -197,7 +197,7 @@ class Visualizer(VisualizerHelper):
 
         return json.dumps(parent, cls=JSONEncoder)
 
-    def configure_output(self, **kwargs: dict) -> 'Visualizer':
+    def output(self, **kwargs: dict) -> 'Visualizer':
         """
         Configure the output of the visualizer.
 
@@ -210,7 +210,7 @@ class Visualizer(VisualizerHelper):
         self.config.output = replace(self.config.output, **kwargs)
         return self
 
-    def configure_detections(self, **kwargs: dict) -> 'Visualizer':
+    def detections(self, **kwargs: dict) -> 'Visualizer':
         """
         Configure how bounding boxes will look like.
         Args:
@@ -222,7 +222,7 @@ class Visualizer(VisualizerHelper):
         self.config.detection = replace(self.config.detection, **kwargs)
         return self
 
-    def configure_text(self, **kwargs: dict) -> 'Visualizer':
+    def text(self, **kwargs: dict) -> 'Visualizer':
         """
         Configure how text will look like.
 
@@ -235,7 +235,7 @@ class Visualizer(VisualizerHelper):
         self.config.text = replace(self.config.text, **kwargs)
         return self
 
-    def configure_tracking(self, **kwargs: dict) -> 'Visualizer':
+    def tracking(self, **kwargs: dict) -> 'Visualizer':
         """
         Configure how tracking trails will look like.
 

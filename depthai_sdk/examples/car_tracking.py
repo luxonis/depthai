@@ -6,11 +6,11 @@ with OakCamera(recording='cars-tracking-above-01') as oak:
     nn.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.STRETCH)
 
     visualizer = oak.visualize(nn.out.tracker)
-    visualizer.configure_output(
+    visualizer.output(
         show_fps=True
-    ).configure_tracking(
+    ).tracking(
         line_thickness=5
-    ).configure_text(
+    ).text(
         font_thickness=1,
         auto_scale=True
     )
