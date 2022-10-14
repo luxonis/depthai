@@ -13,6 +13,7 @@ from depthai import ImgDetection
 from .configs import VisConfig, TextPosition
 from .encoder import JSONEncoder
 from .objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle
+from .visualizer_helper import VisualizerHelper
 from ..oak_outputs.normalize_bb import NormalizeBoundingBox
 
 
@@ -24,7 +25,7 @@ class Platform(Enum):
     PC = 'pc'
 
 
-class Visualizer:
+class Visualizer(VisualizerHelper):
     # Constants
     IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt'
 
