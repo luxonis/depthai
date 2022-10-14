@@ -1,4 +1,3 @@
-import json
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Tuple, List, Union
@@ -10,7 +9,7 @@ from depthai import ImgDetection
 
 from .configs import VisConfig, BboxStyle, TextPosition
 from ..oak_outputs.normalize_bb import NormalizeBoundingBox
-from ..oak_outputs.visualizer_helper import spatials_text
+from depthai_sdk.visualize.visualizer_helper import spatials_text
 
 
 class GenericObject(ABC):

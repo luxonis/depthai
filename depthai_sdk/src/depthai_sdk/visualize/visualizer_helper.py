@@ -8,8 +8,8 @@ import depthai as dai
 import distinctipy
 import numpy as np
 
-from .normalize_bb import NormalizeBoundingBox
-from ..classes.packets import DetectionPacket, _TwoStageDetection, SpatialBbMappingPacket, TrackerPacket, \
+from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.classes.packets import DetectionPacket, _TwoStageDetection, SpatialBbMappingPacket, TrackerPacket, \
     _TrackingDetection
 
 

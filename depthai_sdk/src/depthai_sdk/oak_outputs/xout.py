@@ -1,7 +1,4 @@
-import sys
-import time
 from abc import abstractmethod
-from threading import Thread
 from typing import Dict, List, Any, Optional, Tuple, Union
 
 import cv2
@@ -10,12 +7,10 @@ import numpy as np
 
 from distinctipy import distinctipy
 
-import PyQt5
-import pyqtgraph as pg
 from matplotlib import pyplot as plt
 
 from .normalize_bb import NormalizeBoundingBox
-from .visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr, colorize_depth
+from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 from .xout_base import XoutBase, StreamXout
 from ..classes.packets import (
     FramePacket,
@@ -69,7 +64,7 @@ class XoutFrames(XoutBase):
             )
 
         if self.callback:  # Don't display frame, call the callback
-            self.callback(packet)
+            self.callback(packet, self._visualizer)
         else:
             self._visualizer.draw(packet.frame, self.name)
 
@@ -177,7 +172,6 @@ class XoutDisparity(XoutFrames, XoutClickable):
 
         self.multiplier = 255.0 / max_disp
         self.fps = fps
-        self.clickable = clickable
 
         self.colorize = colorize
         self.use_wls_filter = use_wls_filter
@@ -200,7 +194,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
 
         packet.frame = cv2.applyColorMap(disparity_frame, cv2.COLORMAP_TURBO) if self.colorize else disparity_frame
 
-        if self.clickable:
+        if self._visualizer.config.output.clickable:
             cv2.namedWindow(self.name)
             cv2.setMouseCallback(self.name, self.on_click_callback, param=[disparity_frame])
 
@@ -263,7 +257,6 @@ class XoutDepth(XoutFrames, XoutClickable):
                  frames: StreamXout,
                  fps: float,
                  mono_frames: StreamXout,
-                 clickable: bool = False,
                  colorize: bool = False,
                  use_wls_filter: bool = None,
                  wls_lambda: float = None,
@@ -274,7 +267,6 @@ class XoutDepth(XoutFrames, XoutClickable):
         self.device = device
         self.multiplier = 255 / 95.0
 
-        self.clickable = clickable
         self.colorize = colorize
 
         self.use_wls_filter = use_wls_filter
@@ -299,7 +291,7 @@ class XoutDepth(XoutFrames, XoutClickable):
 
         packet.frame = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET) if self.colorize else depth_frame_color
 
-        if self.clickable:
+        if self._visualizer.config.output.clickable:
             cv2.namedWindow(self.name)
             cv2.setMouseCallback(self.name, self.on_click_callback, param=[depth_frame])
 

@@ -34,6 +34,7 @@ class OutputConfig:
     """Configuration for output of the visualizer."""
     img_scale: float = 1.0
     show_fps: bool = False
+    clickable: bool = True
 
 
 @dataclass

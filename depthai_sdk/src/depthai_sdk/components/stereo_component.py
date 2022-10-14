@@ -35,7 +35,6 @@ class StereoComponent(Component):
                  pipeline: dai.Pipeline,
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
-                 clickable: bool = None,
                  left: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Left mono camera
                  right: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Right mono camera
                  replay: Optional[Replay] = None,
@@ -64,8 +63,6 @@ class StereoComponent(Component):
 
         self.node = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
-
-        self._clickable = clickable
 
         # Configuration variables
         self._colorize = False
@@ -186,7 +183,6 @@ class StereoComponent(Component):
                 mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
                 max_disp=self._comp.node.getMaxDisparity(),
                 fps=fps,
-                clickable=self._comp._clickable,
                 colorize=self._comp._colorize,
                 use_wls_filter=self._comp._use_wls_filter,
                 wls_lambda=self._comp._wls_lambda,
@@ -202,7 +198,6 @@ class StereoComponent(Component):
                 frames=StreamXout(self._comp.node.id, self._comp.depth),
                 mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
                 fps=fps,
-                clickable=self._comp._clickable,
                 colorize=self._comp._colorize,
                 use_wls_filter=self._comp._use_wls_filter,
                 wls_lambda=self._comp._wls_lambda,
