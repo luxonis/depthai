@@ -7,6 +7,7 @@ from ..oak_outputs.xout_base import XoutBase, StreamXout
 from ..oak_outputs.xout import XoutDisparity, XoutDepth
 from ..replay import Replay
 from .parser import parse_cam_socket, parse_median_filter
+from ..visualize.configs import StereoColor
 
 
 class StereoComponent(Component):
@@ -65,7 +66,7 @@ class StereoComponent(Component):
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
         # Configuration variables
-        self._colorize = False
+        self._colorize = StereoColor.GRAY
         self._use_wls_filter = False
         self._wls_lambda = 8000
         self._wls_sigma = 1.5
@@ -139,7 +140,7 @@ class StereoComponent(Component):
         if lrCheckThreshold: self.node.initialConfig.setLeftRightCheckThreshold(lrCheckThreshold)
 
     def configure_postprocessing(self,
-                                 colorize: bool = None,
+                                 colorize: StereoColor = None,
                                  wls_filter: bool = None,
                                  wls_lambda: float = None,
                                  wls_sigma: float = None) -> None:

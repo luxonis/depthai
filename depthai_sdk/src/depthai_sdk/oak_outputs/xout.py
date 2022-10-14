@@ -20,6 +20,7 @@ from ..classes.packets import (
     TrackerPacket,
     IMUPacket, DepthPacket
 )
+from ..visualize.configs import StereoColor
 from ..visualize import Visualizer
 from ..visualize.configs import TextPosition
 
@@ -163,8 +164,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
                  mono_frames: StreamXout,
                  max_disp: float,
                  fps: float,
-                 clickable: bool = False,
-                 colorize: bool = False,
+                 colorize: StereoColor = False,
                  use_wls_filter: bool = None,
                  wls_lambda: float = None,
                  wls_sigma: float = None):
@@ -192,7 +192,15 @@ class XoutDisparity(XoutFrames, XoutClickable):
         if self.use_wls_filter:
             disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
-        packet.frame = cv2.applyColorMap(disparity_frame, cv2.COLORMAP_TURBO) if self.colorize else disparity_frame
+        if self.colorize == StereoColor.GRAY:
+            packet.frame = disparity_frame
+        elif self.colorize == StereoColor.RGB:
+            packet.frame = cv2.applyColorMap(disparity_frame, cv2.COLORMAP_JET)
+        elif self.colorize == StereoColor.RGBD:
+            packet.frame = cv2.applyColorMap(
+                (disparity_frame * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
+                cv2.COLORMAP_JET
+            )
 
         if self._visualizer.config.output.clickable:
             cv2.namedWindow(self.name)
@@ -250,14 +258,13 @@ class XoutDisparity(XoutFrames, XoutClickable):
 # TODO can we merge XoutDispariry and XoutDepth?
 class XoutDepth(XoutFrames, XoutClickable):
     name: str = "Depth"
-    factor: float = None
 
     def __init__(self,
                  device: dai.Device,
                  frames: StreamXout,
                  fps: float,
                  mono_frames: StreamXout,
-                 colorize: bool = False,
+                 colorize: StereoColor = False,
                  use_wls_filter: bool = None,
                  wls_lambda: float = None,
                  wls_sigma: float = None):
@@ -265,7 +272,7 @@ class XoutDepth(XoutFrames, XoutClickable):
 
         self.fps = fps
         self.device = device
-        self.multiplier = 255 / 95.0
+        # self.multiplier = 255 / 95.0
 
         self.colorize = colorize
 
@@ -289,7 +296,15 @@ class XoutDepth(XoutFrames, XoutClickable):
         depth_frame_color = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
         depth_frame_color = cv2.equalizeHist(depth_frame_color)
 
-        packet.frame = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET) if self.colorize else depth_frame_color
+        if self.colorize == StereoColor.GRAY:
+            packet.frame = depth_frame_color
+        elif self.colorize == StereoColor.RGB:
+            packet.frame = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET)
+        elif self.colorize == StereoColor.RGBD:
+            packet.frame = cv2.applyColorMap(
+                (depth_frame_color * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
+                cv2.COLORMAP_JET
+            )
 
         if self._visualizer.config.output.clickable:
             cv2.namedWindow(self.name)

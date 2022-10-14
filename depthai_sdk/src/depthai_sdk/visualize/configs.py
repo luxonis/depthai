@@ -29,6 +29,12 @@ class BboxStyle(IntEnum):
     ROUNDED_CORNERS = 11
 
 
+class StereoColor:
+    GRAY = 0
+    RGB = 1
+    RGBD = 2
+
+
 @dataclass
 class OutputConfig:
     """Configuration for output of the visualizer."""
