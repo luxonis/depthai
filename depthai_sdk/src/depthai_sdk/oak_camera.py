@@ -179,7 +179,6 @@ class OakCamera:
         Args:
             resolution (str/SensorResolution): If monochrome cameras aren't already passed, create them and set specified resolution
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
-            clickable (bool): Whether we want to enable clicking on the depth map to show it's Z coordinate
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
         """
@@ -394,7 +393,8 @@ class OakCamera:
     def _callback(self,
                   output: Union[List, Callable, Component],
                   callback: Callable,
-                  visualizer: Visualizer = None):
+                  visualizer: Visualizer = None,
+                  record: Optional[str] = None):
         if isinstance(output, List):
             for element in output:
                 self._callback(element, callback, visualizer)
@@ -403,19 +403,20 @@ class OakCamera:
         if isinstance(output, Component):
             output = output.out.main
 
-        self._out_templates.append(OutputConfig(output, callback, visualizer))
+        self._out_templates.append(OutputConfig(output, callback, visualizer, record))
 
-    def visualize(self,
-                  output: Union[List, Callable, Component],
+    def visualize(self, output: Union[List, Callable, Component],
+                  record: Optional[str] = None,
                   callback: Callable = None):
         """
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
         Args:
             output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
+            record: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
         visualizer = Visualizer()
-        self._callback(output, callback, visualizer)
+        self._callback(output, callback, visualizer, record)
         return visualizer
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):

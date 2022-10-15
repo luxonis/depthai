@@ -37,19 +37,41 @@ class XoutFrames(XoutBase):
     Single message, no syncing required
     """
     name: str = "Frames"
+    fps: float
     frames: StreamXout
+    _frame_shape: Tuple[int, int] = None
     _scale: Union[None, float, Tuple[int, int]] = None
     _show_fps: bool = False
-    fps: float
+    _recording_path: Union[None, str] = None
+    _video_writer: Union[cv2.VideoWriter, None] = None
+    _fourcc_codec_code = None
+    _frames_buffer: List = []
+    _FRAMES_TO_BUFFER: int = 20
 
     def __init__(self, frames: StreamXout, fps: float = 30):
         self.frames = frames
         self.fps = fps
         super().__init__()
 
-    def setup_visualize(self, visualizer: Visualizer, name: str = None):
+    def setup_visualize(self, visualizer: Visualizer,
+                        name: str = None,
+                        recording_path: Optional[str] = None):
         self._visualizer = visualizer
         self.name = name or self.name
+
+        if recording_path:
+            _recording_path = recording_path.split('.')
+            _recording_path[-2] += '_' + self.name.replace(' ', '_').lower()
+            self._recording_path = '.'.join(_recording_path)
+
+            video_format = _recording_path[-1]
+            if video_format == "mp4":
+                self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'mp4v')
+            elif video_format =="avi":
+                self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'FMP4')
+            else:
+                print("Selected video format not supported, using mp4 instead.")
+                self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'mp4v')
 
     def visualize(self, packet: FramePacket) -> None:
         """
@@ -67,7 +89,22 @@ class XoutFrames(XoutBase):
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet, self._visualizer)
         else:
-            self._visualizer.draw(packet.frame, self.name)
+            result = self._visualizer.draw(packet.frame, self.name)
+
+            # Record
+            if self._recording_path and not self._video_writer:
+                if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
+                    self._frames_buffer.append(packet.frame)
+                else:
+                    self._video_writer = cv2.VideoWriter(self._recording_path, self._fourcc_codec_code, self._fps.fps(),
+                                                         self._frame_shape)
+                    # write all buffered frames
+                    for frame in self._frames_buffer:
+                        self._video_writer.write(frame)
+            elif self._video_writer:
+                self._video_writer.write(result)
+
+
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -82,6 +119,10 @@ class XoutFrames(XoutBase):
         packet = FramePacket(name, msg, msg.getCvFrame())
 
         self.queue.put(packet, block=False)
+
+    def __del__(self):
+        if self._video_writer:
+            self._video_writer.release()
 
 
 class XoutMjpeg(XoutFrames):

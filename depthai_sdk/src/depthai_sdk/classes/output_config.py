@@ -14,10 +14,12 @@ class VisualizeConfig:
     # BB rectangle config (transparency, rounded edges etc.)
     scale: Union[None, float, Tuple[int, int]]
     fps: bool
+    record: Optional[str]
 
-    def __init__(self, scale, fps):
+    def __init__(self, scale, fps, recording_path):
         self.scale = scale
         self.fps = fps
+        self.recording_path = recording_path
 
 
 class BaseConfig:
@@ -34,10 +36,14 @@ class OutputConfig(BaseConfig):
     output: Callable  # Output of the component (a callback)
     callback: Callable  # Callback that gets called after syncing
 
-    def __init__(self, output: Callable, callback: Callable, visualizer: Visualizer = None):
+    def __init__(self, output: Callable,
+                 callback: Callable,
+                 visualizer: Visualizer = None,
+                 record: Optional[str] = None):
         self.output = output
         self.callback = callback
         self.visualizer = visualizer
+        self.record = record
 
     def find_new_name(self, name: str, names: List[str]):
         while True:
@@ -60,7 +66,7 @@ class OutputConfig(BaseConfig):
         names.append(xoutbase.name)
 
         if self.visualizer:
-            xoutbase.setup_visualize(self.visualizer, xoutbase.name)
+            xoutbase.setup_visualize(self.visualizer, xoutbase.name, self.record)
 
         return xoutbase
 
