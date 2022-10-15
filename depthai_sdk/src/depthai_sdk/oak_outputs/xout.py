@@ -63,11 +63,12 @@ class XoutFrames(XoutBase):
             _recording_path = recording_path.split('.')
             _recording_path[-2] += '_' + self.name.replace(' ', '_').lower()
             self._recording_path = '.'.join(_recording_path)
+            print(f'Recording to {self._recording_path}')
 
             video_format = _recording_path[-1]
             if video_format == "mp4":
                 self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'mp4v')
-            elif video_format =="avi":
+            elif video_format == "avi":
                 self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'FMP4')
             else:
                 print("Selected video format not supported, using mp4 instead.")
@@ -96,15 +97,15 @@ class XoutFrames(XoutBase):
                 if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
                     self._frames_buffer.append(packet.frame)
                 else:
-                    self._video_writer = cv2.VideoWriter(self._recording_path, self._fourcc_codec_code, self._fps.fps(),
-                                                         self._frame_shape)
-                    # write all buffered frames
+                    self._video_writer = cv2.VideoWriter(self._recording_path,
+                                                         self._fourcc_codec_code,
+                                                         self._fps.fps(),
+                                                         self._visualizer.frame_shape[:2])
+                    # Write all buffered frames
                     for frame in self._frames_buffer:
                         self._video_writer.write(frame)
             elif self._video_writer:
                 self._video_writer.write(result)
-
-
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]

@@ -397,7 +397,7 @@ class OakCamera:
                   record: Optional[str] = None):
         if isinstance(output, List):
             for element in output:
-                self._callback(element, callback, visualizer)
+                self._callback(element, callback, visualizer, record)
             return
 
         if isinstance(output, Component):
