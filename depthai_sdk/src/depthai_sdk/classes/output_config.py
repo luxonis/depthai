@@ -1,10 +1,12 @@
 from abc import abstractmethod
 from typing import Optional, Callable, Union, Tuple, List
+
 import depthai as dai
 
-from ..record import Record
-from ..oak_outputs.xout_base import XoutBase, StreamXout
+from ..visualize import Visualizer
 from ..oak_outputs.xout import XoutFrames
+from ..oak_outputs.xout_base import XoutBase
+from ..record import Record
 
 
 class VisualizeConfig:
@@ -12,7 +14,8 @@ class VisualizeConfig:
     # BB rectangle config (transparency, rounded edges etc.)
     scale: Union[None, float, Tuple[int, int]]
     fps: bool
-    record: Union[None, str]
+    record: Optional[str]
+
     def __init__(self, scale, fps, recording_path):
         self.scale = scale
         self.fps = fps
@@ -29,14 +32,18 @@ class OutputConfig(BaseConfig):
     """
     Saves callbacks/visualizers until the device is fully initialized. I'll admit it's not the cleanest solution.
     """
-    vis: Optional[VisualizeConfig] # Visualization
-    output: Callable # Output of the component (a callback)
-    callback: Callable # Callback that gets called after syncing
+    visualizer: Optional[Visualizer]  # Visualization
+    output: Callable  # Output of the component (a callback)
+    callback: Callable  # Callback that gets called after syncing
 
-    def __init__(self, output: Callable, callback: Callable, vis: VisualizeConfig = None):
+    def __init__(self, output: Callable,
+                 callback: Callable,
+                 visualizer: Visualizer = None,
+                 record: Optional[str] = None):
         self.output = output
         self.callback = callback
-        self.vis = vis
+        self.visualizer = visualizer
+        self.record = record
 
     def find_new_name(self, name: str, names: List[str]):
         while True:
@@ -58,13 +65,16 @@ class OutputConfig(BaseConfig):
             xoutbase.name = self.find_new_name(xoutbase.name, names)
         names.append(xoutbase.name)
 
-        if self.vis:
-            xoutbase.setup_visualize(self.vis.scale, self.vis.fps, self.vis.recording_path)
+        if self.visualizer:
+            xoutbase.setup_visualize(self.visualizer, xoutbase.name, self.record)
+
         return xoutbase
+
 
 class RecordConfig(BaseConfig):
     rec: Record
     outputs: List[Callable]
+
     def __init__(self, outputs: List[Callable], rec: Record):
         self.outputs = outputs
         self.rec = rec

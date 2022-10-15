@@ -7,6 +7,7 @@ from ..oak_outputs.xout_base import XoutBase, StreamXout
 from ..oak_outputs.xout import XoutDisparity, XoutDepth
 from ..replay import Replay
 from .parser import parse_cam_socket, parse_median_filter
+from ..visualize.configs import StereoColor
 
 
 class StereoComponent(Component):
@@ -64,6 +65,12 @@ class StereoComponent(Component):
         self.node = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
+        # Configuration variables
+        self._colorize = StereoColor.GRAY
+        self._use_wls_filter = False
+        self._wls_lambda = 8000
+        self._wls_sigma = 1.5
+
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._replay:
             self._replay.initStereoDepth(self.node)
@@ -82,13 +89,17 @@ class StereoComponent(Component):
             # TODO: use self._args to setup the StereoDepth node
 
             if isinstance(self.left, CameraComponent):
-                self.left = self.left.node # CameraComponent -> node
+                self.left = self.left.node  # CameraComponent -> node
             if isinstance(self.right, CameraComponent):
-                self.right = self.right.node # CameraComponent -> node
+                self.right = self.right.node  # CameraComponent -> node
 
             # Connect Mono cameras to the StereoDepth node
             self.left.out.link(self.node.left)
             self.right.out.link(self.node.right)
+
+            if len(device.getIrDrivers()) > 0:
+                print('IR driver detected, setting IR laser dot projector brightness to 800mA')
+                device.setIrLaserDotProjectorBrightness(800)
 
         if self._args:
             self._config_stereo_args(self._args)
@@ -128,6 +139,16 @@ class StereoComponent(Component):
         if sigma: self.node.initialConfig.setBilateralFilterSigma(sigma)
         if lrCheckThreshold: self.node.initialConfig.setLeftRightCheckThreshold(lrCheckThreshold)
 
+    def configure_postprocessing(self,
+                                 colorize: StereoColor = None,
+                                 wls_filter: bool = None,
+                                 wls_lambda: float = None,
+                                 wls_sigma: float = None) -> None:
+        self._colorize = colorize or self._colorize
+        self._use_wls_filter = wls_filter or self._use_wls_filter
+        self._wls_lambda = wls_lambda or self._wls_lambda
+        self._wls_sigma = wls_sigma or self._wls_sigma
+
     def _get_disparity_factor(self, device: dai.Device) -> float:
         """
         Calculates the disparity factor used to calculate depth from disparity.
@@ -144,26 +165,45 @@ class StereoComponent(Component):
     """
     Available outputs (to the host) of this component
     """
+
     class Out:
         _comp: 'StereoComponent'
+
         def __init__(self, stereoComponent: 'StereoComponent'):
             self._comp = stereoComponent
+
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             # By default, we want to show disparity
             return self.depth(pipeline, device)
 
         def disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             fps = self._comp.left.getFps() if self._comp._replay is None else self._comp._replay.getFps()
+
             out = XoutDisparity(
-                StreamXout(self._comp.node.id, self._comp.disparity),
-                self._comp.node.getMaxDisparity(),
-                fps
+                disparity_frames=StreamXout(self._comp.node.id, self._comp.disparity),
+                mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
+                max_disp=self._comp.node.getMaxDisparity(),
+                fps=fps,
+                colorize=self._comp._colorize,
+                use_wls_filter=self._comp._use_wls_filter,
+                wls_lambda=self._comp._wls_lambda,
+                wls_sigma=self._comp._wls_sigma
             )
+
             return self._comp._create_xout(pipeline, out)
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             fps = self._comp.left.getFps() if self._comp._replay is None else self._comp._replay.getFps()
-            out = XoutDepth(device, StreamXout(self._comp.node.id, self._comp.depth), fps)
+            out = XoutDepth(
+                device=device,
+                frames=StreamXout(self._comp.node.id, self._comp.depth),
+                mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
+                fps=fps,
+                colorize=self._comp._colorize,
+                use_wls_filter=self._comp._use_wls_filter,
+                wls_lambda=self._comp._wls_lambda,
+                wls_sigma=self._comp._wls_sigma
+            )
             return self._comp._create_xout(pipeline, out)
 
     out: Out

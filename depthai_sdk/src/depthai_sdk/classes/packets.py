@@ -1,25 +1,27 @@
 from typing import Tuple, List, Union
+
 import depthai as dai
 import numpy as np
 
 
 class _Detection:
-    def __init__(self):
-        pass
-
     # Original ImgDetection
-    imgDetection: dai.ImgDetection
+    img_detection: dai.ImgDetection
     label_str: str
     color: Tuple[int, int, int]
+
     # Normalized bounding box
-    topLeft: Tuple[int, int]
-    bottomRight: Tuple[int, int]
+    top_left: Tuple[int, int]
+    bottom_right: Tuple[int, int]
 
     def centroid(self) -> Tuple[int, int]:
         return (
-            int((self.bottomRight[0] + self.topLeft[0]) / 2),
-            int((self.bottomRight[1] + self.topLeft[1]) / 2),
+            int((self.bottom_right[0] + self.top_left[0]) / 2),
+            int((self.bottom_right[1] + self.top_left[1]) / 2),
         )
+
+    def get_bbox(self) -> Tuple[float, float, float, float]:
+        return self.img_detection.xmin, self.img_detection.ymin, self.img_detection.xmax, self.img_detection.ymax
 
 
 class _TrackingDetection(_Detection):
@@ -45,6 +47,14 @@ class FramePacket:
         self.frame = frame
 
 
+class DepthPacket(FramePacket):
+    mono_frame: dai.ImgFrame
+
+    def __init__(self, name: str, disparity_frame: dai.ImgFrame, mono_frame: dai.ImgFrame):
+        super().__init__(name, disparity_frame, disparity_frame.getCvFrame())
+        self.mono_frame = mono_frame
+
+
 class SpatialBbMappingPacket(FramePacket):
     """
     Output from Spatial Detection nodes - depth frame + bounding box mappings. Inherits FramePacket.
@@ -60,27 +70,27 @@ class DetectionPacket(FramePacket):
     """
     Output from Detection Network nodes - image frame + image detections. Inherits FramePacket.
     """
-    imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]
+    img_detections: Union[dai.ImgDetections, dai.SpatialImgDetections]
     detections: List[_Detection]
 
     def __init__(self,
                  name: str,
-                 imgFrame: dai.ImgFrame,
-                 imgDetections: Union[dai.ImgDetections, dai.SpatialImgDetections]):
-        super().__init__(name, imgFrame, imgFrame.getCvFrame())
-        self.imgDetections = imgDetections
+                 img_frame: dai.ImgFrame,
+                 img_detections: Union[dai.ImgDetections, dai.SpatialImgDetections]):
+        super().__init__(name, img_frame, img_frame.getCvFrame())
+        self.img_detections = img_detections
         self.detections = []
 
-    def _isSpatialDetection(self) -> bool:
-        return isinstance(self.imgDetections, dai.SpatialImgDetections)
+    def _is_spatial_detection(self) -> bool:
+        return isinstance(self.img_detections, dai.SpatialImgDetections)
 
     def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
         det = _Detection()
-        det.imgDetection = img_det
+        det.img_detection = img_det
         det.label_str = txt
         det.color = color
-        det.topLeft = (bbox[0], bbox[1])
-        det.bottomRight = (bbox[2], bbox[3])
+        det.top_left = (bbox[0], bbox[1])
+        det.bottom_right = (bbox[2], bbox[3])
         self.detections.append(det)
 
 
@@ -93,22 +103,22 @@ class TrackerPacket(FramePacket):
 
     def __init__(self,
                  name: str,
-                 imgFrame: dai.ImgFrame,
+                 img_frame: dai.ImgFrame,
                  tracklets: dai.Tracklets):
-        super().__init__(name, imgFrame, imgFrame.getCvFrame())
+        super().__init__(name, img_frame, img_frame.getCvFrame())
         self.daiTracklets = tracklets
         self.detections = []
 
     def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
         det = _TrackingDetection()
-        det.imgDetection = img_det
+        det.img_detection = img_det
         det.label_str = txt
         det.color = color
-        det.topLeft = (bbox[0], bbox[1])
-        det.bottomRight = (bbox[2], bbox[3])
+        det.top_left = (bbox[0], bbox[1])
+        det.bottom_right = (bbox[2], bbox[3])
         self.detections.append(det)
 
-    def _isSpatialDetection(self) -> bool:
+    def _is_spatial_detection(self) -> bool:
         coords = self.daiTracklets.tracklets[0].spatialCoordinates
         return coords.x != 0.0 or coords.y != 0.0 or coords.z != 0.0
 
@@ -128,22 +138,22 @@ class TwoStagePacket(DetectionPacket):
     _cntr: int = 0  # Label counter
 
     def __init__(self, name: str,
-                 imgFrame: dai.ImgFrame,
-                 imgDetections: dai.ImgDetections,
-                 nnData: List[dai.NNData],
+                 img_frame: dai.ImgFrame,
+                 img_detections: dai.ImgDetections,
+                 nn_data: List[dai.NNData],
                  labels: List[int]):
-        super().__init__(name, imgFrame, imgDetections)
+        super().__init__(name, img_frame, img_detections)
         self.frame = self.imgFrame.getCvFrame()
-        self.nnData = nnData
+        self.nnData = nn_data
         self.labels = labels
         self._cntr = 0
 
     def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
         det = _TwoStageDetection()
-        det.imgDetection = img_det
+        det.img_detection = img_det
         det.color = color
-        det.topLeft = (bbox[0], bbox[1])
-        det.bottomRight = (bbox[2], bbox[3])
+        det.top_left = (bbox[0], bbox[1])
+        det.bottom_right = (bbox[2], bbox[3])
 
         # Append the second stage NN result to the detection
         if self.labels is None or img_det.label in self.labels:

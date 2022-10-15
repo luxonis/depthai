@@ -7,8 +7,9 @@ from .fps import *
 from .oak_camera import OakCamera
 from .oak_device import OakDevice
 from .oak_outputs.fps import FPS
-from .oak_outputs.visualizer_helper import Visualizer
+from .visualize.visualizer_helper import VisualizerHelper
 from .previews import *
 from .record import *
 from .replay import *
 from .utils import *
+from .visualize import *

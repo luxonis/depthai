@@ -1,13 +1,15 @@
 import functools
 import time
+import warnings
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, Callable, Tuple
 
 import cv2
 import depthai as dai
 
+from .visualize import Visualizer
 from .args_parser import ArgsParser
-from .classes.output_config import BaseConfig, RecordConfig, OutputConfig, VisualizeConfig
+from .classes.output_config import BaseConfig, RecordConfig, OutputConfig
 from .components.camera_component import CameraComponent
 from .components.component import Component
 from .components.imu_component import IMUComponent
@@ -19,6 +21,10 @@ from .oak_device import OakDevice
 from .record import RecordType, Record
 from .replay import Replay
 from .utils import configPipeline
+
+
+class UsbWarning(UserWarning):
+    pass
 
 
 def _add_to_components(func) -> Callable:
@@ -207,6 +213,7 @@ class OakCamera:
                 raise Exception("No OAK device found to connect to!")
 
         version = self._pipeline.getOpenVINOVersion()
+
         if self._usb_speed == dai.UsbSpeed.SUPER:
             self._oak.device = dai.Device(
                 version=version,
@@ -219,6 +226,12 @@ class OakCamera:
                 deviceInfo=deviceInfo,
                 maxUsbSpeed=dai.UsbSpeed.SUPER if self._usb_speed is None else self._usb_speed
             )
+
+        # TODO test with usb3 (SUPER speed)
+        if self._usb_speed != dai.UsbSpeed.HIGH and self._oak.device.getUsbSpeed() == dai.UsbSpeed.HIGH:
+            warnings.warn("Device connected in USB2 mode! This might cause some issues. "
+                          "In such case, please try using a (different) USB3 cable, "
+                          "or force USB2 mode 'with OakCamera(usbSpeed=depthai.UsbSpeed.HIGH)'", UsbWarning)
 
     def config_pipeline(self,
                         xlinkChunk: Optional[int] = None,
@@ -377,33 +390,34 @@ class OakCamera:
 
         PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
 
-    def _callback(self, output: Union[List, Callable, Component], callback: Callable, vis=None):
+    def _callback(self,
+                  output: Union[List, Callable, Component],
+                  callback: Callable,
+                  visualizer: Visualizer = None,
+                  record: Optional[str] = None):
         if isinstance(output, List):
             for element in output:
-                self._callback(element, callback, vis)
+                self._callback(element, callback, visualizer, record)
             return
 
         if isinstance(output, Component):
             output = output.out.main
 
-        self._out_templates.append(OutputConfig(output, callback, vis))
+        self._out_templates.append(OutputConfig(output, callback, visualizer, record))
 
     def visualize(self, output: Union[List, Callable, Component],
-                  scale: Union[None, float, Tuple[int, int]] = None,
-                  fps=False,
-                  record: Union[None, str] = None,
+                  record: Optional[str] = None,
                   callback: Callable = None):
         """
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
         Args:
             output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
-            scale: Optionally scale the frame before it's displayed
-            fps: Show FPS of the output on the frame
             record: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
-
-        self._callback(output, callback, VisualizeConfig(scale, fps, record))
+        visualizer = Visualizer()
+        self._callback(output, callback, visualizer, record)
+        return visualizer
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):
         """

@@ -1,14 +1,18 @@
-from typing import Union, List, Callable
-from queue import Empty, Queue
 from abc import ABC, abstractmethod
+from queue import Empty, Queue
+from typing import List, Callable
+
 import depthai as dai
+
 from .fps import FPS
+from ..visualize import Visualizer
 
 
 class StreamXout:
     stream: dai.Node.Output
     name: str  # XLinkOut stream name
     friendly_name: str = None  # Used for eg. recording to a file
+
     def __init__(self, id: int, out: dai.Node.Output):
         self.stream = out
         self.name = f"{str(id)}_{out.name}"
@@ -24,7 +28,7 @@ class XoutBase(ABC):
     callback: Callable  # User defined callback. Called either after visualization (if vis=True) or after syncing.
     queue: Queue  # Queue to which synced Packets will be added. Main thread will get these
     _streams: List[str]  # Streams to listen for
-    _vis: bool = False
+    _visualizer: Visualizer = None
     _fps: FPS
     name: str  # Other Xouts will override this
 
@@ -61,7 +65,12 @@ class XoutBase(ABC):
             packet = self.queue.get(block=block)
             if packet is not None:
                 self._fps.next_iter()
-                if self._vis:
+                if self._visualizer:
+                    try:
+                        self._visualizer.frame_shape = packet.frame.shape
+                    except AttributeError:
+                        pass  # Not all packets have frame attribute
+
                     self.visualize(packet)
                 else:
                     # User defined callback

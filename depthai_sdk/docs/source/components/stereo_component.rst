@@ -25,6 +25,6 @@ Component outputs
 Reference
 #########
 
-.. autoclass:: depthai_sdk.StereoComponent
+.. autoclass:: depthai_sdk.components.StereoComponent
     :members:
     :undoc-members:

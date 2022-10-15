@@ -1,12 +1,10 @@
 from .component import Component
-from typing import Optional, Union, Tuple, Any, Dict
-import depthai as dai
+from typing import Dict
 from ..replay import Replay
 from .camera_helper import *
 from .parser import parseResolution, parseEncode
 from ..oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
 from ..oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
-
 
 
 class CameraComponent(Component):
@@ -65,9 +63,10 @@ class CameraComponent(Component):
             self._encoderProfile = parseEncode(encode)
 
         self._resolution_forced: bool = resolution is not None
-        if resolution: self._setResolution(resolution)
-        if fps: self._setFps(fps)
-
+        if resolution:
+            self._setResolution(resolution)
+        if fps:
+            self._setFps(fps)
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self.isReplay():  # If replay, don't create camera node
@@ -99,7 +98,7 @@ class CameraComponent(Component):
                 self.node.setIspScale(*scale)
 
             self.node.setVideoSize(*getClosestVideoSize(*self.node.getIspSize()))
-            self.node.setVideoNumFramesPool(2) # We will increase it later if we are streaming to host
+            self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 
             self.node.setPreviewSize(*self.node.getIspSize())
             self._out_size = self.node.getPreviewSize()
@@ -127,7 +126,6 @@ class CameraComponent(Component):
                 self.node.video.link(self.encoder.input)
             else:
                 raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
-
 
     def _create_node(self, pipeline: dai.Pipeline, source: str) -> None:
         """
@@ -165,7 +163,7 @@ class CameraComponent(Component):
                       preview: Union[None, str, Tuple[int, int]] = None,
                       fps: Optional[float] = None,
                       resolution: Union[
-                            None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
+                          None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None
                       ) -> None:
         """
         Configure resolution, scale, FPS, etc.
@@ -185,6 +183,7 @@ class CameraComponent(Component):
                 self.node.setPreviewSize(preview)
             else:
                 # TODO: Use ImageManip to set mono frame size
+
                 raise NotImplementedError("Not yet implemented")
 
     def _config_camera_args(self, args: Dict):
@@ -213,7 +212,7 @@ class CameraComponent(Component):
                 fps=args.get('monoFps', None),
                 resolution=args.get('monoResolution', None),
             )
-        else: # Replay
+        else:  # Replay
             self.config_camera(fps=args.get('fps', None))
 
     def config_color_camera(self,
@@ -227,7 +226,7 @@ class CameraComponent(Component):
                             antiBandingMode: Optional[dai.CameraControl.AntiBandingMode] = None,
                             effectMode: Optional[dai.CameraControl.EffectMode] = None,
                             # IQ settings
-                            ispScale: Optional[Tuple[int,int]] = None,
+                            ispScale: Optional[Tuple[int, int]] = None,
                             sharpness: Optional[int] = None,
                             lumaDenoise: Optional[int] = None,
                             chromaDenoise: Optional[int] = None,
@@ -266,6 +265,7 @@ class CameraComponent(Component):
         if not self.isReplay():
             self.node.setResolution(parseResolution(type(self.node), resolution))
         # TODO: support potentially downscaling depthai-recording
+
     def isReplay(self) -> bool:
         return self._replay is not None
 
@@ -277,12 +277,13 @@ class CameraComponent(Component):
 
     def _getFps(self):
         return (self._replay if self.isReplay() else self.node).getFps()
+
     def _setFps(self, fps: float):
         (self._replay if self._replay else self.node).setFps(fps)
 
     def config_encoder_h26x(self,
                             rate_control_mode: Optional[dai.VideoEncoderProperties.RateControlMode] = None,
-                            keyframe_freq: Optional[int ]= None,
+                            keyframe_freq: Optional[int] = None,
                             bitrate_kbps: Optional[int] = None,
                             num_b_frames: Optional[int] = None,
                             ):
@@ -307,7 +308,8 @@ class CameraComponent(Component):
         if self.encoder is None:
             raise Exception('Video encoder was not enabled!')
         if self._encoderProfile != dai.VideoEncoderProperties.Profile.MJPEG:
-            raise Exception(f'Video encoder was set to {self._encoderProfile} while trying to configure MJPEG attributes!')
+            raise Exception(
+                f'Video encoder was set to {self._encoderProfile} while trying to configure MJPEG attributes!')
 
         if quality:
             self.encoder.setQuality(quality)
@@ -317,9 +319,9 @@ class CameraComponent(Component):
     def get_stream_xout(self) -> StreamXout:
         if self.isReplay():
             return ReplayStream(self._source)
-        elif  self.isMono():
+        elif self.isMono():
             return StreamXout(self.node.id, self._out)
-        else: # ColorCamera
+        else:  # ColorCamera
             self.node.setVideoNumFramesPool(10)
             return StreamXout(self.node.id, self.node.video)
 
