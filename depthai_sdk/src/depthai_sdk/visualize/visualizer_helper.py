@@ -9,8 +9,13 @@ import distinctipy
 import numpy as np
 
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
-from depthai_sdk.classes.packets import DetectionPacket, _TwoStageDetection, SpatialBbMappingPacket, TrackerPacket, \
+from depthai_sdk.classes.packets import (
+    DetectionPacket,
+    _TwoStageDetection,
+    SpatialBbMappingPacket,
+    TrackerPacket,
     _TrackingDetection
+)
 
 
 class FramePosition(IntEnum):
@@ -300,7 +305,7 @@ def draw_tracklet_id(packet: TrackerPacket):
     for det in packet.detections:
         # centroid = det.centroid()
         VisualizerHelper.print_on_roi(packet.frame, det.top_left, det.bottom_right,
-                                f"Id: {str(det.tracklet.id)}",
+                                      f"Id: {str(det.tracklet.id)}",
                                       FramePosition.TopMid)
 
 

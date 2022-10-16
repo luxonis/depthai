@@ -2,9 +2,9 @@ from typing import List
 
 import depthai as dai
 
-from .component import Component, XoutBase
-from ..oak_outputs.xout import XoutIMU
-from ..oak_outputs.xout_base import StreamXout
+from depthai_sdk.components.component import Component, XoutBase
+from depthai_sdk.oak_outputs.xout import XoutIMU
+from depthai_sdk.oak_outputs.xout_base import StreamXout
 
 
 class IMUComponent(Component):

@@ -4,6 +4,7 @@ from string import Template
 import os
 from pathlib import Path
 
+
 class MultiStageConfig:
     debug: bool
     show_cropped_frames: bool
@@ -18,20 +19,20 @@ class MultiStageConfig:
 
 class MultiStageNN():
     script: dai.node.Script
-    manip: dai.node.ImageManip # Cropping ImageManip
-    out: dai.Node.Output # Cropped imgFrame output
+    manip: dai.node.ImageManip  # Cropping ImageManip
+    out: dai.Node.Output  # Cropped imgFrame output
     _size: Tuple[int, int]
 
     def __init__(self,
                  pipeline: dai.Pipeline,
                  detection_node: Union[
-                    dai.node.MobileNetDetectionNetwork,
-                    dai.node.MobileNetSpatialDetectionNetwork,
-                    dai.node.YoloDetectionNetwork,
-                    dai.node.YoloSpatialDetectionNetwork],  # Object detection node
+                     dai.node.MobileNetDetectionNetwork,
+                     dai.node.MobileNetSpatialDetectionNetwork,
+                     dai.node.YoloDetectionNetwork,
+                     dai.node.YoloSpatialDetectionNetwork],  # Object detection node
                  highResFrames: dai.Node.Output,
                  size: Tuple[int, int],
-                 debug = False
+                 debug=False
                  ) -> None:
         """
         Args:
@@ -40,9 +41,8 @@ class MultiStageNN():
         """
         # self._input.node, self._input.stream_input, self.size
 
-
         self.script = pipeline.create(dai.node.Script)
-        self.script.setProcessor(dai.ProcessorType.LEON_CSS) # More stable
+        self.script.setProcessor(dai.ProcessorType.LEON_CSS)  # More stable
         self._size = size
 
         detection_node.out.link(self.script.inputs['detections'])
@@ -71,15 +71,14 @@ class MultiStageNN():
 
         with open(Path(os.path.dirname(__file__)) / 'template_multi_stage_script.py', 'r') as file:
             code = Template(file.read()).substitute(
-                DEBUG = '' if config.debug else '#',
-                CHECK_LABELS = f"if det.label not in {str(config.labels)}: continue" if config.labels else "",
-                WIDTH = str(self._size[0]),
-                HEIGHT = str(self._size[1]),
-                SCALE_BB_XMIN = f"-{config.scaleBb[0]/100}" if config.scaleBb else "", # % to float value
-                SCALE_BB_YMIN = f"-{config.scaleBb[1]/100}" if config.scaleBb else "",
-                SCALE_BB_XMAX = f"+{config.scaleBb[0]/100}" if config.scaleBb else "",
-                SCALE_BB_YMAX = f"+{config.scaleBb[1]/100}" if config.scaleBb else "",
+                DEBUG='' if config.debug else '#',
+                CHECK_LABELS=f"if det.label not in {str(config.labels)}: continue" if config.labels else "",
+                WIDTH=str(self._size[0]),
+                HEIGHT=str(self._size[1]),
+                SCALE_BB_XMIN=f"-{config.scaleBb[0] / 100}" if config.scaleBb else "",  # % to float value
+                SCALE_BB_YMIN=f"-{config.scaleBb[1] / 100}" if config.scaleBb else "",
+                SCALE_BB_XMAX=f"+{config.scaleBb[0] / 100}" if config.scaleBb else "",
+                SCALE_BB_YMAX=f"+{config.scaleBb[1] / 100}" if config.scaleBb else "",
             )
             self.script.setScript(code)
             # print(f"\n------------{code}\n---------------")
-

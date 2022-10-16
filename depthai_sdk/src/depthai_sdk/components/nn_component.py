@@ -4,16 +4,16 @@ from typing import Callable, Union, List, Dict
 
 import blobconverter
 
-from .camera_component import CameraComponent
-from .component import Component
-from .multi_stage_nn import MultiStageNN, MultiStageConfig
-from .nn_helper import *
-from .parser import *
-from .stereo_component import StereoComponent
-from ..classes.nn_config import Config
-from ..oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker
-from ..oak_outputs.xout_base import StreamXout, XoutBase
-from ..replay import Replay
+from depthai_sdk.components.camera_component import CameraComponent
+from depthai_sdk.components.component import Component
+from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
+from depthai_sdk.components.nn_helper import *
+from depthai_sdk.components.parser import *
+from depthai_sdk.components.stereo_component import StereoComponent
+from depthai_sdk.classes.nn_config import Config
+from depthai_sdk.oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker
+from depthai_sdk.oak_outputs.xout_base import StreamXout, XoutBase
+from depthai_sdk.replay import Replay
 
 
 class NNComponent(Component):

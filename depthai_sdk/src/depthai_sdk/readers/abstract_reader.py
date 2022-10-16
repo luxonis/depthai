@@ -3,6 +3,7 @@ from typing import List, Tuple
 import os
 from pathlib import Path
 
+
 class AbstractReader(ABC):
     @abstractmethod
     def read(self):
@@ -15,7 +16,7 @@ class AbstractReader(ABC):
     @abstractmethod
     def getStreams(self) -> List[str]:
         pass
- 
+
     @abstractmethod
     def getShape(self, name: str) -> Tuple[int, int]:
         """

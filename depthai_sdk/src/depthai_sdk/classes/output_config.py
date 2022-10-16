@@ -3,10 +3,10 @@ from typing import Optional, Callable, Union, Tuple, List
 
 import depthai as dai
 
-from ..visualize import Visualizer
-from ..oak_outputs.xout import XoutFrames
-from ..oak_outputs.xout_base import XoutBase
-from ..record import Record
+from depthai_sdk.visualize import Visualizer
+from depthai_sdk.oak_outputs.xout import XoutFrames
+from depthai_sdk.oak_outputs.xout_base import XoutBase
+from depthai_sdk.record import Record
 
 
 class VisualizeConfig:

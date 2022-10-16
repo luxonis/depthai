@@ -1,7 +1,7 @@
 from pathlib import Path
 from mcap_ros1.writer import Writer as Ros1Writer
-from .abstract_recorder import *
-from .depthai2ros import DepthAi2Ros1
+from depthai_sdk.recorders.abstract_recorder import *
+from depthai_sdk.recorders.depthai2ros import DepthAi2Ros1
 
 import depthai as dai
 from typing import List, Dict
@@ -40,9 +40,6 @@ class McapRecorder(Recorder):
                 raise Exception("MCAP recording doesn't support Lossless MJPEG encoding!")
             # rec.setPointcloud(self._pointcloud)
 
-
-
-    
     def setPointcloud(self, enable: bool):
         """
         Whether to convert depth to pointcloud
@@ -51,16 +48,16 @@ class McapRecorder(Recorder):
 
     def write(self, name: str, frame: dai.ImgFrame):
         if self._stream_type[name].isDepth():
-            if self._pcl: # Generate pointcloud from depth and save it
+            if self._pcl:  # Generate pointcloud from depth and save it
                 msg = self.converter.PointCloud2(frame)
                 self.ros_writer.write_message(f"pointcloud/raw", msg)
-            else: # Save raw depth frame
+            else:  # Save raw depth frame
                 msg = self.converter.Image(frame)
                 self.ros_writer.write_message(f"depth/raw", msg)
         elif self._stream_type[name].isMjpeg():
             msg = self.converter.CompressedImage(frame)
             self.ros_writer.write_message(f"{name}/compressed", msg)
-        
+
     def close(self) -> None:
         if self._closed: return
         self._closed = True

@@ -7,8 +7,8 @@ import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
-from .configs import VisConfig, BboxStyle, TextPosition
-from ..oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
+from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.visualize.visualizer_helper import spatials_text
 
 

@@ -1,22 +1,23 @@
-import array
 from rosbags.rosbag2 import Reader
 from rosbags.serde import deserialize_cdr
 from rosbags.interfaces import Connection
 from typing import Any, Generator, List, Dict
 import numpy as np
-from ..previews import PreviewDecoder
+from depthai_sdk.previews import PreviewDecoder
 import cv2
 from pathlib import Path
 import os
-from .abstract_reader import AbstractReader
+from depthai_sdk.readers.abstract_reader import AbstractReader
+
 
 class Db3Reader(AbstractReader):
     STREAMS = ['left', 'right', 'depth']
     generators: Dict[str, Generator] = {}
-    frames = None # For shapes
+    frames = None  # For shapes
     """
     TODO: make the stream selectable, add function that returns all available streams
     """
+
     def __init__(self, folder: Path) -> None:
         self.reader = Reader(self._fileWithExt(folder, '.db3'))
         self.reader.open()
@@ -44,7 +45,6 @@ class Db3Reader(AbstractReader):
         except:
             return None
 
-
     def _getCvFrame(self, msg, name: str):
         """
         Convert ROS message to cv2 frame (numpy array)
@@ -54,7 +54,7 @@ class Db3Reader(AbstractReader):
         if 'CompressedImage' in msgType:
             if name == 'color':
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_COLOR)
-            else: # left, right, disparity 
+            else:  # left, right, disparity
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_GRAYSCALE)
         elif 'Image' in msgType:
             if msg.encoding == 'mono16':

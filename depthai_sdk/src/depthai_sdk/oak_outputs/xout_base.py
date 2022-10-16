@@ -4,8 +4,8 @@ from typing import List, Callable
 
 import depthai as dai
 
-from .fps import FPS
-from ..visualize import Visualizer
+from depthai_sdk.oak_outputs.fps import FPS
+from depthai_sdk.visualize import Visualizer
 
 
 class StreamXout:

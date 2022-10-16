@@ -1,8 +1,8 @@
 import depthai as dai
 from typing import Type, Dict, List, Tuple
 
-from .visualize.visualizer import Visualizer
-from .oak_outputs.xout_base import XoutBase
+from depthai_sdk.visualize.visualizer import Visualizer
+from depthai_sdk.oak_outputs.xout_base import XoutBase
 
 
 class OakDevice:

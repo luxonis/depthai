@@ -1,10 +1,10 @@
-from .component import Component
 from typing import Dict
-from ..replay import Replay
-from .camera_helper import *
-from .parser import parseResolution, parseEncode
-from ..oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
-from ..oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
+from depthai_sdk.components.component import Component
+from depthai_sdk.replay import Replay
+from depthai_sdk.components.camera_helper import *
+from depthai_sdk.components.parser import parseResolution, parseEncode
+from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
+from depthai_sdk.oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
 
 
 class CameraComponent(Component):

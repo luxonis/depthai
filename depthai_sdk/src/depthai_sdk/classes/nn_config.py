@@ -1,5 +1,5 @@
 from marshmallow import Schema, fields
-from .yolo_config import YoloConfig
+from depthai_sdk.classes.yolo_config import YoloConfig
 
 
 class Mappings(Schema):
@@ -35,4 +35,3 @@ class Config(Schema):
     openvino_version = fields.Str(required=False)  # If the model requires specific OpenVINO version
     mappings = fields.Nested(Mappings, required=False)
     version = fields.Int()  # Version of the config file
-

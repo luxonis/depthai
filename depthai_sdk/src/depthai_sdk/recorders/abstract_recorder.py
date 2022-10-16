@@ -1,30 +1,33 @@
 from abc import ABC, abstractmethod
 from enum import IntEnum
-from ..oak_outputs.xout_base import XoutBase
-from ..oak_outputs.xout import XoutFrames, XoutH26x, XoutMjpeg, XoutDepth, XoutDisparity
+from depthai_sdk.oak_outputs.xout_base import XoutBase
+from depthai_sdk.oak_outputs.xout import XoutFrames, XoutH26x, XoutMjpeg, XoutDepth, XoutDisparity
 import depthai as dai
+
 
 class Recorder(ABC):
     @abstractmethod
     def write(self, name: str, frame: dai.ImgFrame):
         pass
+
     @abstractmethod
     def close(self):
         pass
 
+
 class OakStream:
     class StreamType(IntEnum):
-        RAW = 0 # Unencoded frames (mono, color, disparity)
+        RAW = 0  # Unencoded frames (mono, color, disparity)
         MJPEG = 1
         H264 = 2
         H265 = 3
-        DEPTH = 4 # 16 bit
+        DEPTH = 4  # 16 bit
 
     type: StreamType
 
     def __init__(self, xout: XoutBase):
         if isinstance(xout, XoutMjpeg):
-           self.type = self.StreamType.MJPEG
+            self.type = self.StreamType.MJPEG
         elif isinstance(xout, XoutH26x):
             if xout.profile == dai.VideoEncoderProperties.Profile.H265_MAIN:
                 self.type = self.StreamType.H265
@@ -62,4 +65,3 @@ class OakStream:
 
     def isDepth(self) -> bool:
         return self.type == self.StreamType.DEPTH
-

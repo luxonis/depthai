@@ -1,10 +1,9 @@
-import array
 import time
 
 import cv2
 import os
 import numpy as np
-from .abstract_reader import AbstractReader
+from depthai_sdk.readers.abstract_reader import AbstractReader
 from typing import List, Tuple, Dict
 from pathlib import Path
 

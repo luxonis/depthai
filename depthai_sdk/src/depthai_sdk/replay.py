@@ -1,22 +1,17 @@
-import array
 import os
-import types
 import depthai as dai
-import datetime
-import numpy as np
-from typing import Dict, Optional, Tuple, List, Any, Union
-from .readers.abstract_reader import AbstractReader
 from time import monotonic
 import time
 from threading import Thread
 
-from .utils import *
-from .readers.abstract_reader import AbstractReader
+from depthai_sdk.utils import *
+from depthai_sdk.readers.abstract_reader import AbstractReader
 
 _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
 _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.webm']
 _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '.pbm', '.pgm', '.ppm', '.pxm',
              '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
+
 
 class Replay:
     disabledStreams: List[str] = []
@@ -35,13 +30,13 @@ class Replay:
 
     fps: float = 30.0
     thread: Thread = None
-    _stop: bool = False # Stop the thread that's sending frames to the OAK camera
+    _stop: bool = False  # Stop the thread that's sending frames to the OAK camera
 
-    xins: List[str] = [] # Name of XLinkIn streams
+    xins: List[str] = []  # Name of XLinkIn streams
 
     reader: AbstractReader = None
-    frames: Dict[str, np.ndarray] = dict() # Frames read from Readers
-    imgFrames: Dict[str, dai.ImgFrame] = dict() # Last frame sent to the device
+    frames: Dict[str, np.ndarray] = dict()  # Frames read from Readers
+    imgFrames: Dict[str, dai.ImgFrame] = dict()  # Last frame sent to the device
 
     def __init__(self, path: str):
         """
@@ -62,8 +57,8 @@ class Replay:
                     return file.endswith(ext)
                 else:
                     raise ValueError('ext should be either str or List[str]!')
-            return [fileWithExt(f) for f in os.listdir(str(path))].count(True)
 
+            return [fileWithExt(f) for f in os.listdir(str(path))].count(True)
 
         if self.path.is_dir():  # Provided path is a folder
             if 0 < cntFilesExt(self.path, _imageExt):
@@ -99,8 +94,6 @@ class Replay:
             else:
                 raise NotImplementedError('Please select folder')
 
-
-
     def _get_path(self, path: str) -> Path:
         """
         Either use local depthai-recording, YT link, mp4 url
@@ -127,7 +120,7 @@ class Replay:
         if recordingName in dic:
             arr = dic[recordingName]
             print("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB".format(recordingName,
-                                                                                                  arr[1] / 1e6))
+                                                                                                        arr[1] / 1e6))
             path = downloadRecording(recordingName, arr[0])
             return path
         else:
@@ -139,7 +132,6 @@ class Replay:
         """
         self._pause = not self._pause
         print("PAUSE", self._pause)
-
 
     def setFps(self, fps: float):
         """
