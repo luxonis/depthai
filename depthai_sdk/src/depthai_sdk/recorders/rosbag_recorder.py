@@ -22,7 +22,7 @@ import os
 import time
 import depthai as dai
 
-from .abstract_recorder import Recorder
+from depthai_sdk.recorders.abstract_recorder import Recorder
 
 CAMERA_INFO = """
 # This message defines meta information for a camera. It should be in a

@@ -5,12 +5,14 @@ import numpy as np
 from typing import List, Tuple
 from pathlib import Path
 
-from .abstract_reader import AbstractReader
+from depthai_sdk.readers.abstract_reader import AbstractReader
+
 
 class RosbagReader(AbstractReader):
     """
     TODO: make the stream selectable, add function that returns all available streams
     """
+
     def __init__(self, folder: Path) -> None:
         self.reader = Reader(source)
         self.reader.open()
@@ -24,12 +26,12 @@ class RosbagReader(AbstractReader):
         return msg.data.view(np.int16).reshape((msg.height, msg.width))
 
     def getStreams(self) -> List[str]:
-        return ["depth"] # Only depth recording is supported
+        return ["depth"]  # Only depth recording is supported
 
     def getShape(self, name: str) -> Tuple[int, int]:
         connection, _, rawdata = next(self.reader.messages('/device_0/sensor_0/Depth_0/image/data'))
         msg = deserialize_cdr(ros1_to_cdr(rawdata, connection.msgtype), connection.msgtype)
-        return (msg.width,msg.height)
+        return (msg.width, msg.height)
 
     def close(self):
         self.reader.close()

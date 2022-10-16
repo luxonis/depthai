@@ -1,12 +1,11 @@
 import array
 import cv2
 import os
-from .abstract_reader import AbstractReader
+from depthai_sdk.readers.abstract_reader import AbstractReader
 from typing import List, Tuple, Dict, Any
 from pathlib import Path
 
 _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264']
-
 
 
 class VideoCapReader(AbstractReader):
@@ -55,7 +54,7 @@ class VideoCapReader(AbstractReader):
     def getStreams(self) -> List[str]:
         return [name for name in self.readers]
 
-    def getShape(self, name: str) -> Tuple[int, int]: # Doesn't work as expected!!
+    def getShape(self, name: str) -> Tuple[int, int]:  # Doesn't work as expected!!
         return self.shapes[name]
 
     def close(self):

@@ -2,7 +2,7 @@ from typing import Tuple
 
 import numpy as np
 
-from ..components.nn_helper import AspectRatioResizeMode
+from depthai_sdk.components.nn_helper import AspectRatioResizeMode
 
 
 class NormalizeBoundingBox:

@@ -5,9 +5,10 @@ import depthai as dai
 # from visualization_msgs.msg import ImageMarker
 # from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point
 from genpy.rostime import Time
-from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField #s, PointCloud
+from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField  # s, PointCloud
 import numpy as np
 import time
+
 
 class DepthAi2Ros1:
     xyz = dict()
@@ -18,7 +19,7 @@ class DepthAi2Ros1:
 
     def getTime(self) -> Time:
         ts = time.time_ns() - self.start_nanos
-        return Time(int(ts/1000000), ts%1000000)
+        return Time(int(ts / 1000000), ts % 1000000)
 
     def CompressedImage(self, imgFrame: dai.ImgFrame) -> CompressedImage:
         msg = CompressedImage()
@@ -34,12 +35,11 @@ class DepthAi2Ros1:
         msg.header.stamp = self.getTime()
         msg.height = imgFrame.getHeight()
         msg.width = imgFrame.getWidth()
-        msg.encoding = 'mono16' # if rgb else 'mono16', # For depth
+        msg.encoding = 'mono16'  # if rgb else 'mono16', # For depth
         msg.is_bigendian = 0
-        msg.step = imgFrame.getWidth() * 2 # *2 for mono16 (depth)
+        msg.step = imgFrame.getWidth() * 2  # *2 for mono16 (depth)
         msg.data = np.array(imgFrame.getData()).tobytes()
         return msg
-
 
     def PointCloud2(self, imgFrame: dai.ImgFrame):
         """
@@ -51,10 +51,10 @@ class DepthAi2Ros1:
         heigth = str(imgFrame.getHeight())
         if heigth not in self.xyz:
             self._create_xyz(imgFrame.getWidth(), imgFrame.getHeight())
-        
+
         frame = imgFrame.getCvFrame()
         frame = np.expand_dims(np.array(frame), axis=-1)
-        pcl = self.xyz[heigth] * frame / 1000.0 # To meters
+        pcl = self.xyz[heigth] * frame / 1000.0  # To meters
 
         msg.height = imgFrame.getHeight()
         msg.width = imgFrame.getWidth()
@@ -64,7 +64,7 @@ class DepthAi2Ros1:
             PointField(name="z", offset=8, datatype=PointField.FLOAT32, count=1)
         ]
         msg.is_bigendian = False
-        msg.point_step = 12 # 3 * float32 (=4 bytes)
+        msg.point_step = 12  # 3 * float32 (=4 bytes)
         msg.row_step = 12 * imgFrame.getWidth()
         msg.data = pcl.tobytes()
         msg.is_dense = True
@@ -98,4 +98,3 @@ class DepthAi2Ros1:
 
         xyz = np.stack([x_coord, y_coord], axis=-1)
         self.xyz[str(height)] = np.pad(xyz, ((0, 0), (0, 0), (0, 1)), "constant", constant_values=1.0)
-

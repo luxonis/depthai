@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 import depthai as dai
-from .components.parser import rgbResolution, monoResolution, parse_bool
+from depthai_sdk.components.parser import rgbResolution, monoResolution, parse_bool
 
 """
 Very similar to ArgsManager, but specific to the new SDK, not depthai_demo.py. 

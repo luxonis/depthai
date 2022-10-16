@@ -10,13 +10,13 @@ class FPSHandler:
     used to feed the video file based on it's FPS property, not app performance (this prevents the video from being sent
     to quickly if we finish processing a frame earlier than the next video frame should be consumed)
     """
-    
+
     _fpsBgColor = (0, 0, 0)
     _fpsColor = (255, 255, 255)
     _fpsType = cv2.FONT_HERSHEY_SIMPLEX
     _fpsLineType = cv2.LINE_AA
 
-    def __init__(self, cap=None, maxTicks = 100):
+    def __init__(self, cap=None, maxTicks=100):
         """
         Args:
             cap (cv2.VideoCapture, Optional): handler to the video file object
@@ -112,5 +112,7 @@ class FPSHandler:
         cv2.putText(frame, frameFps, (5, 15), self._fpsType, 0.5, self._fpsColor, 1, self._fpsLineType)
 
         if "nn" in self._ticks:
-            cv2.putText(frame, f"NN FPS:  {round(self.tickFps('nn'), 1)}", (5, 30), self._fpsType, 0.5, self._fpsBgColor, 4, self._fpsLineType)
-            cv2.putText(frame, f"NN FPS:  {round(self.tickFps('nn'), 1)}", (5, 30), self._fpsType, 0.5, self._fpsColor, 1, self._fpsLineType)
+            cv2.putText(frame, f"NN FPS:  {round(self.tickFps('nn'), 1)}", (5, 30), self._fpsType, 0.5,
+                        self._fpsBgColor, 4, self._fpsLineType)
+            cv2.putText(frame, f"NN FPS:  {round(self.tickFps('nn'), 1)}", (5, 30), self._fpsType, 0.5, self._fpsColor,
+                        1, self._fpsLineType)

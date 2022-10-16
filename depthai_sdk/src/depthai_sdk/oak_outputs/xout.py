@@ -9,10 +9,10 @@ from distinctipy import distinctipy
 
 from matplotlib import pyplot as plt
 
-from .normalize_bb import NormalizeBoundingBox
+from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
-from .xout_base import XoutBase, StreamXout
-from ..classes.packets import (
+from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
+from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
     DetectionPacket,
@@ -20,9 +20,9 @@ from ..classes.packets import (
     TrackerPacket,
     IMUPacket, DepthPacket
 )
-from ..visualize.configs import StereoColor
-from ..visualize import Visualizer
-from ..visualize.configs import TextPosition
+from depthai_sdk.visualize.configs import StereoColor
+from depthai_sdk.visualize import Visualizer
+from depthai_sdk.visualize.configs import TextPosition
 
 """
 Xout classes are abstracting streaming messages to the host computer (via XLinkOut) and syncing those messages
@@ -207,6 +207,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
                  max_disp: float,
                  fps: float,
                  colorize: StereoColor = False,
+                 colormap: int = None,
                  use_wls_filter: bool = None,
                  wls_lambda: float = None,
                  wls_sigma: float = None):
@@ -216,6 +217,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
         self.fps = fps
 
         self.colorize = colorize
+        self.colormap = colormap
         self.use_wls_filter = use_wls_filter
         if use_wls_filter:
             self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
@@ -237,11 +239,11 @@ class XoutDisparity(XoutFrames, XoutClickable):
         if self.colorize == StereoColor.GRAY:
             packet.frame = disparity_frame
         elif self.colorize == StereoColor.RGB:
-            packet.frame = cv2.applyColorMap(disparity_frame, cv2.COLORMAP_JET)
+            packet.frame = cv2.applyColorMap(disparity_frame, self.colormap or cv2.COLORMAP_JET)
         elif self.colorize == StereoColor.RGBD:
             packet.frame = cv2.applyColorMap(
                 (disparity_frame * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
-                cv2.COLORMAP_JET
+                self.colormap or cv2.COLORMAP_JET
             )
 
         if self._visualizer.config.output.clickable:
@@ -307,6 +309,7 @@ class XoutDepth(XoutFrames, XoutClickable):
                  fps: float,
                  mono_frames: StreamXout,
                  colorize: StereoColor = False,
+                 colormap: int = None,
                  use_wls_filter: bool = None,
                  wls_lambda: float = None,
                  wls_sigma: float = None):
@@ -317,7 +320,7 @@ class XoutDepth(XoutFrames, XoutClickable):
         # self.multiplier = 255 / 95.0
 
         self.colorize = colorize
-
+        self.colormap = colormap
         self.use_wls_filter = use_wls_filter
         if use_wls_filter:
             self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
@@ -341,11 +344,11 @@ class XoutDepth(XoutFrames, XoutClickable):
         if self.colorize == StereoColor.GRAY:
             packet.frame = depth_frame_color
         elif self.colorize == StereoColor.RGB:
-            packet.frame = cv2.applyColorMap(depth_frame_color, cv2.COLORMAP_JET)
+            packet.frame = cv2.applyColorMap(depth_frame_color, self.colormap or cv2.COLORMAP_JET)
         elif self.colorize == StereoColor.RGBD:
             packet.frame = cv2.applyColorMap(
                 (depth_frame_color * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
-                cv2.COLORMAP_JET
+                self.colormap or cv2.COLORMAP_JET
             )
 
         if self._visualizer.config.output.clickable:

@@ -7,20 +7,20 @@ from typing import Dict, Any, Optional, List, Union, Callable, Tuple
 import cv2
 import depthai as dai
 
-from .visualize import Visualizer
-from .args_parser import ArgsParser
-from .classes.output_config import BaseConfig, RecordConfig, OutputConfig
-from .components.camera_component import CameraComponent
-from .components.component import Component
-from .components.imu_component import IMUComponent
-from .components.nn_component import NNComponent
-from .components.parser import parse_usb_speed
-from .components.pipeline_graph import PipelineGraph
-from .components.stereo_component import StereoComponent
-from .oak_device import OakDevice
-from .record import RecordType, Record
-from .replay import Replay
-from .utils import configPipeline
+from depthai_sdk.visualize import Visualizer
+from depthai_sdk.args_parser import ArgsParser
+from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig
+from depthai_sdk.components.camera_component import CameraComponent
+from depthai_sdk.components.component import Component
+from depthai_sdk.components.imu_component import IMUComponent
+from depthai_sdk.components.nn_component import NNComponent
+from depthai_sdk.components.parser import parse_usb_speed
+from depthai_sdk.components.pipeline_graph import PipelineGraph
+from depthai_sdk.components.stereo_component import StereoComponent
+from depthai_sdk.oak_device import OakDevice
+from depthai_sdk.record import RecordType, Record
+from depthai_sdk.replay import Replay
+from depthai_sdk.utils import configPipeline
 
 
 class UsbWarning(UserWarning):

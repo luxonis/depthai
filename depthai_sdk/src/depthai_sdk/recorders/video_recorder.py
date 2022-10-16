@@ -2,7 +2,8 @@ from pathlib import Path
 from .abstract_recorder import *
 import depthai as dai
 from typing import List, Dict, Any
-from ..oak_outputs.xout import XoutFrames
+from depthai_sdk.oak_outputs.xout import XoutFrames
+
 
 class VideoRecorder(Recorder):
     """

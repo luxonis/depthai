@@ -2,13 +2,14 @@ import array
 from mcap.mcap0.stream_reader import StreamReader
 from mcap.mcap0.reader import make_reader
 from mcap_ros1.decoder import Decoder
-from ..previews import PreviewDecoder
+from depthai_sdk.previews import PreviewDecoder
 import cv2
 import numpy as np
 from typing import List, Tuple
 from pathlib import Path
 
-from .abstract_reader import AbstractReader
+from depthai_sdk.readers.abstract_reader import AbstractReader
+
 
 class McapReader(AbstractReader):
     """
@@ -16,6 +17,7 @@ class McapReader(AbstractReader):
     Supported ROS messages: Image (depth), CompressedImage (left, right, color, disparity)
     """
     _readFrames = dict()
+
     def __init__(self, folder: Path) -> None:
         # Get available topics
         with open(source, "rb") as file:
@@ -46,7 +48,7 @@ class McapReader(AbstractReader):
         to get one of each buffered frame.
         """
         while not self._framesReady():
-            topic, _, msg =  next(self.msgs)
+            topic, _, msg = next(self.msgs)
             name = topic.split('/')[0]
             self._readFrames[name].append(self._getCvFrame(msg, name))
 
@@ -59,7 +61,7 @@ class McapReader(AbstractReader):
         if 'CompressedImage' in msgType:
             if name == 'color':
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_COLOR)
-            else: # left, right, disparity 
+            else:  # left, right, disparity
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_GRAYSCALE)
         elif 'Image' in msgType:
             if msg.encoding == 'mono16':
@@ -69,7 +71,6 @@ class McapReader(AbstractReader):
         else:
             raise Exception('Only CompressedImage and Image ROS messages are currently supported.')
 
-    
     def _framesReady(self):
         """
         Check if there is at least one frame from each available stream.
@@ -86,7 +87,7 @@ class McapReader(AbstractReader):
         for name, arr in self._readFrames.items():
             ret[name] = arr.pop(0)
         return ret
-        
+
     def getStreams(self) -> List[str]:
         """
         Get available topics

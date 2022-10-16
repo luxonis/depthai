@@ -7,9 +7,10 @@ from typing import Dict, List
 import depthai as dai
 from enum import IntEnum
 
-from .classes.packets import FramePacket
-from .recorders.abstract_recorder import Recorder
-from .oak_outputs.xout import XoutSeqSync, XoutFrames
+from depthai_sdk.classes.packets import FramePacket
+from depthai_sdk.recorders.abstract_recorder import Recorder
+from depthai_sdk.oak_outputs.xout import XoutSeqSync, XoutFrames
+
 
 def _run(recorder, frameQ: Queue):
     """
@@ -18,7 +19,7 @@ def _run(recorder, frameQ: Queue):
     while True:
         try:
             frames = frameQ.get()
-            if frames is None: # Terminate app
+            if frames is None:  # Terminate app
                 break
 
             for name in frames:
@@ -30,10 +31,12 @@ def _run(recorder, frameQ: Queue):
     recorder.close()
     print('Exiting store frame thread')
 
+
 class RecordType(IntEnum):
-    VIDEO = 1 # Save to video file
-    BAG = 2 # To ROS .bag
+    VIDEO = 1  # Save to video file
+    BAG = 2  # To ROS .bag
     # MCAP = 3 # To .mcap
+
 
 class Record(XoutSeqSync):
     """
@@ -41,13 +44,13 @@ class Record(XoutSeqSync):
     Available formats: .h265, .mjpeg, .mp4, .mcap, .bag
     It will also save calibration .json, so depth reconstruction will
     """
-    name_mapping: Dict[str, str] # XLinkOut stream name -> Friendly name mapping
+    name_mapping: Dict[str, str]  # XLinkOut stream name -> Friendly name mapping
 
     def package(self, msgs: Dict):
         # Here we get sequence-num synced messages:)
         mapped = dict()
         for name, msg in msgs.items():
-            if name in self.name_mapping: # Map to friendly name
+            if name in self.name_mapping:  # Map to friendly name
                 mapped[self.name_mapping[name]] = msg
             else:
                 mapped[name] = msg
@@ -55,8 +58,7 @@ class Record(XoutSeqSync):
         self.frame_q.put(mapped)
 
     def visualize(self, packet: FramePacket) -> None:
-        pass # No need.
-
+        pass  # No need.
 
     def __init__(self, path: Path, type: RecordType):
         """
@@ -64,7 +66,7 @@ class Record(XoutSeqSync):
             path (Path): Path to the recording folder
             device (dai.Device): OAK device object
         """
-        super().__init__([]) # We don't yet have streams, we will set it up later
+        super().__init__([])  # We don't yet have streams, we will set it up later
         self.folder = path
         self.type = type
 
@@ -73,14 +75,12 @@ class Record(XoutSeqSync):
         Start recording process. This will create and start the pipeline,
         start recording threads, and initialize all queues.
         """
-        self._streams = [out.frames.name for out in xouts] # required by XoutSeqSync
-
+        self._streams = [out.frames.name for out in xouts]  # required by XoutSeqSync
 
         self.name_mapping = dict()
         for xout in xouts:
             if xout.frames.friendly_name:
                 self.name_mapping[xout.frames.name] = xout.frames.friendly_name
-
 
         self.mxid = device.getMxId()
         self.path = self._createFolder(self.folder, self.mxid)
@@ -92,7 +92,7 @@ class Record(XoutSeqSync):
         self.process = Thread(target=_run, args=(self._get_recorder(device, xouts), self.frame_q))
         self.process.start()
 
-    def _get_recorder(self, device: dai.Device, xouts:  List[XoutFrames]) -> Recorder:
+    def _get_recorder(self, device: dai.Device, xouts: List[XoutFrames]) -> Recorder:
         """
         Create recorder
         """
@@ -108,7 +108,6 @@ class Record(XoutSeqSync):
         else:
             raise ValueError(f"Recording type '{self.type}' isn't supported!")
 
-
     def _createFolder(self, path: Path, mxid: str) -> Path:
         """
         Creates recording folder
@@ -122,4 +121,4 @@ class Record(XoutSeqSync):
                 return recordings_path
 
     def close(self):
-        self.frame_q.put(None) # Close recorder and stop the thread
+        self.frame_q.put(None)  # Close recorder and stop the thread

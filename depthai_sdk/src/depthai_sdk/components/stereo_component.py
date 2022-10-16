@@ -1,3 +1,5 @@
+import cv2
+
 from .component import Component
 from .camera_component import CameraComponent
 from typing import Optional, Union, Tuple, Any, Dict, Callable
@@ -67,6 +69,7 @@ class StereoComponent(Component):
 
         # Configuration variables
         self._colorize = StereoColor.GRAY
+        self._colormap = cv2.COLORMAP_TURBO
         self._use_wls_filter = False
         self._wls_lambda = 8000
         self._wls_sigma = 1.5
@@ -141,10 +144,12 @@ class StereoComponent(Component):
 
     def configure_postprocessing(self,
                                  colorize: StereoColor = None,
+                                 colormap: int = None,
                                  wls_filter: bool = None,
                                  wls_lambda: float = None,
                                  wls_sigma: float = None) -> None:
         self._colorize = colorize or self._colorize
+        self._colormap = colormap or self._colormap
         self._use_wls_filter = wls_filter or self._use_wls_filter
         self._wls_lambda = wls_lambda or self._wls_lambda
         self._wls_sigma = wls_sigma or self._wls_sigma
@@ -185,6 +190,7 @@ class StereoComponent(Component):
                 max_disp=self._comp.node.getMaxDisparity(),
                 fps=fps,
                 colorize=self._comp._colorize,
+                colormap=self._comp._colormap,
                 use_wls_filter=self._comp._use_wls_filter,
                 wls_lambda=self._comp._wls_lambda,
                 wls_sigma=self._comp._wls_sigma
@@ -200,6 +206,7 @@ class StereoComponent(Component):
                 mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
                 fps=fps,
                 colorize=self._comp._colorize,
+                colormap=self._comp._colormap,
                 use_wls_filter=self._comp._use_wls_filter,
                 wls_lambda=self._comp._wls_lambda,
                 wls_sigma=self._comp._wls_sigma

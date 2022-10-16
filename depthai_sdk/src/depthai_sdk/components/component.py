@@ -1,6 +1,6 @@
 import depthai as dai
 from typing import Optional
-from ..oak_outputs.xout_base import XoutBase, ReplayStream
+from depthai_sdk.oak_outputs.xout_base import XoutBase, ReplayStream
 from abc import ABC, abstractmethod
 
 
