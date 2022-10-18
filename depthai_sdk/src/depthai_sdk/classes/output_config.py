@@ -90,3 +90,29 @@ class RecordConfig(BaseConfig):
         self.rec.start(device, xouts)
 
         return self.rec
+
+class SyncConfig(BaseConfig, XoutSeqSync):
+    outputs: List[Callable]
+    cb: Callable
+    def __init__(self, outputs: List[Callable], callback: Callable):
+        XoutSeqSync.__init__(self, []) # We don't yet have streams, we will set it up later
+        self.outputs = outputs
+        self.cb = callback
+        print(self.cb)
+
+    def package(self, msgs: Dict):
+        print(self.cb)
+        self.cb(msgs)
+    def visualize(self, packet) -> None:
+        pass # No need.
+    def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> XoutBase:
+        self._streams = []
+        for output in self.outputs:
+            xoutbase: XoutBase = output(pipeline, device)
+            xoutbase.setup_base(None)
+            self._streams.extend(xoutbase._streams)
+
+        super().setup_base(None)
+        return self
+
+

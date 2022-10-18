@@ -368,6 +368,17 @@ class OakCamera:
 
         return self._pipeline
 
+    def sync(self, outputs: Union[Callable, List[Callable]], callback: Callable):
+        """
+        Synchronize multiple components outputs forward them to the callback.
+        Args:
+            outputs: Component output(s)
+            callback: Where to send synced streams
+        """
+        if isinstance(outputs, Callable):
+            outputs = [outputs]  # to list
+        self._out_templates.append(SyncConfig(outputs, callback))
+
     def record(self, outputs: Union[Callable, List[Callable]], path: str, type: RecordType = RecordType.VIDEO):
         """
         Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
