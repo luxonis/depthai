@@ -98,10 +98,8 @@ class SyncConfig(BaseConfig, XoutSeqSync):
         XoutSeqSync.__init__(self, []) # We don't yet have streams, we will set it up later
         self.outputs = outputs
         self.cb = callback
-        print(self.cb)
 
     def package(self, msgs: Dict):
-        print(self.cb)
         self.cb(msgs)
     def visualize(self, packet) -> None:
         pass # No need.
