@@ -33,11 +33,6 @@ class OakDevice:
         for sync in self.oak_out_streams:
             sync.newMsg(name, msg)
 
-        # if name not in self.fpsHandlers:
-        #     self.fpsHandlers[name] = FPS()
-        # self.fpsHandlers[name].next_iter()
-        # print(name,' fps', self.fpsHandlers[name].fps())
-
     def checkSync(self):
         """
         Checks whether there are new synced messages, non-blocking.

@@ -2,11 +2,14 @@ from abc import abstractmethod
 from typing import Optional, Callable, Union, Tuple, List
 
 import depthai as dai
+from depthai_sdk import FramePacket
 
 from depthai_sdk.visualize import Visualizer
 from depthai_sdk.oak_outputs.xout import XoutFrames
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 from depthai_sdk.record import Record
+
+from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 
 
 class VisualizeConfig:
@@ -24,7 +27,7 @@ class VisualizeConfig:
 
 class BaseConfig:
     @abstractmethod
-    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> XoutBase:
+    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
         raise NotImplementedError()
 
 
@@ -57,7 +60,7 @@ class OutputConfig(BaseConfig):
             if name not in names:
                 return name
 
-    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> XoutBase:
+    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
         xoutbase: XoutBase = self.output(pipeline, device)
         xoutbase.setup_base(self.callback)
 
@@ -68,7 +71,7 @@ class OutputConfig(BaseConfig):
         if self.visualizer:
             xoutbase.setup_visualize(self.visualizer, xoutbase.name, self.record)
 
-        return xoutbase
+        return [xoutbase]
 
 
 class RecordConfig(BaseConfig):
@@ -79,7 +82,7 @@ class RecordConfig(BaseConfig):
         self.outputs = outputs
         self.rec = rec
 
-    def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> XoutBase:
+    def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> List[XoutBase]:
         xouts: List[XoutFrames] = []
         for output in self.outputs:
             xoutbase: XoutFrames = output(pipeline, device)
@@ -89,28 +92,42 @@ class RecordConfig(BaseConfig):
         self.rec.setup_base(None)
         self.rec.start(device, xouts)
 
-        return self.rec
+        return [self.rec]
 
-class SyncConfig(BaseConfig, XoutSeqSync):
+class SyncConfig(BaseConfig, SequenceNumSync):
     outputs: List[Callable]
     cb: Callable
-    def __init__(self, outputs: List[Callable], callback: Callable):
-        XoutSeqSync.__init__(self, []) # We don't yet have streams, we will set it up later
+    visualizer: VisualizeConfig
+
+    def __init__(self, outputs: List[Callable], callback: Callable, vis: VisualizeConfig = None):
         self.outputs = outputs
         self.cb = callback
+        self.visualizer = vis
 
-    def package(self, msgs: Dict):
-        self.cb(msgs)
-    def visualize(self, packet) -> None:
-        pass # No need.
-    def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> XoutBase:
-        self._streams = []
+        SequenceNumSync.__init__(self, len(outputs))
+
+        self.packets = dict()
+
+    def new_packet(self, packet: FramePacket):
+        print('new packet', packet)
+        synced = self.sync(
+            packet.imgFrame.getSequenceNum(),
+            packet.,
+            packet
+        )
+        if synced:
+            self.cb(synced)
+
+    def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> List[XoutBase]:
+        xouts = []
         for output in self.outputs:
             xoutbase: XoutBase = output(pipeline, device)
-            xoutbase.setup_base(None)
-            self._streams.extend(xoutbase._streams)
+            xoutbase.setup_base(self.new_packet)
+            xouts.append(xoutbase)
 
-        super().setup_base(None)
-        return self
+            if self.visualizer:
+                xoutbase.setup_visualize(self.visualizer, xoutbase.name)
+
+        return xouts
 
 

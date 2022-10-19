@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
+from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
@@ -467,24 +468,8 @@ class XoutSpatialBbMappings(XoutFrames):
             self.depth_msg = None
 
 
-class XoutSeqSync(XoutBase):
-    msgs: Dict[str, Dict[str, dai.Buffer]]  # List of messages.
+class XoutSeqSync(XoutBase, SequenceNumSync):
     streams: List[StreamXout]
-    """
-    msgs = {seq: {stream_name: frame}}
-    Example:
-
-    msgs = {
-        '1': {
-            'rgb': dai.Frame(),
-            'dets': dai.ImgDetections(),
-        }
-        '2': {
-            'rgb': dai.Frame(),
-            'dets': dai.ImgDetections(),
-        }
-    }
-    """
 
     def xstreams(self) -> List[StreamXout]:
         return self.streams
@@ -493,32 +478,20 @@ class XoutSeqSync(XoutBase):
         self.streams = streams
         # Save StreamXout before initializing super()!
         XoutBase.__init__(self)
+        SequenceNumSync.__init__(self, len(streams))
         self.msgs = dict()
 
     @abstractmethod
-    def package(self, msgs: Dict):
+    def package(self, msgs: List):
         raise NotImplementedError('XoutSeqSync is an abstract class, you need to override package() method!')
 
     def newMsg(self, name: str, msg) -> None:
         # Ignore frames that we aren't listening for
         if name not in self._streams: return
 
-        # TODO: what if msg doesn't have sequence num?
-        seq = str(msg.getSequenceNum())
-
-        if seq not in self.msgs: self.msgs[seq] = dict()
-        self.msgs[seq][name] = msg
-
-        if len(self._streams) == len(self.msgs[seq]):  # We have sequence num synced frames!
-
-            self.package(self.msgs[seq])
-
-            # Remove previous msgs (memory cleaning)
-            newMsgs = {}
-            for name, msg in self.msgs.items():
-                if int(name) > int(seq):
-                    newMsgs[name] = msg
-            self.msgs = newMsgs
+        synced = self.sync(msg.getSequenceNum(), name, msg)
+        if synced:
+            self.package(synced)
 
 
 class XoutNnResults(XoutSeqSync, XoutFrames):

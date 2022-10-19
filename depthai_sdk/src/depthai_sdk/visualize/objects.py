@@ -267,7 +267,7 @@ class VisDetections(GenericObject):
         return parent
 
     def register_detection(self,
-                           bbox: Union[np.ndarray[Tuple[int, int, int, int]]],
+                           bbox: Union[Tuple[int, int, int, int]],
                            label: str,
                            color: Tuple[int, int, int]) -> None:
         """
