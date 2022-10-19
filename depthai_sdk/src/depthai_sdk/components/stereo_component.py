@@ -1,6 +1,6 @@
 import cv2
 
-from .component import Component
+from .component import Component, ComponentOutput
 from .camera_component import CameraComponent
 from typing import Optional, Union, Tuple, Any, Dict, Callable
 import depthai as dai
@@ -171,11 +171,11 @@ class StereoComponent(Component):
     Available outputs (to the host) of this component
     """
 
-    class Out:
+    class Out(ComponentOutput):
         _comp: 'StereoComponent'
 
-        def __init__(self, stereoComponent: 'StereoComponent'):
-            self._comp = stereoComponent
+        def __init__(self, stereo_component: 'StereoComponent'):
+            super().__init__(stereo_component)
 
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             # By default, we want to show disparity
@@ -187,6 +187,7 @@ class StereoComponent(Component):
             out = XoutDisparity(
                 disparity_frames=StreamXout(self._comp.node.id, self._comp.disparity),
                 mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
+                component_id=self.id,
                 max_disp=self._comp.node.getMaxDisparity(),
                 fps=fps,
                 colorize=self._comp._colorize,
@@ -203,6 +204,7 @@ class StereoComponent(Component):
             out = XoutDepth(
                 device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.depth),
+                component_id=self.id,
                 mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
                 fps=fps,
                 colorize=self._comp._colorize,

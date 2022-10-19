@@ -36,7 +36,6 @@ class FramePacket:
     """
     Contains only dai.ImgFrame message and cv2 frame, which is used by visualization logic.
     """
-
     name: str  # ImgFrame stream name
     imgFrame: dai.ImgFrame  # Original depthai message
     frame: np.ndarray  # cv2 frame for visualization

@@ -109,10 +109,10 @@ class SyncConfig(BaseConfig, SequenceNumSync):
         self.packets = dict()
 
     def new_packet(self, packet: FramePacket):
-        print('new packet', packet)
+        # print("new packet", packet.name)
         synced = self.sync(
             packet.imgFrame.getSequenceNum(),
-            packet.,
+            packet.name,
             packet
         )
         if synced:

@@ -5,7 +5,7 @@ from typing import Callable, Union, List, Dict
 import blobconverter
 
 from depthai_sdk.components.camera_component import CameraComponent
-from depthai_sdk.components.component import Component
+from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
 from depthai_sdk.components.parser import *
@@ -473,11 +473,11 @@ class NNComponent(Component):
     Available outputs (to the host) of this component
     """
 
-    class Out:
+    class Out(ComponentOutput):
         _comp: 'NNComponent'
 
-        def __init__(self, nnComponent: 'NNComponent'):
-            self._comp = nnComponent
+        def __init__(self, nn_component: 'NNComponent'):
+            super().__init__(nn_component)
 
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
@@ -486,17 +486,18 @@ class NNComponent(Component):
             """
 
             if self._comp._isMultiStage():
-                out = XoutTwoStage(self._comp._input, self._comp,
-                                   self._comp._input._input.get_stream_xout(),  # CameraComponent
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),
-                                   # NnComponent (detections)
-                                   StreamXout(self._comp.node.id, self._comp.node.out),
-                                   # This NnComponent (2nd stage NN)
-                                   )
+                out = XoutTwoStage(det_nn=self._comp._input,
+                                   secondNn=self._comp,
+                                   frames=self._comp._input._input.get_stream_xout(),  # CameraComponent
+                                   detections=StreamXout(self._comp._input.node.id,  # NnComponent (detections)
+                                                         self._comp._input.node.out),
+                                   second_nn=StreamXout(self._comp.node.id,  # This NnComponent (2nd stage NN))
+                                                        self._comp.node.out))
             else:
-                out = XoutNnResults(self._comp,
-                                    self._comp._input.get_stream_xout(),  # CameraComponent
-                                    StreamXout(self._comp.node.id, self._comp.node.out))  # NnComponent
+                out = XoutNnResults(det_nn=self._comp,
+                                    frames=self._comp._input.get_stream_xout(),  # CameraComponent
+                                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out),  # NNComponent
+                                    component_id=self.id)
             return self._comp._create_xout(pipeline, out)
 
         def passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -505,19 +506,19 @@ class NNComponent(Component):
             Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
             if self._comp._isMultiStage():
-                out = XoutTwoStage(self._comp._input, self._comp,
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.passthrough),
-                                   # Passthrough frame
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),
-                                   # NnComponent (detections)
-                                   StreamXout(self._comp.node.id, self._comp.node.out),
-                                   # This NnComponent (2nd stage NN)
-                                   )
+                out = XoutTwoStage(det_nn=self._comp._input,
+                                   secondNn=self._comp,
+                                   frames=StreamXout(self._comp._input.node.id,  # Passthrough frame
+                                                     self._comp._input.node.passthrough),
+                                   detections=StreamXout(self._comp._input.node.id,  # NnComponent (detections)
+                                                         self._comp._input.node.out),
+                                   second_nn=StreamXout(self._comp.node.id,  # This NnComponent (2nd stage NN)
+                                                        self._comp.node.out))
             else:
-                out = XoutNnResults(self._comp,
-                                    StreamXout(self._comp.node.id, self._comp.node.passthrough),
-                                    StreamXout(self._comp.node.id, self._comp.node.out)
-                                    )
+                out = XoutNnResults(det_nn=self._comp,
+                                    frames=StreamXout(self._comp.node.id, self._comp.node.passthrough),
+                                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
+                                    component_id=self.id)
 
             return self._comp._create_xout(pipeline, out)
 
@@ -529,10 +530,11 @@ class NNComponent(Component):
                 raise Exception(
                     'SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
 
-            out = XoutSpatialBbMappings(device,
-                                        StreamXout(self._comp.node.id, self._comp.node.passthroughDepth),
-                                        StreamXout(self._comp.node.id, self._comp.node.boundingBoxMapping)
-                                        )
+            out = XoutSpatialBbMappings(device=device,
+                                        frames=StreamXout(self._comp.node.id, self._comp.node.passthroughDepth),
+                                        component_id=self.id,
+                                        configs=StreamXout(self._comp.node.id, self._comp.node.boundingBoxMapping))
+
             return self._comp._create_xout(pipeline, out)
 
         def twostage_crops(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutFrames:
@@ -542,7 +544,10 @@ class NNComponent(Component):
             if not self._comp._isMultiStage():
                 raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
-            out = XoutFrames(StreamXout(self._comp._multiStageNn.manip.id, self._comp._multiStageNn.manip.out))
+            out = XoutFrames(frames=StreamXout(self._comp._multiStageNn.manip.id,
+                                               self._comp._multiStageNn.manip.out),
+                             component_id=self.id)
+
             return self._comp._create_xout(pipeline, out)
 
         def tracker(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutTracker:
@@ -556,10 +561,11 @@ class NNComponent(Component):
             # TODO: add support for full frame tracking
             self._comp.node.passthrough.link(self._comp.tracker.inputTrackerFrame)
 
-            out = XoutTracker(self._comp,
-                              self._comp._input.get_stream_xout(),  # CameraComponent
-                              StreamXout(self._comp.tracker.id, self._comp.tracker.out)
-                              )
+            out = XoutTracker(det_nn=self._comp,
+                              frames=self._comp._input.get_stream_xout(),  # CameraComponent
+                              component_id=self.id,
+                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out))
+
             return self._comp._create_xout(pipeline, out)
 
     out: Out

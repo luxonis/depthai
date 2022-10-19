@@ -1,13 +1,29 @@
+import uuid
+
 import depthai as dai
 from typing import Optional
 from depthai_sdk.oak_outputs.xout_base import XoutBase, ReplayStream
 from abc import ABC, abstractmethod
 
 
+class ComponentOutput(ABC):
+    def __init__(self, component: 'Component'):
+        self._comp = component
+
+    @property
+    def id(self):
+        return self._comp.id
+
+
 class Component(ABC):
     """
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
+
+    id: str  # unique id for this component
+
+    def __init__(self):
+        self.id = str(uuid.uuid4().hex)
 
     def _forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
         """

@@ -49,9 +49,10 @@ class XoutFrames(XoutBase):
     _frames_buffer: List = []
     _FRAMES_TO_BUFFER: int = 20
 
-    def __init__(self, frames: StreamXout, fps: float = 30):
+    def __init__(self, frames: StreamXout, component_id: str = None, fps: float = 30):
         self.frames = frames
         self.fps = fps
+        self.component_id = component_id or self.name
         super().__init__()
 
     def setup_visualize(self, visualizer: Visualizer,
@@ -118,8 +119,7 @@ class XoutFrames(XoutBase):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
 
-        packet = FramePacket(name, msg, msg.getCvFrame())
-
+        packet = FramePacket(self.component_id, msg, msg.getCvFrame())
         self.queue.put(packet, block=False)
 
     def __del__(self):
@@ -132,8 +132,8 @@ class XoutMjpeg(XoutFrames):
     lossless: bool
     fps: float
 
-    def __init__(self, frames: StreamXout, color: bool, lossless: bool, fps: float):
-        super().__init__(frames)
+    def __init__(self, frames: StreamXout, component_id: str, color: bool, lossless: bool, fps: float):
+        super().__init__(frames, component_id)
         # We could use cv2.IMREAD_UNCHANGED, but it produces 3 planes (RGB) for mono frame instead of a single plane
         self.flag = cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE
         self.lossless = lossless
@@ -153,8 +153,9 @@ class XoutH26x(XoutFrames):
     fps: float
     profile: dai.VideoEncoderProperties.Profile
 
-    def __init__(self, frames: StreamXout, color: bool, profile: dai.VideoEncoderProperties.Profile, fps: float):
-        super().__init__(frames)
+    def __init__(self, frames: StreamXout, component_id: str, color: bool, profile: dai.VideoEncoderProperties.Profile,
+                 fps: float):
+        super().__init__(frames, component_id)
         self.color = color
         self.profile = profile
         self.fps = fps
@@ -205,6 +206,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
     def __init__(self,
                  disparity_frames: StreamXout,
                  mono_frames: StreamXout,
+                 component_id: str,
                  max_disp: float,
                  fps: float,
                  colorize: StereoColor = False,
@@ -227,7 +229,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
 
         self.msgs = dict()
 
-        XoutFrames.__init__(self, frames=disparity_frames, fps=fps)
+        XoutFrames.__init__(self, frames=disparity_frames, component_id=component_id, fps=fps)
         XoutClickable.__init__(self, decay_step=int(self.fps))
 
     def visualize(self, packet: DepthPacket):
@@ -287,7 +289,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = DepthPacket(
-                self.frames.name,
+                f'{self.component_id}_{name}',
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.mono_frames.name],
             )
@@ -307,6 +309,7 @@ class XoutDepth(XoutFrames, XoutClickable):
     def __init__(self,
                  device: dai.Device,
                  frames: StreamXout,
+                 component_id: str,
                  fps: float,
                  mono_frames: StreamXout,
                  colorize: StereoColor = False,
@@ -330,7 +333,7 @@ class XoutDepth(XoutFrames, XoutClickable):
 
         self.msgs = dict()
 
-        XoutFrames.__init__(self, frames=frames, fps=fps)
+        XoutFrames.__init__(self, frames=frames, component_id=component_id, fps=fps)
         XoutClickable.__init__(self, decay_step=int(self.fps))
 
     def visualize(self, packet: DepthPacket):
@@ -392,7 +395,7 @@ class XoutDepth(XoutFrames, XoutClickable):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = DepthPacket(
-                self.frames.name,
+                f'{self.component_id}_{name}',
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.mono_frames.name],
             )
@@ -417,12 +420,16 @@ class XoutSpatialBbMappings(XoutFrames):
 
     factor: float = None
 
-    def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
+    def __init__(self,
+                 device: dai.Device,
+                 frames: StreamXout,
+                 component_id: str,
+                 configs: StreamXout):
         self.frames = frames
         self.configs = configs
         self.device = device
         self.multiplier = 255 / 95.0
-        super().__init__(frames)
+        super().__init__(frames, component_id)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.configs]
@@ -457,7 +464,7 @@ class XoutSpatialBbMappings(XoutFrames):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = SpatialBbMappingPacket(
-                self.frames.name,
+                f'{self.component_id}_{self.frames.name}',
                 self.depth_msg,
                 self.config_msg
             )
@@ -502,10 +509,10 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
     def xstreams(self) -> List[StreamXout]:
         return [self.nn_results, self.frames]
 
-    def __init__(self, det_nn, frames: StreamXout, nn_results: StreamXout):
+    def __init__(self, det_nn, frames: StreamXout, nn_results: StreamXout, component_id: str):
         self.nn_results = nn_results
         # Multiple inheritance init
-        XoutFrames.__init__(self, frames)
+        XoutFrames.__init__(self, frames, component_id)
         XoutSeqSync.__init__(self, [frames, nn_results])
         # Save StreamXout before initializing super()!
         self.det_nn = det_nn
@@ -553,7 +560,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
         packet = DetectionPacket(
-            self.frames.name,
+            self.component_id,
             msgs[self.frames.name],
             msgs[self.nn_results.name],
         )
@@ -565,8 +572,12 @@ class XoutTracker(XoutNnResults):
     # TODO: hold tracklets for a few frames so we can draw breadcrumb trail
     packets: List[TrackerPacket]
 
-    def __init__(self, det_nn, frames: StreamXout, tracklets: StreamXout):
-        super().__init__(det_nn, frames, tracklets)
+    def __init__(self,
+                 det_nn,
+                 frames: StreamXout,
+                 component_id: str,
+                 tracklets: StreamXout):
+        super().__init__(det_nn, frames, tracklets, component_id)
         self.packets = []
 
     def visualize(self, packet: TrackerPacket):
@@ -671,10 +682,16 @@ class XoutTwoStage(XoutNnResults):
 
     second_nn: StreamXout
 
-    def __init__(self, det_nn, secondNn, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
+    def __init__(self,
+                 det_nn,
+                 secondNn,
+                 component_id: str,
+                 frames: StreamXout,
+                 detections: StreamXout,
+                 second_nn: StreamXout):
         self.second_nn = second_nn
         # Save StreamXout before initializing super()!
-        super().__init__(det_nn, frames, detections)
+        super().__init__(det_nn, frames, detections, component_id)
 
         self.detNn = det_nn
         self.secondNn = secondNn
@@ -718,7 +735,7 @@ class XoutTwoStage(XoutNnResults):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = TwoStagePacket(
-                self.frames.name,
+                f'{self.component_id}_{name}',
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.nn_results.name],
                 self.msgs[seq][self.second_nn.name],
@@ -789,8 +806,9 @@ class XoutIMU(XoutBase):
     packets: List[IMUPacket]
     start_time: float
 
-    def __init__(self, imu_xout: StreamXout):
+    def __init__(self, imu_xout: StreamXout, component_id: str):
         self.imu_out = imu_xout
+        self.component_id = component_id
         self.packets = []
         self.start_time = 0.0
 
