@@ -310,7 +310,10 @@ class OakCamera:
             if self.replay._stop:
                 return False
 
-        return True  # TODO: check whether OAK is connected
+        if self.device.isClosed():
+            return False
+
+        return True
 
     def build(self) -> dai.Pipeline:
         """
