@@ -12,6 +12,7 @@ from matplotlib import pyplot as plt
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
+from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
@@ -286,7 +287,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = DepthPacket(
-                self.frames.name,
+                self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.mono_frames.name],
             )
@@ -391,7 +392,7 @@ class XoutDepth(XoutFrames, XoutClickable):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = DepthPacket(
-                self.frames.name,
+                self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.mono_frames.name],
             )
@@ -456,7 +457,7 @@ class XoutSpatialBbMappings(XoutFrames):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = SpatialBbMappingPacket(
-                self.frames.name,
+                self.get_packet_name(),
                 self.depth_msg,
                 self.config_msg
             )
@@ -467,24 +468,8 @@ class XoutSpatialBbMappings(XoutFrames):
             self.depth_msg = None
 
 
-class XoutSeqSync(XoutBase):
-    msgs: Dict[str, Dict[str, dai.Buffer]]  # List of messages.
+class XoutSeqSync(XoutBase, SequenceNumSync):
     streams: List[StreamXout]
-    """
-    msgs = {seq: {stream_name: frame}}
-    Example:
-
-    msgs = {
-        '1': {
-            'rgb': dai.Frame(),
-            'dets': dai.ImgDetections(),
-        }
-        '2': {
-            'rgb': dai.Frame(),
-            'dets': dai.ImgDetections(),
-        }
-    }
-    """
 
     def xstreams(self) -> List[StreamXout]:
         return self.streams
@@ -493,32 +478,20 @@ class XoutSeqSync(XoutBase):
         self.streams = streams
         # Save StreamXout before initializing super()!
         XoutBase.__init__(self)
+        SequenceNumSync.__init__(self, len(streams))
         self.msgs = dict()
 
     @abstractmethod
-    def package(self, msgs: Dict):
+    def package(self, msgs: List):
         raise NotImplementedError('XoutSeqSync is an abstract class, you need to override package() method!')
 
     def newMsg(self, name: str, msg) -> None:
         # Ignore frames that we aren't listening for
         if name not in self._streams: return
 
-        # TODO: what if msg doesn't have sequence num?
-        seq = str(msg.getSequenceNum())
-
-        if seq not in self.msgs: self.msgs[seq] = dict()
-        self.msgs[seq][name] = msg
-
-        if len(self._streams) == len(self.msgs[seq]):  # We have sequence num synced frames!
-
-            self.package(self.msgs[seq])
-
-            # Remove previous msgs (memory cleaning)
-            newMsgs = {}
-            for name, msg in self.msgs.items():
-                if int(name) > int(seq):
-                    newMsgs[name] = msg
-            self.msgs = newMsgs
+        synced = self.sync(msg.getSequenceNum(), name, msg)
+        if synced:
+            self.package(synced)
 
 
 class XoutNnResults(XoutSeqSync, XoutFrames):
@@ -531,11 +504,11 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
     def __init__(self, det_nn, frames: StreamXout, nn_results: StreamXout):
         self.nn_results = nn_results
+        self.det_nn = det_nn
         # Multiple inheritance init
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, nn_results])
         # Save StreamXout before initializing super()!
-        self.det_nn = det_nn
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
         if det_nn._labels:
@@ -580,7 +553,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
         packet = DetectionPacket(
-            self.frames.name,
+            self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.nn_results.name],
         )
@@ -640,7 +613,7 @@ class XoutTracker(XoutNnResults):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
         packet = TrackerPacket(
-            self.frames.name,
+            self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.nn_results.name],
         )
@@ -745,7 +718,7 @@ class XoutTwoStage(XoutNnResults):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = TwoStagePacket(
-                self.frames.name,
+                self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.nn_results.name],
                 self.msgs[seq][self.second_nn.name],

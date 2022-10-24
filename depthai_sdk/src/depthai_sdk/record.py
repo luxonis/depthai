@@ -48,6 +48,7 @@ class Record(XoutSeqSync):
 
     def package(self, msgs: Dict):
         # Here we get sequence-num synced messages:)
+        print('package new frames record', msgs)
         mapped = dict()
         for name, msg in msgs.items():
             if name in self.name_mapping:  # Map to friendly name
@@ -76,6 +77,7 @@ class Record(XoutSeqSync):
         start recording threads, and initialize all queues.
         """
         self._streams = [out.frames.name for out in xouts]  # required by XoutSeqSync
+        self.streamNum = len(self._streams)
 
         self.name_mapping = dict()
         for xout in xouts:

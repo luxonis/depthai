@@ -6,10 +6,11 @@ from typing import Dict, Any, Optional, List, Union, Callable, Tuple
 
 import cv2
 import depthai as dai
+from depthai_sdk.oak_outputs.xout_base import XoutBase
 
 from depthai_sdk.visualize import Visualizer
 from depthai_sdk.args_parser import ArgsParser
-from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig
+from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
@@ -309,7 +310,10 @@ class OakCamera:
             if self.replay._stop:
                 return False
 
-        return True  # TODO: check whether OAK is connected
+        if self.device.isClosed():
+            return False
+
+        return True
 
     def build(self) -> dai.Pipeline:
         """
@@ -353,8 +357,8 @@ class OakCamera:
 
         names = []
         for out in self._out_templates:
-            xoutbase = out.setup(self._pipeline, self._oak.device, names)
-            self._oak.oak_out_streams.append(xoutbase)
+            xouts = out.setup(self._pipeline, self._oak.device, names)
+            self._oak.oak_out_streams.extend(xouts)
 
         # User-defined arguments
         if self._args:
@@ -367,6 +371,19 @@ class OakCamera:
             self.device.setIrFloodLightBrightness(self._args.get('irFloodBrightness', None) or 0)
 
         return self._pipeline
+
+    def sync(self, outputs: Union[Callable, List[Callable]], callback: Callable, visualize=False):
+        """
+        Synchronize multiple components outputs forward them to the callback.
+        Args:
+            outputs: Component output(s)
+            callback: Where to send synced streams
+            visualize: Whether to draw on the frames (like with visualize())
+        """
+        visualizer = Visualizer() if visualize else None
+        if isinstance(outputs, Callable):
+            outputs = [outputs]  # to list
+        self._out_templates.append(SyncConfig(outputs, callback, visualizer))
 
     def record(self, outputs: Union[Callable, List[Callable]], path: str, type: RecordType = RecordType.VIDEO):
         """
