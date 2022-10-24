@@ -254,11 +254,11 @@ class OakCamera:
 
     def __exit__(self, exc_type, exc_value, tb):
         print("Closing OAK camera")
-        if self._oak.device is not None:
-            self._oak.device.close()
         if self.replay:
             print("Closing replay")
             self.replay.close()
+        if self._oak.device is not None:
+            self._oak.device.close()
 
         for out in self._out_templates:
             if isinstance(out, RecordConfig):

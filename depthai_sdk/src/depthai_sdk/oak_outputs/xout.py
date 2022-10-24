@@ -6,7 +6,7 @@ import depthai as dai
 import numpy as np
 
 from distinctipy import distinctipy
-
+from pathlib import Path
 from matplotlib import pyplot as plt
 
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
@@ -63,7 +63,7 @@ class XoutFrames(XoutBase):
         if recording_path:
             _recording_path = recording_path.split('.')
             _recording_path[-2] += '_' + self.name.replace(' ', '_').lower()
-            self._recording_path = '.'.join(_recording_path)
+            self._recording_path = str(Path('.'.join(_recording_path)).resolve())
             print(f'Recording to {self._recording_path}')
 
             video_format = _recording_path[-1]
@@ -93,20 +93,20 @@ class XoutFrames(XoutBase):
         else:
             result = self._visualizer.draw(packet.frame, self.name)
 
-            # Record
-            if self._recording_path and not self._video_writer:
-                if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
-                    self._frames_buffer.append(packet.frame)
-                else:
-                    self._video_writer = cv2.VideoWriter(self._recording_path,
-                                                         self._fourcc_codec_code,
-                                                         self._fps.fps(),
-                                                         self._visualizer.frame_shape[:2])
-                    # Write all buffered frames
-                    for frame in self._frames_buffer:
-                        self._video_writer.write(frame)
-            elif self._video_writer:
-                self._video_writer.write(result)
+        # Record
+        if self._recording_path and not self._video_writer:
+            if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
+                self._frames_buffer.append(packet.frame)
+            else:
+                self._video_writer = cv2.VideoWriter(self._recording_path,
+                                                     self._fourcc_codec_code,
+                                                     self._fps.fps(),
+                                                     self._visualizer.frame_shape[:2])
+                # Write all buffered frames
+                for frame in self._frames_buffer:
+                    self._video_writer.write(frame)
+        elif self._video_writer:
+            self._video_writer.write(packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -123,6 +123,7 @@ class XoutFrames(XoutBase):
         self.queue.put(packet, block=False)
 
     def __del__(self):
+        print('releasing video writer')
         if self._video_writer:
             self._video_writer.release()
 

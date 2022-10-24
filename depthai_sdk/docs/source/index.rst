@@ -29,7 +29,8 @@ otherwise take 100s of lines of code, and a few hours of assembling code pieces 
       nn = oak.create_nn('vehicle-detection-0202', color, tracker=True)
       nn.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.STRETCH)
       # Visualize tracklets, show FPS, downscale frame
-      oak.visualize([nn.out.tracker], scale=2/3, fps=True)
+      visualizer = oak.visualize([nn.out.tracker])
+   visualizer.output(show_fps=True).tracking(line_thickness=3).text(auto_scale=True)
       # Visualize the NN passthrough frame + detections
       oak.visualize([nn.out.passthrough])
       # Record color H264 stream
@@ -39,9 +40,9 @@ otherwise take 100s of lines of code, and a few hours of assembling code pieces 
 
 Installation
 ------------
-.. include::  install.rst
+.. include::  ./includes/install-short.rst
 
-.. include::  footer-short.rst
+.. include::  ./includes/footer-short.rst
 
 .. toctree::
    :maxdepth: 2

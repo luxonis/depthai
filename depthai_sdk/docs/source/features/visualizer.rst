@@ -7,7 +7,7 @@ Getting Started
 #################
 
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is created upon calling
-:func:`visualize <depthai_sdk.OakCamera.visualize>`, which returns :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` instance.
+:func:`oak.visualize <depthai_sdk.OakCamera.visualize>`, which returns :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` instance.
 Once it is created, the visualizer configs can be modified using :func:`configure_output <depthai_sdk.visualize.visualizer.Visualizer.configure_output>`,
 :func:`configure_text <depthai_sdk.visualize.visualizer.Visualizer.configure_text>`,
 :func:`configure_detections <depthai_sdk.visualize.visualizer.Visualizer.configure_detections>`,

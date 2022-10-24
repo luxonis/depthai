@@ -144,7 +144,7 @@ class Visualizer(VisualizerHelper):
         self.objects.append(circle)
         return self
 
-    def draw(self, frame: np.ndarray, name: Optional[str] = 'Frames') -> np.ndarray:
+    def draw(self, frame: np.ndarray, name: Optional[str] = 'Frames'):
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
         and communicate with the RobotHub application.
@@ -179,7 +179,6 @@ class Visualizer(VisualizerHelper):
             pass
 
         self.objects.clear()  # Clear objects
-        return frame
 
     def serialize(self) -> str:
         """
