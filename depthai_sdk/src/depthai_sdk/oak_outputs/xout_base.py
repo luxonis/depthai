@@ -35,6 +35,13 @@ class XoutBase(ABC):
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
 
+
+    _packet_name: str = None
+    def get_packet_name(self) -> str:
+        if self._packet_name is None:
+            self._packet_name = ";".join([xout.name for xout in self.xstreams()])
+        return self._packet_name
+
     @abstractmethod
     def xstreams(self) -> List[StreamXout]:
         raise NotImplementedError()

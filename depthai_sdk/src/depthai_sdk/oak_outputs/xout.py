@@ -287,7 +287,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = DepthPacket(
-                self.frames.name,
+                self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.mono_frames.name],
             )
@@ -392,7 +392,7 @@ class XoutDepth(XoutFrames, XoutClickable):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = DepthPacket(
-                self.frames.name,
+                self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.mono_frames.name],
             )
@@ -457,7 +457,7 @@ class XoutSpatialBbMappings(XoutFrames):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = SpatialBbMappingPacket(
-                self.frames.name,
+                self.get_packet_name(),
                 self.depth_msg,
                 self.config_msg
             )
@@ -504,11 +504,11 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
     def __init__(self, det_nn, frames: StreamXout, nn_results: StreamXout):
         self.nn_results = nn_results
+        self.det_nn = det_nn
         # Multiple inheritance init
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, nn_results])
         # Save StreamXout before initializing super()!
-        self.det_nn = det_nn
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
         if det_nn._labels:
@@ -553,7 +553,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
         packet = DetectionPacket(
-            self.frames.name,
+            self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.nn_results.name],
         )
@@ -613,7 +613,7 @@ class XoutTracker(XoutNnResults):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
         packet = TrackerPacket(
-            self.frames.name,
+            self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.nn_results.name],
         )
@@ -718,7 +718,7 @@ class XoutTwoStage(XoutNnResults):
                 self.queue.get()  # Get one, so queue isn't full
 
             packet = TwoStagePacket(
-                self.frames.name,
+                self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.nn_results.name],
                 self.msgs[seq][self.second_nn.name],

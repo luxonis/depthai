@@ -9,9 +9,9 @@ with OakCamera() as oak:
     # oak.visualize([nn.out.main, nn.out.passthrough])
     # oak.visualize(nn.out.spatials, scale=1 / 2)
     def cb(msgs: Dict):
-        print(msgs)
+        print('synced!', msgs)
 
-    oak.sync([color.out.encoded, nn.out.main, nn2.out.main], cb)
+    oak.sync([color.out.encoded, nn.out.passthrough, nn.out.main, nn2.out.main], cb)
     # oak.show_graph()
 
     oak.start(blocking=True)
