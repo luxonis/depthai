@@ -1,6 +1,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-import calibrate
+import calibrate2 as calibrate
 import cv2
 from multiprocessing import Process, Pipe
 import time
@@ -364,6 +364,13 @@ def run_main_camera(options, show_img=cv2.imshow, wait_key=cv2.waitKey):
 
 
 class Application(QtWidgets.QMainWindow):
+    output_scale_factor = 0.5
+    polygons = None
+    width = None
+    height = None
+    current_polygon = 0
+    images_captured_polygon = 0
+    images_captured = 0
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()
@@ -386,7 +393,11 @@ class Application(QtWidgets.QMainWindow):
             'maxEpiploarError': 1.0,
             'cameraMode': 'perspective',
             'rgbLensPosition': 135,
-            'fps': 30}
+            'fps': 30,
+            'debug': False,
+            'outputScaleFactor': 0.5,
+            'captureDelay': 2}
+        self.args = self.options
         self.display_width = 640
         self.display_height = 480
         self.old_display_width = 640
@@ -396,7 +407,7 @@ class Application(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.update_image)
         # self.device_test = depthai.Device()
         self.ui.connect_but.clicked.connect(self.camera_connect)
-
+        self.ui.calibrate_but.clicked.connect(self.capture)
 
     def camera_connect(self):
         self.ui.connect_but.setDisabled(True)
@@ -457,8 +468,11 @@ class Application(QtWidgets.QMainWindow):
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         convert_to_Qt_format = QtGui.QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
-        p = convert_to_Qt_format.scaled(self.display_width, self.display_height, Qt.KeepAspectRatio)
+        p = convert_to_Qt_format.scaled(self.display_width, self.display_height, QtCore.Qt.KeepAspectRatio)
         return QtGui.QPixmap.fromImage(p)
+
+    def capture(self):
+        self.key_out.send(' ')
 
 
 if __name__ == "__main__":
