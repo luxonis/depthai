@@ -33,12 +33,17 @@ class Visualizer(VisualizerHelper):
     config: VisConfig
     _frame_shape: Optional[Tuple[int, ...]]
 
-    def __init__(self):
+    def __init__(self, scale: float = None, fps=False):
         self.platform: Platform = self._detect_platform()
         self.objects: List[GenericObject] = []
         self._frame_shape = None
 
         self.config = VisConfig()
+
+        if fps:
+            self.config.output(show_fps=fps)
+        if scale:
+            self.config.output(img_scale=scale)
 
     def add_object(self, obj: GenericObject) -> 'Visualizer':
         """
@@ -144,7 +149,7 @@ class Visualizer(VisualizerHelper):
         self.objects.append(circle)
         return self
 
-    def draw(self, frame: np.ndarray, name: Optional[str] = 'Frames'):
+    def draw(self, frame: np.ndarray):
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
         and communicate with the RobotHub application.
@@ -171,8 +176,6 @@ class Visualizer(VisualizerHelper):
                         int(frame.shape[1] * img_scale),
                         int(frame.shape[0] * img_scale)
                     ))
-
-            cv2.imshow(name, frame)
         else:
             # print(json.dumps(self.serialize()))
             # TODO encode/serialize and send everything to robothub

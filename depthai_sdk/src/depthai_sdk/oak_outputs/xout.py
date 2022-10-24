@@ -88,20 +88,26 @@ class XoutFrames(XoutBase):
                 position=TextPosition.TOP_LEFT
             )
 
+        # Draw on the frame
+        self._visualizer.draw(packet.frame)
+
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet, self._visualizer)
         else:
-            result = self._visualizer.draw(packet.frame, self.name)
+            # TODO: if RH, don't display frame
+            cv2.imshow(self.name, packet.frame)
 
         # Record
         if self._recording_path and not self._video_writer:
             if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
                 self._frames_buffer.append(packet.frame)
             else:
+                h,w = self._visualizer.frame_shape[:2]
                 self._video_writer = cv2.VideoWriter(self._recording_path,
                                                      self._fourcc_codec_code,
                                                      self._fps.fps(),
-                                                     self._visualizer.frame_shape[:2])
+                                                     (w, h)
+                                                     )
                 # Write all buffered frames
                 for frame in self._frames_buffer:
                     self._video_writer.write(frame)

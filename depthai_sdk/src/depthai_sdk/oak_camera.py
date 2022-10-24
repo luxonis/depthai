@@ -407,6 +407,22 @@ class OakCamera:
 
         PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
 
+    def visualize(self, output: Union[List, Callable, Component],
+                  record: Optional[str] = None,
+                  scale: float = None,
+                  fps=False,
+                  callback: Callable = None):
+        """
+        Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
+        Args:
+            output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
+            record: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
+            callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
+        """
+        visualizer = Visualizer(scale, fps)
+        self._callback(output, callback, visualizer, record)
+        return visualizer
+
     def _callback(self,
                   output: Union[List, Callable, Component],
                   callback: Callable,
@@ -421,20 +437,6 @@ class OakCamera:
             output = output.out.main
 
         self._out_templates.append(OutputConfig(output, callback, visualizer, record))
-
-    def visualize(self, output: Union[List, Callable, Component],
-                  record: Optional[str] = None,
-                  callback: Callable = None):
-        """
-        Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
-        Args:
-            output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
-            record: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
-            callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
-        """
-        visualizer = Visualizer()
-        self._callback(output, callback, visualizer, record)
-        return visualizer
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):
         """
