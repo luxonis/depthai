@@ -5,13 +5,13 @@
     "test_type": "OAK-FFC-4P",
     "variants": [
         {
-            "title":"OAK FFC-4P (DD2090 R4M1E4)",
-            "description": "OAK FFC-4P",
+            "title":"OAK-FFC 4P (DD2090 R4M1E4)",
+            "description": "OAK-FFC 4P",
             "eeprom":"eeprom/DD2090_R4M1E4_oak_ffc_4p.json"
         },
         {
-            "title":"OAK FFC-4P (DD2090 R5M1E5)",
-            "description": "OAK FFC-4P",
+            "title":"OAK-FFC 4P (DD2090 R5M1E5)",
+            "description": "OAK-FFC 4P",
             "eeprom":"eeprom/DD2090_R5M1E5_oak_ffc_4p.json"
         }
     ]
