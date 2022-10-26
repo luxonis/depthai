@@ -68,4 +68,4 @@ stream and mono streams. You can open the rosbag with the [RealSense Viewer](htt
 
 .. image:: https://user-images.githubusercontent.com/18037362/141661982-f206ed61-b505-4b17-8673-211a4029754b.gif
 
-
+.. include::  ../includes/footer-short.rst

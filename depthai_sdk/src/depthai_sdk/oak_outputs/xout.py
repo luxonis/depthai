@@ -44,15 +44,16 @@ class XoutFrames(XoutBase):
     _frame_shape: Tuple[int, int] = None
     _scale: Union[None, float, Tuple[int, int]] = None
     _show_fps: bool = False
-    _recording_path: Union[None, str] = None
-    _video_writer: Union[cv2.VideoWriter, None] = None
+    _recording_path: Optional[Path] = None
+    _video_writer: Optional[cv2.VideoWriter] = None
     _fourcc_codec_code = None
-    _frames_buffer: List = []
+    _frames_buffer: List
     _FRAMES_TO_BUFFER: int = 20
 
     def __init__(self, frames: StreamXout, fps: float = 30):
         self.frames = frames
         self.fps = fps
+        self._frames_buffer = []
         super().__init__()
 
     def setup_visualize(self, visualizer: Visualizer,
@@ -62,15 +63,11 @@ class XoutFrames(XoutBase):
         self.name = name or self.name
 
         if recording_path:
-            _recording_path = recording_path.split('.')
-            _recording_path[-2] += '_' + self.name.replace(' ', '_').lower()
-            self._recording_path = str(Path('.'.join(_recording_path)).resolve())
-            print(f'Recording to {self._recording_path}')
-
-            video_format = _recording_path[-1]
-            if video_format == "mp4":
+            self._recording_path = Path(recording_path).resolve()
+            video_format = self._recording_path.suffix
+            if video_format == ".mp4":
                 self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'mp4v')
-            elif video_format == "avi":
+            elif video_format == ".avi":
                 self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'FMP4')
             else:
                 print("Selected video format not supported, using mp4 instead.")
@@ -107,7 +104,7 @@ class XoutFrames(XoutBase):
                 self._frames_buffer.append(packet.frame)
             else:
                 h,w = self._visualizer.frame_shape[:2]
-                self._video_writer = cv2.VideoWriter(self._recording_path,
+                self._video_writer = cv2.VideoWriter(str(self._recording_path),
                                                      self._fourcc_codec_code,
                                                      self._fps.fps(),
                                                      (w, h)
@@ -133,7 +130,6 @@ class XoutFrames(XoutBase):
         self.queue.put(packet, block=False)
 
     def __del__(self):
-        print('releasing video writer')
         if self._video_writer:
             self._video_writer.release()
 
@@ -611,7 +607,7 @@ class XoutTracker(XoutNnResults):
 
         # Add to local storage
         self.packets.append(packet)
-        if 20 < len(self.packets):
+        if 10 < len(self.packets):
             self.packets.pop(0)
 
         self._visualizer.add_trail(
@@ -840,7 +836,7 @@ class XoutIMU(XoutBase):
 
         super().__init__()
 
-    def setup_visualize(self, visualizer: Visualizer, name: str = None):
+    def setup_visualize(self, visualizer: Visualizer, name: str = None, _ = None):
         self._visualizer = visualizer
         self.name = name or self.name
 
@@ -896,11 +892,13 @@ class XoutIMU(XoutBase):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         packet.frame = img
+        self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet)
         else:
-            self._visualizer.draw(packet.frame)
+            cv2.imshow(self.name, packet.frame)
+
 
     def xstreams(self) -> List[StreamXout]:
         return [self.imu_out]

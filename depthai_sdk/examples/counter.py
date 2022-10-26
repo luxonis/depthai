@@ -12,8 +12,9 @@ with OakCamera(recording='people-images-01') as oak:
         num = len(packet.img_detections.detections)
         print('New msgs! Number of people detected:', num)
 
-        visualizer.add_text(f"Number of people: {num}", position=TextPosition.BOTTOM_MID)
-        visualizer.draw(packet.frame, f'frame {packet.name}')
+        visualizer.add_text(f"Number of people: {num}", position=TextPosition.TOP_MID)
+        visualizer.draw(packet.frame)
+        cv2.imshow(f'frame {packet.name}', packet.frame)
 
 
     oak.visualize(nn, callback=cb)

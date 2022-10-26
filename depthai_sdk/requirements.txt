@@ -4,7 +4,7 @@ opencv-python>4
 opencv-contrib-python>4
 blobconverter>=1.2.8
 pytube>=12.1.0
-depthai>=2.17.3
+depthai>=2.18.0
 PyTurboJPEG==1.6.4
 marshmallow==3.17.0
 distinctipy

@@ -1,6 +1,9 @@
 StereoComponent
 ===============
 
+**StereoComponent** abstracts `StereoDepth <https://docs.luxonis.com/projects/api/en/latest/components/nodes/imu/>`__ node, its configuration,
+filtering (eg. `WLS filter <https://github.com/luxonis/depthai-experiments/tree/master/gen2-wls-filter>`__), and disparity/depth viewing.
+
 Usage
 #####
 
@@ -11,7 +14,7 @@ Usage
         stereo = oak.create_stereo('800p', fps=60)
 
         # Visualize normalized and colorized disparity stream
-        oak.visualize(stereo.out.disparity)
+        oak.visualize(stereo.out.depth)
         # Start the pipeline, continuously poll
         oak.start(blocking=True)
 
@@ -25,6 +28,6 @@ Component outputs
 Reference
 #########
 
-.. autoclass:: depthai_sdk.components.StereoComponent
+.. autoclass:: depthai_sdk.StereoComponent
     :members:
     :undoc-members:
