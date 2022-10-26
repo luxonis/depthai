@@ -417,6 +417,8 @@ class OakCamera:
         Args:
             output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
             record: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
+            scale: Scale the output window by this factor
+            fps: Whether to show FPS on the output window
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
         visualizer = Visualizer(scale, fps)
