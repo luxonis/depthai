@@ -1,7 +1,9 @@
 OakCamera
 =========
 
-**OakCamera** is the the main class that abstracts Components and outputs.
+The **OakCamera** class abstracts DepthAI API pipeline building with :ref:`Components`, supports stream :ref:`recording <Recording>`
+annd :ref:`replaying <Replaying>`, adds debugging features, handles :ref:`AI model <AI models>` sourcing and decoding,
+does message syncing & visualization, and much more.
 
 Reference
 #########
