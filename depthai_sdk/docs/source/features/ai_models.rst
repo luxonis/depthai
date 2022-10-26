@@ -96,3 +96,5 @@ Both of the models above are supported by this SDK, so they will be downloaded a
 
 ..
   TODO: add gif for each model
+
+.. include::  ../includes/footer-short.rst

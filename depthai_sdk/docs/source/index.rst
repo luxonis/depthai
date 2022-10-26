@@ -18,25 +18,36 @@ Script below demonstrates how you can easily accomplish complex tasks, that woul
 otherwise take 100s of lines of code, and a few hours of assembling code pieces together.
 
 .. code-block:: python
+   :linenos:
 
-   from depthai_sdk import OakCamera, AspectRatioResizeMode, RecordType
+   from depthai_sdk import OakCamera, AspectRatioResizeMode
 
    # Download public depthai-recording
    with OakCamera(recording='cars-tracking-above-01') as oak:
       # Create color camera, add video encoder
-      color = oak.create_camera('color', encode='H264')
+      color = oak.create_camera('color')
+
       # Download & run pretrained vehicle detection model and track detections
       nn = oak.create_nn('vehicle-detection-0202', color, tracker=True)
       nn.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.STRETCH)
-      # Visualize tracklets, show FPS, downscale frame
-      visualizer = oak.visualize([nn.out.tracker])
-   visualizer.output(show_fps=True).tracking(line_thickness=3).text(auto_scale=True)
-      # Visualize the NN passthrough frame + detections
-      oak.visualize([nn.out.passthrough])
-      # Record color H264 stream
-      oak.record(color.out.encoded, './color-recording', RecordType.VIDEO)
+
+      # Visualize tracklets, show FPS
+      visualizer = oak.visualize(nn.out.tracker, fps=True)
+      visualizer.tracking(line_thickness=5).text(auto_scale=True)
+
       # Start the app in blocking mode
       oak.start(blocking=True)
+
+
+.. image:: https://user-images.githubusercontent.com/18037362/197657107-1c0a73ae-9022-4a85-abe2-892725edaa5f.gif
+
+A :ref:`public video <Public depthai-recordings>` gets downloaded and frames are sent to the OAK camera. On the OAK camera, we run ``vehicle-detection-0202``,
+which is an :ref:`SDK supported model <SDK supported models>`. Afterwards, we use object tracker for tracking these detections over
+time. We visualize tracking results and configure visualizer to best fit our needs.
+
+.. figure:: https://user-images.githubusercontent.com/18037362/197664572-33d8dc9e-dd35-4e73-8291-30bb8ec641d5.png
+
+   Car tracking pipeline from oak.show_graph()
 
 Installation
 ------------

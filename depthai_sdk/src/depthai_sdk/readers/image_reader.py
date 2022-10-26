@@ -39,11 +39,19 @@ class ImageReader(AbstractReader):
             stream, flag = get_name_flag(path.stem)
             self.frames[stream].append(cv2.imread(str(path), flag))
         else:
+            shape = None
             for fileName in os.listdir(str(path)):
                 f_name, ext = os.path.splitext(fileName)
                 if ext not in _imageExt: continue
                 stream, flag = get_name_flag(f_name)
-                self.frames[stream].append(cv2.imread(str(path / fileName), flag))
+
+                frame = cv2.imread(str(path / fileName), flag)
+                if shape is None:
+                    shape = (frame.shape[1], frame.shape[0])
+                # Resize, so all images are the same size
+                frame = cv2.resize(frame, shape)
+
+                self.frames[stream].append(frame)
 
         for name, arr in self.frames.items():
             self.cntr[name] = 0

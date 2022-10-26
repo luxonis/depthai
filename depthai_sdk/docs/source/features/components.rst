@@ -24,3 +24,5 @@ and linking. This improves ease of use when developing OAK aplications.
    :caption: Components:
 
    ../components/*
+
+.. include::  ../includes/footer-short.rst

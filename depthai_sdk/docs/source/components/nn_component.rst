@@ -43,6 +43,6 @@ Component outputs
 Reference
 #########
 
-.. autoclass:: depthai_sdk.components.NNComponent
+.. autoclass:: depthai_sdk.NNComponent
     :members:
     :undoc-members:

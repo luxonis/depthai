@@ -126,7 +126,6 @@ class XoutFrames(XoutBase):
         self.queue.put(packet, block=False)
 
     def __del__(self):
-        print('releasing video writer')
         if self._video_writer:
             self._video_writer.release()
 
@@ -591,7 +590,7 @@ class XoutTracker(XoutNnResults):
 
         # Add to local storage
         self.packets.append(packet)
-        if 20 < len(self.packets):
+        if 10 < len(self.packets):
             self.packets.pop(0)
 
         self._visualizer.add_trail(
@@ -820,7 +819,7 @@ class XoutIMU(XoutBase):
 
         super().__init__()
 
-    def setup_visualize(self, visualizer: Visualizer, name: str = None):
+    def setup_visualize(self, visualizer: Visualizer, name: str = None, _ = None):
         self._visualizer = visualizer
         self.name = name or self.name
 
@@ -876,11 +875,13 @@ class XoutIMU(XoutBase):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         packet.frame = img
+        self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet)
         else:
-            self._visualizer.draw(packet.frame, self.name)
+            cv2.imshow(self.name, packet.frame)
+
 
     def xstreams(self) -> List[StreamXout]:
         return [self.imu_out]

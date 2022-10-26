@@ -100,3 +100,5 @@ application (eg. ``OakCamera(recording='cars-california-01')``). Recording will 
 
 ..
     TODO: gif for each recording
+
+.. include::  ../includes/footer-short.rst

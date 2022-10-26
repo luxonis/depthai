@@ -27,14 +27,12 @@ Preview color camera
 
 .. literalinclude:: ./examples/rgb_preview.py
    :language: python
-   :linenos:
 
 Preview color and mono cameras
 ******************************
 
 .. literalinclude:: ./examples/rgb_mono_preview.py
    :language: python
-   :linenos:
 
 
 Run MobilenetSSD on color camera
@@ -42,17 +40,15 @@ Run MobilenetSSD on color camera
 
 .. literalinclude:: ./examples/rgb_mobilenet.py
    :language: python
-   :linenos:
 
 Run face-detection-retail-0004 on left camera
 *********************************************
 
 .. literalinclude:: ./examples/face_detection_left.py
    :language: python
-   :linenos:
 
 
-.. include::  footer-short.rst
+.. include::  includes/footer-short.rst
 
 
 

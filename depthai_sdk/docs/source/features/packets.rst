@@ -81,3 +81,5 @@ IMUPacket
 .. autoclass:: depthai_sdk.IMUPacket
     :members:
     :undoc-members:
+
+.. include::  ../includes/footer-short.rst

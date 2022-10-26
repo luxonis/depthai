@@ -4,7 +4,7 @@ Visualizer
 Visualizer helps user to visualize the output of AI models in a more intuitive and customizable way.
 
 Getting Started
-#################
+###############
 
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is created upon calling
 :func:`oak.visualize <depthai_sdk.OakCamera.visualize>`, which returns :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` instance.
@@ -32,7 +32,7 @@ in ``oak_outputs.xout`` module.
 
 
 Flow
-######
+####
 
 The flow of the :class:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is as follows:
 
@@ -42,7 +42,7 @@ The flow of the :class:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>
 that produces the output depending on the platform.
 
 Configs
-#################
+#######
 
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is configurable via
 :class:`VisConfig <depthai_sdk.visualize.configs.VisConfig>` that consists of four auxiliary configs:
@@ -76,7 +76,7 @@ Example how to configure the visualizer:
         )
 
 Objects
-#################
+#######
 
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` operates with objects. Objects can be seen as a hierarchical structure.
 The root object is ``self``, and the children are the list of the created objects.
@@ -101,7 +101,7 @@ Objects can be added to the visualizer using the following methods:
 * :func:`add_circle <depthai_sdk.visualize.visualizer.Visualizer.add_circle>`
 
 Create your own object
-##############
+######################
 
 If the provided functionality is not enough, you can create your own object. To do so, you need to create a class
 derived from :class:`GenericObject <depthai_sdk.visualize.objects.GenericObject>` and implement the
@@ -131,7 +131,7 @@ The :func:`draw <depthai_sdk.visualize.objects.GenericObject.draw>` method shoul
         visualizer.add_object(YourOwnObject(...))
 
 Example usage
-##############
+#############
 
 The following script will visualize the output of face detection model.
 
@@ -163,10 +163,10 @@ The following script will visualize the output of face detection model.
         oak.start(blocking=True)
 
 References
-##############
+##########
 
 Visualizer
-----------------
+----------
 
 .. autoclass:: depthai_sdk.visualize.visualizer.Visualizer
     :members:
@@ -177,7 +177,7 @@ Visualizer
     :undoc-members:
 
 Objects
-----------------
+-------
 
 .. autoclass:: depthai_sdk.visualize.objects.GenericObject
     :members:
@@ -200,8 +200,10 @@ Objects
     :undoc-members:
 
 Configs
-----------------
+-------
 
 .. automodule:: depthai_sdk.visualize.configs
     :members:
     :undoc-members:
+
+.. include::  ../includes/footer-short.rst

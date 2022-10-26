@@ -24,12 +24,14 @@ with OakCamera() as oak:
             box = tuple(map(int, (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)))
             visualizer.add_text(f'{gender_str}, age: {age}', bbox=box)
 
-        visualizer.draw(packet.frame, packet.name)
+        visualizer.draw(packet.frame)
+        cv2.imshow('Age-gender estimation', packet.frame)
 
 
     # Visualize detections on the frame. Don't show the frame but send the packet
     # to the callback function (where it will be displayed)
     oak.visualize(age_gender, callback=cb)
+    oak.visualize(det.out.passthrough)
 
     # oak.show_graph() # Show pipeline graph, no need for now
     oak.start(blocking=True)  # This call will block until the app is stopped (by pressing 'Q' button)
