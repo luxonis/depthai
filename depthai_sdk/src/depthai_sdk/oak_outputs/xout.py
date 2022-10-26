@@ -10,6 +10,7 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.visualize.visualizer import Platform
 from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
@@ -19,7 +20,7 @@ from depthai_sdk.classes.packets import (
     DetectionPacket,
     TwoStagePacket,
     TrackerPacket,
-    IMUPacket, DepthPacket
+    IMUPacket, DepthPacket, _Detection
 )
 from depthai_sdk.visualize.configs import StereoColor
 from depthai_sdk.visualize import Visualizer
@@ -88,14 +89,17 @@ class XoutFrames(XoutBase):
                 position=TextPosition.TOP_LEFT
             )
 
-        # Draw on the frame
-        self._visualizer.draw(packet.frame)
+        packet.frame = self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet, self._visualizer)
         else:
             # TODO: if RH, don't display frame
-            cv2.imshow(self.name, packet.frame)
+            # Draw on the frame
+            if self._visualizer.platform == Platform.PC:
+                cv2.imshow(self.name, packet.frame)
+            else:
+                pass
 
         # Record
         if self._recording_path and not self._video_writer:
@@ -545,6 +549,19 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 "Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead."
             )
 
+        # Add detections to packet
+        for detection in packet.img_detections.detections:
+            d = _Detection()
+            d.img_detection = detection
+            d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
+            d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
+            h, w = packet.frame.shape[:2]
+            bbox = self.normalizer.normalize(packet.frame,
+                                             (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+            d.top_left = (int(bbox[0]), int(bbox[1]))
+            d.bottom_right = (int(bbox[2]), int(bbox[3]))
+            packet.detections.append(d)
+
         # TODO add support for packet._is_spatial_detection() == True case
         if isinstance(packet, TrackerPacket):
             pass  # TrackerPacket draws detection boxes itself
@@ -883,7 +900,7 @@ class XoutIMU(XoutBase):
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet)
         else:
-            self._visualizer.draw(packet.frame, self.name)
+            self._visualizer.draw(packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.imu_out]
