@@ -419,6 +419,8 @@ class OakCamera:
             record: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
+        if record and isinstance(output, List):
+            raise ValueError('Recording visualizer is only supported for a single output.')
         visualizer = Visualizer(scale, fps)
         self._callback(output, callback, visualizer, record)
         return visualizer

@@ -41,9 +41,9 @@ class Visualizer(VisualizerHelper):
         self.config = VisConfig()
 
         if fps:
-            self.config.output(show_fps=fps)
+            self.config.output.show_fps=fps
         if scale:
-            self.config.output(img_scale=scale)
+            self.config.output.img_scale=scale
 
     def add_object(self, obj: GenericObject) -> 'Visualizer':
         """
