@@ -448,7 +448,7 @@ class VisText(GenericObject):
             else text_config.font_scale
 
         # Calculate font thickness
-        font_thickness = max(2, int(font_scale / 2)) if text_config.auto_scale else text_config.font_thickness
+        font_thickness = max(1, int(font_scale * 2)) if text_config.auto_scale else text_config.font_thickness
 
         dy = cv2.getTextSize(self.text, text_config.font_face, font_scale, font_thickness)[0][1] + 10
 
