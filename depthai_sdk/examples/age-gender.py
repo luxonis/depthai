@@ -1,4 +1,4 @@
-from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, VisualizerHelper, Visualizer
+from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, VisualizerHelper, Visualizer, TextPosition
 import depthai as dai
 import numpy as np
 import cv2
@@ -16,15 +16,17 @@ with OakCamera() as oak:
     # age_gender.config_multistage_nn(show_cropped_frames=True) # For debugging
 
     def cb(packet: TwoStagePacket, visualizer: Visualizer):
-        for det, rec in zip(packet.img_detections.detections, packet.nnData):
+        for det, rec in zip(packet.detections, packet.nnData):
             age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
             gender = np.squeeze(np.array(rec.getLayerFp16('prob')))
             gender_str = "woman" if gender[0] > gender[1] else "man"
-            h, w = packet.frame.shape[:2]
-            box = tuple(map(int, (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)))
-            visualizer.add_text(f'{gender_str}, age: {age}', bbox=box)
 
-        visualizer.draw(packet.frame, packet.name)
+            visualizer.add_text(f'{gender_str}\nage: {age}',
+                                bbox=(*det.top_left, *det.bottom_right),
+                                position=TextPosition.BOTTOM_RIGHT)
+
+        frame = visualizer.draw(packet.frame)
+        cv2.imshow('f', frame)
 
 
     # Visualize detections on the frame. Don't show the frame but send the packet
