@@ -61,7 +61,7 @@ class DetectionConfig:
 @dataclass
 class TextConfig:
     """Configuration for drawing labels."""
-    font_face = cv2.FONT_HERSHEY_SIMPLEX
+    font_face: int = cv2.FONT_HERSHEY_SIMPLEX
     font_color: Tuple[int, int, int] = (255, 255, 255)
     font_transparency: float = 0.5
     font_scale: float = 1.0
