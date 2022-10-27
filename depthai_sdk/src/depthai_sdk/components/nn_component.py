@@ -328,7 +328,7 @@ class NNComponent(Component):
             labels (List[int], optional): Crop & run inference only on objects with these labels
             scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
         """
-        if self._isMultiStage():
+        if not self._isMultiStage():
             print(
                 "Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
