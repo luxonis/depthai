@@ -103,7 +103,7 @@ class XoutFrames(XoutBase):
             if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
                 self._frames_buffer.append(packet.frame)
             else:
-                h,w = self._visualizer.frame_shape[:2]
+                h, w = self._visualizer.frame_shape[:2]
                 self._video_writer = cv2.VideoWriter(str(self._recording_path),
                                                      self._fourcc_codec_code,
                                                      self._fps.fps(),
@@ -545,27 +545,29 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 "Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead."
             )
 
-        # Add detections to packet
-        for detection in packet.img_detections.detections:
-            d = _Detection()
-            d.img_detection = detection
-            d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
-            d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
-            h, w = packet.frame.shape[:2]
-            bbox = self.normalizer.normalize(packet.frame,
-                                             (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-            d.top_left = (int(bbox[0]), int(bbox[1]))
-            d.bottom_right = (int(bbox[2]), int(bbox[3]))
-            packet.detections.append(d)
-
-        # TODO add support for packet._is_spatial_detection() == True case
         if isinstance(packet, TrackerPacket):
             pass  # TrackerPacket draws detection boxes itself
         else:
-            self._visualizer.add_detections(packet.img_detections.detections,
-                                            self.normalizer,
-                                            self.labels,
-                                            is_spatial=packet._is_spatial_detection())
+            # Add detections to packet
+            for detection in packet.img_detections.detections:
+                d = _Detection()
+                d.img_detection = detection
+                d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
+                d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
+                bbox = self.normalizer.normalize(
+                    frame=packet.frame,
+                    bbox=(detection.xmin, detection.ymin, detection.xmax, detection.ymax)
+                )
+                d.top_left = (int(bbox[0]), int(bbox[1]))
+                d.bottom_right = (int(bbox[2]), int(bbox[3]))
+                packet.detections.append(d)
+
+            self._visualizer.add_detections(
+                packet.img_detections.detections,
+                self.normalizer,
+                self.labels,
+                is_spatial=packet._is_spatial_detection()
+            )
 
         super().visualize(packet)
 
@@ -836,7 +838,7 @@ class XoutIMU(XoutBase):
 
         super().__init__()
 
-    def setup_visualize(self, visualizer: Visualizer, name: str = None, _ = None):
+    def setup_visualize(self, visualizer: Visualizer, name: str = None, _=None):
         self._visualizer = visualizer
         self.name = name or self.name
 
@@ -898,7 +900,6 @@ class XoutIMU(XoutBase):
             self.callback(packet)
         else:
             cv2.imshow(self.name, packet.frame)
-
 
     def xstreams(self) -> List[StreamXout]:
         return [self.imu_out]

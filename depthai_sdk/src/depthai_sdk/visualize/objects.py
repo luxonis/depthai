@@ -575,12 +575,17 @@ class VisTrail(GenericObject):
                                       stop=self.config.tracking.line_thickness,
                                       num=len(tracklets)).astype(np.int16)
 
-            for i in range(len(tracklets) - 1):
+            tracklet_length = 0
+            for i in reversed(range(len(tracklets) - 1)):
                 # Get current and next detections' centroids
                 d1 = tracklets[i].srcImgDetection
                 p1 = int(w * (d1.xmin + d1.xmax) // 2), int(h * (d1.ymin + d1.ymax) // 2)
                 d2 = tracklets[i + 1].srcImgDetection
                 p2 = int(w * (d2.xmin + d2.xmax) // 2), int(h * (d2.ymin + d2.ymax) // 2)
+                tracklet_length += np.linalg.norm(np.array(p1) - np.array(p2))
+                if tracklet_length > self.config.tracking.max_length:
+                    break
+
                 self.add_child(VisLine(p1, p2, color=self.label_map[tracklets[i].label][1], thickness=thicknesses[i]))
 
         return self

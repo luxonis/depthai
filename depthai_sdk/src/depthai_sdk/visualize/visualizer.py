@@ -294,6 +294,7 @@ class Visualizer(VisualizerHelper):
         return self
 
     def tracking(self,
+                 max_length: int = None,
                  line_thickness: int = None,
                  line_color: Tuple[int, int, int] = None,
                  line_type: int = None,
@@ -302,6 +303,7 @@ class Visualizer(VisualizerHelper):
         Configure how tracking trails will look like.
 
         Args:
+            max_length: Maximum length of the trail (in pixels).
             line_thickness: Thickness of the line.
             line_color: Color of the line.
             line_type: Type of the line (from cv2).

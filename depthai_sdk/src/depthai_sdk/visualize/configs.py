@@ -79,6 +79,7 @@ class TextConfig:
 @dataclass
 class TrackingConfig:
     """Configuration for drawing tracking bounding boxes."""
+    max_length: int = 100
     line_thickness: int = 1
     line_color: Tuple[int, int, int] = (255, 255, 255)
     line_type: int = cv2.LINE_AA
