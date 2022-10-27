@@ -2,7 +2,7 @@ import json
 import os
 from dataclasses import replace
 from enum import Enum
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Optional, Union, Any, Dict
 
 import cv2
 import depthai as dai
@@ -74,7 +74,7 @@ class Visualizer(VisualizerHelper):
             spatial_points: List of spatial points. None if not spatial.
             is_spatial: Flag that indicates if the detections are spatial.
         Returns:
-
+            self
         """
         detection_overlay = VisDetections(
             detections, normalizer, label_map, spatial_points, is_spatial
@@ -216,9 +216,7 @@ class Visualizer(VisualizerHelper):
         Returns:
             self
         """
-        kwargs = locals()
-        kwargs.pop('self')
-        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        kwargs = self._process_kwargs(locals())
 
         if len(kwargs) > 0:
             self.config.output = replace(self.config.output, **kwargs)
@@ -252,9 +250,7 @@ class Visualizer(VisualizerHelper):
         Returns:
             self
         """
-        kwargs = locals()
-        kwargs.pop('self')
-        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        kwargs = self._process_kwargs(locals())
 
         if len(kwargs) > 0:
             self.config.detection = replace(self.config.detection, **kwargs)
@@ -290,9 +286,7 @@ class Visualizer(VisualizerHelper):
         Returns:
             self
         """
-        kwargs = locals()
-        kwargs.pop('self')
-        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        kwargs = self._process_kwargs(locals())
 
         if len(kwargs) > 0:
             self.config.text = replace(self.config.text, **kwargs)
@@ -316,9 +310,7 @@ class Visualizer(VisualizerHelper):
         Returns:
 
         """
-        kwargs = locals()
-        kwargs.pop('self')
-        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        kwargs = self._process_kwargs(locals())
 
         if len(kwargs) > 0:
             self.config.tracking = replace(self.config.tracking, **kwargs)
@@ -341,3 +333,9 @@ class Visualizer(VisualizerHelper):
     @frame_shape.setter
     def frame_shape(self, shape: Tuple[int, ...]) -> None:
         self._frame_shape = shape
+
+    @staticmethod
+    def _process_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        kwargs.pop('self')
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        return kwargs
