@@ -131,11 +131,11 @@ class NNComponent(Component):
         # maxSize = dims
 
         if isinstance(self._input, CameraComponent):
-            self._stream_input = self._input._out
+            self._stream_input = self._input.stream
             self._setupResizeManip(pipeline).link(self.node.input)
         elif self._isMultiStage():
             # Calculate crop shape of the object detector
-            frameSize = self._input._input._out_size
+            frameSize = self._input._input.stream_size
             nnSize = self._input._size
             scale = frameSize[0] / nnSize[0], frameSize[1] / nnSize[1]
             i = 0 if scale[0] < scale[1] else 1

@@ -63,6 +63,8 @@ class OakCamera:
     _device_name: str = None  # MxId / IP / USB port
 
     _out_templates: List[BaseConfig] = []
+    # Whether to stop running the OAK camera. Used by oak.running()
+    _stop: bool = False
 
     def __init__(self,
                  device: Optional[str] = None,  # MxId / IP / USB port
@@ -104,10 +106,6 @@ class OakCamera:
         if recording:
             self.replay = Replay(recording)
             print('Available streams from recording:', self.replay.getStreams())
-
-    def _comp(self, comp: Component) -> Union[CameraComponent, NNComponent, StereoComponent]:
-        self._components.append(comp)
-        return comp
 
     @_add_to_components
     def create_camera(self,
@@ -288,19 +286,20 @@ class OakCamera:
         # Check if callbacks (sync/non-sync are set)
         if blocking:
             # Constant loop: get messages, call callbacks
-            while True:
+            while self.running():
                 time.sleep(0.001)
-                if not self.poll():
-                    break
+                self.poll()
+    def running(self) -> bool:
+        return not self._stop
 
-    def poll(self) -> bool:
+    def poll(self):
         """
         Poll events; cv2.waitKey, send controls to OAK (if controls are enabled), update, check syncs.
-        True if successful.
         """
         key = cv2.waitKey(1)
         if key == ord('q'):
-            return False
+            self._stop = True
+            return
 
         # TODO: check if components have controls enabled and check whether key == `control`
 
@@ -308,12 +307,11 @@ class OakCamera:
 
         if self.replay:
             if self.replay._stop:
-                return False
+                self._stop = True
+                return
 
         if self.device.isClosed():
-            return False
-
-        return True
+            self._stop = True
 
     def build(self) -> dai.Pipeline:
         """
