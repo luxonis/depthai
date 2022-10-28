@@ -161,28 +161,21 @@ class Visualizer(VisualizerHelper):
         Returns:
             None
         """
-        if self.IS_INTERACTIVE:
-            # Draw overlays
-            for obj in self.objects:
-                obj.draw(frame)
 
-            # Resize frame if needed
-            img_scale = self.config.output.img_scale
-            if img_scale:
-                if isinstance(img_scale, Tuple):
-                    frame = cv2.resize(frame, img_scale)
-                elif isinstance(img_scale, float) and img_scale != 1.0:
-                    frame = cv2.resize(frame, dsize=None, fx=img_scale, fy=img_scale)
+        # Draw overlays
+        for obj in self.objects:
+            obj.draw(frame)
 
-            self.reset()
-            return frame
-        else:
+        # Resize frame if needed
+        img_scale = self.config.output.img_scale
+        if img_scale:
+            if isinstance(img_scale, Tuple):
+                frame = cv2.resize(frame, img_scale)
+            elif isinstance(img_scale, float) and img_scale != 1.0:
+                frame = cv2.resize(frame, dsize=None, fx=img_scale, fy=img_scale)
 
-            # print(json.dumps(self.serialize()))
-            # TODO encode/serialize and send everything to robothub
-            pass
-
-        self.reset()  # Clear objects
+        self.reset()
+        return frame
 
     def serialize(self) -> str:
         """
@@ -197,8 +190,9 @@ class Visualizer(VisualizerHelper):
             'config': self.config,
             'objects': [obj.serialize() for obj in self.objects]
         }
-
-        return json.dumps(parent, cls=JSONEncoder)
+        result = json.dumps(parent, cls=JSONEncoder)
+        self.reset()
+        return result
 
     def reset(self):
         self.objects.clear()

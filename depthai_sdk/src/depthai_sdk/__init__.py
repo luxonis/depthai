@@ -13,3 +13,4 @@ from depthai_sdk.record import *
 from depthai_sdk.replay import *
 from depthai_sdk.utils import *
 from depthai_sdk.visualize import *
+from depthai_sdk.robothub import *

@@ -10,7 +10,6 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
-from depthai_sdk.visualize.visualizer import Platform
 from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
@@ -93,10 +92,7 @@ class XoutFrames(XoutBase):
         else:
             # TODO: if RH, don't display frame
             # Draw on the frame
-            if self._visualizer.platform == Platform.PC:
-                cv2.imshow(self.name, packet.frame)
-            else:
-                pass
+            cv2.imshow(self.name, packet.frame)
 
         # Record
         if self._recording_path and not self._video_writer:

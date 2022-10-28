@@ -1,4 +1,5 @@
 import functools
+import os
 import time
 import warnings
 from pathlib import Path
@@ -6,8 +7,11 @@ from typing import Dict, Any, Optional, List, Union, Callable, Tuple
 
 import cv2
 import depthai as dai
+
+from depthai_sdk.robothub import RobotHub
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 
+from depthai_sdk.robothub import IS_ROBOTHUB
 from depthai_sdk.visualize import Visualizer
 from depthai_sdk.args_parser import ArgsParser
 from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig
@@ -68,8 +72,7 @@ class OakCamera:
                  device: Optional[str] = None,  # MxId / IP / USB port
                  usbSpeed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
                  recording: Optional[str] = None,
-                 args: Union[bool, Dict] = True
-                 ):
+                 args: Union[bool, Dict] = True):
         """
         Initializes OakCamera
 
@@ -104,6 +107,12 @@ class OakCamera:
         if recording:
             self.replay = Replay(recording)
             print('Available streams from recording:', self.replay.getStreams())
+
+        # If platform is robothub
+        # if 'DISPLAY' not in os.environ and os.name != 'nt':
+        self.robothub = None
+        if IS_ROBOTHUB:
+            self.robothub = RobotHub(self)
 
     def _comp(self, comp: Component) -> Union[CameraComponent, NNComponent, StereoComponent]:
         self._components.append(comp)
@@ -298,9 +307,10 @@ class OakCamera:
         Poll events; cv2.waitKey, send controls to OAK (if controls are enabled), update, check syncs.
         True if successful.
         """
-        key = cv2.waitKey(1)
-        if key == ord('q'):
-            return False
+        if not IS_ROBOTHUB:
+            key = cv2.waitKey(1)
+            if key == ord('q'):
+                return False
 
         # TODO: check if components have controls enabled and check whether key == `control`
 
@@ -407,11 +417,13 @@ class OakCamera:
 
         PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
 
-    def visualize(self, output: Union[List, Callable, Component],
+    def visualize(self,
+                  output: Union[List, Callable, Component],
                   record: Optional[str] = None,
                   scale: float = None,
                   fps=False,
-                  callback: Callable = None):
+                  callback: Callable = None,
+                  **kwargs):
         """
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
         Args:
@@ -423,33 +435,42 @@ class OakCamera:
         """
         if record and isinstance(output, List):
             raise ValueError('Recording visualizer is only supported for a single output.')
+
         visualizer = Visualizer(scale, fps)
-        self._callback(output, callback, visualizer, record)
+
+        self._callback(output, callback, visualizer, record, **kwargs)
+
         return visualizer
 
     def _callback(self,
                   output: Union[List, Callable, Component],
                   callback: Callable,
                   visualizer: Visualizer = None,
-                  record: Optional[str] = None):
+                  record: Optional[str] = None,
+                  **kwargs):
         if isinstance(output, List):
             for element in output:
-                self._callback(element, callback, visualizer, record)
+                self._callback(element, callback, visualizer, record, **kwargs)
             return
 
         if isinstance(output, Component):
             output = output.out.main
 
+        if self.robothub:
+            stream = self.robothub.add_stream(kwargs['unique_key'], kwargs['description'])
+            print(f'Added stream {stream.unique_key}')
+            callback = callback or functools.partial(self.robothub.stream_callback, stream)
+
         self._out_templates.append(OutputConfig(output, callback, visualizer, record))
 
-    def callback(self, output: Union[List, Callable, Component], callback: Callable):
+    def callback(self, output: Union[List, Callable, Component], callback: Callable, **kwargs):
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
             output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
             callback: Handler function to which the Packet will be sent
         """
-        self._callback(output, callback)
+        self._callback(output, callback, **kwargs)
 
     @property
     def device(self) -> dai.Device:

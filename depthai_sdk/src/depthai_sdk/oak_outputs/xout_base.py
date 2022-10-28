@@ -4,6 +4,7 @@ from typing import List, Callable
 
 import depthai as dai
 
+from depthai_sdk.robothub import IS_ROBOTHUB
 from depthai_sdk.oak_outputs.fps import FPS
 from depthai_sdk.visualize import Visualizer
 
@@ -35,8 +36,8 @@ class XoutBase(ABC):
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
 
-
     _packet_name: str = None
+
     def get_packet_name(self) -> str:
         if self._packet_name is None:
             self._packet_name = ";".join([xout.name for xout in self.xstreams()])
@@ -81,6 +82,11 @@ class XoutBase(ABC):
                     self.visualize(packet)
                 else:
                     # User defined callback
-                    self.callback(packet)
+                    if IS_ROBOTHUB:
+                        pass
+                        # result = self.visualize(packet)
+                    else:
+                        self.callback(packet)
+
         except Empty:  # Queue empty
             pass
