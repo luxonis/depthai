@@ -10,6 +10,7 @@ from pathlib import Path
 from matplotlib import pyplot as plt
 
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.visualize.visualizer import Platform
 from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
@@ -19,7 +20,7 @@ from depthai_sdk.classes.packets import (
     DetectionPacket,
     TwoStagePacket,
     TrackerPacket,
-    IMUPacket, DepthPacket
+    IMUPacket, DepthPacket, _Detection
 )
 from depthai_sdk.visualize.configs import StereoColor
 from depthai_sdk.visualize import Visualizer
@@ -85,21 +86,24 @@ class XoutFrames(XoutBase):
                 position=TextPosition.TOP_LEFT
             )
 
-        # Draw on the frame
-        self._visualizer.draw(packet.frame)
+        packet.frame = self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet, self._visualizer)
         else:
             # TODO: if RH, don't display frame
-            cv2.imshow(self.name, packet.frame)
+            # Draw on the frame
+            if self._visualizer.platform == Platform.PC:
+                cv2.imshow(self.name, packet.frame)
+            else:
+                pass
 
         # Record
         if self._recording_path and not self._video_writer:
             if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
                 self._frames_buffer.append(packet.frame)
             else:
-                h,w = self._visualizer.frame_shape[:2]
+                h, w = self._visualizer.frame_shape[:2]
                 self._video_writer = cv2.VideoWriter(str(self._recording_path),
                                                      self._fourcc_codec_code,
                                                      self._fps.fps(),
@@ -541,14 +545,29 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 "Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead."
             )
 
-        # TODO add support for packet._is_spatial_detection() == True case
         if isinstance(packet, TrackerPacket):
             pass  # TrackerPacket draws detection boxes itself
         else:
-            self._visualizer.add_detections(packet.img_detections.detections,
-                                            self.normalizer,
-                                            self.labels,
-                                            is_spatial=packet._is_spatial_detection())
+            # Add detections to packet
+            for detection in packet.img_detections.detections:
+                d = _Detection()
+                d.img_detection = detection
+                d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
+                d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
+                bbox = self.normalizer.normalize(
+                    frame=packet.frame,
+                    bbox=(detection.xmin, detection.ymin, detection.xmax, detection.ymax)
+                )
+                d.top_left = (int(bbox[0]), int(bbox[1]))
+                d.bottom_right = (int(bbox[2]), int(bbox[3]))
+                packet.detections.append(d)
+
+            self._visualizer.add_detections(
+                packet.img_detections.detections,
+                self.normalizer,
+                self.labels,
+                is_spatial=packet._is_spatial_detection()
+            )
 
         super().visualize(packet)
 
@@ -819,7 +838,7 @@ class XoutIMU(XoutBase):
 
         super().__init__()
 
-    def setup_visualize(self, visualizer: Visualizer, name: str = None, _ = None):
+    def setup_visualize(self, visualizer: Visualizer, name: str = None, _=None):
         self._visualizer = visualizer
         self.name = name or self.name
 
@@ -881,7 +900,6 @@ class XoutIMU(XoutBase):
             self.callback(packet)
         else:
             cv2.imshow(self.name, packet.frame)
-
 
     def xstreams(self) -> List[StreamXout]:
         return [self.imu_out]

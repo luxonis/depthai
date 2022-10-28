@@ -61,7 +61,7 @@ class DetectionConfig:
 @dataclass
 class TextConfig:
     """Configuration for drawing labels."""
-    font_face = cv2.FONT_HERSHEY_SIMPLEX
+    font_face: int = cv2.FONT_HERSHEY_SIMPLEX
     font_color: Tuple[int, int, int] = (255, 255, 255)
     font_transparency: float = 0.5
     font_scale: float = 1.0
@@ -79,6 +79,7 @@ class TextConfig:
 @dataclass
 class TrackingConfig:
     """Configuration for drawing tracking bounding boxes."""
+    max_length: int = 100
     line_thickness: int = 1
     line_color: Tuple[int, int, int] = (255, 255, 255)
     line_type: int = cv2.LINE_AA
