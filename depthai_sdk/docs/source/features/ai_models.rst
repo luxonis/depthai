@@ -1,7 +1,7 @@
 AI models
 =========
 
-DepthAI SDK abstracts:
+Through the :ref:`NNComponent`, DepthAI SDK abstracts:
 
 - **AI model sourcing** using `blobconverter <https://github.com/luxonis/blobconverter>`__ from `Open Model Zoo <https://github.com/openvinotoolkit/open_model_zoo>`__ (OMZ) and `DepthAI Model Zoo <https://github.com/luxonis/depthai-model-zoo>`__ (DMZ)
 - **AI result decoding** - currently SDK supports on-device decoding for YOLO and MobileNet based results using `YoloDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/yolo_detection_network/>`__ and `MobileNetDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/>`__ nodes

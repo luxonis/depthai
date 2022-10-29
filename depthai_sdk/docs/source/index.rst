@@ -49,6 +49,9 @@ time. We visualize tracking results and configure visualizer to best fit our nee
 
    Car tracking pipeline from oak.show_graph()
 
+.. note::
+    This class will be in **alpha stage** until **depthai-sdk 2.0.0**, so there will likely be some API changes.
+
 Installation
 ------------
 .. include::  ./includes/install-short.rst
