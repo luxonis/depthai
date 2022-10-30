@@ -1,5 +1,5 @@
 from depthai_sdk import OakCamera, FramePacket
-from depthai_sdk.recorders.pyav_mp4_recorder import  PyAvRecorder
+# from depthai_sdk.recorders.pyav_mp4_recorder import  PyAvRecorder
 from pathlib import Path
 
 with OakCamera() as oak:

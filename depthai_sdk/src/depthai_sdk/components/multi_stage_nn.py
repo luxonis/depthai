@@ -17,7 +17,7 @@ class MultiStageConfig:
         self.scaleBb = scaleBb
 
 
-class MultiStageNN():
+class MultiStageNN:
     script: dai.node.Script
     manip: dai.node.ImageManip  # Cropping ImageManip
     out: dai.Node.Output  # Cropped imgFrame output

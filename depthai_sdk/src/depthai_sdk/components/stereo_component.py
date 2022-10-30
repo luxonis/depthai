@@ -1,15 +1,15 @@
-import cv2
+from typing import Optional, Union, Any, Dict
 
-from .component import Component
-from .camera_component import CameraComponent
-from typing import Optional, Union, Tuple, Any, Dict, Callable
+import cv2
 import depthai as dai
 
-from ..oak_outputs.xout_base import XoutBase, StreamXout
-from ..oak_outputs.xout import XoutDisparity, XoutDepth
-from ..replay import Replay
-from .parser import parse_cam_socket, parse_median_filter
-from ..visualize.configs import StereoColor
+from depthai_sdk.components.camera_component import CameraComponent
+from depthai_sdk.components.component import Component
+from depthai_sdk.components.parser import parse_cam_socket, parse_median_filter
+from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth
+from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
+from depthai_sdk.replay import Replay
+from depthai_sdk.visualize.configs import StereoColor
 
 
 class StereoComponent(Component):

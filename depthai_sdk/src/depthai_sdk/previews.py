@@ -44,7 +44,7 @@ class PreviewDecoder:
         else:
             frame = packet.getCvFrame()
         if hasattr(manager, "nnSource") and manager.nnSource in (
-        Previews.rectifiedLeft.name, Previews.rectifiedRight.name):
+                Previews.rectifiedLeft.name, Previews.rectifiedRight.name):
             frame = cv2.flip(frame, 1)
         return frame
 
