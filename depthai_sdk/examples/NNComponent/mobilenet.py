@@ -3,6 +3,6 @@ from depthai_sdk import OakCamera
 with OakCamera() as oak:
     color = oak.create_camera('color')
     nn = oak.create_nn('mobilenet-ssd', color, spatial=True)
-    oak.visualize([nn.out.main, nn.out.passthrough], fps=True, scale=2/3)
-    # oak.show_graph()
+    oak.visualize([nn.out.main, nn.out.spatials], fps=True)
+    # oak.show_graph()s
     oak.start(blocking=True)

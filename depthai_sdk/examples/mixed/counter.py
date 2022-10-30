@@ -3,7 +3,7 @@
 import cv2
 from depthai_sdk import OakCamera, DetectionPacket, Visualizer, TextPosition
 
-with OakCamera(recording='people-images-01') as oak:
+with OakCamera(replay='people-images-01') as oak:
     color = oak.create_camera('color')
     nn = oak.create_nn('person-detection-retail-0013', color)
     oak.replay.setFps(3)

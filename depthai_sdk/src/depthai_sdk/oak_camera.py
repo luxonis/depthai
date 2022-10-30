@@ -69,7 +69,7 @@ class OakCamera:
     def __init__(self,
                  device: Optional[str] = None,  # MxId / IP / USB port
                  usbSpeed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
-                 recording: Optional[str] = None,
+                 replay: Optional[str] = None,
                  args: Union[bool, Dict] = True
                  ):
         """
@@ -78,7 +78,7 @@ class OakCamera:
         Args:
             device (str, optional): OAK device we want to connect to
             usb2 (bool, optional): Force USB2 mode
-            recording (str, optional): Use depthai-recording - either local path, or from depthai-recordings repo
+            replay (str, optional): Replay a depthai-recording - either local path, or from depthai-recordings repo
             args (None, bool, Dict): Use user defined arguments when constructing the pipeline
         """
         self._device_name = device
@@ -93,7 +93,7 @@ class OakCamera:
                     self._args = ArgsParser.parseArgs()
                     # Set up the OakCamera
                     if self._args.get('recording', None):
-                        recording = self._args.get('recording', None)
+                        replay = self._args.get('recording', None)
                     if self._args.get('deviceId', None):
                         self._device_name = self._args.get('deviceId', None)
                     if self._args.get('usbSpeed', None):
@@ -103,8 +103,8 @@ class OakCamera:
             else:  # Already parsed
                 self._args = args
 
-        if recording:
-            self.replay = Replay(recording)
+        if replay:
+            self.replay = Replay(replay)
             print('Available streams from recording:', self.replay.getStreams())
 
     @_add_to_components

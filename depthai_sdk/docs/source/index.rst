@@ -22,9 +22,9 @@ otherwise take 100s of lines of code, and a few hours of assembling code pieces 
 
    from depthai_sdk import OakCamera, AspectRatioResizeMode
 
-   # Download public depthai-recording
-   with OakCamera(recording='cars-tracking-above-01') as oak:
-      # Create color camera, add video encoder
+   # Download a public depthai-recording and replay it
+   with OakCamera(replay='cars-tracking-above-01') as oak:
+      # Create color camera
       color = oak.create_camera('color')
 
       # Download & run pretrained vehicle detection model and track detections

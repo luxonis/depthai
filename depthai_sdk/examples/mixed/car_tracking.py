@@ -1,7 +1,7 @@
 from depthai_sdk import OakCamera, AspectRatioResizeMode, RecordType
 
 # Download public depthai-recording
-with OakCamera(recording='cars-tracking-above-01') as oak:
+with OakCamera(replay='cars-tracking-above-01') as oak:
     # Create color camera, add video encoder
     color = oak.create_camera('color')
     # Download & run pretrained vehicle detection model and track detections
