@@ -145,7 +145,7 @@ The following script will visualize the output of face detection model.
 
         det = oak.create_nn('face-detection-retail-0004', camera)
 
-        visualizer = oak.visualize(det.out.main)
+        visualizer = oak.visualize(det.out.main, fps=True)
         visualizer.configure_bbox(
             color=(0, 255, 0),
             thickness=2,
@@ -154,8 +154,6 @@ The following script will visualize the output of face detection model.
         ).configure_text(
             font_color=(255, 255, 0),
             auto_scale=True
-        ).configure_output(
-            show_fps=True,
         ).configure_tracking(
             line_thickness=5
         )

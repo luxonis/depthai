@@ -63,11 +63,13 @@ class OakCamera:
     _device_name: str = None  # MxId / IP / USB port
 
     _out_templates: List[BaseConfig] = []
+    # Whether to stop running the OAK camera. Used by oak.running()
+    _stop: bool = False
 
     def __init__(self,
                  device: Optional[str] = None,  # MxId / IP / USB port
                  usbSpeed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
-                 recording: Optional[str] = None,
+                 replay: Optional[str] = None,
                  args: Union[bool, Dict] = True
                  ):
         """
@@ -76,7 +78,7 @@ class OakCamera:
         Args:
             device (str, optional): OAK device we want to connect to
             usb2 (bool, optional): Force USB2 mode
-            recording (str, optional): Use depthai-recording - either local path, or from depthai-recordings repo
+            replay (str, optional): Replay a depthai-recording - either local path, or from depthai-recordings repo
             args (None, bool, Dict): Use user defined arguments when constructing the pipeline
         """
         self._device_name = device
@@ -91,7 +93,7 @@ class OakCamera:
                     self._args = ArgsParser.parseArgs()
                     # Set up the OakCamera
                     if self._args.get('recording', None):
-                        recording = self._args.get('recording', None)
+                        replay = self._args.get('recording', None)
                     if self._args.get('deviceId', None):
                         self._device_name = self._args.get('deviceId', None)
                     if self._args.get('usbSpeed', None):
@@ -101,13 +103,9 @@ class OakCamera:
             else:  # Already parsed
                 self._args = args
 
-        if recording:
-            self.replay = Replay(recording)
+        if replay:
+            self.replay = Replay(replay)
             print('Available streams from recording:', self.replay.getStreams())
-
-    def _comp(self, comp: Component) -> Union[CameraComponent, NNComponent, StereoComponent]:
-        self._components.append(comp)
-        return comp
 
     @_add_to_components
     def create_camera(self,
@@ -288,19 +286,20 @@ class OakCamera:
         # Check if callbacks (sync/non-sync are set)
         if blocking:
             # Constant loop: get messages, call callbacks
-            while True:
+            while self.running():
                 time.sleep(0.001)
-                if not self.poll():
-                    break
+                self.poll()
+    def running(self) -> bool:
+        return not self._stop
 
-    def poll(self) -> bool:
+    def poll(self):
         """
         Poll events; cv2.waitKey, send controls to OAK (if controls are enabled), update, check syncs.
-        True if successful.
         """
         key = cv2.waitKey(1)
         if key == ord('q'):
-            return False
+            self._stop = True
+            return
 
         # TODO: check if components have controls enabled and check whether key == `control`
 
@@ -308,12 +307,11 @@ class OakCamera:
 
         if self.replay:
             if self.replay._stop:
-                return False
+                self._stop = True
+                return
 
         if self.device.isClosed():
-            return False
-
-        return True
+            self._stop = True
 
     def build(self) -> dai.Pipeline:
         """
@@ -367,8 +365,9 @@ class OakCamera:
                 tuningBlob=self._args.get('cameraTuning', None),
                 openvinoVersion=self._args.get('openvinoVersion', None),
             )
-            self.device.setIrLaserDotProjectorBrightness(self._args.get('irDotBrightness', None) or 0)
-            self.device.setIrFloodLightBrightness(self._args.get('irFloodBrightness', None) or 0)
+            if 0 < len(self.device.getIrDrivers()):
+                self.device.setIrLaserDotProjectorBrightness(self._args.get('irDotBrightness', None) or 0)
+                self.device.setIrFloodLightBrightness(self._args.get('irFloodBrightness', None) or 0)
 
         return self._pipeline
 

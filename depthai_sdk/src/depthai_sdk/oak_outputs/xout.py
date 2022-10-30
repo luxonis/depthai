@@ -412,69 +412,6 @@ class XoutDepth(XoutFrames, XoutClickable):
             self.msgs = newMsgs
 
 
-class XoutSpatialBbMappings(XoutFrames):
-    name: str = "Depth & Bounding Boxes"
-    # Streams
-    frames: StreamXout
-    configs: StreamXout
-
-    # Save messages
-    depth_msg: Optional[dai.ImgFrame] = None
-    config_msg: Optional[dai.SpatialLocationCalculatorConfig] = None
-
-    factor: float = None
-
-    def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
-        self.frames = frames
-        self.configs = configs
-        self.device = device
-        self.multiplier = 255 / 95.0
-        super().__init__(frames)
-
-    def xstreams(self) -> List[StreamXout]:
-        return [self.frames, self.configs]
-
-    def visualize(self, packet: SpatialBbMappingPacket):
-        if not self.factor:
-            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
-            self.factor = calc_disp_multiplier(self.device, size)
-
-        depth = np.array(packet.imgFrame.getFrame())
-        with np.errstate(divide='ignore'):
-            disp = (self.factor / depth).astype(np.uint8)
-
-        packet.frame = colorize_disparity(disp, multiplier=self.multiplier)
-        draw_mappings(packet)
-
-        super().visualize(packet)
-
-    def newMsg(self, name: str, msg: dai.Buffer) -> None:
-        # Ignore frames that we aren't listening for
-        if name not in self._streams: return
-
-        if name == self.frames.name:
-            self.depth_msg = msg
-
-        if name == self.configs.name:
-            self.config_msg = msg
-
-        if self.depth_msg and self.config_msg:
-
-            if self.queue.full():
-                self.queue.get()  # Get one, so queue isn't full
-
-            packet = SpatialBbMappingPacket(
-                self.get_packet_name(),
-                self.depth_msg,
-                self.config_msg
-            )
-
-            self.queue.put(packet, block=False)
-
-            self.config_msg = None
-            self.depth_msg = None
-
-
 class XoutSeqSync(XoutBase, SequenceNumSync):
     streams: List[StreamXout]
 
@@ -580,6 +517,54 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             msgs[self.nn_results.name],
         )
         self.queue.put(packet, block=False)
+
+class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
+    name: str = "Depth & Bounding Boxes"
+    # Streams
+    frames: StreamXout
+    configs: StreamXout
+
+    # Save messages
+    depth_msg: Optional[dai.ImgFrame] = None
+    config_msg: Optional[dai.SpatialLocationCalculatorConfig] = None
+
+    factor: float = None
+
+    def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
+        self.frames = frames
+        self.configs = configs
+        self.device = device
+        self.multiplier = 255 / 95.0
+        XoutFrames.__init__(self, frames)
+        XoutSeqSync.__init__(self, [frames, configs])
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames, self.configs]
+
+    def visualize(self, packet: SpatialBbMappingPacket):
+        if not self.factor:
+            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
+            self.factor = calc_disp_multiplier(self.device, size)
+
+        depth = np.array(packet.imgFrame.getFrame())
+        with np.errstate(divide='ignore'):
+            disp = (self.factor / depth).astype(np.uint8)
+
+        packet.frame = colorize_disparity(disp, multiplier=self.multiplier)
+        draw_mappings(packet)
+
+        super().visualize(packet)
+
+    def package(self, msgs: Dict):
+        if self.queue.full():
+            self.queue.get()  # Get one, so queue isn't full
+        packet = SpatialBbMappingPacket(
+            self.get_packet_name(),
+            msgs[self.frames.name],
+            msgs[self.configs.name],
+        )
+        self.queue.put(packet, block=False)
+
 
 
 class XoutTracker(XoutNnResults):

@@ -151,7 +151,7 @@ class PipelineManager:
         xout=False,
         xoutVideo=False,
         xoutStill=False,
-        control=False, # Create input control
+        control=True, # Create input control
         pipeline=None,
         args=None,
         ) -> dai.node.ColorCamera:
@@ -679,11 +679,11 @@ class PipelineManager:
         elif cameraName == Previews.left.name:
             if not hasattr(self.nodes, 'monoLeft'):
                 raise RuntimeError("Left mono camera not initialized. Call createLeftCam(res, fps) first!")
-            encIn = self.nodes.monoLeft._out
+            encIn = self.nodes.monoLeft.out
         elif cameraName == Previews.right.name:
             if not hasattr(self.nodes, 'monoRight'):
                 raise RuntimeError("Right mono camera not initialized. Call createRightCam(res, fps) first!")
-            encIn = self.nodes.monoRight._out
+            encIn = self.nodes.monoRight.out
 
         enc = self.pipeline.createVideoEncoder()
         enc.setDefaultProfilePreset(encFps, encProfile)

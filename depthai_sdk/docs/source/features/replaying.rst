@@ -30,8 +30,8 @@ Replaying feature is quite extensible, and supports a variety of different input
 Replaying a depthai-recording
 #############################
 
-Let's say we have a :ref:`depthai-recording <Recording>` at ``./1-18443010D116631200``, we can easily specify that when constructing :ref:`OakCamera` object,
-which will result in using `XLinkIn <https://docs.luxonis.com/projects/api/en/latest/components/nodes/xlink_in/>`__ nodes instead of `ColorCamera <https://docs.luxonis.com/projects/api/en/latest/components/nodes/color_camera/>`__ /
+When constructing the :ref:`OakCamera` object we can easily replay an existing :ref:`depthai-recording <Recording>`,
+which results in using `XLinkIn <https://docs.luxonis.com/projects/api/en/latest/components/nodes/xlink_in/>`__ nodes instead of `ColorCamera <https://docs.luxonis.com/projects/api/en/latest/components/nodes/color_camera/>`__ /
 `MonoCamera <https://docs.luxonis.com/projects/api/en/latest/components/nodes/mono_camera/>`__ nodes.
 
 Script below will also do depth reconstruction and will display 3D detections coordinates (XYZ) to the frame.
@@ -41,7 +41,7 @@ Script below will also do depth reconstruction and will display 3D detections co
     from depthai_sdk import OakCamera
 
   - with OakCamera() as oak:
-  + with OakCamera(recording='./1-18443010D116631200') as oak:
+  + with OakCamera(replay='path/to/folders') as oak:
         color = oak.create_camera('color')
         nn = oak.create_nn('mobilenet-ssd', color, spatial=True)
         oak.visualize(nn.out.main, fps=True)

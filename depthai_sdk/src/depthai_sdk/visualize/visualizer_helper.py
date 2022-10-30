@@ -239,9 +239,9 @@ def get_text_color(background, threshold=0.6):
 
 
 def draw_mappings(packet: SpatialBbMappingPacket):
-    roi_datas = packet.config.getConfigData()
-    for roi_data in roi_datas:
-        roi = roi_data.roi
+    dets = packet.spatials.detections
+    for det in dets:
+        roi = det.boundingBoxMapping.roi
         roi = roi.denormalize(packet.frame.shape[1], packet.frame.shape[0])
         top_left = roi.topLeft()
         bottom_right = roi.bottomRight()

@@ -119,12 +119,12 @@ def run():
                             q['msgs'].append(new_msg)
                             if checkSync(recording.queues, new_msg.getSequenceNum()):
                                 # Wait for Auto focus/exposure/white-balance
-                                recording._frameCntr += 1
-                                if recording._frameCntr <= SKIP_FRAMES: # 1.5 sec
+                                recording.frameCntr += 1
+                                if recording.frameCntr <= SKIP_FRAMES: # 1.5 sec
                                     continue
                                 # Timelapse
                                 if 0 < args.timelapse: timelapse = time.time()
-                                if args.frame_cnt == recording._frameCntr:
+                                if args.frame_cnt == recording.frameCntr:
                                     quitEvent.set()
 
                                 frames = dict()
@@ -144,76 +144,3 @@ def run():
 
 if __name__ == '__main__':
     run()
-
-class EncodingQuality(IntEnum):
-    BEST = 1  # Lossless MJPEG
-    HIGH = 2  # MJPEG Quality=97 (default)
-    MEDIUM = 3  # MJPEG Quality=93
-    LOW = 4  # H265 BitrateKbps=10000
-
-def _createPipeline(self):
-    """
-    Creates depthai pipeline for recording
-    """
-
-    pipeline = dai.Pipeline()
-    nodes = {}
-
-    def stream_out(name, fps, out, noEnc=False):
-        # Create XLinkOutputs for the stream
-        xout = pipeline.create(dai.node.XLinkOut)
-        xout.setStreamName(name)
-        if noEnc:
-            out.link(xout.input)
-            return
-
-        encoder = pipeline.create(dai.node.VideoEncoder)
-        profile = dai.VideoEncoderProperties.Profile.H265_MAIN if self.quality == EncodingQuality.LOW else dai.VideoEncoderProperties.Profile.MJPEG
-        encoder.setDefaultProfilePreset(fps, profile)
-
-        if self.quality == EncodingQuality.BEST:
-            encoder.setLossless(True)
-        elif self.quality == EncodingQuality.HIGH:
-            quality = 97 if self._mjpegQuality is None else self._mjpegQuality
-            encoder.setQuality(quality)
-        elif self.quality == EncodingQuality.MEDIUM:
-            encoder.setQuality(93)
-        elif self.quality == EncodingQuality.LOW:
-            encoder.setBitrateKbps(10000)
-
-        out.link(encoder.input)
-        encoder.bitstream.link(xout.input)
-
-    if "color" in self.save:
-        nodes['color'] = self.pm.createColorCam(
-            control=False,
-            colorOrder=dai.ColorCameraProperties.ColorOrder.RGB,
-            pipeline=pipeline,
-            args=self.args)
-
-
-        # TODO change out to .isp instead of .video when ImageManip will support I420 -> NV12
-        # Don't encode color stream if we save depth; as we will be saving color frames in rosbags as well
-        stream_out("color", nodes['color'].getFps(), nodes['color'].video) #, noEnc='depth' in self.save)
-
-    if True in (el in ["left", "disparity", "depth"] for el in self.save):
-        nodes['left'] = self.pm.createLeftCam(control=False, pipeline=pipeline, args=self.args)
-        if "left" in self.save:
-            stream_out("left", nodes['left'].getFps(), nodes['left'].out)
-
-    if True in (el in ["right", "disparity", "depth"] for el in self.save):
-        nodes['right'] = self.pm.createRightCam(control=False, pipeline=pipeline, args=self.args)
-        if "right" in self.save:
-            stream_out("right", nodes['right'].getFps(), nodes['right'].out)
-
-    if True in (el in ["disparity", "depth"] for el in self.save):
-        nodes['stereo'] = self.pm.createDepth(control=False, pipeline=pipeline, args = self.args)
-
-        if "disparity" in self.save:
-            stream_out("disparity", nodes['right'].getFps(), nodes['stereo'].disparity)
-        if "depth" in self.save:
-            stream_out('depth', None, nodes['stereo'].depth, noEnc=True)
-
-    return pipeline, nodes
-
-

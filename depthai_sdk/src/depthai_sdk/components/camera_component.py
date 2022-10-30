@@ -12,8 +12,8 @@ class CameraComponent(Component):
     node: Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera] = None
     encoder: dai.node.VideoEncoder = None
 
-    _out: dai.Node.Output = None  # Node output to be used as eg. an input into NN
-    _out_size: Tuple[int, int]  # Output size
+    stream: dai.Node.Output = None  # Node output to be used as eg. an input into NN
+    stream_size: Tuple[int, int]  # Output size
 
     # Setting passed at init
     _replay: Replay  # Replay module
@@ -77,8 +77,8 @@ class CameraComponent(Component):
             self.node: dai.node.XLinkIn = getattr(self._replay, self._source)
             # print('resize', resize)
             self.node.setMaxDataSize(res[0] * res[1] * 3)
-            self._out_size = res
-            self._out = self.node.out
+            self.stream_size = res
+            self.stream = self.node.out
             return
 
         if isinstance(self.node, dai.node.ColorCamera):
@@ -101,12 +101,12 @@ class CameraComponent(Component):
             self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 
             self.node.setPreviewSize(*self.node.getIspSize())
-            self._out_size = self.node.getPreviewSize()
-            self._out = self.node.preview
+            self.stream_size = self.node.getPreviewSize()
+            self.stream = self.node.preview
 
         elif isinstance(self.node, dai.node.MonoCamera):
-            self._out_size = self.node.getResolutionSize()
-            self._out = self.node.out
+            self.stream_size = self.node.getResolutionSize()
+            self.stream = self.node.out
 
         if self._args:
             self._config_camera_args(self._args)
@@ -117,8 +117,8 @@ class CameraComponent(Component):
                 # Create ImageManip to convert to NV12
                 type_manip = pipeline.createImageManip()
                 type_manip.setFrameType(dai.ImgFrame.Type.NV12)
-                type_manip.setMaxOutputFrameSize(self._out_size[0] * self._out_size[1] * 3)
-                self._out.link(type_manip.inputImage)
+                type_manip.setMaxOutputFrameSize(self.stream_size[0] * self.stream_size[1] * 3)
+                self.stream.link(type_manip.inputImage)
                 type_manip.out.link(self.encoder.input)
             elif self.isMono():
                 self.node.out.link(self.encoder.input)
@@ -176,6 +176,8 @@ class CameraComponent(Component):
         if preview:
             from .parser import parseSize
             preview = parseSize(preview)
+
+            self.stream_size = preview
 
             if self._replay:
                 self._replay.setResizeColor(preview)
@@ -320,7 +322,7 @@ class CameraComponent(Component):
         if self.isReplay():
             return ReplayStream(self._source)
         elif self.isMono():
-            return StreamXout(self.node.id, self._out)
+            return StreamXout(self.node.id, self.stream)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(10)
             return StreamXout(self.node.id, self.node.video)
