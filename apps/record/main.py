@@ -119,12 +119,12 @@ def run():
                             q['msgs'].append(new_msg)
                             if checkSync(recording.queues, new_msg.getSequenceNum()):
                                 # Wait for Auto focus/exposure/white-balance
-                                recording._frameCntr += 1
-                                if recording._frameCntr <= SKIP_FRAMES: # 1.5 sec
+                                recording.frameCntr += 1
+                                if recording.frameCntr <= SKIP_FRAMES: # 1.5 sec
                                     continue
                                 # Timelapse
                                 if 0 < args.timelapse: timelapse = time.time()
-                                if args.frame_cnt == recording._frameCntr:
+                                if args.frame_cnt == recording.frameCntr:
                                     quitEvent.set()
 
                                 frames = dict()
@@ -140,7 +140,7 @@ def run():
         for recording in devices:
             recording.frame_q.put(None)
             recording.process.join()  # Terminate the process
-        print("All recordings have stopped successfully. Exiting the app.")
+        print("All recordings have stopped successfuly. Exiting the app.")
 
 if __name__ == '__main__':
     run()
