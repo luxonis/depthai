@@ -64,7 +64,6 @@ Installation
    :caption: Home:
 
    self
-   getting-started.rst
    oak-camera.rst
 
 .. toctree::
