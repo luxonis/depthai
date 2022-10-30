@@ -14,7 +14,7 @@ on:
 jobs:
 
   build:
-    name: Just build the image
+    name: Build and Upload to Docker Hub
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -51,4 +51,5 @@ jobs:
           docker buildx build \
             --platform linux/amd64,linux/arm/v7,linux/arm64 \
             --tag luxonis/depthai:${{ steps.vars.outputs.short_ref }} \
+            --tag luxonis/depthai:latest \
             --output "type=image,push=true" .
