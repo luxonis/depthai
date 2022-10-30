@@ -365,8 +365,9 @@ class OakCamera:
                 tuningBlob=self._args.get('cameraTuning', None),
                 openvinoVersion=self._args.get('openvinoVersion', None),
             )
-            self.device.setIrLaserDotProjectorBrightness(self._args.get('irDotBrightness', None) or 0)
-            self.device.setIrFloodLightBrightness(self._args.get('irFloodBrightness', None) or 0)
+            if 0 < len(self.device.getIrDrivers()):
+                self.device.setIrLaserDotProjectorBrightness(self._args.get('irDotBrightness', None) or 0)
+                self.device.setIrFloodLightBrightness(self._args.get('irFloodBrightness', None) or 0)
 
         return self._pipeline
 

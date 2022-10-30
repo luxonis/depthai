@@ -531,7 +531,7 @@ class NNComponent(Component):
 
             out = XoutSpatialBbMappings(device,
                                         StreamXout(self._comp.node.id, self._comp.node.passthroughDepth),
-                                        StreamXout(self._comp.node.id, self._comp.node.boundingBoxMapping)
+                                        StreamXout(self._comp.node.id, self._comp.node.out)
                                         )
             return self._comp._create_xout(pipeline, out)
 
