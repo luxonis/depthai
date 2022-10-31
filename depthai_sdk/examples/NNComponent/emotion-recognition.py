@@ -1,4 +1,4 @@
-from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, visualizer
+from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, visualizer, TextPosition
 import numpy as np
 import cv2
 
@@ -15,14 +15,15 @@ with OakCamera() as oak:
     # emotion_nn.config_multistage_nn(show_cropped_frames=True) # For debugging
 
     def cb(packet: TwoStagePacket, visualizer):
-        for det, rec in zip(packet.img_detections.detections, packet.nnData):
+        for det, rec in zip(packet.detections, packet.nnData):
             emotion_results = np.array(rec.getFirstLayerFp16())
             print(det, emotion_results)
             emotion_name = emotions[np.argmax(emotion_results)]
             print(emotion_name)
-            h, w = packet.frame.shape[:2]
-            box = tuple(map(int, (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)))
-            visualizer.add_text(emotion_name, bbox=box)
+
+            visualizer.add_text(emotion_name,
+                                bbox=(*det.top_left, *det.bottom_right),
+                                position=TextPosition.BOTTOM_RIGHT)
 
         visualizer.draw(packet.frame)
         cv2.imshow(packet.name, packet.frame)

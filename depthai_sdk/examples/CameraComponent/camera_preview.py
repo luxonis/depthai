@@ -6,5 +6,5 @@ with OakCamera() as oak:
     right = oak.create_camera('right')
     stereo = oak.create_stereo(left=left, right=right)
 
-    oak.visualize([color, left, right, stereo.out_depth], fps=True, scale=2/3)
+    oak.visualize([color, left, right, stereo.out.depth], fps=True, scale=2/3)
     oak.start(blocking=True)

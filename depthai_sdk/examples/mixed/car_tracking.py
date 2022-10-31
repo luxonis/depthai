@@ -11,5 +11,5 @@ with OakCamera(replay='cars-tracking-above-01') as oak:
     visualizer = oak.visualize(nn.out.tracker, fps=True, record='./recorded_video.mp4')
     visualizer.tracking(line_thickness=5).text(auto_scale=True)
     # Start the app in blocking mode
-    oak.show_graph()
+    # oak.show_graph()
     oak.start(blocking=True)

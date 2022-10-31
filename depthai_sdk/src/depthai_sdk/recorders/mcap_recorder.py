@@ -1,10 +1,11 @@
 from pathlib import Path
-from mcap_ros1.writer import Writer as Ros1Writer
-from depthai_sdk.recorders.abstract_recorder import *
-from depthai_sdk.recorders.depthai2ros import DepthAi2Ros1
+from typing import List, Dict
 
 import depthai as dai
-from typing import List, Dict
+from mcap_ros1.writer import Writer as Ros1Writer
+
+from depthai_sdk.recorders.abstract_recorder import *
+from depthai_sdk.recorders.depthai2ros import DepthAi2Ros1
 
 
 class McapRecorder(Recorder):

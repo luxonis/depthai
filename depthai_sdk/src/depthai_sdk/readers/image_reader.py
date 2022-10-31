@@ -1,11 +1,12 @@
+import os
 import time
+from pathlib import Path
+from typing import List, Tuple, Dict
 
 import cv2
-import os
 import numpy as np
+
 from depthai_sdk.readers.abstract_reader import AbstractReader
-from typing import List, Tuple, Dict
-from pathlib import Path
 
 # Supported image formats:
 _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '.pbm', '.pgm', '.ppm', '.pxm',

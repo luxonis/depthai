@@ -8,7 +8,6 @@ import depthai as dai
 import distinctipy
 import numpy as np
 
-from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.classes.packets import (
     DetectionPacket,
     _TwoStageDetection,
@@ -16,6 +15,7 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
     _TrackingDetection
 )
+from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 
 
 class FramePosition(IntEnum):

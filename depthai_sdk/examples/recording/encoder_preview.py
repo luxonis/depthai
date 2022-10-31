@@ -1,5 +1,6 @@
 from depthai_sdk import OakCamera, FramePacket
 from depthai_sdk.recorders.video_writers.av_writer import  AvWriter
+
 from pathlib import Path
 
 rec = AvWriter(Path('./'), 'color', 'mjpeg', fps=30)

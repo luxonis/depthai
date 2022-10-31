@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from enum import IntEnum
-from depthai_sdk.oak_outputs.xout_base import XoutBase
-from depthai_sdk.oak_outputs.xout import XoutFrames, XoutH26x, XoutMjpeg, XoutDepth, XoutDisparity
+
 import depthai as dai
+
+from depthai_sdk.oak_outputs.xout import XoutFrames, XoutH26x, XoutMjpeg, XoutDepth
+from depthai_sdk.oak_outputs.xout_base import XoutBase
 
 
 class Recorder(ABC):

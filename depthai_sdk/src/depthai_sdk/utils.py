@@ -1,11 +1,12 @@
 import importlib
 import sys
-from pathlib import Path
 import urllib.request
-import cv2
-import numpy as np
-import depthai as dai
+from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
+
+import cv2
+import depthai as dai
+import numpy as np
 import requests
 import xmltodict
 

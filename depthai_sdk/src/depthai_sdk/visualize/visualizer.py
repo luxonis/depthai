@@ -9,11 +9,11 @@ import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
+from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle
 from depthai_sdk.visualize.encoder import JSONEncoder
 from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle
 from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
-from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 
 
 class Platform(Enum):

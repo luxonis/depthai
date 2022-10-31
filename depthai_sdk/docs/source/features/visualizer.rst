@@ -8,10 +8,10 @@ Getting Started
 
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is created upon calling
 :func:`oak.visualize <depthai_sdk.OakCamera.visualize>`, which returns :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` instance.
-Once it is created, the visualizer configs can be modified using :func:`configure_output <depthai_sdk.visualize.visualizer.Visualizer.configure_output>`,
-:func:`configure_text <depthai_sdk.visualize.visualizer.Visualizer.configure_text>`,
-:func:`configure_detections <depthai_sdk.visualize.visualizer.Visualizer.configure_detections>`,
-:func:`configure_tracking <depthai_sdk.visualize.visualizer.Visualizer.configure_tracking>` methods.
+Once it is created, the visualizer configs can be modified using :func:`output <depthai_sdk.visualize.visualizer.Visualizer.output>`,
+:func:`text <depthai_sdk.visualize.visualizer.Visualizer.text>`,
+:func:`detections <depthai_sdk.visualize.visualizer.Visualizer.detections>`,
+:func:`tracking <depthai_sdk.visualize.visualizer.Visualizer.tracking>` methods.
 
 Example how :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` can be created:
 
@@ -53,25 +53,25 @@ and :class:`TrackingConfig <depthai_sdk.visualize.configs.TrackingConfig>`.
 Each config's type has its own set of parameters, which effects how the corresponding object will be visualized.
 
 There are the following methods for modifying the default configuration:
-:func:`configure_output <depthai_sdk.visualize.visualizer.Visualizer.configure_output>`,
-:func:`configure_text <depthai_sdk.visualize.visualizer.Visualizer.configure_text>`,
-:func:`configure_detections <depthai_sdk.visualize.visualizer.Visualizer.configure_detections>`,
-:func:`configure_tracking <depthai_sdk.visualize.visualizer.Visualizer.configure_tracking>`.
+:func:`output <depthai_sdk.visualize.visualizer.Visualizer.output>`,
+:func:`text <depthai_sdk.visualize.visualizer.Visualizer.text>`,
+:func:`detections <depthai_sdk.visualize.visualizer.Visualizer.detections>`,
+:func:`tracking <depthai_sdk.visualize.visualizer.Visualizer.tracking>`.
 The arguments should be passed as key-value arguments with the same signature as the corresponding config,
-e.g., ``configure_text(font_size=2, font_color=(255,123,200))``.
+e.g., ``text(font_size=2, font_color=(255,123,200))``.
 
-The modified configuration will be applied to every created objects. The ``configure_*()`` methods support
-fluent interface and can be chained, e.g., ``visualizer.configure_text(font_size=2).configure_bbox(color=(255, 0, 0))``.
+The modified configuration will be applied to every created objects. The methods support
+fluent interface and can be chained, e.g., ``visualizer.text(font_size=2).bbox(color=(255, 0, 0))``.
 
 Example how to configure the visualizer:
 
 .. code-block:: python
 
         visualizer = oak.visualize(camera.out.main)
-        visualizer.configure_bbox(
+        visualizer.bbox(
             bbox_style=BboxStyle.RECTANGLE,
             label_position=TextPosition.MID,
-        ).configure_text(
+        ).text(
             auto_scale=True
         )
 
@@ -146,15 +146,15 @@ The following script will visualize the output of face detection model.
         det = oak.create_nn('face-detection-retail-0004', camera)
 
         visualizer = oak.visualize(det.out.main, fps=True)
-        visualizer.configure_bbox(
+        visualizer.bbox(
             color=(0, 255, 0),
             thickness=2,
             bbox_style=BboxStyle.RECTANGLE,
             label_position=TextPosition.MID,
-        ).configure_text(
+        ).text(
             font_color=(255, 255, 0),
             auto_scale=True
-        ).configure_tracking(
+        ).tracking(
             line_thickness=5
         )
 

@@ -1,26 +1,25 @@
 '''
 This is a helper class that let's you save depth frames into rosbag (.bag), which can be replayed using RealSense Viewer app.
 '''
-from typing import List
-
-from rosbags.rosbag1 import Writer
-from rosbags.serde import cdr_to_ros1, serialize_cdr
-from rosbags.typesys.types import geometry_msgs__msg__Transform as Transform
-from rosbags.typesys.types import diagnostic_msgs__msg__KeyValue as KeyValue
-from rosbags.typesys.types import geometry_msgs__msg__Quaternion as Quaternion
-from rosbags.typesys.types import geometry_msgs__msg__Vector3 as Vector3
-from rosbags.typesys.types import builtin_interfaces__msg__Time as Time
-from rosbags.typesys.types import sensor_msgs__msg__RegionOfInterest as Roi
-from rosbags.typesys.types import std_msgs__msg__UInt32 as UInt32
-from rosbags.typesys.types import sensor_msgs__msg__Image as Image
-from rosbags.typesys.types import std_msgs__msg__Header as Header
-from rosbags.typesys import get_types_from_msg, register_types
-
-from pathlib import Path
-import numpy as np
 import os
 import time
+from pathlib import Path
+from typing import List
+
 import depthai as dai
+import numpy as np
+from rosbags.rosbag1 import Writer
+from rosbags.serde import cdr_to_ros1, serialize_cdr
+from rosbags.typesys import get_types_from_msg, register_types
+from rosbags.typesys.types import builtin_interfaces__msg__Time as Time
+from rosbags.typesys.types import diagnostic_msgs__msg__KeyValue as KeyValue
+from rosbags.typesys.types import geometry_msgs__msg__Quaternion as Quaternion
+from rosbags.typesys.types import geometry_msgs__msg__Transform as Transform
+from rosbags.typesys.types import geometry_msgs__msg__Vector3 as Vector3
+from rosbags.typesys.types import sensor_msgs__msg__Image as Image
+from rosbags.typesys.types import sensor_msgs__msg__RegionOfInterest as Roi
+from rosbags.typesys.types import std_msgs__msg__Header as Header
+from rosbags.typesys.types import std_msgs__msg__UInt32 as UInt32
 
 from depthai_sdk.recorders.abstract_recorder import Recorder
 
@@ -202,6 +201,7 @@ string encoding   # Stream's data format
 bool is_recommended # Is this stream recommended by RealSense SDK
 """
 
+
 class RosbagRecorder(Recorder):
     _closed = False
     _frame_init: List[str]
@@ -213,7 +213,7 @@ class RosbagRecorder(Recorder):
             device: depthai.Device object
         '''
 
-        rgb = False # TODO: support rgb/mono recording as well
+        rgb = False  # TODO: support rgb/mono recording as well
         self._frame_init = []
 
         if not str(path).endswith('.bag'):
@@ -236,8 +236,10 @@ class RosbagRecorder(Recorder):
         from rosbags.typesys.types import sensor_msgs__msg__CamInfo as CamInfo
         self.CamInfo = CamInfo
 
-        self.depth_conn = self.writer.add_connection('/device_0/sensor_0/Depth_0/image/data', Image.__msgtype__, latching=1)
-        self.depth_meta_conn = self.writer.add_connection('/device_0/sensor_0/Depth_0/image/metadata', KeyValue.__msgtype__, latching=1)
+        self.depth_conn = self.writer.add_connection('/device_0/sensor_0/Depth_0/image/data', Image.__msgtype__,
+                                                     latching=1)
+        self.depth_meta_conn = self.writer.add_connection('/device_0/sensor_0/Depth_0/image/metadata',
+                                                          KeyValue.__msgtype__, latching=1)
 
         self.write_uint32('/file_version', 2)
         self.write_keyvalues('/device_0/info', {
@@ -290,13 +292,15 @@ class RosbagRecorder(Recorder):
             })
             self.write_transform('/device_0/sensor_1/Color_0/tf/0')
 
-            self.rgb_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/data', Image.__msgtype__, latching=1)
-            self.rgb_meta_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/metadata', KeyValue.__msgtype__, latching=1)
+            self.rgb_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/data', Image.__msgtype__,
+                                                       latching=1)
+            self.rgb_meta_conn = self.writer.add_connection('/device_0/sensor_1/Color_0/image/metadata',
+                                                            KeyValue.__msgtype__, latching=1)
 
     def _init_stream(self, frame: dai.ImgFrame):
         resolution = (frame.getWidth(), frame.getHeight())
 
-        if frame.getType() == dai.ImgFrame.Type.RAW16: # Depth
+        if frame.getType() == dai.ImgFrame.Type.RAW16:  # Depth
             self.write_depthInfo('/device_0/sensor_0/Depth_0/info/camera_info', resolution, self.calib)
         else:
             raise NotImplementedError('RosBags currently only support recording of depth!')
@@ -307,12 +311,10 @@ class RosbagRecorder(Recorder):
         #     fourcc = "I420"
         #     self.write_colorInfo('/device_0/sensor_1/Color_0/info/camera_info', resolution, self.calib)
 
-
     def write(self, name: str, imgFrame: dai.ImgFrame):
         if name not in self._frame_init:
             self._init_stream(imgFrame)
             self._frame_init.append(name)
-
 
         frame = imgFrame.getCvFrame()
         # First frames
@@ -322,12 +324,12 @@ class RosbagRecorder(Recorder):
         if rgb:
             frame = frame[:, :, [2, 1, 0]]
         img = Image(header=self.get_current_header(),
-                height=frame.shape[0],
-                width=frame.shape[1],
-                encoding='rgb8' if rgb else 'mono16',
-                is_bigendian=0,
-                step=frame.shape[1]*2,
-                data=frame.flatten().view(dtype=np.int8))
+                    height=frame.shape[0],
+                    width=frame.shape[1],
+                    encoding='rgb8' if rgb else 'mono16',
+                    is_bigendian=0,
+                    step=frame.shape[1] * 2,
+                    data=frame.flatten().view(dtype=np.int8))
         type = Image.__msgtype__
 
         self._write(self.rgb_conn if rgb else self.depth_conn, type, img)
@@ -347,7 +349,7 @@ class RosbagRecorder(Recorder):
     def _write(self, connection, type, data):
         self.writer.write(connection, time.time_ns() - self.start_nanos, cdr_to_ros1(serialize_cdr(data, type), type))
 
-    def write_streamInfo(self, depth = False, rgb = False):
+    def write_streamInfo(self, depth=False, rgb=False):
         # Inspired by https://github.com/IntelRealSense/librealsense/blob/master/third-party/realsense-file/rosbag/msgs/realsense_msgs/StreamInfo.h
         register_types(get_types_from_msg(STREAM_INFO, 'realsense_msgs/msg/StreamInfo'))
         from rosbags.typesys.types import realsense_msgs__msg__StreamInfo as StreamInfo
@@ -361,7 +363,7 @@ class RosbagRecorder(Recorder):
             c = self.writer.add_connection('/device_0/sensor_1/Color_0/info', streamInfo.__msgtype__)
             self._write(c, streamInfo.__msgtype__, streamInfo)
 
-    def write_keyvalues(self, topicOrConnection, array, connection = False):
+    def write_keyvalues(self, topicOrConnection, array, connection=False):
         type = KeyValue.__msgtype__
         if not connection:
             c = self.writer.add_connection(topicOrConnection, type, latching=1)
@@ -376,7 +378,7 @@ class RosbagRecorder(Recorder):
     # translation: [x,y,z]
     # rotation: [x,y,z,w]
     # We will use depth alignment to color camera in case we record depth
-    def write_transform(self, topic, translation=[0,0,0], rotation=[0,0,0,0]):
+    def write_transform(self, topic, translation=[0, 0, 0], rotation=[0, 0, 0, 0]):
         type = Transform.__msgtype__
         translation = Vector3(x=translation[0], y=translation[1], z=translation[2])
         rotation = Quaternion(x=rotation[0], y=rotation[1], z=rotation[2], w=rotation[3])
@@ -406,24 +408,24 @@ class RosbagRecorder(Recorder):
 
         # Intrinsic camera matrix
         M_color = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, resolution[0], resolution[1]))
-        self.write_cameraInfo(topic, resolution, M_color, np.zeros((3,3)), np.zeros((4,4)))
+        self.write_cameraInfo(topic, resolution, M_color, np.zeros((3, 3)), np.zeros((4, 4)))
 
     def write_cameraInfo(self, topic, resolution, intrinsics, rect, project):
         # print(topic, resolution)
         type = self.CamInfo.__msgtype__
         c = self.writer.add_connection(topic, type, latching=1)
         info = self.CamInfo(header=self.get__default_header(),
-                    height=resolution[1],
-                    width=resolution[0],
-                    distortion_model='Brown Conrady',
-                    # D=dist[:5], # Doesn't work
-                    D=np.zeros(5), # Distortion parameters (k1,k2,t1,t2,k3)
-                    K=intrinsics.flatten(), # Intrinsic camera matrix
-                    R=rect.flatten(), # Rectification matrix (stereo cameras only)
-                    P=project[:3,:].flatten(), # Projection/camera matrix
-                    binning_x=0,
-                    binning_y=0,
-                    roi=self.get_default_roi())
+                            height=resolution[1],
+                            width=resolution[0],
+                            distortion_model='Brown Conrady',
+                            # D=dist[:5], # Doesn't work
+                            D=np.zeros(5),  # Distortion parameters (k1,k2,t1,t2,k3)
+                            K=intrinsics.flatten(),  # Intrinsic camera matrix
+                            R=rect.flatten(),  # Rectification matrix (stereo cameras only)
+                            P=project[:3, :].flatten(),  # Projection/camera matrix
+                            binning_x=0,
+                            binning_y=0,
+                            roi=self.get_default_roi())
         self._write(c, type, info)
 
     def get__default_header(self):

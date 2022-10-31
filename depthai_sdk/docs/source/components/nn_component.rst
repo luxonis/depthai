@@ -27,7 +27,7 @@ Usage
         color = oak.create_camera('color')
         nn = oak.create_nn('vehicle-detection-0202', color, tracker=True)
         nn.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.STRETCH)
-        oak.visualize([nn.out_tracker, nn.out_passthrough], fps=True)
+        oak.visualize([nn.out.tracker, nn.out.passthrough], fps=True)
         # oak.show_graph()
         oak.start(blocking=True)
 

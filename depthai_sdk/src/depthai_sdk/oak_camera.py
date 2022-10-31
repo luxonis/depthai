@@ -2,13 +2,11 @@ import functools
 import time
 import warnings
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union, Callable, Tuple
+from typing import Dict, Any, Optional, List, Union, Callable
 
 import cv2
 import depthai as dai
-from depthai_sdk.oak_outputs.xout_base import XoutBase
 
-from depthai_sdk.visualize import Visualizer
 from depthai_sdk.args_parser import ArgsParser
 from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig
 from depthai_sdk.components.camera_component import CameraComponent
@@ -22,6 +20,7 @@ from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
 from depthai_sdk.utils import configPipeline
+from depthai_sdk.visualize import Visualizer
 
 
 class UsbWarning(UserWarning):
@@ -289,6 +288,7 @@ class OakCamera:
             while self.running():
                 time.sleep(0.001)
                 self.poll()
+
     def running(self) -> bool:
         return not self._stop
 
