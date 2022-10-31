@@ -12,7 +12,7 @@ Through the :ref:`NNComponent`, DepthAI SDK abstracts:
 SDK supported models
 ####################
 
-With :ref:`NN Component` you can **easily try out a variety of different pre-trained models** by simply changing the model name:
+With :ref:`NNComponent` you can **easily try out a variety of different pre-trained models** by simply changing the model name:
 
 .. code-block:: diff
 
