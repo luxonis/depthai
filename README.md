@@ -51,7 +51,6 @@ docker run --privileged -v /dev/bus/usb:/dev/bus/usb --device-cgroup-rule='c 189
 This repository and the demo script itself can be used in various independent cases:
 - As a tool to try out different DepthAI features, explorable either with command line arguments (with `--guiType cv`) or in clickable QT interface (with `--guiType qt`)
 - As a quick prototyping backbone, either utilising [callbacks mechanism](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#callbacks-file) or by [extending the `Demo` class itself](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#importing-demo-as-a-class)
-- As a way to [write code for DepthAI devices faster](https://docs.luxonis.com/projects/sdk/en/latest/getting-started/#preview-color-camera), using [depthai-sdk](https://pypi.org/project/depthai-sdk/) managers and helper functions, on top of which the demo script is built
 
 ### QT GUI usage
 

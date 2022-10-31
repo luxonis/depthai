@@ -1,0 +1,15 @@
+description: >-
+  deeplab_v3_plus_mnv2_decoder_256
+documentation: https://github.com/PINTO0309/PINTO_model_zoo/blob/master/026_mobile-deeplabv3-plus/01_float32/download.sh
+task_type: semantic_segmentation
+files:
+  - name: FP16/deeplabv3p_person.xml
+    size: 138536
+    sha256: bd03684c902e99df3156d331167d94d965ad12193f2a8e26903be27ac17414fd
+    source: https://blobconverter.s3.us-west-2.amazonaws.com/deeplabv3.xml
+  - name: FP16/deeplabv3p_person.bin
+    size: 4481868
+    sha256: f0a667920462ed264cf7c2fc0654c2c0c3e311c763abfe99cc15232adf6bcff4
+    source: https://blobconverter.s3.us-west-2.amazonaws.com/deeplabv3.bin
+framework: dldt
+license: https://raw.githubusercontent.com/PINTO0309/PINTO_model_zoo/master/LICENSE

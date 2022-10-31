@@ -1,0 +1,10 @@
+{
+    "model": {
+        "model_name":"age-gender-recognition-retail-0013"
+    },
+    "nn_config": {
+        "output_format" : "raw"
+    },
+    "handler": "handler.py",
+    "version": 1
+}

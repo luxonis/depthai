@@ -1,0 +1,23 @@
+{
+    "model":
+    {
+        "model_name": "person-vehicle-bike-detection-crossroad-1016"
+    },
+    "nn_config":
+    {
+        "output_format" : "detection",
+        "NN_family" : "mobilenet",
+        "confidence_threshold" : 0.5
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "bike",
+            "vehicle",
+            "person"
+        ]
+    },
+    "version": 1
+}
+

@@ -1,0 +1,23 @@
+{
+    "model":
+    {
+        "model_name": "vehicle-license-plate-detection-barrier-0106"
+    },
+    "nn_config":
+    {
+        "output_format" : "detection",
+        "NN_family" : "mobilenet",
+        "confidence_threshold" : 0.5
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "",
+            "vehicle",
+            "license plate"
+        ]
+    },
+    "version": 1
+}
+

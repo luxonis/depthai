@@ -1,0 +1,42 @@
+{
+    "model":
+    {
+        "model_name": "mobilenet-ssd",
+        "zoo": "intel"
+    },
+    "nn_config":
+    {
+        "output_format" : "detection",
+        "NN_family" : "mobilenet",
+        "confidence_threshold" : 0.5
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "background",
+            "aeroplane",
+            "bicycle",
+            "bird",
+            "boat",
+            ["bottle","#FF0002"],
+            "bus",
+            "car",
+            "cat",
+            ["chair", "#3888FF"],
+            "cow",
+            ["table", "#AD7B52"],
+            "dog",
+            "horse",
+            "motorbike",
+            ["person", "#FAFC2B"],
+            ["plant","#38FF4C"],
+            "sheep",
+            ["sofa", "#F9FFBF"],
+            "train",
+            ["monitor", "#120036"]
+        ]
+    },
+    "version": 1
+}
+
