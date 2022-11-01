@@ -104,10 +104,12 @@ class XoutFrames(XoutBase):
                 self._frames_buffer.append(packet.frame)
             else:
                 h, w = self._visualizer.frame_shape[:2]
+                c = self._visualizer.frame_shape[2] if len(self._visualizer.frame_shape) == 3 else 1
                 self._video_writer = cv2.VideoWriter(str(self._recording_path),
                                                      self._fourcc_codec_code,
                                                      self._fps.fps(),
-                                                     (w, h)
+                                                     (w, h),
+                                                     isColor=int(c > 1)
                                                      )
                 # Write all buffered frames
                 for frame in self._frames_buffer:

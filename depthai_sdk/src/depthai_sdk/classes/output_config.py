@@ -1,15 +1,14 @@
 from abc import abstractmethod
-from typing import Optional, Callable, Union, Tuple, List
+from typing import Optional, Callable, List
 
 import depthai as dai
-from depthai_sdk import FramePacket
 
-from depthai_sdk.visualize import Visualizer
+from depthai_sdk import FramePacket
+from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout import XoutFrames
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 from depthai_sdk.record import Record
-
-from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.visualize import Visualizer
 
 
 # class VisualizeConfig:
@@ -109,7 +108,7 @@ class SyncConfig(BaseConfig, SequenceNumSync):
 
         self.packets = dict()
 
-    def new_packet(self, packet: FramePacket):
+    def new_packet(self, packet: FramePacket, _=None):
         # print('new packet', packet, packet.name, 'seq num',packet.imgFrame.getSequenceNum())
         synced = self.sync(
             packet.imgFrame.getSequenceNum(),
@@ -117,7 +116,7 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             packet
         )
         if synced:
-            self.cb(synced)
+            self.cb(synced) if self.visualizer is None else self.cb(synced, self.visualizer)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> List[XoutBase]:
         xouts = []
