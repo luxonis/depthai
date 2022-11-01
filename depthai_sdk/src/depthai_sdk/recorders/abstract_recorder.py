@@ -3,7 +3,7 @@ from enum import IntEnum
 
 import depthai as dai
 
-from depthai_sdk.oak_outputs.xout import XoutFrames, XoutH26x, XoutMjpeg, XoutDepth
+from depthai_sdk.oak_outputs.xout import XoutFrames, XoutH26x, XoutMjpeg, XoutDepth, XoutDisparity
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 
 
@@ -37,6 +37,8 @@ class OakStream:
                 self.type = self.StreamType.H264
         elif isinstance(xout, XoutDepth):
             self.type = self.StreamType.DEPTH
+        elif isinstance(xout, XoutDisparity):
+            self.type = self.StreamType.RAW
         elif isinstance(xout, XoutFrames):
             self.type = self.StreamType.RAW
         else:
