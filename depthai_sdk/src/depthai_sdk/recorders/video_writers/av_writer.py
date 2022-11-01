@@ -1,8 +1,10 @@
-from pathlib import Path
-import av
 from datetime import timedelta
-import depthai as dai
 from fractions import Fraction
+from pathlib import Path
+
+import av
+import depthai as dai
+
 
 class AvWriter:
     start_ts: timedelta = None
@@ -11,6 +13,7 @@ class AvWriter:
     def __init__(self, folder: Path, name: str, fourcc: str, fps: float):
         self.start_ts = None
         self.file = av.open(str(folder / f"{name}.mp4"), 'w')
+
         stream = self.file.add_stream(fourcc, rate=int(fps))
         stream.time_base = Fraction(1, 1000 * 1000)  # Microseconds
 
@@ -20,7 +23,6 @@ class AvWriter:
 
     def close(self):
         self.file.close()
-
 
     def write(self, frame: dai.ImgFrame):
         packet = av.Packet(frame.getData())  # Create new packet with byte array

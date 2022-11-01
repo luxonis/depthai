@@ -2,6 +2,7 @@ from pathlib import Path
 import depthai as dai
 import cv2
 
+
 class VideoWriter:
     file = None
     _fps: float
@@ -15,9 +16,9 @@ class VideoWriter:
         w = frame.getWidth()
         h = frame.getHeight()
 
-        if frame.getType() == dai.ImgFrame.Type.RAW16: # Depth
+        if frame.getType() == dai.ImgFrame.Type.RAW16:  # Depth
             fourcc = "Y16 "
-        elif frame.getType() == dai.ImgFrame.Type.RAW8: # Mono Cams
+        elif frame.getType() == dai.ImgFrame.Type.RAW8:  # Mono Cams
             fourcc = "GREY"
         else:
             fourcc = "I420"
@@ -26,12 +27,10 @@ class VideoWriter:
                                     cv2.VideoWriter_fourcc(*fourcc),
                                     self._fps,
                                     (w, h),
-                                    isColor=fourcc=="I420")
-
+                                    isColor=fourcc == "I420")
 
     def close(self):
         self.file.release()
-
 
     def write(self, frame: dai.ImgFrame):
         if self.file is None:

@@ -4,13 +4,13 @@ from typing import Callable, Union, List, Dict
 
 import blobconverter
 
+from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
-from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker
 from depthai_sdk.oak_outputs.xout_base import StreamXout, XoutBase
 from depthai_sdk.replay import Replay
@@ -193,8 +193,8 @@ class NNComponent(Component):
         else:  # SDK supported model
             models = getSupportedModels(printModels=False)
             if str(model) not in models:
-                raise ValueError(f"Specified model '{str(model)}' is not supported by DepthAI SDK. \
-                    Check SDK documentation page to see which models are supported.")
+                raise ValueError(f"Specified model '{str(model)}' is not supported by DepthAI SDK.\n"
+                                 "Check SDK documentation page to see which models are supported.")
 
             model = models[str(model)] / 'config.json'
             self._parse_config(model)
