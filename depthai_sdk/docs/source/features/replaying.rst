@@ -84,6 +84,10 @@ application (eg. ``OakCamera(recording='cars-california-01')``). Recording will 
      - ``left.mp4``, ``right.mp4``, ``calib.json``
      - 5.8 MB
      - Used by `depth-people-counting <https://github.com/luxonis/depthai-experiments/tree/master/gen2-depth-people-counting>`__ demo
+   * - ``people-construction-vest-01``
+     - ``color.mp4``
+     - 5.2 MB
+     - Used by `ObjectTracker example <https://docs.luxonis.com/projects/api/en/latest/samples/ObjectTracker/object_tracker_video/#object-tracker-on-video>`__ and `pedestrian reidentification <https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification>`__ demo
    * - ``people-images-01``
      - 5x jpg images
      - 2 MB
@@ -96,6 +100,10 @@ application (eg. ``OakCamera(recording='cars-california-01')``). Recording will 
      - ``color.mp4``
      - 86.4 MB
      - Fisheye top-down view, useful for people tracking/counting
+   * - ``people-tracking-above-03``
+     - ``color.mp4``
+     - 16.7 MB
+     - Top-down view, used by `people-tracker <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker>`__ demo
 
 
 ..

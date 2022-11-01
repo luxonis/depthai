@@ -86,6 +86,8 @@ def downloadContent(url: str) -> Path:
 def downloadRecording(name: str, keys: List[str]) -> Path:
     (DEPTHAI_RECORDINGS_PATH / name).mkdir(parents=True, exist_ok=True)
     for key in keys:
+        if key.endswith('/'):  # Folder
+            continue
         url = DEPTHAI_RECORDINGS_URL + key
         _downloadFile(str(DEPTHAI_RECORDINGS_PATH / key), url)
         print('Downloaded', key)
