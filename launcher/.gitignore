@@ -1,0 +1,4 @@
+# Ignore build directory
+build/
+# Ignore log file
+log.dat

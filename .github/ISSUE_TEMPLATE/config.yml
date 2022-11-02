@@ -1,0 +1,12 @@
+blank_issues_enabled: true
+
+contact_links:
+- name: Documentation
+  url: https://docs.luxonis.com/en/latest/
+  about: Depthai documentation is a great source of knowledge
+- name: Discord
+  url: https://luxonis.com/discord
+  about: Get a more real-time help on Discord
+- name: Forum
+  url: https://discuss.luxonis.com/
+  about: Ask your question on our Forum

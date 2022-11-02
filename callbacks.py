@@ -6,7 +6,7 @@ def onShowFrame(frame, source):
     pass
 
 
-def onNn(nn_packet):
+def onNn(nn_packet, decoded_data):
     pass
 
 
@@ -14,13 +14,13 @@ def onReport(report):
     pass
 
 
-def onSetup(**kwargs):
+def onSetup(*args, **kwargs):
     pass
 
 
-def onTeardown(**kwargs):
+def onTeardown(*args, **kwargs):
     pass
 
 
-def onIter(**kwargs):
+def onIter(*args, **kwargs):
     pass

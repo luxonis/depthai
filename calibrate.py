@@ -5,6 +5,7 @@ import shutil
 import traceback
 from argparse import ArgumentParser
 from pathlib import Path
+import time
 
 import cv2
 import depthai as dai
@@ -38,13 +39,13 @@ def parse_args():
 
     Image capture requires the use of a printed OpenCV charuco calibration target applied to a flat surface(ex: sturdy cardboard).
     Default board size used in this script is 22x16. However you can send a customized one too.
-    When taking photos, ensure enough amount of markers are visible and images are crisp. 
+    When taking photos, ensure enough amount of markers are visible and images are crisp.
     The board does not need to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
 
     If the calibration checkerboard corners cannot be found, the user will be prompted to try that calibration pose again.
 
     The script requires a RMS error < 1.0 to generate a calibration file. If RMS exceeds this threshold, an error is displayed.
-    An average epipolar error of <1.5 is considered to be good, but not required. 
+    An average epipolar error of <1.5 is considered to be good, but not required.
 
     Example usage:
 
@@ -53,7 +54,7 @@ def parse_args():
 
     Only run image processing only with same board setup. Requires a set of saved capture images:
     python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM -m process
-    
+
     Delete all existing images before starting image capture:
     python3 calibrate.py -i delete
     '''
@@ -92,9 +93,14 @@ def parse_args():
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
-    parser.add_argument("-fps", "--fps", default=30, type=int,
+    parser.add_argument("-fps", "--fps", default=10, type=int,
                         required=False, help="Set capture FPS for all cameras. Default: %(default)s")
-    
+    parser.add_argument("-cd", "--captureDelay", default=5, type=int,
+                        required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
+    parser.add_argument("-d", "--debug", default=False, action="store_true", help="Enable debug logs.")
+    parser.add_argument("-fac", "--factoryCalibration", default=False, action="store_true",
+                        help="Enable writing to Factory Calibration.")
+
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -105,7 +111,7 @@ def parse_args():
             raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
-        
+
     return options
 
 
@@ -119,8 +125,9 @@ class Main:
     images_captured = 0
 
     def __init__(self):
+        global debug
         self.args = parse_args()
-
+        debug = self.args.debug
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
@@ -140,9 +147,18 @@ class Main:
         if debug:
             print("Using Arguments=", self.args)
 
+        if self.args.board.upper() == 'OAK-D-LITE':
+            raise Exception(
+            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         pipeline = self.create_pipeline()
         self.device = dai.Device(pipeline)
+        """ cameraProperties = self.device.getConnectedCameraProperties()
+        for properties in cameraProperties:
+            if properties.sensorName == 'OV7251':
+                raise Exception(
+            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
 
+        self.device.startPipeline(pipeline)"""
         self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
         self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
         if not self.args.disableRgb:
@@ -162,7 +178,7 @@ class Main:
 
         for i, left_id in enumerate(id_l):
             idx = np.where(id_r == left_id)
-            print(idx)
+            # print(idx)
             if idx[0].size == 0:
                 continue
             for left_corner, right_corner in zip(marker_corners_l[i], marker_corners_r[idx[0][0]]):
@@ -185,7 +201,7 @@ class Main:
         else:
             cam_left.setBoardSocket(dai.CameraBoardSocket.LEFT)
             cam_right.setBoardSocket(dai.CameraBoardSocket.RIGHT)
-                
+
         cam_left.setResolution(
             dai.MonoCameraProperties.SensorResolution.THE_800_P)
         cam_left.setFps(self.args.fps)
@@ -212,7 +228,7 @@ class Main:
 
             xout_rgb_isp = pipeline.createXLinkOut()
             xout_rgb_isp.setStreamName("rgb")
-            rgb_cam.isp.link(xout_rgb_isp.input)        
+            rgb_cam.isp.link(xout_rgb_isp.input)
 
         return pipeline
 
@@ -271,7 +287,7 @@ class Main:
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
-        cv2.imshow("left + rgb + right", info_frame)
+        cv2.imshow(self.display_name, info_frame)
         cv2.waitKey(2000)
 
     def show_failed_orientation(self):
@@ -297,6 +313,13 @@ class Main:
         raise Exception(
             "Calibration failed, Camera Might be held upside down. start again!!")
 
+
+    def empty_calibration(self, calib: dai.CalibrationHandler):
+        data = calib.getEepromData()
+        for attr in ["boardName", "boardRev"]:
+            if getattr(data, attr): return False
+        return True
+
     def capture_images(self):
         finished = False
         capturing = False
@@ -309,6 +332,13 @@ class Main:
         recent_left = None
         recent_right = None
         recent_color = None
+        combine_img = None
+        start_timer = False
+        timer = self.args.captureDelay
+        prev_time = None
+        curr_time = None
+        self.display_name = "left + right + rgb"
+        last_frame_time = time.time()
         # with self.get_pipeline() as pipeline:
         while not finished:
             current_left  = self.left_camera_queue.tryGet()
@@ -327,8 +357,16 @@ class Main:
                 recent_color = current_color
 
             if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
-                print("Continuing...")
+                if time.time() - last_frame_time > 5:
+                    if self.args.disableRgb:
+                        print("Error: Couldn't retrieve left and right frames for more than 5 seconds. Exiting...")
+                    else:
+                        print("Error: Couldn't retrieve left, rigth and color frames for more than 5 seconds. Exiting...")
+                    raise SystemExit(1)
+                cv2.waitKey(1)
                 continue
+
+            last_frame_time = time.time()
 
             recent_frames = [('left', recent_left), ('right', recent_right)]
             if not self.args.disableRgb:
@@ -340,8 +378,10 @@ class Main:
                 raise SystemExit(0)
             elif key == ord(" "):
                 if debug:
-                    print("setting capture true------------------------")
-                capturing = True
+                    print("setting timer true------------------------")
+                start_timer = True
+                prev_time = time.time()
+                timer = self.args.captureDelay
 
             frame_list = []
             # left_frame = recent_left.getCvFrame()
@@ -360,18 +400,18 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
 
-                if debug:
-                    print("Timestamp difference ---> l & rgb")
+                # if debug:
+                #     print("Timestamp difference ---> l & rgb")
                 lrgb_time = 0
                 if not self.args.disableRgb:
-                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)])
-                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)])
+                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
+                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
 
                 if debug:
-                    print(lrgb_time)
-                    print(lr_time)
+                    print(f'Timestamp difference between l & RGB ---> {lrgb_time} in microseconds')
+                    print(f'Timestamp difference between l & r ---> {lr_time} in microseconds')
 
-                if capturing and lrgb_time < 30000 and lr_time < 30000:
+                if capturing and lrgb_time < 50 and lr_time < 30:
                     print("Capturing  ------------------------")
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
@@ -417,8 +457,9 @@ class Main:
 
                 if self.args.disableRgb:
                     captured_color = True
+                    tried_color = True
                 if captured_left and captured_right and captured_color:
-                    print(f"Images captured --> {self.images_captured}")
+                    print("Images captured --> {}".format(self.images_captured))
                     if not self.images_captured:
                         if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
                             self.show_failed_orientation()
@@ -434,7 +475,7 @@ class Main:
                     captured_left = False
                     captured_right = False
                     captured_color = False
-                elif tried_left and tried_color:
+                elif tried_left and tried_right and tried_color:
                     self.show_failed_capture_frame()
                     capturing = False
                     tried_left = False
@@ -453,14 +494,30 @@ class Main:
                         finished = True
                         cv2.destroyAllWindows()
                         break
-            
-            combine_img = None
+
             if not self.args.disableRgb:
                 frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
             else:
                 combine_img = np.vstack((frame_list[0], frame_list[1]))
-            cv2.imshow("left + rgb + right", combine_img)
+                self.display_name = "left + right"
+
+            if start_timer == True:
+                curr_time = time.time()
+                if curr_time - prev_time >= 1:
+                    prev_time = curr_time
+                    timer = timer-1
+                if timer <= 0 and start_timer == True:
+                    start_timer = False
+                    capturing = True
+                    print('Statrt capturing...')
+
+                image_shape = combine_img.shape
+                cv2.putText(combine_img, str(timer),
+                        (image_shape[1]//2, image_shape[0]//2), font,
+                        7, (0, 255, 255),
+                        4, cv2.LINE_AA)
+            cv2.imshow(self.display_name, combine_img)
             frame_list.clear()
 
     def calibrate(self):
@@ -500,13 +557,17 @@ class Main:
                 left = dai.CameraBoardSocket.RIGHT
                 right = dai.CameraBoardSocket.LEFT
 
-            calibration_handler = dai.CalibrationHandler()
-            calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+            calibration_handler = self.device.readCalibration()
+
+            # calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+               # Set board name / revision only if calibration is empty
+            if self.empty_calibration(calibration_handler):
+                calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
             calibration_handler.setCameraIntrinsics(left, calibData[2], 1280, 800)
             calibration_handler.setCameraIntrinsics(right, calibData[3], 1280, 800)
             measuredTranslation = [
-                -self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
+                - self.board_config['board_config']['left_to_right_distance_cm'], 0.0, 0.0]
             calibration_handler.setCameraExtrinsics(
                 left, right, calibData[5], calibData[6], measuredTranslation)
 
@@ -528,25 +589,30 @@ class Main:
                 calibration_handler.setLensPosition(dai.CameraBoardSocket.RGB, self.focus_value)
 
                 measuredTranslation = [
-                    self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
+                    self.board_config['board_config']['left_to_right_distance_cm'] - self.board_config['board_config']['left_to_rgb_distance_cm'], 0.0, 0.0]
                 calibration_handler.setCameraExtrinsics(
                     right, dai.CameraBoardSocket.RGB, calibData[7], calibData[8], measuredTranslation)
-            
+
             resImage = None
             if not self.device.isClosed():
-                dev_info = self.device.getDeviceInfo()
-                mx_serial_id = dev_info.getMxId()
+                mx_serial_id = self.device.getDeviceInfo().getMxId()
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
                 is_write_succesful = False
-                
+
                 try:
+                    if self.args.factoryCalibration:
+                        self.device.flashFactoryCalibration(calibration_handler)
                     is_write_succesful = self.device.flashCalibration(
                         calibration_handler)
                 except:
                     print("Writing in except...")
+
+                    if self.args.factoryCalibration:
+                        self.device.flashFactoryCalibration(calibration_handler)
                     is_write_succesful = self.device.flashCalibration(
                         calibration_handler)
+
                 if is_write_succesful:
                     resImage = create_blank(900, 512, rgb_color=green)
                     text = "Calibration Succesful with"
@@ -563,8 +629,10 @@ class Main:
                     text = "Try recalibrating !!"
                     cv2.putText(resImage, text, (10, 300),
                                 font, 2, (0, 0, 0), 2)
+
+
             else:
-                calib_dest_path = dest_path + '/depthai_calib.json'
+                # calib_dest_path = dest_path + '/depthai_calib.json'
                 # calibration_handler.eepromToJsonFile(calib_dest_path)
                 resImage = create_blank(900, 512, rgb_color=red)
                 text = "Calibratin succesful. " + str(epiploar_error)

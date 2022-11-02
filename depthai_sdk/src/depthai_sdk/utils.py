@@ -1,11 +1,17 @@
 import importlib
 import sys
-from pathlib import Path
 import urllib.request
+from pathlib import Path
+from typing import Dict, List, Tuple, Optional, Union
 
 import cv2
-import numpy as np
 import depthai as dai
+import numpy as np
+import requests
+import xmltodict
+
+DEPTHAI_RECORDINGS_PATH = Path.home() / Path('.cache/depthai-recordings')
+DEPTHAI_RECORDINGS_URL = 'https://depthai-recordings.fra1.digitaloceanspaces.com/'
 
 
 def cosDist(a, b):
@@ -13,6 +19,78 @@ def cosDist(a, b):
     Calculates cosine distance - https://en.wikipedia.org/wiki/Cosine_similarity
     """
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+
+def getLocalRecording(recording: str) -> Optional[Path]:
+    p: Path = DEPTHAI_RECORDINGS_PATH / recording
+    if p.exists():
+        return p
+    return None
+
+
+def configPipeline(pipeline: dai.Pipeline,
+                   xlinkChunk: Optional[int] = None,
+                   calib: Optional[dai.CalibrationHandler] = None,
+                   tuningBlob: Optional[str] = None,
+                   openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
+                   ) -> None:
+    if xlinkChunk:
+        pipeline.setXLinkChunkSize(xlinkChunk)
+    if calib:
+        pipeline.setCalibrationData(calib)
+    if tuningBlob:
+        pipeline.setCameraTuningBlobPath(tuningBlob)
+    if openvinoVersion:
+        # pipeline.setOpenVINOVersion(parseOpenVinoVersion(openvinoVersion))
+        pass
+
+
+def getAvailableRecordings() -> Dict[str, Tuple[List[str], int]]:
+    """
+    Get available (online) depthai-recordings. Returns list of available recordings and it's size
+    """
+    x = requests.get(DEPTHAI_RECORDINGS_URL)
+    if x.status_code != 200:
+        raise ValueError("DepthAI-Recordings server currently isn't available!")
+
+    # TODO: refactor and use native XML parsing to improve performance and reduce module dependencies
+    d = xmltodict.parse(x.content)
+    recordings: Dict[str, List[List[str], int]] = dict()
+
+    for content in d['ListBucketResult']['Contents']:
+        name = content['Key'].split('/')[0]
+        if name not in recordings: recordings[name] = [[], 0]
+        recordings[name][0].append(content['Key'])
+        recordings[name][1] += int(content['Size'])
+
+    return recordings
+
+
+def _downloadFile(path: str, url: str):
+    r = requests.get(url)
+    if r.status_code != 200:
+        raise ValueError(f"Could not download file from {url}!")
+
+    # retrieving data from the URL using get method
+    with open(path, 'wb') as f:
+        f.write(r.content)
+
+
+def downloadContent(url: str) -> Path:
+    # Remove url arguments eg. `img.jpeg?w=800&h=600`
+    file = Path(url).name.split('?')[0]
+    _downloadFile(str(DEPTHAI_RECORDINGS_PATH / file), url)
+    return DEPTHAI_RECORDINGS_PATH / file
+
+
+def downloadRecording(name: str, keys: List[str]) -> Path:
+    (DEPTHAI_RECORDINGS_PATH / name).mkdir(parents=True, exist_ok=True)
+    for key in keys:
+        url = DEPTHAI_RECORDINGS_URL + key
+        _downloadFile(str(DEPTHAI_RECORDINGS_PATH / key), url)
+        print('Downloaded', key)
+
+    return DEPTHAI_RECORDINGS_PATH / name
 
 
 def frameNorm(frame, bbox):
@@ -72,7 +150,7 @@ def toTensorResult(packet):
     return data
 
 
-def merge(source:dict, destination:dict):
+def merge(source: dict, destination: dict):
     """
     Utility function to merge two dictionaries
 
@@ -117,7 +195,7 @@ def loadModule(path: Path):
     return module
 
 
-def getDeviceInfo(deviceId=None):
+def getDeviceInfo(deviceId=None, debug=False):
     """
     Find a correct :obj:`depthai.DeviceInfo` object, either matching provided :code:`deviceId` or selected by the user (if multiple devices available)
     Useful for almost every app where there is a possibility of multiple devices being connected simultaneously
@@ -132,7 +210,12 @@ def getDeviceInfo(deviceId=None):
         RuntimeError: if no DepthAI device was found or, if :code:`deviceId` was specified, no device with matching MX ID was found
         ValueError: if value supplied by the user when choosing the DepthAI device was incorrect
     """
-    deviceInfos = dai.Device.getAllAvailableDevices()
+    deviceInfos = []
+    if debug:
+        deviceInfos = dai.XLinkConnection.getAllConnectedDevices()
+    else:
+        deviceInfos = dai.Device.getAllAvailableDevices()
+
     if len(deviceInfos) == 0:
         raise RuntimeError("No DepthAI device found!")
     else:
@@ -174,18 +257,27 @@ def showProgress(curr, max):
         max (int): Maximum position on progress bar
     """
     done = int(50 * curr / max)
-    sys.stdout.write("\r[{}{}] ".format('=' * done, ' ' * (50-done)) )
+    sys.stdout.write("\r[{}{}] ".format('=' * done, ' ' * (50 - done)))
     sys.stdout.flush()
 
 
+def isYoutubeLink(source: str) -> bool:
+    return "youtube.com" in source
 
-def downloadYTVideo(video, outputDir=None):
+
+def isUrl(source: Union[str, Path]) -> bool:
+    if isinstance(source, Path):
+        source = str(source)
+    return source.startswith("http://") or source.startswith("https://")
+
+
+def downloadYTVideo(video: str, output_dir: Optional[Path] = None) -> Path:
     """
     Downloads a video from YouTube and returns the path to video. Will choose the best resolutuion if possible.
 
     Args:
         video (str): URL to YouTube video
-        outputDir (pathlib.Path, optional): Path to directory where youtube video should be downloaded.
+        output_dir (pathlib.Path): Path to directory where youtube video should be downloaded.
 
     Returns:
          pathlib.Path: Path to downloaded video file
@@ -193,22 +285,27 @@ def downloadYTVideo(video, outputDir=None):
     Raises:
         RuntimeError: thrown when video download was unsuccessful
     """
+    if output_dir is None:
+        output_dir = DEPTHAI_RECORDINGS_PATH
+
+    # TODO: check whether we have video cached (by url?)
+
     def progressFunc(stream, chunk, bytesRemaining):
         showProgress(stream.filesize - bytesRemaining, stream.filesize)
 
+    path = None
     try:
         from pytube import YouTube
     except ImportError as ex:
         raise RuntimeError("Unable to use YouTube video due to the following import error: {}".format(ex))
-    path = None
     for _ in range(10):
         try:
-            path = YouTube(video, on_progress_callback=progressFunc)\
-                .streams\
-                .order_by('resolution')\
-                .desc()\
-                .first()\
-                .download(output_path=outputDir)
+            path = YouTube(video, on_progress_callback=progressFunc) \
+                .streams \
+                .order_by('resolution') \
+                .desc() \
+                .first() \
+                .download(output_path=str(output_dir))
         except urllib.error.HTTPError:
             # TODO remove when this issue is resolved - https://github.com/pytube/pytube/issues/990
             # Often, downloading YT video will fail with 404 exception, but sometimes it's successful
@@ -217,7 +314,7 @@ def downloadYTVideo(video, outputDir=None):
             break
     if path is None:
         raise RuntimeError("Unable to download YouTube video. Please try again")
-    return path
+    return Path(path)
 
 
 def cropToAspectRatio(frame, size):
@@ -225,7 +322,9 @@ def cropToAspectRatio(frame, size):
     Crop the frame to desired aspect ratio and then scales it down to desired size
     Args:
         frame (numpy.ndarray): Source frame that will be cropped
-        size (tuple): Desired frame size (width, heigth)
+        size (tuple): Desired frame size (width, height)
+    Returns:
+         numpy.ndarray: Cropped frame
     """
     shape = frame.shape
     h = shape[0]
@@ -233,14 +332,56 @@ def cropToAspectRatio(frame, size):
     currentRatio = w / h
     newRatio = size[0] / size[1]
 
-    # Crop width/heigth to match the aspect ratio needed by the NN
+    # Crop width/height to match the aspect ratio needed by the NN
     if newRatio < currentRatio:  # Crop width
         # Use full height, crop width
-        newW = (newRatio/currentRatio) * w
+        newW = (newRatio / currentRatio) * w
         crop = int((w - newW) / 2)
-        return frame[:, crop:w-crop]
+        return frame[:, crop:w - crop]
     else:  # Crop height
         # Use full width, crop height
-        newH = (currentRatio/newRatio) * h
+        newH = (currentRatio / newRatio) * h
         crop = int((h - newH) / 2)
-        return frame[crop:h-crop, :]
+        return frame[crop:h - crop, :]
+
+
+def resizeLetterbox(frame, size):
+    """
+    Transforms the frame to meet the desired size, preserving the aspect ratio and adding black borders (letterboxing)
+    Args:
+        frame (numpy.ndarray): Source frame that will be resized
+        size (tuple): Desired frame size (width, height)
+    Returns:
+         numpy.ndarray: Resized frame
+    """
+    border_v = 0
+    border_h = 0
+    if (size[1] / size[0]) >= (frame.shape[0] / frame.shape[1]):
+        border_v = int((((size[1] / size[0]) * frame.shape[1]) - frame.shape[0]) / 2)
+    else:
+        border_h = int((((size[0] / size[1]) * frame.shape[0]) - frame.shape[1]) / 2)
+    frame = cv2.copyMakeBorder(frame, border_v, border_v, border_h, border_h, cv2.BORDER_CONSTANT, 0)
+    return cv2.resize(frame, size)
+
+
+def createBlankFrame(width, height, rgb_color=(0, 0, 0)):
+    """
+    Create new image(numpy array) filled with certain color in RGB
+
+    Args:
+        width (int): New frame width
+        height (int): New frame height
+        rgb_color (tuple, Optional): Specify frame fill color in RGB format (default (0,0,0) - black)
+
+    Returns:
+         numpy.ndarray: New frame filled with specified color
+    """
+    # Create black blank image
+    image = np.zeros((height, width, 3), np.uint8)
+
+    # Since OpenCV uses BGR, convert the color first
+    color = tuple(reversed(rgb_color))
+    # Fill image with color
+    image[:] = color
+
+    return image
