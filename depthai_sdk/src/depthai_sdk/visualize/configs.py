@@ -44,6 +44,15 @@ class OutputConfig:
 
 
 @dataclass
+class StereoConfig:
+    colorize: StereoColor = StereoColor.RGB
+    colormap: int = cv2.COLORMAP_JET
+    wls_filter: bool = True
+    wls_lambda: float = 1500
+    wls_sigma: float = 1.5
+
+
+@dataclass
 class DetectionConfig:
     """Configuration for drawing bounding boxes."""
     thickness: int = 1
@@ -99,6 +108,7 @@ class VisConfig:
     """Configuration for visualizer."""
 
     output: OutputConfig = field(default_factory=OutputConfig)
+    stereo: StereoConfig = field(default_factory=StereoConfig)
     detection: DetectionConfig = field(default_factory=DetectionConfig)
     text: TextConfig = field(default_factory=TextConfig)
     tracking: TrackingConfig = field(default_factory=TrackingConfig)
