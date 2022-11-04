@@ -20,6 +20,9 @@ setup(
     package_dir={"": "src"},  # https://stackoverflow.com/a/67238346/5494277
     install_requires=required,
     include_package_data=True,
+    extras_require={
+        "visualize": ["PySide2", "Qt.py>=1.3.0"]
+    },
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
         "Source Code": "https://github.com/luxonis/depthai/tree/main/depthai_sdk",
