@@ -1,4 +1,3 @@
-import functools
 import time
 import warnings
 from pathlib import Path
@@ -22,23 +21,8 @@ from depthai_sdk.replay import Replay
 from depthai_sdk.utils import configPipeline
 from depthai_sdk.visualize import Visualizer
 
-
 class UsbWarning(UserWarning):
     pass
-
-
-def _add_to_components(func) -> Callable:
-    """
-    Decorator to add created component to the components list.
-    """
-
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs) -> Component:
-        comp = func(self, *args, **kwargs)
-        self._components.append(comp)
-        return comp
-
-    return wrapper
 
 
 class OakCamera:
@@ -106,7 +90,6 @@ class OakCamera:
             self.replay = Replay(replay)
             print('Available streams from recording:', self.replay.getStreams())
 
-    @_add_to_components
     def create_camera(self,
                       source: str,
                       resolution: Union[
@@ -125,17 +108,16 @@ class OakCamera:
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
         """
-        return CameraComponent(
-            self._pipeline,
-            source=source,
-            resolution=resolution,
-            fps=fps,
-            encode=encode,
-            replay=self.replay,
-            args=self._args,
-        )
+        comp = CameraComponent(self._pipeline,
+                               source=source,
+                               resolution=resolution,
+                               fps=fps,
+                               encode=encode,
+                               replay=self.replay,
+                               args=self._args, )
+        self._components.append(comp)
+        return comp
 
-    @_add_to_components
     def create_nn(self,
                   model: Union[str, Path],
                   input: Union[CameraComponent, NNComponent],
@@ -153,18 +135,17 @@ class OakCamera:
             tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
         """
-        return NNComponent(
-            self._pipeline,
-            model=model,
-            input=input,
-            nnType=type,
-            tracker=tracker,
-            spatial=spatial,
-            replay=self.replay,
-            args=self._args
-        )
+        comp = NNComponent(self._pipeline,
+                           model=model,
+                           input=input,
+                           nnType=type,
+                           tracker=tracker,
+                           spatial=spatial,
+                           replay=self.replay,
+                           args=self._args)
+        self._components.append(comp)
+        return comp
 
-    @_add_to_components
     def create_stereo(self,
                       resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
@@ -180,24 +161,23 @@ class OakCamera:
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
         """
-        return StereoComponent(
-            self._pipeline,
-            resolution=resolution,
-            fps=fps,
-            left=left,
-            right=right,
-            replay=self.replay,
-            args=self._args,
-        )
+        comp = StereoComponent(self._pipeline,
+                               resolution=resolution,
+                               fps=fps,
+                               left=left,
+                               right=right,
+                               replay=self.replay,
+                               args=self._args)
+        self._components.append(comp)
+        return comp
 
-    @_add_to_components
     def create_imu(self) -> IMUComponent:
         """
         Create IMU component
         """
-        return IMUComponent(
-            pipeline=self._pipeline
-        )
+        comp = IMUComponent(self._pipeline)
+        self._components.append(comp)
+        return comp
 
     def _init_device(self) -> None:
         """
@@ -384,18 +364,25 @@ class OakCamera:
             outputs = [outputs]  # to list
         self._out_templates.append(SyncConfig(outputs, callback, visualizer))
 
-    def record(self, outputs: Union[Callable, List[Callable]], path: str, type: RecordType = RecordType.VIDEO):
+    def record(self,
+               outputs: Union[Callable, List[Callable]],
+               path: str,
+               type: RecordType = RecordType.VIDEO,
+               keep_last: int = 0):
         """
         Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
         them to the computer in desired format (raw, mp4, mcap, bag..).
         Args:
             outputs (Component/Component output): Component output(s) to be recorded
             path: Folder path where to save these streams
+            type: Record type
         """
         if isinstance(outputs, Callable):
             outputs = [outputs]  # to list
 
-        self._out_templates.append(RecordConfig(outputs, Record(Path(path).resolve(), type)))
+        self._out_templates.append(
+            RecordConfig(outputs, Record(Path(path).resolve(), type))
+        )
 
     def show_graph(self):
         """
@@ -406,8 +393,10 @@ class OakCamera:
 
         PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
 
-    def visualize(self, output: Union[List, Callable, Component],
+    def visualize(self,
+                  output: Union[List, Callable, Component],
                   record: Optional[str] = None,
+                  keep_last_seconds: int = 0,
                   scale: float = None,
                   fps=False,
                   callback: Callable = None):
@@ -422,15 +411,18 @@ class OakCamera:
         """
         if record and isinstance(output, List):
             raise ValueError('Recording visualizer is only supported for a single output.')
+
         visualizer = Visualizer(scale, fps)
-        self._callback(output, callback, visualizer, record)
+        self._callback(output, callback, visualizer, record, keep_last_seconds)
+
         return visualizer
 
     def _callback(self,
                   output: Union[List, Callable, Component],
                   callback: Callable,
                   visualizer: Visualizer = None,
-                  record: Optional[str] = None):
+                  record: Optional[str] = None,
+                  keep_last_seconds: int = 0):
         if isinstance(output, List):
             for element in output:
                 self._callback(element, callback, visualizer, record)
@@ -439,7 +431,7 @@ class OakCamera:
         if isinstance(output, Component):
             output = output.out.main
 
-        self._out_templates.append(OutputConfig(output, callback, visualizer, record))
+        self._out_templates.append(OutputConfig(output, callback, visualizer, record, keep_last_seconds))
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):
         """
