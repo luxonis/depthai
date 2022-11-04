@@ -139,7 +139,7 @@ class OakCamera:
     def create_nn(self,
                   model: Union[str, Path],
                   input: Union[CameraComponent, NNComponent],
-                  type: Optional[str] = None,
+                  nnType: Optional[str] = None,
                   tracker: bool = False,  # Enable object tracker - only for Object detection models
                   spatial: Union[None, bool, StereoComponent] = None,
                   ) -> NNComponent:
@@ -149,7 +149,7 @@ class OakCamera:
         Args:
             model (str / Path): str for SDK supported model or Path to custom model's json/blob
             input (CameraComponent/NNComponent): Input to the model. If NNComponent (detector), it creates 2-stage NN
-            type (str): Type of the network (yolo/mobilenet) for on-device NN result decoding (only needed if blob path was specified)
+            nnType (str): Type of the network (yolo/mobilenet) for on-device NN result decoding (only needed if blob path was specified)
             tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
         """
@@ -157,7 +157,7 @@ class OakCamera:
             self._pipeline,
             model=model,
             input=input,
-            nnType=type,
+            nnType=nnType,
             tracker=tracker,
             spatial=spatial,
             replay=self.replay,

@@ -1,0 +1,11 @@
+{
+    "model": {
+        "model_name":"sbd_mask_classification_224x224",
+        "zoo": "depthai"
+    },
+    "nn_config": {
+        "output_format" : "raw"
+    },
+    "handler": "handler.py",
+    "version": 1
+}

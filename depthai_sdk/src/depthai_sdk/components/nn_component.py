@@ -96,6 +96,14 @@ class NNComponent(Component):
         # Create NN node
         self.node = pipeline.create(self._nodeType)
 
+        if self._config:
+            nnConfig = self._config.get("nn_config", {})
+            if self._isDetector() and 'confidence_threshold' in nnConfig:
+                self.node.setConfidenceThreshold(float(nnConfig['confidence_threshold']))
+            meta = nnConfig.get('NN_specific_metadata', None)
+            if self._isYolo() and meta:
+                self.config_yolo_from_metadata(metadata=meta)
+
     def _forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
         Checks whether the component forces a specific OpenVINO version. This function is called after
@@ -112,15 +120,6 @@ class NNComponent(Component):
         # TODO: update NN input based on camera resolution
         self.node.setBlob(self._blob)
         self._out = self.node.out
-
-        if self._config:
-            nnConfig = self._config.get("nn_config", {})
-            if self._isDetector() and 'confidence_threshold' in nnConfig:
-                self.node.setConfidenceThreshold(float(nnConfig['confidence_threshold']))
-
-            meta = nnConfig.get('NN_specific_metadata', None)
-            if self._isYolo() and meta:
-                self.config_yolo_from_metadata(metadata=meta)
 
         if 1 < len(self._blob.networkInputs):
             raise NotImplementedError()
@@ -265,8 +264,6 @@ class NNComponent(Component):
     def _blobFromConfig(self, model: Dict, version: dai.OpenVINO.Version) -> str:
         """
         Gets the blob from the config file.
-        @param model:
-        @param parent: Path to the parent folder where the json file is stored
         """
         vals = str(version).split('_')
         versionStr = f"{vals[1]}.{vals[2]}"
@@ -422,7 +419,8 @@ class NNComponent(Component):
         self.node.setAnchorMasks(masks)
         self.node.setIouThreshold(iouThreshold)
 
-        if confThreshold: self.node.setConfidenceThreshold(confThreshold)
+        if confThreshold:
+            self.node.setConfidenceThreshold(confThreshold)
 
     def config_nn(self,
                   confThreshold: Optional[float] = None,
