@@ -589,6 +589,11 @@ class VisTrail(GenericObject):
                                       stop=self.config.tracking.line_thickness,
                                       num=len(tracklets)).astype(np.int16)
 
+            if self.label_map:
+                label, color = self.label_map[tracklets[0].label]
+            else:
+                label, color = str(tracklets[0].label), self.config.tracking.line_color
+
             tracklet_length = 0
             for i in reversed(range(len(tracklets) - 1)):
                 # Get current and next detections' centroids
@@ -600,7 +605,7 @@ class VisTrail(GenericObject):
                 if tracklet_length > self.config.tracking.max_length:
                     break
 
-                self.add_child(VisLine(p1, p2, color=self.label_map[tracklets[i].label][1], thickness=thicknesses[i]))
+                self.add_child(VisLine(p1, p2, color=color, thickness=thicknesses[i]))
 
         return self
 
