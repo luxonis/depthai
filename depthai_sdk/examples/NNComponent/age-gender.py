@@ -3,8 +3,6 @@ import depthai as dai
 import numpy as np
 import cv2
 
-from depthai_sdk.visualize.objects import VisText
-
 with OakCamera() as oak:
     color = oak.create_camera('color')
 
@@ -15,13 +13,13 @@ with OakCamera() as oak:
     age_gender = oak.create_nn('age-gender-recognition-retail-0013', input=det)
     # age_gender.config_multistage_nn(show_cropped_frames=True) # For debugging
 
-    def cb(packet: TwoStagePacket, visualizer: Visualizer):
+    def cb(packet: TwoStagePacket, visualizer: Visualizer, **kwargs):
         for det, rec in zip(packet.detections, packet.nnData):
             age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
             gender = np.squeeze(np.array(rec.getLayerFp16('prob')))
-            gender_str = "woman" if gender[0] > gender[1] else "man"
+            gender_str = "Woman" if gender[0] > gender[1] else "Man"
 
-            visualizer.add_text(f'{gender_str}\nage: {age}',
+            visualizer.add_text(f'{gender_str}\nAge: {age}',
                                 bbox=(*det.top_left, *det.bottom_right),
                                 position=TextPosition.BOTTOM_RIGHT)
 
