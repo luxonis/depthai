@@ -24,7 +24,6 @@ class SequenceNumSync:
         self.msgs = dict()
         self.streamNum = streamNum
 
-
     def sync(self, seqNum: int, name: str, msg) -> Optional[Dict]:
         seqNum = str(seqNum)
         if seqNum not in self.msgs: self.msgs[seqNum] = dict()
@@ -44,6 +43,3 @@ class SequenceNumSync:
 
             return ret
         return None
-
-
-
