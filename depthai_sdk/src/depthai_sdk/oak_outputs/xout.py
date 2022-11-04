@@ -228,11 +228,13 @@ class XoutDisparity(XoutFrames, XoutClickable):
 
         self.colorize = colorize
         self.colormap = colormap
+
         self.use_wls_filter = use_wls_filter
-        if use_wls_filter:
+        self.wls_lambda = wls_lambda
+        self.wls_sigma = wls_sigma
+
+        if self.use_wls_filter:
             self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
-            self.wls_filter.setLambda(wls_lambda)
-            self.wls_filter.setSigmaColor(wls_sigma)
 
         self.msgs = dict()
 
@@ -243,17 +245,23 @@ class XoutDisparity(XoutFrames, XoutClickable):
         frame = packet.frame
         disparity_frame = (frame * self.multiplier).astype(np.uint8)
 
+        stereo_config = self._visualizer.config.stereo
+
         if self.use_wls_filter:
+            self.wls_filter.setLambda(stereo_config.wls_lambda or self.wls_lambda)
+            self.wls_filter.setSigmaColor(stereo_config.wls_sigma or self.wls_sigma)
             disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
-        if self.colorize == StereoColor.GRAY:
+        colorize = stereo_config.colorize or self.colorize
+        colormap = stereo_config.colormap or self.colormap
+        if colorize == StereoColor.GRAY:
             packet.frame = disparity_frame
-        elif self.colorize == StereoColor.RGB:
-            packet.frame = cv2.applyColorMap(disparity_frame, self.colormap or cv2.COLORMAP_JET)
-        elif self.colorize == StereoColor.RGBD:
+        elif colorize == StereoColor.RGB:
+            packet.frame = cv2.applyColorMap(disparity_frame, colormap or cv2.COLORMAP_JET)
+        elif colorize == StereoColor.RGBD:
             packet.frame = cv2.applyColorMap(
                 (disparity_frame * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
-                self.colormap or cv2.COLORMAP_JET
+                colormap or cv2.COLORMAP_JET
             )
 
         if self._visualizer.config.output.clickable:
@@ -327,15 +335,16 @@ class XoutDepth(XoutFrames, XoutClickable):
 
         self.fps = fps
         self.device = device
-        # self.multiplier = 255 / 95.0
 
         self.colorize = colorize
         self.colormap = colormap
+
         self.use_wls_filter = use_wls_filter
+        self.wls_lambda = wls_lambda
+        self.wls_sigma = wls_sigma
+
         if use_wls_filter:
             self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
-            self.wls_filter.setLambda(wls_lambda)
-            self.wls_filter.setSigmaColor(wls_sigma)
 
         self.msgs = dict()
 
@@ -345,20 +354,26 @@ class XoutDepth(XoutFrames, XoutClickable):
     def visualize(self, packet: DepthPacket):
         depth_frame = packet.imgFrame.getFrame()
 
-        if self.use_wls_filter:
+        stereo_config = self._visualizer.config.stereo
+
+        if stereo_config.wls_filter or self.use_wls_filter:
+            self.wls_filter.setLambda(stereo_config.wls_lambda)
+            self.wls_filter.setSigmaColor(stereo_config.wls_sigma)
             depth_frame = self.wls_filter.filter(depth_frame, packet.mono_frame.getCvFrame())
 
         depth_frame_color = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
         depth_frame_color = cv2.equalizeHist(depth_frame_color)
 
-        if self.colorize == StereoColor.GRAY:
+        colorize = stereo_config.colorize or self.colorize
+        colormap = stereo_config.colormap or self.colormap
+        if colorize == StereoColor.GRAY:
             packet.frame = depth_frame_color
-        elif self.colorize == StereoColor.RGB:
-            packet.frame = cv2.applyColorMap(depth_frame_color, self.colormap or cv2.COLORMAP_JET)
-        elif self.colorize == StereoColor.RGBD:
+        elif colorize == StereoColor.RGB:
+            packet.frame = cv2.applyColorMap(depth_frame_color, colormap or cv2.COLORMAP_JET)
+        elif colorize == StereoColor.RGBD:
             packet.frame = cv2.applyColorMap(
                 (depth_frame_color * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
-                self.colormap or cv2.COLORMAP_JET
+                stereo_config.colormap or cv2.COLORMAP_JET
             )
 
         if self._visualizer.config.output.clickable:
