@@ -222,6 +222,18 @@ class Visualizer(VisualizerHelper):
             self.config.output = replace(self.config.output, **kwargs)
         return self
 
+    def stereo(self,
+               colorize: StereoColor = None,
+               colormap: int = None,
+               wls_filter: bool = None,
+               wls_lambda: float = None,
+               wls_sigma: float = None):
+        kwargs = self._process_kwargs(locals())
+
+        if len(kwargs) > 0:
+            self.config.stereo = replace(self.config.stereo, **kwargs)
+        return self
+
     def detections(self,
                    thickness: int = None,
                    fill_transparency: float = None,
