@@ -55,3 +55,13 @@ resources/*.json
 *.whl
 
 *.orig
+
+# Virtual environment
+virtualenv/
+venv/
+
+# DepthAI recordings
+recordings/
+
+# PyPi token
+.pypirc

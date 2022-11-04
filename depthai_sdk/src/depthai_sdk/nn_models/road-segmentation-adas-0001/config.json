@@ -1,0 +1,7 @@
+{
+    "nn_config": {
+        "output_format" : "raw"
+    },
+    "handler": "handler.py",
+    "version": 1
+}

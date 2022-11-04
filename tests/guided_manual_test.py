@@ -41,7 +41,7 @@ def getDeviceInfo():
         show(info_frame, (25, 100), "Choose DepthAI Device:")
         i = -1
         for i, device_info in enumerate(device_infos):
-            text = f"[{i}] {device_info.getMxId()} {device_info.state.name} {device_info.desc.protocol}"
+            text = f"[{i}] {device_info.getMxId()} {device_info.state.name} {device_info.protocol}"
             cv2.putText(info_frame, text, (25, 160 + i * 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
         cv2.putText(info_frame, "[ESC] Exit", (25, 220 + i * 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0))
         cv2.imshow("info", info_frame)
@@ -89,9 +89,6 @@ def test_cameras():
     
     show_test_def("All cameras 5FPS", "You should see the color, left and right camera outputs", "limited to 5 FPS")
     subprocess.check_call([*demo_call, "-s", "left", "right", "color", "-monof", "5", "-rgbf", "5"])
-    
-    show_test_def("Preview scaling", "You should see the left camera output scaled x2")
-    subprocess.check_call([*demo_call, "-s", "left", "--scale", "left,2"])
     
     show_test_def("Camera orientation", "You should see the both rgb and mono camera previews rotated 180 degrees")
     subprocess.check_call([*demo_call, "-camo", "left,ROTATE_180_DEG", "right,ROTATE_180_DEG", "color,ROTATE_180_DEG"])

@@ -4,6 +4,7 @@ import subprocess
 from pathlib import Path
 import cv2
 import depthai as dai
+import numpy as np
 
 from depthai_helpers.cli_utils import cliPrint, PrintColors
 from depthai_sdk.previews import Previews
@@ -19,17 +20,32 @@ class ConfigManager:
     customFwCommit = ''
 
     def __init__(self, args):
-        self.args = args
+        self.args = args 
+
+        # Get resolution width as it's required by some functions
+        self.rgbResWidth = self.rgbResolutionWidth(self.args.rgbResolution)
+
         self.args.encode = dict(self.args.encode)
         self.args.cameraOrientation = dict(self.args.cameraOrientation)
-        if self.args.scale is None:
-            self.args.scale = {"color": 0.37 if not self.args.sync else 1}
-        else:
-            self.args.scale = dict(self.args.scale)
-        if not self.useCamera and not self.args.sync:
-            print("[WARNING] When using video file as an input, it's highly recommended to run the demo with \"--sync\" flag")
         if (Previews.left.name in self.args.cameraOrientation or Previews.right.name in self.args.cameraOrientation) and self.useDepth:
             print("[WARNING] Changing mono cameras orientation may result in incorrect depth/disparity maps")
+
+    def rgbResolutionWidth(self, res: dai.ColorCameraProperties.SensorResolution) -> int:
+        if res == dai.ColorCameraProperties.SensorResolution.THE_720_P: return 720
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_800_P: return 800
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_1080_P: return 1080
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_4_K: return 2160
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_12_MP: return 3040
+        elif res == dai.ColorCameraProperties.SensorResolution.THE_13_MP: return 3120
+        else: raise Exception('Resolution not supported!')
+
+    # Not needed, but might be useful for SDK in the future
+    # def _monoResWidth(self, res: dai.MonoCameraProperties.SensorResolution) -> int:
+    #     if res == dai.MonoCameraProperties.SensorResolution.THE_400_P: return 400
+    #     elif res == dai.MonoCameraProperties.SensorResolution.THE_480_P: return 480
+    #     elif res == dai.MonoCameraProperties.SensorResolution.THE_720_P: return 720
+    #     elif res == dai.MonoCameraProperties.SensorResolution.THE_800_P: return 800
+    #     else: raise Exception('Resolution not supported!')
 
     @property
     def debug(self):
@@ -71,6 +87,13 @@ class ConfigManager:
         if self.args.camera == "color":
             return "color"
 
+    def irEnabled(self, device):
+        try:
+            drivers = device.getIrDrivers()
+            return len(drivers) > 0
+        except RuntimeError:
+            return False
+
     def getModelName(self):
         if self.args.cnnModel:
             return self.args.cnnModel
@@ -84,36 +107,19 @@ class ConfigManager:
         if self.args.cnnModel is not None and (DEPTHAI_ZOO / self.args.cnnModel).exists():
             return DEPTHAI_ZOO / self.args.cnnModel
 
+    def getAvailableZooModels(self):
+        def verify(path: Path):
+            return path.parent.name == path.stem
+
+        def convert(path: Path):
+            return path.stem
+
+        return list(map(convert, filter(verify, DEPTHAI_ZOO.rglob("**/*.json"))))
+
     def getColorMap(self):
-        return getattr(cv2, "COLORMAP_{}".format(self.args.colorMap))
-
-    def getRgbResolution(self):
-        if self.args.rgbResolution == 2160:
-            return dai.ColorCameraProperties.SensorResolution.THE_4_K
-        elif self.args.rgbResolution == 3040:
-            return dai.ColorCameraProperties.SensorResolution.THE_12_MP
-        else:
-            return dai.ColorCameraProperties.SensorResolution.THE_1080_P
-
-    def getMonoResolution(self):
-        if self.args.monoResolution == 720:
-            return dai.MonoCameraProperties.SensorResolution.THE_720_P
-        elif self.args.monoResolution == 800:
-            return dai.MonoCameraProperties.SensorResolution.THE_800_P
-        else:
-            return dai.MonoCameraProperties.SensorResolution.THE_400_P
-
-    def getMedianFilter(self):
-        if self.args.subpixel:
-            return dai.MedianFilter.MEDIAN_OFF
-        if self.args.stereoMedianSize == 3:
-            return dai.MedianFilter.KERNEL_3x3
-        elif self.args.stereoMedianSize == 5:
-            return dai.MedianFilter.KERNEL_5x5
-        elif self.args.stereoMedianSize == 7:
-            return dai.MedianFilter.KERNEL_7x7
-        else:
-            return dai.MedianFilter.MEDIAN_OFF
+        cvColorMap = cv2.applyColorMap(np.arange(256, dtype=np.uint8), getattr(cv2, "COLORMAP_{}".format(self.args.colorMap)))
+        cvColorMap[0] = [0, 0, 0]
+        return cvColorMap
 
     def getUsb2Mode(self):
         if self.args['forceUsb2']:
@@ -125,23 +131,31 @@ class ConfigManager:
 
     def adjustPreviewToOptions(self):
         if len(self.args.show) != 0:
+            depthPreviews = [Previews.rectifiedRight.name, Previews.rectifiedLeft.name, Previews.depth.name,
+                             Previews.depthRaw.name, Previews.disparity.name, Previews.disparityColor.name]
+
+            if len([preview for preview in self.args.show if preview in depthPreviews]) == 0 and not self.useNN:
+                print("No depth-related previews chosen, disabling depth...")
+                self.args.disableDepth = True
             return
 
-        if self.args.camera == "color" and Previews.color.name not in self.args.show:
-            self.args.show.append(Previews.color.name)
+        self.args.show.append(Previews.color.name)
         if self.useDepth:
-            if self.lowBandwidth and Previews.disparityColor.name not in self.args.show:
-                self.args.show.append(Previews.disparityColor.name)
-            elif not self.lowBandwidth and Previews.depth.name not in self.args.show:
-                self.args.show.append(Previews.depth.name)
-            if self.args.camera == "left" and Previews.rectifiedLeft.name not in self.args.show:
+            self.args.show.append(Previews.disparityColor.name)
+
+        if self.args.guiType == "qt":
+            if self.useNN:
+                self.args.show.append(Previews.nnInput.name)
+
+            if self.useDepth:
+                if self.lowBandwidth:
+                    self.args.show.append(Previews.disparityColor.name)
+                else:
+                    self.args.show.append(Previews.depthRaw.name)
                 self.args.show.append(Previews.rectifiedLeft.name)
-            if self.args.camera == "right" and Previews.rectifiedRight.name not in self.args.show:
                 self.args.show.append(Previews.rectifiedRight.name)
-        else:
-            if self.args.camera == "left" and Previews.left.name not in self.args.show:
+            else:
                 self.args.show.append(Previews.left.name)
-            if self.args.camera == "right" and Previews.right.name not in self.args.show:
                 self.args.show.append(Previews.right.name)
 
     def adjustParamsToDevice(self, device):
@@ -149,16 +163,30 @@ class ConfigManager:
         cams = device.getConnectedCameras()
         depthEnabled = dai.CameraBoardSocket.LEFT in cams and dai.CameraBoardSocket.RIGHT in cams
 
+        sensorNames = device.getCameraSensorNames()
+        if dai.CameraBoardSocket.RGB in cams:
+            name = sensorNames[dai.CameraBoardSocket.RGB]
+            if name == 'OV9782':
+                if self.rgbResWidth not in [720, 800]:
+                    self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_800_P
+                    cliPrint(f'{name} requires 720 or 800 resolution, defaulting to {self.args.rgbResolution}', 
+                             PrintColors.RED)
+            else:
+                if self.rgbResWidth in [720, 800]:
+                    self.args.rgbResolution = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+                    cliPrint(f'{name} doesn\'t support 720 / 800 resolutions, defaulting to {self.args.rgbResolution}', 
+                             PrintColors.RED)
+
         if not depthEnabled:
             if not self.args.disableDepth:
                 print("Disabling depth...")
-            self.args.disableDepth = True
+                self.args.disableDepth = True
             if self.args.spatialBoundingBox:
                 print("Disabling spatial bounding boxes...")
-            self.args.spatialBoundingBox = False
+                self.args.spatialBoundingBox = False
             if self.args.camera != 'color':
                 print("Switching source to RGB camera...")
-            self.args.camera = 'color'
+                self.args.camera = 'color'
             updatedShowArg = []
             for name in self.args.show:
                 if name in ("nnInput", "color"):
@@ -166,30 +194,36 @@ class ConfigManager:
                 else:
                     print("Disabling {} preview...".format(name))
             if len(updatedShowArg) == 0:
-                print("No previews available, adding color...")
+                print("No previews available, adding defaults...")
                 updatedShowArg.append("color")
+                if self.useNN:
+                    updatedShowArg.append("nnInput")
             self.args.show = updatedShowArg
 
         if self.args.bandwidth == "auto":
-            if deviceInfo.desc.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
-                print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(deviceInfo.desc.protocol))
+            if deviceInfo.protocol != dai.XLinkProtocol.X_LINK_USB_VSC:
+                print("Enabling low-bandwidth mode due to connection mode... (protocol: {})".format(deviceInfo.protocol))
                 self.args.bandwidth = "low"
+                print("Setting PoE video quality to 50 to reduce latency...")
+                self.args.poeQuality = 50
             elif device.getUsbSpeed() not in [dai.UsbSpeed.SUPER, dai.UsbSpeed.SUPER_PLUS]:
                 print("Enabling low-bandwidth mode due to low USB speed... (speed: {})".format(device.getUsbSpeed()))
                 self.args.bandwidth = "low"
             else:
                 self.args.bandwidth = "high"
 
-
     def linuxCheckApplyUsbRules(self):
         if platform.system() == 'Linux':
             ret = subprocess.call(['grep', '-irn', 'ATTRS{idVendor}=="03e7"', '/etc/udev/rules.d'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             if(ret != 0):
-                cliPrint("\nWARNING: Usb rules not found", PrintColors.WARNING)
-                cliPrint("\nSet rules: \n"
-                """echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules \n"""
-                "sudo udevadm control --reload-rules && sudo udevadm trigger \n"
-                "Disconnect/connect usb cable on host! \n", PrintColors.RED)
+                cliPrint("WARNING: Usb rules not found", PrintColors.WARNING)
+                cliPrint("""
+Run the following commands to set USB rules:
+
+$ echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="03e7", MODE="0666"' | sudo tee /etc/udev/rules.d/80-movidius.rules
+$ sudo udevadm control --reload-rules && sudo udevadm trigger
+
+After executing these commands, disconnect and reconnect USB cable to your OAK device""", PrintColors.RED)
                 os._exit(1)
 
     def getCountLabel(self, nnetManager):
@@ -227,19 +261,23 @@ class ConfigManager:
 
     @property
     def previewSize(self):
-        return self.inputSize or (576, 324)
+        return (576, 320)
 
     @property
     def lowBandwidth(self):
         return self.args.bandwidth == "low"
 
     @property
+    def lowCapabilities(self):
+        return platform.machine().startswith("arm") or platform.machine().startswith("aarch")
+
+    @property
     def shaves(self):
         if self.args.shaves is not None:
             return self.args.shaves
-        if not self.useCamera and not self.args.sync:
+        if not self.useCamera:
             return 8
-        if self.args.rgbResolution > 1080:
+        if self.rgbResWidth > 1080:
             return 5
         return 6
 

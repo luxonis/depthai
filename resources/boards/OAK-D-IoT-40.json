@@ -1,0 +1,12 @@
+{
+    "board_config":
+    {
+        "name": "OAK-D-IoT-40",
+        "revision": "R2M2E2",
+        "swap_left_and_right_cameras": true,
+        "left_fov_deg": 71.86,
+        "rgb_fov_deg": 68.7938,
+        "left_to_right_distance_cm": 4.0,
+        "left_to_rgb_distance_cm": 3.0
+    }
+}

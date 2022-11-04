@@ -7,12 +7,12 @@ with open('requirements.txt') as f:
 
 setup(
     name='depthai-sdk',
-    version='1.1.1',
-    description='This package contains convenience classes and functions that help in most common tasks while using DepthAI API',
+    version='1.9.0',
+    description='This package provides an abstraction of the DepthAI API library.',
     long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
-    url='https://github.com/luxonis/depthai/sdk',
-    keywords="depthai sdk utils managers previews helpers",
+    url='https://github.com/luxonis/depthai/tree/main/depthai_sdk',
+    keywords="depthai sdk oak camera",
     author='Luxonis',
     author_email='support@luxonis.com',
     license='MIT',
@@ -22,7 +22,7 @@ setup(
     include_package_data=True,
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
-        "Source Code": "https://github.com/luxonis/depthai/tree/main/sdk",
+        "Source Code": "https://github.com/luxonis/depthai/tree/main/depthai_sdk",
     },
     classifiers=[
         'License :: OSI Approved :: MIT License',
@@ -32,5 +32,6 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
 )

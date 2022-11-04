@@ -45,17 +45,8 @@ def getVersion(module_name):
 def checkRequirementsVersion():
     daiVersionRequired = getVersionFromRequirements('depthai', Path(__file__).parent / Path('../requirements.txt'))
     if daiVersionRequired is not None:
-        if depthai.__version__.endswith('+dev'):
-            print('Depthai development version found, skipping check.')
-        elif daiVersionRequired != getVersion('depthai'):
+        if daiVersionRequired != getVersion('depthai'):
             raise SystemExit(f"\033[1;5;31mVersion mismatch\033[0m\033[91m between installed depthai lib and the required one by the script.\033[0m \n\
                 Required:  {daiVersionRequired}\n\
                 Installed: {getVersion('depthai')}\n\
                 \033[91mRun: python3 install_requirements.py \033[0m")
-
-    blobcVersionRequired = getVersionFromRequirements('blobconverter', Path(__file__).parent / Path('../depthai_sdk/requirements.txt'))
-    if blobcVersionRequired != getVersion('blobconverter'):
-        raise SystemExit(f"\033[1;5;31mVersion mismatch\033[0m\033[91m between installed blobconverter lib and the required one by the script.\033[0m \n\
-            Required:  {blobcVersionRequired}\n\
-            Installed: {getVersion('blobconverter')}\n\
-            \033[91mRun: python3 install_requirements.py \033[0m")

@@ -2,7 +2,7 @@ import traceback
 from pathlib import Path
 from ..previews import Previews
 import depthai as dai
-
+import os
 
 class EncodingManager:
     """
@@ -17,10 +17,12 @@ class EncodingManager:
         """
         Args:
             encodeConfig (dict): Encoding config consisting of keys as preview names and values being the encoding FPS
-            encodeOutput (pathlib.Path): Output directory for the recorded videos
+            encodeOutput (pathlib.Path, Optional): Output directory for the recorded videos
         """
         self.encodeConfig = encodeConfig
-        self.encodeOutput = Path(encodeOutput) or Path(__file__).parent
+        self.encodeOutput = Path(encodeOutput) if encodeOutput is not None else None
+        if self.encodeOutput is not None and not self.encodeOutput.exists():
+            os.makedirs(self.encodeOutput, exist_ok=True)
 
     def createEncoders(self, pm):
         """
@@ -75,6 +77,9 @@ class EncodingManager:
             cmd = "ffmpeg -framerate {} -i {} -c copy {}"
             for name, file in self._encodingFiles.items():
                 print(cmd.format(self._encodingNodes[name].getFrameRate(), file.name, str(Path(file.name).with_suffix('.mp4'))))
+
+        for queue in self._encodingQueues.values():
+            queue.close()
 
         for name, file in self._encodingFiles.items():
             file.close()
