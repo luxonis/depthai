@@ -11,19 +11,6 @@ from depthai_sdk.record import Record
 from depthai_sdk.visualize import Visualizer
 
 
-# class VisualizeConfig:
-#     # TODO: support visualziation configs. eg. colors, fonts, locations where text in BBs is displayed,
-#     # BB rectangle config (transparency, rounded edges etc.)
-#     scale: Union[None, float, Tuple[int, int]]
-#     fps: bool
-#     record: Optional[str]
-#
-#     def __init__(self, scale, fps, recording_path):
-#         self.scale = scale
-#         self.fps = fps
-#         self.recording_path = recording_path
-
-
 class BaseConfig:
     @abstractmethod
     def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
