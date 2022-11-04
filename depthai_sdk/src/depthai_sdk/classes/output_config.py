@@ -28,11 +28,13 @@ class OutputConfig(BaseConfig):
     def __init__(self, output: Callable,
                  callback: Callable,
                  visualizer: Visualizer = None,
-                 record: Optional[str] = None):
+                 record: Optional[str] = None,
+                 keep_last_seconds: int = 0):
         self.output = output
         self.callback = callback
         self.visualizer = visualizer
         self.record = record
+        self.keep_last_seconds = keep_last_seconds
 
     def find_new_name(self, name: str, names: List[str]):
         while True:
@@ -55,7 +57,8 @@ class OutputConfig(BaseConfig):
         names.append(xoutbase.name)
 
         if self.visualizer:
-            xoutbase.setup_visualize(self.visualizer, xoutbase.name, self.record)
+            xoutbase.setup_visualize(self.visualizer, xoutbase.name,
+                                     self.record, self.keep_last_seconds)
 
         return [xoutbase]
 

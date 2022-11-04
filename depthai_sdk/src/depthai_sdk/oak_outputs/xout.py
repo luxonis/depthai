@@ -1,19 +1,13 @@
 from abc import abstractmethod
+from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
 
 import cv2
 import depthai as dai
 import numpy as np
-
 from distinctipy import distinctipy
-from pathlib import Path
 from matplotlib import pyplot as plt
 
-from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
-from depthai_sdk.visualize.visualizer import Platform
-from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
-from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
-from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
@@ -22,9 +16,15 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
     IMUPacket, DepthPacket, _Detection
 )
-from depthai_sdk.visualize.configs import StereoColor
+from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
+from depthai_sdk.recorders.video_recorder import VideoRecorder
 from depthai_sdk.visualize import Visualizer
+from depthai_sdk.visualize.configs import StereoColor
 from depthai_sdk.visualize.configs import TextPosition
+from depthai_sdk.visualize.visualizer import Platform
+from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 
 """
 Xout classes are abstracting streaming messages to the host computer (via XLinkOut) and syncing those messages
@@ -45,7 +45,7 @@ class XoutFrames(XoutBase):
     _scale: Union[None, float, Tuple[int, int]] = None
     _show_fps: bool = False
     _recording_path: Optional[Path] = None
-    _video_writer: Optional[cv2.VideoWriter] = None
+    # _video_writer: Optional[cv2.VideoWriter] = None
     _fourcc_codec_code = None
     _frames_buffer: List
     _FRAMES_TO_BUFFER: int = 20
@@ -54,24 +54,18 @@ class XoutFrames(XoutBase):
         self.frames = frames
         self.fps = fps
         self._frames_buffer = []
+        self._video_recorder = None
         super().__init__()
 
     def setup_visualize(self, visualizer: Visualizer,
                         name: str = None,
-                        recording_path: Optional[str] = None):
+                        recording_path: Optional[str] = None,
+                        keep_last_seconds: int = 0):
         self._visualizer = visualizer
         self.name = name or self.name
 
         if recording_path:
-            self._recording_path = Path(recording_path).resolve()
-            video_format = self._recording_path.suffix
-            if video_format == ".mp4":
-                self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'mp4v')
-            elif video_format == ".avi":
-                self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'FMP4')
-            else:
-                print("Selected video format not supported, using mp4 instead.")
-                self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'mp4v')
+            self._video_recorder = VideoRecorder(Path(recording_path), [self], keep_last_seconds=keep_last_seconds)
 
     def visualize(self, packet: FramePacket) -> None:
         """
@@ -89,7 +83,8 @@ class XoutFrames(XoutBase):
         packet.frame = self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
-            self.callback(packet, self._visualizer)
+            self.callback(packet, self._visualizer,
+                          recorder=self._video_recorder._writer if self._video_recorder else None)
         else:
             # TODO: if RH, don't display frame
             # Draw on the frame
@@ -98,24 +93,8 @@ class XoutFrames(XoutBase):
             else:
                 pass
 
-        # Record
-        if self._recording_path and not self._video_writer:
-            if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
-                self._frames_buffer.append(packet.frame)
-            else:
-                h, w = self._visualizer.frame_shape[:2]
-                c = self._visualizer.frame_shape[2] if len(self._visualizer.frame_shape) == 3 else 1
-                self._video_writer = cv2.VideoWriter(str(self._recording_path),
-                                                     self._fourcc_codec_code,
-                                                     self._fps.fps(),
-                                                     (w, h),
-                                                     isColor=int(c > 1)
-                                                     )
-                # Write all buffered frames
-                for frame in self._frames_buffer:
-                    self._video_writer.write(frame)
-        elif self._video_writer:
-            self._video_writer.write(packet.frame)
+        if self._video_recorder:
+            self._video_recorder.write(self.frames.friendly_name or self.frames.name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -132,8 +111,8 @@ class XoutFrames(XoutBase):
         self.queue.put(packet, block=False)
 
     def __del__(self):
-        if self._video_writer:
-            self._video_writer.release()
+        if self._video_recorder:
+            self._video_recorder.close()
 
 
 class XoutMjpeg(XoutFrames):
@@ -535,6 +514,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         )
         self.queue.put(packet, block=False)
 
+
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
     name: str = "Depth & Bounding Boxes"
     # Streams
@@ -581,7 +561,6 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
             msgs[self.configs.name],
         )
         self.queue.put(packet, block=False)
-
 
 
 class XoutTracker(XoutNnResults):

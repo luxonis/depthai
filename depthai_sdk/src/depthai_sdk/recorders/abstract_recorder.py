@@ -3,7 +3,7 @@ from enum import IntEnum
 
 import depthai as dai
 
-from depthai_sdk.oak_outputs.xout import XoutFrames, XoutH26x, XoutMjpeg, XoutDepth, XoutDisparity
+import depthai_sdk.oak_outputs.xout as xouts
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 
 
@@ -28,18 +28,18 @@ class OakStream:
     type: StreamType
 
     def __init__(self, xout: XoutBase):
-        if isinstance(xout, XoutMjpeg):
+        if isinstance(xout, xouts.XoutMjpeg):
             self.type = self.StreamType.MJPEG
-        elif isinstance(xout, XoutH26x):
+        elif isinstance(xout, xouts.XoutH26x):
             if xout.profile == dai.VideoEncoderProperties.Profile.H265_MAIN:
                 self.type = self.StreamType.H265
             else:
                 self.type = self.StreamType.H264
-        elif isinstance(xout, XoutDepth):
-            self.type = self.StreamType.DEPTH
-        elif isinstance(xout, XoutDisparity):
+        elif isinstance(xout, xouts.XoutDepth):
+            self.type = self.StreamType.RAW  # TODO is depth raw or should it be DEPTH?
+        elif isinstance(xout, xouts.XoutDisparity):
             self.type = self.StreamType.RAW
-        elif isinstance(xout, XoutFrames):
+        elif isinstance(xout, xouts.XoutFrames):
             self.type = self.StreamType.RAW
         else:
             raise ValueError("You have passed invalid Component Output to the Recorder!")
@@ -51,6 +51,8 @@ class OakStream:
             return 'h264'
         elif self.type == self.StreamType.H265:
             return 'hevc'
+        elif self.type == self.StreamType.DEPTH:
+            return 'y16'
 
     def isH265(self) -> bool:
         return self.type == self.StreamType.H265

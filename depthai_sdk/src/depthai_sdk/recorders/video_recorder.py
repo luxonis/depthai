@@ -1,9 +1,6 @@
 from pathlib import Path
 from typing import List, Dict, Any
 
-import depthai as dai
-
-from depthai_sdk.oak_outputs.xout import XoutFrames
 from .abstract_recorder import *
 
 
@@ -15,27 +12,28 @@ class VideoRecorder(Recorder):
     _closed = False
     _writers: Dict[str, Any]
 
-    def __init__(self, folder: Path, xouts: List[XoutFrames]):
+    def __init__(self, folder: Path, xouts: List['XoutFrames'], keep_last_seconds: int = 0):
         self.folder = folder
+        self.keep_last_seconds = keep_last_seconds
 
         self._stream_type = dict()
 
         self._writer = dict()
         for xout in xouts:
-
             name = xout.frames.friendly_name or xout.frames.name
             stream = OakStream(xout)
             fourcc = stream.fourcc()  # TODO add default fourcc? stream.fourcc() can be None.
             if stream.isRaw():
                 from .video_writers.video_writer import VideoWriter
-                self._writer[name] = VideoWriter(folder, name, fourcc, xout.fps)
+                self._writer[name] = VideoWriter(folder, name, fourcc, xout.fps, keep_last_seconds)
             else:
                 try:
                     from .video_writers.av_writer import AvWriter
                     self._writer[name] = AvWriter(folder, name, fourcc, xout.fps)
-                except:
+                except Exception as e:
                     # TODO here can be other errors, not only import error
-                    print("'av' library is not installed, depthai-record will save uncontainerized encoded streams.")
+                    print('Exception while creating AvWriter: ', e)
+                    print('Falling back to FileWriter, saving uncontainerized encoded streams.')
                     from .video_writers.file_writer import FileWriter
                     self._writer[name] = FileWriter(folder, name, fourcc)
 
