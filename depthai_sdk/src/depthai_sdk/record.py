@@ -61,7 +61,9 @@ class Record(XoutSeqSync):
     def visualize(self, packet: FramePacket) -> None:
         pass  # No need.
 
-    def __init__(self, path: Path, type: RecordType):
+    def __init__(self,
+                 path: Path,
+                 type: RecordType):
         """
         Args:
             path (Path): Path to the recording folder
@@ -91,6 +93,7 @@ class Record(XoutSeqSync):
         calibData.eepromToJsonFile(str(self.path / "calib.json"))
 
         self.frame_q = Queue(maxsize=20)
+
         self.process = Thread(target=_run, args=(self._get_recorder(device, xouts), self.frame_q))
         self.process.start()
 
