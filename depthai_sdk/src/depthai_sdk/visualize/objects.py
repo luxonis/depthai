@@ -316,7 +316,7 @@ class VisDetections(GenericObject):
 
             if not detection_config.hide_label and len(label) > 0:
                 # Place label in the bounding box
-                self.add_child(VisText(text=label, bbox=normalized_bbox,
+                self.add_child(VisText(text=label.capitalize(), bbox=normalized_bbox,
                                        position=detection_config.label_position,
                                        padding=detection_config.label_padding))
 
