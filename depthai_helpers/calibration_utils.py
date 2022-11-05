@@ -12,8 +12,10 @@ import cv2.aruco as aruco
 from pathlib import Path
 from collections import deque
 # Creates a set of 13 polygon coordinates
-traceLevel = 1
+traceLevel = 2
 # trace = 3 -> Undisted image viz
+# trace = 2 -> Print logs
+
 
 def setPolygonCoordinates(height, width):
     horizontal_shift = width//4
@@ -324,7 +326,7 @@ class StereoCalibration(object):
         frame_right_shape = cv2.imread(images_right[0], 0).shape
         scalable_res = frame_left_shape
         scaled_res = frame_right_shape
-
+        # print(f' Frame left shape: {frame_left_shape} and right shape: {frame_right_shape}')
         if frame_right_shape[0] < frame_left_shape[0] and frame_right_shape[1] < frame_left_shape[1]:
             scale_req = True
             scale = frame_right_shape[1] / frame_left_shape[1]
@@ -497,10 +499,10 @@ class StereoCalibration(object):
         right_corners_sampled = []
         obj_pts = []
         one_pts = self.board.chessboardCorners
-        # print('allIds_l')
-        # print(len(allIds_l))
-        # print('allIds_r')
-        # print(len(allIds_r))
+        print('allIds_l')
+        print(len(allIds_l))
+        print('allIds_r')
+        print(len(allIds_r))
         # print('allIds_l')
         # print(allIds_l)
         # print(allIds_r)
@@ -512,6 +514,8 @@ class StereoCalibration(object):
             #if len(allIds_l[i]) < 70 or len(allIds_r[i]) < 70:
             #      continue
             for j in range(len(allIds_l[i])):
+                # print(f' allIds_l[i][j] is {allIds_l[i][j]}')
+                # print(f' allIds_r[i] is {allIds_r[i]}')
                 idx = np.where(allIds_r[i] == allIds_l[i][j])
                 if idx[0].size == 0:
                     continue
@@ -535,8 +539,8 @@ class StereoCalibration(object):
             # flags |= cv2.CALIB_USE_EXTRINSIC_GUESS
             # print(flags)
 
-            flags |= cv2.CALIB_FIX_INTRINSIC
-            # flags |= cv2.CALIB_USE_INTRINSIC_GUESS
+            # flags |= cv2.CALIB_FIX_INTRINSIC
+            flags |= cv2.CALIB_USE_INTRINSIC_GUESS
             flags |= cv2.CALIB_RATIONAL_MODEL
             # print(flags)
             if traceLevel == 1:
@@ -567,6 +571,7 @@ class StereoCalibration(object):
             #     cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
             #     criteria=stereocalib_criteria, flags=flags)
             # if np.absolute(T[1])  > 0.2:
+            print(f'Image size---: {imsize}')
 
             R_l, R_r, P_l, P_r, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
                 cameraMatrix_l,
@@ -613,7 +618,6 @@ class StereoCalibration(object):
                 obj_pts, left_corners_sampled, right_corners_sampled,
                 cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
                 flags=flags, criteria=stereocalib_criteria), None, None
-
             R_l, R_r, P_l, P_r, Q = cv2.fisheye.stereoRectify(
                 cameraMatrix_l,
                 distCoeff_l,
@@ -892,63 +896,15 @@ class StereoCalibration(object):
         # print('Intrinsics from the getOptimalNewCameraMatrix....')
         # print(kScaledL)
         # print(kScaledR)
-        oldEpipolarError = None
-        epQueue = deque()
-        movePos = True
-        if 0:
-            while True:
-                
-                epError = self.sgdEpipolar(images_left, images_right, M_lp, d_l, M_rp, d_r, r_l, r_r, kScaledL, kScaledR, scaled_res, isHorizontal)
-
-                if oldEpipolarError is None:
-                    epQueue.append((epError, kScaledR))
-                    oldEpipolarError = epError
-                    kScaledR[0][0] += 1
-                    kScaledR[1][1] += 1
-                    continue
-                if movePos:
-                    if epError < oldEpipolarError:
-                        epQueue.append((epError, kScaledR))
-                        oldEpipolarError = epError
-                        kScaledR[0][0] += 1
-                        kScaledR[1][1] += 1
-                    else:
-                        movePos = False
-                        startPos = epQueue.popleft()
-                        oldEpipolarError = startPos[0]
-                        kScaledR = startPos[1]
-                        epQueue.appendleft((oldEpipolarError, kScaledR))
-                        kScaledR[0][0] -= 1
-                        kScaledR[1][1] -= 1
-                else:
-                    if epError < oldEpipolarError:
-                        epQueue.appendleft((epError, kScaledR))
-                        oldEpipolarError = epError
-                        kScaledR[0][0] -= 1
-                        kScaledR[1][1] -= 1
-                    else:
-                        break
-            oldEpipolarError = None
-            while epQueue:
-                currEp, currK = epQueue.popleft()
-                if oldEpipolarError is None:
-                    oldEpipolarError = currEp
-                    kScaledR = currK
-                else:
-                    currEp, currK = epQueue.popleft()
-                    if currEp < oldEpipolarError:
-                        oldEpipolarError = currEp
-                        kScaledR = currK
-
-
-            print('Lets find the best epipolar Error')
-
-
-
+        # oldEpipolarError = None
+        # epQueue = deque()
+        # movePos = True
+       
+        r_id = np.identity(3)
         mapx_l, mapy_l = cv2.initUndistortRectifyMap(
-            M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
+            M_lp, d_l, r_l, M_lp, scaled_res[::-1], cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
-            M_rp, d_r, r_r, kScaledR, scaled_res[::-1], cv2.CV_32FC1)
+            M_rp, d_r, r_r, M_rp, scaled_res[::-1], cv2.CV_32FC1)
         
 
         image_data_pairs = []
@@ -1008,7 +964,6 @@ class StereoCalibration(object):
                                                                             rejectedCorners=rejectedImgPoints)
             print(f'Marekrs length r is {len(marker_corners_r)}')
             print(f'Marekrs length l is {len(marker_corners_l)}')
-            cv2.imshow("undistorted-rleft", image_data_pair[0])
             res2_l = cv2.aruco.interpolateCornersCharuco(
                 marker_corners_l, ids_l, image_data_pair[0], self.board)
             res2_r = cv2.aruco.interpolateCornersCharuco(
