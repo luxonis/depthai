@@ -12,8 +12,8 @@ import cv2.aruco as aruco
 from pathlib import Path
 from collections import deque
 # Creates a set of 13 polygon coordinates
-traceLevel = 1
-
+traceLevel = 3
+# trace = 3 -> Undisted image viz
 
 def setPolygonCoordinates(height, width):
     horizontal_shift = width//4

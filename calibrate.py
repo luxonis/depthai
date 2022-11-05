@@ -66,13 +66,13 @@ CamToString = {
 
 camToMonoRes = {
                 'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
-                'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
+                'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
                 }
 
 camToRgbRes = {
                 'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
-                'OV9*82' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
+                'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P
                 }
@@ -310,7 +310,7 @@ class Main:
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         
         self.device = dai.Device()
-        cameraProperties = self.device.getConnectedCameraProperties()
+        cameraProperties = self.device.getConnectedCameraFeatures()
         for properties in cameraProperties:
             for in_cam in self.board_config['cameras'].keys():
                 cam_info = self.board_config['cameras'][in_cam]
