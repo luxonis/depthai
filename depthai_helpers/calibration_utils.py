@@ -12,7 +12,7 @@ import cv2.aruco as aruco
 from pathlib import Path
 from collections import deque
 # Creates a set of 13 polygon coordinates
-traceLevel = 3
+traceLevel = 1
 # trace = 3 -> Undisted image viz
 
 def setPolygonCoordinates(height, width):
@@ -393,11 +393,11 @@ class StereoCalibration(object):
             img = cv2.imread(im)
             # h, w = img.shape[:2]
             if self.cameraModel == 'perspective':
-                kScaled, _ = cv2.getOptimalNewCameraMatrix(K, D, img_size, 0)
+                # kScaled, _ = cv2.getOptimalNewCameraMatrix(K, D, img_size, 0)
                 # print(f'K scaled is \n {kScaled} and size is \n {img_size}')
                 # print(f'D Value is \n {D}')
                 map1, map2 = cv2.initUndistortRectifyMap(
-                    K, D, np.eye(3), kScaled, img_size, cv2.CV_32FC1)
+                    K, D, np.eye(3), K, img_size, cv2.CV_32FC1)
             else:
                 map1, map2 = cv2.fisheye.initUndistortRectifyMap(
                     K, D, np.eye(3), K, img_size, cv2.CV_32FC1)
@@ -835,7 +835,7 @@ class StereoCalibration(object):
         assert len(images_left) != 0, "ERROR: Images not read correctly"
         assert len(images_right) != 0, "ERROR: Images not read correctly"
         isHorizontal = True
-        if np.absolute(t[1]) > 0.2:
+        if np.absolute(t[1]) > 0.6:
             isHorizontal = False
 
         scale = None
@@ -885,12 +885,13 @@ class StereoCalibration(object):
 
         print(f'Width and height is {scaled_res[::-1]}')
         # print(d_r)
-        kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_l, d_l, scaled_res[::-1], 0)
+        # kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_l, d_l, scaled_res[::-1], 0)
         # kScaledR, _ = cv2.getOptimalNewCameraMatrix(M_r, d_r, scaled_res[::-1], 0)
+        kScaledL = M_rp
         kScaledR = kScaledL
-        print('Intrinsics from the getOptimalNewCameraMatrix....')
-        print(kScaledL)
-        print(kScaledR)
+        # print('Intrinsics from the getOptimalNewCameraMatrix....')
+        # print(kScaledL)
+        # print(kScaledR)
         oldEpipolarError = None
         epQueue = deque()
         movePos = True
@@ -940,7 +941,7 @@ class StereoCalibration(object):
                         kScaledR = currK
 
 
-        print('Lets find the best epipolar Error')
+            print('Lets find the best epipolar Error')
 
 
 
