@@ -96,6 +96,7 @@ class OakCamera:
                           None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                      rotation: Optional[int] = None,
                       ) -> CameraComponent:
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
@@ -107,12 +108,14 @@ class OakCamera:
             resolution (str/SensorResolution): Sensor resolution of the camera.
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
+            rotation (int): Rotate the camera output by this amount of degrees, 0 by default, 90, 180, 270 are supported.
         """
         comp = CameraComponent(self._pipeline,
                                source=source,
                                resolution=resolution,
                                fps=fps,
                                encode=encode,
+                               rotation=rotation,
                                replay=self.replay,
                                args=self._args, )
         self._components.append(comp)
