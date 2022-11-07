@@ -5,8 +5,10 @@ from pathlib import Path
 import av
 import depthai as dai
 
+from depthai_sdk.recorders.video_writers import AbstractWriter
 
-class AvWriter:
+
+class AvWriter(AbstractWriter):
     start_ts: timedelta = None
     file = None
 

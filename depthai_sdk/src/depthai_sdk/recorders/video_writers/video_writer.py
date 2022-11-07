@@ -8,8 +8,10 @@ import cv2
 import depthai as dai
 import numpy as np
 
+from depthai_sdk.recorders.video_writers import AbstractWriter
 
-class VideoWriter:
+
+class VideoWriter(AbstractWriter):
     file = None
     _fps: float
     _path: str
