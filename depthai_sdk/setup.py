@@ -21,7 +21,13 @@ setup(
     install_requires=required,
     include_package_data=True,
     extras_require={
-        "visualize": ["PySide2", "Qt.py>=1.3.0"]
+        "visualize": ['PySide2',
+                      'Qt.py>=1.3.0',
+                      'matplotlib==3.5.3; python_version <= "3.7"',
+                      'matplotlib==3.6.1; python_version > "3.7"'],
+        "replay": ['mcap>=0.0.10',
+                   'mcap-ros1-support==0.0.8',
+                   'rosbags==0.9.11']
     },
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
