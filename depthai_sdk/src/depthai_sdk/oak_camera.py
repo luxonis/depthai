@@ -13,7 +13,6 @@ from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.nn_component import NNComponent
 from depthai_sdk.components.parser import parse_usb_speed
-from depthai_sdk.components.pipeline_graph import PipelineGraph
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
@@ -389,6 +388,8 @@ class OakCamera:
         """
         Shows DepthAI Pipeline graph, which can be useful when debugging. Builds the pipeline (oak.build()).
         """
+        from depthai_sdk.components.pipeline_graph import PipelineGraph
+
         if not self._pipeline_built:
             self.build()  # Build the pipeline
 
