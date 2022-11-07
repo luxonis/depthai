@@ -49,7 +49,7 @@ class NormalizeBoundingBox:
                 bbox[3] = bbox[3] * new_h
             else:
                 new_w = frame.shape[1]
-                new_h = frame.shape[0] * ar_diff
+                new_h = frame.shape[0] / ar_diff
                 bbox[0] = bbox[0] * new_w
                 bbox[1] = bbox[1] * new_h + (new_h - frame.shape[0]) / 2
                 bbox[2] = bbox[2] * new_w
