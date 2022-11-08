@@ -115,7 +115,7 @@ class DepthAICamera():
     def __init__(self):
         global update_res
         self.pipeline = dai.Pipeline()
-        if 'FFC-4P' in test_type:
+        if 'FFC' in test_type:
             imu = self.pipeline.create(dai.node.IMU)
             imu.enableFirmwareUpdate(True)
             imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
@@ -776,7 +776,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 311))
         elif 'OAK-1' in test_type:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 190))
-        elif 'FFC-4P' in test_type:
+        elif 'FFC' in test_type:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 90))
         else:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 281))
