@@ -9,5 +9,5 @@ PyTurboJPEG==1.6.4
 marshmallow==3.17.0
 distinctipy
 xmltodict
-matplotlib==3.5.3; python_version <= "3.7"
-matplotlib==3.6.1; python_version > "3.7"
+Qt.py
+av
