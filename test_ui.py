@@ -18,6 +18,8 @@ from pathlib import Path
 import cv2
 import glob
 
+from depthai_helpers import stats_server_api
+
 # Try setting native cv2 image format, otherwise RGB888
 colorMode = QtGui.QImage.Format_RGB888
 try:
@@ -115,11 +117,20 @@ class DepthAICamera():
     def __init__(self):
         global update_res
         self.pipeline = dai.Pipeline()
+        self.start_time = datetime.now()
+        res, device_info = dai.Device.getAnyAvailableDevice()
+
+        if not res:
+            raise RuntimeError("No device found")
+
+        with dai.DeviceBootloader(device_info) as bootloader:
+            self.bootloader_version = bootloader.getVersion().toStringSemver()
+
         if 'FFC' in test_type:
             imu = self.pipeline.create(dai.node.IMU)
             imu.enableFirmwareUpdate(True)
             imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
-            self.device = dai.Device(self.pipeline)
+            self.device = dai.Device(self.pipeline, device_info)
             update_res = True
             return
         self.camRgb = self.pipeline.create(dai.node.ColorCamera)
@@ -201,7 +212,7 @@ class DepthAICamera():
         if 'POE' in test_type:
             usb_speed = dai.UsbSpeed.HIGH
 
-        self.device = dai.Device(dai.OpenVINO.VERSION_2021_4, usb_speed)
+        self.device = dai.Device(dai.OpenVINO.VERSION_2021_4, device_info, usb_speed)
 
         # Check cameras, if center is smaller, modify all to be same (all cams OV case)
         # cams = self.device.getConnectedCameraProperties()
@@ -1425,9 +1436,12 @@ class UiTests(QtWidgets.QMainWindow):
             return False
 
     def save_csv(self):
+
+        results = {}
+
         if 'FFC-4P' in test_type:
             return
-        path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/tests_result/' + eepromDataJson['productName'] + '.csv'
+        path = os.path.realpath(__file__).replace("\\","/").rsplit('/', 1)[0] + '/tests_result/' + eepromDataJson['productName'] + '.csv'
         print(path)
         if os.path.exists(path):
             file = open(path, 'a')
@@ -1457,16 +1471,24 @@ class UiTests(QtWidgets.QMainWindow):
                 file.write(',' + 'Not Tested')
             else:
                 file.write(',' + test_result[key])
+                results[key] = test_result[key]
         for key in op_keys:
             if operator_tests[key] == '':
                 file.write(',' + 'Not Tested')
             else:
                 file.write(',' + operator_tests[key])
+                results[key] = operator_tests[key]
         file.write(',' + calib_path.parent.name)
         file.write(',' + calib_path.name)
         file.write('\n')
         file.close()
         self.print_logs('Test results for ' + eepromDataJson['productName'] + ' with id ' + self.depth_camera.id + ' had been saved!', 'GREEN')
+
+        stats_server_api.add_result(
+            'test', self.depth_camera.id, eepromDataJson['productName'], self.depth_camera.bootloader_version, 
+            dai.__version__, self.depth_camera.start_time, datetime.now(), results
+        )
+        stats_server_api.sync()
 
     def close_event(self, event):
         self.disconnect()
