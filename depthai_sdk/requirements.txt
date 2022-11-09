@@ -9,5 +9,3 @@ PyTurboJPEG==1.6.4
 marshmallow==3.17.0
 distinctipy
 xmltodict
-Qt.py
-av
