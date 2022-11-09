@@ -705,7 +705,7 @@ class UiTests(QtWidgets.QMainWindow):
         # self.save_but.setObjectName("connect_but")
         # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
-        if 'FFC-4P' in test_type:
+        if 'FFC' in test_type:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 125))
         elif 'OAK-1' in test_type:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 241))
@@ -1194,7 +1194,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.connect_but.adjustSize()
         self.update_imu = True
         location = WIDTH, 0
-        if 'FFC-4P' not in test_type:
+        if 'FFC' not in test_type:
             self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
             self.rgb.show()
             location = WIDTH, prew_height + 80
@@ -1425,7 +1425,7 @@ class UiTests(QtWidgets.QMainWindow):
             return False
 
     def save_csv(self):
-        if 'FFC-4P' in test_type:
+        if 'FFC' in test_type:
             return
         path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/tests_result/' + eepromDataJson['productName'] + '.csv'
         print(path)
@@ -1475,7 +1475,7 @@ class UiTests(QtWidgets.QMainWindow):
 
     def disconnect(self):
         if hasattr(self, 'depth_camera'):
-            if 'FFC-4P' not in test_type:
+            if 'FFC' not in test_type:
                 del self.rgb
                 del self.jpeg
                 if 'OAK-1' not in test_type:
