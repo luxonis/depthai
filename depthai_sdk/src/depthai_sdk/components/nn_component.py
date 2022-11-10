@@ -7,6 +7,7 @@ import blobconverter
 from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
+from depthai_sdk.components.integrations.roboflow import RoboflowIntegration
 from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
 from depthai_sdk.components.parser import *
@@ -40,6 +41,7 @@ class NNComponent(Component):
     _args: Dict = None
     _config: Dict = None
     _nodeType: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
+    _roboflow: RoboflowIntegration = None
 
     _multiStageNn: MultiStageNN = None
     _multi_stage_config: MultiStageConfig = None
@@ -96,14 +98,6 @@ class NNComponent(Component):
         # Create NN node
         self.node = pipeline.create(self._nodeType)
 
-        if self._config:
-            nnConfig = self._config.get("nn_config", {})
-            if self._isDetector() and 'confidence_threshold' in nnConfig:
-                self.node.setConfidenceThreshold(float(nnConfig['confidence_threshold']))
-            meta = nnConfig.get('NN_specific_metadata', None)
-            if self._isYolo() and meta:
-                self.config_yolo_from_metadata(metadata=meta)
-
     def _forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
         Checks whether the component forces a specific OpenVINO version. This function is called after
@@ -113,6 +107,10 @@ class NNComponent(Component):
         return self._forcedVersion
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+
+        if self._roboflow:
+            path = self._roboflow.device_update(device)
+            self._parse_config(path)
 
         if self._blob is None:
             self._blob = dai.OpenVINO.Blob(self._blobFromConfig(self._config['model'], version))
@@ -146,6 +144,7 @@ class NNComponent(Component):
             self.imageManip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
             self.imageManip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             self._input._stream_input.link(self.imageManip.inputImage)
+            # self._input.imageManip.setNumFramesPool(15)
 
             # Create script node, get HQ frames from input.
             self._multiStageNn = MultiStageNN(pipeline, self._input.node, self.imageManip.out, self._size)
@@ -230,6 +229,15 @@ class NNComponent(Component):
         else:  # Dict
             self._config = modelConfig
 
+        if 'source' in self._config:
+            if self._config['source'] == 'roboflow':
+                from depthai_sdk.components.integrations.roboflow import RoboflowIntegration
+                self._roboflow = RoboflowIntegration(self._config)
+                self._parse_node_type('YOLO') # Roboflow only supports YOLO models
+                return
+            else:
+                raise ValueError(f"[NN Dict configuration] Source '{self._config['source']}' not supported")
+
         # Get blob from the config file
         if 'model' in self._config:
             model = self._config['model']
@@ -257,10 +265,20 @@ class NNComponent(Component):
             if not callable(getattr(self._handler, "decode", None)):
                 raise RuntimeError("Custom model handler does not contain 'decode' method!")
 
-        # Parse node type
-        nnFamily = self._config.get("nn_config", {}).get("NN_family", None)
-        if nnFamily:
-            self._parse_node_type(nnFamily)
+        if 'nn_config' in self._config:
+            nnConfig = self._config.get("nn_config", {})
+
+            # Parse node type
+            nnFamily = nnConfig.get("NN_family", None)
+            if nnFamily:
+                self._parse_node_type(nnFamily)
+
+            if self._isDetector() and 'confidence_threshold' in nnConfig:
+                self.node.setConfidenceThreshold(float(nnConfig['confidence_threshold']))
+
+            meta = nnConfig.get('NN_specific_metadata', None)
+            if self._isYolo() and meta:
+                self.config_yolo_from_metadata(metadata=meta)
 
     def _blobFromConfig(self, model: Dict, version: dai.OpenVINO.Version) -> str:
         """
