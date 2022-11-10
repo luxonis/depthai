@@ -26,7 +26,7 @@ BOARD_TYPES = [f.stem for f in (Path(__file__).parent / 'resources' / 'boards').
 
 SETTINGS = {
     'board': {
-        'flag': "-brd", 'flag_long': "--board", 'default': BOARD_TYPES[0], 'type': str, 'options': BOARD_TYPES,
+        'flag': "-brd", 'flag_long': "--board", 'default': None, 'type': str, 'options': BOARD_TYPES,
         'label': "Camera model", 'help': "BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive},. Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]"
     },
     'count': {
@@ -38,7 +38,7 @@ SETTINGS = {
         'label': "Square size (cm)", 'help': "Square size of calibration pattern used in centimeters. Default: 2.0cm."
     },
     'markerSizeCm': {
-        'flag': "-ms", 'flag_long': "--markerSizeCm", 'default': 2.5*0.75, 'type': float, 
+        'flag': "-ms", 'flag_long': "--markerSizeCm", 'default': None, 'type': float, 
         'label': "Marker size (cm)", 'help': "Marker size in charuco boards."
     },
     'defaultBoard': {
@@ -91,11 +91,11 @@ SETTINGS = {
     },
     'fps': {
         'flag': "-fps", 'flag_long': "--fps", 'default': 10, 'type': int, 'min': 1, 'max': 30,
-        'help': "Set capture FPS for all cameras. Default: 10"
+        'label': "Camera FPS", 'help': "Set capture FPS for all cameras. Default: 10"
     },
     'captureDelay': {
         'flag': "-cd", 'flag_long': "--captureDelay", 'default': 5, 'type': int, min: 0,
-        'label': "Capture delay", 'help': "Choose how much delay to add between pressing the key and capturing the image. Default: 5"
+        'label': "Capture delay (s)", 'help': "Choose how much delay to add between pressing the key and capturing the image. Default: 5"
     },
     'debug': {
         'flag': "-d", 'flag_long': "--debug", 'default': False, 'type': bool, 'action': "store_true", 
@@ -105,7 +105,7 @@ SETTINGS = {
         'flag': "-fac", 'flag_long': "--factoryCalibration", 'default': False, 'type': bool, 'action': "store_true", 
         'help': "Enable writing to Factory Calibration."
     },
-    'gui': {
+    'noGui': {
         'flag': "-ng", 'flag_long': "--noGui", 'default': False, 'type': bool, 'action': "store_true", 
         'help': "Disable GUI."
     }
@@ -156,7 +156,7 @@ def parse_args():
 
     for name, properties in SETTINGS.items():
         if properties['type'] == bool:
-            parser.add_argument(properties['flag'], properties['flag_long'], default=properties['default'], action=properties['action'], help=properties['help'])
+            parser.add_argument(properties['flag'], properties['flag_long'], default=properties['default'], action=properties['action'], dest=name, help=properties['help'])
         elif properties['type'] == str:
             parser.add_argument(properties['flag'], properties['flag_long'], default=properties['default'], nargs=properties.get('nargs'), dest=name, type=properties['type'], help=properties['help'])
         else:
@@ -166,10 +166,7 @@ def parse_args():
 
     # Set some extra defaults, `-brd` would override them
     if options.markerSizeCm is None:
-        if options.defaultBoard:
-            options.markerSizeCm = options.squareSizeCm * 0.75
-        else:
-            raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
+        options.markerSizeCm = options.squareSizeCm * 0.75
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
 
@@ -187,6 +184,7 @@ class Main:
     def __init__(self):
         global debug
         self.args = parse_args()
+        self.guess_board_config()
         if not self.args.noGui:
             self.settings_gui()
         debug = self.args.debug
@@ -226,9 +224,39 @@ class Main:
         if not self.args.disableRgb:
             self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
 
+    def guess_board_config(self):
+        if self.args.board: # if board is set with flags then use that
+            return
+
+        product_name = None
+        try:
+            with dai.Device() as device:
+                try: 
+                    product_name = device.readFactoryCalibration().eepromToJson().get('productName')
+                except: pass
+                if not product_name:
+                    try: 
+                        product_name = device.readCalibration().eepromToJson().get('productName')
+                    except: pass
+        except: pass
+
+        if not product_name:
+            print("Couldn't determine product name from EEPROM")
+            return
+
+        product_name = product_name.upper().replace(' ', '-')
+        for board_type in BOARD_TYPES:
+            if board_type in product_name:
+                self.args.board = board_type
+                return
+
+        print("Couldn't determine board type from product name: {}".format(product_name))
+        
+
     def settings_gui(self):
         app = QtWidgets.QApplication([])
-        window = QtWidgets.QWidget()
+        window = QtWidgets.QDialog()
+        window.setWindowFlags(window.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
         window.setWindowTitle('DepthAI Calibration Settings')
         # Define the layout
         layout = QtWidgets.QGridLayout()
@@ -240,29 +268,29 @@ class Main:
 
             if properties['type'] == bool:
                 widget = QtWidgets.QCheckBox()
-                widget.setChecked(properties['default'])
+                widget.setChecked(getattr(self.args, name))
                 widget.stateChanged.connect(lambda v, n=name: setattr(self.args, n, v != 0))
             elif properties['type'] == int:
                 widget = QtWidgets.QSpinBox()
                 widget.setMinimum(properties.get('min', 0))
                 widget.setMaximum(properties.get('max', 100))
-                widget.setValue(properties['default'])
+                widget.setValue(getattr(self.args, name))
                 widget.valueChanged.connect(lambda v, n=name: setattr(self.args, n, v))
             elif properties['type'] == float:
                 widget = QtWidgets.QDoubleSpinBox()
                 widget.setMinimum(properties.get('min', 0))
                 widget.setMaximum(properties.get('max', 100))
-                widget.setValue(properties['default'])
+                widget.setValue(getattr(self.args, name))
                 widget.valueChanged.connect(lambda v, n=name: setattr(self.args, n, v))
             elif properties['type'] == str:
                 if 'options' in properties:
                     widget = QtWidgets.QComboBox()
                     widget.addItems(properties['options'])
-                    widget.setCurrentText(properties['default'])
+                    widget.setCurrentText(getattr(self.args, name))
                     widget.currentTextChanged.connect(lambda v, n=name: setattr(self.args, n, v))
                 else:
                     widget = QtWidgets.QLineEdit()
-                    widget.setText(properties['default'])
+                    widget.setText(getattr(self.args, name))
                     widget.textChanged.connect(lambda v, n=name: setattr(self.args, n, v))
             else:
                 continue 
@@ -274,9 +302,10 @@ class Main:
             layout.addWidget(widget, i, 1)
 
         button = QtWidgets.QPushButton('Start Calibration')
-        button.clicked.connect(lambda: window.close())
+        button.clicked.connect(lambda: window.accept())
         layout.addWidget(button, i + 1, 0, 1, 2)
 
+        window.reject = lambda: sys.exit(0)
         window.setLayout(layout)
         window.show()
         app.exec()
