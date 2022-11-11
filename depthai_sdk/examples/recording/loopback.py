@@ -1,20 +1,23 @@
-from typing import Dict
-
 import cv2
 
-from depthai_sdk import OakCamera, VisualizerHelper, DetectionPacket, Visualizer
-from depthai_sdk.recorders.video_writers.video_writer import VideoWriter
+from depthai_sdk import OakCamera, VisualizerHelper
+from depthai_sdk.callback_context import VisualizeContext
 from depthai_sdk.visualize.visualizer_helper import FramePosition
 
 i = 0
 FPS = 30
 
-def callback(packet: DetectionPacket, visualizer: Visualizer, recorders: Dict[str, VideoWriter]):
+
+def callback(ctx: VisualizeContext):
     global i
-    print('Detections:', packet.img_detections.detections)
+
+    packet = ctx.packet
+    recorders = ctx.recorders
+
     VisualizerHelper.print(packet.frame, 'BottomRight!', FramePosition.BottomRight)
     cv2.imshow('frame', packet.frame)
-    # recorders
+
+    # recorder
     if i == FPS * 10:
         recorders[packet.name.split(';')[-1]].get_last(10)
 

@@ -1,7 +1,26 @@
-from depthai_sdk import OakCamera, TwoStagePacket, AspectRatioResizeMode, VisualizerHelper, Visualizer, TextPosition
-import depthai as dai
-import numpy as np
 import cv2
+import numpy as np
+
+from depthai_sdk import OakCamera, AspectRatioResizeMode, TextPosition
+from depthai_sdk.callback_context import VisualizeContext
+
+
+def callback(ctx: VisualizeContext):
+    packet = ctx.packet
+    visualizer = ctx.visualizer
+
+    for det, rec in zip(packet.detections, packet.nnData):
+        age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
+        gender = np.squeeze(np.array(rec.getLayerFp16('prob')))
+        gender_str = "Woman" if gender[0] > gender[1] else "Man"
+
+        visualizer.add_text(f'{gender_str}\nAge: {age}',
+                            bbox=(*det.top_left, *det.bottom_right),
+                            position=TextPosition.BOTTOM_RIGHT)
+
+    frame = visualizer.draw(packet.frame)
+    cv2.imshow('Age-gender estimation', frame)
+
 
 with OakCamera() as oak:
     color = oak.create_camera('color')
@@ -13,23 +32,9 @@ with OakCamera() as oak:
     age_gender = oak.create_nn('age-gender-recognition-retail-0013', input=det)
     # age_gender.config_multistage_nn(show_cropped_frames=True) # For debugging
 
-    def cb(packet: TwoStagePacket, visualizer: Visualizer, **kwargs):
-        for det, rec in zip(packet.detections, packet.nnData):
-            age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
-            gender = np.squeeze(np.array(rec.getLayerFp16('prob')))
-            gender_str = "Woman" if gender[0] > gender[1] else "Man"
-
-            visualizer.add_text(f'{gender_str}\nAge: {age}',
-                                bbox=(*det.top_left, *det.bottom_right),
-                                position=TextPosition.BOTTOM_RIGHT)
-
-        frame = visualizer.draw(packet.frame)
-        cv2.imshow('Age-gender estimation', frame)
-
-
     # Visualize detections on the frame. Don't show the frame but send the packet
     # to the callback function (where it will be displayed)
-    oak.visualize(age_gender, callback=cb)
+    oak.visualize(age_gender, callback=callback)
     oak.visualize(det.out.passthrough)
 
     # oak.show_graph() # Show pipeline graph, no need for now
