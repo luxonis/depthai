@@ -31,6 +31,7 @@ parser.add_argument('--disable-git', help='Disable git requirement and updating 
 args = parser.parse_args()
 
 pathToDepthaiRepository = args.repo
+print(f"{pathToDepthaiRepository = }")
 gitExecutable = args.git
 if args.disable_git:
     gitExecutable = ''
