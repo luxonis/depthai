@@ -8,6 +8,7 @@ import numpy as np
 from distinctipy import distinctipy
 from matplotlib import pyplot as plt
 
+from depthai_sdk.callback_context import VisualizeContext
 from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
@@ -57,7 +58,8 @@ class XoutFrames(XoutBase):
         self._video_recorder = None
         super().__init__()
 
-    def setup_visualize(self, visualizer: Visualizer,
+    def setup_visualize(self,
+                        visualizer: Visualizer,
                         name: str = None,
                         recording_path: Optional[str] = None,
                         keep_last_seconds: int = 0):
@@ -83,8 +85,8 @@ class XoutFrames(XoutBase):
         packet.frame = self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
-            self.callback(packet, self._visualizer,
-                          recorder=self._video_recorder._writer if self._video_recorder else None)
+            ctx = VisualizeContext(packet, self._visualizer, self._video_recorder)
+            self.callback(ctx)
         else:
             # TODO: if RH, don't display frame
             # Draw on the frame
