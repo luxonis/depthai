@@ -1,0 +1,40 @@
+{
+    "board_config":
+    {
+        "name": "OAK-D-SR",
+        "revision": "R0M0E0",
+        "cameras":{
+            "LEFT": {
+                "name": "left",
+                "hfov": 71.86,
+                "type": "color",
+                "extrinsics": {
+                    "to_cam": "RIGHT",
+                    "specTranslation": {
+                        "x": -2.0,
+                        "y": 0,
+                        "z": 0
+                    },
+                    "rotation":{
+                        "r": 0,
+                        "p": 0,
+                        "y": 0
+                    }
+
+                }
+
+            },
+            "RIGHT": {
+                "name": "right",
+                "hfov": 71.86,
+                "type": "color"
+            }
+
+        },
+
+        "stereo_config":{
+            "left_cam": "LEFT",
+            "right_cam": "RIGHT"
+        }
+    }
+}

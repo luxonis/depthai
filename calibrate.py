@@ -322,21 +322,16 @@ class Main:
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         
         self.device = dai.Device()
-        if hasattr(self.device, 'getConnectedCameraProperties'):
-            cameraProperties = self.device.getConnectedCameraProperties()
-            for properties in cameraProperties:
-                for in_cam in self.board_config['cameras'].keys():
-                    cam_info = self.board_config['cameras'][in_cam]
-                    if properties.socket == stringToCam[in_cam]:
-                        self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
-                        print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
-                        self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
-                        # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
-                        break
-        else:
-            sensors = self.device.getCameraSensorNames()
-            for sensor in sensors:
-                self.board_config['cameras'][camToString[sensor]]['sensorName'] = sensors[sensor]
+        cameraProperties = self.device.getConnectedCameraFeatures()
+        for properties in cameraProperties:
+            for in_cam in self.board_config['cameras'].keys():
+                cam_info = self.board_config['cameras'][in_cam]
+                if properties.socket == stringToCam[in_cam]:
+                    self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
+                    print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
+                    self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
+                    # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
+                    break
 
         pipeline = self.create_pipeline()
         self.device.startPipeline(pipeline)
