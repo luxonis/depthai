@@ -2,7 +2,6 @@ from datetime import timedelta
 from fractions import Fraction
 from pathlib import Path
 
-import av
 import depthai as dai
 
 from depthai_sdk.recorders.video_writers import AbstractWriter
@@ -13,6 +12,8 @@ class AvWriter(AbstractWriter):
     file = None
 
     def __init__(self, folder: Path, name: str, fourcc: str, fps: float):
+        import av
+
         self.start_ts = None
         self.file = av.open(str(folder / f"{name}.mp4"), 'w')
 
