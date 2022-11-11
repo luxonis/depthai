@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from collections import deque 
 from scipy.spatial.transform import Rotation
 import traceback
+import sys
 
 import cv2
 from cv2 import resize
@@ -77,6 +78,102 @@ camToRgbRes = {
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P
                 }
 
+BOARD_TYPES = [f.stem for f in (Path(__file__).parent / 'resources' / 'boards').glob('*.json')]
+
+# This settings definition is used to create the command line parser and to compose the settings GUI.
+# The 'label' property is displayed in the GUI. If it is missing the setting is not displayed in the GUI.
+# The 'help' property is dispayed as a tooltip in the GUI and as a help message in the command line parser.
+SETTINGS = {
+    'board': {
+        'flag': "-brd", 'flag_long': "--board", 'default': None, 'type': str, 'options': BOARD_TYPES,
+        'label': "Camera model", 'help': "BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive},. Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]"
+    },
+    'count': {
+        'flag': "-c", 'flag_long': "--count", 'default': 3, 'type': int, 'min': 1, 'max': 10,
+        'label': "Images per capture", 'help': "Number of images per polygon to capture. Default: 1."
+    },
+    'squareSizeCm': {
+        'flag': "-s", 'flag_long': "--squareSizeCm", 'default': 2.5, 'type': float, 'min': 2.2,
+        'label': "Square size (cm)", 'help': "Square size of calibration pattern used in centimeters. Default: 2.0cm."
+    },
+    'markerSizeCm': {
+        'flag': "-ms", 'flag_long': "--markerSizeCm", 'default': None, 'type': float, 
+        'label': "Marker size (cm)", 'help': "Marker size in charuco boards."
+    },
+    'defaultBoard': {
+        'flag': "-db", 'flag_long': "--defaultBoard", 'default': False, 'type': bool, 'action': "store_true", 
+        'help': "Calculates the -ms parameter automatically based on aspect ratio of charuco board in the repository"
+    },
+    'squaresX': {
+        'flag': "-nx", 'flag_long': "--squaresX", 'default': 11, 'type': int, 'min': 1,
+        'label': "No. squres X", 'help': "number of chessboard squares in X direction in charuco boards."
+    },
+    'squaresY': {
+        'flag': "-ny", 'flag_long': "--squaresY", 'default': 8, 'type': int, 'min': 1,
+        'label': "No. squares Y", 'help': "number of chessboard squares in Y direction in charuco boards."
+    },
+    'rectifiedDisp': {
+        'flag': "-rd", 'flag_long': "--rectifiedDisp", 'default': True, 'type': bool, 'action': "store_false", 
+        'label': "Show rectified lines", 'help': "Display rectified images with lines drawn for epipolar check"
+    },
+    'disableRgb': {
+        'flag': "-drgb", 'flag_long': "--disableRgb", 'default': False, 'type': bool, 'action': "store_true", 
+        'label': "Disable RGB calibration", 'help': "Disable rgb camera Calibration"
+    },
+    'swapLR': {
+        'flag': "-slr", 'flag_long': "--swapLR", 'default': False, 'type': bool, 'action': "store_true",
+        'label': "Swap left and right cameras", 'help': "Interchange Left and right camera port."
+    },
+    'mode': {
+        'flag': "-m", 'flag_long': "--mode", 'default': ['capture', 'process'], 'nargs': '*', 'type': str, 
+        'help': "Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process')."
+    },
+    'invert_v': {
+        'flag': "-iv", 'flag_long': "--invertVertical", 'default': False, 'type': bool, 'action': "store_true", 
+        'label': "Flip verticaly", 'help': "Invert vertical axis of the camera for the display"
+    },
+    'invert_h': {
+        'flag': "-ih", 'flag_long': "--invertHorizontal", 'default': False, 'type': bool, 'action': "store_true", 
+        'label': "Flip horizontaly", 'help': "Invert horizontal axis of the camera for the display"
+    },
+    'outputScaleFactor': {
+        'flag': "-osf", 'flag_long': "--outputScaleFactor", 'default': 0.5, 'type': float, 'min': 0.1, 'max': 2.0,
+        'label': "Visualization scale factor", 'help': "Set the scaling factor for output visualization. Default: 0.5."
+    },
+    'maxEpiploarError': {
+        'flag': "-ep", 'flag_long': "--maxEpiploarError", 'default': "1.0", 'type': float, 
+        'help': "Sets the maximum epiploar allowed with rectification"
+    },
+    'cameraMode': {
+        'flag': "-cm", 'flag_long': "--cameraMode", 'default': "perspective", 'type': str, 
+        'help': "Choose between perspective and Fisheye"
+    },
+    'rgbLensPosition': {
+        'flag': "-rlp", 'flag_long': "--rgbLensPosition", 'default': 135, 'type': int, 'min': 0, 'max': 255,
+        'label': "RGB focus", 'help': "Set the manual lens position of the camera for calibration"
+    },
+    'fps': {
+        'flag': "-fps", 'flag_long': "--fps", 'default': 10, 'type': int, 'min': 1, 'max': 30,
+        'label': "Camera FPS", 'help': "Set capture FPS for all cameras. Default: 10"
+    },
+    'captureDelay': {
+        'flag': "-cd", 'flag_long': "--captureDelay", 'default': 5, 'type': int, min: 0,
+        'label': "Capture delay (s)", 'help': "Choose how much delay to add between pressing the key and capturing the image. Default: 5"
+    },
+    'debug': {
+        'flag': "-d", 'flag_long': "--debug", 'default': False, 'type': bool, 'action': "store_true", 
+        'help': "Enable debug logs."
+    },
+    'factoryCalibration': {
+        'flag': "-fac", 'flag_long': "--factoryCalibration", 'default': False, 'type': bool, 'action': "store_true", 
+        'help': "Enable writing to Factory Calibration."
+    },
+    'noGui': {
+        'flag': "-ng", 'flag_long': "--noGui", 'default': False, 'type': bool, 'action': "store_true", 
+        'help': "Disable GUI."
+    }
+}
+
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
     # Create black blank image
@@ -118,57 +215,20 @@ def parse_args():
     '''
     parser = ArgumentParser(
         epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-c", "--count", default=3, type=int, required=False,
-                        help="Number of images per polygon to capture. Default: 1.")
-    parser.add_argument("-s", "--squareSizeCm", type=float, required=True,
-                        help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
-    parser.add_argument("-ms", "--markerSizeCm", type=float, required=False,
-                        help="Marker size in charuco boards.")
-    parser.add_argument("-db", "--defaultBoard", default=False, action="store_true",
-                        help="Calculates the -ms parameter automatically based on aspect ratio of charuco board in the repository")
-    parser.add_argument("-nx", "--squaresX", default="11", type=int, required=False,
-                        help="number of chessboard squares in X direction in charuco boards.")
-    parser.add_argument("-ny", "--squaresY", default="8", type=int, required=False,
-                        help="number of chessboard squares in Y direction in charuco boards.")
-    parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
-                        help="Display rectified images with lines drawn for epipolar check")
-    parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
-                        help="Disable rgb camera Calibration")
-    parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
-                        help="Interchange Left and right camera port.")
-    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
-                        help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
-    parser.add_argument("-brd", "--board", default=None, type=str, required=True,
-                        help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
-                        "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
-    parser.add_argument("-iv", "--invertVertical", dest="invert_v", default=False, action="store_true",
-                        help="Invert vertical axis of the camera for the display")
-    parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
-                        help="Invert horizontal axis of the camera for the display")
-    # parser.add_argument("-ep", "--maxEpiploarError", default="1.0", type=float, required=False,
-    #                     help="Sets the maximum epiploar allowed with rectification")
-    parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
-                        required=False, help="Choose between perspective and Fisheye")
-    parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
-                        required=False, help="Set the manual lens position of the camera for calibration")
-    parser.add_argument("-fps", "--fps", default=10, type=int,
-                        required=False, help="Set capture FPS for all cameras. Default: %(default)s")
-    parser.add_argument("-cd", "--captureDelay", default=5, type=int,
-                        required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
-    parser.add_argument("-d", "--debug", default=False, action="store_true", help="Enable debug logs.")
-    parser.add_argument("-fac", "--factoryCalibration", default=False, action="store_true",
-                        help="Enable writing to Factory Calibration.")
-    parser.add_argument("-osf", "--outputScaleFactor", type=float, default=0.5,
-                        help="set the scaling factor for output visualization. Default: 0.5.")
+    for name, properties in SETTINGS.items():
+        if properties['type'] == bool:
+            parser.add_argument(properties['flag'], properties['flag_long'], default=properties['default'], action=properties['action'], dest=name, help=properties['help'])
+        elif properties['type'] == str:
+            parser.add_argument(properties['flag'], properties['flag_long'], default=properties['default'], nargs=properties.get('nargs'), dest=name, type=properties['type'], help=properties['help'])
+        else:
+            parser.add_argument(properties['flag'], properties['flag_long'], default=properties['default'], dest=name, type=properties['type'], help=properties['help'])
+
 
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
     if options.markerSizeCm is None:
-        if options.defaultBoard:
-            options.markerSizeCm = options.squareSizeCm * 0.75
-        else:
-            raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
+        options.markerSizeCm = options.squareSizeCm * 0.75
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
         
@@ -281,6 +341,9 @@ class Main:
     def __init__(self):
         global debug
         self.args = parse_args()
+        self.guess_board_config()
+        if not self.args.noGui:
+            self.settings_gui()
         debug = self.args.debug
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
@@ -340,6 +403,93 @@ class Main:
         # self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
         # if not self.args.disableRgb:
         #     self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
+
+    def guess_board_config(self):
+        if self.args.board: # if board is set with flags then use that
+            return
+
+        product_name = None
+        try:
+            with dai.Device() as device:
+                try: 
+                    product_name = device.readFactoryCalibration().eepromToJson().get('productName')
+                except: pass
+                if not product_name:
+                    try: 
+                        product_name = device.readCalibration().eepromToJson().get('productName')
+                    except: pass
+        except: pass
+
+        if not product_name:
+            print("Couldn't determine product name from EEPROM")
+            return
+
+        product_name = product_name.upper().replace(' ', '-')
+        for board_type in BOARD_TYPES:
+            if board_type in product_name:
+                self.args.board = board_type
+                return
+
+        print("Couldn't determine board type from product name: {}".format(product_name))
+        
+
+    def settings_gui(self):
+        from PyQt5 import QtCore, QtWidgets
+        app = QtWidgets.QApplication([])
+        window = QtWidgets.QDialog()
+        window.setWindowFlags(window.windowFlags() & ~QtCore.Qt.WindowContextHelpButtonHint)
+        window.setWindowTitle('DepthAI Calibration Settings')
+        # Define the layout
+        layout = QtWidgets.QGridLayout()
+        layout.columnCount = 2
+        for i, (name, properties) in enumerate(SETTINGS.items()):
+            label = properties.get('label')
+            if label is None:
+                continue
+
+            if properties['type'] == bool:
+                widget = QtWidgets.QCheckBox()
+                widget.setChecked(getattr(self.args, name))
+                widget.stateChanged.connect(lambda v, n=name: setattr(self.args, n, v != 0))
+            elif properties['type'] == int:
+                widget = QtWidgets.QSpinBox()
+                widget.setMinimum(properties.get('min', 0))
+                widget.setMaximum(properties.get('max', 100))
+                widget.setValue(getattr(self.args, name))
+                widget.valueChanged.connect(lambda v, n=name: setattr(self.args, n, v))
+            elif properties['type'] == float:
+                widget = QtWidgets.QDoubleSpinBox()
+                widget.setMinimum(properties.get('min', 0))
+                widget.setMaximum(properties.get('max', 100))
+                widget.setValue(getattr(self.args, name))
+                widget.valueChanged.connect(lambda v, n=name: setattr(self.args, n, v))
+            elif properties['type'] == str:
+                if 'options' in properties:
+                    widget = QtWidgets.QComboBox()
+                    widget.addItems(properties['options'])
+                    widget.setCurrentText(getattr(self.args, name))
+                    widget.currentTextChanged.connect(lambda v, n=name: setattr(self.args, n, v))
+                else:
+                    widget = QtWidgets.QLineEdit()
+                    widget.setText(getattr(self.args, name))
+                    widget.textChanged.connect(lambda v, n=name: setattr(self.args, n, v))
+            else:
+                continue 
+
+            label_widget = QtWidgets.QLabel(label)
+            label_widget.setToolTip(properties.get('help'))
+            widget.setToolTip(properties.get('help'))
+            layout.addWidget(label_widget, i, 0)
+            layout.addWidget(widget, i, 1)
+
+        button = QtWidgets.QPushButton('Start Calibration')
+        button.clicked.connect(lambda: window.accept())
+        layout.addWidget(button, i + 1, 0, 1, 2)
+
+        window.reject = lambda: sys.exit(0)
+        window.setLayout(layout)
+        window.show()
+        app.exec()
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
