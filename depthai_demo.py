@@ -205,7 +205,7 @@ class Demo:
             self._nnManager.countLabel(self._conf.getCountLabel(self._nnManager))
             self._pm.setNnManager(self._nnManager)
 
-        self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo)
+        self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
         self._device.addLogCallback(self._logMonitorCallback)
         if sentryEnabled:
             try:
