@@ -15,7 +15,6 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 # Constants
 SCRIPT_DIRECTORY=Path(os.path.abspath(os.path.dirname(__file__)))
-print(f"{SCRIPT_DIRECTORY = }")
 DEPTHAI_DEMO_SCRIPT='depthai_demo.py'
 DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT='install_requirements.py'
 DEFAULT_GIT_PATH='git'
@@ -31,7 +30,6 @@ parser.add_argument('--disable-git', help='Disable git requirement and updating 
 args = parser.parse_args()
 
 pathToDepthaiRepository = args.repo
-print(f"{pathToDepthaiRepository = }")
 gitExecutable = args.git
 if args.disable_git:
     gitExecutable = ''
@@ -55,7 +53,6 @@ sys.stdout = logger
 sys.stderr = logger
 
 print(f'========= Starting: Launcher ({datetime.datetime.now()}) =========')
-print(f"{SCRIPT_DIRECTORY = }")
 
 qApp = QtWidgets.QApplication(['DepthAI Launcher'])
 # Set style
