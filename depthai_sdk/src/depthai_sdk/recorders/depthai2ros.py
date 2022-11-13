@@ -1,5 +1,3 @@
-import time
-
 import depthai as dai
 import numpy as np
 # from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point
@@ -8,11 +6,13 @@ import numpy as np
 # from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point
 from genpy.rostime import Time
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField  # s, PointCloud
+import std_msgs
 
 """
 --extra-index-url https://rospypi.github.io/simple/
 sensor_msgs
 geometry_msgs
+std_msgs
 genpy
 """
 
