@@ -206,23 +206,20 @@ class RosbagRecorder(Recorder):
     _closed = False
     _frame_init: List[str]
 
-    def __init__(self, path: Path, device: dai.Device):
+    def update(self, path: Path, device: dai.Device, _):
         '''
         Args:
             path: Path to the folder where rosbag will be saved
             device: depthai.Device object
         '''
+        if path.suffix != '.bag':
+            path = path / 'recording.bag'
+        if path.exists():
+            path.unlink()
+        self.path = path
 
         rgb = False  # TODO: support rgb/mono recording as well
         self._frame_init = []
-
-        if not str(path).endswith('.bag'):
-            path = path / 'recording.bag'
-
-        if path.exists():
-            os.remove(str(path))
-
-        self.path = path
         self.start_nanos = 0
         self.writer = Writer(self.path)
         # Compression will cause error in RealSense

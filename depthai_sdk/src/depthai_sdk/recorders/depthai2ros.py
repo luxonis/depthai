@@ -9,21 +9,30 @@ import numpy as np
 from genpy.rostime import Time
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField  # s, PointCloud
 
+"""
+--extra-index-url https://rospypi.github.io/simple/
+sensor_msgs
+geometry_msgs
+genpy
+"""
 
 class DepthAi2Ros1:
     xyz = dict()
 
     def __init__(self, device: dai.Device) -> None:
-        self.start_nanos = time.time_ns()
+        self.start_time = dai.Clock.now()
         self.device = device
 
-    def getTime(self) -> Time:
-        ts = time.time_ns() - self.start_nanos
-        return Time(int(ts / 1000000), ts % 1000000)
-
+    def header(self, imgFrame: dai.ImgFrame) -> std_msgs.msg.Header:
+        header = std_msgs.msg.Header()
+        ts = (imgFrame.getTimestamp() - self.start_time).total_seconds()
+        # secs / nanosecs
+        header.stamp = Time(int(ts), (ts % 1) * 1e6)
+        header.frame_id = str(imgFrame.getSequenceNum())
+        return header
     def CompressedImage(self, imgFrame: dai.ImgFrame) -> CompressedImage:
         msg = CompressedImage()
-        msg.header.stamp = self.getTime()
+        msg.header = self.header(imgFrame)
         msg.format = "jpeg"
         msg.data = np.array(imgFrame.getData()).tobytes()
         return msg
@@ -32,7 +41,7 @@ class DepthAi2Ros1:
         msg = Image()
         # print(imgFrame.getType()) # Check whether this is RGB888p frame
         # dai.ImgFrame.Type.RAW16 == depth
-        msg.header.stamp = self.getTime()
+        msg.header = self.header(imgFrame)
         msg.height = imgFrame.getHeight()
         msg.width = imgFrame.getWidth()
         msg.encoding = 'mono16'  # if rgb else 'mono16', # For depth
@@ -46,7 +55,7 @@ class DepthAi2Ros1:
         Depth frame -> ROS1 PointCloud2 message
         """
         msg = PointCloud2()
-        msg.header.stamp = self.getTime()
+        msg.header = self.header(imgFrame)
 
         heigth = str(imgFrame.getHeight())
         if heigth not in self.xyz:
