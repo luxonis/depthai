@@ -4,35 +4,40 @@ General (standarized) NN outputs, to be used for higher-level abstractions (eg. 
 below. If the latter, model json config will incldue handler.py logic for decoding to the standard NN output.
 These will be integrated into depthai-core, bonus points for on-device decoding of some popular models.
 """
+from dataclasses import dataclass, field
+from typing import List, Tuple, TypeVar, Union, Any
 
-import depthai as dai
 import numpy as np
-from typing import List, Tuple
+
 
 # First we have Object detection results, which are already standarized with dai.ImgDetections
 
-class SemanticSegmentation: # In core, extend from NNData
+@dataclass
+class SemanticSegmentation:  # In core, extend from NNData
     """
     Provides class for each pixel on the frame.
     Examples: DeeplabV3, Lanenet, road-semgentation-adas-0001
     """
-    layers: List[np.array] = [] # 2D np.array for each class
-    
+    mask: List[np.array] = field(default_factory=list)  # 2D np.array for each class
 
-class ImgLandmarks: # In core, extend from NNData
+
+@dataclass
+class ImgLandmarks:  # In core, extend from NNData
     """
     Provides location of a landmark, eg. joint landmarks, face landmarks, hand landmarks
     Examples: human-pose-estimation-0001, openpose2, facial-landmarks-68, landmarks-regression-retail-0009
     """
-    landmarks: List[dai.Point2f] = [] # Landmarks
-    pairs: List[Tuple[int,int]] = None # Pairs of landmarks, to draw lines betwee them
-    colors: List[Tuple[int,int,int]] = None # Color for each landmark (eg. both elbows are in the same color)
+    landmarks: List[List[Any]] = field(default_factory=list)
+    pairs: List[Tuple[int, int]] = None  # Pairs of landmarks, to draw lines between them
+    colors: List[Tuple[int, int, int]] = None  # Color for each landmark (eg. both elbows are in the same color)
 
-class InstanceSegmentations(dai.NNData):
-    def __init__(self, nnData: dai.NNData) -> None:
-        super(nnData).__init__()
 
-class InstanceSegmentation(dai.ImgDetection):
-    def __init__(self) -> None:
-        super().__init__()
+@dataclass
+class InstanceSegmentations:
+    masks: List[np.array] = field(default_factory=list)  # 2D np.array for each instance
+    labels: List[int] = field(default_factory=list)  # Class label for each instance
 
+
+@dataclass
+class InstanceSegmentation:
+    pass
