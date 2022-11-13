@@ -56,6 +56,7 @@ class NNComponent(Component):
                  model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
                  input: Union[CameraComponent, 'NNComponent'],
                  nnType: Optional[str] = None,  # Either 'yolo' or 'mobilenet'
+                 decode_fn: Optional[Callable] = None,
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
                  spatial: Union[None, bool, StereoComponent] = None,
                  replay: Optional[Replay] = None,
@@ -85,6 +86,7 @@ class NNComponent(Component):
         self._spatial = spatial
         self._args = args
         self._replay = replay
+        self._decode_fn = decode_fn or (lambda x: x)
 
         self.tracker = pipeline.createObjectTracker() if tracker else None
 
@@ -115,7 +117,7 @@ class NNComponent(Component):
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
 
         if self._blob is None:
-            self._blob = dai.OpenVINO.Blob(self._blobFromConfig(self._config['model'], version))
+            self._blob = dai.OpenVINO.Blob(self._blobFromConfig(self._config['model'], dai.OpenVINO.Version.VERSION_2022_1))
 
         # TODO: update NN input based on camera resolution
         self.node.setBlob(self._blob)
@@ -156,7 +158,9 @@ class NNComponent(Component):
             self.node.input.setQueueSize(15)
         else:
             raise ValueError(
-                "'input' argument passed on init isn't supported! You can only use NnComponent or CameraComponent as the input.")
+                "'input' argument passed on init isn't supported!"
+                "You can only use NnComponent or CameraComponent as the input."
+            )
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
@@ -215,29 +219,30 @@ class NNComponent(Component):
             upperThreshold=args.get('maxDepth', None),
         )
 
-    def _parse_config(self, modelConfig: Union[Path, str, Dict]):
+    def _parse_config(self, model_config: Union[Path, str, Dict]):
         """
         Called when NNComponent is initialized. Reads config.json file and parses relevant setting from there
         """
-        parentFolder = None
-        if isinstance(modelConfig, str):
-            modelConfig = Path(modelConfig).resolve()
-        if isinstance(modelConfig, Path):
-            parentFolder = modelConfig.parent
-            with modelConfig.open() as f:
+        parent_folder = None
+        if isinstance(model_config, str):
+            model_config = Path(model_config).resolve()
+
+        if isinstance(model_config, Path):
+            parent_folder = model_config.parent
+            with model_config.open() as f:
                 self._config = Config().load(json.loads(f.read()))
         else:  # Dict
-            self._config = modelConfig
+            self._config = model_config
 
         # Get blob from the config file
         if 'model' in self._config:
             model = self._config['model']
 
             # Resolve the paths inside config
-            if parentFolder:
+            if parent_folder:
                 for name in ['blob', 'xml', 'bin']:
                     if name in model:
-                        model[name] = str((parentFolder / model[name]).resolve())
+                        model[name] = str((parent_folder / model[name]).resolve())
 
             if 'blob' in model:
                 self._blob = dai.OpenVINO.Blob(model['blob'])
@@ -251,7 +256,7 @@ class NNComponent(Component):
 
         # Handler.py logic to decode raw NN results into standardized AI results
         if 'handler' in self._config:
-            self._handler = loadModule(modelConfig.parent / self._config["handler"])
+            self._handler = loadModule(model_config.parent / self._config["handler"])
 
             if not callable(getattr(self._handler, "decode", None)):
                 raise RuntimeError("Custom model handler does not contain 'decode' method!")
@@ -494,7 +499,9 @@ class NNComponent(Component):
             else:
                 out = XoutNnResults(self._comp,
                                     self._comp._input.get_stream_xout(),  # CameraComponent
-                                    StreamXout(self._comp.node.id, self._comp.node.out))  # NnComponent
+                                    StreamXout(self._comp.node.id, self._comp.node.out),
+                                    decode_fn=self._comp._handler.decode if self._comp._handler else self._comp._decode_fn
+                                    )  # NnComponent
             return self._comp._create_xout(pipeline, out)
 
         def passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:

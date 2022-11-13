@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional, Tuple, Union, Callable
 
 import cv2
 import depthai as dai
@@ -444,13 +444,19 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
     def xstreams(self) -> List[StreamXout]:
         return [self.nn_results, self.frames]
 
-    def __init__(self, det_nn, frames: StreamXout, nn_results: StreamXout):
+    def __init__(self,
+                 det_nn,
+                 frames: StreamXout,
+                 nn_results: StreamXout,
+                 decode_fn: Optional[Callable] = None):
         self.nn_results = nn_results
         self.det_nn = det_nn
         # Multiple inheritance init
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, nn_results])
         # Save StreamXout before initializing super()!
+
+        self.decode_fn = decode_fn
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
         if det_nn._labels:
@@ -512,7 +518,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         packet = DetectionPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
-            msgs[self.nn_results.name],
+            msgs[self.nn_results.name] if self.decode_fn is None else self.decode_fn(msgs[self.nn_results.name])
         )
         self.queue.put(packet, block=False)
 
