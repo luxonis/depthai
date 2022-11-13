@@ -74,12 +74,14 @@ An alternative to Rosbags are `mcap files <https://github.com/foxglove/mcap>`__ 
 You can find `MCAP recording example here <https://github.com/luxonis/depthai/blob/main/depthai_sdk/examples/recording/mcap-record.py>`__.
 Currently supported streams:
 
-- MJPEG encoded color/left/right/disparity. Lossless MJPEG isn't supported by Foxglove studio, and neither is H264/H265
+- MJPEG encoded color/left/right/disparity. Lossless MJPEG/H264/H265 aren't supported by Foxglove Studio
 - Raw depth frame
 
 Standalone Foxglove studio streaming demo can be `found here <https://github.com/luxonis/depthai-experiments/blob/master/gen2-foxglove>`__.
 
-.. image:: 
+.. figure:: https://user-images.githubusercontent.com/18037362/201514899-b4a202d9-0330-4754-b2f5-041f51bdd917.png
+
+    Available topics in Foxglove Studio from MCAP recorded by mcap-recording.py example
 
 
 .. include::  ../includes/footer-short.rst
