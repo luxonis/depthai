@@ -365,9 +365,6 @@ class OakCamera:
                 tuningBlob=self._args.get('cameraTuning', None),
                 openvinoVersion=self._args.get('openvinoVersion', None),
             )
-            if 0 < len(self.device.getIrDrivers()):
-                self.device.setIrLaserDotProjectorBrightness(self._args.get('irDotBrightness', None) or 0)
-                self.device.setIrFloodLightBrightness(self._args.get('irFloodBrightness', None) or 0)
 
         return self._pipeline
 
@@ -384,7 +381,7 @@ class OakCamera:
             outputs = [outputs]  # to list
         self._out_templates.append(SyncConfig(outputs, callback, visualizer))
 
-    def record(self, outputs: Union[Callable, List[Callable]], path: str, type: RecordType = RecordType.VIDEO):
+    def record(self, outputs: Union[Callable, List[Callable]], path: str, type: RecordType = RecordType.VIDEO) -> Record:
         """
         Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
         them to the computer in desired format (raw, mp4, mcap, bag..).
@@ -395,7 +392,9 @@ class OakCamera:
         if isinstance(outputs, Callable):
             outputs = [outputs]  # to list
 
-        self._out_templates.append(RecordConfig(outputs, Record(Path(path).resolve(), type)))
+        record = Record(Path(path).resolve(), type)
+        self._out_templates.append(RecordConfig(outputs, record))
+        return record
 
     def show_graph(self):
         """
