@@ -75,7 +75,8 @@ You can find `MCAP recording example here <https://github.com/luxonis/depthai/bl
 Currently supported streams:
 
 - MJPEG encoded color/left/right/disparity. Lossless MJPEG/H264/H265 aren't supported by Foxglove Studio
-- Raw depth frame
+- Non-encoded color/left/right/disparity/depth frames
+- Pointcloud, enable with ``recorder.config_mcap(pointcloud=True)``. It converts depth frame to pointcloud on the host
 
 Standalone Foxglove studio streaming demo can be `found here <https://github.com/luxonis/depthai-experiments/blob/master/gen2-foxglove>`__.
 
