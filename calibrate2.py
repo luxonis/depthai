@@ -313,7 +313,13 @@ class Main:
     images_captured_polygon = 0
     images_captured = 0
 
-    def __init__(self, options, show_img=cv2.imshow, waitKey=cv2.waitKey):
+    def __init__(self, options, show_img=cv2.imshow, waitKey=cv2.waitKey, mxid=None):
+        # self.device = dai.Device(deviceInfo= dai.Device.getAllAvailableDevices()[0])
+        if mxid is None:
+            self.device = dai.Device()
+        else:
+            (result, device_info) = dai.Device.getDeviceByMxId(mxid)
+            self.device = dai.Device(device_info)
         global debug
         # self.args = parse_args()
         self.args = Bunch(options)
@@ -355,9 +361,8 @@ class Main:
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
 
-        self.device = dai.Device()
-        if hasattr(self.device, 'getConnectedCameraProperties'):
-            cameraProperties = self.device.getConnectedCameraProperties()
+        if hasattr(self.device, 'getConnectedCameraFeatures'):
+            cameraProperties = self.device.getConnectedCameraFeatures()
             for properties in cameraProperties:
                 for in_cam in self.board_config['cameras'].keys():
                     cam_info = self.board_config['cameras'][in_cam]
