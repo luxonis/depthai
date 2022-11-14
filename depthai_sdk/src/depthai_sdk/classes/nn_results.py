@@ -12,6 +12,9 @@ from depthai import NNData
 
 
 class GenericNNOutput:
+    """
+    Generic NN output, to be used for higher-level abstractions (eg. automatic visualization of results).
+    """
     def __init__(self, nn_data):
         self.nn_data = nn_data
 
@@ -21,7 +24,7 @@ class GenericNNOutput:
 @dataclass
 class Detections(GenericNNOutput):
     """
-    Object detection results, standarized with dai.ImgDetections
+    Detection results containing bounding boxes, labels and confidences.
     """
 
     def __init__(self, nn_data: NNData):
@@ -43,8 +46,9 @@ class Detections(GenericNNOutput):
 @dataclass
 class SemanticSegmentation(GenericNNOutput):  # In core, extend from NNData
     """
-    Provides class for each pixel on the frame.
-    Examples: DeeplabV3, Lanenet, road-semgentation-adas-0001
+    Semantic segmentation results, with a mask for each class.
+
+    Examples: `DeeplabV3`, `Lanenet`, `road-semgentation-adas-0001`.
     """
 
     def __init__(self, nn_data: NNData, mask: List[np.ndarray]):
@@ -57,8 +61,9 @@ class SemanticSegmentation(GenericNNOutput):  # In core, extend from NNData
 @dataclass
 class ImgLandmarks(GenericNNOutput):  # In core, extend from NNData
     """
-    Provides location of a landmark, eg. joint landmarks, face landmarks, hand landmarks
-    Examples: human-pose-estimation-0001, openpose2, facial-landmarks-68, landmarks-regression-retail-0009
+    Landmarks results, with a list of landmarks and pairs of landmarks to draw lines between.
+
+    Examples: `human-pose-estimation-0001`, `openpose2`, `facial-landmarks-68`, `landmarks-regression-retail-0009`.
     """
 
     def __init__(self,
@@ -78,6 +83,9 @@ class ImgLandmarks(GenericNNOutput):  # In core, extend from NNData
 
 @dataclass
 class InstanceSegmentation(GenericNNOutput):
+    """
+    Instance segmentation results, with a mask for each instance.
+    """
     def __init__(self, nn_data: NNData, masks: List[np.ndarray], labels: List[int]):
         super().__init__(nn_data)
 
