@@ -488,7 +488,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         if isinstance(packet, TrackerPacket):
             pass  # TrackerPacket draws detection boxes itself
-        else:
+        elif isinstance(packet.img_detections, dai.ImgDetections):
             # Add detections to packet
             for detection in packet.img_detections.detections:
                 d = _Detection()
