@@ -3,6 +3,8 @@ from typing import Literal, Dict, Union
 from datetime import datetime
 import requests
 import os
+import json
+import numpy as np
 
 CACHE_FILE_NAME = os.environ.get('CACHE_FILE_NAME', 'results_cache.jsonl')
 CACHE_DIRECTORY = os.environ.get('CACHE_DIRECTORY', '')
@@ -12,6 +14,12 @@ API_KEY = os.environ.get('API_KEY', '1234')
 
 print(f'Stats server API: {STATS_SERVER_URL}, API key: {API_KEY}')
 
+class NumpyArrayEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
+
 def add_result(
 	stage: Literal['calib', 'test'], 
 	device_id: str, 
@@ -20,7 +28,8 @@ def add_result(
 	library_version: str,
 	start_time: datetime,
 	end_time: datetime,
-	result_data: Dict
+	result_data: Dict,
+	error: Union[str, None] = None
 ):
 	"""
 	Adds a result to the cache.
@@ -34,11 +43,12 @@ def add_result(
 		'library_version': library_version,
 		'start_time': start_time.isoformat(),
 		'end_time': end_time.isoformat(),
-		'result_data': result_data
+		'result_data': result_data,
+		'error': error
 	}
 
 	# add to cache
-	with jsonlines.open(CACHE_FILE_PATH, mode='a') as writer:
+	with jsonlines.open(CACHE_FILE_PATH, mode='a', dumps=lambda o: json.dumps(o, cls=NumpyArrayEncoder)) as writer:
 		writer.write(result)
 
 def sync():
