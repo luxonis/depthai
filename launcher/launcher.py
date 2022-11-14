@@ -4,6 +4,9 @@
 
 # Standard imports
 import os, sys, subprocess, time, threading, argparse, datetime
+print(f"\nSYSTEM CHECK\n")
+print(f"{sys.prefix = }\n{sys.base_prefix = }")
+
 import re
 from pathlib import Path
 # Import splash screen
@@ -13,6 +16,7 @@ from packaging import version
 # PyQt5
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+print(f"SYS EXECUTABLE: {sys.executable}")
 # Constants
 SCRIPT_DIRECTORY=Path(os.path.abspath(os.path.dirname(__file__)))
 DEPTHAI_DEMO_SCRIPT='depthai_demo.py'
