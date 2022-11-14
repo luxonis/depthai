@@ -7,7 +7,7 @@ from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point, Transform
 # from visualization_msgs.msg import ImageMarker
 from geometry_msgs.msg import TransformStamped
 from genpy.rostime import Time
-from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField  # s, PointCloud
+from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField, Imu  # s, PointCloud
 import std_msgs
 from tf.msg import tfMessage
 
@@ -40,6 +40,42 @@ class DepthAi2Ros1:
         msg.header = self.header(imgFrame)
         msg.format = "jpeg"
         msg.data = np.array(imgFrame.getData()).tobytes()
+        return msg
+
+    def Imu(self, accel: dai.IMUReportAccelerometer, gyro: dai.IMUReportGyroscope,
+            linear_accel_cov: float = 0., angular_velocity_cov: float = 0) -> Imu:
+        msg = Imu()
+
+        msg.linear_acceleration.x = accel.x
+        msg.linear_acceleration.y = accel.y
+        msg.linear_acceleration.z = accel.z
+
+        msg.angular_velocity.x = gyro.x
+        msg.angular_velocity.y = gyro.y
+        msg.angular_velocity.z = gyro.z
+
+        msg.orientation.x = 0.0
+        msg.orientation.y = 0.0
+        msg.orientation.z = 0.0
+        msg.orientation.w = 1.0
+
+        msg.orientation_covariance = [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        msg.linear_acceleration_covariance = [linear_accel_cov, 0.0, 0.0, 0.0, linear_accel_cov, 0.0, 0.0, 0.0, linear_accel_cov]
+        msg.angular_velocity_covariance = [angular_velocity_cov, 0.0, 0.0, 0.0, angular_velocity_cov, 0.0, 0.0, 0.0, angular_velocity_cov]
+
+        # msg.header.frame_id = _frameName;
+        # endif
+
+        # if (_syncMode == ImuSyncMethod::LINEAR_INTERPOLATE_ACCEL) {
+        # interpMsg.header.stamp = getFrameTime(_rosBaseTime, _steadyBaseTime, gyro.timestamp.get());
+        # } else if (_syncMode == ImuSyncMethod::
+        #     LINEAR_INTERPOLATE_GYRO) {
+        #     interpMsg.header.stamp = getFrameTime(_rosBaseTime, _steadyBaseTime, accel.timestamp.get());
+        # } else {
+        #     interpMsg.header.stamp = getFrameTime(_rosBaseTime, _steadyBaseTime, accel.timestamp.get());
+        # }
+
+
         return msg
 
     def Image(self, imgFrame: dai.ImgFrame) -> Image:
