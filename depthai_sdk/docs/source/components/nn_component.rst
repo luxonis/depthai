@@ -40,9 +40,62 @@ Component outputs
 - ``out.twostage_crops`` - Streams 2. stage cropped frames to the host. Produces :ref:`FramePacket`.
 - ``out.tracker`` - Streams `ObjectTracker's <https://docs.luxonis.com/projects/api/en/latest/components/nodes/object_tracker/>`__ tracklets and high-res frames that were downscaled and used for inferencing. Produces :ref:`TrackerPacket`.
 
+Decoding outputs
+#################
+
+NNComponent allows user to define their own decoding functions. There is a set of standardized outputs:
+
+- :class:`Detections <depthai_sdk.classes.nn_results.Detections>`
+- :class:`SemanticSegmentation <depthai_sdk.classes.nn_results.SemanticSegmentation>`
+- :class:`ImgLandmarks <depthai_sdk.classes.nn_results.ImgLandmarks>`
+- :class:`InstanceSegmentation <depthai_sdk.classes.nn_results.InstanceSegmentation>`
+
+Example usage:
+
+.. code-block:: python
+
+    import numpy as np
+    from depthai import NNData
+
+    from depthai_sdk import OakCamera, Detections
+    from depthai_sdk.callback_context import VisualizeContext
+
+
+    def decode(nn_data: NNData):
+        layer = nn_data.getFirstLayerFp16()
+        results = np.array(layer).reshape((1, 1, -1, 7))
+        dets = Detections(nn_data)
+
+        for result in results[0][0]:
+            if result[2] > 0.5:
+                dets.add(result[1], result[2], result[3:])
+
+        return dets
+
+
+    def callback(ctx: VisualizeContext):
+        packet = ctx.packet
+        detections: Detections = packet.img_detections
+        ...
+
+
+    with OakCamera() as oak:
+        color = oak.create_camera('color')
+
+        nn = oak.create_nn(..., color, decode_fn=decode)
+
+        oak.visualize(nn, callback=callback)
+        oak.start(blocking=True)
+
+
 Reference
 #########
 
 .. autoclass:: depthai_sdk.NNComponent
+    :members:
+    :undoc-members:
+
+
+.. automodule:: depthai_sdk.classes.nn_results
     :members:
     :undoc-members:
