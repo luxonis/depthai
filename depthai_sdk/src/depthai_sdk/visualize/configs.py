@@ -58,7 +58,7 @@ class DetectionConfig:
     thickness: int = 1
     fill_transparency: float = 0.15
     box_roundness: int = 0
-    color: Tuple[int, int, int] = (255, 255, 255)
+    color: Tuple[int, int, int] = None
     bbox_style: BboxStyle = BboxStyle.RECTANGLE
     line_width: float = 0.5
     line_height: float = 0.5
