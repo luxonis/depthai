@@ -27,7 +27,8 @@
        - name: Install dependencies
          run: |
            ln -snf /usr/share/zoneinfo/UTC /etc/localtime && echo UTC > /etc/timezone
-           sed '/udevadm control --reload-rules && sudo udevadm trigger/d' $(curl -fL https://docs.luxonis.com/install_dependencies.sh) > tmp_script.sh
+           curl -fL https://docs.luxonis.com/install_dependencies.sh > install_dependencies.sh
+           sed '/udevadm control --reload-rules && sudo udevadm trigger/d' install_dependencies.sh > tmp_script.sh
            bash tmp_script.sh
        - name: Install example requirements
          run: |
@@ -38,8 +39,8 @@
        - uses: actions/checkout@v3
        - name: Install dependencies
          run: |
-           ln -snf /usr/share/zoneinfo/UTC /etc/localtime && echo UTC > /etc/timezone
-           sed '/udevadm control --reload-rules && sudo udevadm trigger/d' $(curl -fL https://docs.luxonis.com/install_dependencies.sh) > tmp_script.sh
+           curl -fL https://docs.luxonis.com/install_dependencies.sh > install_dependencies.sh
+           sed '/udevadm control --reload-rules && sudo udevadm trigger/d' install_dependencies.sh > tmp_script.sh
            bash tmp_script.sh
        - name: Install example requirements
          run: |
