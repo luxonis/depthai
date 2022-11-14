@@ -296,7 +296,8 @@ class VisDetections(GenericObject):
             # TODO can normalize accept frame shape?
             normalized_bbox = self.normalizer.normalize(mock_frame, bbox) if self.normalizer else bbox
 
-            if self.label_map:
+            color = detection_config.color
+            if color is None and self.label_map:
                 label, color = self.label_map[detection.label]
             else:
                 label, color = str(detection.label), detection_config.color
