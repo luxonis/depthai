@@ -127,6 +127,7 @@ class OakCamera:
                   nnType: Optional[str] = None,
                   tracker: bool = False,  # Enable object tracker - only for Object detection models
                   spatial: Union[None, bool, StereoComponent] = None,
+                  decode_fn: Optional[Callable] = None,
                   ) -> NNComponent:
         """
         Creates Neural Network component.
@@ -137,6 +138,7 @@ class OakCamera:
             nnType (str): Type of the network (yolo/mobilenet) for on-device NN result decoding (only needed if blob path was specified)
             tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
+            decode_fn: Custom decoding function for the model's output
         """
         comp = NNComponent(self._pipeline,
                            model=model,
@@ -144,6 +146,7 @@ class OakCamera:
                            nnType=nnType,
                            tracker=tracker,
                            spatial=spatial,
+                           decode_fn=decode_fn,
                            replay=self.replay,
                            args=self._args)
         self._components.append(comp)
