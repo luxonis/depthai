@@ -109,11 +109,11 @@ class Record(XoutSeqSync):
         self.process.start()
 
     # TODO: support pointclouds in MCAP
-    # def config_mcap(self, pointcloud: bool):
-    #     if self.type != RecordType.MCAP:
-    #         print(f"Recorder type is {self.type}, not MCAP! Config attempt ignored.")
-    #         return
-    #     self.recorder.setPointcloud(pointcloud)
+    def config_mcap(self, pointcloud: bool):
+        if self.type != RecordType.MCAP:
+            print(f"Recorder type is {self.type}, not MCAP! Config attempt ignored.")
+            return
+        self.recorder.setPointcloud(pointcloud)
 
     # def config_video(self, ):
     # Nothing to configure for video recorder

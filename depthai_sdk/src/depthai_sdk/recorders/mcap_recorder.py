@@ -47,16 +47,17 @@ class McapRecorder(Recorder):
         self._pcl = enable
 
     def write(self, name: str, frame: dai.ImgFrame):
-        if self._stream_type[name].isDepth():
-            if self._pcl:  # Generate pointcloud from depth and save it
-                msg = self.converter.PointCloud2(frame)
-                self.ros_writer.write_message(f"pointcloud/raw", msg)
-            else:  # Save raw depth frame
-                msg = self.converter.Image(frame)
-                self.ros_writer.write_message(f"depth/raw", msg)
+        if self._stream_type[name].isDepth() and self._pcl:
+            msg = self.converter.PointCloud2(frame)
+            self.ros_writer.write_message(f"pointcloud/raw", msg)
+            # tf = self.converter.TfMessage(frame)
+            # self.ros_writer.write_message(f"pointcloud/tf", tf)
         elif self._stream_type[name].isMjpeg():
             msg = self.converter.CompressedImage(frame)
             self.ros_writer.write_message(f"{name}/compressed", msg)
+        else: # Non-encoded frame; rgb/mono/depth
+            msg = self.converter.Image(frame)
+            self.ros_writer.write_message(f"{name}/raw", msg)
 
     def close(self) -> None:
         if self._closed: return

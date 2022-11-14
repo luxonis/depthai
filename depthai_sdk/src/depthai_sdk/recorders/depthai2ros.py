@@ -1,12 +1,15 @@
+from typing import Tuple
+
 import depthai as dai
 import numpy as np
-# from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point
+from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point, Transform
 # from std_msgs.msg import Header, ColorRGBA, String
 # from visualization_msgs.msg import ImageMarker
-# from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point
+from geometry_msgs.msg import TransformStamped
 from genpy.rostime import Time
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField  # s, PointCloud
 import std_msgs
+from tf.msg import tfMessage
 
 """
 --extra-index-url https://rospypi.github.io/simple/
@@ -14,6 +17,8 @@ sensor_msgs
 geometry_msgs
 std_msgs
 genpy
+tf2-msgs
+tf2-ros
 """
 
 class DepthAi2Ros1:
@@ -39,15 +44,40 @@ class DepthAi2Ros1:
 
     def Image(self, imgFrame: dai.ImgFrame) -> Image:
         msg = Image()
-        # print(imgFrame.getType()) # Check whether this is RGB888p frame
-        # dai.ImgFrame.Type.RAW16 == depth
         msg.header = self.header(imgFrame)
         msg.height = imgFrame.getHeight()
         msg.width = imgFrame.getWidth()
-        msg.encoding = 'mono16'  # if rgb else 'mono16', # For depth
+        msg.step = imgFrame.getWidth()
         msg.is_bigendian = 0
-        msg.step = imgFrame.getWidth() * 2  # *2 for mono16 (depth)
-        msg.data = np.array(imgFrame.getData()).tobytes()
+
+        type = imgFrame.getType()
+        print('new frame', type)
+        TYPE = dai.ImgFrame.Type
+        if type == TYPE.RAW16: # Depth
+            msg.encoding = 'mono16'
+            msg.step *= 2 # 2 bytes per pixel
+            msg.data = imgFrame.getData().tobytes()
+        elif type in [TYPE.GRAY8, TYPE.RAW8]: # Mono frame
+            msg.encoding = 'mono8'
+            msg.data = imgFrame.getData().tobytes() #np.array(imgFrame.getFrame()).tobytes()
+        else:
+            msg.encoding = 'bgr8'
+            msg.data = np.array(imgFrame.getCvFrame()).tobytes()
+        return msg
+
+    def TfMessage(self,
+           imgFrame: dai.ImgFrame,
+           translation: Tuple[float,float,float] = (0., 0., 0.),
+           rotation: Tuple[float,float,float, float] = (0., 0., 0., 0.)) -> tfMessage:
+        msg = tfMessage()
+        tf = TransformStamped()
+        tf.header = self.header(imgFrame)
+        tf.child_frame_id = str(imgFrame.getSequenceNum())
+        tf.transform = Transform(
+            translation = Vector3(x=translation[0], y=translation[1], z=translation[2]),
+            rotation = Quaternion(x=rotation[0], y=rotation[1], z=rotation[2], w=rotation[3])
+        )
+        msg.transforms.append(tf)
         return msg
 
     def PointCloud2(self, imgFrame: dai.ImgFrame):

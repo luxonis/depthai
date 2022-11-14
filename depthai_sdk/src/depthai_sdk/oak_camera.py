@@ -392,6 +392,10 @@ class OakCamera:
         if isinstance(outputs, Callable):
             outputs = [outputs]  # to list
 
+        for i in range(len(outputs)):
+            if isinstance(outputs[i], Component):
+                outputs[i] = outputs[i].out.main
+
         record = Record(Path(path).resolve(), type)
         self._out_templates.append(RecordConfig(outputs, record))
         return record
