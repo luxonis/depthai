@@ -111,12 +111,13 @@ class CameraComponent(Component):
                 scale = getClosestIspScale(self.node.getIspSize(), width=1200, videoEncoder=(self.encoder is not None))
                 self.node.setIspScale(*scale)
 
-            self.node.setVideoSize(*getClosestVideoSize(*self.node.getIspSize()))
+            videoSize = getClosestVideoSize(*self.node.getIspSize(), videoEncoder=(self.encoder is not None))
+            self.node.setVideoSize(*videoSize)
             self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 
-            self.node.setPreviewSize(*self.node.getIspSize())
-            self.stream_size = self.node.getPreviewSize()
-            self.stream = self.node.preview if self.encoder is None else self.node.video
+            self.node.setPreviewSize(*videoSize)
+            self.stream_size = videoSize
+            self.stream = self.node.preview
 
         elif isinstance(self.node, dai.node.MonoCamera):
             self.stream_size = self.node.getResolutionSize()

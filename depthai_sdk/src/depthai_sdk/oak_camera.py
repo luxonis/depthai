@@ -351,9 +351,6 @@ class OakCamera:
                 tuningBlob=self._args.get('cameraTuning', None),
                 openvinoVersion=self._args.get('openvinoVersion', None),
             )
-            if 0 < len(self.device.getIrDrivers()):
-                self.device.setIrLaserDotProjectorBrightness(self._args.get('irDotBrightness', None) or 0)
-                self.device.setIrFloodLightBrightness(self._args.get('irFloodBrightness', None) or 0)
 
         return self._pipeline
 
@@ -386,9 +383,9 @@ class OakCamera:
         if isinstance(outputs, Callable):
             outputs = [outputs]  # to list
 
-        self._out_templates.append(
-            RecordConfig(outputs, Record(Path(path).resolve(), type))
-        )
+        record = Record(Path(path).resolve(), type)
+        self._out_templates.append(RecordConfig(outputs, record))
+        return record
 
     def show_graph(self):
         """

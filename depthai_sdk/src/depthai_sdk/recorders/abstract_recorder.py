@@ -1,21 +1,25 @@
 from abc import ABC, abstractmethod
 from enum import IntEnum
+from typing import List
 
 import depthai as dai
 
 import depthai_sdk.oak_outputs.xout as xouts
 from depthai_sdk.oak_outputs.xout_base import XoutBase
-
+from pathlib import Path
 
 class Recorder(ABC):
     @abstractmethod
     def write(self, name: str, frame: dai.ImgFrame):
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def close(self):
-        pass
+        raise NotImplementedError()
 
+    @abstractmethod
+    def update(self, path: Path, device: dai.Device, xouts: List[XoutFrames]):
+        raise NotImplementedError()
 
 class OakStream:
     class StreamType(IntEnum):
