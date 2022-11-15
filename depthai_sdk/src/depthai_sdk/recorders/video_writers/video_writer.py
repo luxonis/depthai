@@ -1,6 +1,5 @@
 import datetime
 from collections import deque
-from multiprocessing import Queue
 from pathlib import Path
 from typing import Union
 
@@ -80,8 +79,15 @@ class VideoWriter(AbstractWriter):
         # Copy queue
         buffer_copy = self._buffer.copy()
 
+        n_skip_frames = int(self._fps * (self._keep_last_seconds - seconds))
         while len(buffer_copy) > 0:
-            el = buffer_copy.pop()
+            # Wait til we reach the desired time
+            if n_skip_frames > 0:
+                n_skip_frames -= 1
+                buffer_copy.popleft()
+                continue
+
+            el = buffer_copy.popleft()
             snapshot_file.write(el if isinstance(el, np.ndarray) else el.getCvFrame())
 
         snapshot_file.release()
