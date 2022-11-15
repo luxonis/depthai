@@ -400,7 +400,7 @@ class OakCamera:
 
     def visualize(self,
                   output: Union[List, Callable, Component],
-                  record: Optional[str] = None,
+                  record_dir: Optional[str] = None,
                   keep_last_seconds: int = 0,
                   scale: float = None,
                   fps=False,
@@ -409,16 +409,16 @@ class OakCamera:
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
         Args:
             output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
-            record: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
+            record_dir: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
             scale: Scale the output window by this factor
             fps: Whether to show FPS on the output window
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
-        if record and isinstance(output, List):
+        if record_dir and isinstance(output, List):
             raise ValueError('Recording visualizer is only supported for a single output.')
 
         visualizer = Visualizer(scale, fps)
-        self._callback(output, callback, visualizer, record, keep_last_seconds)
+        self._callback(output, callback, visualizer, record_dir, keep_last_seconds)
 
         return visualizer
 
@@ -426,17 +426,17 @@ class OakCamera:
                   output: Union[List, Callable, Component],
                   callback: Callable,
                   visualizer: Visualizer = None,
-                  record: Optional[str] = None,
+                  record_dir: Optional[str] = None,
                   keep_last_seconds: int = 0):
         if isinstance(output, List):
             for element in output:
-                self._callback(element, callback, visualizer, record)
+                self._callback(element, callback, visualizer, record_dir)
             return
 
         if isinstance(output, Component):
             output = output.out.main
 
-        self._out_templates.append(OutputConfig(output, callback, visualizer, record, keep_last_seconds))
+        self._out_templates.append(OutputConfig(output, callback, visualizer, record_dir, keep_last_seconds))
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):
         """

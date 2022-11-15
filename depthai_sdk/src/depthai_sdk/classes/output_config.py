@@ -1,4 +1,5 @@
 from abc import abstractmethod
+from pathlib import Path
 from typing import Optional, Callable, List
 
 import depthai as dai
@@ -8,6 +9,7 @@ from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout import XoutFrames
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 from depthai_sdk.record import Record
+from depthai_sdk.recorders.video_recorder import VideoRecorder
 from depthai_sdk.visualize import Visualizer
 
 
@@ -28,12 +30,12 @@ class OutputConfig(BaseConfig):
     def __init__(self, output: Callable,
                  callback: Callable,
                  visualizer: Visualizer = None,
-                 record: Optional[str] = None,
+                 record_dir: Optional[str] = None,
                  keep_last_seconds: int = 0):
         self.output = output
         self.callback = callback
         self.visualizer = visualizer
-        self.record = record
+        self.record_dir = record_dir
         self.keep_last_seconds = keep_last_seconds
 
     def find_new_name(self, name: str, names: List[str]):
@@ -56,9 +58,13 @@ class OutputConfig(BaseConfig):
             xoutbase.name = self.find_new_name(xoutbase.name, names)
         names.append(xoutbase.name)
 
+        recorder = None
+        if self.record_dir:
+            recorder = VideoRecorder(keep_last_seconds=self.keep_last_seconds)
+            recorder.update(Path(self.record_dir), device, [xoutbase])
+
         if self.visualizer:
-            xoutbase.setup_visualize(self.visualizer, xoutbase.name,
-                                     self.record, self.keep_last_seconds)
+            xoutbase.setup_visualize(self.visualizer, xoutbase.name, recorder)
 
         return [xoutbase]
 
