@@ -1,12 +1,10 @@
 from abc import abstractmethod
-from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union, Callable
 
 import cv2
 import depthai as dai
 import numpy as np
 from distinctipy import distinctipy
-from matplotlib import pyplot as plt
 
 from depthai_sdk.callback_context import VisualizeContext
 from depthai_sdk.classes.packets import (
@@ -21,6 +19,7 @@ from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
 from depthai_sdk.recorders.video_recorder import VideoRecorder
+from depthai_sdk.recorders.video_writers import AvWriter
 from depthai_sdk.visualize import Visualizer
 from depthai_sdk.visualize.configs import StereoColor
 from depthai_sdk.visualize.configs import TextPosition
@@ -42,32 +41,20 @@ class XoutFrames(XoutBase):
     name: str = "Frames"
     fps: float
     frames: StreamXout
-    _frame_shape: Tuple[int, int] = None
-    _scale: Union[None, float, Tuple[int, int]] = None
-    _show_fps: bool = False
-    _recording_path: Optional[Path] = None
-    # _video_writer: Optional[cv2.VideoWriter] = None
-    _fourcc_codec_code = None
-    _frames_buffer: List
-    _FRAMES_TO_BUFFER: int = 20
 
     def __init__(self, frames: StreamXout, fps: float = 30):
         self.frames = frames
         self.fps = fps
-        self._frames_buffer = []
         self._video_recorder = None
         super().__init__()
 
     def setup_visualize(self,
                         visualizer: Visualizer,
                         name: str = None,
-                        recording_path: Optional[str] = None,
-                        keep_last_seconds: int = 0):
+                        recorder: VideoRecorder = None):
         self._visualizer = visualizer
         self.name = name or self.name
-
-        if recording_path:
-            self._video_recorder = VideoRecorder(Path(recording_path), [self], keep_last_seconds=keep_last_seconds)
+        self._video_recorder = recorder
 
     def visualize(self, packet: FramePacket) -> None:
         """
@@ -96,7 +83,12 @@ class XoutFrames(XoutBase):
                 pass
 
         if self._video_recorder:
-            self._video_recorder.write(self.frames.friendly_name or self.frames.name, packet.frame)
+            xout_name = self.frames.friendly_name or self.frames.name
+            # TODO not ideal to check it this way
+            if isinstance(self._video_recorder._writer[xout_name], AvWriter):
+                self._video_recorder.write(xout_name, packet.imgFrame)
+            else:
+                self._video_recorder.write(xout_name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -128,7 +120,7 @@ class XoutMjpeg(XoutFrames):
         self.flag = cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE
         self.lossless = lossless
         self.fps = fps
-        if lossless and self._vis:
+        if lossless and self._visualizer:
             raise ValueError('Visualizing Lossless MJPEG stream is not supported!')
 
     def visualize(self, packet: FramePacket):
