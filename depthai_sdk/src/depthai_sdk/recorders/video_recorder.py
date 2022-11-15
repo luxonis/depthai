@@ -1,5 +1,4 @@
-from pathlib import Path
-from typing import List, Dict, Any
+from typing import Dict, Any
 
 from .abstract_recorder import *
 
@@ -12,12 +11,18 @@ class VideoRecorder(Recorder):
     _closed = False
     _writers: Dict[str, Any]
 
-    def __init__(self, folder: Path, xouts: List['XoutFrames'], keep_last_seconds: int = 0):
-        self.folder = folder
+    def __init__(self, keep_last_seconds: int = 0):
         self.keep_last_seconds = keep_last_seconds
-
+        self.folder = None
         self._stream_type = dict()
         self._writer = dict()
+
+    def __getitem__(self, item):
+        return self._writer[item]
+
+    def update(self, path: Path, device: dai.Device, xouts: List['XoutFrames']):
+        self.folder = path
+        self.folder.mkdir(parents=True, exist_ok=True)
 
         for xout in xouts:
             name = xout.frames.friendly_name or xout.frames.name
@@ -25,17 +30,17 @@ class VideoRecorder(Recorder):
             fourcc = stream.fourcc()  # TODO add default fourcc? stream.fourcc() can be None.
             if stream.isRaw():
                 from .video_writers.video_writer import VideoWriter
-                self._writer[name] = VideoWriter(self.folder, name, fourcc, xout.fps, keep_last_seconds)
+                self._writer[name] = VideoWriter(self.folder, name, fourcc, xout.fps, self.keep_last_seconds)
             else:
                 try:
                     from .video_writers.av_writer import AvWriter
-                    self._writer[name] = AvWriter(self.folder, name, fourcc, xout.fps)
+                    self._writer[name] = AvWriter(self.folder, name, fourcc, xout.fps, self.keep_last_seconds)
                 except Exception as e:
                     # TODO here can be other errors, not only import error
                     print('Exception while creating AvWriter: ', e)
                     print('Falling back to FileWriter, saving uncontainerized encoded streams.')
                     from .video_writers.file_writer import FileWriter
-                    self._writer[name] = FileWriter(self.folder, name, fourcc)
+                    self._writer[name] = FileWriter(self.folder, name, fourcc, self.keep_last_seconds)
 
     def write(self, name: str, frame: dai.ImgFrame):
         self._writer[name].write(frame)
