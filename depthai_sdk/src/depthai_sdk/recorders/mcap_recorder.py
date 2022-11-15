@@ -29,7 +29,7 @@ class McapRecorder(Recorder):
 
         self._stream_type = dict()
         for xout in xouts:
-            name = xout.frames.friendly_name or xout.frames.name
+            name = xout.name
             codec = OakStream(xout)
             self._stream_type[name] = codec
 

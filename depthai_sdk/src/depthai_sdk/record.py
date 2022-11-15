@@ -83,22 +83,26 @@ class Record(XoutSeqSync):
         else:
             raise ValueError(f"Recording type '{self.type}' isn't supported!")
 
+    def no_sync(self, name: str, msg):
+        # self.frame_q.put(mapped)
+        print('NO SYNC', name, msg)
     def start(self, device: dai.Device, xouts: List[XoutFrames]):
         """
         Start recording process. This will create and start the pipeline,
         start recording threads, and initialize all queues.
         """
-        self._streams = [out.frames.name for out in xouts]  # required by XoutSeqSync
-        self.streamNum = len(self._streams)
+        if self.type == RecordType.VIDEO:
+            self._streams = [out.frames.name for out in xouts]  # required by XoutSeqSync
+            self.streamNum = len(xouts)
+            self.name_mapping = dict()
+            for xout in xouts:
+                self.name_mapping[xout.frames.name] = xout.name
+        else: # For MCAP/Ros bags we don't need msg syncing
+            self.newMsg = self.no_sync
 
-        self.name_mapping = dict()
-        for xout in xouts:
-            if xout.frames.friendly_name:
-                self.name_mapping[xout.frames.name] = xout.frames.friendly_name
 
         self.mxid = device.getMxId()
         self.path = self._createFolder(self.folder, self.mxid)
-
         calibData = device.readCalibration()
         calibData.eepromToJsonFile(str(self.path / "calib.json"))
 
