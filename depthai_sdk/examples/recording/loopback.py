@@ -17,16 +17,14 @@ def callback(ctx: VisualizeContext):
     VisualizerHelper.print(packet.frame, 'BottomRight!', FramePosition.BottomRight)
     cv2.imshow('frame', packet.frame)
 
-    # recorder
+    # Save the last 3 seconds after script every 10 seconds
     if i == FPS * 10:
-        recorders[packet.name.split(';')[-1]].get_last(10)
-
+        recorders['color'].get_last(3)
+        i = 0
     i += 1
 
 
 with OakCamera() as oak:
-    color = oak.create_camera('color', fps=FPS)
-    nn = oak.create_nn('mobilenet-ssd', color)
-
-    oak.visualize(nn, fps=True, callback=callback, record='recordings', keep_last_seconds=10)
+    color = oak.create_camera('color', resolution='1080p', fps=FPS)
+    oak.visualize(color.out.main, fps=True, callback=callback, record_dir='recordings', keep_last_seconds=10)
     oak.start(blocking=True)
