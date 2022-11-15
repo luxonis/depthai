@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 from enum import IntEnum
+from pathlib import Path
 from typing import List
 
 import depthai as dai
 
-import depthai_sdk.oak_outputs.xout as xouts
+import depthai_sdk.oak_outputs.xout as outputs
 from depthai_sdk.oak_outputs.xout_base import XoutBase
-from pathlib import Path
+
 
 class Recorder(ABC):
     @abstractmethod
@@ -18,8 +19,9 @@ class Recorder(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    def update(self, path: Path, device: dai.Device, xouts: List[XoutFrames]):
+    def update(self, path: Path, device: dai.Device, xouts: List['XoutFrames']):
         raise NotImplementedError()
+
 
 class OakStream:
     class StreamType(IntEnum):
@@ -32,18 +34,18 @@ class OakStream:
     type: StreamType
 
     def __init__(self, xout: XoutBase):
-        if isinstance(xout, xouts.XoutMjpeg):
+        if isinstance(xout, outputs.XoutMjpeg):
             self.type = self.StreamType.MJPEG
-        elif isinstance(xout, xouts.XoutH26x):
+        elif isinstance(xout, outputs.XoutH26x):
             if xout.profile == dai.VideoEncoderProperties.Profile.H265_MAIN:
                 self.type = self.StreamType.H265
             else:
                 self.type = self.StreamType.H264
-        elif isinstance(xout, xouts.XoutDepth):
+        elif isinstance(xout, outputs.XoutDepth):
             self.type = self.StreamType.RAW  # TODO is depth raw or should it be DEPTH?
-        elif isinstance(xout, xouts.XoutDisparity):
+        elif isinstance(xout, outputs.XoutDisparity):
             self.type = self.StreamType.RAW
-        elif isinstance(xout, xouts.XoutFrames):
+        elif isinstance(xout, outputs.XoutFrames):
             self.type = self.StreamType.RAW
         else:
             raise ValueError("You have passed invalid Component Output to the Recorder!")
