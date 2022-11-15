@@ -6,6 +6,7 @@
 import os, sys, subprocess, time, threading, argparse, datetime
 print(f"\nSYSTEM CHECK\n")
 print(f"{sys.prefix = }\n{sys.base_prefix = }")
+print(f"PYTHONPATH: {os.getenv('PYTHONPATH')}")
 
 import re
 from pathlib import Path
