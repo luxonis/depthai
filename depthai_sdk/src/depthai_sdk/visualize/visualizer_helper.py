@@ -44,13 +44,17 @@ class VisualizerHelper:
     line_type = cv2.LINE_AA
 
     @classmethod
-    def putText(cls, frame: np.ndarray,
+    def putText(cls,
+                frame: np.ndarray,
                 text: str,
                 coords: Tuple[int, int],
                 scale: float = 1.0,
                 backColor: Tuple[int, int, int] = None,
                 color: Tuple[int, int, int] = None):
         # Background text
+
+        frame = np.array(frame)
+
         cv2.putText(frame, text, coords, cls.text_type, scale,
                     color=backColor if backColor else cls.bg_color,
                     thickness=int(scale * 3),
@@ -62,7 +66,8 @@ class VisualizerHelper:
                     lineType=cls.line_type)
 
     @classmethod
-    def line(cls, frame: np.ndarray,
+    def line(cls,
+             frame: np.ndarray,
              p1: Tuple[int, int], p2: Tuple[int, int],
              color=None,
              thickness: int = 1) -> None:
