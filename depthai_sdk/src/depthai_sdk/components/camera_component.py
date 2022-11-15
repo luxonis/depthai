@@ -117,7 +117,7 @@ class CameraComponent(Component):
 
             self.node.setPreviewSize(*videoSize)
             self.stream_size = videoSize
-            self.stream = self.node.preview
+            self.stream = self.node.preview if self.encoder is None else self.node.video
 
         elif isinstance(self.node, dai.node.MonoCamera):
             self.stream_size = self.node.getResolutionSize()
