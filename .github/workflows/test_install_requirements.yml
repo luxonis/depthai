@@ -44,5 +44,6 @@
            bash tmp_script.sh
        - name: Install example requirements
          run: |
+           sudo rm -rf /Library/Developer/CommandLineTools
            sudo xcode-select --install
            python3 install_requirements.py
