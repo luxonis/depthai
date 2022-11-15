@@ -1,4 +1,4 @@
- name: Test requirements installation
+ name: OS Support
 
  on:
   workflow_dispatch:
@@ -9,7 +9,7 @@
 
  # A workflow run is made up of one or more jobs that can run sequentially or in parallel
  jobs:
-   install_dependencies_linux:
+   test_linux:
      runs-on: ubuntu-latest
      strategy:
        matrix:
@@ -33,8 +33,11 @@
        - name: Install example requirements
          run: |
            python3 install_requirements.py
-   install_dependencies_macos:
-      runs-on: macos-latest
+   test_macos:
+      strategy:
+        matrix:
+          os: ["macos-11", "macos-12"]
+      runs-on: ${{ matrix.os }}
       steps:
        - uses: actions/checkout@v3
        - name: Install dependencies
@@ -44,6 +47,17 @@
            bash tmp_script.sh
        - name: Install example requirements
          run: |
-           sudo rm -rf /Library/Developer/CommandLineTools
-           sudo xcode-select --install
            python3 install_requirements.py
+   test_windows:
+      runs-on: windows-latest
+      steps:
+      - name: Download chocolatey
+        shell: pwsh
+        run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
+      - name: Install dependencies
+        shell: pwsh
+        run: choco install cmake git python pycharm-community -y
+      - name: Install requrirements
+        run: |
+          python install_requirements.py
+
