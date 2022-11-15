@@ -828,6 +828,8 @@ class XoutIMU(XoutBase):
         super().__init__()
 
     def setup_visualize(self, visualizer: Visualizer, name: str = None, _=None):
+        from matplotlib import pyplot as plt
+
         self._visualizer = visualizer
         self.name = name or self.name
 
