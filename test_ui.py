@@ -1155,7 +1155,7 @@ class UiTests(QtWidgets.QMainWindow):
                     self.print_logs('Writing EEPROM...')
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                     eeprom_written = True
-        elif 'FFC' in test_type:
+        elif ('FFC' in test_type) and ('NOR' not in test_type):
             self.update_bootloader()
             with dai.Device() as device:
                 self.print_logs("Writing EEPROM... ")
