@@ -1437,9 +1437,6 @@ class UiTests(QtWidgets.QMainWindow):
             return False
 
     def save_csv(self):
-
-        results = {}
-
         if 'FFC-4P' in test_type:
             return
         path = os.path.realpath(__file__).replace("\\","/").rsplit('/', 1)[0] + '/tests_result/' + eepromDataJson['productName'] + '.csv'
@@ -1485,6 +1482,10 @@ class UiTests(QtWidgets.QMainWindow):
         file.close()
         self.print_logs('Test results for ' + eepromDataJson['productName'] + ' with id ' + self.depth_camera.id + ' had been saved!', 'GREEN')
 
+        results = {
+            'automatic_tests': test_result,
+            'operator_tests': operator_tests,
+        }
         stats_server_api.add_result(
             'test', self.depth_camera.id, self.depth_camera.device_name, self.depth_camera.bootloader_version, 
             dai.__version__, self.depth_camera.start_time, datetime.now(), results
