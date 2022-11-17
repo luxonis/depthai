@@ -163,7 +163,7 @@ class Worker(QtCore.QThread):
                         commit = ''
                         try:
                             commit = commitTag.split(' ')[0].strip()
-                            tag = commitTag.split(' ')[1].split('refs/tags/')[1].strip()
+                            tag = commitTag.split(' ')[1].split('refs/tags/')[1].split("^{}")[0].strip()
                         except Exception as ex:
                             print(f"Couldn't parse commit&tag line: {ex}")
 

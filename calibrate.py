@@ -97,13 +97,13 @@ def parse_args():
 
     Image capture requires the use of a printed OpenCV charuco calibration target applied to a flat surface(ex: sturdy cardboard).
     Default board size used in this script is 22x16. However you can send a customized one too.
-    When taking photos, ensure enough amount of markers are visible and images are crisp. 
+    When taking photos, ensure enough amount of markers are visible and images are crisp.
     The board does not need to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
 
     If the calibration checkerboard corners cannot be found, the user will be prompted to try that calibration pose again.
 
     The script requires a RMS error < 1.0 to generate a calibration file. If RMS exceeds this threshold, an error is displayed.
-    An average epipolar error of <1.5 is considered to be good, but not required. 
+    An average epipolar error of <1.5 is considered to be good, but not required.
 
     Example usage:
 
@@ -112,7 +112,7 @@ def parse_args():
 
     Only run image processing only with same board setup. Requires a set of saved capture images:
     python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM -m process
-    
+
     Delete all existing images before starting image capture:
     python3 calibrate.py -i delete
     '''
@@ -171,7 +171,7 @@ def parse_args():
             raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
-        
+
     return options
 
 class HostSync:
@@ -333,7 +333,7 @@ class Main:
         for properties in cameraProperties:
             if properties.sensorName == 'OV7251':
                 raise Exception(
-            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!") 
+            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
 
         self.device.startPipeline(pipeline)"""
         # self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
@@ -695,6 +695,7 @@ class Main:
         prev_time = None
         curr_time = None
         self.display_name = "left + right + rgb"
+        last_frame_time = time.time()
         # with self.get_pipeline() as pipeline:
         while not finished:
             current_left  = self.left_camera_queue.tryGet()
@@ -713,8 +714,16 @@ class Main:
                 recent_color = current_color
 
             if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
-                print("Continuing...")
+                if time.time() - last_frame_time > 5:
+                    if self.args.disableRgb:
+                        print("Error: Couldn't retrieve left and right frames for more than 5 seconds. Exiting...")
+                    else:
+                        print("Error: Couldn't retrieve left, rigth and color frames for more than 5 seconds. Exiting...")
+                    raise SystemExit(1)
+                cv2.waitKey(1)
                 continue
+
+            last_frame_time = time.time()
 
             recent_frames = [('left', recent_left), ('right', recent_right)]
             if not self.args.disableRgb:
@@ -842,7 +851,7 @@ class Main:
                         finished = True
                         cv2.destroyAllWindows()
                         break
-            
+
             if not self.args.disableRgb:
                 frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
@@ -859,7 +868,7 @@ class Main:
                     start_timer = False
                     capturing = True
                     print('Statrt capturing...')
-                
+
                 image_shape = combine_img.shape
                 cv2.putText(combine_img, str(timer),
                         (image_shape[1]//2, image_shape[0]//2), font,

@@ -2,6 +2,7 @@ from types import SimpleNamespace
 import depthai as dai
 
 from ..previews import Previews
+from typing import Tuple, Optional
 
 class PipelineManager:
     """
@@ -144,6 +145,7 @@ class PipelineManager:
         res=dai.ColorCameraProperties.SensorResolution.THE_1080_P,
         fps=30,
         fullFov=True,
+        ispScale: Optional[Tuple[int,int]] = None,
         orientation: dai.CameraImageOrientation=None,
         colorOrder=dai.ColorCameraProperties.ColorOrder.BGR,
         xout=False,
@@ -173,17 +175,24 @@ class PipelineManager:
             pipeline = self.pipeline
 
         if args is not None:
-            return self.createColorCam(
+            self.nodes.camRgb = self.createColorCam(
                 previewSize=(576, 320), # 1080P / 3
                 res=args.rgbResolution,
                 fps=args.rgbFps,
                 orientation=dict(args.cameraOrientation).get(Previews.color.name),
                 fullFov=not args.disableFullFovNn,
                 xout=Previews.color.name in args.show,
-                pipeline=pipeline
+                pipeline=pipeline,
+                ispScale=args.ispScale
             )
+            # Using CameraComponent's static function. Managers (including this one) will get deprecated when the full SDK
+            # refactor is complete.
+            from ..components.parser import parseColorCamControl
+            parseColorCamControl(vars(args), self.nodes.camRgb)
+            return self.nodes.camRgb
 
         self.nodes.camRgb = pipeline.createColorCamera()
+
         if previewSize is not None:
             self.nodes.camRgb.setPreviewSize(*previewSize)
         self.nodes.camRgb.setInterleaved(False)
@@ -193,6 +202,9 @@ class PipelineManager:
         if orientation is not None:
             self.nodes.camRgb.setImageOrientation(orientation)
         self.nodes.camRgb.setPreviewKeepAspectRatio(not fullFov)
+
+        if ispScale and len(ispScale) == 2:
+            self.nodes.camRgb.setIspScale(int(ispScale[0]), int(ispScale[1]))
 
         if xout:
             self.nodes.xoutRgb = pipeline.createXLinkOut()
@@ -418,11 +430,11 @@ class PipelineManager:
         self.nodes.stereo.setSubpixel(subpixel)
         if alignment is not None:
             self.nodes.stereo.setDepthAlign(alignment)
-            if alignment == dai.CameraBoardSocket.RGB:
+            if alignment == dai.CameraBoardSocket.RGB and 'camRgb' in dir(self.nodes):
                 self.nodes.stereo.setOutputSize(*self.nodes.camRgb.getPreviewSize())
-            elif alignment == dai.CameraBoardSocket.LEFT:
+            elif alignment == dai.CameraBoardSocket.LEFT and 'monoLeft' in dir(self.nodes):
                 self.nodes.stereo.setOutputSize(*self.nodes.monoLeft.getResolutionSize())
-            elif alignment == dai.CameraBoardSocket.RIGHT:
+            elif alignment == dai.CameraBoardSocket.RIGHT and 'monoRight' in dir(self.nodes):
                 self.nodes.stereo.setOutputSize(*self.nodes.monoRight.getResolutionSize())
 
         self._depthConfig = self.nodes.stereo.initialConfig.get()
@@ -496,6 +508,13 @@ class PipelineManager:
     def captureStill(self):
         ctrl = dai.CameraControl()
         ctrl.setCaptureStill(True)
+        self._rgbConfigInputQueue.send(ctrl)
+
+    # Added this function to send manual focus
+    # configuration to inputControl queue.
+    def setManualFocus(self, focus):
+        ctrl = dai.CameraControl()
+        ctrl.setManualFocus(focus)
         self._rgbConfigInputQueue.send(ctrl)
 
     def triggerAutoFocus(self):

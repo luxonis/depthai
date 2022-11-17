@@ -1,27 +1,43 @@
-import array
-from pathlib import Path
 import os
-import cv2
-import types
+import time
+from threading import Thread
+from time import monotonic
+
 import depthai as dai
-import datetime
-from .utils import *
+
+from depthai_sdk.readers.abstract_reader import AbstractReader
+from depthai_sdk.utils import *
+
+_fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
+_videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.webm']
+_imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '.pbm', '.pgm', '.ppm', '.pxm',
+             '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
+
 
 class Replay:
-    disabledStreams = []
-    _streamTypes = ['color', 'left', 'right', 'depth'] # Available types to stream back to the camera
-    _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
-    _supportedExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.bag', '.mcap']
-    _imageExt = ['.bmp','.dib','.jpeg','.jpg','.jpe','.jp2','.png','.webp','.pbm','.pgm','.ppm','.pxm','.pnm','.pfm','.sr','.ras','.tiff','.tif','.exr','.hdr','.pic']
-    _inputQueues = dict() # dai.InputQueue dictionary for each stream
-    _seqNum = 0 # Frame sequence number, added to each imgFrame
-    _start = datetime.datetime.now() # For frame timestamp
-    _now = datetime.datetime.now()
+    disabledStreams: List[str] = []
+    # Nodes
+    left: dai.node.XLinkIn = None
+    right: dai.node.XLinkIn = None
+    color: dai.node.XLinkIn = None
+
+    _inputQueues = dict()  # dai.InputQueue dictionary for each stream
+    _seqNum = 0  # Frame sequence number, added to each imgFrame
+    _now: monotonic = None
     _colorSize = None
-    _keepAR = True # By default crop image as needed to keep the aspect ratio
-    _xins = [] # XLinkIn stream names
+    _keepAR = True  # By default, crop image as needed to keep the aspect ratio
     _pause = False
     _calibData = None
+
+    fps: float = 30.0
+    thread: Thread = None
+    _stop: bool = False  # Stop the thread that's sending frames to the OAK camera
+
+    xins: List[str] = []  # Name of XLinkIn streams
+
+    reader: AbstractReader = None
+    frames: Dict[str, np.ndarray] = dict()  # Frames read from Readers
+    imgFrames: Dict[str, dai.ImgFrame] = dict()  # Last frame sent to the device
 
     def __init__(self, path: str):
         """
@@ -32,48 +48,84 @@ class Replay:
         Args:
             path (str): Path to the recording folder
         """
-        self.path = Path(path).resolve().absolute()
+        self.path = self._get_path(path)
 
-        self.frames = dict() # Frames read from Readers
-        self.imgFrames = dict() # Last frame sent to the device
-
-        self.readers = dict()
-        self._supportedExt.extend(self._imageExt)
-
-        def readFile(filePath: Path) -> None:
-            strPath = str(filePath)
-            file = os.path.basename(filePath)
-            (name, extension) = os.path.splitext(file)
-            if extension in self._supportedExt:
-                if extension == '.bag':
-                    from .readers.rosbag_reader import RosbagReader
-                    self.readers[name] = RosbagReader(strPath)
-                elif extension == '.mcap':
-                    from .readers.mcap_reader import McapReader
-                    self.readers[name] = McapReader(strPath)
-                elif extension in self._imageExt:
-                    from .readers.image_reader import ImageReader
-                    self.readers[name] = ImageReader(strPath)
-                elif name in self._fileTypes:
-                    # For .mjpeg / .h265 / .mp4 files
-                    from .readers.videocap_reader import VideoCapReader
-                    self.readers[name] = VideoCapReader(strPath)
+        def cntFilesExt(path: Path, ext: Union[str, List[str]]) -> int:
+            def fileWithExt(file: str) -> bool:
+                if isinstance(ext, List):
+                    return os.path.splitext(file)[1] in ext
+                elif isinstance(ext, str):
+                    return file.endswith(ext)
                 else:
-                    print(f"Found and skipped an unsupported file name: '{file}'.")    
-            elif file == 'calib.json':
-                self._calibData = dai.CalibrationHandler(strPath)
+                    raise ValueError('ext should be either str or List[str]!')
+
+            return [fileWithExt(f) for f in os.listdir(str(path))].count(True)
+
+        if self.path.is_dir():  # Provided path is a folder
+            if 0 < cntFilesExt(self.path, _imageExt):
+                from .readers.image_reader import ImageReader
+                self.reader = ImageReader(self.path)
+            elif 0 < cntFilesExt(self.path, _videoExt):
+                from .readers.videocap_reader import VideoCapReader
+                self.reader = VideoCapReader(self.path)
+            elif cntFilesExt(self.path, '.bag') == 1:
+                from .readers.rosbag_reader import RosbagReader
+                self.reader = RosbagReader(self.path)
+            elif cntFilesExt(self.path, '.mcap') == 1:
+                from .readers.mcap_reader import McapReader
+                self.reader = McapReader(self.path)
+            elif cntFilesExt(self.path, '.db3') == 1:
+                from .readers.db3_reader import Db3Reader
+                self.reader = Db3Reader(self.path)
             else:
-                print(f"Found and skipped an unknown file, extension: '{extension}'.")
+                raise RuntimeError("Path invalid - no recordings found.")
 
-        if self.path.is_dir(): # Provided path is a folder
-            for fileName in os.listdir(path):
-                filePath = self.path / fileName
-                if filePath.is_file(): readFile(filePath)
-        else: # Provided path is a file
-            readFile(self.path)
+            # Read calibration file
+            calibFile = self.path / 'calib.json'
+            if calibFile.exists():
+                self._calibData = dai.CalibrationHandler(str(calibFile))
 
-        if len(self.readers) == 0:
-            raise RuntimeError("Path invalid - no recordings found.")
+        else:  # Provided path is a file
+            if self.path.suffix in _videoExt:
+                from .readers.videocap_reader import VideoCapReader
+                self.reader = VideoCapReader(self.path)
+            elif self.path.suffix in _imageExt:
+                from .readers.image_reader import ImageReader
+                self.reader = ImageReader(self.path)
+            else:
+                raise NotImplementedError('Please select folder')
+
+    def _get_path(self, path: str) -> Path:
+        """
+        Either use local depthai-recording, YT link, mp4 url
+        @param path: depthai-recording path.
+        @return: Replay module
+        """
+        if isUrl(path):
+            if isYoutubeLink(path):
+                # Overwrite source - so Replay class can use it
+                return downloadYTVideo(path)
+            else:
+                return downloadContent(path)
+
+        if Path(path).resolve().exists():
+            return Path(path).resolve()
+
+        recordingName: str = path
+        # Check if we have it stored locally
+        path: Path = getLocalRecording(recordingName)
+        if path is not None:
+            return path
+        # Try to download from the server
+        dic = getAvailableRecordings()
+        if recordingName in dic:
+            arr = dic[recordingName]
+            print("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB".format(recordingName,
+                                                                                                        arr[1] / 1e6))
+            path = downloadRecording(recordingName, arr[0])
+            return path
+        else:
+            raise ValueError(f"DepthAI recording '{recordingName}' was not found on the server!")
 
     def togglePause(self):
         """
@@ -81,6 +133,15 @@ class Replay:
         """
         self._pause = not self._pause
         print("PAUSE", self._pause)
+
+    def setFps(self, fps: float):
+        """
+        Sets frequency at which Replay module will send frames to the camera. Default 30FPS.
+        """
+        self.fps = fps
+
+    def getFps(self) -> float:
+        return self.fps
 
     def setResizeColor(self, size: tuple):
         """
@@ -110,77 +171,101 @@ class Replay:
         #     print(f"There's no stream '{streamName}' available!")
         #     return
         if disableReading:
-            self.readers[streamName].close()
-            # Remove the stream from the dict
-            self.readers.pop(streamName, None)
+            self.reader.disableStream(streamName)
 
         self.disabledStreams.append(streamName)
 
-    def sendFrames(self):
+    def sendFrames(self, cb=None) -> bool:
         """
         Reads and sends recorded frames from all enabled streams to the OAK camera.
 
         Returns:
             bool: True if successful, otherwise False.
         """
-        if not self._pause: # If replaying is paused, don't read new frames        
+        if not self._pause:  # If replaying is paused, don't read new frames
             if not self._readFrames():
-                return False # End of the recording
+                return False  # End of the recording
 
-        self._now = datetime.datetime.now()
+        self._now = monotonic()
         for name in self.frames:
             imgFrame = self._createImgFrame(name, self.frames[name])
             # Save the imgFrame
             self.imgFrames[name] = imgFrame
+            if cb:  # callback
+                cb(name, imgFrame)
 
             # Don't send these frames to the OAK camera
             if name in self.disabledStreams: continue
 
             # Send an imgFrame to the OAK camera
             self._inputQueues[name].send(imgFrame)
-        
+
         self._seqNum += 1
         return True
 
-    def initPipeline(self):
+    def initPipeline(self, pipeline: dai.Pipeline = None):
         """
         Prepares the pipeline for replaying. It creates XLinkIn nodes and sets up StereoDepth node.
-        Returns:
-            pipeline, nodes
+        Returns: dai.Pipeline
         """
-        pipeline = dai.Pipeline()
+        if pipeline is None:  # Create pipeline if not passed
+            pipeline = dai.Pipeline()
+
         if self._calibData is not None:
             pipeline.setCalibrationData(self._calibData)
-        nodes = types.SimpleNamespace()
 
         def createXIn(p: dai.Pipeline, name: str):
             xin = p.create(dai.node.XLinkIn)
             xin.setMaxDataSize(self._getMaxSize(name))
             xin.setStreamName(name + '_in')
-            self._xins.append(name)
+            self.xins.append(name)
             return xin
 
-        for _, reader in self.readers.items():
-            for name in reader.getStreams():
-                if name not in self.disabledStreams:
-                    setattr(nodes, name, createXIn(pipeline, name))
-
-        # Create StereoDepth node
-        if hasattr(nodes, 'left') and hasattr(nodes, 'right'):
-            nodes.stereo = pipeline.create(dai.node.StereoDepth)
-            nodes.stereo.setInputResolution(self._getShape('left'))
-
-            if hasattr(nodes, 'color'): # Enable RGB-depth alignment
-                nodes.stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-                if self._colorSize is not None:
-                    nodes.stereo.setOutputSize(*self._colorSize)
+        for name in self.reader.getStreams():
+            if name not in self.disabledStreams:
+                xin = createXIn(pipeline, name)
+                if name.upper() == 'LEFT':
+                    self.left = xin
+                elif name.upper() == 'RIGHT':
+                    self.right = xin
+                elif name.upper() == 'COLOR':
+                    self.color = xin
                 else:
-                    nodes.stereo.setOutputSize(*self._getShape('color'))
+                    pass  # Not implemented
 
-            nodes.left.out.link(nodes.stereo.left)
-            nodes.right.out.link(nodes.stereo.right)
+        return pipeline
 
-        return pipeline, nodes
+    def initStereoDepth(self, stereo: dai.node.StereoDepth):
+        streams = self.reader.getStreams()
+        if 'left' not in streams or 'right' not in streams:
+            raise Exception("Tried to init StereoDepth, but left/right streams aren't available!")
+        stereo.setInputResolution(self.getShape('left'))
+
+        if self.color:  # Enable RGB-depth alignment
+            stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
+            if self._colorSize is not None:
+                stereo.setOutputSize(*self._colorSize)
+            else:
+                stereo.setOutputSize(*self.getShape('color'))
+
+        self.left.out.link(stereo.left)
+        self.right.out.link(stereo.right)
+
+    def start(self, cb):
+        """
+        Start sending frames to the OAK device on a new thread
+        """
+        self.thread = Thread(target=self.run, args=(cb,))
+        self.thread.start()
+
+    def run(self, cb):
+        delay = 1.0 / self.fps
+        while True:
+            if not self.sendFrames(cb): break
+            time.sleep(delay)
+            if self._stop: break
+        print('Replay `run` thread stopped')
+        self._stop = True
 
     def createQueues(self, device: dai.Device):
         """
@@ -189,13 +274,12 @@ class Replay:
         Args:
             device (dai.Device): Device to which we will stream frames
         """
-        for name in self._xins:
+        for name in self.xins:
             self._inputQueues[name] = device.getInputQueue(name + '_in')
 
-    def getStreams(self) -> array:
-        streams = []
-        for _, reader in self.readers.items():
-            [streams.append(name) for name in reader.getStreams()]
+    def getStreams(self) -> List[str]:
+        streams: List[str] = []
+        [streams.append(name) for name in self.reader.getStreams()]
         return streams
 
     def _resizeColor(self, frame):
@@ -213,7 +297,7 @@ class Replay:
     def _createNewFrame(self, cvFrame) -> dai.ImgFrame:
         imgFrame = dai.ImgFrame()
         imgFrame.setData(cvFrame)
-        imgFrame.setTimestamp(self._now - self._start)
+        imgFrame.setTimestamp(self._now)
         imgFrame.setSequenceNum(self._seqNum)
         shape = cvFrame.shape[::-1]
         imgFrame.setWidth(shape[0])
@@ -221,7 +305,7 @@ class Replay:
         return imgFrame
 
     def _createImgFrame(self, name: str, cvFrame) -> dai.ImgFrame:
-        imgFrame: dai.ImgFrame = None
+        imgFrame: dai.ImgFrame
         if name == 'color':
             # Resize/crop color frame as specified by the user
             cvFrame = self._resizeColor(cvFrame)
@@ -248,44 +332,43 @@ class Replay:
             bool: True if successful, otherwise False.
         """
         self.frames = dict()
-        for name in self.readers:
-            if 1 < len(self.readers[name].getStreams()): # Read all frames (one of each)
-                frames = self.readers[name].read()
-                for name, frame in frames.items():
-                    self.frames[name] = frame
-            else:
-                self.frames[name] = self.readers[name].read() # Read a frame
-            
-            if self.frames[name] is False:
-                return False # No more frames!
-            
-            # Compress 3-plane frame to a single plane
-            if name in ["left", "right", "disparity"] and len(self.frames[name].shape) == 3:
-                self.frames[name] = self.frames[name][:,:,0] # All 3 planes are the same
+        frames = self.reader.read()
+        if not frames:
+            return False  # No more frames!
+
+        for name, frame in frames.items():
+            self.frames[name] = frame
+
+        # Compress 3-plane frame to a single plane
+        for name, frame in self.frames.items():
+            if name in ["left", "right", "disparity"] and len(frame.shape) == 3:
+                self.frames[name] = frame[:, :, 0]  # All 3 planes are the same
         return True
 
-    def _getMaxSize(self, name: str):
+    def _getMaxSize(self, name: str) -> int:
         """
         Used when setting XLinkIn nodes, so they consume the least amount of memory needed.
         """
-        size = self._getShape(name)
+        size = self.getShape(name)
         bytes_per_pixel = 1
-        if name == 'color': bytes_per_pixel = 3
-        elif name == 'depth': bytes_per_pixel = 2 # 16bit
+        if name == 'color':
+            bytes_per_pixel = 3
+        elif name == 'depth':
+            bytes_per_pixel = 2  # 16bit
         return size[0] * size[1] * bytes_per_pixel
 
-    def _getShape(self, name: str) -> tuple:
+    def getShape(self, name: str) -> Tuple[int, int]:
         """
         Get shape of a stream
         """
-        for _, reader in self.readers.items():
-            if name in reader.getStreams():
-                return reader.getShape(name)
-
+        if name in self.reader.getStreams():
+            return self.reader.getShape(name)
 
     def close(self):
         """
         Closes all video readers.
         """
-        for name in self.readers:
-            self.readers[name].close()
+        self._stop = True
+        if self.thread:
+            self.thread.join()
+        self.reader.close()
