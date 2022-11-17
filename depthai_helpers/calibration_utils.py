@@ -265,7 +265,8 @@ class StereoCalibration(object):
                     all_marker_ids.append(ids)
                     all_recovered.append(recoverd)
                 else:
-                    raise RuntimeError("Failed to detect markers in the image")
+                    err_name = f'Failed to detect markers in the image {im}'
+                    raise RuntimeError(err_name)
             else:
                 print(im + " Not found")
                 raise RuntimeError("Failed to detect markers in the image")
