@@ -118,19 +118,12 @@ class DepthAICamera():
         global update_res
         self.pipeline = dai.Pipeline()
         self.start_time = datetime.now()
-        res, device_info = dai.Device.getAnyAvailableDevice()
-
-        if not res:
-            raise RuntimeError("No device found")
-
-        with dai.DeviceBootloader(device_info) as bootloader:
-            self.bootloader_version = bootloader.getVersion().toStringSemver()
 
         if 'FFC' in test_type:
             imu = self.pipeline.create(dai.node.IMU)
             imu.enableFirmwareUpdate(True)
             imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
-            self.device = dai.Device(self.pipeline, device_info)
+            self.device = dai.Device(self.pipeline)
             update_res = True
             return
         self.camRgb = self.pipeline.create(dai.node.ColorCamera)
@@ -212,7 +205,9 @@ class DepthAICamera():
         if 'POE' in test_type:
             usb_speed = dai.UsbSpeed.HIGH
 
-        self.device = dai.Device(dai.OpenVINO.VERSION_2021_4, device_info, usb_speed)
+        self.device = dai.Device(dai.OpenVINO.VERSION_2021_4, usb_speed)
+
+
 
         # Check cameras, if center is smaller, modify all to be same (all cams OV case)
         # cams = self.device.getConnectedCameraProperties()
@@ -292,6 +287,12 @@ class DepthAICamera():
         self.current_jpeg = 0
 
         self.id = self.device.getDeviceInfo().getMxId()
+        self.bootloader_version = "library"
+        try:
+            self.bootloader_version = self.device.getBootloaderVersion().toStringSemver()
+        except: pass
+
+        self.device_name = self.device.getDeviceName()
 
     def __del__(self):
         self.device.close()
@@ -1485,7 +1486,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.print_logs('Test results for ' + eepromDataJson['productName'] + ' with id ' + self.depth_camera.id + ' had been saved!', 'GREEN')
 
         stats_server_api.add_result(
-            'test', self.depth_camera.id, eepromDataJson['productName'], self.depth_camera.bootloader_version, 
+            'test', self.depth_camera.id, self.depth_camera.device_name, self.depth_camera.bootloader_version, 
             dai.__version__, self.depth_camera.start_time, datetime.now(), results
         )
         stats_server_api.sync()
