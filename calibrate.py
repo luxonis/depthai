@@ -25,57 +25,72 @@ debug = False
 red = (255, 0, 0)
 green = (0, 255, 0)
 
-stringToCam = {
-                # 'RGB': dai.CameraBoardSocket.RGB,
-                # 'LEFT': dai.CameraBoardSocket.LEFT,
-                # 'RIGHT': dai.CameraBoardSocket.RIGHT,
-                # 'AUTO': dai.CameraBoardSocket.AUTO,
-                # 'CAM_A' : dai.CameraBoardSocket.RGB,
-                # 'CAM_B' : dai.CameraBoardSocket.LEFT,
-                # 'CAM_C' : dai.CameraBoardSocket.CAM_C,
-                'RGB'   : dai.CameraBoardSocket.CAM_A,
-                'LEFT'  : dai.CameraBoardSocket.CAM_B,
-                'RIGHT' : dai.CameraBoardSocket.CAM_C,
-                'CAM_A' : dai.CameraBoardSocket.CAM_A,
-                'CAM_B' : dai.CameraBoardSocket.CAM_B,
-                'CAM_C' : dai.CameraBoardSocket.CAM_C,
-                'CAM_D' : dai.CameraBoardSocket.CAM_D,
-                'CAM_E' : dai.CameraBoardSocket.CAM_E,
-                'CAM_F' : dai.CameraBoardSocket.CAM_F,
-                'CAM_G' : dai.CameraBoardSocket.CAM_G,
-                'CAM_H' : dai.CameraBoardSocket.CAM_H
-                }
+if hasattr(dai.CameraBoardSocket, 'CAM_A'):
+    stringToCam = {
+                    'RGB'   : dai.CameraBoardSocket.CAM_A,
+                    'LEFT'  : dai.CameraBoardSocket.CAM_B,
+                    'RIGHT' : dai.CameraBoardSocket.CAM_C,
+                    'CAM_A' : dai.CameraBoardSocket.CAM_A,
+                    'CAM_B' : dai.CameraBoardSocket.CAM_B,
+                    'CAM_C' : dai.CameraBoardSocket.CAM_C,
+                    'CAM_D' : dai.CameraBoardSocket.CAM_D,
+                    'CAM_E' : dai.CameraBoardSocket.CAM_E,
+                    'CAM_F' : dai.CameraBoardSocket.CAM_F,
+                    'CAM_G' : dai.CameraBoardSocket.CAM_G,
+                    'CAM_H' : dai.CameraBoardSocket.CAM_H
+                    }
+    camToString = {
+                    dai.CameraBoardSocket.CAM_A : 'RGB'  ,
+                    dai.CameraBoardSocket.CAM_B : 'LEFT' ,
+                    dai.CameraBoardSocket.CAM_C : 'RIGHT',
+                    dai.CameraBoardSocket.CAM_A : 'CAM_A',
+                    dai.CameraBoardSocket.CAM_B : 'CAM_B',
+                    dai.CameraBoardSocket.CAM_C : 'CAM_C',
+                    dai.CameraBoardSocket.CAM_D : 'CAM_D',
+                    dai.CameraBoardSocket.CAM_E : 'CAM_E',
+                    dai.CameraBoardSocket.CAM_F : 'CAM_F',
+                    dai.CameraBoardSocket.CAM_G : 'CAM_G',
+                    dai.CameraBoardSocket.CAM_H : 'CAM_H'
+                    }
+else:
+    stringToCam = {
+                    'RGB': dai.CameraBoardSocket.RGB,
+                    'LEFT': dai.CameraBoardSocket.LEFT,
+                    'RIGHT': dai.CameraBoardSocket.RIGHT,
+                    'AUTO': dai.CameraBoardSocket.AUTO,
+                    'CAM_A' : dai.CameraBoardSocket.RGB,
+                    'CAM_B' : dai.CameraBoardSocket.LEFT,
+                    'CAM_C' : dai.CameraBoardSocket.RIGHT
+                   }
 
-CamToString = {
-                # dai.CameraBoardSocket.RGB : 'RGB'  ,
-                # dai.CameraBoardSocket.LEFT : 'LEFT' ,
-                # dai.CameraBoardSocket.RIGHT : 'RIGHT',
-                # dai.CameraBoardSocket.AUTO : 'AUTO'
-                dai.CameraBoardSocket.CAM_A : 'RGB'  ,
-                dai.CameraBoardSocket.CAM_B : 'LEFT' ,
-                dai.CameraBoardSocket.CAM_C : 'RIGHT',
-                dai.CameraBoardSocket.CAM_A : 'CAM_A',
-                dai.CameraBoardSocket.CAM_B : 'CAM_B',
-                dai.CameraBoardSocket.CAM_C : 'CAM_C',
-                dai.CameraBoardSocket.CAM_D : 'CAM_D',
-                dai.CameraBoardSocket.CAM_E : 'CAM_E',
-                dai.CameraBoardSocket.CAM_F : 'CAM_F',
-                dai.CameraBoardSocket.CAM_G : 'CAM_G',
-                dai.CameraBoardSocket.CAM_H : 'CAM_H'
-                }
+    camToString = {
+                    # dai.CameraBoardSocket.RGB : 'RGB'  ,
+                    # dai.CameraBoardSocket.LEFT : 'LEFT' ,
+                    # dai.CameraBoardSocket.RIGHT : 'RIGHT',
+                    # dai.CameraBoardSocket.AUTO : 'AUTO',
+                    dai.CameraBoardSocket.RGB : 'CAM_A',
+                    dai.CameraBoardSocket.LEFT : 'CAM_B',
+                    dai.CameraBoardSocket.RIGHT : 'CAM_C',
+                    }
+
 
 camToMonoRes = {
                 'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
+                'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
                 'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
                 }
 
 camToRgbRes = {
                 'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+                'OV9*82' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
+                'OV9282' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
-                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P
                 }
+
+if hasattr(dai.ColorCameraProperties.SensorResolution, 'THE_1200_P'):
+    camToRgbRes['AR0234'] = dai.ColorCameraProperties.SensorResolution.THE_1200_P
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
