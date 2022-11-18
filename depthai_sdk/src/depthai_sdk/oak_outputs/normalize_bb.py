@@ -71,7 +71,7 @@ class NormalizeBoundingBox:
             bbox[sel::2] -= abs(letterboxing_ratio) / 2
             bbox[sel::2] /= 1 - abs(letterboxing_ratio)
 
-            # Normalize bounding boxes
-            normVals = np.full(len(bbox), frame.shape[0])
-            normVals[::2] = frame.shape[1]
-            return (np.clip(bbox, 0, 1) * normVals).astype(int)
+        # Normalize bounding boxes
+        normVals = np.full(len(bbox), frame.shape[0])
+        normVals[::2] = frame.shape[1]
+        return (np.clip(bbox, 0, 1) * normVals).astype(int)
