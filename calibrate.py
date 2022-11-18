@@ -409,8 +409,8 @@ class Main:
                     cam_node.initialControl.setLumaDenoise(0)
                     cam_node.initialControl.setChromaDenoise(4)
 
-                # if cam_info['hasAutofocus']:
-                cam_node.initialControl.setManualFocus(self.focus_value)
+                if cam_info['hasAutofocus']:
+                    cam_node.initialControl.setManualFocus(self.focus_value)
 
                 controlIn = pipeline.createXLinkIn()
                 controlIn.setStreamName(cam_info['name'] + '-control')
@@ -942,8 +942,8 @@ class Main:
                 calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
                 calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
 
-                # if cam_info['hasAutofocus']:
-                calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
+                if cam_info['hasAutofocus']:
+                    calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
 
                 # log_list.append(self.focusSigma[cam_info['name']])
                 # log_list.append(cam_info['reprojection_error'])
