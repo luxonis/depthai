@@ -9,6 +9,8 @@ from pathlib import Path
 import time
 from datetime import datetime, timedelta
 from collections import deque 
+from scipy.spatial.transform import Rotation
+import traceback
 
 import cv2
 from cv2 import resize
@@ -83,6 +85,7 @@ camToRgbRes = {
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'OV9*82' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'OV9282' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
+                'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
                 }
 
@@ -130,7 +133,7 @@ def parse_args():
     '''
     parser = ArgumentParser(
         epilog=epilog_text, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-c", "--count", default=1, type=int, required=False,
+    parser.add_argument("-c", "--count", default=3, type=int, required=False,
                         help="Number of images per polygon to capture. Default: 1.")
     parser.add_argument("-s", "--squareSizeCm", type=float, required=True,
                         help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
@@ -577,8 +580,32 @@ class Main:
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
                 
+                localPolygon = np.array([self.polygons[self.current_polygon]])
+                print(localPolygon.shape)
+                print(localPolygon)
+                if self.images_captured_polygon == 1:
+                    # perspectiveRotationMatrix = Rotation.from_euler('z', 45, degrees=True).as_matrix()
+                    angle = 30.
+                    theta = (angle/180.) * np.pi
+                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)], 
+                                                        [np.sin(theta),  np.cos(theta)]])
+                    
+                    localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
+                    localPolygon[0][:, 1] += abs(localPolygon.min())    
+                if self.images_captured_polygon == 2:
+                    # perspectiveRotationMatrix = Rotation.from_euler('z', -45, degrees=True).as_matrix()
+                    angle = -30.
+                    theta = (angle/180.) * np.pi
+                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)], 
+                                                        [np.sin(theta),  np.cos(theta)]])
+                    localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
+                    localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))    
+                    localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())    
+
+                print(localPolygon)
+                print(localPolygon.shape)
                 cv2.polylines(
-                    imgFrame, np.array([self.polygons[self.current_polygon]]),
+                    imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
                 
                 # TODO(Sachin): Add this back with proper alignment
@@ -860,7 +887,7 @@ class Main:
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
         dest_path = str(Path('resources').absolute())
-        self.args.cameraMode = 'perspective' # hardcoded for now
+        # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
 
             # stereo_calib = StereoCalibration()
@@ -879,9 +906,13 @@ class Main:
             calibration_handler = self.device.readCalibration()
             try:
                 if self.empty_calibration(calibration_handler):
-                    calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
-            except:
-                pass
+                    calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
+            except Exception as e:
+                print('Device closed in exception..' )
+                self.device.close()
+                print(e)
+                print(traceback.format_exc())
+                raise SystemExit(1)
 
             # calibration_handler.set
             error_text = []
@@ -1015,7 +1046,10 @@ class Main:
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
         except Exception as e:
+            self.device.close()
+            print('Device closed in exception..' )
             print(e)
+            print(traceback.format_exc())
             raise SystemExit(1)
 
     def run(self):
