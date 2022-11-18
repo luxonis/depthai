@@ -1469,13 +1469,11 @@ class UiTests(QtWidgets.QMainWindow):
                 file.write(',' + 'Not Tested')
             else:
                 file.write(',' + test_result[key])
-                results[key] = test_result[key]
         for key in op_keys:
             if operator_tests[key] == '':
                 file.write(',' + 'Not Tested')
             else:
                 file.write(',' + operator_tests[key])
-                results[key] = operator_tests[key]
         file.write(',' + calib_path.parent.name)
         file.write(',' + calib_path.name)
         file.write('\n')
