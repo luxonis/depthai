@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import depthai as dai
 import numpy as np
@@ -28,12 +28,16 @@ class DepthAi2Ros1:
         self.start_time = dai.Clock.now()
         self.device = device
 
-    def header(self, imgFrame: dai.ImgFrame) -> std_msgs.msg.Header:
+
+    def header(self, msg: dai.Buffer) -> std_msgs.msg.Header:
         header = std_msgs.msg.Header()
-        ts = (imgFrame.getTimestamp() - self.start_time).total_seconds()
+        ts = (msg.getTimestamp() - self.start_time).total_seconds()
         # secs / nanosecs
         header.stamp = Time(int(ts), (ts % 1) * 1e6)
-        header.frame_id = str(imgFrame.getSequenceNum())
+        try:
+            header.frame_id = str(msg.getSequenceNum()) # ImgFrame
+        except:
+            header.frame_id = str(msg.sequence) # IMUReport
         return header
     def CompressedImage(self, imgFrame: dai.ImgFrame) -> CompressedImage:
         msg = CompressedImage()
@@ -42,17 +46,20 @@ class DepthAi2Ros1:
         msg.data = np.array(imgFrame.getData()).tobytes()
         return msg
 
-    def Imu(self, accel: dai.IMUReportAccelerometer, gyro: dai.IMUReportGyroscope,
-            linear_accel_cov: float = 0., angular_velocity_cov: float = 0) -> Imu:
+    def Imu(self, imu_packet: dai.IMUPacket, linear_accel_cov: float = 0., angular_velocity_cov: float = 0) -> Imu
         msg = Imu()
 
-        msg.linear_acceleration.x = accel.x
-        msg.linear_acceleration.y = accel.y
-        msg.linear_acceleration.z = accel.z
+        if imu_packet.acceleroMeter is not None:
+            msg.header = self.header(imu_packet.acceleroMeter)
+            msg.linear_acceleration.x = imu_packet.acceleroMeter.x
+            msg.linear_acceleration.y = imu_packet.acceleroMeter.y
+            msg.linear_acceleration.z = imu_packet.acceleroMeter.z
 
-        msg.angular_velocity.x = gyro.x
-        msg.angular_velocity.y = gyro.y
-        msg.angular_velocity.z = gyro.z
+        if imu_packet.gyroscope is not None:
+            msg.header = self.header(imu_packet.gyroscope)
+            msg.angular_velocity.x = imu_packet.gyroscope.x
+            msg.angular_velocity.y = imu_packet.gyroscope.y
+            msg.angular_velocity.z = imu_packet.gyroscope.z
 
         msg.orientation.x = 0.0
         msg.orientation.y = 0.0
@@ -62,19 +69,6 @@ class DepthAi2Ros1:
         msg.orientation_covariance = [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         msg.linear_acceleration_covariance = [linear_accel_cov, 0.0, 0.0, 0.0, linear_accel_cov, 0.0, 0.0, 0.0, linear_accel_cov]
         msg.angular_velocity_covariance = [angular_velocity_cov, 0.0, 0.0, 0.0, angular_velocity_cov, 0.0, 0.0, 0.0, angular_velocity_cov]
-
-        # msg.header.frame_id = _frameName;
-        # endif
-
-        # if (_syncMode == ImuSyncMethod::LINEAR_INTERPOLATE_ACCEL) {
-        # interpMsg.header.stamp = getFrameTime(_rosBaseTime, _steadyBaseTime, gyro.timestamp.get());
-        # } else if (_syncMode == ImuSyncMethod::
-        #     LINEAR_INTERPOLATE_GYRO) {
-        #     interpMsg.header.stamp = getFrameTime(_rosBaseTime, _steadyBaseTime, accel.timestamp.get());
-        # } else {
-        #     interpMsg.header.stamp = getFrameTime(_rosBaseTime, _steadyBaseTime, accel.timestamp.get());
-        # }
-
 
         return msg
 

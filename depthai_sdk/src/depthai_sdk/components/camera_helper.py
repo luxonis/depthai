@@ -74,7 +74,7 @@ def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
     return lst
 
 
-def getClosestVideoSize(width: int, height: int, videoEncoder: bool) -> Tuple[int, int]:
+def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tuple[int, int]:
     """
     For colorCamera.video output
     """

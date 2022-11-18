@@ -140,6 +140,7 @@ class NNComponent(Component):
             i = 0 if scale[0] < scale[1] else 1
             crop = int(scale[i] * nnSize[0]), int(scale[i] * nnSize[1])
             # Crop the high-resolution frames so it matches object detection frame aspect ratio
+            # NOTE: objecgt detections have to be set to CROP mode
             self.imageManip = pipeline.createImageManip()
             self.imageManip.setResize(*crop)
             self.imageManip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
@@ -517,6 +518,13 @@ class NNComponent(Component):
                                     StreamXout(self._comp.node.id, self._comp.node.out)
                                     )
 
+            return self._comp._create_xout(pipeline, out)
+        def image_manip(self,  pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            out = XoutFrames(StreamXout(self._comp.imageManip.id, self._comp.imageManip.out))
+            return self._comp._create_xout(pipeline, out)
+
+        def input(self,  pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            out = XoutFrames(StreamXout(self._comp._input.node.id, self._comp._stream_input))
             return self._comp._create_xout(pipeline, out)
 
         def spatials(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutSpatialBbMappings:

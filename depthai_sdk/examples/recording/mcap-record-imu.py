@@ -6,9 +6,9 @@ with OakCamera() as oak:
     stereo = oak.create_stereo(left=left, right=right)
 
     imu = oak.create_imu()
-    imu.config_imu(report_rate=400, batch_report_threshold=5)
+    imu.config_imu(report_rate=500, batch_report_threshold=5)
 
-    recorder = oak.record([stereo.out.depth, imu], './', RecordType.MCAP)
+    recorder = oak.record([imu], './', RecordType.MCAP)
 
-    oak.visualize(left)
+    oak.visualize([left, stereo])
     oak.start(blocking=True)
