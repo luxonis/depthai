@@ -1483,6 +1483,7 @@ class UiTests(QtWidgets.QMainWindow):
         results = {
             'automatic_tests': test_result,
             'operator_tests': operator_tests,
+            'eeprom_filename_used': Path(calib_path).name,
         }
         stats_server_api.add_result(
             'test', self.depth_camera.id, self.depth_camera.device_name, self.depth_camera.bootloader_version, 
