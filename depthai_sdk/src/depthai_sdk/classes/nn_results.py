@@ -15,7 +15,7 @@ class GenericNNOutput:
     """
     Generic NN output, to be used for higher-level abstractions (eg. automatic visualization of results).
     """
-    def __init__(self, nn_data):
+    def __init__(self, nn_data: NNData):
         self.nn_data = nn_data
 
 
