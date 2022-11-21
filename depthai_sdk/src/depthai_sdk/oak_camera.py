@@ -40,12 +40,10 @@ class OakCamera:
     _oak: OakDevice  # Init this object by default
     _args: Dict[str, Any] = None  # User defined arguments
     replay: Optional[Replay] = None
-    _components: List[Component] = []  # List of components
 
     _usb_speed: Optional[dai.UsbSpeed] = None
     _device_name: str = None  # MxId / IP / USB port
 
-    _out_templates: List[BaseConfig] = []
     # Whether to stop running the OAK camera. Used by oak.running()
     _stop: bool = False
 
@@ -70,6 +68,9 @@ class OakCamera:
         self._oak = OakDevice()
         self._pipeline = dai.Pipeline()
         self._pipeline_built = False
+
+        self._components: List[Component] = []  # List of components
+        self._out_templates: List[BaseConfig] = []
 
         self._rotation = rotation
 
