@@ -117,6 +117,38 @@ class PipelineGraph:
                                              color=node_color.get(node['type'], default_node_color),
                                              text_color=(0, 0, 0), push_undo=False)
 
+        nodes = {} # First save all nodes and their inputs/outputs
+        for c in dai_connections:
+            src_node_id = c["node1Id"]
+            src_node = qt_nodes[src_node_id]
+            src_port_name = c["node1Output"]
+            dst_node_id = c["node2Id"]
+            dst_node = qt_nodes[dst_node_id]
+            dst_port_name = c["node2Input"]
+
+            if dst_node not in nodes:
+                nodes[dst_node] = {'outputs': [], 'inputs': []}
+            if src_node not in nodes:
+                nodes[src_node] = {'outputs': [], 'inputs': []}
+
+            dst_port_color = (249, 75, 0) if dai_nodes[dst_node_id]['blocking'][dst_port_name] else (0, 255, 0)
+            dst_port_label = f"[{dai_nodes[dst_node_id]['queue_size'][dst_port_name]}] {dst_port_name}"
+
+            nodes[dst_node]['inputs'].append({'name': dst_port_name, 'color': dst_port_color, 'label': dst_port_label})
+            nodes[src_node]['outputs'].append({'name': src_port_name})
+
+        for node, vals in nodes.items():
+            # Go through all inputs/outputs, sort them by name (alphabetical order)
+            vals['inputs'] = list(sorted(vals['inputs'], key = lambda el: el['name']))
+            vals['outputs'] = list(sorted(vals['outputs'], key=lambda el: el['name']))
+            # Create node input/output
+            for output in vals['outputs']:
+                if not output['name'] in list(node.outputs()):
+                    node.add_output(name=output['name'])
+            for input in vals['inputs']:
+                if not input['name'] in list(node.inputs()):
+                    node.add_input(name=input['label'], color=input['color'], multi_input=True)
+
         print("\nConnections:\n============")
         i = 0
         for c in dai_connections:
@@ -126,12 +158,8 @@ class PipelineGraph:
             dst_node_id = c["node2Id"]
             dst_node = qt_nodes[dst_node_id]
             dst_port_name = c["node2Input"]
-            dst_port_color = (249, 75, 0) if dai_nodes[dst_node_id]['blocking'][dst_port_name] else (0, 255, 0)
             dst_port_label = f"[{dai_nodes[dst_node_id]['queue_size'][dst_port_name]}] {dst_port_name}"
-            if not src_port_name in list(src_node.outputs()):
-                src_node.add_output(name=src_port_name)
-            if not dst_port_label in list(dst_node.inputs()):
-                dst_node.add_input(name=dst_port_label, color=dst_port_color, multi_input=True)
+            # Create the connection between nodes
             print(i,
                   f"{dai_nodes[src_node_id]['name']}: {src_port_name} -> {dai_nodes[dst_node_id]['name']}: {dst_port_label}")
             src_node.outputs()[src_port_name].connect_to(dst_node.inputs()[dst_port_label], push_undo=False)
