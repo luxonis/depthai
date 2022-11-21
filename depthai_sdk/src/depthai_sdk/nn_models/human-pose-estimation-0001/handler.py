@@ -73,7 +73,7 @@ def decode(nn_data: NNData) -> ImgLandmarks:
 
         keypoint_points.append(person_keypoints)
 
-    return ImgLandmarks(keypoint_points, POSE_PAIRS, colors)
+    return ImgLandmarks(nn_data, keypoint_points, POSE_PAIRS, colors)
 
 
 def get_keypoints(prob_map, threshold=0.2):
