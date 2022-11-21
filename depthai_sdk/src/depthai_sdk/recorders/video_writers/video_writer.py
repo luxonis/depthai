@@ -8,6 +8,7 @@ import depthai as dai
 import numpy as np
 
 from depthai_sdk.recorders.video_writers import AbstractWriter
+from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 
 
 class VideoWriter(AbstractWriter):
@@ -15,11 +16,8 @@ class VideoWriter(AbstractWriter):
     _fps: float
     _path: str
 
-    def __init__(self, folder: Path, name: str, fourcc: str, fps: float, keep_last_seconds: int = 0):
-        if not folder.exists():
-            folder.mkdir(parents=True, exist_ok=True)
-
-        self._path = str(folder / f"{name}.avi")
+    def __init__(self, path: Path, name: str, fourcc: str, fps: float, keep_last_seconds: int = 0):
+        self._path = create_writer_dir(path, name, 'avi')
         self._keep_last_seconds = keep_last_seconds
         self._fourcc = None
 
@@ -58,7 +56,8 @@ class VideoWriter(AbstractWriter):
                                     isColor=self._fourcc == "I420")
 
     def close(self):
-        self.file.release()
+        if self.file:
+            self.file.release()
 
     def get_last(self, seconds: float = 0.0):
         if self._buffer is None:

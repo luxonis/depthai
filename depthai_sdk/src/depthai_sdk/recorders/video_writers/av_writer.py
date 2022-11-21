@@ -7,6 +7,7 @@ from pathlib import Path
 import depthai as dai
 
 from depthai_sdk.recorders.video_writers import AbstractWriter
+from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 
 
 class AvWriter(AbstractWriter):
@@ -15,11 +16,13 @@ class AvWriter(AbstractWriter):
 
     def __init__(self, folder: Path, name: str, fourcc: str, fps: float, keep_last_seconds: int):
         global av
-        import av
+        import av as av
+
+        name = create_writer_dir(folder, name, 'mp4')
 
         self.start_ts = None
         self.folder = folder
-        self.file = av.open(str(folder / f"{name}.mp4"), 'w')
+        self.file = av.open(name, 'w')
         self._fps = fps
         self._fourcc = fourcc
 
