@@ -1,10 +1,11 @@
 from typing import Dict
-from depthai_sdk.components.component import Component
-from depthai_sdk.replay import Replay
+
 from depthai_sdk.components.camera_helper import *
+from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parseResolution, parseEncode
-from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
+from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
+from depthai_sdk.replay import Replay
 
 
 class CameraComponent(Component):
@@ -31,6 +32,7 @@ class CameraComponent(Component):
                      None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
                  encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                 rotation: Optional[int] = None,
                  replay: Optional[Replay] = None,
                  args: Dict = None,
                  ):
@@ -54,6 +56,11 @@ class CameraComponent(Component):
         self._source = source
         self._replay: Replay = replay
         self._args = args
+
+        if rotation not in [None, 0, 90, 180, 270]:
+            raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
+
+        self._rotation = rotation
 
         self._create_node(pipeline, source.upper())
 
@@ -79,6 +86,13 @@ class CameraComponent(Component):
             self.node.setMaxDataSize(res[0] * res[1] * 3)
             self.stream_size = res
             self.stream = self.node.out
+            if self._rotation:
+                rot_manip = self._create_rotation_manip(pipeline) if self._rotation else None
+                self.node.out.link(rot_manip.inputImage)
+                self.stream = rot_manip.out
+            else:
+                self.stream = self.node.out
+
             return
 
         if isinstance(self.node, dai.node.ColorCamera):
@@ -90,10 +104,10 @@ class CameraComponent(Component):
 
             cams = device.getCameraSensorNames()
             # print('Available sensors on OAK:', cams)
-            sensorName = cams[dai.CameraBoardSocket.RGB]
+            sensor_name = cams[dai.CameraBoardSocket.RGB]
 
             if not self._resolution_forced:  # Find the closest resolution
-                self.node.setResolution(getClosesResolution(sensorName, width=1200))
+                self.node.setResolution(getClosesResolution(sensor_name, width=1200))
                 scale = getClosestIspScale(self.node.getIspSize(), width=1200, videoEncoder=(self.encoder is not None))
                 self.node.setIspScale(*scale)
 
@@ -102,7 +116,7 @@ class CameraComponent(Component):
 
             self.node.setPreviewSize(*self.node.getVideoSize())
             self.stream_size = self.node.getPreviewSize()
-            self.stream = self.node.preview
+            self.stream = self.node.preview if self.encoder is None else self.node.video
 
         elif isinstance(self.node, dai.node.MonoCamera):
             self.stream_size = self.node.getResolutionSize()
@@ -111,21 +125,38 @@ class CameraComponent(Component):
         if self._args:
             self._config_camera_args(self._args)
 
+        if self._rotation:
+            rot_manip = self._create_rotation_manip(pipeline) if self._rotation else None
+            self.stream.link(rot_manip.inputImage)
+            self.stream = rot_manip.out
+
         if self.encoder:
             self.encoder.setDefaultProfilePreset(self._getFps(), self._encoderProfile)
-            if self.isReplay():
+            if self.isReplay():  # TODO - this might be not needed, we check for replay above and return
                 # Create ImageManip to convert to NV12
                 type_manip = pipeline.createImageManip()
                 type_manip.setFrameType(dai.ImgFrame.Type.NV12)
                 type_manip.setMaxOutputFrameSize(self.stream_size[0] * self.stream_size[1] * 3)
+
                 self.stream.link(type_manip.inputImage)
                 type_manip.out.link(self.encoder.input)
             elif self.isMono():
-                self.node.out.link(self.encoder.input)
+                self.stream.link(self.encoder.input)
             elif self.isColor():
-                self.node.video.link(self.encoder.input)
+                self.stream.link(self.encoder.input)
             else:
                 raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
+
+    def _create_rotation_manip(self, pipeline: dai.Pipeline):
+        rot_manip = pipeline.createImageManip()
+        rgb_rr = dai.RotatedRect()
+        w, h = self.stream_size
+        rgb_rr.center.x, rgb_rr.center.y = w // 2, h // 2
+        rgb_rr.size.width, rgb_rr.size.height = (w, h) if self._rotation % 180 == 0 else (h, w)
+        rgb_rr.angle = self._rotation
+        rot_manip.initialConfig.setCropRotatedRect(rgb_rr, False)
+        rot_manip.setMaxOutputFrameSize(w * h * 3)
+        return rot_manip
 
     def _create_node(self, pipeline: dai.Pipeline, source: str) -> None:
         """
@@ -325,11 +356,11 @@ class CameraComponent(Component):
             return StreamXout(self.node.id, self.stream)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(10)
-            return StreamXout(self.node.id, self.node.video)
+            return StreamXout(self.node.id, self.stream)
 
     """
-        Available outputs (to the host) of this component
-        """
+    Available outputs (to the host) of this component
+    """
 
     class Out:
         _comp: 'CameraComponent'

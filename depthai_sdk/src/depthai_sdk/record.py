@@ -35,7 +35,7 @@ def _run(recorder: Recorder, frameQ: Queue):
 class RecordType(IntEnum):
     VIDEO = 1  # Save to video file
     BAG = 2  # To ROS .bag
-    MCAP = 3 # To .mcap
+    MCAP = 3  # To .mcap
 
 
 class Record(XoutSeqSync):
@@ -56,12 +56,15 @@ class Record(XoutSeqSync):
                 mapped[self.name_mapping[name]] = msg
             else:
                 mapped[name] = msg
+
         self.frame_q.put(mapped)
 
     def visualize(self, packet: FramePacket) -> None:
         pass  # No need.
 
-    def __init__(self, path: Path, type: RecordType):
+    def __init__(self,
+                 path: Path,
+                 type: RecordType):
         """
         Args:
             path (Path): Path to the recording folder
@@ -76,10 +79,10 @@ class Record(XoutSeqSync):
             self.recorder = McapRecorder()
         elif self.type == RecordType.VIDEO:
             from .recorders.video_recorder import VideoRecorder
-            self.recorder =  VideoRecorder()
+            self.recorder = VideoRecorder()
         elif self.type == RecordType.BAG:
             from .recorders.rosbag_recorder import RosbagRecorder
-            self.recorder =  RosbagRecorder()
+            self.recorder = RosbagRecorder()
         else:
             raise ValueError(f"Recording type '{self.type}' isn't supported!")
 

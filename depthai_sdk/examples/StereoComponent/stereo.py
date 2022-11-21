@@ -1,10 +1,9 @@
 import cv2
-import depthai
 
 from depthai_sdk import OakCamera
 from depthai_sdk.visualize.configs import StereoColor
 
-with OakCamera(usbSpeed=depthai.UsbSpeed.HIGH) as oak:
+with OakCamera() as oak:
     stereo = oak.create_stereo('400p', fps=30)
     stereo.configure_postprocessing(
         colorize=StereoColor.RGB,

@@ -4,13 +4,7 @@ import depthai
 from depthai_sdk import OakCamera
 from depthai_sdk.visualize.configs import StereoColor
 
-
-def callback(msgs, visualizer):
-    for name, packet in msgs.items():
-        cv2.imshow(packet.name, packet.frame)
-
-
-with OakCamera(usbSpeed=depthai.UsbSpeed.HIGH) as oak:
+with OakCamera() as oak:
     color = oak.create_camera('color', resolution='1080p', fps=5)
     stereo = oak.create_stereo('400p', fps=5)
 

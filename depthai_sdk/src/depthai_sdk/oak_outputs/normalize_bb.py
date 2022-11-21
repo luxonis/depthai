@@ -39,10 +39,23 @@ class NormalizeBoundingBox:
 
         # Edit the bounding boxes before normalizing them
         if self.arResizeMode == AspectRatioResizeMode.CROP:
-            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[0] / frame.shape[1]
-            sel = 0 if 0 < ar_diff else 1
-            bbox[sel::2] *= 1 - abs(ar_diff)
-            bbox[sel::2] += abs(ar_diff) / 2
+            ar_diff = (self.aspectRatio[0] / self.aspectRatio[1]) / (frame.shape[1] / frame.shape[0])
+            if ar_diff < 1:
+                new_w = frame.shape[1] * ar_diff
+                new_h = frame.shape[0]
+                bbox[0] = bbox[0] * new_w + (frame.shape[1] - new_w) / 2
+                bbox[1] = bbox[1] * new_h
+                bbox[2] = bbox[2] * new_w + (frame.shape[1] - new_w) / 2
+                bbox[3] = bbox[3] * new_h
+            else:
+                new_w = frame.shape[1]
+                new_h = frame.shape[0] / ar_diff
+                bbox[0] = bbox[0] * new_w
+                bbox[1] = bbox[1] * new_h + (new_h - frame.shape[0]) / 2
+                bbox[2] = bbox[2] * new_w
+                bbox[3] = bbox[3] * new_h + (new_h - frame.shape[0]) / 2
+
+            return bbox.astype(int)
         elif self.arResizeMode == AspectRatioResizeMode.STRETCH:
             # No need to edit bounding boxes when stretching
             pass

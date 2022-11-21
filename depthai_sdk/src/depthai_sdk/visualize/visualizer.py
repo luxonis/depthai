@@ -10,9 +10,9 @@ import numpy as np
 from depthai import ImgDetection
 
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
-from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle
+from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
 from depthai_sdk.visualize.encoder import JSONEncoder
-from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle
+from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine
 from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
 
 
@@ -76,17 +76,22 @@ class Visualizer(VisualizerHelper):
         Returns:
             self
         """
-        detection_overlay = VisDetections(
-            detections, normalizer, label_map, spatial_points, is_spatial
-        )
-
+        detection_overlay = VisDetections(detections=detections,
+                                          normalizer=normalizer,
+                                          label_map=label_map,
+                                          spatial_points=spatial_points,
+                                          is_spatial=is_spatial)
         self.add_object(detection_overlay)
         return self
 
     def add_text(self,
                  text: str,
                  coords: Tuple[int, int] = None,
-                 bbox: Tuple[int, int, int, int] = None,
+                 size: int = None,
+                 color: Tuple[int, int, int] = None,
+                 thickness: int = None,
+                 outline: bool = False,
+                 bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10) -> 'Visualizer':
         """
@@ -95,6 +100,10 @@ class Visualizer(VisualizerHelper):
         Args:
             text: Text.
             coords: Coordinates.
+            size: Size of the text.
+            color: Color of the text.
+            thickness: Thickness of the text.
+            outline: Flag that indicates if the text should be outlined.
             bbox: Bounding box.
             position: Position.
             padding: Padding.
@@ -102,7 +111,15 @@ class Visualizer(VisualizerHelper):
         Returns:
             self
         """
-        text_overlay = VisText(text, coords, bbox, position, padding)
+        text_overlay = VisText(text=text,
+                               coords=coords,
+                               size=size,
+                               color=color,
+                               thickness=thickness,
+                               outline=outline,
+                               bbox=bbox,
+                               position=position,
+                               padding=padding)
         self.add_object(text_overlay)
         return self
 
@@ -119,7 +136,8 @@ class Visualizer(VisualizerHelper):
         Returns:
             self
         """
-        trail = VisTrail(tracklets, label_map)
+        trail = VisTrail(tracklets=tracklets,
+                         label_map=label_map)
         self.add_object(trail)
         return self
 
@@ -140,16 +158,38 @@ class Visualizer(VisualizerHelper):
         Returns:
             self
         """
-        circle = VisCircle(
-            coords=coords,
-            radius=radius,
-            color=color,
-            thickness=thickness
-        )
+        circle = VisCircle(coords=coords,
+                           radius=radius,
+                           color=color,
+                           thickness=thickness)
         self.objects.append(circle)
         return self
 
-    def draw(self, frame: np.ndarray):
+    def add_line(self,
+                 pt1: Tuple[int, int],
+                 pt2: Tuple[int, int],
+                 color: Tuple[int, int, int] = None,
+                 thickness: int = None) -> 'Visualizer':
+        """
+        Add a line to the visualizer.
+
+        Args:
+            pt1: Start coordinates.
+            pt2: End coordinates.
+            color: Color of the line.
+            thickness: Thickness of the line.
+
+        Returns:
+            self
+        """
+        line = VisLine(pt1=pt1,
+                       pt2=pt2,
+                       color=color,
+                       thickness=thickness)
+        self.objects.append(line)
+        return self
+
+    def draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
         and communicate with the RobotHub application.
@@ -159,7 +199,7 @@ class Visualizer(VisualizerHelper):
             name: The name of the displayed window.
 
         Returns:
-            None
+            np.ndarray if the platform is PC, None otherwise.
         """
         if self.IS_INTERACTIVE:
             # Draw overlays
@@ -201,6 +241,7 @@ class Visualizer(VisualizerHelper):
         return json.dumps(parent, cls=JSONEncoder)
 
     def reset(self):
+        """Clear all objects."""
         self.objects.clear()
 
     def output(self,
@@ -220,6 +261,18 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.output = replace(self.config.output, **kwargs)
+        return self
+
+    def stereo(self,
+               colorize: StereoColor = None,
+               colormap: int = None,
+               wls_filter: bool = None,
+               wls_lambda: float = None,
+               wls_sigma: float = None):
+        kwargs = self._process_kwargs(locals())
+
+        if len(kwargs) > 0:
+            self.config.stereo = replace(self.config.stereo, **kwargs)
         return self
 
     def detections(self,
@@ -295,7 +348,9 @@ class Visualizer(VisualizerHelper):
 
     def tracking(self,
                  max_length: int = None,
+                 deletion_lost_threshold: int = None,
                  line_thickness: int = None,
+                 fading_tails: bool = None,
                  line_color: Tuple[int, int, int] = None,
                  line_type: int = None,
                  bg_color: Tuple[int, int, int] = None) -> 'Visualizer':
@@ -304,13 +359,15 @@ class Visualizer(VisualizerHelper):
 
         Args:
             max_length: Maximum length of the trail (in pixels).
+            deletion_lost_threshold: Number of consequent LOST statuses after which the trail is deleted.
             line_thickness: Thickness of the line.
+            fading_tails: Flag that indicates if the tails should fade.
             line_color: Color of the line.
             line_type: Type of the line (from cv2).
             bg_color: Text background color.
 
         Returns:
-
+            self
         """
         kwargs = self._process_kwargs(locals())
 
@@ -338,6 +395,7 @@ class Visualizer(VisualizerHelper):
 
     @staticmethod
     def _process_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        """Process the kwargs and remove all None values."""
         kwargs.pop('self')
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
         return kwargs

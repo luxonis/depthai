@@ -55,7 +55,8 @@ class NNComponent(Component):
                  pipeline: dai.Pipeline,
                  model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
                  input: Union[CameraComponent, 'NNComponent'],
-                 nnType: Optional[str] = None,  # Either 'yolo' or 'mobilenet'
+                 nn_type: Optional[str] = None,  # Either 'yolo' or 'mobilenet'
+                 decode_fn: Optional[Callable] = None,
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
                  spatial: Union[None, bool, StereoComponent] = None,
                  replay: Optional[Replay] = None,
@@ -71,7 +72,7 @@ class NNComponent(Component):
         Args:
             model (Union[str, Path, Dict]): str for SDK supported model / Path to blob or custom model's json
             input: (Union[Component, dai.Node.Output]): Input to the NN. If nn_component that is object detector, crop HQ frame at detections (Script node + ImageManip node)
-            nnType (str, optional): Type of the NN - Either 'Yolo' or 'MobileNet'
+            nn_type (str, optional): Type of the NN - Either 'Yolo' or 'MobileNet'
             tracker (bool, default False): Enable object tracker - only for Object detection models
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
             replay (Replay object): Replay
@@ -85,13 +86,14 @@ class NNComponent(Component):
         self._spatial = spatial
         self._args = args
         self._replay = replay
+        self._decode_fn = decode_fn or (lambda x: x)
 
         self.tracker = pipeline.createObjectTracker() if tracker else None
 
         # Parse passed settings
         self._parse_model(model)
-        if nnType:
-            self._parse_node_type(nnType)
+        if nn_type:
+            self._parse_node_type(nn_type)
 
         # Create NN node
         self.node = pipeline.create(self._nodeType)
@@ -157,7 +159,9 @@ class NNComponent(Component):
             self.node.input.setQueueSize(15)
         else:
             raise ValueError(
-                "'input' argument passed on init isn't supported! You can only use NnComponent or CameraComponent as the input.")
+                "'input' argument passed on init isn't supported!"
+                "You can only use NnComponent or CameraComponent as the input."
+            )
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
@@ -216,29 +220,30 @@ class NNComponent(Component):
             upperThreshold=args.get('maxDepth', None),
         )
 
-    def _parse_config(self, modelConfig: Union[Path, str, Dict]):
+    def _parse_config(self, model_config: Union[Path, str, Dict]):
         """
         Called when NNComponent is initialized. Reads config.json file and parses relevant setting from there
         """
-        parentFolder = None
-        if isinstance(modelConfig, str):
-            modelConfig = Path(modelConfig).resolve()
-        if isinstance(modelConfig, Path):
-            parentFolder = modelConfig.parent
-            with modelConfig.open() as f:
+        parent_folder = None
+        if isinstance(model_config, str):
+            model_config = Path(model_config).resolve()
+
+        if isinstance(model_config, Path):
+            parent_folder = model_config.parent
+            with model_config.open() as f:
                 self._config = Config().load(json.loads(f.read()))
         else:  # Dict
-            self._config = modelConfig
+            self._config = model_config
 
         # Get blob from the config file
         if 'model' in self._config:
             model = self._config['model']
 
             # Resolve the paths inside config
-            if parentFolder:
+            if parent_folder:
                 for name in ['blob', 'xml', 'bin']:
                     if name in model:
-                        model[name] = str((parentFolder / model[name]).resolve())
+                        model[name] = str((parent_folder / model[name]).resolve())
 
             if 'blob' in model:
                 self._blob = dai.OpenVINO.Blob(model['blob'])
@@ -252,7 +257,7 @@ class NNComponent(Component):
 
         # Handler.py logic to decode raw NN results into standardized AI results
         if 'handler' in self._config:
-            self._handler = loadModule(modelConfig.parent / self._config["handler"])
+            self._handler = loadModule(model_config.parent / self._config["handler"])
 
             if not callable(getattr(self._handler, "decode", None)):
                 raise RuntimeError("Custom model handler does not contain 'decode' method!")
@@ -316,7 +321,7 @@ class NNComponent(Component):
     def config_multistage_nn(self,
                              debug=False,
                              labels: Optional[List[int]] = None,
-                             scaleBb: Optional[Tuple[int, int]] = None,
+                             scale_bb: Optional[Tuple[int, int]] = None,
                              ) -> None:
         """
         Configures the MultiStage NN pipeline. Available if the input to this NNComponent is Detection NNComponent.
@@ -324,14 +329,14 @@ class NNComponent(Component):
         Args:
             debug (bool, default False): Debug script node
             labels (List[int], optional): Crop & run inference only on objects with these labels
-            scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
+            scale_bb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
         """
         if not self._isMultiStage():
             print(
                 "Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
 
-        self._multi_stage_config = MultiStageConfig(debug, labels, scaleBb)
+        self._multi_stage_config = MultiStageConfig(debug, labels, scale_bb)
 
     def _parse_label(self, label: Union[str, int]) -> int:
         if isinstance(label, int):
@@ -495,7 +500,9 @@ class NNComponent(Component):
             else:
                 out = XoutNnResults(self._comp,
                                     self._comp._input.get_stream_xout(),  # CameraComponent
-                                    StreamXout(self._comp.node.id, self._comp.node.out))  # NnComponent
+                                    StreamXout(self._comp.node.id, self._comp.node.out),
+                                    decode_fn=self._comp._handler.decode if self._comp._handler else self._comp._decode_fn
+                                    )  # NnComponent
             return self._comp._create_xout(pipeline, out)
 
         def passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:

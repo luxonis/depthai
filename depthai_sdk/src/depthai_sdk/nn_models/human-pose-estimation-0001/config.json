@@ -1,4 +1,7 @@
 {
+    "model":{
+        "model_name": "human-pose-estimation-0001"
+    },
     "nn_config": {
         "output_format" : "raw"
     },

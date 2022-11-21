@@ -1,19 +1,12 @@
 from abc import abstractmethod
-from typing import Dict, List, Any, Optional, Tuple, Union
+from typing import Dict, List, Any, Optional, Tuple, Union, Callable
 
 import cv2
 import depthai as dai
 import numpy as np
-
 from distinctipy import distinctipy
-from pathlib import Path
-from matplotlib import pyplot as plt
 
-from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
-from depthai_sdk.visualize.visualizer import Platform
-from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
-from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
-from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.callback_context import CallbackContext
 from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
@@ -22,9 +15,16 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
     IMUPacket, DepthPacket, _Detection
 )
-from depthai_sdk.visualize.configs import StereoColor
+from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
+from depthai_sdk.recorders.video_recorder import VideoRecorder
+from depthai_sdk.recorders.video_writers import AvWriter
 from depthai_sdk.visualize import Visualizer
+from depthai_sdk.visualize.configs import StereoColor
 from depthai_sdk.visualize.configs import TextPosition
+from depthai_sdk.visualize.visualizer import Platform
+from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 
 """
 Xout classes are abstracting streaming messages to the host computer (via XLinkOut) and syncing those messages
@@ -41,37 +41,20 @@ class XoutFrames(XoutBase):
     name: str = "Frames"
     fps: float
     frames: StreamXout
-    _frame_shape: Tuple[int, int] = None
-    _scale: Union[None, float, Tuple[int, int]] = None
-    _show_fps: bool = False
-    _recording_path: Optional[Path] = None
-    _video_writer: Optional[cv2.VideoWriter] = None
-    _fourcc_codec_code = None
-    _frames_buffer: List
-    _FRAMES_TO_BUFFER: int = 20
 
     def __init__(self, frames: StreamXout, fps: float = 30):
         self.frames = frames
         self.fps = fps
-        self._frames_buffer = []
+        self._video_recorder = None
         super().__init__()
 
-    def setup_visualize(self, visualizer: Visualizer,
+    def setup_visualize(self,
+                        visualizer: Visualizer,
                         name: str = None,
-                        recording_path: Optional[str] = None):
+                        recorder: VideoRecorder = None):
         self._visualizer = visualizer
         self.name = name or self.name
-
-        if recording_path:
-            self._recording_path = Path(recording_path).resolve()
-            video_format = self._recording_path.suffix
-            if video_format == ".mp4":
-                self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'mp4v')
-            elif video_format == ".avi":
-                self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'FMP4')
-            else:
-                print("Selected video format not supported, using mp4 instead.")
-                self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'mp4v')
+        self._video_recorder = recorder
 
     def visualize(self, packet: FramePacket) -> None:
         """
@@ -89,7 +72,8 @@ class XoutFrames(XoutBase):
         packet.frame = self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
-            self.callback(packet, self._visualizer)
+            ctx = CallbackContext(packet, self._visualizer, self._video_recorder)
+            self.callback(ctx)
         else:
             # TODO: if RH, don't display frame
             # Draw on the frame
@@ -98,24 +82,13 @@ class XoutFrames(XoutBase):
             else:
                 pass
 
-        # Record
-        if self._recording_path and not self._video_writer:
-            if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
-                self._frames_buffer.append(packet.frame)
+        if self._video_recorder:
+            xout_name = self.frames.friendly_name or self.frames.name
+            # TODO not ideal to check it this way
+            if isinstance(self._video_recorder._writer[xout_name], AvWriter):
+                self._video_recorder.write(xout_name, packet.imgFrame)
             else:
-                h, w = self._visualizer.frame_shape[:2]
-                c = self._visualizer.frame_shape[2] if len(self._visualizer.frame_shape) == 3 else 1
-                self._video_writer = cv2.VideoWriter(str(self._recording_path),
-                                                     self._fourcc_codec_code,
-                                                     self._fps.fps(),
-                                                     (w, h),
-                                                     isColor=int(c > 1)
-                                                     )
-                # Write all buffered frames
-                for frame in self._frames_buffer:
-                    self._video_writer.write(frame)
-        elif self._video_writer:
-            self._video_writer.write(packet.frame)
+                self._video_recorder.write(xout_name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -132,8 +105,8 @@ class XoutFrames(XoutBase):
         self.queue.put(packet, block=False)
 
     def __del__(self):
-        if self._video_writer:
-            self._video_writer.release()
+        if self._video_recorder:
+            self._video_recorder.close()
 
 
 class XoutMjpeg(XoutFrames):
@@ -147,7 +120,7 @@ class XoutMjpeg(XoutFrames):
         self.flag = cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE
         self.lossless = lossless
         self.fps = fps
-        if lossless and self._vis:
+        if lossless and self._visualizer:
             raise ValueError('Visualizing Lossless MJPEG stream is not supported!')
 
     def visualize(self, packet: FramePacket):
@@ -228,11 +201,13 @@ class XoutDisparity(XoutFrames, XoutClickable):
 
         self.colorize = colorize
         self.colormap = colormap
+
         self.use_wls_filter = use_wls_filter
-        if use_wls_filter:
+        self.wls_lambda = wls_lambda
+        self.wls_sigma = wls_sigma
+
+        if self.use_wls_filter:
             self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
-            self.wls_filter.setLambda(wls_lambda)
-            self.wls_filter.setSigmaColor(wls_sigma)
 
         self.msgs = dict()
 
@@ -243,17 +218,23 @@ class XoutDisparity(XoutFrames, XoutClickable):
         frame = packet.frame
         disparity_frame = (frame * self.multiplier).astype(np.uint8)
 
+        stereo_config = self._visualizer.config.stereo
+
         if self.use_wls_filter:
+            self.wls_filter.setLambda(stereo_config.wls_lambda or self.wls_lambda)
+            self.wls_filter.setSigmaColor(stereo_config.wls_sigma or self.wls_sigma)
             disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
-        if self.colorize == StereoColor.GRAY:
+        colorize = stereo_config.colorize or self.colorize
+        colormap = stereo_config.colormap or self.colormap
+        if colorize == StereoColor.GRAY:
             packet.frame = disparity_frame
-        elif self.colorize == StereoColor.RGB:
-            packet.frame = cv2.applyColorMap(disparity_frame, self.colormap or cv2.COLORMAP_JET)
-        elif self.colorize == StereoColor.RGBD:
+        elif colorize == StereoColor.RGB:
+            packet.frame = cv2.applyColorMap(disparity_frame, colormap or cv2.COLORMAP_JET)
+        elif colorize == StereoColor.RGBD:
             packet.frame = cv2.applyColorMap(
                 (disparity_frame * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
-                self.colormap or cv2.COLORMAP_JET
+                colormap or cv2.COLORMAP_JET
             )
 
         if self._visualizer.config.output.clickable:
@@ -327,15 +308,16 @@ class XoutDepth(XoutFrames, XoutClickable):
 
         self.fps = fps
         self.device = device
-        # self.multiplier = 255 / 95.0
 
         self.colorize = colorize
         self.colormap = colormap
+
         self.use_wls_filter = use_wls_filter
+        self.wls_lambda = wls_lambda
+        self.wls_sigma = wls_sigma
+
         if use_wls_filter:
             self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
-            self.wls_filter.setLambda(wls_lambda)
-            self.wls_filter.setSigmaColor(wls_sigma)
 
         self.msgs = dict()
 
@@ -345,20 +327,26 @@ class XoutDepth(XoutFrames, XoutClickable):
     def visualize(self, packet: DepthPacket):
         depth_frame = packet.imgFrame.getFrame()
 
-        if self.use_wls_filter:
+        stereo_config = self._visualizer.config.stereo
+
+        if stereo_config.wls_filter or self.use_wls_filter:
+            self.wls_filter.setLambda(stereo_config.wls_lambda)
+            self.wls_filter.setSigmaColor(stereo_config.wls_sigma)
             depth_frame = self.wls_filter.filter(depth_frame, packet.mono_frame.getCvFrame())
 
         depth_frame_color = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
         depth_frame_color = cv2.equalizeHist(depth_frame_color)
 
-        if self.colorize == StereoColor.GRAY:
+        colorize = stereo_config.colorize or self.colorize
+        colormap = stereo_config.colormap or self.colormap
+        if colorize == StereoColor.GRAY:
             packet.frame = depth_frame_color
-        elif self.colorize == StereoColor.RGB:
-            packet.frame = cv2.applyColorMap(depth_frame_color, self.colormap or cv2.COLORMAP_JET)
-        elif self.colorize == StereoColor.RGBD:
+        elif colorize == StereoColor.RGB:
+            packet.frame = cv2.applyColorMap(depth_frame_color, colormap or cv2.COLORMAP_JET)
+        elif colorize == StereoColor.RGBD:
             packet.frame = cv2.applyColorMap(
                 (depth_frame_color * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
-                self.colormap or cv2.COLORMAP_JET
+                stereo_config.colormap or cv2.COLORMAP_JET
             )
 
         if self._visualizer.config.output.clickable:
@@ -448,13 +436,19 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
     def xstreams(self) -> List[StreamXout]:
         return [self.nn_results, self.frames]
 
-    def __init__(self, det_nn, frames: StreamXout, nn_results: StreamXout):
+    def __init__(self,
+                 det_nn,
+                 frames: StreamXout,
+                 nn_results: StreamXout,
+                 decode_fn: Optional[Callable] = None):
         self.nn_results = nn_results
         self.det_nn = det_nn
         # Multiple inheritance init
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, nn_results])
         # Save StreamXout before initializing super()!
+
+        self.decode_fn = decode_fn
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
         if det_nn._labels:
@@ -486,7 +480,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         if isinstance(packet, TrackerPacket):
             pass  # TrackerPacket draws detection boxes itself
-        else:
+        elif isinstance(packet.img_detections, dai.ImgDetections):
             # Add detections to packet
             for detection in packet.img_detections.detections:
                 d = _Detection()
@@ -516,9 +510,10 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         packet = DetectionPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
-            msgs[self.nn_results.name],
+            msgs[self.nn_results.name] if self.decode_fn is None else self.decode_fn(msgs[self.nn_results.name])
         )
         self.queue.put(packet, block=False)
+
 
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
     name: str = "Depth & Bounding Boxes"
@@ -568,15 +563,15 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
         self.queue.put(packet, block=False)
 
 
-
 class XoutTracker(XoutNnResults):
     name: str = "Object Tracker"
-    # TODO: hold tracklets for a few frames so we can draw breadcrumb trail
-    packets: List[TrackerPacket]
+    buffer: List[TrackerPacket]
+    lost_counter: Dict[int, int] = {}
+    buffer_size: int = 10
 
     def __init__(self, det_nn, frames: StreamXout, tracklets: StreamXout):
         super().__init__(det_nn, frames, tracklets)
-        self.packets = []
+        self.buffer = []
 
     def visualize(self, packet: TrackerPacket):
         try:
@@ -589,18 +584,30 @@ class XoutTracker(XoutNnResults):
         except IndexError:
             spatial_points = None
 
-        self._visualizer.add_detections(packet.daiTracklets.tracklets,
+        blacklist = set()
+        threshold = self._visualizer.config.tracking.deletion_lost_threshold
+        for i, tracklet in enumerate(packet.daiTracklets.tracklets):
+            if tracklet.status == dai.Tracklet.TrackingStatus.LOST:
+                self.lost_counter[tracklet.id] += 1
+            elif tracklet.status == dai.Tracklet.TrackingStatus.TRACKED:
+                self.lost_counter[tracklet.id] = 0
+
+            if tracklet.id in self.lost_counter and self.lost_counter[tracklet.id] >= threshold:
+                blacklist.add(tracklet.id)
+
+        filtered_tracklets = [tracklet for tracklet in packet.daiTracklets.tracklets if tracklet.id not in blacklist]
+        self._visualizer.add_detections(filtered_tracklets,
                                         self.normalizer,
                                         self.labels,
                                         spatial_points=spatial_points)
 
         # Add to local storage
-        self.packets.append(packet)
-        if 10 < len(self.packets):
-            self.packets.pop(0)
+        self.buffer.append(packet)
+        if self.buffer_size < len(self.buffer):
+            self.buffer.pop(0)
 
         self._visualizer.add_trail(
-            tracklets=[t for p in self.packets for t in p.daiTracklets.tracklets],
+            tracklets=[t for p in self.buffer for t in p.daiTracklets.tracklets if t.id not in blacklist],
             label_map=self.labels
         )
 
@@ -803,22 +810,10 @@ class XoutIMU(XoutBase):
         self.packets = []
         self.start_time = 0.0
 
-        self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
-        labels = ['x', 'y', 'z']
-
+        self.fig = None
+        self.axes = None
         self.acceleration_lines = []
-        for i in range(3):
-            self.acceleration_lines.append(self.axes[0].plot([], [], label=f'Acceleration {labels[i]}')[0])
-            self.axes[0].set_ylabel('Acceleration (m/s^2)')
-            self.axes[0].set_xlabel('Time (s)')
-            self.axes[0].legend()
-
         self.gyroscope_lines = []
-        for i in range(3):
-            self.gyroscope_lines.append(self.axes[1].plot([], [], label=f'Gyroscope {labels[i]}')[0])
-            self.axes[1].set_ylabel('Gyroscope (rad/s)')
-            self.axes[1].set_xlabel('Time (s)')
-            self.axes[1].legend()
 
         self.acceleration_buffer = []
         self.gyroscope_buffer = []
@@ -826,8 +821,25 @@ class XoutIMU(XoutBase):
         super().__init__()
 
     def setup_visualize(self, visualizer: Visualizer, name: str = None, _=None):
+        from matplotlib import pyplot as plt
+
         self._visualizer = visualizer
         self.name = name or self.name
+
+        self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
+        labels = ['x', 'y', 'z']
+
+        for i in range(3):
+            self.acceleration_lines.append(self.axes[0].plot([], [], label=f'Acceleration {labels[i]}')[0])
+            self.axes[0].set_ylabel('Acceleration (m/s^2)')
+            self.axes[0].set_xlabel('Time (s)')
+            self.axes[0].legend()
+
+        for i in range(3):
+            self.gyroscope_lines.append(self.axes[1].plot([], [], label=f'Gyroscope {labels[i]}')[0])
+            self.axes[1].set_ylabel('Gyroscope (rad/s)')
+            self.axes[1].set_xlabel('Time (s)')
+            self.axes[1].legend()
 
     def visualize(self, packet: IMUPacket):
         if self.start_time == 0.0:

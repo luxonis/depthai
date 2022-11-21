@@ -4,6 +4,7 @@ from typing import List, Callable
 
 import depthai as dai
 
+from depthai_sdk.callback_context import CallbackContext
 from depthai_sdk.oak_outputs.fps import FPS
 from depthai_sdk.visualize import Visualizer
 
@@ -77,6 +78,8 @@ class XoutBase(ABC):
                     self.visualize(packet)
                 else:
                     # User defined callback
-                    self.callback(packet)
+                    ctx = CallbackContext(packet=packet)
+                    self.callback(ctx)
+
         except Empty:  # Queue empty
             pass
