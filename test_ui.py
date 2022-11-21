@@ -18,7 +18,7 @@ from pathlib import Path
 import cv2
 import glob
 
-from depthai_helpers import stats_server_api
+from depthai_helpers import production_support_server_api
 
 # Try setting native cv2 image format, otherwise RGB888
 colorMode = QtGui.QImage.Format_RGB888
@@ -1486,11 +1486,11 @@ class UiTests(QtWidgets.QMainWindow):
             'eeprom_filename_used': Path(calib_path).name,
             'eeprom_file_used': eepromDataJson,
         }
-        stats_server_api.add_result(
+        production_support_server_api.add_result(
             'test', self.depth_camera.id, self.depth_camera.device_name, self.depth_camera.bootloader_version, 
             dai.__version__, self.depth_camera.start_time, datetime.now(), results
         )
-        stats_server_api.sync()
+        production_support_server_api.sync()
 
     def close_event(self, event):
         self.disconnect()

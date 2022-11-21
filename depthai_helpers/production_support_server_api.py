@@ -9,10 +9,10 @@ import numpy as np
 CACHE_FILE_NAME = os.environ.get('CACHE_FILE_NAME', 'results_cache.jsonl')
 CACHE_DIRECTORY = os.environ.get('CACHE_DIRECTORY', '')
 CACHE_FILE_PATH = os.path.join(CACHE_DIRECTORY, CACHE_FILE_NAME)
-STATS_SERVER_URL = os.environ.get('STATS_SERVER_URL', 'http://localhost')
-API_KEY = os.environ.get('STATS_SERVER_API_KEY', '1234')
+PRODUCTION_SUPPORT_SERVER_URL = os.environ.get('PRODUCTION_SUPPORT_SERVER_URL', 'http://localhost')
+API_KEY = os.environ.get('PRODUCTION_SUPPORT_SERVER_API_KEY', '1234')
 
-print(f'Stats server API: {STATS_SERVER_URL}, API key: {API_KEY}')
+print(f'Production support server API: {PRODUCTION_SUPPORT_SERVER_URL}, API key: {API_KEY}')
 
 class NumpyArrayEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -61,7 +61,7 @@ def sync():
 			results = [result for result in reader]
 		
 		response = requests.post(
-			f'{STATS_SERVER_URL}/results', 
+			f'{PRODUCTION_SUPPORT_SERVER_URL}/results', 
 			json=results, 
 			headers={'x-api-key': API_KEY},
 			timeout=1
