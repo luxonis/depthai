@@ -2,12 +2,12 @@ import cv2
 import numpy as np
 
 from depthai_sdk import OakCamera, AspectRatioResizeMode, TextPosition
-from depthai_sdk.callback_context import VisualizeContext
+from depthai_sdk.callback_context import CallbackContext
 
 emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 
 
-def callback(ctx: VisualizeContext):
+def callback(ctx: CallbackContext):
     packet = ctx.packet
     visualizer = ctx.visualizer
 

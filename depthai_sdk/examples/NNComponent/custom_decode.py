@@ -4,7 +4,7 @@ import numpy as np
 from depthai import NNData, ImgDetections
 
 from depthai_sdk import OakCamera, Detections
-from depthai_sdk.callback_context import VisualizeContext
+from depthai_sdk.callback_context import CallbackContext
 
 
 def decode(nn_data: NNData):
@@ -19,7 +19,7 @@ def decode(nn_data: NNData):
     return dets
 
 
-def callback(ctx: VisualizeContext):
+def callback(ctx: CallbackContext):
     packet = ctx.packet
     frame = packet.frame
     detections: Detections = packet.img_detections

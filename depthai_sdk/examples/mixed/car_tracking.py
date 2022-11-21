@@ -8,7 +8,7 @@ with OakCamera(replay='cars-tracking-above-01') as oak:
     nn = oak.create_nn('vehicle-detection-0202', color, tracker=True)
     nn.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.STRETCH)
     # Visualize tracklets, show FPS
-    visualizer = oak.visualize(nn.out.tracker, fps=True, record_dir='./recorded_video.mp4')
+    visualizer = oak.visualize(nn.out.tracker, fps=True, record_path='./car_tracking.avi')
     visualizer.tracking(line_thickness=5).text(auto_scale=True)
     # Start the app in blocking mode
     # oak.show_graph()

@@ -3,10 +3,10 @@
 import cv2
 
 from depthai_sdk import OakCamera, TextPosition
-from depthai_sdk.callback_context import VisualizeContext
+from depthai_sdk.callback_context import CallbackContext
 
 
-def callback(ctx: VisualizeContext):
+def callback(ctx: CallbackContext):
     packet = ctx.packet
     visualizer = ctx.visualizer
 
