@@ -4,9 +4,6 @@
 
 # Standard imports
 import os, sys, subprocess, time, threading, argparse, datetime
-print(f"\nSYSTEM CHECK\n")
-print(f"{sys.prefix = }\n{sys.base_prefix = }")
-print(f"PYTHONPATH: {os.getenv('PYTHONPATH')}")
 
 import re
 from pathlib import Path
@@ -17,7 +14,6 @@ from packaging import version
 # PyQt5
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-print(f"SYS EXECUTABLE: {sys.executable}")
 # Constants
 SCRIPT_DIRECTORY=Path(os.path.abspath(os.path.dirname(__file__)))
 DEPTHAI_DEMO_SCRIPT='depthai_demo.py'
@@ -58,6 +54,11 @@ sys.stdout = logger
 sys.stderr = logger
 
 print(f'========= Starting: Launcher ({datetime.datetime.now()}) =========')
+print(f"System information:")
+print(f" - sys.prefix = {sys.prefix}")
+print(f" - sys.base_prefix = {sys.base_prefix}")
+print(f" - Env 'PYTHONPATH': {os.getenv('PYTHONPATH')}")
+print(f" - Executable: {sys.executable}\n")
 
 qApp = QtWidgets.QApplication(['DepthAI Launcher'])
 # Set style
