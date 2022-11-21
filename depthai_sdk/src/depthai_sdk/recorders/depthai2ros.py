@@ -46,7 +46,7 @@ class DepthAi2Ros1:
         msg.data = np.array(imgFrame.getData()).tobytes()
         return msg
 
-    def Imu(self, imu_packet: dai.IMUPacket, linear_accel_cov: float = 0., angular_velocity_cov: float = 0) -> Imu
+    def Imu(self, imu_packet: dai.IMUPacket, linear_accel_cov: float = 0., angular_velocity_cov: float = 0) -> Imu:
         msg = Imu()
 
         if imu_packet.acceleroMeter is not None:
@@ -81,7 +81,6 @@ class DepthAi2Ros1:
         msg.is_bigendian = 0
 
         type = imgFrame.getType()
-        print('new frame', type)
         TYPE = dai.ImgFrame.Type
         if type == TYPE.RAW16: # Depth
             msg.encoding = 'mono16'
