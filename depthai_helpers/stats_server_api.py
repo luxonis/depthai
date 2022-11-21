@@ -10,7 +10,7 @@ CACHE_FILE_NAME = os.environ.get('CACHE_FILE_NAME', 'results_cache.jsonl')
 CACHE_DIRECTORY = os.environ.get('CACHE_DIRECTORY', '')
 CACHE_FILE_PATH = os.path.join(CACHE_DIRECTORY, CACHE_FILE_NAME)
 STATS_SERVER_URL = os.environ.get('STATS_SERVER_URL', 'http://localhost')
-API_KEY = os.environ.get('API_KEY', '1234')
+API_KEY = os.environ.get('STATS_SERVER_API_KEY', '1234')
 
 print(f'Stats server API: {STATS_SERVER_URL}, API key: {API_KEY}')
 
