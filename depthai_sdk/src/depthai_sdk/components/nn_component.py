@@ -47,6 +47,9 @@ class NNComponent(Component):
     _multi_stage_nn: MultiStageNN = None
     _multi_stage_config: MultiStageConfig = None
 
+    x_in = None
+    _input_queue = None
+
     _spatial: Union[None, bool, StereoComponent] = None
     _replay: Replay  # Replay module
 
@@ -148,22 +151,47 @@ class NNComponent(Component):
             scale = frame_size[0] / nn_size[0], frame_size[1] / nn_size[1]
             i = 0 if scale[0] < scale[1] else 1
             crop = int(scale[i] * nn_size[0]), int(scale[i] * nn_size[1])
-            # Crop the high-resolution frames so it matches object detection frame aspect ratio
-            # NOTE: objecgt detections have to be set to CROP mode
+            # Crop the high-resolution frames, so it matches object detection frame aspect ratio
+
+            self.image_manip_config = dai.ImageManipConfig()
             self.image_manip = pipeline.createImageManip()
-            self.image_manip.setResize(*crop)
-            self.image_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
+            self.image_manip.setNumFramesPool(20)
+
             self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             self._input._stream_input.link(self.image_manip.inputImage)
 
-            # Create script node, get HQ frames from input.
-            self._multi_stage_nn = MultiStageNN(pipeline, self._input.node, self.image_manip.out, self._size)
-            self._multi_stage_nn.configure(self._multi_stage_config)
-            self._multi_stage_nn.out.link(self.node.input)  # Cropped frames
-            # For debugging, for integral counter
-            self.node.out.link(self._multi_stage_nn.script.inputs['recognition'])
-            self.node.input.setBlocking(True)
-            self.node.input.setQueueSize(15)
+            if self._input._isDetector():
+                self.image_manip.setResize(*crop)
+                self.image_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
+
+                # Create script node, get HQ frames from input.
+                self._multi_stage_nn = MultiStageNN(pipeline, self._input.node, self.image_manip.out, self._size)
+                self._multi_stage_nn.configure(self._multi_stage_config)
+                self._multi_stage_nn.out.link(self.node.input)  # Cropped frames
+
+                # For debugging, for integral counter
+                self.node.out.link(self._multi_stage_nn.script.inputs['recognition'])
+                self.node.input.setBlocking(True)
+                self.node.input.setQueueSize(15)
+            else:
+                # Custom NN
+                self.image_manip.setResize(*self._size)
+                self.image_manip.setWaitForConfigInput(True)
+                self.image_manip.inputConfig.setReusePreviousMessage(True)
+                self.image_manip.setNumFramesPool(20)
+
+                self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
+
+                self.x_in = pipeline.createXLinkIn()
+                self.x_in.setStreamName("input_queue")
+                self.x_in.setMaxDataSize(frame_size[0] * frame_size[1] * 3)
+                self.x_in.out.link(self.image_manip.inputImage)
+
+                self.x_in_cfg = pipeline.createXLinkIn()
+                self.x_in_cfg.setStreamName("input_queue_cfg")
+                self.x_in_cfg.out.link(self.image_manip.inputConfig)
+
+                self.image_manip.out.link(self.node.input)
         else:
             raise ValueError(
                 "'input' argument passed on init isn't supported!"
@@ -251,7 +279,7 @@ class NNComponent(Component):
             if self._config['source'] == 'roboflow':
                 from depthai_sdk.components.integrations.roboflow import RoboflowIntegration
                 self._roboflow = RoboflowIntegration(self._config)
-                self._parse_node_type('YOLO') # Roboflow only supports YOLO models
+                self._parse_node_type('YOLO')  # Roboflow only supports YOLO models
                 return
             else:
                 raise ValueError(f"[NN Dict configuration] Source '{self._config['source']}' not supported")
@@ -517,19 +545,18 @@ class NNComponent(Component):
             """
 
             if self._comp._is_multi_stage():
-                out = XoutTwoStage(self._comp._input, self._comp,
-                                   self._comp._input._input.get_stream_xout(),  # CameraComponent
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),
-                                   # NnComponent (detections)
-                                   StreamXout(self._comp.node.id, self._comp.node.out),
-                                   # This NnComponent (2nd stage NN)
-                                   )
+                out = XoutTwoStage(det_nn=self._comp._input,
+                                   second_nn=self._comp,
+                                   frames=self._comp._input._input.get_stream_xout(),
+                                   det_out=StreamXout(self._comp._input.node.id, self._comp._input.node.out),
+                                   second_nn_out=StreamXout(self._comp.node.id, self._comp.node.out),
+                                   device=device,
+                                   input_queue_name="input_queue" if self._comp.x_in else None)
             else:
                 out = XoutNnResults(self._comp,
-                                    self._comp._input.get_stream_xout(),  # CameraComponent
-                                    StreamXout(self._comp.node.id, self._comp.node.out),
-                                    decode_fn=self._comp._handler.decode if self._comp._handler else self._comp._decode_fn
-                                    )  # NnComponent
+                                    self._comp._input.get_stream_xout(),
+                                    StreamXout(self._comp.node.id, self._comp.node.out))
+
             return self._comp._create_xout(pipeline, out)
 
         def passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -635,7 +662,10 @@ class NNComponent(Component):
         if not isinstance(self._input, type(self)):
             return False
 
-        if not self._input._is_detector():
-            raise Exception('Only object detector models can be used as an input to the NNComponent!')
+        if not isinstance(self._input, Component):
+            return False
+
+        # if not self._input._isDetector():
+        #     raise Exception('Only object detector models can be used as an input to the NNComponent!')
 
         return True
