@@ -683,25 +683,37 @@ class XoutTwoStage(XoutNnResults):
     }
     """
     whitelist_labels: Optional[List[int]] = None
-    scaleBb: Optional[Tuple[int, int]] = None
+    scale_bb: Optional[Tuple[int, int]] = None
 
-    second_nn: StreamXout
+    second_nn_out: StreamXout
 
-    def __init__(self, det_nn, secondNn, frames: StreamXout, detections: StreamXout, second_nn: StreamXout):
-        self.second_nn = second_nn
+    def __init__(self,
+                 det_nn: 'NNComponent',
+                 second_nn: 'NNComponent',
+                 frames: StreamXout,
+                 det_out: StreamXout,
+                 second_nn_out: StreamXout,
+                 device: dai.Device,
+                 input_queue_name: str):
+        self.second_nn_out = second_nn_out
         # Save StreamXout before initializing super()!
-        super().__init__(det_nn, frames, detections)
+        super().__init__(det_nn, frames, det_out)
 
-        self.detNn = det_nn
-        self.secondNn = secondNn
+        self.det_nn = det_nn
+        self.second_nn = second_nn
 
         conf = det_nn._multi_stage_config  # No types due to circular import...
         if conf is not None:
             self.labels = conf._labels
-            self.scaleBb = conf.scaleBb
+            self.scale_bb = conf.scale_bb
+
+        self.device = device
+        self.input_queue_name = input_queue_name
+        self.input_queue = None
+        self.input_cfg_queue = None
 
     def xstreams(self) -> List[StreamXout]:
-        return [self.frames, self.nn_results, self.second_nn]
+        return [self.frames, self.nn_results, self.second_nn_out]
 
     # No need for `def visualize()` as `XoutNnResults.visualize()` does what we want
 
@@ -713,14 +725,50 @@ class XoutTwoStage(XoutNnResults):
 
         if seq not in self.msgs:
             self.msgs[seq] = dict()
-            self.msgs[seq][self.second_nn.name] = []
+            self.msgs[seq][self.second_nn_out.name] = []
             self.msgs[seq][self.nn_results.name] = None
 
-        if name == self.second_nn.name:
-            self.msgs[seq][name].append(msg)
+        if name == self.second_nn_out.name:
+            if (f := self.second_nn._decode_fn) is not None:
+                self.msgs[seq][name].append(f(msg))
+            else:
+                self.msgs[seq][name].append(msg)
+
             # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
         elif name == self.nn_results.name:
+            if (f := self.det_nn._decode_fn) is not None:
+                msg = f(msg)
+
             self.add_detections(seq, msg)
+
+            if self.input_queue_name:
+                if self.input_queue is None:
+                    self.input_queue = self.device.getInputQueue(self.input_queue_name)
+                    self.input_cfg_queue = self.device.getInputQueue(self.input_queue_name + '_cfg')
+
+                for i, det in enumerate(msg.detections):
+                    frame = self.msgs[seq][self.frames.name].getCvFrame()
+                    h, w = frame.shape[:2]
+                    cfg = dai.ImageManipConfig()
+
+                    if isinstance(det, dai.ImgDetection):
+                        rect = (det.xmin, det.ymin, det.xmax, det.ymax)
+                    else:
+                        rect = det[0] / 255, det[1] / 255, det[2] / 255, det[3] / 255
+
+                    cfg.setCropRect(rect)
+                    cfg.setResize(*self.second_nn._size)
+
+                    img_frame = dai.ImgFrame()
+                    img_frame.setData(frame.transpose(2, 0, 1).flatten())
+                    img_frame.setType(dai.ImgFrame.Type.BGR888p)
+                    img_frame.setWidth(w)
+                    img_frame.setHeight(h)
+
+                    if self.input_queue:
+                        self.input_queue.send(img_frame)
+                        self.input_cfg_queue.send(cfg)
+
             # print(f'Added detection seq {seq}')
         elif name in self.frames.name:
             self.msgs[seq][name] = msg
@@ -729,15 +777,19 @@ class XoutTwoStage(XoutNnResults):
             raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
 
         if self.synced(seq):
+            # print('Synced', seq)
             # Frames synced!
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
+
+            # print(seq, self.msgs[seq][self.nn_results.name].detections, self.msgs[seq][self.second_nn_out.name])
 
             packet = TwoStagePacket(
                 self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.nn_results.name],
-                self.msgs[seq][self.second_nn.name],
+                self.msgs[seq][self.second_nn_out.name],
+                # if (f := self.second_nn._decode_fn) is None else f(self.msgs[seq][self.second_nn_out.name]),
                 self.whitelist_labels
             )
             self.queue.put(packet, block=False)
@@ -757,15 +809,17 @@ class XoutTwoStage(XoutNnResults):
         # Used to match the scaled bounding boxes by the 2-stage NN script node
         self.msgs[seq][self.nn_results.name] = dets
 
-        if self.scaleBb is None: return  # No scaling required, ignore
+        if isinstance(dets, dai.ImgDetections):
+            if self.scale_bb is None:
+                return  # No scaling required, ignore
 
-        for det in dets.detections:
-            # Skip resizing BBs if we have whitelist and the detection label is not on it
-            if self.labels and det.label not in self.labels: continue
-            det.xmin -= self.scaleBb[0] / 100
-            det.ymin -= self.scaleBb[1] / 100
-            det.xmax += self.scaleBb[0] / 100
-            det.ymax += self.scaleBb[1] / 100
+            for det in dets.detections:
+                # Skip resizing BBs if we have whitelist and the detection label is not on it
+                if self.labels and det.label not in self.labels: continue
+                det.xmin -= self.scale_bb[0] / 100
+                det.ymin -= self.scale_bb[1] / 100
+                det.xmax += self.scale_bb[0] / 100
+                det.ymax += self.scale_bb[1] / 100
 
     def synced(self, seq: str) -> bool:
         """
@@ -782,9 +836,10 @@ class XoutTwoStage(XoutNnResults):
         if not packet[self.nn_results.name]:
             return False  # We don't have dai.ImgDetections
 
-        if len(packet[self.second_nn.name]) < self.required_recognitions(seq):
+        if len(packet[self.second_nn_out.name]) < self.required_recognitions(seq):
             return False  # We don't have enough 2nd stage NN results
 
+        # print('Synced!')
         return True
 
     def required_recognitions(self, seq: str) -> int:

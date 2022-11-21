@@ -27,7 +27,7 @@ class NNComponent(Component):
         dai.node.YoloSpatialDetectionNetwork,
     ]
     tracker: dai.node.ObjectTracker
-    imageManip: dai.node.ImageManip = None  # ImageManip used to resize the input to match the expected NN input size
+    image_manip: dai.node.ImageManip = None  # ImageManip used to resize the input to match the expected NN input size
 
     # Private properties
     _arResizeMode: AspectRatioResizeMode = AspectRatioResizeMode.LETTERBOX  # Default
@@ -41,8 +41,11 @@ class NNComponent(Component):
     _config: Dict = None
     _nodeType: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
 
-    _multiStageNn: MultiStageNN = None
+    _multi_stage_nn: MultiStageNN = None
     _multi_stage_config: MultiStageConfig = None
+
+    x_in = None
+    _input_queue = None
 
     _spatial: Union[None, bool, StereoComponent] = None
     _replay: Replay  # Replay module
@@ -115,7 +118,6 @@ class NNComponent(Component):
         return self._forcedVersion
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-
         if self._blob is None:
             self._blob = dai.OpenVINO.Blob(self._blobFromConfig(self._config['model'], version))
 
@@ -126,9 +128,9 @@ class NNComponent(Component):
         if 1 < len(self._blob.networkInputs):
             raise NotImplementedError()
 
-        nnIn: dai.TensorInfo = next(iter(self._blob.networkInputs.values()))
+        nn_in: dai.TensorInfo = next(iter(self._blob.networkInputs.values()))
         # TODO: support models that expect mono img
-        self._size: Tuple[int, int] = (nnIn.dims[0], nnIn.dims[1])
+        self._size: Tuple[int, int] = (nn_in.dims[0], nn_in.dims[1])
         # maxSize = dims
 
         if isinstance(self._input, CameraComponent):
@@ -136,27 +138,52 @@ class NNComponent(Component):
             self._setupResizeManip(pipeline).link(self.node.input)
         elif self._isMultiStage():
             # Calculate crop shape of the object detector
-            frameSize = self._input._input.stream_size
-            nnSize = self._input._size
-            scale = frameSize[0] / nnSize[0], frameSize[1] / nnSize[1]
+            frame_size = self._input._input.stream_size
+            nn_size = self._input._size
+            scale = frame_size[0] / nn_size[0], frame_size[1] / nn_size[1]
             i = 0 if scale[0] < scale[1] else 1
-            crop = int(scale[i] * nnSize[0]), int(scale[i] * nnSize[1])
-            # Crop the high-resolution frames so it matches object detection frame aspect ratio
-            # NOTE: objecgt detections have to be set to CROP mode
-            self.imageManip = pipeline.createImageManip()
-            self.imageManip.setResize(*crop)
-            self.imageManip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
-            self.imageManip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
-            self._input._stream_input.link(self.imageManip.inputImage)
+            crop = int(scale[i] * nn_size[0]), int(scale[i] * nn_size[1])
+            # Crop the high-resolution frames, so it matches object detection frame aspect ratio
 
-            # Create script node, get HQ frames from input.
-            self._multiStageNn = MultiStageNN(pipeline, self._input.node, self.imageManip.out, self._size)
-            self._multiStageNn.configure(self._multi_stage_config)
-            self._multiStageNn.out.link(self.node.input)  # Cropped frames
-            # For debugging, for integral counter
-            self.node.out.link(self._multiStageNn.script.inputs['recognition'])
-            self.node.input.setBlocking(True)
-            self.node.input.setQueueSize(15)
+            self.image_manip_config = dai.ImageManipConfig()
+            self.image_manip = pipeline.createImageManip()
+            self.image_manip.setNumFramesPool(20)
+
+            self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            self._input._stream_input.link(self.image_manip.inputImage)
+
+            if self._input._isDetector():
+                self.image_manip.setResize(*crop)
+                self.image_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
+
+                # Create script node, get HQ frames from input.
+                self._multi_stage_nn = MultiStageNN(pipeline, self._input.node, self.image_manip.out, self._size)
+                self._multi_stage_nn.configure(self._multi_stage_config)
+                self._multi_stage_nn.out.link(self.node.input)  # Cropped frames
+
+                # For debugging, for integral counter
+                self.node.out.link(self._multi_stage_nn.script.inputs['recognition'])
+                self.node.input.setBlocking(True)
+                self.node.input.setQueueSize(15)
+            else:
+                # Custom NN
+                self.image_manip.setResize(*self._size)
+                self.image_manip.setWaitForConfigInput(True)
+                self.image_manip.inputConfig.setReusePreviousMessage(True)
+                self.image_manip.setNumFramesPool(20)
+
+                self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
+
+                self.x_in = pipeline.createXLinkIn()
+                self.x_in.setStreamName("input_queue")
+                self.x_in.setMaxDataSize(frame_size[0] * frame_size[1] * 3)
+                self.x_in.out.link(self.image_manip.inputImage)
+
+                self.x_in_cfg = pipeline.createXLinkIn()
+                self.x_in_cfg.setStreamName("input_queue_cfg")
+                self.x_in_cfg.out.link(self.image_manip.inputConfig)
+
+                self.image_manip.out.link(self.node.input)
         else:
             raise ValueError(
                 "'input' argument passed on init isn't supported!"
@@ -297,26 +324,26 @@ class NNComponent(Component):
         Creates ImageManip node that resizes the input to match the expected NN input size.
         DepthAI uses CHW (Planar) channel layout and BGR color order convention.
         """
-        if not self.imageManip:
-            self.imageManip = pipeline.create(dai.node.ImageManip)
-            self._stream_input.link(self.imageManip.inputImage)
-            self.imageManip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
-            self.imageManip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+        if not self.image_manip:
+            self.image_manip = pipeline.create(dai.node.ImageManip)
+            self._stream_input.link(self.image_manip.inputImage)
+            self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
+            self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             # Set to non-blocking
-            self.imageManip.inputImage.setBlocking(False)
-            self.imageManip.inputImage.setQueueSize(2)
+            self.image_manip.inputImage.setBlocking(False)
+            self.image_manip.inputImage.setQueueSize(2)
 
         # Set Aspect Ratio resizing mode
         if self._arResizeMode == AspectRatioResizeMode.CROP:
             # Cropping is already the default mode of the ImageManip node
-            self.imageManip.initialConfig.setResize(self._size)
+            self.image_manip.initialConfig.setResize(self._size)
         elif self._arResizeMode == AspectRatioResizeMode.LETTERBOX:
-            self.imageManip.initialConfig.setResizeThumbnail(*self._size)
+            self.image_manip.initialConfig.setResizeThumbnail(*self._size)
         elif self._arResizeMode == AspectRatioResizeMode.STRETCH:
-            self.imageManip.initialConfig.setResize(self._size)
-            self.imageManip.setKeepAspectRatio(False)  # Not keeping aspect ratio -> stretching the image
+            self.image_manip.initialConfig.setResize(self._size)
+            self.image_manip.setKeepAspectRatio(False)  # Not keeping aspect ratio -> stretching the image
 
-        return self.imageManip.out
+        return self.image_manip.out
 
     def config_multistage_nn(self,
                              debug=False,
@@ -490,12 +517,13 @@ class NNComponent(Component):
             """
 
             if self._comp._isMultiStage():
-                out = XoutTwoStage(self._comp._input, self._comp,
-                                   self._comp._input._input.get_stream_xout(),  # CameraComponent
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),
-                                   # NnComponent (detections)
-                                   StreamXout(self._comp.node.id, self._comp.node.out),
-                                   # This NnComponent (2nd stage NN)
+                out = XoutTwoStage(det_nn=self._comp._input,
+                                   second_nn=self._comp,
+                                   frames=self._comp._input._input.get_stream_xout(),
+                                   det_out=StreamXout(self._comp._input.node.id, self._comp._input.node.out),
+                                   second_nn_out=StreamXout(self._comp.node.id, self._comp.node.out),
+                                   device=device,
+                                   input_queue_name="input_queue" if self._comp.x_in else None
                                    )
             else:
                 out = XoutNnResults(self._comp,
@@ -526,6 +554,7 @@ class NNComponent(Component):
                                     )
 
             return self._comp._create_xout(pipeline, out)
+
         def image_manip(self,  pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             out = XoutFrames(StreamXout(self._comp.imageManip.id, self._comp.imageManip.out))
             return self._comp._create_xout(pipeline, out)
@@ -555,7 +584,7 @@ class NNComponent(Component):
             if not self._comp._isMultiStage():
                 raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
-            out = XoutFrames(StreamXout(self._comp._multiStageNn.manip.id, self._comp._multiStageNn.manip.out))
+            out = XoutFrames(StreamXout(self._comp._multi_stage_nn.manip.id, self._comp._multi_stage_nn.manip.out))
             return self._comp._create_xout(pipeline, out)
 
         def tracker(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutTracker:
@@ -607,7 +636,10 @@ class NNComponent(Component):
         if not isinstance(self._input, type(self)):
             return False
 
-        if not self._input._isDetector():
-            raise Exception('Only object detector models can be used as an input to the NNComponent!')
+        if not isinstance(self._input, Component):
+            return False
+
+        # if not self._input._isDetector():
+        #     raise Exception('Only object detector models can be used as an input to the NNComponent!')
 
         return True
