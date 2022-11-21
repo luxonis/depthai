@@ -97,12 +97,11 @@ class CameraComponent(Component):
                 scale = getClosestIspScale(self.node.getIspSize(), width=1200, videoEncoder=(self.encoder is not None))
                 self.node.setIspScale(*scale)
 
-            videoSize = getClosestVideoSize(*self.node.getIspSize(), videoEncoder=(self.encoder is not None))
-            self.node.setVideoSize(*videoSize)
+            self.node.setVideoSize(*getClosestVideoSize(*self.node.getIspSize()))
             self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 
-            self.node.setPreviewSize(*videoSize)
-            self.stream_size = videoSize
+            self.node.setPreviewSize(*self.node.getVideoSize())
+            self.stream_size = self.node.getPreviewSize()
             self.stream = self.node.preview
 
         elif isinstance(self.node, dai.node.MonoCamera):
@@ -354,7 +353,7 @@ class CameraComponent(Component):
             Streams camera output to the OAK camera. Produces FramePacket.
             """
             out = XoutFrames(self._comp.get_stream_xout(), self._comp._getFps())
-            out.frames.friendly_name = self._comp._source
+            out.name = self._comp._source
             return self._comp._create_xout(pipeline, out)
 
         def replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -382,7 +381,7 @@ class CameraComponent(Component):
                     self._comp._encoderProfile,
                     self._comp.encoder.getFrameRate()
                 )
-            out.frames.friendly_name = self._comp._source
+            out.name = self._comp._source
             return self._comp._create_xout(pipeline, out)
 
     out: Out

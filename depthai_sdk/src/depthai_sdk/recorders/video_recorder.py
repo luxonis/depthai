@@ -21,7 +21,7 @@ class VideoRecorder(Recorder):
         self._writer = dict()
 
         for xout in xouts:
-            name = xout.frames.friendly_name or xout.frames.name
+            name = xout.name
             stream = OakStream(xout)
             if stream.isRaw():
                 from .video_writers.video_writer import VideoWriter

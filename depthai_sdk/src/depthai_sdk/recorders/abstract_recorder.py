@@ -4,7 +4,7 @@ from typing import List
 
 import depthai as dai
 
-from depthai_sdk.oak_outputs.xout import XoutFrames, XoutH26x, XoutMjpeg, XoutDepth, XoutDisparity
+from depthai_sdk.oak_outputs.xout import XoutFrames, XoutH26x, XoutMjpeg, XoutDepth, XoutDisparity, XoutIMU
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 from pathlib import Path
 
@@ -28,23 +28,33 @@ class OakStream:
         H264 = 2
         H265 = 3
         DEPTH = 4  # 16 bit
+        IMU = 5
 
     type: StreamType
+    xlink_name: str
 
     def __init__(self, xout: XoutBase):
         if isinstance(xout, XoutMjpeg):
             self.type = self.StreamType.MJPEG
+            self.xlink_name = xout.frames.name
         elif isinstance(xout, XoutH26x):
+            self.xlink_name = xout.frames.name
             if xout.profile == dai.VideoEncoderProperties.Profile.H265_MAIN:
                 self.type = self.StreamType.H265
             else:
                 self.type = self.StreamType.H264
         elif isinstance(xout, XoutDepth):
+            self.xlink_name = xout.frames.name
             self.type = self.StreamType.DEPTH
         elif isinstance(xout, XoutDisparity):
+            self.xlink_name = xout.frames.name
             self.type = self.StreamType.RAW
         elif isinstance(xout, XoutFrames):
+            self.xlink_name = xout.frames.name
             self.type = self.StreamType.RAW
+        elif isinstance(xout, XoutIMU):
+            self.xlink_name = xout.imu_out.name
+            self.type = self.StreamType.IMU
         else:
             raise ValueError("You have passed invalid Component Output to the Recorder!")
 
@@ -73,3 +83,6 @@ class OakStream:
 
     def isDepth(self) -> bool:
         return self.type == self.StreamType.DEPTH
+
+    def isIMU(self):
+        return self.type == self.StreamType.IMU

@@ -44,8 +44,7 @@ Supported recording types
 
 #. :ref:`RecordType.VIDEO <1. Video>`
 #. :ref:`RecordType.BAG <2. Rosbag>`
-
-In the next release we will also support MCAP.
+#. :ref:`RecordType.MCAP <3. MCAP recording>`
 
 1. Video
 --------
@@ -67,5 +66,23 @@ Currently, we only support recording ``depth`` to the rosbag (``recording.bag``)
 stream and mono streams. You can open the rosbag with the [RealSense Viewer](https://www.intelrealsense.com/sdk-2/#sdk2-tools) to view the depth:
 
 .. image:: https://user-images.githubusercontent.com/18037362/141661982-f206ed61-b505-4b17-8673-211a4029754b.gif
+
+3. MCAP recording
+-----------------
+
+An alternative to Rosbags are `mcap files <https://github.com/foxglove/mcap>`__ which can be viewed with `Foxglove studio <https://foxglove.dev/>`__.
+You can find `MCAP recording example here <https://github.com/luxonis/depthai/blob/main/depthai_sdk/examples/recording/mcap-record.py>`__.
+Currently supported streams:
+
+- MJPEG encoded color/left/right/disparity. Lossless MJPEG/H264/H265 aren't supported by Foxglove Studio
+- Non-encoded color/left/right/disparity/depth frames
+- Pointcloud, enable with ``recorder.config_mcap(pointcloud=True)``. It converts depth frame to pointcloud on the host
+
+Standalone Foxglove studio streaming demo can be `found here <https://github.com/luxonis/depthai-experiments/blob/master/gen2-foxglove>`__.
+
+.. figure:: https://user-images.githubusercontent.com/18037362/201514899-b4a202d9-0330-4754-b2f5-041f51bdd917.png
+
+    Available topics in Foxglove Studio from MCAP recorded by mcap-recording.py example
+
 
 .. include::  ../includes/footer-short.rst
