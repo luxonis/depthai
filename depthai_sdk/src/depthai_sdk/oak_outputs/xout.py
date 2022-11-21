@@ -565,12 +565,13 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
 
 class XoutTracker(XoutNnResults):
     name: str = "Object Tracker"
-    # TODO: hold tracklets for a few frames so we can draw breadcrumb trail
-    packets: List[TrackerPacket]
+    buffer: List[TrackerPacket]
+    lost_counter: Dict[int, int] = {}
+    buffer_size: int = 10
 
     def __init__(self, det_nn, frames: StreamXout, tracklets: StreamXout):
         super().__init__(det_nn, frames, tracklets)
-        self.packets = []
+        self.buffer = []
 
     def visualize(self, packet: TrackerPacket):
         try:
@@ -583,18 +584,30 @@ class XoutTracker(XoutNnResults):
         except IndexError:
             spatial_points = None
 
-        self._visualizer.add_detections(packet.daiTracklets.tracklets,
+        blacklist = set()
+        threshold = self._visualizer.config.tracking.deletion_lost_threshold
+        for i, tracklet in enumerate(packet.daiTracklets.tracklets):
+            if tracklet.status == dai.Tracklet.TrackingStatus.LOST:
+                self.lost_counter[tracklet.id] += 1
+            elif tracklet.status == dai.Tracklet.TrackingStatus.TRACKED:
+                self.lost_counter[tracklet.id] = 0
+
+            if tracklet.id in self.lost_counter and self.lost_counter[tracklet.id] >= threshold:
+                blacklist.add(tracklet.id)
+
+        filtered_tracklets = [tracklet for tracklet in packet.daiTracklets.tracklets if tracklet.id not in blacklist]
+        self._visualizer.add_detections(filtered_tracklets,
                                         self.normalizer,
                                         self.labels,
                                         spatial_points=spatial_points)
 
         # Add to local storage
-        self.packets.append(packet)
-        if 10 < len(self.packets):
-            self.packets.pop(0)
+        self.buffer.append(packet)
+        if self.buffer_size < len(self.buffer):
+            self.buffer.pop(0)
 
         self._visualizer.add_trail(
-            tracklets=[t for p in self.packets for t in p.daiTracklets.tracklets],
+            tracklets=[t for p in self.buffer for t in p.daiTracklets.tracklets if t.id not in blacklist],
             label_map=self.labels
         )
 

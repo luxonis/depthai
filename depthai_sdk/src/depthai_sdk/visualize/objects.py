@@ -485,7 +485,6 @@ class VisText(GenericObject):
                             thickness=font_thickness + 1,
                             lineType=text_config.line_type)
 
-
             # Front text
             cv2.putText(img=frame,
                         text=line,
@@ -587,16 +586,14 @@ class VisTrail(GenericObject):
     def prepare(self) -> 'VisTrail':
         grouped_tracklets = self.groupby_tracklet()
         h, w = self.frame_shape[:2]
+        tracking_config = self.config.tracking
 
         for tracklet_id, tracklets in grouped_tracklets.items():
-            thicknesses = np.linspace(start=1,
-                                      stop=self.config.tracking.line_thickness,
-                                      num=len(tracklets)).astype(np.int16)
-
-            if self.label_map:
+            color = tracking_config.line_color
+            if color is None and self.label_map:
                 label, color = self.label_map[tracklets[0].label]
             else:
-                label, color = str(tracklets[0].label), self.config.tracking.line_color
+                label, color = str(tracklets[0].label), tracking_config.line_color
 
             tracklet_length = 0
             for i in reversed(range(len(tracklets) - 1)):
@@ -605,11 +602,18 @@ class VisTrail(GenericObject):
                 p1 = int(w * (d1.xmin + d1.xmax) // 2), int(h * (d1.ymin + d1.ymax) // 2)
                 d2 = tracklets[i + 1].srcImgDetection
                 p2 = int(w * (d2.xmin + d2.xmax) // 2), int(h * (d2.ymin + d2.ymax) // 2)
-                tracklet_length += np.linalg.norm(np.array(p1) - np.array(p2))
-                if tracklet_length > self.config.tracking.max_length:
-                    break
+                if tracking_config.max_length != -1:
+                    tracklet_length += np.linalg.norm(np.array(p1) - np.array(p2))
+                    if tracklet_length > tracking_config.max_length:
+                        break
 
-                self.add_child(VisLine(p1, p2, color=color, thickness=thicknesses[i]))
+                thickness = tracking_config.line_thickness
+                if tracking_config.fading_tails:
+                    thickness = max(1, int(np.ceil(thickness * i / len(tracklets))))
+
+                self.add_child(VisLine(p1, p2,
+                                       color=color,
+                                       thickness=thickness))
 
         return self
 

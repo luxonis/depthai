@@ -348,7 +348,9 @@ class Visualizer(VisualizerHelper):
 
     def tracking(self,
                  max_length: int = None,
+                 deletion_lost_threshold: int = None,
                  line_thickness: int = None,
+                 fading_tails: bool = None,
                  line_color: Tuple[int, int, int] = None,
                  line_type: int = None,
                  bg_color: Tuple[int, int, int] = None) -> 'Visualizer':
@@ -357,7 +359,9 @@ class Visualizer(VisualizerHelper):
 
         Args:
             max_length: Maximum length of the trail (in pixels).
+            deletion_lost_threshold: Number of consequent LOST statuses after which the trail is deleted.
             line_thickness: Thickness of the line.
+            fading_tails: Flag that indicates if the tails should fade.
             line_color: Color of the line.
             line_type: Type of the line (from cv2).
             bg_color: Text background color.
