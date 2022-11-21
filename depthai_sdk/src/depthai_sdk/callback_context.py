@@ -13,11 +13,5 @@ Packet = Union[P, IMUPacket]
 @dataclass
 class CallbackContext:
     packet: Packet
-    recorders: Dict[str, R] = None
-
-
-@dataclass
-class VisualizeContext:
-    packet: Packet
     visualizer: Visualizer = None
     recorders: Dict[str, R] = None
