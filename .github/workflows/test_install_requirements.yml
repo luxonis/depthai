@@ -16,22 +16,22 @@
      runs-on: ubuntu-latest
      strategy:
        matrix:
-          python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
+          python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
           container_image: ["fedora:34", "fedora:35", "fedora:36", "ubuntu:20.04", "ubuntu:22.04"]
        fail-fast: false
      container:
        image: ${{ matrix.container_image }}
      steps:
        - uses: actions/checkout@v3
-       - uses: actions/setup-python@v4
-         with:
-           python-version: ${{ matrix.python-version }}
        - name: Install sudo
          if: startsWith(matrix.container_image, 'fedora') == true
          run: yum update -y && yum install -y sudo curl
        - name: Install sudo
          if: startsWith(matrix.container_image, 'ubuntu') == true
          run: apt-get update  -qq && apt-get -qq install sudo curl
+       - uses: actions/setup-python@v4
+         with:
+           python-version: ${{ matrix.python-version }}
        - name: Install dependencies
          run: |
            ln -snf /usr/share/zoneinfo/UTC /etc/localtime && echo UTC > /etc/timezone
@@ -44,7 +44,7 @@
    test_macos:
       strategy:
         matrix:
-          python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
+          python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
           os: ["macos-11", "macos-12"]
         fail-fast: false
       runs-on: ${{ matrix.os }}
@@ -65,7 +65,7 @@
       runs-on: windows-latest
       strategy:
         matrix:
-          python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
+          python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
         fail-fast: false
       steps:
       - uses: actions/checkout@v3
