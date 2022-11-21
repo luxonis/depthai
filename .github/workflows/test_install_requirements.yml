@@ -6,6 +6,9 @@
     paths:
       - 'install_requirements.py'
       - '.github/workflows/test_install_requirements.yml'
+      - 'requirements.txt'
+      - 'requirements-optional.txt'
+      - 'depthai_sdk/requirements.txt'
 
  # A workflow run is made up of one or more jobs that can run sequentially or in parallel
  jobs:
