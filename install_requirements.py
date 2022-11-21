@@ -44,10 +44,6 @@ subprocess.check_call(pip_call + ["uninstall", "opencv-python", "opencv-contrib-
 subprocess.check_call(pip_call + ["uninstall", "depthai", "--yes"])
 subprocess.check_call(pip_package_install + ["-r", "requirements.txt"], cwd=script_directory)
 
-# arm version is installed by homebrew in installation script
-# if not is_arm:
-#     subprocess.check_call(pip_call + ["install", "pyqt5"])
-
 try:
     subprocess.check_call(pip_package_install + ["-r", "requirements-optional.txt"], cwd=script_directory, stderr=subprocess.DEVNULL)
 except subprocess.CalledProcessError as ex:
