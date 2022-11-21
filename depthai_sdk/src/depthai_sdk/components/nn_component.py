@@ -55,7 +55,7 @@ class NNComponent(Component):
                  pipeline: dai.Pipeline,
                  model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
                  input: Union[CameraComponent, 'NNComponent'],
-                 nnType: Optional[str] = None,  # Either 'yolo' or 'mobilenet'
+                 nn_type: Optional[str] = None,  # Either 'yolo' or 'mobilenet'
                  decode_fn: Optional[Callable] = None,
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
                  spatial: Union[None, bool, StereoComponent] = None,
@@ -72,7 +72,7 @@ class NNComponent(Component):
         Args:
             model (Union[str, Path, Dict]): str for SDK supported model / Path to blob or custom model's json
             input: (Union[Component, dai.Node.Output]): Input to the NN. If nn_component that is object detector, crop HQ frame at detections (Script node + ImageManip node)
-            nnType (str, optional): Type of the NN - Either 'Yolo' or 'MobileNet'
+            nn_type (str, optional): Type of the NN - Either 'Yolo' or 'MobileNet'
             tracker (bool, default False): Enable object tracker - only for Object detection models
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
             replay (Replay object): Replay
@@ -92,8 +92,8 @@ class NNComponent(Component):
 
         # Parse passed settings
         self._parse_model(model)
-        if nnType:
-            self._parse_node_type(nnType)
+        if nn_type:
+            self._parse_node_type(nn_type)
 
         # Create NN node
         self.node = pipeline.create(self._nodeType)
@@ -117,7 +117,7 @@ class NNComponent(Component):
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
 
         if self._blob is None:
-            self._blob = dai.OpenVINO.Blob(self._blobFromConfig(self._config['model'], dai.OpenVINO.Version.VERSION_2022_1))
+            self._blob = dai.OpenVINO.Blob(self._blobFromConfig(self._config['model'], version))
 
         # TODO: update NN input based on camera resolution
         self.node.setBlob(self._blob)
@@ -320,7 +320,7 @@ class NNComponent(Component):
     def config_multistage_nn(self,
                              debug=False,
                              labels: Optional[List[int]] = None,
-                             scaleBb: Optional[Tuple[int, int]] = None,
+                             scale_bb: Optional[Tuple[int, int]] = None,
                              ) -> None:
         """
         Configures the MultiStage NN pipeline. Available if the input to this NNComponent is Detection NNComponent.
@@ -328,14 +328,14 @@ class NNComponent(Component):
         Args:
             debug (bool, default False): Debug script node
             labels (List[int], optional): Crop & run inference only on objects with these labels
-            scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
+            scale_bb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
         """
         if not self._isMultiStage():
             print(
                 "Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
             return
 
-        self._multi_stage_config = MultiStageConfig(debug, labels, scaleBb)
+        self._multi_stage_config = MultiStageConfig(debug, labels, scale_bb)
 
     def _parse_label(self, label: Union[str, int]) -> int:
         if isinstance(label, int):

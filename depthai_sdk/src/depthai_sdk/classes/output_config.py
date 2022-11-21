@@ -31,12 +31,12 @@ class OutputConfig(BaseConfig):
     def __init__(self, output: Callable,
                  callback: Callable,
                  visualizer: Visualizer = None,
-                 record_dir: Optional[str] = None,
+                 record_path: Optional[str] = None,
                  keep_last_seconds: int = 0):
         self.output = output
         self.callback = callback
         self.visualizer = visualizer
-        self.record_dir = record_dir
+        self.record_path = record_path
         self.keep_last_seconds = keep_last_seconds
 
     def find_new_name(self, name: str, names: List[str]):
@@ -60,9 +60,9 @@ class OutputConfig(BaseConfig):
         names.append(xoutbase.name)
 
         recorder = None
-        if self.record_dir:
+        if self.record_path:
             recorder = VideoRecorder(keep_last_seconds=self.keep_last_seconds)
-            recorder.update(Path(self.record_dir), device, [xoutbase])
+            recorder.update(Path(self.record_path), device, [xoutbase])
 
         if self.visualizer:
             xoutbase.setup_visualize(self.visualizer, xoutbase.name, recorder)

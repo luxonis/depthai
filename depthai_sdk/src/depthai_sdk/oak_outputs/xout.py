@@ -6,7 +6,7 @@ import depthai as dai
 import numpy as np
 from distinctipy import distinctipy
 
-from depthai_sdk.callback_context import VisualizeContext
+from depthai_sdk.callback_context import CallbackContext
 from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
@@ -72,7 +72,7 @@ class XoutFrames(XoutBase):
         packet.frame = self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
-            ctx = VisualizeContext(packet, self._visualizer, self._video_recorder)
+            ctx = CallbackContext(packet, self._visualizer, self._video_recorder)
             self.callback(ctx)
         else:
             # TODO: if RH, don't display frame
@@ -810,22 +810,10 @@ class XoutIMU(XoutBase):
         self.packets = []
         self.start_time = 0.0
 
-        self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
-        labels = ['x', 'y', 'z']
-
+        self.fig = None
+        self.axes = None
         self.acceleration_lines = []
-        for i in range(3):
-            self.acceleration_lines.append(self.axes[0].plot([], [], label=f'Acceleration {labels[i]}')[0])
-            self.axes[0].set_ylabel('Acceleration (m/s^2)')
-            self.axes[0].set_xlabel('Time (s)')
-            self.axes[0].legend()
-
         self.gyroscope_lines = []
-        for i in range(3):
-            self.gyroscope_lines.append(self.axes[1].plot([], [], label=f'Gyroscope {labels[i]}')[0])
-            self.axes[1].set_ylabel('Gyroscope (rad/s)')
-            self.axes[1].set_xlabel('Time (s)')
-            self.axes[1].legend()
 
         self.acceleration_buffer = []
         self.gyroscope_buffer = []
@@ -837,6 +825,21 @@ class XoutIMU(XoutBase):
 
         self._visualizer = visualizer
         self.name = name or self.name
+
+        self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
+        labels = ['x', 'y', 'z']
+
+        for i in range(3):
+            self.acceleration_lines.append(self.axes[0].plot([], [], label=f'Acceleration {labels[i]}')[0])
+            self.axes[0].set_ylabel('Acceleration (m/s^2)')
+            self.axes[0].set_xlabel('Time (s)')
+            self.axes[0].legend()
+
+        for i in range(3):
+            self.gyroscope_lines.append(self.axes[1].plot([], [], label=f'Gyroscope {labels[i]}')[0])
+            self.axes[1].set_ylabel('Gyroscope (rad/s)')
+            self.axes[1].set_xlabel('Time (s)')
+            self.axes[1].legend()
 
     def visualize(self, packet: IMUPacket):
         if self.start_time == 0.0:
