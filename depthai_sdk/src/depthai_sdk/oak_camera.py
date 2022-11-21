@@ -53,6 +53,7 @@ class OakCamera:
                  device: Optional[str] = None,  # MxId / IP / USB port
                  usbSpeed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
                  replay: Optional[str] = None,
+                 rotation: int = 0,
                  args: Union[bool, Dict] = True
                  ):
         """
@@ -69,6 +70,8 @@ class OakCamera:
         self._oak = OakDevice()
         self._pipeline = dai.Pipeline()
         self._pipeline_built = False
+
+        self._rotation = rotation
 
         if args:
             if isinstance(args, bool):
@@ -96,7 +99,6 @@ class OakCamera:
                           None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-                      rotation: Optional[int] = None,
                       ) -> CameraComponent:
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
@@ -108,14 +110,13 @@ class OakCamera:
             resolution (str/SensorResolution): Sensor resolution of the camera.
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
-            rotation (int): Rotate the camera output by this amount of degrees, 0 by default, 90, 180, 270 are supported.
         """
         comp = CameraComponent(self._pipeline,
                                source=source,
                                resolution=resolution,
                                fps=fps,
                                encode=encode,
-                               rotation=rotation,
+                               rotation=self._rotation,
                                replay=self.replay,
                                args=self._args, )
         self._components.append(comp)
@@ -124,7 +125,7 @@ class OakCamera:
     def create_nn(self,
                   model: Union[str, Path],
                   input: Union[CameraComponent, NNComponent],
-                  nnType: Optional[str] = None,
+                  nn_type: Optional[str] = None,
                   tracker: bool = False,  # Enable object tracker - only for Object detection models
                   spatial: Union[None, bool, StereoComponent] = None,
                   decode_fn: Optional[Callable] = None,
@@ -135,7 +136,7 @@ class OakCamera:
         Args:
             model (str / Path): str for SDK supported model or Path to custom model's json/blob
             input (CameraComponent/NNComponent): Input to the model. If NNComponent (detector), it creates 2-stage NN
-            nnType (str): Type of the network (yolo/mobilenet) for on-device NN result decoding (only needed if blob path was specified)
+            nn_type (str): Type of the network (yolo/mobilenet) for on-device NN result decoding (only needed if blob path was specified)
             tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
             decode_fn: Custom decoding function for the model's output
@@ -143,7 +144,7 @@ class OakCamera:
         comp = NNComponent(self._pipeline,
                            model=model,
                            input=input,
-                           nnType=nnType,
+                           nn_type=nn_type,
                            tracker=tracker,
                            spatial=spatial,
                            decode_fn=decode_fn,
@@ -216,6 +217,14 @@ class OakCamera:
             warnings.warn("Device connected in USB2 mode! This might cause some issues. "
                           "In such case, please try using a (different) USB3 cable, "
                           "or force USB2 mode 'with OakCamera(usbSpeed=depthai.UsbSpeed.HIGH)'", UsbWarning)
+
+    def config_camera(self, rotation: Optional[int] = None) -> None:
+        """
+        Configures general camera settings.
+        Args:
+            rotation: Rotate the camera output by this amount of degrees, 0 by default, 90, 180, 270 are supported.
+        """
+        self._rotation = rotation or self._rotation
 
     def config_pipeline(self,
                         xlinkChunk: Optional[int] = None,
@@ -400,7 +409,7 @@ class OakCamera:
 
     def visualize(self,
                   output: Union[List, Callable, Component],
-                  record_dir: Optional[str] = None,
+                  record_path: Optional[str] = None,
                   keep_last_seconds: int = 0,
                   scale: float = None,
                   fps=False,
@@ -409,16 +418,16 @@ class OakCamera:
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
         Args:
             output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
-            record_dir: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
+            record_path: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
             scale: Scale the output window by this factor
             fps: Whether to show FPS on the output window
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
-        if record_dir and isinstance(output, List):
+        if record_path and isinstance(output, List):
             raise ValueError('Recording visualizer is only supported for a single output.')
 
         visualizer = Visualizer(scale, fps)
-        self._callback(output, callback, visualizer, record_dir, keep_last_seconds)
+        self._callback(output, callback, visualizer, record_path, keep_last_seconds)
 
         return visualizer
 
@@ -426,17 +435,17 @@ class OakCamera:
                   output: Union[List, Callable, Component],
                   callback: Callable,
                   visualizer: Visualizer = None,
-                  record_dir: Optional[str] = None,
+                  record_path: Optional[str] = None,
                   keep_last_seconds: int = 0):
         if isinstance(output, List):
             for element in output:
-                self._callback(element, callback, visualizer, record_dir)
+                self._callback(element, callback, visualizer, record_path)
             return
 
         if isinstance(output, Component):
             output = output.out.main
 
-        self._out_templates.append(OutputConfig(output, callback, visualizer, record_dir, keep_last_seconds))
+        self._out_templates.append(OutputConfig(output, callback, visualizer, record_path, keep_last_seconds))
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):
         """
