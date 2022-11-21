@@ -11,8 +11,7 @@ class VideoRecorder(Recorder):
     _closed = False
     _writers: Dict[str, Any]
 
-    def __init__(self, keep_last_seconds: int = 0):
-        self.keep_last_seconds = keep_last_seconds
+    def __init__(self):
         self.path = None
         self._stream_type = dict()
         self._writer = dict()
@@ -39,17 +38,17 @@ class VideoRecorder(Recorder):
             fourcc = stream.fourcc()  # TODO add default fourcc? stream.fourcc() can be None.
             if stream.isRaw():
                 from .video_writers.video_writer import VideoWriter
-                self._writer[name] = VideoWriter(self.path, name, fourcc, xout.fps, self.keep_last_seconds)
+                self._writer[name] = VideoWriter(self.path, name, fourcc, xout.fps)
             else:
                 try:
                     from .video_writers.av_writer import AvWriter
-                    self._writer[name] = AvWriter(self.path, name, fourcc, xout.fps, self.keep_last_seconds)
+                    self._writer[name] = AvWriter(self.path, name, fourcc, xout.fps)
                 except Exception as e:
                     # TODO here can be other errors, not only import error
                     print('Exception while creating AvWriter: ', e)
                     print('Falling back to FileWriter, saving uncontainerized encoded streams.')
                     from .video_writers.file_writer import FileWriter
-                    self._writer[name] = FileWriter(self.path, name, fourcc, self.keep_last_seconds)
+                    self._writer[name] = FileWriter(self.path, name, fourcc)
 
     def write(self, name: str, frame: dai.ImgFrame):
         self._writer[name].write(frame)

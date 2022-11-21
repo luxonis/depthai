@@ -8,7 +8,7 @@ from depthai_sdk.recorders.video_writers import AbstractWriter
 class FileWriter(AbstractWriter):
     file = None
 
-    def __init__(self, folder: Path, name: str, fourcc: str, keep_last_seconds: int):
+    def __init__(self, folder: Path, name: str, fourcc: str):
         super().__init__()
         self.file = open(str(folder / f"{name}.{fourcc or '.dat'}"), 'wb')
 

@@ -410,7 +410,6 @@ class OakCamera:
     def visualize(self,
                   output: Union[List, Callable, Component],
                   record_path: Optional[str] = None,
-                  keep_last_seconds: int = 0,
                   scale: float = None,
                   fps=False,
                   callback: Callable = None):
@@ -427,7 +426,7 @@ class OakCamera:
             raise ValueError('Recording visualizer is only supported for a single output.')
 
         visualizer = Visualizer(scale, fps)
-        self._callback(output, callback, visualizer, record_path, keep_last_seconds)
+        self._callback(output, callback, visualizer, record_path)
 
         return visualizer
 
@@ -435,8 +434,7 @@ class OakCamera:
                   output: Union[List, Callable, Component],
                   callback: Callable,
                   visualizer: Visualizer = None,
-                  record_path: Optional[str] = None,
-                  keep_last_seconds: int = 0):
+                  record_path: Optional[str] = None):
         if isinstance(output, List):
             for element in output:
                 self._callback(element, callback, visualizer, record_path)
@@ -445,7 +443,7 @@ class OakCamera:
         if isinstance(output, Component):
             output = output.out.main
 
-        self._out_templates.append(OutputConfig(output, callback, visualizer, record_path, keep_last_seconds))
+        self._out_templates.append(OutputConfig(output, callback, visualizer, record_path))
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):
         """

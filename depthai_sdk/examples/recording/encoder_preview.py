@@ -4,7 +4,7 @@ from depthai_sdk import OakCamera, FramePacket
 from depthai_sdk.callback_context import CallbackContext
 from depthai_sdk.recorders.video_writers.av_writer import AvWriter
 
-rec = AvWriter(Path('./'), 'color', 'mjpeg', fps=30, keep_last_seconds=0)
+rec = AvWriter(Path('./'), 'color', 'mjpeg', fps=30)
 
 
 def save_raw_mjpeg(ctx: CallbackContext):
