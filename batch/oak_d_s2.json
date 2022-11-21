@@ -3,6 +3,7 @@
     "description": "OAK-D Series 2",
     "image": "images/oak_d_s2.jpg",
     "test_type": "OAK-D",
+    "bootloader": "nor",
     "variants": [
         {
             "title":"OAK-D S2 AF (DM9098 R3M2E3)",

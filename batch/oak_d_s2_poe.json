@@ -3,6 +3,7 @@
     "description": "OAK-D Series 2 PoE",
     "image": "images/oak_d_s2_poe.jpg",
     "test_type": "OAK-D-POE",
+    "bootloader": "poe",
     "variants": [
         {
             "title":"OAK-D S2 AF PoE (NG9097 R4M2E3 BMI270)",

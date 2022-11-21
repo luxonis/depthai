@@ -3,6 +3,7 @@
     "description": "OAK-D Pro PoE",
     "image": "images/oak_d_pro.jpg",
     "test_type": "OAK-D-PRO-POE",
+    "bootloader": "poe",
     "variants": [
         {
             "title":"OAK-D Pro PoE AF (NG9097 R3M2E2)",

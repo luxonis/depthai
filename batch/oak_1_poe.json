@@ -3,6 +3,7 @@
     "description": "OAK-1 PoE",
     "image": "images/oak_1_poe.jpg",
     "test_type": "OAK-1-POE",
+    "bootloader": "POE",
     "variants": [
         {
             "title":"OAK-1 PoE FF (SJ2096 R2M1E2)",

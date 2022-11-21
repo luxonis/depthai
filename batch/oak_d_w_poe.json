@@ -3,6 +3,7 @@
     "description": "OAK-D W PoE",
     "image": "images/oak_d_w_poe.jpg",
     "test_type": "OAK-D-POE",
+    "bootloader": "poe",
     "variants": [
         {
             "title":"OAK-D W PoE (NG9097 R4M2E3 BMI270)",

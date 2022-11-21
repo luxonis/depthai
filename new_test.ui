@@ -36,6 +36,9 @@
     <property name="text">
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
     </property>
+    <property name="alignment">
+     <set>Qt::AlignCenter</set>
+    </property>
    </widget>
    <widget class="QPushButton" name="connect_but">
     <property name="geometry">
@@ -379,7 +382,7 @@
     </widget>
     <widget class="QFrame" name="op_rgb_frame">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -400,7 +403,7 @@
      </property>
      <widget class="QRadioButton" name="rgb_fail_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -421,7 +424,7 @@
      </widget>
      <widget class="QRadioButton" name="rgb_ntes_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -445,7 +448,7 @@
      </widget>
      <widget class="QRadioButton" name="rgb_pass_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -480,7 +483,7 @@
     </widget>
     <widget class="QFrame" name="op_right_frame">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -501,7 +504,7 @@
      </property>
      <widget class="QRadioButton" name="right_fail_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -522,7 +525,7 @@
      </widget>
      <widget class="QRadioButton" name="right_ntes_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -546,7 +549,7 @@
      </widget>
      <widget class="QRadioButton" name="right_pass_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -568,7 +571,7 @@
     </widget>
     <widget class="QFrame" name="op_jpeg_frame">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -589,7 +592,7 @@
      </property>
      <widget class="QRadioButton" name="jpeg_fail_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -610,7 +613,7 @@
      </widget>
      <widget class="QRadioButton" name="jpeg_ntes_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -634,7 +637,7 @@
      </widget>
      <widget class="QRadioButton" name="jpeg_pass_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -669,7 +672,7 @@
     </widget>
     <widget class="QFrame" name="op_left_frame">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -690,7 +693,7 @@
      </property>
      <widget class="QRadioButton" name="left_fail_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -711,7 +714,7 @@
      </widget>
      <widget class="QRadioButton" name="left_ntes_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -735,7 +738,7 @@
      </widget>
      <widget class="QRadioButton" name="left_pass_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -829,7 +832,7 @@
     </widget>
     <widget class="QFrame" name="op_ir_frame">
      <property name="enabled">
-      <bool>false</bool>
+      <bool>true</bool>
      </property>
      <property name="geometry">
       <rect>
@@ -850,7 +853,7 @@
      </property>
      <widget class="QRadioButton" name="ir_fail_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -871,7 +874,7 @@
      </widget>
      <widget class="QRadioButton" name="ir_ntes_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -895,7 +898,7 @@
      </widget>
      <widget class="QRadioButton" name="ir_pass_but">
       <property name="enabled">
-       <bool>false</bool>
+       <bool>true</bool>
       </property>
       <property name="geometry">
        <rect>
@@ -972,7 +975,7 @@
       <number>0</number>
      </property>
     </widget>
-    <widget class="QLabel" name="FLASH_IMU_LABEL">
+    <widget class="QLabel" name="l_prog">
      <property name="geometry">
       <rect>
        <x>430</x>

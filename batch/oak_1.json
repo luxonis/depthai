@@ -3,6 +3,7 @@
     "description": "OAK-1",
     "image": "images/oak_1.jpg",
     "test_type": "OAK-1",
+    "bootloader": "skip",
     "variants": [
         {
             "title":"OAK-1 AF (NG9093 R2M0E3)",

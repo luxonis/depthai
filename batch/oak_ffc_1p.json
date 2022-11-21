@@ -1,8 +1,9 @@
   {
-    "title": "OAK-FFC 1P",
-    "description": "OAK-FFC 1P",
+    "title": "OAK-FFC 1P POE",
+    "description": "OAK-FFC 1P POE",
     "image": "images/oak_ffc_1p.jpg",
-    "test_type": "OAK-FFC-1P",
+    "test_type": "OAK-FFC-1P-POE",
+    "bootloader": "poe",
     "variants": [
         {
             "title":"OAK-FFC 1P PoE (BW2098 R4M1E3)",

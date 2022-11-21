@@ -3,6 +3,7 @@
     "description": "OAK-D Pro (Series 2)",
     "image": "images/oak_d_pro.jpg",
     "test_type": "OAK-D-PRO",
+    "bootloader": "nor",
     "variants": [
         {
             "title":"OAK-D Pro AF PB (DM9098 R6M2E6)",

@@ -3,6 +3,7 @@
     "description": "OAK-D PoE",
     "image": "images/oak_d_poe.jpg",
     "test_type": "OAK-D-POE",
+    "bootloader": "poe",
     "variants": [
         {
             "title":"OAK-D PoE AF (DM2088 R0M0E0)",
