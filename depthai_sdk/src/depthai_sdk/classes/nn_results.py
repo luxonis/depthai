@@ -8,13 +8,14 @@ from dataclasses import dataclass, field
 from typing import List, Tuple, Any
 
 import numpy as np
-from depthai import NNData
+from depthai import NNData, ImgDetections, ImgDetection
 
 
 class GenericNNOutput:
     """
     Generic NN output, to be used for higher-level abstractions (eg. automatic visualization of results).
     """
+
     def __init__(self, nn_data: NNData):
         self.nn_data = nn_data
 
@@ -22,25 +23,24 @@ class GenericNNOutput:
 # First we have Object detection results, which are already standarized with dai.ImgDetections
 
 @dataclass
-class Detections(GenericNNOutput):
+class Detections(ImgDetections, GenericNNOutput):
     """
     Detection results containing bounding boxes, labels and confidences.
     """
 
     def __init__(self, nn_data: NNData):
-        super().__init__(nn_data)
-        self.detections = []
-        self.labels = []
-        self.confidences = []
+        ImgDetections.__init__(self)
+        GenericNNOutput.__init__(self, nn_data)
 
-    detections: List[Tuple[float, ...]] = field(default_factory=list)
-    labels: List[str] = field(default_factory=list)
-    confidences: List[float] = field(default_factory=list)
-
-    def add(self, label: str, confidence: float, bbox: Tuple[float, ...]) -> None:
-        self.labels.append(label)
-        self.confidences.append(confidence)
-        self.detections.append(bbox)
+    def add(self, label: int, confidence: float, bbox: Tuple[float, ...]) -> None:
+        det = ImgDetection()
+        det.label = label
+        det.confidence = confidence
+        det.xmin = bbox[0]
+        det.ymin = bbox[1]
+        det.xmax = bbox[2]
+        det.ymax = bbox[3]
+        self.detections = [*self.detections, det]
 
 
 @dataclass
@@ -86,6 +86,7 @@ class InstanceSegmentation(GenericNNOutput):
     """
     Instance segmentation results, with a mask for each instance.
     """
+
     def __init__(self, nn_data: NNData, masks: List[np.ndarray], labels: List[int]):
         super().__init__(nn_data)
 
