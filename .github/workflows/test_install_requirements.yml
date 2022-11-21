@@ -16,11 +16,15 @@
      runs-on: ubuntu-latest
      strategy:
        matrix:
+          python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
           container_image: ["fedora:34", "fedora:35", "fedora:36", "ubuntu:20.04", "ubuntu:22.04"]
      container:
        image: ${{ matrix.container_image }}
      steps:
        - uses: actions/checkout@v3
+       - uses: actions/setup-python@v4
+         with:
+           python-version: ${{ matrix.python-version }}
        - name: Install sudo
          if: startsWith(matrix.container_image, 'fedora') == true
          run: yum update -y && yum install -y sudo curl
@@ -39,10 +43,14 @@
    test_macos:
       strategy:
         matrix:
+          python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
           os: ["macos-11", "macos-12"]
       runs-on: ${{ matrix.os }}
       steps:
        - uses: actions/checkout@v3
+       - uses: actions/setup-python@v4
+         with:
+           python-version: ${{ matrix.python-version }}
        - name: Install dependencies
          run: |
            curl -fL https://docs.luxonis.com/install_dependencies.sh > install_dependencies.sh
@@ -53,8 +61,14 @@
            python3 install_requirements.py
    test_windows:
       runs-on: windows-latest
+      strategy:
+        matrix:
+          python-version: ["3.6", "3.7", "3.8", "3.9", "3.10", "3.11"]
       steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+           python-version: ${{ matrix.python-version }}
       - name: Download chocolatey
         shell: pwsh
         run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
