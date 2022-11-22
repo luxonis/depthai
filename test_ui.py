@@ -29,7 +29,7 @@ except:
 
 FPS = 10
 
-DEVICE_DIR = Path(__file__).resolve().parent / 'batch'
+DEVICE_DIR = Path(__file__).resolve().parent / 'resources/depthai-boards/batch'
 
 test_result = {
     'usb3_res': '',
