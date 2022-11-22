@@ -56,6 +56,11 @@ class XoutFrames(XoutBase):
         self.name = name or self.name
         self._video_recorder = recorder
 
+        # TODO we may need to allow user switch between encodings (or disable it)
+        # Enable encoding for the video recorder
+        if recorder:
+            self._video_recorder[self.name].set_fourcc('avc1')
+
     def visualize(self, packet: FramePacket) -> None:
         """
         Called from main thread if visualizer is not None
@@ -83,12 +88,11 @@ class XoutFrames(XoutBase):
                 pass
 
         if self._video_recorder:
-            xout_name = self.frames.friendly_name or self.frames.name
             # TODO not ideal to check it this way
-            if isinstance(self._video_recorder._writer[xout_name], AvWriter):
-                self._video_recorder.write(xout_name, packet.imgFrame)
+            if isinstance(self._video_recorder[self.name], AvWriter):
+                self._video_recorder.write(self.name, packet.imgFrame)
             else:
-                self._video_recorder.write(xout_name, packet.frame)
+                self._video_recorder.write(self.name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]

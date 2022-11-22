@@ -34,23 +34,23 @@ class VideoWriter(AbstractWriter):
 
         # Disparity - RAW8
         # Depth - RAW16
-
-        if isinstance(frame, np.ndarray):
-            c = 1 if len(frame.shape) == 2 else frame.shape[2]
-            self._fourcc = "GRAY" if c == 1 else "I420"
-        else:
-            if frame.getType() == dai.ImgFrame.Type.RAW16:  # Depth
-                self._fourcc = "FFV1"
-            elif frame.getType() == dai.ImgFrame.Type.RAW8:  # Mono Cams
-                self._fourcc = "GREY"
+        if self._fourcc is None:
+            if isinstance(frame, np.ndarray):
+                c = 1 if frame.ndim == 2 else frame.shape[2]
+                self._fourcc = "GRAY" if c == 1 else "I420"
             else:
-                self._fourcc = "I420"
+                if frame.getType() == dai.ImgFrame.Type.RAW16:  # Depth
+                    self._fourcc = "FFV1"
+                elif frame.getType() == dai.ImgFrame.Type.RAW8:  # Mono Cams
+                    self._fourcc = "GREY"
+                else:
+                    self._fourcc = "I420"
 
         self.file = cv2.VideoWriter(self._path,
                                     cv2.VideoWriter_fourcc(*self._fourcc),
                                     self._fps,
                                     (self._w, self._h),
-                                    isColor=self._fourcc == "I420")
+                                    isColor=self._fourcc != "GREY")
 
     def close(self):
         if self.file:
@@ -88,6 +88,9 @@ class VideoWriter(AbstractWriter):
     #
     #     snapshot_file.release()
     #     print('Snapshot saved to', snapshot_path)
+
+    def set_fourcc(self, fourcc: str):
+        self._fourcc = fourcc
 
     def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
         if self.file is None:
