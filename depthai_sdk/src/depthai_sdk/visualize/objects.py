@@ -448,8 +448,6 @@ class VisText(GenericObject):
         if self.frame_shape is None:
             self.frame_shape = frame.shape
 
-        frame = np.array(frame)
-
         text_config = self.config.text
 
         # Extract shape of the bbox if exists
