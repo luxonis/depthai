@@ -24,7 +24,7 @@ class VideoRecorder(Recorder):
         """
         Update the recorder with new streams.
         Args:
-            path: Path to save the output.
+            path: Path to save the output. Either a folder or a file.
             device: Device to get the streams from.
             xouts: List of output streams.
         """
