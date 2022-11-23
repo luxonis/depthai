@@ -1,5 +1,5 @@
 import jsonlines
-from typing import Literal, Dict, Union
+from typing import Literal, Dict, Union, Any
 from datetime import datetime
 import requests
 import os
@@ -28,7 +28,7 @@ def add_result(
 	library_version: str,
 	start_time: datetime,
 	end_time: datetime,
-	result_data: Dict,
+	result_data: Dict[str, Any],
 	error: Union[str, None] = None
 ):
 	"""
