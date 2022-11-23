@@ -617,7 +617,7 @@ class XoutTracker(XoutNnResults):
 
         # Add trail id
         h, w = packet.frame.shape[:2]
-        for tracklet in packet.daiTracklets.tracklets:
+        for tracklet in filtered_tracklets:
             det = tracklet.srcImgDetection
             bbox = (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)
             bbox = tuple(map(int, bbox))
