@@ -1,6 +1,6 @@
 {
     "model": {
-        "model_name": "deeplab_v3_mnv2_513x513"
+        "model_name": "deeplabv3"
     },
     "nn_config": {
         "output_format" : "raw"
