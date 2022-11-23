@@ -93,8 +93,6 @@ class CameraComponent(Component):
             else:
                 self.stream = self.node.out
 
-            return
-
         if isinstance(self.node, dai.node.ColorCamera):
             # DepthAI uses CHW (Planar) channel layout convention for NN inferencing
             self.node.setInterleaved(False)
