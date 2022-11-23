@@ -27,7 +27,7 @@ with OakCamera() as oak:
 
     det = oak.create_nn('face-detection-retail-0004', color)
     # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
-    det.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.CROP)
+    det.config_nn(aspect_ratio_resize_mode=AspectRatioResizeMode.CROP)
 
     age_gender = oak.create_nn('age-gender-recognition-retail-0013', input=det)
     # age_gender.config_multistage_nn(show_cropped_frames=True) # For debugging

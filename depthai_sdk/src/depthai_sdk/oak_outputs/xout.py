@@ -473,7 +473,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
                 self.labels.append((text, color))
 
-        self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._arResizeMode)
+        self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._ar_resize_mode)
 
     def visualize(self, packet: Union[DetectionPacket, TrackerPacket]):
         # We can't visualize NNData (not decoded)
