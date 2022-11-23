@@ -28,6 +28,18 @@ Examples
 
 Below there are a few basic examples. **See** `all examples here <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples>`__.
 
+Here are a few demos that have been developed with DepthAI SDK:
+
+#. `age-gender <https://github.com/luxonis/depthai-experiments/tree/master/gen2-age-gender>`__
+#. `emotion-recognition <https://github.com/luxonis/depthai-experiments/tree/master/gen2-emotsion-recognition>`__
+#. `full-fov-nn <https://github.com/luxonis/depthai-experiments/tree/master/gen2-full-fov-nn>`__
+#. `head-posture-detection <https://github.com/luxonis/depthai-experiments/tree/master/gen2-head-posture-detection>`__
+#. `pedestrian-reidentification <https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification>`__
+#. `people-counter <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__
+#. `people-tracker <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker>`__
+#. `mask-detection <https://github.com/luxonis/depthai-experiments/tree/master/gen2-mask-detection>`__
+#. `yolo <https://github.com/luxonis/depthai-experiments/tree/master/gen2-yolo>`__
+
 
 Preview color and mono cameras
 ******************************

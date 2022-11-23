@@ -7,6 +7,7 @@ Through the :ref:`NNComponent`, DepthAI SDK abstracts:
 - **AI result decoding** - currently SDK supports on-device decoding for YOLO and MobileNet based results using `YoloDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/yolo_detection_network/>`__ and `MobileNetDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/>`__ nodes
 - **Decoding** of the ``config.json`` which **allows an easy deployment of custom AI models** trained `using our notebooks <https://github.com/luxonis/depthai-ml-training>`__ and converted using https://tools.luxonis.com
 - Formatting of the AI model input frame - SDK uses **BGR** color order and **Planar / CHW** channel layout conventions
+- Integration with 3rd party tools/services (:ref:`Roboflow`)
 
 
 SDK supported models

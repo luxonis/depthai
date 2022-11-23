@@ -2,7 +2,7 @@ NNComponent
 ===========
 
 NNComponent abstracts sourcing & decoding :ref:`AI models`, creating a DepthAI API node for neural inferencing,
-object tracking, and MultiStage pipelines setup.
+object tracking, and MultiStage pipelines setup. It also supports :ref:`Roboflow` integration.
 
 DepthAI API nodes
 -----------------
