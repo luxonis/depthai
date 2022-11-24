@@ -291,13 +291,6 @@ class NNComponent(Component):
             if nn_family:
                 self._parse_node_type(nn_family)
 
-            if self._is_detector() and 'confidence_threshold' in nn_config:
-                self.node.setConfidenceThreshold(float(nn_config['confidence_threshold']))
-
-            meta = nn_config.get('NN_specific_metadata', None)
-            if self._is_yolo() and meta:
-                self.config_yolo_from_metadata(metadata=meta)
-
     def _blob_from_config(self, model: Dict, version: dai.OpenVINO.Version) -> str:
         """
         Gets the blob from the config file.
