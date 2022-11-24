@@ -93,79 +93,62 @@ class PipelineGraph:
         graph_widget.resize(1100, 800)
 
         dai_connections = schema['connections']
+        qt_nodes = {}
         dai_nodes = {}  # key = id, value = dict with keys 'type', 'blocking', 'queue_size' and 'name' (if args.use_variable_name)
+        # Hold id->port
+        input_port_map = dict()
+        output_port_map = dict()
+        input_name_to_id_map = dict()
+        output_name_to_id_map = dict()
+
         for n in schema['nodes']:
             dict_n = n[1]
-            dai_nodes[dict_n['id']] = {'type': dict_n['name']}
-            dai_nodes[dict_n['id']]['name'] = f"{dict_n['name']} ({dict_n['id']})"
-            blocking = {}
-            queue_size = {}
+            node_name = dict_n['name']
+            id = dict_n['id']
+            dai_nodes[dict_n['id']] = {'type': node_name}
+            dai_nodes[dict_n['id']]['name'] = f"{node_name} ({dict_n['id']})"
+            # Create the node
+            qt_nodes[id] = graph.create_node('dai.DepthaiNode', name=node_name, color=node_color.get(node_name, default_node_color), text_color=(0,0,0), push_undo=False)
+
+            dict_n['ioInfo'] = list(sorted(dict_n['ioInfo'], key = lambda el: el[0][1]))
             for io in dict_n['ioInfo']:
                 dict_io = io[1]
+                io_id = dict_io['id']
                 port_name = dict_io['name']
-                blocking[port_name] = dict_io['blocking']
-                queue_size[port_name] = dict_io['queueSize']
-            dai_nodes[dict_n['id']]['blocking'] = blocking
-            dai_nodes[dict_n['id']]['queue_size'] = queue_size
+                port_group = dict_io['group']
+                if port_group:
+                    port_name = f"{dict_io['group']}[{port_name}]"
+                blocking = dict_io['blocking']
+                queue_size = dict_io['queueSize']
+                port_color = (249,75,0) if blocking else (0,255,0)
+                port_label = f"[{queue_size}] {port_name}"
 
-        print("\nNodes (id):\n===========")
-        for id in sorted(dai_nodes):
-            print(f"{dai_nodes[id]['name']}")
+                io_key = tuple([id, dict_io['group'], dict_io['name']])
+                if dict_io['type'] == 3: # Input
+                    input_port_map[dict_io['id']] = qt_nodes[id].add_input(name=port_label, color=port_color, multi_input=True)
+                    input_name_to_id_map[io_key] = io_id
+                elif dict_io['type'] == 0: # Output
+                    output_port_map[dict_io['id']] = qt_nodes[id].add_output(name=port_name)
+                    output_name_to_id_map[io_key] = io_id
+                else:
+                    print('Unhandled case!')
 
-        # create the nodes.
-        qt_nodes = {}
-        for id, node in dai_nodes.items():
-            qt_nodes[id] = graph.create_node('dai.DepthaiNode', name=node['name'],
-                                             color=node_color.get(node['type'], default_node_color),
-                                             text_color=(0, 0, 0), push_undo=False)
-
-        nodes = {} # First save all nodes and their inputs/outputs
-        for c in dai_connections:
-            src_node_id = c["node1Id"]
-            src_node = qt_nodes[src_node_id]
-            src_port_name = c["node1Output"]
-            dst_node_id = c["node2Id"]
-            dst_node = qt_nodes[dst_node_id]
-            dst_port_name = c["node2Input"]
-
-            if dst_node not in nodes:
-                nodes[dst_node] = {'outputs': [], 'inputs': []}
-            if src_node not in nodes:
-                nodes[src_node] = {'outputs': [], 'inputs': []}
-
-            dst_port_color = (249, 75, 0) if dai_nodes[dst_node_id]['blocking'][dst_port_name] else (0, 255, 0)
-            dst_port_label = f"[{dai_nodes[dst_node_id]['queue_size'][dst_port_name]}] {dst_port_name}"
-
-            nodes[dst_node]['inputs'].append({'name': dst_port_name, 'color': dst_port_color, 'label': dst_port_label})
-            nodes[src_node]['outputs'].append({'name': src_port_name})
-
-        for node, vals in nodes.items():
-            # Go through all inputs/outputs, sort them by name (alphabetical order)
-            vals['inputs'] = list(sorted(vals['inputs'], key = lambda el: el['name']))
-            vals['outputs'] = list(sorted(vals['outputs'], key=lambda el: el['name']))
-            # Create node input/output
-            for output in vals['outputs']:
-                if not output['name'] in list(node.outputs()):
-                    node.add_output(name=output['name'])
-            for input in vals['inputs']:
-                if not input['name'] in list(node.inputs()):
-                    node.add_input(name=input['label'], color=input['color'], multi_input=True)
-
-        print("\nConnections:\n============")
+        # nodes = {} # First save all nodes and their inputs/outputs
         i = 0
         for c in dai_connections:
             src_node_id = c["node1Id"]
-            src_node = qt_nodes[src_node_id]
-            src_port_name = c["node1Output"]
+            src_name = c["node1Output"]
+            src_group = c["node1OutputGroup"]
             dst_node_id = c["node2Id"]
-            dst_node = qt_nodes[dst_node_id]
-            dst_port_name = c["node2Input"]
-            dst_port_label = f"[{dai_nodes[dst_node_id]['queue_size'][dst_port_name]}] {dst_port_name}"
-            # Create the connection between nodes
-            print(i,
-                  f"{dai_nodes[src_node_id]['name']}: {src_port_name} -> {dai_nodes[dst_node_id]['name']}: {dst_port_label}")
-            src_node.outputs()[src_port_name].connect_to(dst_node.inputs()[dst_port_label], push_undo=False)
-            i += 1
+            dst_name = c["node2Input"]
+            dst_group = c["node2InputGroup"]
+
+            out_key = tuple([src_node_id, src_group, src_name])
+            in_key = tuple([dst_node_id, dst_group, dst_name])
+            print(i,f"{out_key} -> {in_key}")
+
+            output_port_map[output_name_to_id_map[out_key]].connect_to(input_port_map[input_name_to_id_map[in_key]], push_undo=False)
+            i+=1
 
         # Lock the ports
         graph.lock_all_ports()
