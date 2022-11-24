@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-
+import re
 import signal
+import depthai as dai
 from typing import Dict
 from depthai_sdk.components.node_graph_qt import NodeGraph, BaseNode, PropertiesBinWidget
 from depthai_sdk.components.node_graph_qt.constants import ViewerEnum
-
+import time
+from threading import Thread
 
 class DepthaiNode(BaseNode):
     # unique node identifier.
@@ -22,7 +24,7 @@ class DepthaiNode(BaseNode):
 
 class PipelineGraph:
 
-    def __init__(self, schema: Dict):
+    def __init__(self, schema: Dict, device: dai.Device):
 
         from Qt import QtWidgets, QtCore
 
@@ -174,4 +176,45 @@ class PipelineGraph:
         graph.set_zoom(-0.9)
         graph.clear_selection()
         graph.clear_undo_stack()
-        app.exec_()
+
+        def traceEventReader(log_msg: dai.LogMessage):
+            app.processEvents() # Process events
+            # we are looking for  a line: EV:  ...
+            match = re.search(r'EV:([0-9]+),S:([0-9]+),IDS:([0-9]+),IDD:([0-9]+),TSS:([0-9]+),TSN:([0-9]+)',
+                              log_msg.payload.rstrip('\n'))
+            if match:
+                trace_event = TraceEvent()
+
+                trace_event.event = int(match.group(1))
+                trace_event.status = int(match.group(2))
+                trace_event.src_id = int(match.group(3))
+                trace_event.dst_id = int(match.group(4))
+                trace_event.timestamp = int(match.group(5)) + (int(match.group(6)) / 1000000000.0)
+                trace_event.host_timestamp = time.time()
+
+                print('START->',log_msg.payload,'<-END')
+                # buffer.append(trace_event)
+                # buffer.sort(key=lambda event: event.timestamp)
+
+        device.setLogLevel(dai.LogLevel.TRACE)
+        device.addLogCallback(traceEventReader)
+        class TraceEvent():
+            event = 0
+            status = 0
+            src_id = 0
+            dst_id = 0
+            timestamp = 0.0
+            host_timestamp = 0.0
+
+        # while True:
+        #     app.processEvents()
+        #
+        #     # TODO(themarpe) - move event processing to a separate function
+        #     # Process trace events
+        #
+        #     # atleast 200ms should pass from latest event received
+        #     if len(event_buffer) > 0 and time.time() - event_buffer[-1].host_timestamp > 0.2:
+        #         # TODO(themarpe) - Process events
+        #         pass
+        #
+        # app.exec_()
