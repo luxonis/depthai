@@ -695,6 +695,10 @@ class UiTests(QtWidgets.QMainWindow):
 
         self.print_logs_trigger.connect(self.print_logs)
 
+        self.uploaded_bootloader = {
+            'uploaded': False
+        } # used for logging if the bootloader was uploaded and which version and type was used
+
     def setupUi(self):
         global UI_tests
         UI_tests = self
@@ -1246,6 +1250,9 @@ class UiTests(QtWidgets.QMainWindow):
             test_result['eeprom_res'] = 'FAIL'
             test_result['eeprom_data'] = ''
 
+
+        self.flash_data_512 = self.depth_camera.device.flashRead(512)
+
     def set_result(self):
         global update_res
         if not self.update_imu:
@@ -1336,6 +1343,7 @@ class UiTests(QtWidgets.QMainWindow):
     def update_bootloader_impl(self):
         self.print_logs('Check bootloader')
         deviceInfos = dai.DeviceBootloader.getAllAvailableDevices()
+        self.uploaded_bootloader['version'] = dai.DeviceBootloader.getEmbeddedBootloaderVersion()
         if len(deviceInfos) <= 0:
             return (False, 'ERROR device was disconnected')
 
@@ -1345,13 +1353,16 @@ class UiTests(QtWidgets.QMainWindow):
                 self.prog_label.setText('Bootloader')
                 if 'POE' in test_type:
                     self.print_logs('Flashing NETWORK bootloader...')
+                    self.uploaded_bootloader['type'] = "NETWORK" 
                     return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, self.update_prog_bar)
                 else:
                     self.print_logs('Flashing USB bootloader...')
+                    self.uploaded_bootloader['type'] = "USB" 
                     return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.USB, self.update_prog_bar)
 
         except RuntimeError as ex:
             # self.print_logs('Device communication failed, check connexions')
+            self.uploaded_bootloader = {'uploaded': False}
             return (False, f"Device communication failed, check connexions: {ex}")
 
     def update_bootloader(self):
@@ -1494,7 +1505,9 @@ class UiTests(QtWidgets.QMainWindow):
         results = {
             'automatic_tests': test_result,
             'operator_tests': operator_tests,
-            'eeprom_data': self.depth_camera.eepromUnionData
+            'eeprom_data': self.depth_camera.eepromUnionData,
+            'uploaded_bootloader': self.uploaded_bootloader,
+            'flash_first_512B': self.flash_data_512,
         }
         production_support_server_api.add_result(
             'test', self.depth_camera.id, self.depth_camera.device_name, self.depth_camera.bootloader_version, 
