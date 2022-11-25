@@ -28,8 +28,15 @@ setup(
         "replay": ['mcap>=0.0.10',
                    'mcap-ros1-support==0.0.8',
                    'rosbags==0.9.11'],
-        "record": ['av']
+        "record": ['av',
+                   'sensor_msgs',
+                   'geometry_msgs',
+                   'std_msgs',
+                   'genpy']
     },
+    dependency_links=[
+        'https://rospypi.github.io/simple/'
+    ],
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
         "Source Code": "https://github.com/luxonis/depthai/tree/main/depthai_sdk",

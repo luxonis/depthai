@@ -2,10 +2,9 @@ from typing import Tuple, List
 
 import depthai as dai
 import numpy as np
-from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point, Transform
+from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point, Transform, TransformStamped
 # from std_msgs.msg import Header, ColorRGBA, String
 # from visualization_msgs.msg import ImageMarker
-from geometry_msgs.msg import TransformStamped
 from genpy.rostime import Time
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField, Imu  # s, PointCloud
 import std_msgs
@@ -17,17 +16,17 @@ sensor_msgs
 geometry_msgs
 std_msgs
 genpy
-tf2-msgs
-tf2-ros
+tf2_msgs
+tf2_ros
+tf
 """
 
-class DepthAi2Ros1:
+class Bridge:
     xyz = dict()
 
     def __init__(self, device: dai.Device) -> None:
         self.start_time = dai.Clock.now()
         self.device = device
-
 
     def header(self, msg: dai.Buffer) -> std_msgs.msg.Header:
         header = std_msgs.msg.Header()
@@ -39,11 +38,12 @@ class DepthAi2Ros1:
         except:
             header.frame_id = str(msg.sequence) # IMUReport
         return header
+
     def CompressedImage(self, imgFrame: dai.ImgFrame) -> CompressedImage:
         msg = CompressedImage()
         msg.header = self.header(imgFrame)
         msg.format = "jpeg"
-        msg.data = np.array(imgFrame.getData()).tobytes()
+        msg.data = imgFrame.getData().tobytes()
         return msg
 
     def Imu(self, imu_packet: dai.IMUPacket, linear_accel_cov: float = 0., angular_velocity_cov: float = 0) -> Imu:
@@ -88,10 +88,10 @@ class DepthAi2Ros1:
             msg.data = imgFrame.getData().tobytes()
         elif type in [TYPE.GRAY8, TYPE.RAW8]: # Mono frame
             msg.encoding = 'mono8'
-            msg.data = imgFrame.getData().tobytes() #np.array(imgFrame.getFrame()).tobytes()
+            msg.data = imgFrame.getData().tobytes()
         else:
             msg.encoding = 'bgr8'
-            msg.data = np.array(imgFrame.getCvFrame()).tobytes()
+            msg.data = imgFrame.getCvFrame().tobytes()
         return msg
 
     def TfMessage(self,
@@ -109,7 +109,7 @@ class DepthAi2Ros1:
         msg.transforms.append(tf)
         return msg
 
-    def PointCloud2(self, imgFrame: dai.ImgFrame):
+    def PointCloud2(self, imgFrame: dai.ImgFrame) -> PointCloud2:
         """
         Depth frame -> ROS1 PointCloud2 message
         """

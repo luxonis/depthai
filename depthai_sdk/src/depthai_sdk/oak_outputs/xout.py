@@ -39,6 +39,7 @@ class XoutFrames(XoutBase):
     Single message, no syncing required
     """
     name: str = "Frames"
+    TYPE = "RAW"
     fps: float
     frames: StreamXout
 
@@ -115,6 +116,7 @@ class XoutFrames(XoutBase):
 
 class XoutMjpeg(XoutFrames):
     name: str = "MJPEG Stream"
+    TYPE = "MJPEG"
     lossless: bool
     fps: float
 
@@ -135,6 +137,7 @@ class XoutMjpeg(XoutFrames):
 
 class XoutH26x(XoutFrames):
     name = "H26x Stream"
+    TYPE = "H26x"
     color: bool
     fps: float
     profile: dai.VideoEncoderProperties.Profile
@@ -145,6 +148,7 @@ class XoutH26x(XoutFrames):
         self.profile = profile
         self.fps = fps
         fourcc = 'hevc' if profile == dai.VideoEncoderProperties.Profile.H265_MAIN else 'h264'
+        self.TYPE = "H265" if fourcc == 'hevc' else "H264"
         import av
         self.codec = av.CodecContext.create(fourcc, "r")
 
@@ -186,6 +190,7 @@ class XoutClickable:
 class XoutDisparity(XoutFrames, XoutClickable):
     name: str = "Disparity"
     multiplier: float
+    TYPE="DISPARITY"
     fps: float
 
     def __init__(self,
@@ -297,6 +302,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
 # TODO can we merge XoutDispariry and XoutDepth?
 class XoutDepth(XoutFrames, XoutClickable):
     name: str = "Depth"
+    TYPE="DEPTH"
 
     def __init__(self,
                  device: dai.Device,
@@ -804,6 +810,7 @@ class XoutTwoStage(XoutNnResults):
 
 class XoutIMU(XoutBase):
     name: str = 'IMU'
+    TYPE = "IMU"
     imu_out: StreamXout
 
     packets: List[IMUPacket]

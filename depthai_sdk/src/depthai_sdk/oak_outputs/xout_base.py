@@ -28,6 +28,7 @@ class XoutBase(ABC):
     _visualizer: Visualizer = None
     _fps: FPS
     name: str  # Other Xouts will override this
+    TYPE = "" # Readonly
 
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
@@ -83,3 +84,37 @@ class XoutBase(ABC):
 
         except Empty:  # Queue empty
             pass
+
+    def fourcc(self) -> str:
+        if self.TYPE == 'MJPEG':
+            return 'mjpeg'
+        elif self.TYPE == 'H264':
+            return 'h264'
+        elif self.TYPE == 'H265':
+            return 'hevc'
+        elif self.TYPE == 'DEPTH':
+            return 'y16'
+        # TODO: add for mono, rgb, nv12, yuv...
+        else:
+            return None
+
+    def isH265(self) -> bool:
+        return self.TYPE == 'H265'
+
+    def isH264(self) -> bool:
+        return self.TYPE == 'H264'
+
+    def isH26x(self) -> bool:
+        return self.isH264() or self.isH265()
+
+    def isMjpeg(self) -> bool:
+        return self.TYPE == 'MJPEG'
+
+    def isRaw(self) -> bool:
+        return self.TYPE == 'RAW'
+
+    def isDepth(self) -> bool:
+        return self.TYPE == 'DEPTH'
+
+    def isIMU(self):
+        return self.TYPE == 'IMU'
