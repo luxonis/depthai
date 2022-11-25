@@ -2,8 +2,12 @@
 import re
 import signal
 import depthai as dai
-from typing import Dict
-from depthai_sdk.components.node_graph_qt import NodeGraph, BaseNode, PropertiesBinWidget
+from typing import Dict, Any
+
+import numpy as np
+
+from depthai_sdk.oak_outputs.fps import FPS
+from depthai_sdk.components.node_graph_qt import NodeGraph, BaseNode, PropertiesBinWidget, Port
 from depthai_sdk.components.node_graph_qt.constants import ViewerEnum
 import time
 from threading import Thread
@@ -21,6 +25,36 @@ class DepthaiNode(BaseNode):
         # create QLineEdit text input widget.
         # self.add_text_input('my_input', 'Text Input', tab='widgets')
 
+class NodePort:
+    name: str # Port name, eg. `preview` or `out`
+    port: Port # QT port object, so we can edit it later
+    node: BaseNode # QT node object
+    type: int # Inout or output
+    dai_node: Any # From schema, contains depthai node info
+    group_name: str # Not sure
+    _fps: FPS = None
+
+    def is_input(self) -> bool:
+        return self.type == 3
+    def is_output(self) -> bool:
+        return self.type == 0
+    def find_node(self, node_id: int, group_name: str, port_name: str) -> bool:
+        return self.name == port_name and self.dai_node['id'] == node_id and self.group_name == group_name
+    def __str__(self):
+        return f"{self.name} from node {self.dai_node['id']}"
+    def new_event(self, _):
+        if self._fps is None:
+            self._fps = FPS()
+        self._fps.next_iter()
+    def fps(self) -> float:
+        if self._fps is None:
+            return None
+        return self._fps.fps()
+
+def find_port(ports: Dict[int, NodePort], src_node_id, src_group, src_name) -> NodePort:
+    for n, p in ports.items():
+        if p.find_node(src_node_id, src_group, src_name):
+            return p
 
 class PipelineGraph:
 
@@ -93,25 +127,17 @@ class PipelineGraph:
         graph_widget.resize(1100, 800)
 
         dai_connections = schema['connections']
-        qt_nodes = {}
-        dai_nodes = {}  # key = id, value = dict with keys 'type', 'blocking', 'queue_size' and 'name' (if args.use_variable_name)
-        # Hold id->port
-        input_port_map = dict()
-        output_port_map = dict()
-        input_name_to_id_map = dict()
-        output_name_to_id_map = dict()
 
+        ports: Dict[int, NodePort] = {}
         for n in schema['nodes']:
             dict_n = n[1]
             node_name = dict_n['name']
-            id = dict_n['id']
-            dai_nodes[dict_n['id']] = {'type': node_name}
-            dai_nodes[dict_n['id']]['name'] = f"{node_name} ({dict_n['id']})"
-            # Create the node
-            qt_nodes[id] = graph.create_node('dai.DepthaiNode', name=node_name, color=node_color.get(node_name, default_node_color), text_color=(0,0,0), push_undo=False)
 
-            dict_n['ioInfo'] = list(sorted(dict_n['ioInfo'], key = lambda el: el[0][1]))
-            for io in dict_n['ioInfo']:
+            # Create the node
+            qt_node = graph.create_node('dai.DepthaiNode', name=node_name, color=node_color.get(node_name, default_node_color), text_color=(0,0,0), push_undo=False)
+
+            ioInfo = list(sorted(dict_n['ioInfo'], key = lambda el: el[0][1]))
+            for io in ioInfo:
                 dict_io = io[1]
                 io_id = dict_io['id']
                 port_name = dict_io['name']
@@ -120,22 +146,29 @@ class PipelineGraph:
                     port_name = f"{dict_io['group']}[{port_name}]"
                 blocking = dict_io['blocking']
                 queue_size = dict_io['queueSize']
-                port_color = (249,75,0) if blocking else (0,255,0)
-                port_label = f"[{queue_size}] {port_name}"
 
-                io_key = tuple([id, dict_io['group'], dict_io['name']])
-                if dict_io['type'] == 3: # Input
-                    input_port_map[dict_io['id']] = qt_nodes[id].add_input(name=port_label, color=port_color, multi_input=True)
-                    input_name_to_id_map[io_key] = io_id
-                elif dict_io['type'] == 0: # Output
-                    output_port_map[dict_io['id']] = qt_nodes[id].add_output(name=port_name)
-                    output_name_to_id_map[io_key] = io_id
+                p = NodePort()
+                p.name = port_name
+                p.type = dict_io['type'] # Input/Output
+                p.node = qt_node
+                p.dai_node = n[1]
+                p.group_name = port_group
+
+                if p.is_input(): # Input
+                    port_color = (249, 75, 0) if blocking else (0, 255, 0)
+                    port_label = f"[{queue_size}] {port_name}"
+                    p.port = qt_node.add_input(name=port_label, color=port_color, multi_input=True)
+                elif p.is_output(): # Output
+                    p.port = qt_node.add_output(name=port_name)
                 else:
                     print('Unhandled case!')
 
-        # nodes = {} # First save all nodes and their inputs/outputs
-        i = 0
-        for c in dai_connections:
+                ports[io_id] = p
+
+        ports_sorted = sorted(ports.items(), key=lambda el: el[0])
+        ports_list = [p for id, p in ports_sorted]
+
+        for i, c in enumerate(dai_connections):
             src_node_id = c["node1Id"]
             src_name = c["node1Output"]
             src_group = c["node1OutputGroup"]
@@ -143,12 +176,11 @@ class PipelineGraph:
             dst_name = c["node2Input"]
             dst_group = c["node2InputGroup"]
 
-            out_key = tuple([src_node_id, src_group, src_name])
-            in_key = tuple([dst_node_id, dst_group, dst_name])
-            print(i,f"{out_key} -> {in_key}")
+            src_port = find_port(ports, src_node_id, src_group, src_name)
+            dst_port = find_port(ports, dst_node_id, dst_group, dst_name)
 
-            output_port_map[output_name_to_id_map[out_key]].connect_to(input_port_map[input_name_to_id_map[in_key]], push_undo=False)
-            i+=1
+            print(f"[{i}] {src_port} -> {dst_port}")
+            src_port.port.connect_to(dst_port.port, push_undo=False)
 
         # Lock the ports
         graph.lock_all_ports()
@@ -160,6 +192,8 @@ class PipelineGraph:
         graph.clear_selection()
         graph.clear_undo_stack()
 
+
+        self.prev_update = time.time()
         def traceEventReader(log_msg: dai.LogMessage):
             app.processEvents() # Process events
             # we are looking for  a line: EV:  ...
@@ -175,7 +209,35 @@ class PipelineGraph:
                 trace_event.timestamp = int(match.group(5)) + (int(match.group(6)) / 1000000000.0)
                 trace_event.host_timestamp = time.time()
 
-                print('START->',log_msg.payload,'<-END')
+                if trace_event.event == 0: # SEND
+                    id = trace_event.src_id
+                    ports_list[id-1].new_event(trace_event)
+                else: # RECEIVE:
+                    id = trace_event.dst_id
+                    ports_list[id-1].new_event(trace_event)
+
+                if 0.5 < time.time() - self.prev_update:
+                    self.prev_update = time.time()
+
+                    for id, p in ports.items():
+                        fps = p.fps()
+                        if fps is None: continue
+                        # print('Port updated', fps)
+                        p.port.model.name = "{:.1f}".format(fps)
+                        p.port.model.display_name = "{:.1f}".format(fps)
+                        """
+                        self.node = node
+                        self.type_ = ''
+                        self.name = 'port'
+                        self.display_name = True
+                        self.multi_connection = False
+                        self.visible = True
+                        self.locked = False
+                        self.connected_ports = defaultdict(list)
+                        """
+
+                    app.processEvents()
+
                 # buffer.append(trace_event)
                 # buffer.sort(key=lambda event: event.timestamp)
 
