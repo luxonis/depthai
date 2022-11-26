@@ -268,7 +268,7 @@ class OakCamera:
 
         self._oak.device.startPipeline(self._pipeline)
 
-        self._oak.initCallbacks(self._pipeline)
+        self._oak.init_callbacks(self._pipeline)
 
         for xout in self._oak.oak_out_streams:  # Start FPS counters
             xout.start_fps()
@@ -276,7 +276,7 @@ class OakCamera:
         if self.replay:
             self.replay.createQueues(self._oak.device)
             # Called from Replay module on each new frame sent to the device.
-            self.replay.start(self._oak.newMsg)
+            self.replay.start(self._oak.new_msg)
 
         # Check if callbacks (sync/non-sync are set)
         if blocking:
@@ -299,7 +299,7 @@ class OakCamera:
 
         # TODO: check if components have controls enabled and check whether key == `control`
 
-        self._oak.checkSync()
+        self._oak.check_sync()
 
         if self.replay:
             if self.replay._stop:

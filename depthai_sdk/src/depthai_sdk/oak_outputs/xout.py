@@ -97,7 +97,7 @@ class XoutFrames(XoutBase):
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
 
-    def newMsg(self, name: str, msg) -> None:
+    def new_msg(self, name: str, msg) -> None:
         if name not in self._streams:
             return
 
@@ -258,7 +258,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.mono_frames]
 
-    def newMsg(self, name: str, msg: dai.Buffer) -> None:
+    def new_msg(self, name: str, msg: dai.Buffer) -> None:
         if name not in self._streams:
             return  # From Replay modules. TODO: better handling?
 
@@ -370,7 +370,7 @@ class XoutDepth(XoutFrames, XoutClickable):
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.mono_frames]
 
-    def newMsg(self, name: str, msg: dai.Buffer) -> None:
+    def new_msg(self, name: str, msg: dai.Buffer) -> None:
         if name not in self._streams:
             return  # From Replay modules. TODO: better handling?
 
@@ -423,7 +423,7 @@ class XoutSeqSync(XoutBase, SequenceNumSync):
     def package(self, msgs: List):
         raise NotImplementedError('XoutSeqSync is an abstract class, you need to override package() method!')
 
-    def newMsg(self, name: str, msg) -> None:
+    def new_msg(self, name: str, msg) -> None:
         # Ignore frames that we aren't listening for
         if name not in self._streams: return
 
@@ -721,8 +721,9 @@ class XoutTwoStage(XoutNnResults):
 
     # No need for `def visualize()` as `XoutNnResults.visualize()` does what we want
 
-    def newMsg(self, name: str, msg: dai.Buffer) -> None:
-        if name not in self._streams: return  # From Replay modules. TODO: better handling?
+    def new_msg(self, name: str, msg: dai.Buffer) -> None:
+        if name not in self._streams:
+            return  # From Replay modules. TODO: better handling?
 
         # TODO: what if msg doesn't have sequence num?
         seq = str(msg.getSequenceNum())
@@ -738,7 +739,6 @@ class XoutTwoStage(XoutNnResults):
             else:
                 self.msgs[seq][name].append(msg)
 
-            # print(f'Added recognition seq {seq}, total len {len(self.msgs[seq]["recognition"])}')
         elif name == self.nn_results.name:
             if (f := self.det_nn._decode_fn) is not None:
                 msg = f(msg)
@@ -786,14 +786,11 @@ class XoutTwoStage(XoutNnResults):
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
 
-            # print(seq, self.msgs[seq][self.nn_results.name].detections, self.msgs[seq][self.second_nn_out.name])
-
             packet = TwoStagePacket(
                 self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.nn_results.name],
                 self.msgs[seq][self.second_nn_out.name],
-                # if (f := self.second_nn._decode_fn) is None else f(self.msgs[seq][self.second_nn_out.name]),
                 self.whitelist_labels
             )
             self.queue.put(packet, block=False)
@@ -962,7 +959,7 @@ class XoutIMU(XoutBase):
     def xstreams(self) -> List[StreamXout]:
         return [self.imu_out]
 
-    def newMsg(self, name: str, msg: dai.IMUData) -> None:
+    def new_msg(self, name: str, msg: dai.IMUData) -> None:
         if name not in self._streams:
             return
 

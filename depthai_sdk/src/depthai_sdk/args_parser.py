@@ -4,7 +4,7 @@ from typing import Any, Dict
 
 import depthai as dai
 
-from depthai_sdk.components.parser import rgbResolution, monoResolution, parse_bool
+from depthai_sdk.components.parser import rgb_resolution, mono_resolution, parse_bool
 
 """
 Very similar to ArgsManager, but specific to the new SDK, not depthai_demo.py. 
@@ -182,8 +182,8 @@ class ArgsParser:
 
         args = parser.parse_args()
         # Parse arguments
-        args.rgbResolution = rgbResolution(args.rgbResolution)
-        args.monoResolution = monoResolution(args.monoResolution)
+        args.rgbResolution = rgb_resolution(args.rgbResolution)
+        args.monoResolution = mono_resolution(args.monoResolution)
         # Global FPS setting, applied to all cameras
         if args.fps is not None:
             args.rgbFps = args.fps

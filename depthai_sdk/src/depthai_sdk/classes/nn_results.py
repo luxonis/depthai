@@ -19,7 +19,6 @@ class GenericNNOutput:
     def __init__(self, nn_data: NNData):
         self.nn_data = nn_data
 
-
 # First we have Object detection results, which are already standarized with dai.ImgDetections
 
 @dataclass

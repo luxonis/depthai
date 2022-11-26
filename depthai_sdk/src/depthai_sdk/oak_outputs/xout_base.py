@@ -52,7 +52,7 @@ class XoutBase(ABC):
         self._fps = FPS()
 
     @abstractmethod
-    def newMsg(self, name: str, msg) -> None:
+    def new_msg(self, name: str, msg) -> None:
         raise NotImplementedError()
 
     @abstractmethod
@@ -61,7 +61,7 @@ class XoutBase(ABC):
 
     # This approach is used as some functions (eg. imshow()) need to be called from
     # main thread, and calling them from callback thread wouldn't work.
-    def checkQueue(self, block=False) -> None:
+    def check_queue(self, block=False) -> None:
         """
         Checks queue for any available messages. If available, call callback. Non-blocking by default.
         """

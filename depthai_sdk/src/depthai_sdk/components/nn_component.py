@@ -299,7 +299,7 @@ class NNComponent(Component):
 
         # Parse OpenVINO version
         if "openvino_version" in self._config:
-            self._forced_version = parseOpenVinoVersion(self._config.get("openvino_version"))
+            self._forced_version = parse_open_vino_version(self._config.get("openvino_version"))
 
         # Save for visualization
         self._labels = self._config.get("mappings", {}).get("labels", None)
