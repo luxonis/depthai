@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Dict, List, Any, Optional, Tuple, Union, Callable
+from typing import Dict, List, Any, Optional, Tuple, Union
 
 import cv2
 import depthai as dai
@@ -441,18 +441,15 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         return [self.nn_results, self.frames]
 
     def __init__(self,
-                 det_nn,
+                 det_nn: 'NNComponent',
                  frames: StreamXout,
-                 nn_results: StreamXout,
-                 decode_fn: Optional[Callable] = None):
-        self.nn_results = nn_results
+                 nn_results: StreamXout):
         self.det_nn = det_nn
+        self.nn_results = nn_results
         # Multiple inheritance init
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, nn_results])
         # Save StreamXout before initializing super()!
-
-        self.decode_fn = decode_fn
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
         if det_nn._labels:
@@ -511,11 +508,13 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
     def package(self, msgs: Dict):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
+
         packet = DetectionPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
-            msgs[self.nn_results.name] if self.decode_fn is None else self.decode_fn(msgs[self.nn_results.name])
+            msgs[self.nn_results.name] if (f := self.det_nn._decode_fn) is None else f(msgs[self.nn_results.name])
         )
+
         self.queue.put(packet, block=False)
 
 
@@ -746,32 +745,45 @@ class XoutTwoStage(XoutNnResults):
             self.add_detections(seq, msg)
 
             if self.input_queue_name:
-                if self.input_queue is None:
-                    self.input_queue = self.device.getInputQueue(self.input_queue_name)
-                    self.input_cfg_queue = self.device.getInputQueue(self.input_queue_name + '_cfg')
+                # We cannot create them in __init__ as device is not initialized yet
+                # if self.input_queue is None:
+                self.input_queue = self.device.getInputQueue(self.input_queue_name,
+                                                             maxSize=8,
+                                                             blocking=False)
+                self.input_cfg_queue = self.device.getInputQueue(self.input_queue_name + '_cfg',
+                                                                 maxSize=8,
+                                                                 blocking=False)
 
                 for i, det in enumerate(msg.detections):
-                    frame = self.msgs[seq][self.frames.name].getCvFrame()
-                    h, w = frame.shape[:2]
                     cfg = dai.ImageManipConfig()
 
                     if isinstance(det, dai.ImgDetection):
                         rect = (det.xmin, det.ymin, det.xmax, det.ymax)
                     else:
-                        rect = det[0] / 255, det[1] / 255, det[2] / 255, det[3] / 255
+                        rect = det[0], det[1], det[2], det[3]
 
-                    cfg.setCropRect(rect)
+                    try:
+                        if (angle := msg.angles[i]) != 0.0:
+                            rr = dai.RotatedRect()
+                            rr.center.x = rect[0]
+                            rr.center.y = rect[1]
+                            rr.size.width = rect[2] - rect[0]
+                            rr.size.height = rect[3] - rect[1]
+                            rr.angle = angle
+                            cfg.setCropRotatedRect(rr, normalizedCoords=True)
+                        else:
+                            cfg.setCropRect(rect)
+                    except AttributeError:
+                        cfg.setCropRect(rect)
+
                     cfg.setResize(*self.second_nn._size)
 
-                    img_frame = dai.ImgFrame()
-                    img_frame.setData(frame.transpose(2, 0, 1).flatten())
-                    img_frame.setType(dai.ImgFrame.Type.BGR888p)
-                    img_frame.setWidth(w)
-                    img_frame.setHeight(h)
+                    if i == 0:
+                        frame = self.msgs[seq][self.frames.name]
+                        self.input_queue.send(frame)
+                        cfg.setReusePreviousImage(True)
 
-                    if self.input_queue:
-                        self.input_queue.send(img_frame)
-                        self.input_cfg_queue.send(cfg)
+                    self.input_cfg_queue.send(cfg)
 
             # print(f'Added detection seq {seq}')
         elif name in self.frames.name:

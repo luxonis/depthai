@@ -153,14 +153,14 @@ class NNComponent(Component):
             crop = int(scale[i] * nn_size[0]), int(scale[i] * nn_size[1])
             # Crop the high-resolution frames, so it matches object detection frame aspect ratio
 
-            self.image_manip_config = dai.ImageManipConfig()
             self.image_manip = pipeline.createImageManip()
-            self.image_manip.setNumFramesPool(20)
-
+            self.image_manip.setNumFramesPool(10)
+            self.image_manip_config = dai.ImageManipConfig()
             self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+
             self._input._stream_input.link(self.image_manip.inputImage)
 
-            if self._input._isDetector():
+            if self._input._is_detector() and self._input._decode_fn is None:
                 self.image_manip.setResize(*crop)
                 self.image_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
 
@@ -172,13 +172,12 @@ class NNComponent(Component):
                 # For debugging, for integral counter
                 self.node.out.link(self._multi_stage_nn.script.inputs['recognition'])
                 self.node.input.setBlocking(True)
-                self.node.input.setQueueSize(15)
+                self.node.input.setQueueSize(20)
             else:
                 # Custom NN
                 self.image_manip.setResize(*self._size)
-                self.image_manip.setWaitForConfigInput(True)
-                self.image_manip.inputConfig.setReusePreviousMessage(True)
-                self.image_manip.setNumFramesPool(20)
+                # self.image_manip.setWaitForConfigInput(True)
+                # self.image_manip.inputConfig.setReusePreviousMessage(True)
 
                 self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
 
@@ -192,6 +191,8 @@ class NNComponent(Component):
                 self.x_in_cfg.out.link(self.image_manip.inputConfig)
 
                 self.image_manip.out.link(self.node.input)
+                # self.node.input.setBlocking(True)
+                self.node.input.setQueueSize(20)
         else:
             raise ValueError(
                 "'input' argument passed on init isn't supported!"
@@ -572,7 +573,8 @@ class NNComponent(Component):
                                    # NnComponent (detections)
                                    StreamXout(self._comp.node.id, self._comp.node.out),
                                    # This NnComponent (2nd stage NN)
-                                   )
+                                   device=device,
+                                   input_queue_name="input_queue" if self._comp.x_in else None)
             else:
                 out = XoutNnResults(self._comp,
                                     StreamXout(self._comp.node.id, self._comp.node.passthrough),
@@ -665,7 +667,7 @@ class NNComponent(Component):
         if not isinstance(self._input, Component):
             return False
 
-        # if not self._input._isDetector():
+        # if not self._input._is_detector():
         #     raise Exception('Only object detector models can be used as an input to the NNComponent!')
 
         return True
