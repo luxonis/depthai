@@ -46,20 +46,22 @@ class XoutFrames(XoutBase):
         self.frames = frames
         self.fps = fps
         self._video_recorder = None
+        self._is_recorder_enabled = None
         super().__init__()
 
     def setup_visualize(self,
                         visualizer: Visualizer,
                         name: str = None,
-                        recorder: VideoRecorder = None):
+                        recorder: VideoRecorder = None,
+                        is_recorder_enabled: bool = False):
         self._visualizer = visualizer
         self.name = name or self.name
         self._video_recorder = recorder
-
+        self._is_recorder_enabled = is_recorder_enabled
         # TODO we may need to allow user switch between encodings (or disable it)
         # Enable encoding for the video recorder
-        if recorder:
-            self._video_recorder[self.name].set_fourcc('avc1')
+        # if recorder:
+        self._video_recorder[self.name].set_fourcc('avc1')
 
     def visualize(self, packet: FramePacket) -> None:
         """
@@ -87,12 +89,14 @@ class XoutFrames(XoutBase):
             else:
                 pass
 
-        if self._video_recorder:
+        if self._is_recorder_enabled:
             # TODO not ideal to check it this way
             if isinstance(self._video_recorder[self.name], AvWriter):
                 self._video_recorder.write(self.name, packet.imgFrame)
             else:
                 self._video_recorder.write(self.name, packet.frame)
+        else:
+            self._video_recorder.add_to_buffer(self.name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -504,6 +508,13 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             )
 
         super().visualize(packet)
+
+    # Check triggers
+    def triggers(self, packet: Union[DetectionPacket, TrackerPacket]):
+        if isinstance(packet, TrackerPacket):
+            pass
+
+
 
     def package(self, msgs: Dict):
         if self.queue.full():

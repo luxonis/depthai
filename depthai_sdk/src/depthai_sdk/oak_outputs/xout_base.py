@@ -67,6 +67,7 @@ class XoutBase(ABC):
         """
         try:
             packet = self.queue.get(block=block)
+
             if packet is not None:
                 self._fps.next_iter()
                 if self._visualizer:

@@ -1,6 +1,9 @@
+import asyncio
 import json
 import warnings
+from collections import defaultdict
 from pathlib import Path
+from threading import Thread
 from typing import Callable, Union, List, Dict
 
 import blobconverter
@@ -86,6 +89,10 @@ class NNComponent(Component):
         """
         super().__init__()
         self.out = self.Out(self)
+        self.detection = self.DetectionTrigger(self)
+        self.detections = self.DetectionsTrigger(self)
+
+        self.triggers = defaultdict(list)
 
         # Save passed settings
         self._input = input
@@ -532,6 +539,83 @@ class NNComponent(Component):
     """
     Available outputs (to the host) of this component
     """
+
+    class Trigger:
+        def __init__(self, nn_component: 'NNComponent'):
+            self._comp = nn_component
+
+    class DetectionTrigger(Trigger):
+        def __init__(self, nn_component: 'NNComponent'):
+            super().__init__(nn_component)
+
+    class DetectionsTrigger(Trigger):
+        def __init__(self, nn_component: 'NNComponent'):
+            super().__init__(nn_component)
+            self.condition_func = None
+            self.dir_path = None
+            self.stream = None
+            self.offset = None
+            self.duration = None
+            self.threads = []
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            for t in self.threads:
+                t.join()
+
+        async def save(self):
+            await asyncio.sleep(self.offset)
+            self.stream._video_recorder.save_snapshot(self.dir_path, self.offset + self.duration)
+
+        def run_async_loop_in_thread(self):
+            asyncio.run(self.save())
+
+        def check_trigger(self, condition_input: Any = None) -> None:
+            if self.condition_func is None:
+                return
+
+            if self.condition_func(condition_input):
+                thread = Thread(target=self.run_async_loop_in_thread)
+                thread.start()
+                self.threads.append(thread)
+
+        def record(self,
+                   condition_func: Callable[[Any], bool],
+                   dir_path: Union[Path, str],
+                   stream: XoutBase,
+                   offset: int = 0,  # From which frame before/after trigger should we start recording frames
+                   duration: int = 10,  # After how many frames after the last trigger should we stop recording
+                   ):
+            """
+            Record frames from a stream to a directory on condition.
+
+            Args:
+                condition_func: Function that takes detections and returns True if we should record.
+                dir_path: Path to the directory where to save the video.
+                stream: Stream to record.
+                offset: From which second before/after trigger should we start recording frames.
+                duration: Duration of the recording in seconds.
+            """
+            assert condition_func is not None, 'Condition function must be provided'
+            self.condition_func = condition_func
+            self.dir_path = dir_path
+            self.stream = stream
+            self.offset = offset
+            self.duration = duration
+
+            self._comp._add_trigger('detections', self)
+
+    detection: DetectionTrigger
+    detections: DetectionsTrigger
+
+    def _add_trigger(self, trigger_name, trigger: Trigger):
+        """
+        Adds a trigger to a directory.
+
+        Args:
+            trigger_name: Name of the trigger.
+            trigger: Trigger object.
+        """
+        self.triggers[trigger_name].append(trigger)
 
     class Out:
         _comp: 'NNComponent'

@@ -330,7 +330,9 @@ class OakCamera:
             if ov:
                 if self._pipeline.getRequiredOpenVINOVersion() and self._pipeline.getRequiredOpenVINOVersion() != ov:
                     raise Exception(
-                        'Two components forced two different OpenVINO version! Please make sure that all your models are compiled using the same OpenVINO version.')
+                        'Two components forced two different OpenVINO version!'
+                        'Please make sure that all your models are compiled using the same OpenVINO version.'
+                    )
                 self._pipeline.setOpenVINOVersion(ov)
 
         if self._pipeline.getRequiredOpenVINOVersion() == None:
@@ -380,15 +382,14 @@ class OakCamera:
     def record(self,
                outputs: Union[Callable, List[Callable]],
                path: str,
-               type: RecordType = RecordType.VIDEO,
-               keep_last: int = 0):
+               record_type: RecordType = RecordType.VIDEO):
         """
         Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
         them to the computer in desired format (raw, mp4, mcap, bag..).
         Args:
             outputs (Component/Component output): Component output(s) to be recorded
             path: Folder path where to save these streams
-            type: Record type
+            record_type: Record type
         """
         if isinstance(outputs, Callable):
             outputs = [outputs]  # to list
@@ -397,7 +398,7 @@ class OakCamera:
             if isinstance(outputs[i], Component):
                 outputs[i] = outputs[i].out.main
 
-        record = Record(Path(path).resolve(), type)
+        record = Record(Path(path).resolve(), record_type)
         self._out_templates.append(RecordConfig(outputs, record))
         return record
 

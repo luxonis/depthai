@@ -28,7 +28,8 @@ class OutputConfig(BaseConfig):
     output: Callable  # Output of the component (a callback)
     callback: Callable  # Callback that gets called after syncing
 
-    def __init__(self, output: Callable,
+    def __init__(self,
+                 output: Callable,
                  callback: Callable,
                  visualizer: Visualizer = None,
                  record_path: Optional[str] = None):
@@ -57,13 +58,15 @@ class OutputConfig(BaseConfig):
             xoutbase.name = self.find_new_name(xoutbase.name, names)
         names.append(xoutbase.name)
 
-        recorder = None
-        if self.record_path:
-            recorder = VideoRecorder()
-            recorder.update(Path(self.record_path), device, [xoutbase])
+        recorder = VideoRecorder()
+        record_path = self.record_path or '.'
+        recorder.update(Path(record_path), device, [xoutbase])
 
         if self.visualizer:
-            xoutbase.setup_visualize(self.visualizer, xoutbase.name, recorder)
+            xoutbase.setup_visualize(visualizer=self.visualizer,
+                                     name=xoutbase.name,
+                                     recorder=recorder,
+                                     is_recorder_enabled=self.record_path is not None)
 
         return [xoutbase]
 

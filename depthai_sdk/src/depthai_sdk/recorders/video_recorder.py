@@ -1,4 +1,6 @@
-from typing import Dict, Any
+from typing import Dict, Any, Union
+
+import numpy as np
 
 from .abstract_recorder import *
 
@@ -50,8 +52,11 @@ class VideoRecorder(Recorder):
                     from .video_writers.file_writer import FileWriter
                     self._writer[name] = FileWriter(self.path, name, fourcc)
 
-    def write(self, name: str, frame: dai.ImgFrame):
+    def write(self, name: str, frame: Union[np.ndarray, dai.ImgFrame]):
         self._writer[name].write(frame)
+
+    def add_to_buffer(self, name: str, frame: Union[np.ndarray, dai.ImgFrame]):
+        self._writer[name].add_to_buffer(frame)
 
     def close(self):
         if self._closed: return
