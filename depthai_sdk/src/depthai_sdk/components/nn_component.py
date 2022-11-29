@@ -151,8 +151,7 @@ class NNComponent(Component):
             self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
 
             self._input._stream_input.link(self.image_manip.inputImage)
-
-            if self._input._is_detector() and self._input._decode_fn is None:
+            if self._input._is_detector() and self._decode_fn is None:
                 self.image_manip.setResize(*crop)
                 self.image_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
 
@@ -166,11 +165,9 @@ class NNComponent(Component):
                 self.node.input.setBlocking(True)
                 self.node.input.setQueueSize(20)
             else:
+                print('Using on-host decoding for multi-stage NN')
                 # Custom NN
                 self.image_manip.setResize(*self._size)
-                # self.image_manip.setWaitForConfigInput(True)
-                # self.image_manip.inputConfig.setReusePreviousMessage(True)
-
                 self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
 
                 # TODO pass frame on device, and just send config from host
@@ -184,7 +181,6 @@ class NNComponent(Component):
                 self.x_in_cfg.out.link(self.image_manip.inputConfig)
 
                 self.image_manip.out.link(self.node.input)
-                # self.node.input.setBlocking(True)
                 self.node.input.setQueueSize(20)
         else:
             raise ValueError(
@@ -386,8 +382,8 @@ class NNComponent(Component):
             scale_bb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
         """
         if not self._is_multi_stage():
-            print(
-                "Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
+            print("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible!"
+                  "This configuration attempt will be ignored.")
             return
 
         self._multi_stage_config = MultiStageConfig(debug, labels, scale_bb)
@@ -397,8 +393,8 @@ class NNComponent(Component):
             return label
         elif isinstance(label, str):
             if not self._labels:
-                raise ValueError(
-                    "Incorrect trackLabels type! Make sure to pass NN configuration to the NNComponent so it can deccode string labels!")
+                raise ValueError("Incorrect trackLabels type! Make sure to pass NN configuration to"
+                                 "the NNComponent so it can deccode string labels!")
             # Label map is Dict of either "name", or ["name", "color"]
             label_strs = [l.upper() if isinstance(l, str) else l[0].upper() for l in self._labels]
 
@@ -488,16 +484,21 @@ class NNComponent(Component):
 
     def config_nn(self,
                   conf_threshold: Optional[float] = None,
-                  aspect_ratio_resize_mode: AspectRatioResizeMode = None,
-                  ):
+                  aspect_ratio_resize_mode: Union[AspectRatioResizeMode, str] = None):
         """
         Configures the Detection Network node.
 
         Args:
             conf_threshold: (float, optional): Confidence threshold for the detections (0..1]
-            aspect_ratio_resize_mode: (AspectRatioResizeMode, optional): Change aspect ratio resizing mode - to either STRETCH, CROP, or LETTERBOX
+            aspect_ratio_resize_mode: (AspectRatioResizeMode, optional): Change aspect ratio resizing mode - to either STRETCH, CROP, or LETTERBOX.
         """
         if aspect_ratio_resize_mode:
+            if isinstance(aspect_ratio_resize_mode, str):
+                try:
+                    aspect_ratio_resize_mode = AspectRatioResizeMode[aspect_ratio_resize_mode.upper()]
+                except (AttributeError, KeyError):
+                    print('AR resize mode was not recognizied. Using default LETTERBOX mode.')
+
             self._ar_resize_mode = aspect_ratio_resize_mode
         if conf_threshold and self._is_detector():
             self.node.setConfidenceThreshold(conf_threshold)
@@ -506,8 +507,7 @@ class NNComponent(Component):
                        bb_scale_factor: Optional[float] = None,
                        lower_threshold: Optional[int] = None,
                        upper_threshold: Optional[int] = None,
-                       calc_algo: Optional[dai.SpatialLocationCalculatorAlgorithm] = None,
-                       ):
+                       calc_algo: Optional[dai.SpatialLocationCalculatorAlgorithm] = None):
         """
         Configures the Spatial Detection Network node.
 
