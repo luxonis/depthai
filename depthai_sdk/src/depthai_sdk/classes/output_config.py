@@ -4,7 +4,6 @@ from typing import Optional, Callable, List
 
 import depthai as dai
 
-from depthai_sdk import FramePacket
 from depthai_sdk.callback_context import CallbackContext
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout import XoutFrames
@@ -63,10 +62,10 @@ class OutputConfig(BaseConfig):
         recorder.update(Path(record_path), device, [xoutbase])
 
         if self.visualizer:
-            xoutbase.setup_visualize(visualizer=self.visualizer,
-                                     name=xoutbase.name,
-                                     recorder=recorder,
-                                     is_recorder_enabled=self.record_path is not None)
+            xoutbase.setup_visualize(visualizer=self.visualizer, name=xoutbase.name)
+
+        if self.record_path:
+            xoutbase.setup_recorder(recorder=recorder, is_recorder_enabled=self.record_path is not None)
 
         return [xoutbase]
 

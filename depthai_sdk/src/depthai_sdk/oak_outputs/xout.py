@@ -51,21 +51,28 @@ class XoutFrames(XoutBase):
 
     def setup_visualize(self,
                         visualizer: Visualizer,
-                        name: str = None,
-                        recorder: VideoRecorder = None,
-                        is_recorder_enabled: bool = False):
+                        name: str = None):
         self._visualizer = visualizer
         self.name = name or self.name
+        # self._video_recorder = recorder
+        # self._is_recorder_enabled = is_recorder_enabled
+        # # TODO we may need to allow user switch between encodings (or disable it)
+        # # Enable encoding for the video recorder
+        # # if recorder:
+        # self._video_recorder[self.name].set_fourcc('avc1')
+
+    def setup_recorder(self,
+                       recorder: VideoRecorder,
+                       is_recorder_enabled: bool = False,
+                       encoding: str = 'avc1'):
         self._video_recorder = recorder
         self._is_recorder_enabled = is_recorder_enabled
-        # TODO we may need to allow user switch between encodings (or disable it)
         # Enable encoding for the video recorder
-        # if recorder:
-        self._video_recorder[self.name].set_fourcc('avc1')
+        self._video_recorder[self.name].set_fourcc(encoding)
 
     def visualize(self, packet: FramePacket) -> None:
         """
-        Called from main thread if visualizer is not None
+        Called from main thread if visualizer is not None.
         """
 
         self._visualizer.frame_shape = packet.frame.shape
@@ -76,27 +83,28 @@ class XoutFrames(XoutBase):
                 position=TextPosition.TOP_LEFT
             )
 
-        packet.frame = self._visualizer.draw(packet.frame)
-
         if self.callback:  # Don't display frame, call the callback
             ctx = CallbackContext(packet, self._visualizer, self._video_recorder)
             self.callback(ctx)
         else:
-            # TODO: if RH, don't display frame
+            packet.frame = self._visualizer.draw(packet.frame)
             # Draw on the frame
             if self._visualizer.platform == Platform.PC:
                 cv2.imshow(self.name, packet.frame)
             else:
                 pass
 
+    def on_record(self, packet) -> None:
         if self._is_recorder_enabled:
             # TODO not ideal to check it this way
             if isinstance(self._video_recorder[self.name], AvWriter):
+                print('Writing frame AV')
                 self._video_recorder.write(self.name, packet.imgFrame)
             else:
                 self._video_recorder.write(self.name, packet.frame)
-        else:
-            self._video_recorder.add_to_buffer(self.name, packet.frame)
+                print('Writing frame')
+        # else:
+        #     self._video_recorder.add_to_buffer(self.name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -476,17 +484,11 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._ar_resize_mode)
 
-    def visualize(self, packet: Union[DetectionPacket, TrackerPacket]):
-        # We can't visualize NNData (not decoded)
-        if isinstance(packet, DetectionPacket) and isinstance(packet.img_detections, dai.NNData):
-            raise Exception(
-                "Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead."
-            )
-
+    def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
+        # Add detections to packet
         if isinstance(packet, TrackerPacket):
-            pass  # TrackerPacket draws detection boxes itself
+            pass
         elif isinstance(packet.img_detections, dai.ImgDetections):
-            # Add detections to packet
             for detection in packet.img_detections.detections:
                 d = _Detection()
                 d.img_detection = detection
@@ -500,6 +502,16 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 d.bottom_right = (int(bbox[2]), int(bbox[3]))
                 packet.detections.append(d)
 
+    def visualize(self, packet: Union[DetectionPacket, TrackerPacket]):
+        # We can't visualize NNData (not decoded)
+        if isinstance(packet, DetectionPacket) and isinstance(packet.img_detections, dai.NNData):
+            raise Exception(
+                "Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead."
+            )
+
+        if isinstance(packet, TrackerPacket):
+            pass  # TrackerPacket draws detection boxes itself
+        elif isinstance(packet.img_detections, dai.ImgDetections):
             self._visualizer.add_detections(
                 packet.img_detections.detections,
                 self.normalizer,
@@ -514,16 +526,15 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if isinstance(packet, TrackerPacket):
             pass
 
-
-
     def package(self, msgs: Dict):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
 
+        decode_fn = self.det_nn._decode_fn or self.det_nn._handler.decode
         packet = DetectionPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
-            msgs[self.nn_results.name] if (f := self.det_nn._decode_fn) is None else f(msgs[self.nn_results.name])
+            msgs[self.nn_results.name] if decode_fn is None else decode_fn(msgs[self.nn_results.name])
         )
 
         self.queue.put(packet, block=False)
@@ -757,13 +768,13 @@ class XoutTwoStage(XoutNnResults):
 
             if self.input_queue_name:
                 # We cannot create them in __init__ as device is not initialized yet
-                # if self.input_queue is None:
-                self.input_queue = self.device.getInputQueue(self.input_queue_name,
-                                                             maxSize=8,
-                                                             blocking=False)
-                self.input_cfg_queue = self.device.getInputQueue(self.input_queue_name + '_cfg',
+                if self.input_queue is None:
+                    self.input_queue = self.device.getInputQueue(self.input_queue_name,
                                                                  maxSize=8,
                                                                  blocking=False)
+                    self.input_cfg_queue = self.device.getInputQueue(self.input_queue_name + '_cfg',
+                                                                     maxSize=8,
+                                                                     blocking=False)
 
                 for i, det in enumerate(msg.detections):
                     cfg = dai.ImageManipConfig()
@@ -790,7 +801,11 @@ class XoutTwoStage(XoutNnResults):
                     cfg.setResize(*self.second_nn._size)
 
                     if i == 0:
-                        frame = self.msgs[seq][self.frames.name]
+                        try:
+                            frame = self.msgs[seq][self.frames.name]
+                        except KeyError:
+                            continue
+
                         self.input_queue.send(frame)
                         cfg.setReusePreviousImage(True)
 
@@ -972,11 +987,11 @@ class XoutIMU(XoutBase):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         packet.frame = img
-        self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet)
         else:
+            packet.frame = self._visualizer.draw(packet.frame)
             cv2.imshow(self.name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
