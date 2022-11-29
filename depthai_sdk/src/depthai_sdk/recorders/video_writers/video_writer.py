@@ -24,9 +24,12 @@ class VideoWriter(AbstractWriter):
         self._fps = fps
 
         self._buffer = None
+        self._is_buffer_enabled = False
 
     def init_buffer(self, max_seconds: int):
-        self._buffer = deque(maxlen=int(max_seconds * self._fps))
+        if max_seconds > 0:
+            self._buffer = deque(maxlen=int(max_seconds * self._fps))
+            self._is_buffer_enabled = True
 
     def _create_file(self, frame: Union[dai.ImgFrame, np.ndarray]):
         if isinstance(frame, np.ndarray):
@@ -97,8 +100,8 @@ class VideoWriter(AbstractWriter):
         self._fourcc = fourcc
 
     def add_to_buffer(self, frame: Union[dai.ImgFrame, np.ndarray]):
-        if self._buffer is None:
-            raise RuntimeError("Buffer is not enabled")
+        if not self._is_buffer_enabled:
+            return
 
         if len(self._buffer) == self._buffer.maxlen:
             self._buffer.pop()
