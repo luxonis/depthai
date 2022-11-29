@@ -451,14 +451,18 @@ class OakCamera:
 
         self._out_templates.append(OutputConfig(output, callback, visualizer, record_path))
 
-    def callback(self, output: Union[List, Callable, Component], callback: Callable):
+    def callback(self,
+                 output: Union[List, Callable, Component],
+                 callback: Callable,
+                 record_path: Optional[str] = None):
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
-            output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
-            callback: Handler function to which the Packet will be sent
+            output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output.
+            callback: Handler function to which the Packet will be sent.
+            record_path: Path where to store the recording.
         """
-        self._callback(output, callback)
+        self._callback(output=output, callback=callback, record_path=record_path)
 
     @property
     def device(self) -> dai.Device:
