@@ -4,7 +4,6 @@ from typing import Optional, Callable, List
 
 import depthai as dai
 
-from depthai_sdk import FramePacket
 from depthai_sdk.callback_context import CallbackContext
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout import XoutFrames
@@ -28,7 +27,8 @@ class OutputConfig(BaseConfig):
     output: Callable  # Output of the component (a callback)
     callback: Callable  # Callback that gets called after syncing
 
-    def __init__(self, output: Callable,
+    def __init__(self,
+                 output: Callable,
                  callback: Callable,
                  visualizer: Visualizer = None,
                  record_path: Optional[str] = None):
@@ -63,7 +63,10 @@ class OutputConfig(BaseConfig):
             recorder.update(Path(self.record_path), device, [xoutbase])
 
         if self.visualizer:
-            xoutbase.setup_visualize(self.visualizer, xoutbase.name, recorder)
+            xoutbase.setup_visualize(visualizer=self.visualizer, name=xoutbase.name)
+
+        if self.record_path:
+            xoutbase.setup_recorder(recorder=recorder)
 
         return [xoutbase]
 
