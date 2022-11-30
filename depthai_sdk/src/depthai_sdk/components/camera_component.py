@@ -10,10 +10,10 @@ from depthai_sdk.replay import Replay
 
 class CameraComponent(Component):
     # Users should have access to these nodes
-    node: Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera] = None
-    encoder: dai.node.VideoEncoder = None
+    node: Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera]
+    encoder: dai.node.VideoEncoder
 
-    stream: dai.Node.Output = None  # Node output to be used as eg. an input into NN
+    stream: dai.Node.Output  # Node output to be used as eg. an input into NN
     stream_size: Tuple[int, int]  # Output size
 
     # Setting passed at init
@@ -64,6 +64,7 @@ class CameraComponent(Component):
 
         self._create_node(pipeline, source.upper())
 
+        self.encoder = None
         if encode:
             self.encoder = pipeline.createVideoEncoder()
             # MJPEG by default
