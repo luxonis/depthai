@@ -239,6 +239,10 @@ class NNComponent(Component):
                 model = models[str(model)] / 'config.json'
                 self._parse_config(model)
             elif str(model) in zoo_models:
+                print(
+                    'Models from the OpenVINO Model Zoo do not carry any metadata'
+                    ' (e.g., label map, decoding logic). Please keep this in mind when using models from Zoo.'
+                )
                 self._blob = dai.OpenVINO.Blob(blobconverter.from_zoo(str(model), shaves=6))
                 self._forced_version = self._blob.version
             else:
