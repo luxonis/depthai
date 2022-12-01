@@ -47,7 +47,7 @@ class OakStream:
                 self.type = self.StreamType.H264
         elif isinstance(xout, outputs.XoutDepth):
             self.xlink_name = xout.frames.name
-            self.type = self.StreamType.RAW  # TODO is depth raw or should it be DEPTH?
+            self.type = self.StreamType.DEPTH  # TODO is depth raw or should it be DEPTH?
         elif isinstance(xout, outputs.XoutDisparity):
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.RAW
