@@ -1,3 +1,9 @@
+import os
+
+if os.environ.get('PRODUCTION_ENVIRONMENT') is not None:
+    from install_requirements import update_submodules
+    update_submodules()
+    
 import threading
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -10,7 +16,6 @@ from datetime import datetime
 # import numpy as np
 import depthai as dai
 import argparse
-import os
 # import blobconverter
 import signal
 import json, time
