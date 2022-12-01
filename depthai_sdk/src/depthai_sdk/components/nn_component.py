@@ -92,7 +92,7 @@ class NNComponent(Component):
         self._spatial = spatial
         self._args = args
         self._replay = replay
-        self._decode_fn = decode_fn or (lambda x: x)
+        self._decode_fn = decode_fn or None
 
         self.tracker = pipeline.createObjectTracker() if tracker else None
 
