@@ -522,16 +522,11 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         super().visualize(packet)
 
-    # Check triggers
-    def triggers(self, packet: Union[DetectionPacket, TrackerPacket]):
-        if isinstance(packet, TrackerPacket):
-            pass
-
     def package(self, msgs: Dict):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
 
-        decode_fn = self.det_nn._decode_fn or self.det_nn._handler.decode
+        decode_fn = self.det_nn._decode_fn or (self.det_nn._handler.decode if self.det_nn._handler else None)
         packet = DetectionPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
