@@ -1,5 +1,5 @@
 import jsonlines
-from typing import Literal, Dict, Union, Any
+from typing import Dict, Union, Any
 from datetime import datetime
 import requests
 import os
@@ -10,9 +10,9 @@ CACHE_FILE_NAME = os.environ.get('CACHE_FILE_NAME', 'results_cache.jsonl')
 CACHE_DIRECTORY = os.environ.get('CACHE_DIRECTORY', '')
 CACHE_FILE_PATH = os.path.join(CACHE_DIRECTORY, CACHE_FILE_NAME)
 PRODUCTION_SUPPORT_SERVER_URL = os.environ.get('PRODUCTION_SUPPORT_SERVER_URL', 'http://localhost')
-API_KEY = os.environ.get('PRODUCTION_SUPPORT_SERVER_API_KEY', '1234')
+API_KEY = os.environ.get('PRODUCTION_SUPPORT_API_KEY', '1234')
 
-print(f'Production support server API: {PRODUCTION_SUPPORT_SERVER_URL}, API key: {API_KEY}')
+print(f'Stats server API: {PRODUCTION_SUPPORT_SERVER_URL}, API key: {API_KEY}')
 
 class NumpyArrayEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -21,7 +21,7 @@ class NumpyArrayEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 def add_result(
-	stage: Literal['calib', 'test'], 
+	stage: str, 
 	device_id: str, 
 	device_type: str, 
 	bootloader_version: str,
@@ -59,7 +59,7 @@ def sync():
 	try:
 		with jsonlines.open(CACHE_FILE_PATH, mode='r') as reader:
 			results = [result for result in reader]
-		
+
 		response = requests.post(
 			f'{PRODUCTION_SUPPORT_SERVER_URL}/results', 
 			json=results, 
