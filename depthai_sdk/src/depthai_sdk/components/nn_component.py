@@ -181,6 +181,7 @@ class NNComponent(Component):
 
                 self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
 
+                # TODO pass frame on device, and just send config from host
                 self.x_in = pipeline.createXLinkIn()
                 self.x_in.setStreamName("input_queue")
                 self.x_in.setMaxDataSize(frame_size[0] * frame_size[1] * 3)
