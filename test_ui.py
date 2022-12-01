@@ -3,7 +3,7 @@ import os
 if os.environ.get('PRODUCTION_ENVIRONMENT') is not None:
     from install_requirements import update_submodules
     update_submodules()
-    
+
 import threading
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -34,7 +34,7 @@ except:
 
 FPS = 10
 
-DEVICE_DIR = Path(__file__).resolve().parent / 'resources/depthai-boards/batch'
+DEVICE_DIR = Path(os.environ.get("DEPTHAI_BOARDS_PRIVATE_PATH", Path(__file__).resolve().parent / 'resources/depthai-boards')) / 'batch'
 
 test_result = {
     'usb3_res': '',
