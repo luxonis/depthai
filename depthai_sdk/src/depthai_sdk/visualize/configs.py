@@ -47,7 +47,7 @@ class OutputConfig:
 class StereoConfig:
     colorize: StereoColor = StereoColor.RGB
     colormap: int = cv2.COLORMAP_JET
-    wls_filter: bool = True
+    wls_filter: bool = False
     wls_lambda: float = 1500
     wls_sigma: float = 1.5
 
