@@ -1256,7 +1256,10 @@ class UiTests(QtWidgets.QMainWindow):
             test_result['eeprom_data'] = ''
 
 
-        self.flash_data_512 = self.depth_camera.device.flashRead(512)
+        try:
+            self.flash_data_512 = self.depth_camera.device.flashRead(512)
+        except:
+            self.flash_data_512 = None
 
     def set_result(self):
         global update_res
