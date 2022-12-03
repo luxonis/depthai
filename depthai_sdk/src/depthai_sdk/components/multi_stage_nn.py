@@ -36,6 +36,7 @@ class MultiStageNN:
                  ) -> None:
         """
         Args:
+
             detections (dai.Node.Output): Object detection output
             high_res_frames (dai.Node.Output): Output that will provide high resolution frames
         """

@@ -18,10 +18,10 @@ class ImageSensor:
                  name: str,
                  resolutions: List[str],
                  type: str):
-        from .parser import parseResolution
+        from .parser import parse_resolution
         self.name = name
         self.type = dai.node.ColorCamera if type == 'color' else dai.node.MonoCamera
-        self.resolutions = [parseResolution(self.type, resolution) for resolution in resolutions]
+        self.resolutions = [parse_resolution(self.type, resolution) for resolution in resolutions]
 
     @property
     def maxRes(self) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:

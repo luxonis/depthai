@@ -4,11 +4,11 @@ General (standarized) NN outputs, to be used for higher-level abstractions (eg. 
 below. If the latter, model json config will incldue handler.py logic for decoding to the standard NN output.
 These will be integrated into depthai-core, bonus points for on-device decoding of some popular models.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Tuple, Any
 
 import numpy as np
-from depthai import NNData, ImgDetections, ImgDetection
+from depthai import NNData, ImgDetection
 
 
 class GenericNNOutput:
@@ -19,20 +19,23 @@ class GenericNNOutput:
     def __init__(self, nn_data: NNData):
         self.nn_data = nn_data
 
-
 # First we have Object detection results, which are already standarized with dai.ImgDetections
 
 @dataclass
-class Detections(ImgDetections, GenericNNOutput):
+class Detections(GenericNNOutput):
     """
-    Detection results containing bounding boxes, labels and confidences.
+    Detection results containing bounding boxes, labels and confidences. Optionally can contain rotation angles.
     """
 
-    def __init__(self, nn_data: NNData):
-        ImgDetections.__init__(self)
+    def __init__(self, nn_data: NNData, is_rotated: bool = False):
         GenericNNOutput.__init__(self, nn_data)
 
-    def add(self, label: int, confidence: float, bbox: Tuple[float, ...]) -> None:
+        self.detections = []
+        self.is_rotated = is_rotated
+        if is_rotated:
+            self.angles = []
+
+    def add(self, label: int, confidence: float, bbox: Tuple[float, ...], angle: int = 0) -> None:
         det = ImgDetection()
         det.label = label
         det.confidence = confidence
@@ -40,7 +43,9 @@ class Detections(ImgDetections, GenericNNOutput):
         det.ymin = bbox[1]
         det.xmax = bbox[2]
         det.ymax = bbox[3]
-        self.detections = [*self.detections, det]
+        self.detections.append(det)
+        if self.is_rotated:
+            self.angles.append(angle)
 
 
 @dataclass
@@ -50,12 +55,11 @@ class SemanticSegmentation(GenericNNOutput):  # In core, extend from NNData
 
     Examples: `DeeplabV3`, `Lanenet`, `road-semgentation-adas-0001`.
     """
+    mask: List[np.ndarray]  # 2D np.array for each class
 
     def __init__(self, nn_data: NNData, mask: List[np.ndarray]):
         super().__init__(nn_data)
-        self.mask = mask
-
-    mask: List[np.ndarray] = field(default_factory=list)  # 2D np.array for each class
+        self.mask: List[np.ndarray] = mask
 
 
 @dataclass
@@ -65,6 +69,9 @@ class ImgLandmarks(GenericNNOutput):  # In core, extend from NNData
 
     Examples: `human-pose-estimation-0001`, `openpose2`, `facial-landmarks-68`, `landmarks-regression-retail-0009`.
     """
+    landmarks: List[List[Any]]
+    pairs: List[Tuple[int, int]]  # Pairs of landmarks, to draw lines between them
+    colors: List[Tuple[int, int, int]]  # Color for each landmark (eg. both elbows are in the same color)
 
     def __init__(self,
                  nn_data: NNData,
@@ -76,19 +83,15 @@ class ImgLandmarks(GenericNNOutput):  # In core, extend from NNData
         self.pairs = pairs
         self.colors = colors
 
-    landmarks: List[List[Any]] = field(default_factory=list)
-    pairs: List[Tuple[int, int]] = None  # Pairs of landmarks, to draw lines between them
-    colors: List[Tuple[int, int, int]] = None  # Color for each landmark (eg. both elbows are in the same color)
-
 
 @dataclass
 class InstanceSegmentation(GenericNNOutput):
     """
     Instance segmentation results, with a mask for each instance.
     """
+    masks: List[np.ndarray]  # 2D np.array for each instance
+    labels: List[int]  # Class label for each instance
 
     def __init__(self, nn_data: NNData, masks: List[np.ndarray], labels: List[int]):
         super().__init__(nn_data)
 
-    masks: List[np.ndarray] = field(default_factory=list)  # 2D np.array for each instance
-    labels: List[int] = field(default_factory=list)  # Class label for each instance

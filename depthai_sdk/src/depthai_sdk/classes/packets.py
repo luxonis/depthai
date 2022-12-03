@@ -61,8 +61,8 @@ class SpatialBbMappingPacket(FramePacket):
     """
     spatials: dai.SpatialImgDetections
 
-    def __init__(self, name: str, imgFrame: dai.ImgFrame, spatials: dai.SpatialImgDetections):
-        super().__init__(name, imgFrame, imgFrame.getFrame())
+    def __init__(self, name: str, img_frame: dai.ImgFrame, spatials: dai.SpatialImgDetections):
+        super().__init__(name, img_frame, img_frame.getFrame())
         self.spatials = spatials
 
 
