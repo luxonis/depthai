@@ -4,8 +4,8 @@ Packets
 Packets are **synchronized collections** of one or more `DepthAI messages <https://docs.luxonis.com/projects/api/en/latest/components/messages/>`__. They are used
 **internally for visualization** and also forwarded to the callback function if the user:
 
-#. Specified a callback for visualizing of an output (``oak.visualize(component, callback=fn)``)
-#. Used callback output (``oak.callback(component, callback=fn)``)
+#. Specified a callback for visualizing of an output (``oak.visualize(component, callback=cb)``)
+#. Used callback output (``oak.callback(component, callback=cb)``)
 
 Example
 #######
