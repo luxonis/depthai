@@ -1,3 +1,9 @@
+import os
+
+if os.environ.get('PRODUCTION_ENVIRONMENT') is not None:
+    from install_requirements import update_submodules
+    update_submodules()
+
 import threading
 
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -10,13 +16,14 @@ from datetime import datetime
 # import numpy as np
 import depthai as dai
 import argparse
-import os
 # import blobconverter
 import signal
 import json, time
 from pathlib import Path
 import cv2
 import glob
+
+from depthai_helpers import production_support_server_api
 
 # Try setting native cv2 image format, otherwise RGB888
 colorMode = QtGui.QImage.Format_RGB888
@@ -27,7 +34,7 @@ except:
 
 FPS = 10
 
-DEVICE_DIR = Path(__file__).resolve().parent / 'batch'
+DEVICE_DIR = Path(os.environ.get("DEPTHAI_BOARDS_PRIVATE_PATH", Path(__file__).resolve().parent / 'resources/depthai-boards')) / 'batch'
 
 test_result = {
     'usb3_res': '',
@@ -118,7 +125,9 @@ class DepthAICamera():
     def __init__(self):
         global update_res
         self.pipeline = dai.Pipeline()
-        if 'FFC-4P' in test_type:
+        self.start_time = datetime.now()
+
+        if 'FFC' in test_type:
             imu = self.pipeline.create(dai.node.IMU)
             imu.enableFirmwareUpdate(True)
             imu.enableIMUSensor(dai.IMUSensor.ACCELEROMETER_RAW, 500)
@@ -230,6 +239,8 @@ class DepthAICamera():
 
         self.device = dai.Device(dai.OpenVINO.VERSION_2021_4, usb_speed)
 
+
+
         # Check cameras, if center is smaller, modify all to be same (all cams OV case)
         # cams = self.device.getConnectedCameraProperties()
         # for cam in cams:
@@ -309,6 +320,20 @@ class DepthAICamera():
         self.current_jpeg = 0
 
         self.id = self.device.getDeviceInfo().getMxId()
+        self.bootloader_version = "library"
+        try:
+            self.bootloader_version = self.device.getBootloaderVersion().toStringSemver()
+        except: pass
+
+        self.device_name = self.device.getDeviceName()
+
+        self.eepromUnionData = {}
+        calibHandler = self.device.readCalibration2()
+        self.eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
+        calibHandler = self.device.readFactoryCalibration()
+        self.eepromUnionData['calibrationFactory'] = calibHandler.eepromToJson()
+        self.eepromUnionData['calibrationUserRaw'] = self.device.readCalibrationRaw()
+        self.eepromUnionData['calibrationFactoryRaw'] = self.device.readFactoryCalibrationRaw()
 
     def __del__(self):
         self.device.close()
@@ -710,6 +735,10 @@ class UiTests(QtWidgets.QMainWindow):
 
         self.print_logs_trigger.connect(self.print_logs)
 
+        self.uploaded_bootloader = {
+            'uploaded': False
+        } # used for logging if the bootloader was uploaded and which version and type was used
+
     def setupUi(self):
         global UI_tests
         UI_tests = self
@@ -740,7 +769,7 @@ class UiTests(QtWidgets.QMainWindow):
         # self.save_but.setObjectName("connect_but")
         # self.save_but.clicked.connect(save_csv)
         self.automated_tests = QtWidgets.QGroupBox(self.centralwidget)
-        if 'FFC-4P' in test_type:
+        if 'FFC' in test_type:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 125))
         elif 'OAK-1' in test_type:
             self.automated_tests.setGeometry(QtCore.QRect(20, 70, 311, 241))
@@ -811,7 +840,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 311))
         elif 'OAK-1' in test_type:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 190))
-        elif 'FFC-4P' in test_type:
+        elif 'FFC' in test_type:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 90))
         else:
             self.operator_tests.setGeometry(QtCore.QRect(360, 70, 321, 281))
@@ -1242,6 +1271,7 @@ class UiTests(QtWidgets.QMainWindow):
                 location = WIDTH, prew_height + 80
                 self.jpeg = Camera(lambda: self.depth_camera.get_image('JPEG'), colorMode, 'JPEG Preview', location)
                 self.jpeg.show()
+
             if 'OAK-1' not in test_type:
                 location = WIDTH + prew_width + 20, 0
                 if 'SR' in test_type:
@@ -1274,6 +1304,12 @@ class UiTests(QtWidgets.QMainWindow):
             self.print_logs(f'Flash EEPROM failed! - {eeprom_msg}', 'ERROR')
             test_result['eeprom_res'] = 'FAIL'
             test_result['eeprom_data'] = ''
+
+
+        try:
+            self.flash_data_512 = self.depth_camera.device.flashRead(512)
+        except:
+            self.flash_data_512 = None
 
     def set_result(self):
         global update_res
@@ -1365,6 +1401,7 @@ class UiTests(QtWidgets.QMainWindow):
     def update_bootloader_impl(self):
         self.print_logs('Check bootloader')
         deviceInfos = dai.DeviceBootloader.getAllAvailableDevices()
+        self.uploaded_bootloader['version'] = dai.DeviceBootloader.getEmbeddedBootloaderVersion()
         if len(deviceInfos) <= 0:
             return (False, 'ERROR device was disconnected')
 
@@ -1374,13 +1411,16 @@ class UiTests(QtWidgets.QMainWindow):
                 self.prog_label.setText('Bootloader')
                 if 'POE' in test_type:
                     self.print_logs('Flashing NETWORK bootloader...')
+                    self.uploaded_bootloader['type'] = "NETWORK" 
                     return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, self.update_prog_bar)
                 else:
                     self.print_logs('Flashing USB bootloader...')
+                    self.uploaded_bootloader['type'] = "USB" 
                     return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.USB, self.update_prog_bar)
 
         except RuntimeError as ex:
             # self.print_logs('Device communication failed, check connexions')
+            self.uploaded_bootloader = {'uploaded': False}
             return (False, f"Device communication failed, check connexions: {ex}")
 
     def update_bootloader(self):
@@ -1474,9 +1514,9 @@ class UiTests(QtWidgets.QMainWindow):
             return False
 
     def save_csv(self):
-        if 'FFC-4P' in test_type:
+        if 'FFC' in test_type:
             return
-        path = os.path.realpath(__file__).rsplit('/', 1)[0] + '/tests_result/' + eepromDataJson['productName'] + '.csv'
+        path = os.path.realpath(__file__).replace("\\","/").rsplit('/', 1)[0] + '/tests_result/' + eepromDataJson['productName'] + '.csv'
         print(path)
         if os.path.exists(path):
             file = open(path, 'a')
@@ -1516,6 +1556,22 @@ class UiTests(QtWidgets.QMainWindow):
         file.write('\n')
         file.close()
         self.print_logs('Test results for ' + eepromDataJson['productName'] + ' with id ' + self.depth_camera.id + ' had been saved!', 'GREEN')
+
+        self.depth_camera.eepromUnionData['eeprom_filename_used'] = Path(calib_path).name
+        self.depth_camera.eepromUnionData['eeprom_file_used'] = eepromDataJson
+
+        results = {
+            'automatic_tests': test_result,
+            'operator_tests': operator_tests,
+            'eeprom_data': self.depth_camera.eepromUnionData,
+            'uploaded_bootloader': self.uploaded_bootloader,
+            'flash_first_512B': self.flash_data_512,
+        }
+        production_support_server_api.add_result(
+            'test', self.depth_camera.id, self.depth_camera.device_name, self.depth_camera.bootloader_version, 
+            dai.__version__, self.depth_camera.start_time, datetime.now(), results
+        )
+        production_support_server_api.sync()
 
     def close_event(self, event):
         self.disconnect()

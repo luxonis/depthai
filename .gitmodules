@@ -1,0 +1,3 @@
+[submodule "resources/depthai-boards"]
+	path = resources/depthai-boards
+	url = https://github.com/luxonis/depthai-boards
