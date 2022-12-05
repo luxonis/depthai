@@ -104,14 +104,6 @@ class NNComponent(Component):
         # Create NN node
         self.node = pipeline.create(self._node_type)
 
-        if self._config:
-            nn_config = self._config.get("nn_config", {})
-            if self._is_detector() and 'confidence_threshold' in nn_config:
-                self.node.setConfidenceThreshold(float(nn_config['confidence_threshold']))
-            meta = nn_config.get('NN_specific_metadata', None)
-            if self._is_yolo() and meta:
-                self.config_yolo_from_metadata(metadata=meta)
-
     def _forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
         Checks whether the component forces a specific OpenVINO version. This function is called after
@@ -324,6 +316,10 @@ class NNComponent(Component):
             nn_family = nn_config.get("NN_family", None)
             if nn_family:
                 self._parse_node_type(nn_family)
+
+            meta = nn_config.get('NN_specific_metadata', None)
+            if self._is_yolo() and meta:
+                self.config_yolo_from_metadata(metadata=meta)
 
     def _blob_from_config(self, model: Dict, version: dai.OpenVINO.Version) -> str:
         """

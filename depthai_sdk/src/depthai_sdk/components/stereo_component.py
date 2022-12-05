@@ -95,10 +95,9 @@ class StereoComponent(Component):
                 self.right._update_device_info(pipeline, device, version)
 
             # TODO: use self._args to setup the StereoDepth node
-
             # Connect Mono cameras to the StereoDepth node
-            self.left.out.link(self.node.left)
-            self.right.out.link(self.node.right)
+            self.left.node.out.link(self.node.left)
+            self.right.node.out.link(self.node.right)
 
             if 0 < len(device.getIrDrivers()):
                 laser = self._args.get('irDotBrightness', None)
