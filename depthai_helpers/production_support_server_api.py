@@ -12,7 +12,7 @@ CACHE_FILE_PATH = os.path.join(CACHE_DIRECTORY, CACHE_FILE_NAME)
 PRODUCTION_SUPPORT_SERVER_URL = os.environ.get('PRODUCTION_SUPPORT_SERVER_URL', 'http://localhost')
 API_KEY = os.environ.get('PRODUCTION_SUPPORT_API_KEY', '1234')
 
-print(f'Stats server API: {PRODUCTION_SUPPORT_SERVER_URL}, API key: {API_KEY}')
+print(f'Stats server API: {PRODUCTION_SUPPORT_SERVER_URL}, API key: ***')
 
 class NumpyArrayEncoder(json.JSONEncoder):
     def default(self, obj):
