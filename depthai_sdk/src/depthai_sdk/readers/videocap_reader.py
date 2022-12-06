@@ -1,10 +1,9 @@
-import os
-from pathlib import Path
-from typing import List, Tuple, Dict, Any
-
+import array
 import cv2
-
+import os
 from depthai_sdk.readers.abstract_reader import AbstractReader
+from typing import List, Tuple, Dict, Any
+from pathlib import Path
 
 _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264']
 

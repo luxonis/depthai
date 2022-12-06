@@ -1,13 +1,13 @@
-import time
-
 import depthai as dai
-import numpy as np
+
 # from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point
 # from std_msgs.msg import Header, ColorRGBA, String
 # from visualization_msgs.msg import ImageMarker
 # from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point
 from genpy.rostime import Time
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField  # s, PointCloud
+import numpy as np
+import time
 
 
 class DepthAi2Ros1:

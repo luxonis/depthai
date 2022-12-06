@@ -78,9 +78,11 @@ def getClosestVideoSize(width: int, height: int) -> Tuple[int, int]:
     """
     For colorCamera.video output
     """
+    """ NOTE: custom fix
     while True:
         if width % 3 == 0: break
         width -= 1
+    """
     while True:
         if height % 2 == 0: break
         height -= 1

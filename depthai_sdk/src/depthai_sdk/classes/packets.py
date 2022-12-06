@@ -59,11 +59,11 @@ class SpatialBbMappingPacket(FramePacket):
     """
     Output from Spatial Detection nodes - depth frame + bounding box mappings. Inherits FramePacket.
     """
-    spatials: dai.SpatialImgDetections
+    config: dai.SpatialLocationCalculatorConfig
 
-    def __init__(self, name: str, imgFrame: dai.ImgFrame, spatials: dai.SpatialImgDetections):
+    def __init__(self, name: str, imgFrame: dai.ImgFrame, config: dai.SpatialLocationCalculatorConfig):
         super().__init__(name, imgFrame, imgFrame.getFrame())
-        self.spatials = spatials
+        self.config = config
 
 
 class DetectionPacket(FramePacket):

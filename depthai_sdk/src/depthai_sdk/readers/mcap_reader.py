@@ -1,13 +1,13 @@
-from pathlib import Path
-from typing import List, Tuple
-
+import array
+from mcap.mcap0.stream_reader import StreamReader
+from mcap.mcap0.reader import make_reader
+from mcap_ros1.decoder import Decoder
+from depthai_sdk.previews import PreviewDecoder
 import cv2
 import numpy as np
-from mcap.mcap0.reader import make_reader
-from mcap.mcap0.stream_reader import StreamReader
-from mcap_ros1.decoder import Decoder
+from typing import List, Tuple
+from pathlib import Path
 
-from depthai_sdk.previews import PreviewDecoder
 from depthai_sdk.readers.abstract_reader import AbstractReader
 
 

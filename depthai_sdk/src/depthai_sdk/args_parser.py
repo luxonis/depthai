@@ -1,9 +1,9 @@
 import argparse
+import os
+import sys
 from pathlib import Path
 from typing import Any, Dict
-
 import depthai as dai
-
 from depthai_sdk.components.parser import rgbResolution, monoResolution, parse_bool
 
 """
@@ -19,7 +19,6 @@ Very similar to ArgsManager, but specific to the new SDK, not depthai_demo.py.
 #     _colorMaps = None
 
 _openvinoVersions = [v.replace("VERSION_", "") for v in vars(dai.OpenVINO.Version) if v.startswith("VERSION_")]
-
 
 def _checkRange(minVal, maxVal):
     def checkFn(value):
@@ -66,8 +65,7 @@ def _checkEnum(enum):
 
     return _fun
 
-
-class ArgsParser:
+class ArgsParser():
     @staticmethod
     def parseArgs(parser: argparse.ArgumentParser = None) -> Dict[str, Any]:
         """
@@ -189,9 +187,10 @@ class ArgsParser:
             args.rgbFps = args.fps
             args.monoFps = args.fps
 
-        args = vars(args)  # Namespace->Dict
+        args = vars(args) # Namespace->Dict
         # Print user-defined arguments
         for name, val in args.items():
             if val is not None:
                 print(f'{name}: {val}')
         return args
+

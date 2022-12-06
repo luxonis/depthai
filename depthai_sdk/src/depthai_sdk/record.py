@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-from enum import IntEnum
 from pathlib import Path
 from queue import Queue
 from threading import Thread
 from typing import Dict, List
 
 import depthai as dai
+from enum import IntEnum
 
 from depthai_sdk.classes.packets import FramePacket
-from depthai_sdk.oak_outputs.xout import XoutSeqSync, XoutFrames
 from depthai_sdk.recorders.abstract_recorder import Recorder
+from depthai_sdk.oak_outputs.xout import XoutSeqSync, XoutFrames
 
 
 def _run(recorder, frameQ: Queue):

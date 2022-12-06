@@ -106,9 +106,9 @@ def parseSize(size: Union[str, Tuple[int, int]]) -> Tuple[int, int]:
     elif isinstance(size, str):
         vals = size.split('x')
         if len(vals) != 2: raise ValueError("Size must be in format '[width]x[height]'!")
-        return (int(vals[0]), int(vals[1]))
+        return Tuple[int(vals[0]), int(vals[1])]
     else:
-        raise ValueError("Size type not supported!")
+        raise ValueError("Size typle not supported!")
 
 
 def parseColorCamControl(options: Dict[str, Any], cam: dai.node.ColorCamera):

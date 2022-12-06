@@ -131,15 +131,16 @@ class NNComponent(Component):
         # maxSize = dims
 
         if isinstance(self._input, CameraComponent):
-            self._stream_input = self._input.stream
+            self._stream_input = self._input._out
             self._setupResizeManip(pipeline).link(self.node.input)
         elif self._isMultiStage():
             # Calculate crop shape of the object detector
-            frameSize = self._input._input.stream_size
+            frameSize = self._input._input._out_size
             nnSize = self._input._size
             scale = frameSize[0] / nnSize[0], frameSize[1] / nnSize[1]
             i = 0 if scale[0] < scale[1] else 1
             crop = int(scale[i] * nnSize[0]), int(scale[i] * nnSize[1])
+
             # Crop the high-resolution frames so it matches object detection frame aspect ratio
             self.imageManip = pipeline.createImageManip()
             self.imageManip.setResize(*crop)
@@ -328,6 +329,7 @@ class NNComponent(Component):
             labels (List[int], optional): Crop & run inference only on objects with these labels
             scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
         """
+
         if not self._isMultiStage():
             print(
                 "Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible! This configuration attempt will be ignored.")
@@ -531,7 +533,7 @@ class NNComponent(Component):
 
             out = XoutSpatialBbMappings(device,
                                         StreamXout(self._comp.node.id, self._comp.node.passthroughDepth),
-                                        StreamXout(self._comp.node.id, self._comp.node.out)
+                                        StreamXout(self._comp.node.id, self._comp.node.boundingBoxMapping)
                                         )
             return self._comp._create_xout(pipeline, out)
 

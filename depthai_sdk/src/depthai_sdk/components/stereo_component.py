@@ -1,15 +1,15 @@
-from typing import Optional, Union, Any, Dict
-
 import cv2
+
+from .component import Component
+from .camera_component import CameraComponent
+from typing import Optional, Union, Tuple, Any, Dict, Callable
 import depthai as dai
 
-from depthai_sdk.components.camera_component import CameraComponent
-from depthai_sdk.components.component import Component
-from depthai_sdk.components.parser import parse_cam_socket, parse_median_filter
-from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth
-from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
-from depthai_sdk.replay import Replay
-from depthai_sdk.visualize.configs import StereoColor
+from ..oak_outputs.xout_base import XoutBase, StreamXout
+from ..oak_outputs.xout import XoutDisparity, XoutDepth
+from ..replay import Replay
+from .parser import parse_cam_socket, parse_median_filter
+from ..visualize.configs import StereoColor
 
 
 class StereoComponent(Component):
@@ -75,11 +75,6 @@ class StereoComponent(Component):
         self._wls_sigma = 1.5
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-        if isinstance(self.left, CameraComponent):
-            self.left = self.left.node  # CameraComponent -> node
-        if isinstance(self.right, CameraComponent):
-            self.right = self.right.node  # CameraComponent -> node
-
         if self._replay:
             self._replay.initStereoDepth(self.node)
         else:
@@ -95,6 +90,11 @@ class StereoComponent(Component):
                 self.right._update_device_info(pipeline, device, version)
 
             # TODO: use self._args to setup the StereoDepth node
+
+            if isinstance(self.left, CameraComponent):
+                self.left = self.left.node  # CameraComponent -> node
+            if isinstance(self.right, CameraComponent):
+                self.right = self.right.node  # CameraComponent -> node
 
             # Connect Mono cameras to the StereoDepth node
             self.left.out.link(self.node.left)

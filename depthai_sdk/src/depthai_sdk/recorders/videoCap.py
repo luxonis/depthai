@@ -1,6 +1,5 @@
-import sys
-
 import cv2
+import sys
 
 if len(sys.argv) <= 1:
     raise Exception("Specify the path to the video file (.mp4, .mjpeg, .h265, etc.) like `videoCap.py color.mjpeg`")

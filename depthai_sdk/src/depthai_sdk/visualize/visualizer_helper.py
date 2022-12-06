@@ -8,6 +8,7 @@ import depthai as dai
 import distinctipy
 import numpy as np
 
+from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.classes.packets import (
     DetectionPacket,
     _TwoStageDetection,
@@ -15,7 +16,6 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
     _TrackingDetection
 )
-from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 
 
 class FramePosition(IntEnum):
@@ -239,9 +239,9 @@ def get_text_color(background, threshold=0.6):
 
 
 def draw_mappings(packet: SpatialBbMappingPacket):
-    dets = packet.spatials.detections
-    for det in dets:
-        roi = det.boundingBoxMapping.roi
+    roi_datas = packet.config.getConfigData()
+    for roi_data in roi_datas:
+        roi = roi_data.roi
         roi = roi.denormalize(packet.frame.shape[1], packet.frame.shape[0])
         top_left = roi.topLeft()
         bottom_right = roi.bottomRight()

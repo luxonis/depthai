@@ -1,9 +1,9 @@
-from pathlib import Path
-from typing import List, Tuple
-
-import numpy as np
+import array
 from rosbags.rosbag1 import Reader
 from rosbags.serde import deserialize_cdr, ros1_to_cdr
+import numpy as np
+from typing import List, Tuple
+from pathlib import Path
 
 from depthai_sdk.readers.abstract_reader import AbstractReader
 
