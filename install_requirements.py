@@ -6,7 +6,7 @@ import os
 
 def update_submodules():
     scriptDirectory = os.path.dirname(os.path.realpath(__file__))
-    subprocess.check_call(['git', 'submodule', 'update', '--init', '--recursive'], cwd=scriptDirectory)
+    subprocess.check_call(['git', 'submodule', 'update', '--init', '--recursive', '--remote'], cwd=scriptDirectory)
 
 def install_pip_packages():
     scriptDirectory = os.path.dirname(os.path.realpath(__file__))
