@@ -555,9 +555,9 @@ class NNComponent(Component):
                                    device=device,
                                    input_queue_name="input_queue" if self._comp.x_in else None)
             else:
-                out = XoutNnResults(self._comp,
-                                    self._comp._input.get_stream_xout(),
-                                    StreamXout(self._comp.node.id, self._comp.node.out))
+                out = XoutNnResults(det_nn=self._comp,
+                                    frames=self._comp._input.get_stream_xout(),
+                                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out))
 
             return self._comp._create_xout(pipeline, out)
 
@@ -567,29 +567,26 @@ class NNComponent(Component):
             Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
             if self._comp._is_multi_stage():
-                out = XoutTwoStage(self._comp._input, self._comp,
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.passthrough),
-                                   # Passthrough frame
-                                   StreamXout(self._comp._input.node.id, self._comp._input.node.out),
-                                   # NnComponent (detections)
-                                   StreamXout(self._comp.node.id, self._comp.node.out),
-                                   # This NnComponent (2nd stage NN)
+                out = XoutTwoStage(det_nn=self._comp._input,
+                                   second_nn=self._comp,
+                                   frames=StreamXout(self._comp._input.node.id, self._comp._input.node.passthrough),
+                                   det_out=StreamXout(self._comp._input.node.id, self._comp._input.node.out),
+                                   second_nn_out=StreamXout(self._comp.node.id, self._comp.node.out),
                                    device=device,
                                    input_queue_name="input_queue" if self._comp.x_in else None)
             else:
-                out = XoutNnResults(self._comp,
-                                    StreamXout(self._comp.node.id, self._comp.node.passthrough),
-                                    StreamXout(self._comp.node.id, self._comp.node.out)
-                                    )
+                out = XoutNnResults(det_nn=self._comp,
+                                    frames=StreamXout(self._comp.node.id, self._comp.node.passthrough),
+                                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out))
 
             return self._comp._create_xout(pipeline, out)
 
         def image_manip(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = XoutFrames(StreamXout(self._comp.image_manip.id, self._comp.image_manip.out))
+            out = XoutFrames(frames=StreamXout(self._comp.image_manip.id, self._comp.image_manip.out))
             return self._comp._create_xout(pipeline, out)
 
         def input(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = XoutFrames(StreamXout(self._comp._input.node.id, self._comp._stream_input))
+            out = XoutFrames(frames=StreamXout(self._comp._input.node.id, self._comp._stream_input))
             return self._comp._create_xout(pipeline, out)
 
         def spatials(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutSpatialBbMappings:
@@ -597,13 +594,13 @@ class NNComponent(Component):
             Streams depth and bounding box mappings (``SpatialDetectionNework.boundingBoxMapping``). Produces SpatialBbMappingPacket.
             """
             if not self._comp._is_spatial():
-                raise Exception(
-                    'SDK tried to output spatial data (depth + bounding box mappings), but this is not a Spatial Detection network!')
+                raise Exception('SDK tried to output spatial data (depth + bounding box mappings),'
+                                'but this is not a Spatial Detection network!')
 
-            out = XoutSpatialBbMappings(device,
-                                        StreamXout(self._comp.node.id, self._comp.node.passthroughDepth),
-                                        StreamXout(self._comp.node.id, self._comp.node.out)
-                                        )
+            out = XoutSpatialBbMappings(device=device,
+                                        frames=StreamXout(self._comp.node.id, self._comp.node.passthroughDepth),
+                                        configs=StreamXout(self._comp.node.id, self._comp.node.out))
+
             return self._comp._create_xout(pipeline, out)
 
         def twostage_crops(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutFrames:
@@ -613,17 +610,20 @@ class NNComponent(Component):
             if not self._comp._is_multi_stage():
                 raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
-            out = XoutFrames(StreamXout(self._comp._multi_stage_nn.manip.id, self._comp._multi_stage_nn.manip.out))
+            out = XoutFrames(frames=StreamXout(self._comp._multi_stage_nn.manip.id, self._comp._multi_stage_nn.manip.out))
+
             return self._comp._create_xout(pipeline, out)
 
         def tracker(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutTracker:
             """
             Streams ObjectTracker tracklets and high-res frames that were downscaled and used for inferencing. Produces TrackerPacket.
             """
-            if not self._comp._is_tracker(): raise Exception(
-                'Tracker was not enabled! Enable with cam.create_nn("[model]", tracker=True)!')
+            if not self._comp._is_tracker():
+                raise Exception('Tracker was not enabled! Enable with cam.create_nn("[model]", tracker=True)!')
+
             self._comp.node.passthrough.link(self._comp.tracker.inputDetectionFrame)
             self._comp.node.out.link(self._comp.tracker.inputDetections)
+
             # TODO: add support for full frame tracking
             self._comp.node.passthrough.link(self._comp.tracker.inputTrackerFrame)
 
