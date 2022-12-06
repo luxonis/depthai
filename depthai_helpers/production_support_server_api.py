@@ -15,10 +15,13 @@ API_KEY = os.environ.get('PRODUCTION_SUPPORT_API_KEY', '1234')
 print(f'Stats server API: {PRODUCTION_SUPPORT_SERVER_URL}, API key: ***')
 
 class NumpyArrayEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
+	def default(self, obj):
+		if isinstance(obj, np.ndarray):
+			return obj.tolist()
+		try:
+			return json.JSONEncoder.default(self, obj)
+		except:
+			return str(obj)
 
 def add_result(
 	stage: str, 
