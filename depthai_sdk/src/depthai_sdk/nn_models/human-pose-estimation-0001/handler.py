@@ -67,8 +67,8 @@ def decode(nn_data: NNData) -> ImgLandmarks:
             if -1 in index:
                 continue
 
-            k1 = np.int32(new_keypoints_list[index.astype(int), 0])
-            k2 = np.int32(new_keypoints_list[index.astype(int), 1])
+            k1 = np.int32(new_keypoints_list[index.astype(int), 0]) / NN_WIDTH
+            k2 = np.int32(new_keypoints_list[index.astype(int), 1]) / NN_HEIGHT
             person_keypoints.append([[k1[0], k2[0]], [k1[1], k2[1]]])
 
         keypoint_points.append(person_keypoints)

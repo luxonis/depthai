@@ -7,6 +7,7 @@ import numpy as np
 from distinctipy import distinctipy
 
 from depthai_sdk.callback_context import CallbackContext
+from depthai_sdk.classes.nn_results import Detections, ImgLandmarks
 from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
@@ -70,7 +71,8 @@ class XoutFrames(XoutBase):
         Called from main thread if visualizer is not None.
         """
 
-        self._visualizer.frame_shape = packet.frame.shape
+        if self._visualizer.frame_shape is None:
+            self._visualizer.frame_shape = packet.frame.shape
 
         if self._visualizer.config.output.show_fps:
             self._visualizer.add_text(
@@ -456,6 +458,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                  nn_results: StreamXout):
         self.det_nn = det_nn
         self.nn_results = nn_results
+
         # Multiple inheritance init
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, nn_results])
@@ -482,40 +485,52 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._ar_resize_mode)
 
+        try:
+            self.frame_size = self.det_nn._input.node.getPreviewSize()
+        except AttributeError:
+            self.frame_size = self.det_nn._input.stream_size  # Replay
+
+        self.frame_size = np.array(self.frame_size)[::-1]
+        self.mock_frame = np.zeros(self.frame_size, dtype=np.uint8)
+
+    def setup_visualize(self,
+                        visualizer: Visualizer,
+                        name: str = None):
+        super().setup_visualize(visualizer, name)
+        self._visualizer.frame_shape = self.frame_size
+
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
         # Add detections to packet
-        if isinstance(packet, TrackerPacket):
-            pass
-        elif isinstance(packet.img_detections, dai.ImgDetections):
+        if isinstance(packet.img_detections, dai.ImgDetections) \
+                or isinstance(packet.img_detections, dai.SpatialImgDetections) \
+                or isinstance(packet.img_detections, Detections):
             for detection in packet.img_detections.detections:
                 d = _Detection()
                 d.img_detection = detection
                 d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
                 d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
                 bbox = self.normalizer.normalize(
-                    frame=packet.frame,
+                    frame=self.mock_frame,
                     bbox=(detection.xmin, detection.ymin, detection.xmax, detection.ymax)
                 )
                 d.top_left = (int(bbox[0]), int(bbox[1]))
                 d.bottom_right = (int(bbox[2]), int(bbox[3]))
                 packet.detections.append(d)
 
-    def visualize(self, packet: Union[DetectionPacket, TrackerPacket]):
-        # We can't visualize NNData (not decoded)
-        if isinstance(packet, DetectionPacket) and isinstance(packet.img_detections, dai.NNData):
-            raise Exception(
-                "Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead."
-            )
-
-        if isinstance(packet, TrackerPacket):
-            pass  # TrackerPacket draws detection boxes itself
-        elif isinstance(packet.img_detections, dai.ImgDetections):
+            # Add detections to visualizer
             self._visualizer.add_detections(
                 packet.img_detections.detections,
                 self.normalizer,
                 self.labels,
                 is_spatial=packet._is_spatial_detection()
             )
+        elif isinstance(packet.img_detections, ImgLandmarks):
+            all_landmarks = packet.img_detections.landmarks
+            colors = packet.img_detections.colors
+            for landmarks in all_landmarks:
+                for i, landmark in enumerate(landmarks):
+                    l = self.normalizer.normalize(frame=self.mock_frame, bbox=landmark)
+                    self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[i])
 
         super().visualize(packet)
 
@@ -591,7 +606,7 @@ class XoutTracker(XoutNnResults):
         super().__init__(det_nn, frames, tracklets)
         self.buffer = []
 
-    def visualize(self, packet: TrackerPacket):
+    def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
         try:
             if packet._is_spatial_detection():
                 spatial_points = [packet._get_spatials(det.srcImgDetection)
@@ -640,8 +655,6 @@ class XoutTracker(XoutNnResults):
                 bbox=bbox,
                 position=TextPosition.MID
             )
-
-        super().visualize(packet)
 
     def package(self, msgs: Dict):
         if self.queue.full():
