@@ -589,6 +589,9 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         global test_type
         test_type = curDevice['test_type']
 
+        global device_info
+        device_info = curDevice
+
         # Load eeprom data if available
         if len(curDevice['variants']) > variantIndex:
             # Load test_type, if variant also has it selected, override
@@ -1218,20 +1221,21 @@ class UiTests(QtWidgets.QMainWindow):
         # Update BL if PoE
         # if test_type == 'OAK-D-PRO-POE':
         eeprom_written = False
-        if 'POE' in test_type:
+        print(device_info)
+        if device_info.get('bootloader') == 'poe':
             self.update_bootloader()
             with dai.Device(dai.OpenVINO.VERSION_2021_4, dai.UsbSpeed.HIGH) as device:
                 if not eeprom_written:
                     self.print_logs('Writing EEPROM...')
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                     eeprom_written = True
-        elif 'FFC' in test_type:
+        elif device_info.get('bootloader') == 'usb':
             self.update_bootloader()
             with dai.Device() as device:
                 self.print_logs("Writing EEPROM... ")
                 eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                 eeprom_written = True
-        elif not ('LITE' in test_type or '1' in test_type):
+        elif device_info.get('bootloader') == 'nor':
             # Flash EEPROM and boot header, then reboot for boot header to take effect
             with dai.Device() as device:
                 usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
@@ -1244,6 +1248,11 @@ class UiTests(QtWidgets.QMainWindow):
                     self.print_logs('Writing EEPROM...')
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                     eeprom_written = True
+        elif device_info.get('bootloader') == 'none':
+            # no bootloader needed
+            pass
+        else:
+            raise RuntimeError(f"bootloader option {device_info.get('bootloader')} not known")
 
         try:
             self.depth_camera = DepthAICamera()
