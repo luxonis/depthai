@@ -468,6 +468,8 @@ class OakCamera:
                   callback: Callable,
                   visualizer: Visualizer = None,
                   record_path: Optional[str] = None):
+        visualizer = visualizer or Visualizer()
+
         if isinstance(output, List):
             for element in output:
                 self._callback(element, callback, visualizer, record_path)

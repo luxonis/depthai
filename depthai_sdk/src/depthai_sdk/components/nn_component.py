@@ -665,9 +665,32 @@ class NNComponent(Component):
             # TODO: add support for full frame tracking
             self._comp.node.passthrough.link(self._comp.tracker.inputTrackerFrame)
 
-            out = XoutTracker(self._comp,
-                              self._comp._input.get_stream_xout(),  # CameraComponent
-                              StreamXout(id=self._comp.tracker.id, out=self._comp.tracker.out, name=self._comp.name))
+            out = XoutTracker(det_nn=self._comp,
+                              frames=self._comp._input.get_stream_xout(),  # CameraComponent
+                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out))
+
+            return self._comp._create_xout(pipeline, out)
+
+        def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutNnResults:
+            """
+            Streams NN results and encoded frames (frames used for inferencing)
+            Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
+            """
+            if self._comp._input.encoder is None:
+                raise Exception('Encoder not enabled for the input')
+
+            if self._comp._is_multi_stage():
+                out = XoutTwoStage(det_nn=self._comp._input,
+                                   second_nn=self._comp,
+                                   frames=StreamXout(self._comp._input.node.id, self._comp._input.node.passthrough),
+                                   det_out=StreamXout(self._comp._input.node.id, self._comp._input.node.out),
+                                   second_nn_out=StreamXout(self._comp.node.id, self._comp.node.out),
+                                   device=device,
+                                   input_queue_name="input_queue" if self._comp.x_in else None)
+            else:
+                out = XoutNnResults(det_nn=self._comp,
+                                    frames=StreamXout(self._comp.node.id, self._comp._input.encoder.bitstream),
+                                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out))
 
             return self._comp._create_xout(pipeline, out)
 
