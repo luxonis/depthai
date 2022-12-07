@@ -1274,8 +1274,10 @@ class UiTests(QtWidgets.QMainWindow):
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                     eeprom_written = True
         elif device_options.get('bootloader') == 'none':
-            # no bootloader needed
-            pass
+            with dai.Device() as device:
+                if not eeprom_written:
+                    eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
+                    eeprom_written = True
         else:
             raise RuntimeError(f"bootloader option {device_options.get('bootloader')} not known")
 
