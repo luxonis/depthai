@@ -44,8 +44,9 @@ class XoutFrames(XoutBase):
     _video_recorder: VideoRecorder
 
     def __init__(self, frames: StreamXout, fps: float = 30):
-        self.name = 'Frames'
         self.frames = frames
+        self.name = frames.name
+
         self.fps = fps
         self._video_recorder = None
         self._is_recorder_enabled = None
