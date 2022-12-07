@@ -5,7 +5,7 @@ Replaying
 recorded frames to the OAK device. This is useful especially during development, so we can **record a complex scene** only once and replay it many times to fine-tune
 the pipeline or AI models.
 
-Because :ref:`Recording` saves calibration data and can save synchronized left+right mono streames we can achieve full depth reconstruction.
+Because :ref:`Recording` saves calibration data and can save synchronized left+right mono streams so we can achieve full depth reconstruction.
 
 .. code-block:: python
 
