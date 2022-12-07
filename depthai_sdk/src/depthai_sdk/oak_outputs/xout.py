@@ -60,10 +60,8 @@ class XoutFrames(XoutBase):
 
     def setup_recorder(self,
                        recorder: VideoRecorder,
-                       is_recorder_enabled: bool = False,
                        encoding: str = 'avc1'):
         self._video_recorder = recorder
-        self._is_recorder_enabled = is_recorder_enabled
         # Enable encoding for the video recorder
         self._video_recorder[self.name].set_fourcc(encoding)
 
@@ -92,14 +90,12 @@ class XoutFrames(XoutBase):
                 pass
 
     def on_record(self, packet) -> None:
-        if self._is_recorder_enabled:
+        if self._video_recorder:
             # TODO not ideal to check it this way
             if isinstance(self._video_recorder[self.name], AvWriter):
-                print('Writing frame AV')
                 self._video_recorder.write(self.name, packet.imgFrame)
             else:
                 self._video_recorder.write(self.name, packet.frame)
-                print('Writing frame')
         # else:
         #     self._video_recorder.add_to_buffer(self.name, packet.frame)
 
