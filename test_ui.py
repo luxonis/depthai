@@ -32,6 +32,16 @@ try:
 except:
     colorMode = QtGui.QImage.Format_RGB888
 
+# Specifies POE bootloader
+OPTION_BOOTLOADER_POE = 'poe'
+# Specifies USB bootloader
+OPTION_BOOTLOADER_USB = 'usb'
+# Specifies NOR Header Bootloader USB
+OPTIONS_BOOTLOADER_HEADER_USB = 'header_usb'
+# Specifies that bootloader does not need to be flashed
+OPTIONS_BOOTLOADER_NONE = 'none'
+
+
 FPS = 10
 
 DEVICE_DIR = Path(os.environ.get("DEPTHAI_BOARDS_PRIVATE_PATH", Path(__file__).resolve().parent / 'resources/depthai-boards')) / 'batch'
@@ -589,19 +599,35 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         global test_type
         test_type = curDevice['test_type']
 
-        global device_info
-        device_info = curDevice
-
+        global device_options
+        device_options = curDevice.get('options')
         # Load eeprom data if available
         if len(curDevice['variants']) > variantIndex:
             # Load test_type, if variant also has it selected, override
             if 'test_type' in curDevice['variants'][variantIndex]:
                 test_type = curDevice['variants'][variantIndex]["test_type"]
+            if curDevice['variants'][variantIndex].get('options') is not None:
+                device_options = curDevice['variants'][variantIndex].get('options')
             calib_path = DEVICE_DIR / curDevice['variants'][variantIndex]["eeprom"]
             with open(calib_path) as jfile:
                 eepromDataJson = json.load(jfile)
 
             selectedDeviceInfo = curDevice['variants'][variantIndex]['title']
+        if device_options is None:  # if options is not specified
+            device_options = {'bootloader': self.get_default_bootloader()}
+        elif device_options.get('bootloader') is None:  # if bootloader is not found in options
+            device_options['bootloader'] = self.get_default_bootloader()
+
+    def get_default_bootloader(self):
+        if 'POE' in test_type:
+            return OPTION_BOOTLOADER_POE
+        elif 'FFC' in test_type:
+            return OPTION_BOOTLOADER_USB
+        elif not ('LITE' in test_type or '1' in test_type):
+            return OPTIONS_BOOTLOADER_HEADER_USB
+        else:
+            return OPTIONS_BOOTLOADER_NONE
+
 
 class Camera(QtWidgets.QWidget):
     def __init__(self, get_image, camera_format, title='Camera', location=(0, 0)):
@@ -1221,21 +1247,20 @@ class UiTests(QtWidgets.QMainWindow):
         # Update BL if PoE
         # if test_type == 'OAK-D-PRO-POE':
         eeprom_written = False
-        print(device_info)
-        if device_info.get('bootloader') == 'poe':
+        if device_options.get('bootloader') == OPTION_BOOTLOADER_POE:
             self.update_bootloader()
             with dai.Device(dai.OpenVINO.VERSION_2021_4, dai.UsbSpeed.HIGH) as device:
                 if not eeprom_written:
                     self.print_logs('Writing EEPROM...')
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                     eeprom_written = True
-        elif device_info.get('bootloader') == 'usb':
+        elif device_options.get('bootloader') == OPTION_BOOTLOADER_USB:
             self.update_bootloader()
             with dai.Device() as device:
                 self.print_logs("Writing EEPROM... ")
                 eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                 eeprom_written = True
-        elif device_info.get('bootloader') == 'nor':
+        elif device_options.get('bootloader') == OPTIONS_BOOTLOADER_HEADER_USB:
             # Flash EEPROM and boot header, then reboot for boot header to take effect
             with dai.Device() as device:
                 usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
@@ -1248,11 +1273,11 @@ class UiTests(QtWidgets.QMainWindow):
                     self.print_logs('Writing EEPROM...')
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                     eeprom_written = True
-        elif device_info.get('bootloader') == 'none':
+        elif device_options.get('bootloader') == 'none':
             # no bootloader needed
             pass
         else:
-            raise RuntimeError(f"bootloader option {device_info.get('bootloader')} not known")
+            raise RuntimeError(f"bootloader option {device_options.get('bootloader')} not known")
 
         try:
             self.depth_camera = DepthAICamera()
