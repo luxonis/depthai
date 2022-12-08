@@ -443,32 +443,6 @@ class DepthAICamera():
             return False, None
         return True, image
 
-    def flash_eeprom(self):
-        global eepromDataJson
-        try:
-            device_calib = self.device.readCalibration()
-            device_calib.eepromToJsonFile(CALIB_BACKUP_FILE)
-            print('Calibraton Data on the device is backed up at: ', CALIB_BACKUP_FILE, sep='\n')
-
-            # Opening JSON file
-            if eepromDataJson is None:
-                return False
-
-            eepromDataJson['batchTime'] = int(time.time())
-
-            calib_data = dai.CalibrationHandler.fromJson(eepromDataJson)
-
-            # Flash both factory & user areas
-            self.device.flashFactoryCalibration(calib_data)
-            self.device.flashCalibration2(calib_data)
-        except Exception as ex:
-            errorMsg = f'Calibration Flash Failed: {ex}'
-            print(errorMsg)
-            return (False, errorMsg, eepromDataJson)
-
-        print('Calibration Flash Successful')
-        return (True, '', eepromDataJson)
-
 
 eepromDataJson = None
 calib_path = None
@@ -1291,7 +1265,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.print_logs('EEPROM backup saved at')
         self.print_logs(CALIB_BACKUP_FILE)
         if not eeprom_written:
-            eeprom_success, eeprom_msg, eeprom_data = self.depth_camera.flash_eeprom()
+            eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(self.depth_camera.device)
         if eeprom_success:
             self.print_logs('Flash EEPROM successful!', 'GREEN')
             test_result['eeprom_res'] = 'PASS'
@@ -1437,7 +1411,6 @@ class UiTests(QtWidgets.QMainWindow):
             test_result['nor_flash_res'] = 'FAIL'
             return False
 
-    # Copy-pasted, to not be under device. FIXME
     def flash_eeprom(self, device):
         global eepromDataJson
         try:
