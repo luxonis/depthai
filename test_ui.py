@@ -328,9 +328,9 @@ class DepthAICamera():
         self.device_name = self.device.getDeviceName()
 
         self.eepromUnionData = {}
-        calibHandler = self.device.readCalibration2()
+        calibHandler = self.device.readCalibrationOrDefault()
         self.eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
-        calibHandler = self.device.readFactoryCalibration()
+        calibHandler = self.device.readFactoryCalibrationOrDefault()
         self.eepromUnionData['calibrationFactory'] = calibHandler.eepromToJson()
         self.eepromUnionData['calibrationUserRaw'] = self.device.readCalibrationRaw()
         self.eepromUnionData['calibrationFactoryRaw'] = self.device.readFactoryCalibrationRaw()
