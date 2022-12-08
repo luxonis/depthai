@@ -168,6 +168,7 @@ class PipelineGraph:
         ports_sorted = sorted(ports.items(), key=lambda el: el[0])
         ports_list = [p for id, p in ports_sorted]
 
+        links = dict()
         for i, c in enumerate(dai_connections):
             src_node_id = c["node1Id"]
             src_name = c["node1Output"]
@@ -180,8 +181,11 @@ class PipelineGraph:
             dst_port = find_port(ports, dst_node_id, dst_group, dst_name)
 
             print(f"[{i}] {src_port} -> {dst_port}")
-            src_port.port.connect_to(dst_port.port, push_undo=False)
+            link = src_port.port.connect_to(dst_port.port, push_undo=False)
 
+            links[src_port.name][dst_port.name] = link
+
+        print(links)
         # Lock the ports
         graph.lock_all_ports()
 
