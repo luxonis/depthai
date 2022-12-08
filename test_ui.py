@@ -328,6 +328,8 @@ class DepthAICamera():
         self.device_name = self.device.getDeviceName()
 
         self.eepromUnionData = {}
+    
+    def update_eeprom_uinion_data_log(self):
         calibHandler = self.device.readCalibrationOrDefault()
         self.eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
         calibHandler = self.device.readFactoryCalibrationOrDefault()
@@ -1280,6 +1282,8 @@ class UiTests(QtWidgets.QMainWindow):
             test_result['eeprom_data'] = ''
 
 
+        # save data for logging 
+        self.depth_camera.update_eeprom_uinion_data_log()
         try:
             self.flash_data_512 = self.depth_camera.device.flashRead(512)
         except:
