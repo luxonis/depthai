@@ -44,7 +44,11 @@ OPTIONS_BOOTLOADER_NONE = 'none'
 
 FPS = 10
 
-DEVICE_DIR = Path(os.environ.get("DEPTHAI_BOARDS_PRIVATE_PATH", Path(__file__).resolve().parent / 'resources/depthai-boards')) / 'batch'
+DEVICE_DIR = Path(__file__).resolve().parent / 'resources/depthai-boards/batch'
+try:
+    PRIVATE_DEVICE_DIR = Path(os.environ.get("DEPTHAI_BOARDS_PRIVATE_PATH")) / "batch"
+except:
+    PRIVATE_DEVICE_DIR = None
 
 test_result = {
     'usb3_res': '',
@@ -476,8 +480,18 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         for dev in devices:
             with open(dev, 'r') as f:
                 j = json.load(f)
+                j["base_path"] = DEVICE_DIR
                 self.device_jsons.append(j)
                 self.device_titles.append(j["title"])
+
+        if PRIVATE_DEVICE_DIR is not None:
+            private_devices = glob.glob(f'{PRIVATE_DEVICE_DIR}/*.json')
+            for dev in private_devices:
+                with open(dev, 'r') as f:
+                    j = json.load(f)
+                    j["base_path"] = PRIVATE_DEVICE_DIR
+                    self.device_jsons.append(j)
+                    self.device_titles.append(j["title"])
 
         self.device_dropdown = QtWidgets.QComboBox(self)
         self.device_dropdown.addItems(self.device_titles)
@@ -584,7 +598,7 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
                 test_type = curDevice['variants'][variantIndex]["test_type"]
             if curDevice['variants'][variantIndex].get('options') is not None:
                 device_options = curDevice['variants'][variantIndex].get('options')
-            calib_path = DEVICE_DIR / curDevice['variants'][variantIndex]["eeprom"]
+            calib_path = curDevice['base_path'] / curDevice['variants'][variantIndex]["eeprom"]
             with open(calib_path) as jfile:
                 eepromDataJson = json.load(jfile)
 
@@ -723,17 +737,6 @@ class UiTests(QtWidgets.QMainWindow):
         self.MB_END = "</p></body></html>"
         self.all_logs = ""
 
-        x = os.walk(DEVICE_DIR)
-        print(x)
-        self.batches = []
-        self.jsons = {}
-        i = 0
-        for x in os.walk(DEVICE_DIR):
-            if i == 0:
-                self.batches = x[1]
-            else:
-                self.jsons[self.batches[i - 1]] = x[2]
-            i = i + 1
         dialog = Ui_CalibrateSelect()
         if not dialog.exec_():
             sys.exit()
@@ -1609,11 +1612,6 @@ class UiTests(QtWidgets.QMainWindow):
                     del self.left
                     del self.right
             del self.depth_camera
-
-    def device_changed(self):
-        print("Batches changed!")
-        self.json_combo.clear()
-        self.json_combo.addItems(self.jsons[self.batches_combo.currentText()])
 
 def signal_handler(sig, frame):
     print('Closing app')
