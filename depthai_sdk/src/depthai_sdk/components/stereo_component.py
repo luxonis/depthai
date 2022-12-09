@@ -254,6 +254,9 @@ class StereoComponent(Component):
             return self._comp._create_xout(pipeline, out)
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            if not self._comp.encoder:
+                raise RuntimeError('Encoder not enabled, cannot output encoded frames')
+
             if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
                 out = XoutMjpeg(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
                                 color=False,
