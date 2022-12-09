@@ -723,17 +723,6 @@ class UiTests(QtWidgets.QMainWindow):
         self.MB_END = "</p></body></html>"
         self.all_logs = ""
 
-        x = os.walk(DEVICE_DIR)
-        print(x)
-        self.batches = []
-        self.jsons = {}
-        i = 0
-        for x in os.walk(DEVICE_DIR):
-            if i == 0:
-                self.batches = x[1]
-            else:
-                self.jsons[self.batches[i - 1]] = x[2]
-            i = i + 1
         dialog = Ui_CalibrateSelect()
         if not dialog.exec_():
             sys.exit()
@@ -1601,11 +1590,6 @@ class UiTests(QtWidgets.QMainWindow):
                     del self.left
                     del self.right
             del self.depth_camera
-
-    def device_changed(self):
-        print("Batches changed!")
-        self.json_combo.clear()
-        self.json_combo.addItems(self.jsons[self.batches_combo.currentText()])
 
 def signal_handler(sig, frame):
     print('Closing app')
