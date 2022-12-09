@@ -506,6 +506,17 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 
+        erase_device_window = EraseDeviceWindow()
+
+        # Erase device button
+        erase_button = QtWidgets.QPushButton('Erase device')
+        erase_button.setStyleSheet("QPushButton {text-decoration: underline;} QPushButton {border: none;} QPushButton:hover {color: blue;}")
+        erase_button.clicked.connect(lambda: erase_device_window.exec_())
+
+        bottom_row = QtWidgets.QHBoxLayout()
+        bottom_row.addWidget(erase_button)
+        bottom_row.addWidget(self.buttonBox)
+
         self.batch_label = QtWidgets.QLabel(self)
         font = QtGui.QFont()
         font.setPointSize(12)
@@ -538,7 +549,7 @@ class Ui_CalibrateSelect(QtWidgets.QDialog):
         layout.addRow(self.json_label, self.json_combo)
         layout.addRow(QtWidgets.QLabel("Description"), self.variant_desc_label)
         layout.addRow(QtWidgets.QLabel("Description"), self.variant_desc_label)
-        layout.addRow(self.buttonBox)
+        layout.addRow(bottom_row)
         layout.setRowWrapPolicy(layout.RowWrapPolicy.WrapLongRows)
         self.setLayout(layout)
 
@@ -1618,6 +1629,55 @@ def signal_handler(sig, frame):
     ui.disconnect()
     sys.exit(0)
 
+
+class EraseDeviceWindow(QtWidgets.QDialog):
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Erase Device")
+
+        self.resize(300, 400)
+
+        layout = QtWidgets.QFormLayout()
+        self.setLayout(layout)
+
+        description = QtWidgets.QLabel("This will erase the EEPROM and Flash memory of the device. Proceed with caution!")
+
+        button_row = QtWidgets.QHBoxLayout()
+        self.cancel_button = QtWidgets.QPushButton("Close")
+        self.cancel_button.clicked.connect(self.close)
+        self.erase_button = QtWidgets.QPushButton("Erase")
+        self.erase_button.clicked.connect(self.erase_device)
+        button_row.addWidget(self.cancel_button)
+        button_row.addWidget(self.erase_button)
+
+        # create a log display
+        self.log_display = QtWidgets.QTextEdit()
+        self.log_display.setReadOnly(True)
+
+        layout.addRow(description)
+        layout.addRow(button_row)
+        layout.addRow(self.log_display)
+
+    def print_log(self, text):
+        self.log_display.append(text)
+
+    def erase_device(self):
+        self.cancel_button.setEnabled(False)
+        self.erase_button.setEnabled(False)
+        try:
+            with dai.Device() as device:
+                device.flashEepromClear()
+                self.print_log("Erase EEPROM done!\n")
+                device.flashFactoryEepromClear()
+                self.print_log("Erase Factory EEPROM done!\n")
+                device.flashWrite([0xFF] * (2**20))
+                self.print_log("Erase Flash done!\n")
+        except Exception as e:
+            self.print_log("Error: " + str(e) + "\n")
+        finally:
+            self.cancel_button.setEnabled(True)
+            self.erase_button.setEnabled(True)
 
 if __name__ == "__main__":
     CALIB_BACKUP_FILE = os.path.realpath(__file__).rsplit('/', 1)[0] + '/depthai_calib_backup.json'
