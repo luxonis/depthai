@@ -1218,6 +1218,8 @@ class UiTests(QtWidgets.QMainWindow):
         # Check if there are multiple cameras connected - if so error out
         if signal > 1:
             self.print_logs('Multiple cameras detected, please disconnect all cameras except one...', 'ERROR')
+            self.connect_but.setText("CONNECT")
+            self.connect_but.adjustSize()
             return
         
         self.print_logs('Camera connected, starting tests...', 'GREEN')
