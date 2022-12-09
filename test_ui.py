@@ -649,7 +649,7 @@ def test_connexion():
     result = False
     try:
         # while not result:
-        (result, info) = dai.DeviceBootloader.getFirstAvailableDevice()
+        result = len(dai.DeviceBootloader.getAllAvailableDevices())
     finally:
         return result
 
@@ -1213,7 +1213,13 @@ class UiTests(QtWidgets.QMainWindow):
         # self.threadpool.cancel(self.connexion_result)
         if not signal:
             self.print_logs('No camera detected, check the connexion and try again...', 'ERROR')
+            return        
+
+        # Check if there are multiple cameras connected - if so error out
+        if signal > 1:
+            self.print_logs('Multiple cameras detected, please disconnect all cameras except one...', 'ERROR')
             return
+        
         self.print_logs('Camera connected, starting tests...', 'GREEN')
         # self.connect_but.setText("FLASHING")
         # self.connect_but.adjustSize()
