@@ -148,6 +148,12 @@ class Main:
         if not self.args.disableRgb:
             self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
 
+    def empty_calibration(self, calib: dai.CalibrationHandler):
+        data = calib.getEepromData()
+        for attr in ["boardName", "boardRev"]:
+            if getattr(data, attr): return False
+        return True
+
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
             frame, self.aruco_dictionary)
@@ -527,8 +533,9 @@ class Main:
                 left = dai.CameraBoardSocket.RIGHT
                 right = dai.CameraBoardSocket.LEFT
 
-            calibration_handler = dai.CalibrationHandler()
-            calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
+            calibration_handler = self.device.readCalibration()
+            if self.empty_calibration(calibration_handler):
+                calibration_handler.setBoardInfo(self.board_config['board_config']['name'], self.board_config['board_config']['revision'])
 
             calibration_handler.setCameraIntrinsics(left, calibData[2], 640, 480)
             calibration_handler.setCameraIntrinsics(right, calibData[3], 640, 480)
@@ -537,7 +544,7 @@ class Main:
             calibration_handler.setCameraExtrinsics(
                 left, right, calibData[5], calibData[6], measuredTranslation)
 
-            calibration_handler.setDistortionCoefficients(left, calibData[9] )
+            calibration_handler.setDistortionCoefficients(left, calibData[9])
             calibration_handler.setDistortionCoefficients(right, calibData[10])
 
             calibration_handler.setFov(left, self.board_config['board_config']['left_fov_deg'])
