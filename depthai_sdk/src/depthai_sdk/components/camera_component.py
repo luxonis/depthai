@@ -100,7 +100,7 @@ class CameraComponent(Component):
             self.node.setVideoSize(*getClosestVideoSize(*self.node.getIspSize()))
             self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 
-            self.node.setPreviewSize(*self.node.getIspSize())
+            self.node.setPreviewSize(*self.node.getVideoSize())
             self.stream_size = self.node.getPreviewSize()
             self.stream = self.node.preview
 
