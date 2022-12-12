@@ -1,12 +1,12 @@
+from pathlib import Path
+from typing import Any, Generator, List, Dict, Tuple
+
+import cv2
+import numpy as np
 from rosbags.rosbag2 import Reader
 from rosbags.serde import deserialize_cdr
-from rosbags.interfaces import Connection
-from typing import Any, Generator, List, Dict
-import numpy as np
+
 from depthai_sdk.previews import PreviewDecoder
-import cv2
-from pathlib import Path
-import os
 from depthai_sdk.readers.abstract_reader import AbstractReader
 
 
@@ -14,12 +14,9 @@ class Db3Reader(AbstractReader):
     STREAMS = ['left', 'right', 'depth']
     generators: Dict[str, Generator] = {}
     frames = None  # For shapes
-    """
-    TODO: make the stream selectable, add function that returns all available streams
-    """
 
     def __init__(self, folder: Path) -> None:
-        self.reader = Reader(self._fileWithExt(folder, '.db3'))
+        self.reader = Reader(str(folder))
         self.reader.open()
 
         for con in self.reader.connections:
@@ -45,6 +42,10 @@ class Db3Reader(AbstractReader):
         except:
             return None
 
+    def disableStream(self, name: str):
+        if name in self.generators:
+            del self.generators[name]
+
     def _getCvFrame(self, msg, name: str):
         """
         Convert ROS message to cv2 frame (numpy array)
@@ -68,7 +69,7 @@ class Db3Reader(AbstractReader):
         streams = [name for name in self.frames]
         return streams
 
-    def getShape(self, name: str) -> tuple:
+    def getShape(self, name: str) -> Tuple[int, int]:
         frame = self.frames[name]
         return (frame.shape[1], frame.shape[0])
 

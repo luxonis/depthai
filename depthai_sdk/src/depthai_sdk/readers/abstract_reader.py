@@ -1,7 +1,7 @@
-from abc import ABC, abstractmethod
-from typing import List, Tuple
 import os
+from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import List, Tuple
 
 
 class AbstractReader(ABC):

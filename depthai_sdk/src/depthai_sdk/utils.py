@@ -1,11 +1,12 @@
 import importlib
 import sys
-from pathlib import Path
 import urllib.request
-import cv2
-import numpy as np
-import depthai as dai
+from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
+
+import cv2
+import depthai as dai
+import numpy as np
 import requests
 import xmltodict
 
@@ -19,11 +20,13 @@ def cosDist(a, b):
     """
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
+
 def getLocalRecording(recording: str) -> Optional[Path]:
     p: Path = DEPTHAI_RECORDINGS_PATH / recording
     if p.exists():
         return p
     return None
+
 
 def configPipeline(pipeline: dai.Pipeline,
                    xlinkChunk: Optional[int] = None,
@@ -40,6 +43,7 @@ def configPipeline(pipeline: dai.Pipeline,
     if openvinoVersion:
         # pipeline.setOpenVINOVersion(parseOpenVinoVersion(openvinoVersion))
         pass
+
 
 def getAvailableRecordings() -> Dict[str, Tuple[List[str], int]]:
     """
@@ -71,11 +75,13 @@ def _downloadFile(path: str, url: str):
     with open(path, 'wb') as f:
         f.write(r.content)
 
+
 def downloadContent(url: str) -> Path:
     # Remove url arguments eg. `img.jpeg?w=800&h=600`
     file = Path(url).name.split('?')[0]
     _downloadFile(str(DEPTHAI_RECORDINGS_PATH / file), url)
     return DEPTHAI_RECORDINGS_PATH / file
+
 
 def downloadRecording(name: str, keys: List[str]) -> Path:
     (DEPTHAI_RECORDINGS_PATH / name).mkdir(parents=True, exist_ok=True)
@@ -254,13 +260,16 @@ def showProgress(curr, max):
     sys.stdout.write("\r[{}{}] ".format('=' * done, ' ' * (50 - done)))
     sys.stdout.flush()
 
+
 def isYoutubeLink(source: str) -> bool:
     return "youtube.com" in source
+
 
 def isUrl(source: Union[str, Path]) -> bool:
     if isinstance(source, Path):
         source = str(source)
     return source.startswith("http://") or source.startswith("https://")
+
 
 def downloadYTVideo(video: str, output_dir: Optional[Path] = None) -> Path:
     """

@@ -56,7 +56,7 @@ class PreviewManager:
         calib = device.readCalibration()
         eeprom = calib.getEepromData()
         leftCam = calib.getStereoLeftCameraId()
-        if leftCam != dai.CameraBoardSocket.AUTO:
+        if leftCam != dai.CameraBoardSocket.AUTO and leftCam in eeprom.cameraData.keys():
             camInfo = eeprom.cameraData[leftCam]
             self.baseline = abs(camInfo.extrinsics.specTranslation.x * 10)  # cm -> mm
             self.fov = calib.getFov(calib.getStereoLeftCameraId())

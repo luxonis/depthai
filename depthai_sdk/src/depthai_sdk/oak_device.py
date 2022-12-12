@@ -1,7 +1,7 @@
-import depthai as dai
-from typing import Type, Dict, List, Tuple
+from typing import List
 
-from depthai_sdk.visualize.visualizer import Visualizer
+import depthai as dai
+
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 
 

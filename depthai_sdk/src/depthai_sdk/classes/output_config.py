@@ -12,17 +12,17 @@ from depthai_sdk.record import Record
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 
 
-class VisualizeConfig:
-    # TODO: support visualziation configs. eg. colors, fonts, locations where text in BBs is displayed,
-    # BB rectangle config (transparency, rounded edges etc.)
-    scale: Union[None, float, Tuple[int, int]]
-    fps: bool
-    record: Optional[str]
-
-    def __init__(self, scale, fps, recording_path):
-        self.scale = scale
-        self.fps = fps
-        self.recording_path = recording_path
+# class VisualizeConfig:
+#     # TODO: support visualziation configs. eg. colors, fonts, locations where text in BBs is displayed,
+#     # BB rectangle config (transparency, rounded edges etc.)
+#     scale: Union[None, float, Tuple[int, int]]
+#     fps: bool
+#     record: Optional[str]
+#
+#     def __init__(self, scale, fps, recording_path):
+#         self.scale = scale
+#         self.fps = fps
+#         self.recording_path = recording_path
 
 
 class BaseConfig:
@@ -94,15 +94,16 @@ class RecordConfig(BaseConfig):
 
         return [self.rec]
 
+
 class SyncConfig(BaseConfig, SequenceNumSync):
     outputs: List[Callable]
     cb: Callable
-    visualizer: VisualizeConfig
+    visualizer: Visualizer
 
-    def __init__(self, outputs: List[Callable], callback: Callable, vis: VisualizeConfig = None):
+    def __init__(self, outputs: List[Callable], callback: Callable, visualizer: Visualizer = None):
         self.outputs = outputs
         self.cb = callback
-        self.visualizer = vis
+        self.visualizer = visualizer
 
         SequenceNumSync.__init__(self, len(outputs))
 
@@ -129,5 +130,3 @@ class SyncConfig(BaseConfig, SequenceNumSync):
                 xoutbase.setup_visualize(self.visualizer, xoutbase.name)
 
         return xouts
-
-

@@ -7,8 +7,8 @@ import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
-from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
 from depthai_sdk.visualize.visualizer_helper import spatials_text
 
 
@@ -292,7 +292,9 @@ class VisDetections(GenericObject):
             # Get normalized bounding box
             bbox = detection.xmin, detection.ymin, detection.xmax, detection.ymax
             mock_frame = np.zeros(self.frame_shape, dtype=np.uint8)
-            normalized_bbox = self.normalizer.normalize(mock_frame, bbox)  # TODO can normalize accept frame shape?
+
+            # TODO can normalize accept frame shape?
+            normalized_bbox = self.normalizer.normalize(mock_frame, bbox) if self.normalizer else bbox
 
             if self.label_map:
                 label, color = self.label_map[detection.label]
@@ -308,9 +310,9 @@ class VisDetections(GenericObject):
                 spatial_coords = spatials_text(spatial_point)
 
                 # Add spatial coordinates
-                self.add_child(VisText(spatial_coords.x, (normalized_bbox[0] + 5, normalized_bbox[1] + 50)))
-                self.add_child(VisText(spatial_coords.y, (normalized_bbox[0] + 5, normalized_bbox[1] + 75)))
-                self.add_child(VisText(spatial_coords.z, (normalized_bbox[0] + 5, normalized_bbox[1] + 100)))
+                self.add_child(VisText(f'{spatial_coords.x}\n{spatial_coords.y}\n{spatial_coords.z}',
+                                       bbox=normalized_bbox,
+                                       position=TextPosition.BOTTOM_RIGHT))
 
             if not detection_config.hide_label and len(label) > 0:
                 # Place label in the bounding box
@@ -445,25 +447,35 @@ class VisText(GenericObject):
             if text_config.auto_scale \
             else text_config.font_scale
 
-        # Background
-        cv2.putText(img=frame,
-                    text=self.text,
-                    org=self.coords,
-                    fontFace=text_config.font_face,
-                    fontScale=font_scale,
-                    color=text_config.bg_color,
-                    thickness=int(text_config.font_scale * 3),
-                    lineType=text_config.line_type)
+        # Calculate font thickness
+        font_thickness = max(1, int(font_scale * 2)) if text_config.auto_scale else text_config.font_thickness
 
-        # Front text
-        cv2.putText(img=frame,
-                    text=self.text,
-                    org=self.coords,
-                    fontFace=text_config.font_face,
-                    fontScale=font_scale,
-                    color=text_config.font_color,
-                    thickness=int(text_config.font_thickness),
-                    lineType=text_config.line_type)
+        dy = cv2.getTextSize(self.text, text_config.font_face, font_scale, font_thickness)[0][1] + 10
+
+        for line in self.text.splitlines():
+            y = self.coords[1]
+
+            # Background
+            cv2.putText(img=frame,
+                        text=line,
+                        org=self.coords,
+                        fontFace=text_config.font_face,
+                        fontScale=font_scale,
+                        color=text_config.bg_color,
+                        thickness=font_thickness + 1,
+                        lineType=text_config.line_type)
+
+            # Front text
+            cv2.putText(img=frame,
+                        text=line,
+                        org=self.coords,
+                        fontFace=text_config.font_face,
+                        fontScale=font_scale,
+                        color=text_config.font_color,
+                        thickness=font_thickness,
+                        lineType=text_config.line_type)
+
+            self.coords = (self.coords[0], y + dy)
 
     def get_relative_position(self,
                               bbox: Union[np.ndarray, Tuple[int, int, int, int]],
@@ -490,28 +502,37 @@ class VisText(GenericObject):
             if text_config.auto_scale \
             else text_config.font_scale
 
-        text_size = cv2.getTextSize(text=self.text,
-                                    fontFace=text_config.font_face,
-                                    fontScale=font_scale,
-                                    thickness=text_config.font_thickness)[0]
+        text_width, text_height = 0, 0
+        for text in self.text.splitlines():
+            text_size = cv2.getTextSize(text=text,
+                                        fontFace=text_config.font_face,
+                                        fontScale=font_scale,
+                                        thickness=text_config.font_thickness)[0]
+            text_width = max(text_width, text_size[0])
+            text_height += text_size[1]
+
+        # text_size = cv2.getTextSize(text=self.text,
+        #                             fontFace=text_config.font_face,
+        #                             fontScale=font_scale,
+        #                             thickness=text_config.font_thickness)[0]
 
         x, y = bbox[0], bbox[1]
 
         y_pos = position.value % 10
         if y_pos == 0:  # Y top
-            y = bbox[1] + text_size[1] + padding
+            y = bbox[1] + text_height + padding
         elif y_pos == 1:  # Y mid
-            y = (bbox[1] + bbox[3]) // 2 + text_size[1] // 2
+            y = (bbox[1] + bbox[3]) // 2 + text_height // 2
         elif y_pos == 2:  # Y bottom
-            y = bbox[3] - padding
+            y = bbox[3] - text_height - padding
 
         x_pos = position.value // 10
         if x_pos == 0:  # X Left
             x = bbox[0] + padding
         elif x_pos == 1:  # X mid
-            x = (bbox[0] + bbox[2]) // 2 - text_size[0] // 2
+            x = (bbox[0] + bbox[2]) // 2 - text_width // 2
         elif x_pos == 2:  # X right
-            x = bbox[2] - text_size[0] - padding
+            x = bbox[2] - text_width - padding
 
         return x, y
 
@@ -554,12 +575,17 @@ class VisTrail(GenericObject):
                                       stop=self.config.tracking.line_thickness,
                                       num=len(tracklets)).astype(np.int16)
 
-            for i in range(len(tracklets) - 1):
+            tracklet_length = 0
+            for i in reversed(range(len(tracklets) - 1)):
                 # Get current and next detections' centroids
                 d1 = tracklets[i].srcImgDetection
                 p1 = int(w * (d1.xmin + d1.xmax) // 2), int(h * (d1.ymin + d1.ymax) // 2)
                 d2 = tracklets[i + 1].srcImgDetection
                 p2 = int(w * (d2.xmin + d2.xmax) // 2), int(h * (d2.ymin + d2.ymax) // 2)
+                tracklet_length += np.linalg.norm(np.array(p1) - np.array(p2))
+                if tracklet_length > self.config.tracking.max_length:
+                    break
+
                 self.add_child(VisLine(p1, p2, color=self.label_map[tracklets[i].label][1], thickness=thicknesses[i]))
 
         return self

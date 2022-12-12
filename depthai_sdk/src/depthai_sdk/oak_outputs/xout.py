@@ -6,10 +6,11 @@ import depthai as dai
 import numpy as np
 
 from distinctipy import distinctipy
-
+from pathlib import Path
 from matplotlib import pyplot as plt
 
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.visualize.visualizer import Platform
 from depthai_sdk.visualize.visualizer_helper import colorize_disparity, calc_disp_multiplier, draw_mappings, hex_to_bgr
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
@@ -19,7 +20,7 @@ from depthai_sdk.classes.packets import (
     DetectionPacket,
     TwoStagePacket,
     TrackerPacket,
-    IMUPacket, DepthPacket
+    IMUPacket, DepthPacket, _Detection
 )
 from depthai_sdk.visualize.configs import StereoColor
 from depthai_sdk.visualize import Visualizer
@@ -43,15 +44,16 @@ class XoutFrames(XoutBase):
     _frame_shape: Tuple[int, int] = None
     _scale: Union[None, float, Tuple[int, int]] = None
     _show_fps: bool = False
-    _recording_path: Union[None, str] = None
-    _video_writer: Union[cv2.VideoWriter, None] = None
+    _recording_path: Optional[Path] = None
+    _video_writer: Optional[cv2.VideoWriter] = None
     _fourcc_codec_code = None
-    _frames_buffer: List = []
+    _frames_buffer: List
     _FRAMES_TO_BUFFER: int = 20
 
     def __init__(self, frames: StreamXout, fps: float = 30):
         self.frames = frames
         self.fps = fps
+        self._frames_buffer = []
         super().__init__()
 
     def setup_visualize(self, visualizer: Visualizer,
@@ -61,15 +63,11 @@ class XoutFrames(XoutBase):
         self.name = name or self.name
 
         if recording_path:
-            _recording_path = recording_path.split('.')
-            _recording_path[-2] += '_' + self.name.replace(' ', '_').lower()
-            self._recording_path = '.'.join(_recording_path)
-            print(f'Recording to {self._recording_path}')
-
-            video_format = _recording_path[-1]
-            if video_format == "mp4":
+            self._recording_path = Path(recording_path).resolve()
+            video_format = self._recording_path.suffix
+            if video_format == ".mp4":
                 self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'mp4v')
-            elif video_format == "avi":
+            elif video_format == ".avi":
                 self._fourcc_codec_code = cv2.VideoWriter_fourcc(*'FMP4')
             else:
                 print("Selected video format not supported, using mp4 instead.")
@@ -88,25 +86,34 @@ class XoutFrames(XoutBase):
                 position=TextPosition.TOP_LEFT
             )
 
+        packet.frame = self._visualizer.draw(packet.frame)
+
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet, self._visualizer)
         else:
-            result = self._visualizer.draw(packet.frame, self.name)
+            # TODO: if RH, don't display frame
+            # Draw on the frame
+            if self._visualizer.platform == Platform.PC:
+                cv2.imshow(self.name, packet.frame)
+            else:
+                pass
 
-            # Record
-            if self._recording_path and not self._video_writer:
-                if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
-                    self._frames_buffer.append(packet.frame)
-                else:
-                    self._video_writer = cv2.VideoWriter(self._recording_path,
-                                                         self._fourcc_codec_code,
-                                                         self._fps.fps(),
-                                                         self._visualizer.frame_shape[:2])
-                    # Write all buffered frames
-                    for frame in self._frames_buffer:
-                        self._video_writer.write(frame)
-            elif self._video_writer:
-                self._video_writer.write(result)
+        # Record
+        if self._recording_path and not self._video_writer:
+            if len(self._frames_buffer) < self._FRAMES_TO_BUFFER:
+                self._frames_buffer.append(packet.frame)
+            else:
+                h, w = self._visualizer.frame_shape[:2]
+                self._video_writer = cv2.VideoWriter(str(self._recording_path),
+                                                     self._fourcc_codec_code,
+                                                     self._fps.fps(),
+                                                     (w, h)
+                                                     )
+                # Write all buffered frames
+                for frame in self._frames_buffer:
+                    self._video_writer.write(frame)
+        elif self._video_writer:
+            self._video_writer.write(packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -405,69 +412,6 @@ class XoutDepth(XoutFrames, XoutClickable):
             self.msgs = newMsgs
 
 
-class XoutSpatialBbMappings(XoutFrames):
-    name: str = "Depth & Bounding Boxes"
-    # Streams
-    frames: StreamXout
-    configs: StreamXout
-
-    # Save messages
-    depth_msg: Optional[dai.ImgFrame] = None
-    config_msg: Optional[dai.SpatialLocationCalculatorConfig] = None
-
-    factor: float = None
-
-    def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
-        self.frames = frames
-        self.configs = configs
-        self.device = device
-        self.multiplier = 255 / 95.0
-        super().__init__(frames)
-
-    def xstreams(self) -> List[StreamXout]:
-        return [self.frames, self.configs]
-
-    def visualize(self, packet: SpatialBbMappingPacket):
-        if not self.factor:
-            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
-            self.factor = calc_disp_multiplier(self.device, size)
-
-        depth = np.array(packet.imgFrame.getFrame())
-        with np.errstate(divide='ignore'):
-            disp = (self.factor / depth).astype(np.uint8)
-
-        packet.frame = colorize_disparity(disp, multiplier=self.multiplier)
-        draw_mappings(packet)
-
-        super().visualize(packet)
-
-    def newMsg(self, name: str, msg: dai.Buffer) -> None:
-        # Ignore frames that we aren't listening for
-        if name not in self._streams: return
-
-        if name == self.frames.name:
-            self.depth_msg = msg
-
-        if name == self.configs.name:
-            self.config_msg = msg
-
-        if self.depth_msg and self.config_msg:
-
-            if self.queue.full():
-                self.queue.get()  # Get one, so queue isn't full
-
-            packet = SpatialBbMappingPacket(
-                self.get_packet_name(),
-                self.depth_msg,
-                self.config_msg
-            )
-
-            self.queue.put(packet, block=False)
-
-            self.config_msg = None
-            self.depth_msg = None
-
-
 class XoutSeqSync(XoutBase, SequenceNumSync):
     streams: List[StreamXout]
 
@@ -538,14 +482,29 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 "Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead."
             )
 
-        # TODO add support for packet._is_spatial_detection() == True case
         if isinstance(packet, TrackerPacket):
             pass  # TrackerPacket draws detection boxes itself
         else:
-            self._visualizer.add_detections(packet.img_detections.detections,
-                                            self.normalizer,
-                                            self.labels,
-                                            is_spatial=packet._is_spatial_detection())
+            # Add detections to packet
+            for detection in packet.img_detections.detections:
+                d = _Detection()
+                d.img_detection = detection
+                d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
+                d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
+                bbox = self.normalizer.normalize(
+                    frame=packet.frame,
+                    bbox=(detection.xmin, detection.ymin, detection.xmax, detection.ymax)
+                )
+                d.top_left = (int(bbox[0]), int(bbox[1]))
+                d.bottom_right = (int(bbox[2]), int(bbox[3]))
+                packet.detections.append(d)
+
+            self._visualizer.add_detections(
+                packet.img_detections.detections,
+                self.normalizer,
+                self.labels,
+                is_spatial=packet._is_spatial_detection()
+            )
 
         super().visualize(packet)
 
@@ -558,6 +517,54 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             msgs[self.nn_results.name],
         )
         self.queue.put(packet, block=False)
+
+class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
+    name: str = "Depth & Bounding Boxes"
+    # Streams
+    frames: StreamXout
+    configs: StreamXout
+
+    # Save messages
+    depth_msg: Optional[dai.ImgFrame] = None
+    config_msg: Optional[dai.SpatialLocationCalculatorConfig] = None
+
+    factor: float = None
+
+    def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
+        self.frames = frames
+        self.configs = configs
+        self.device = device
+        self.multiplier = 255 / 95.0
+        XoutFrames.__init__(self, frames)
+        XoutSeqSync.__init__(self, [frames, configs])
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames, self.configs]
+
+    def visualize(self, packet: SpatialBbMappingPacket):
+        if not self.factor:
+            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
+            self.factor = calc_disp_multiplier(self.device, size)
+
+        depth = np.array(packet.imgFrame.getFrame())
+        with np.errstate(divide='ignore'):
+            disp = (self.factor / depth).astype(np.uint8)
+
+        packet.frame = colorize_disparity(disp, multiplier=self.multiplier)
+        draw_mappings(packet)
+
+        super().visualize(packet)
+
+    def package(self, msgs: Dict):
+        if self.queue.full():
+            self.queue.get()  # Get one, so queue isn't full
+        packet = SpatialBbMappingPacket(
+            self.get_packet_name(),
+            msgs[self.frames.name],
+            msgs[self.configs.name],
+        )
+        self.queue.put(packet, block=False)
+
 
 
 class XoutTracker(XoutNnResults):
@@ -587,7 +594,7 @@ class XoutTracker(XoutNnResults):
 
         # Add to local storage
         self.packets.append(packet)
-        if 20 < len(self.packets):
+        if 10 < len(self.packets):
             self.packets.pop(0)
 
         self._visualizer.add_trail(
@@ -816,7 +823,7 @@ class XoutIMU(XoutBase):
 
         super().__init__()
 
-    def setup_visualize(self, visualizer: Visualizer, name: str = None):
+    def setup_visualize(self, visualizer: Visualizer, name: str = None, _=None):
         self._visualizer = visualizer
         self.name = name or self.name
 
@@ -872,11 +879,12 @@ class XoutIMU(XoutBase):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
         packet.frame = img
+        self._visualizer.draw(packet.frame)
 
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet)
         else:
-            self._visualizer.draw(packet.frame, self.name)
+            cv2.imshow(self.name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.imu_out]

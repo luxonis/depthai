@@ -1,11 +1,12 @@
 import os
-import depthai as dai
-from time import monotonic
 import time
 from threading import Thread
+from time import monotonic
 
-from depthai_sdk.utils import *
+import depthai as dai
+
 from depthai_sdk.readers.abstract_reader import AbstractReader
+from depthai_sdk.utils import *
 
 _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
 _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.webm']

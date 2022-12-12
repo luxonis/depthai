@@ -1,15 +1,15 @@
-import cv2
+from typing import Optional, Union, Any, Dict
 
-from .component import Component
-from .camera_component import CameraComponent
-from typing import Optional, Union, Tuple, Any, Dict, Callable
+import cv2
 import depthai as dai
 
-from ..oak_outputs.xout_base import XoutBase, StreamXout
-from ..oak_outputs.xout import XoutDisparity, XoutDepth
-from ..replay import Replay
-from .parser import parse_cam_socket, parse_median_filter
-from ..visualize.configs import StereoColor
+from depthai_sdk.components.camera_component import CameraComponent
+from depthai_sdk.components.component import Component
+from depthai_sdk.components.parser import parse_cam_socket, parse_median_filter
+from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth
+from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
+from depthai_sdk.replay import Replay
+from depthai_sdk.visualize.configs import StereoColor
 
 
 class StereoComponent(Component):
@@ -76,6 +76,11 @@ class StereoComponent(Component):
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._replay:
+            if isinstance(self.left, CameraComponent):
+                self.left = self.left.node  # CameraComponent -> node
+            if isinstance(self.right, CameraComponent):
+                self.right = self.right.node  # CameraComponent -> node
+
             self._replay.initStereoDepth(self.node)
         else:
             # TODO: check sensor names / device name whether it has stereo camera pair (or maybe calibration?)
@@ -89,20 +94,27 @@ class StereoComponent(Component):
                 self.right = CameraComponent(pipeline, 'right', self._resolution, self._fps, replay=self._replay)
                 self.right._update_device_info(pipeline, device, version)
 
-            # TODO: use self._args to setup the StereoDepth node
-
             if isinstance(self.left, CameraComponent):
                 self.left = self.left.node  # CameraComponent -> node
             if isinstance(self.right, CameraComponent):
                 self.right = self.right.node  # CameraComponent -> node
 
+            # TODO: use self._args to setup the StereoDepth node
             # Connect Mono cameras to the StereoDepth node
             self.left.out.link(self.node.left)
             self.right.out.link(self.node.right)
 
-            if len(device.getIrDrivers()) > 0:
-                print('IR driver detected, setting IR laser dot projector brightness to 800mA')
-                device.setIrLaserDotProjectorBrightness(800)
+            if 0 < len(device.getIrDrivers()):
+                laser = self._args.get('irDotBrightness', None)
+                laser = int(laser) if laser else 800
+                if 0 < laser:
+                    device.setIrLaserDotProjectorBrightness(laser)
+                    print(f'Setting IR laser dot projector brightness to {laser}mA')
+
+                led = self._args.get('irFloodBrightness', None)
+                if led is not None:
+                    device.setIrFloodLightBrightness(int(led))
+                    print(f'Setting IR flood LED brightness to {int(led)}mA')
 
         if self._args:
             self._config_stereo_args(self._args)

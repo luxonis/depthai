@@ -2,18 +2,18 @@ import json
 import os
 from dataclasses import replace
 from enum import Enum
-from typing import List, Tuple, Optional, Union
+from typing import List, Tuple, Optional, Union, Any, Dict
 
 import cv2
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
-from depthai_sdk.visualize.configs import VisConfig, TextPosition
+from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle
 from depthai_sdk.visualize.encoder import JSONEncoder
 from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle
 from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
-from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 
 
 class Platform(Enum):
@@ -33,12 +33,17 @@ class Visualizer(VisualizerHelper):
     config: VisConfig
     _frame_shape: Optional[Tuple[int, ...]]
 
-    def __init__(self):
+    def __init__(self, scale: float = None, fps: bool = False):
         self.platform: Platform = self._detect_platform()
         self.objects: List[GenericObject] = []
         self._frame_shape = None
 
         self.config = VisConfig()
+
+        if fps:
+            self.output(show_fps=fps)
+        if scale:
+            self.output(img_scale=scale)
 
     def add_object(self, obj: GenericObject) -> 'Visualizer':
         """
@@ -55,7 +60,7 @@ class Visualizer(VisualizerHelper):
 
     def add_detections(self,
                        detections: List[Union[ImgDetection, dai.Tracklet]],
-                       normalizer: NormalizeBoundingBox,
+                       normalizer: NormalizeBoundingBox = None,
                        label_map: List[Tuple[str, Tuple]] = None,
                        spatial_points: List[dai.Point3f] = None,
                        is_spatial=False) -> 'Visualizer':
@@ -69,7 +74,7 @@ class Visualizer(VisualizerHelper):
             spatial_points: List of spatial points. None if not spatial.
             is_spatial: Flag that indicates if the detections are spatial.
         Returns:
-
+            self
         """
         detection_overlay = VisDetections(
             detections, normalizer, label_map, spatial_points, is_spatial
@@ -144,7 +149,7 @@ class Visualizer(VisualizerHelper):
         self.objects.append(circle)
         return self
 
-    def draw(self, frame: np.ndarray, name: Optional[str] = 'Frames') -> np.ndarray:
+    def draw(self, frame: np.ndarray):
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
         and communicate with the RobotHub application.
@@ -167,19 +172,17 @@ class Visualizer(VisualizerHelper):
                 if isinstance(img_scale, Tuple):
                     frame = cv2.resize(frame, img_scale)
                 elif isinstance(img_scale, float) and img_scale != 1.0:
-                    frame = cv2.resize(frame, (
-                        int(frame.shape[1] * img_scale),
-                        int(frame.shape[0] * img_scale)
-                    ))
+                    frame = cv2.resize(frame, dsize=None, fx=img_scale, fy=img_scale)
 
-            cv2.imshow(name, frame)
+            self.reset()
+            return frame
         else:
+
             # print(json.dumps(self.serialize()))
             # TODO encode/serialize and send everything to robothub
             pass
 
-        self.objects.clear()  # Clear objects
-        return frame
+        self.reset()  # Clear objects
 
     def serialize(self) -> str:
         """
@@ -197,55 +200,123 @@ class Visualizer(VisualizerHelper):
 
         return json.dumps(parent, cls=JSONEncoder)
 
-    def output(self, **kwargs: dict) -> 'Visualizer':
+    def reset(self):
+        self.objects.clear()
+
+    def output(self,
+               img_scale: float = None,
+               show_fps: bool = None) -> 'Visualizer':
         """
         Configure the output of the visualizer.
 
         Args:
-            **kwargs:
+            img_scale: Scale of the output image.
+            show_fps: Flag that indicates if the FPS should be shown.
 
         Returns:
             self
         """
-        self.config.output = replace(self.config.output, **kwargs)
+        kwargs = self._process_kwargs(locals())
+
+        if len(kwargs) > 0:
+            self.config.output = replace(self.config.output, **kwargs)
         return self
 
-    def detections(self, **kwargs: dict) -> 'Visualizer':
+    def detections(self,
+                   thickness: int = None,
+                   fill_transparency: float = None,
+                   box_roundness: float = None,
+                   color: Tuple[int, int, int] = None,
+                   bbox_style: BboxStyle = None,
+                   line_width: float = None,
+                   line_height: float = None,
+                   hide_label: bool = None,
+                   label_position: TextPosition = None,
+                   label_padding: int = None) -> 'Visualizer':
         """
         Configure how bounding boxes will look like.
         Args:
-            **kwargs:
+            thickness: Thickness of the bounding box.
+            fill_transparency: Transparency of the bounding box.
+            box_roundness: Roundness of the bounding box.
+            color: Color of the bounding box.
+            bbox_style: Style of the bounding box.
+            line_width: Width of the bbox horizontal lines CORNERS or ROUNDED_CORNERS style is used.
+            line_height: Height of the bbox vertical lines when CORNERS or ROUNDED_CORNERS style is used.
+            hide_label: Flag that indicates if the label should be hidden.
+            label_position: Position of the label.
+            label_padding: Padding of the label.
 
         Returns:
-
+            self
         """
-        self.config.detection = replace(self.config.detection, **kwargs)
+        kwargs = self._process_kwargs(locals())
+
+        if len(kwargs) > 0:
+            self.config.detection = replace(self.config.detection, **kwargs)
+
         return self
 
-    def text(self, **kwargs: dict) -> 'Visualizer':
+    def text(self,
+             font_face: int = None,
+             font_color: Tuple[int, int, int] = None,
+             font_transparency: float = None,
+             font_scale: float = None,
+             font_thickness: int = None,
+             font_position: TextPosition = None,
+             bg_transparency: float = None,
+             bg_color: Tuple[int, int, int] = None,
+             line_type: int = None,
+             auto_scale: bool = None) -> 'Visualizer':
         """
         Configure how text will look like.
 
         Args:
-            **kwargs:
+            font_face: Font face (from cv2).
+            font_color: Font color.
+            font_transparency: Font transparency.
+            font_scale: Font scale.
+            font_thickness: Font thickness.
+            font_position: Font position.
+            bg_transparency: Text background transparency.
+            bg_color: Text background color.
+            line_type: Line type (from cv2).
+            auto_scale: Flag that indicates if the font scale should be automatically adjusted.
 
         Returns:
-
+            self
         """
-        self.config.text = replace(self.config.text, **kwargs)
+        kwargs = self._process_kwargs(locals())
+
+        if len(kwargs) > 0:
+            self.config.text = replace(self.config.text, **kwargs)
+
         return self
 
-    def tracking(self, **kwargs: dict) -> 'Visualizer':
+    def tracking(self,
+                 max_length: int = None,
+                 line_thickness: int = None,
+                 line_color: Tuple[int, int, int] = None,
+                 line_type: int = None,
+                 bg_color: Tuple[int, int, int] = None) -> 'Visualizer':
         """
         Configure how tracking trails will look like.
 
         Args:
-            **kwargs:
+            max_length: Maximum length of the trail (in pixels).
+            line_thickness: Thickness of the line.
+            line_color: Color of the line.
+            line_type: Type of the line (from cv2).
+            bg_color: Text background color.
 
         Returns:
 
         """
-        self.config.tracking = replace(self.config.tracking, **kwargs)
+        kwargs = self._process_kwargs(locals())
+
+        if len(kwargs) > 0:
+            self.config.tracking = replace(self.config.tracking, **kwargs)
+
         return self
 
     def _detect_platform(self) -> Platform:
@@ -264,3 +335,9 @@ class Visualizer(VisualizerHelper):
     @frame_shape.setter
     def frame_shape(self, shape: Tuple[int, ...]) -> None:
         self._frame_shape = shape
+
+    @staticmethod
+    def _process_kwargs(kwargs: Dict[str, Any]) -> Dict[str, Any]:
+        kwargs.pop('self')
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        return kwargs
