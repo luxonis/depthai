@@ -75,6 +75,11 @@ class StereoComponent(Component):
         self._wls_sigma = 1.5
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+        if isinstance(self.left, CameraComponent):
+            self.left = self.left.node  # CameraComponent -> node
+        if isinstance(self.right, CameraComponent):
+            self.right = self.right.node  # CameraComponent -> node
+
         if self._replay:
             self._replay.initStereoDepth(self.node)
         else:
@@ -90,11 +95,6 @@ class StereoComponent(Component):
                 self.right._update_device_info(pipeline, device, version)
 
             # TODO: use self._args to setup the StereoDepth node
-
-            if isinstance(self.left, CameraComponent):
-                self.left = self.left.node  # CameraComponent -> node
-            if isinstance(self.right, CameraComponent):
-                self.right = self.right.node  # CameraComponent -> node
 
             # Connect Mono cameras to the StereoDepth node
             self.left.out.link(self.node.left)
