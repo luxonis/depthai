@@ -485,21 +485,15 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._ar_resize_mode)
 
-        try:
-            self.frame_size = self.det_nn._input.node.getPreviewSize()
-        except AttributeError:
-            self.frame_size = self.det_nn._input.stream_size  # Replay
-
-        self.frame_size = np.array(self.frame_size)[::-1]
-        self.mock_frame = np.zeros(self.frame_size, dtype=np.uint8)
-
     def setup_visualize(self,
                         visualizer: Visualizer,
                         name: str = None):
         super().setup_visualize(visualizer, name)
-        self._visualizer.frame_shape = self.frame_size
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
+        if self._visualizer.frame_shape is None:
+            self._visualizer.frame_shape = packet.frame.shape
+
         # Add detections to packet
         if isinstance(packet.img_detections, dai.ImgDetections) \
                 or isinstance(packet.img_detections, dai.SpatialImgDetections) \
@@ -510,7 +504,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
                 d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
                 bbox = self.normalizer.normalize(
-                    frame=self.mock_frame,
+                    frame=np.zeros(packet.frame.shape, dtype=bool),
                     bbox=(detection.xmin, detection.ymin, detection.xmax, detection.ymax)
                 )
                 d.top_left = (int(bbox[0]), int(bbox[1]))
@@ -529,7 +523,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             colors = packet.img_detections.colors
             for landmarks in all_landmarks:
                 for i, landmark in enumerate(landmarks):
-                    l = self.normalizer.normalize(frame=self.mock_frame, bbox=landmark)
+                    l = self.normalizer.normalize(frame=np.zeros(packet.frame.shape, dtype=bool), bbox=landmark)
                     self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[i])
 
         super().visualize(packet)

@@ -97,7 +97,7 @@ class SyncConfig(BaseConfig, SequenceNumSync):
     cb: Callable
     visualizer: Visualizer
 
-    def __init__(self, outputs: List[Callable], callback: Callable, visualizer: Visualizer = None):
+    def __init__(self, outputs: List[Callable], callback: Callable, visualizer: Visualizer):
         self.outputs = outputs
         self.cb = callback
         self.visualizer = visualizer
@@ -115,7 +115,7 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             packet
         )
         if synced:
-            self.cb(synced) if self.visualizer is None else self.cb(synced, self.visualizer)
+            self.cb(synced)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> List[XoutBase]:
         xouts = []

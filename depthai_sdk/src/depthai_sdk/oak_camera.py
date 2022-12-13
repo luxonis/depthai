@@ -374,7 +374,7 @@ class OakCamera:
             callback: Where to send synced streams
             visualize: Whether to draw on the frames (like with visualize())
         """
-        visualizer = Visualizer() if visualize else None
+        visualizer = Visualizer()
         if isinstance(outputs, Callable):
             outputs = [outputs]  # to list
         self._out_templates.append(SyncConfig(outputs, callback, visualizer))
