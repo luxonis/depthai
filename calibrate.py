@@ -66,13 +66,13 @@ CamToString = {
 
 camToMonoRes = {
                 'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
-                'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
+                'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
                 }
 
 camToRgbRes = {
                 'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
-                'OV9*82' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
+                'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P
                 }
@@ -310,7 +310,7 @@ class Main:
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         
         self.device = dai.Device()
-        cameraProperties = self.device.getConnectedCameraProperties()
+        cameraProperties = self.device.getConnectedCameraFeatures()
         for properties in cameraProperties:
             for in_cam in self.board_config['cameras'].keys():
                 cam_info = self.board_config['cameras'][in_cam]
@@ -321,13 +321,8 @@ class Main:
                     # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
                     break
 
-        pipeline = self.create_pipeline()
-        self.device.startPipeline(pipeline)
-
-        self.camera_queue = {}
-        for config_cam in self.board_config['cameras']:
-            cam = self.board_config['cameras'][config_cam]
-            self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
+        
+        
 
         """ cameraProperties = self.device.getConnectedCameraProperties()
         for properties in cameraProperties:
@@ -340,6 +335,15 @@ class Main:
         # self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
         # if not self.args.disableRgb:
         #     self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
+
+    def startPipeline(self):
+        pipeline = self.create_pipeline()
+        self.device.startPipeline(pipeline)
+
+        self.camera_queue = {}
+        for config_cam in self.board_config['cameras']:
+            cam = self.board_config['cameras'][config_cam]
+            self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
@@ -384,6 +388,8 @@ class Main:
                 xout = pipeline.createXLinkOut()
                 
                 cam_node.setBoardSocket(stringToCam[cam_id])
+                sensorName = cam_info['sensorName']
+                print(f'Sensor name is {sensorName}')
                 cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
 
@@ -1050,6 +1056,7 @@ class Main:
                 traceback.print_exc()
                 print("An error occurred trying to create image dataset directories!")
                 raise SystemExit(1)
+            self.startPipeline()
             self.show_info_frame()
             self.capture_images_sync()
         self.dataset_path = str(Path("dataset").absolute())

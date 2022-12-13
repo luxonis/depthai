@@ -12,4 +12,4 @@ scipy
 pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" and platform_machine != "aarch64"
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 # depthai==2.17.1.0
-depthai==2.17.2.0.dev+211dc1c0a135d5615dba75ebf2098ba8cdc05cd0
+depthai===2.19.0.0

@@ -411,6 +411,8 @@ class StereoCalibration(object):
             k = cv2.waitKey(0)
             if k == 27:  # Esc key to stop
                 break
+        cv2.destroyWindow("undistorted")
+
 
     def calibrate_camera_charuco(self, allCorners, allIds, imsize, hfov):
         """
@@ -652,7 +654,7 @@ class StereoCalibration(object):
                 line_col += 40
 
             img_concat = cv2.resize(
-                img_concat, (0, 0), fx=0.4, fy=0.4)
+                img_concat, (0, 0), fx=0.8, fy=0.8)
 
             # show image
             cv2.imshow('Stereo Pair', img_concat)
@@ -885,7 +887,7 @@ class StereoCalibration(object):
 
         print(f'Width and height is {scaled_res[::-1]}')
         # print(d_r)
-        kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_l, d_l, scaled_res[::-1], 0)
+        kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_r, d_r, scaled_res[::-1], 0)
         # kScaledR, _ = cv2.getOptimalNewCameraMatrix(M_r, d_r, scaled_res[::-1], 0)
         kScaledR = kScaledL
         print('Intrinsics from the getOptimalNewCameraMatrix....')
@@ -977,7 +979,7 @@ class StereoCalibration(object):
 
             image_data_pairs.append((img_l, img_r))
             
-            if traceLevel == 3:
+            if traceLevel == 4:
                 cv2.imshow("undistorted-Left", img_l)
                 cv2.imshow("undistorted-right", img_r)
                 # print(f'image path - {im}')
@@ -1007,7 +1009,6 @@ class StereoCalibration(object):
                                                                             rejectedCorners=rejectedImgPoints)
             print(f'Marekrs length r is {len(marker_corners_r)}')
             print(f'Marekrs length l is {len(marker_corners_l)}')
-            cv2.imshow("undistorted-rleft", image_data_pair[0])
             res2_l = cv2.aruco.interpolateCornersCharuco(
                 marker_corners_l, ids_l, image_data_pair[0], self.board)
             res2_r = cv2.aruco.interpolateCornersCharuco(
