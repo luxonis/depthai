@@ -63,7 +63,7 @@ class XoutFrames(XoutBase):
 
     def setup_recorder(self,
                        recorder: VideoRecorder,
-                       encoding: str = 'avc1'):
+                       encoding: str = 'mp4v'):
         self._video_recorder = recorder
         # Enable encoding for the video recorder
         self._video_recorder[self.name].set_fourcc(encoding)
