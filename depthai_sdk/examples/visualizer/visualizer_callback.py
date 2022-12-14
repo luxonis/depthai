@@ -9,7 +9,8 @@ def callback(ctx: CallbackContext):
     packet: DetectionPacket = ctx.packet
     print('Detections:', packet.img_detections.detections)
     VisualizerHelper.print(packet.frame, 'BottomRight!', FramePosition.BottomRight)
-    cv2.imshow('frame', packet.frame)
+    frame = ctx.visualizer.draw(packet.frame)
+    cv2.imshow('Visualizer', frame)
 
 
 with OakCamera() as oak:
