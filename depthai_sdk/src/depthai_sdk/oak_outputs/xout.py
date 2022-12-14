@@ -630,6 +630,12 @@ class XoutTracker(XoutNnResults):
         except IndexError:
             spatial_points = None
 
+        if self._visualizer.frame_shape is None:
+            if packet.frame.ndim == 1:
+                self._visualizer.frame_shape = self.frame_shape
+            else:
+                self._visualizer.frame_shape = packet.frame.shape
+
         blacklist = set()
         threshold = self._visualizer.config.tracking.deletion_lost_threshold
         for i, tracklet in enumerate(packet.daiTracklets.tracklets):
