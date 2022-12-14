@@ -399,17 +399,19 @@ class CameraComponent(Component):
             """
             if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
                 out = XoutMjpeg(
-                    StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                    self._comp.is_color(),
-                    self._comp.encoder.getLossless(),
-                    self._comp.encoder.getFrameRate()
+                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                    color=self._comp.is_color(),
+                    lossless=self._comp.encoder.getLossless(),
+                    fps=self._comp.encoder.getFrameRate(),
+                    frame_shape=self._comp.stream_size
                 )
             else:
                 out = XoutH26x(
-                    StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                    self._comp.is_color(),
-                    self._comp._encoderProfile,
-                    self._comp.encoder.getFrameRate()
+                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                    color=self._comp.is_color(),
+                    profile=self._comp._encoderProfile,
+                    fps=self._comp.encoder.getFrameRate(),
+                    frame_shape=self._comp.stream_size
                 )
             out.name = self._comp._source
             return self._comp._create_xout(pipeline, out)
