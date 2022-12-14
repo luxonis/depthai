@@ -63,7 +63,8 @@ class Visualizer(VisualizerHelper):
                        normalizer: NormalizeBoundingBox = None,
                        label_map: List[Tuple[str, Tuple]] = None,
                        spatial_points: List[dai.Point3f] = None,
-                       is_spatial=False) -> 'Visualizer':
+                       is_spatial=False,
+                       ) -> 'Visualizer':
         """
         Add detections to the visualizer.
 
@@ -196,7 +197,6 @@ class Visualizer(VisualizerHelper):
 
         Args:
             frame: The frame to draw on.
-            name: The name of the displayed window.
 
         Returns:
             np.ndarray if the platform is PC, None otherwise.
@@ -216,13 +216,6 @@ class Visualizer(VisualizerHelper):
 
             self.reset()
             return frame
-        else:
-
-            # print(json.dumps(self.serialize()))
-            # TODO encode/serialize and send everything to robothub
-            pass
-
-        self.reset()  # Clear objects
 
     def serialize(self) -> str:
         """
