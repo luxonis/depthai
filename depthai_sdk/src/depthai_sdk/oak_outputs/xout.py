@@ -44,13 +44,15 @@ class XoutFrames(XoutBase):
     frames: StreamXout
     _video_recorder: VideoRecorder
 
-    def __init__(self, frames: StreamXout, fps: float = 30):
+    def __init__(self, frames: StreamXout, fps: float = 30, frame_shape: Tuple[int, ...] = None):
         self.frames = frames
         self.name = frames.name
 
         self.fps = fps
         self._video_recorder = None
         self._is_recorder_enabled = None
+        self._frame_shape = frame_shape
+
         super().__init__()
 
     def setup_visualize(self,
@@ -71,8 +73,9 @@ class XoutFrames(XoutBase):
         Called from main thread if visualizer is not None.
         """
 
-        if self._visualizer.frame_shape is None:
-            self._visualizer.frame_shape = packet.frame.shape
+        # Frame shape may be 1D, that means it's an encoded frame
+        if self._visualizer.frame_shape is None or np.array(self._visualizer.frame_shape).ndim == 1:
+            self._visualizer.frame_shape = self._frame_shape or packet.frame.shape
 
         if self._visualizer.config.output.show_fps:
             self._visualizer.add_text(
@@ -125,12 +128,14 @@ class XoutMjpeg(XoutFrames):
     lossless: bool
     fps: float
 
-    def __init__(self, frames: StreamXout, color: bool, lossless: bool, fps: float):
+    def __init__(self, frames: StreamXout, color: bool, lossless: bool, fps: float, frame_shape: Tuple[int, ...]):
         super().__init__(frames)
         # We could use cv2.IMREAD_UNCHANGED, but it produces 3 planes (RGB) for mono frame instead of a single plane
         self.flag = cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE
         self.lossless = lossless
         self.fps = fps
+        self._frame_shape = frame_shape
+
         if lossless and self._visualizer:
             raise ValueError('Visualizing Lossless MJPEG stream is not supported!')
 
@@ -146,12 +151,19 @@ class XoutH26x(XoutFrames):
     fps: float
     profile: dai.VideoEncoderProperties.Profile
 
-    def __init__(self, frames: StreamXout, color: bool, profile: dai.VideoEncoderProperties.Profile, fps: float):
+    def __init__(self,
+                 frames: StreamXout,
+                 color: bool,
+                 profile: dai.VideoEncoderProperties.Profile,
+                 fps: float,
+                 frame_shape: Tuple[int, ...]):
         super().__init__(frames)
         self.color = color
         self.profile = profile
         self.fps = fps
+        self._frame_shape = frame_shape
         fourcc = 'hevc' if profile == dai.VideoEncoderProperties.Profile.H265_MAIN else 'h264'
+
         import av
         self.codec = av.CodecContext.create(fourcc, "r")
 
@@ -484,6 +496,12 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 self.labels.append((text, color))
 
         self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._ar_resize_mode)
+        try:
+            self.frame_shape = self.det_nn._input.node.getPreviewSize()
+        except AttributeError:
+            self.frame_shape = self.det_nn._input.stream_size  # Replay
+
+        self.frame_shape = np.array(self.frame_shape)[::-1]
 
     def setup_visualize(self,
                         visualizer: Visualizer,
@@ -492,7 +510,10 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
         if self._visualizer.frame_shape is None:
-            self._visualizer.frame_shape = packet.frame.shape
+            if packet.frame.ndim == 1:
+                self._visualizer.frame_shape = self.frame_shape
+            else:
+                self._visualizer.frame_shape = packet.frame.shape
 
         # Add detections to packet
         if isinstance(packet.img_detections, dai.ImgDetections) \
@@ -504,7 +525,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
                 d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
                 bbox = self.normalizer.normalize(
-                    frame=np.zeros(packet.frame.shape, dtype=bool),
+                    frame=np.zeros(self._visualizer.frame_shape, dtype=bool),
                     bbox=(detection.xmin, detection.ymin, detection.xmax, detection.ymax)
                 )
                 d.top_left = (int(bbox[0]), int(bbox[1]))
@@ -525,8 +546,6 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 for i, landmark in enumerate(landmarks):
                     l = self.normalizer.normalize(frame=np.zeros(packet.frame.shape, dtype=bool), bbox=landmark)
                     self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[i])
-
-        super().visualize(packet)
 
     def package(self, msgs: Dict):
         if self.queue.full():
