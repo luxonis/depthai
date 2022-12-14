@@ -97,10 +97,9 @@ class SyncConfig(BaseConfig, SequenceNumSync):
     cb: Callable
     visualizer: Visualizer
 
-    def __init__(self, outputs: List[Callable], callback: Callable, visualizer: Visualizer):
+    def __init__(self, outputs: List[Callable], callback: Callable):
         self.outputs = outputs
         self.cb = callback
-        self.visualizer = visualizer
 
         SequenceNumSync.__init__(self, len(outputs))
 
@@ -124,7 +123,6 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             xoutbase.setup_base(self.new_packet)
             xouts.append(xoutbase)
 
-            if self.visualizer:
-                xoutbase.setup_visualize(self.visualizer, xoutbase.name)
+            xoutbase.setup_visualize(Visualizer(), xoutbase.name)
 
         return xouts
