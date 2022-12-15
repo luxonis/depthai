@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
 import cv2
+import numpy as np
 
 from depthai_sdk.readers.abstract_reader import AbstractReader
 
@@ -30,23 +31,20 @@ class VideoCapReader(AbstractReader):
 
         for name, reader in self.readers.items():
             ok, f = reader.read()
-            self.shapes[name] = (
-                f.shape[1],
-                f.shape[0]
-            )
+            self.shapes[name] = f.shape
             self.initialFrames[name] = f
 
-    def read(self):
+    def read(self) -> Dict[str, np.ndarray]:
         frames = dict()
         for name, reader in self.readers.items():
             if self.initialFrames[name] is not None:
                 frames[name] = self.initialFrames[name].copy()
                 self.initialFrames[name] = None
 
-            if not self.readers[name].isOpened(): return False
+            if not self.readers[name].isOpened(): return None
 
             ok, frame = self.readers[name].read()
-            if not ok: return False
+            if not ok: return None
 
             frames[name] = frame
 
@@ -56,7 +54,16 @@ class VideoCapReader(AbstractReader):
         return [name for name in self.readers]
 
     def getShape(self, name: str) -> Tuple[int, int]:  # Doesn't work as expected!!
-        return self.shapes[name]
+        return (
+            self.shapes[name][1],
+            self.shapes[name][0]
+        )
+
+    def get_message_size(self, name: str) -> int:
+        size = 1
+        for shape in self.shapes[name]:
+            size *= shape
+        return size
 
     def close(self):
         [r.release() for _, r in self.readers.items()]

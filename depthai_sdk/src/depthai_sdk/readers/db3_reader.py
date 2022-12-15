@@ -11,7 +11,7 @@ from depthai_sdk.readers.abstract_reader import AbstractReader
 
 
 class Db3Reader(AbstractReader):
-    STREAMS = ['left', 'right', 'depth']
+    STREAMS = ['left', 'right', 'rgb', 'depth']
     generators: Dict[str, Generator] = {}
     frames = None  # For shapes
 
@@ -32,8 +32,8 @@ class Db3Reader(AbstractReader):
                 if stream.lower() in con.topic.lower():
                     self.generators[stream.lower()] = self.reader.messages([con])
 
-    def read(self):
-        rosMsgs: Dict[str, Any] = dict()
+    def read(self) -> Dict[str, np.ndarray]:
+        rosMsgs: Dict[str, np.ndarray] = dict()
         try:
             for name, gen in self.generators.items():
                 con, ts, raw = next(gen)
@@ -53,7 +53,7 @@ class Db3Reader(AbstractReader):
         msgType = str(type(msg))
         data = np.frombuffer(msg.data, dtype=np.int8)
         if 'CompressedImage' in msgType:
-            if name == 'color':
+            if name in ['color', 'rgb']:
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_COLOR)
             else:  # left, right, disparity
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_GRAYSCALE)
@@ -72,6 +72,12 @@ class Db3Reader(AbstractReader):
     def getShape(self, name: str) -> Tuple[int, int]:
         frame = self.frames[name]
         return (frame.shape[1], frame.shape[0])
+
+    def get_message_size(self, name: str) -> int:
+        size = 1
+        for shape in self.frames[name].shape:
+            size *= shape
+        return size
 
     def close(self):
         self.reader.close()

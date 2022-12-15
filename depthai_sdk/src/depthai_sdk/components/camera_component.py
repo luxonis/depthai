@@ -82,7 +82,7 @@ class CameraComponent(Component):
             # print('resolution', res)
             # resize = getResize(res, width=1200)
             # self._replay.setResizeColor(resize)
-            self.node: dai.node.XLinkIn = getattr(self._replay, self._source)
+            self.node = self._replay.streams[self._source].node
             # print('resize', resize)
             self.node.setMaxDataSize(res[0] * res[1] * 3)
             self.stream_size = res
@@ -164,7 +164,7 @@ class CameraComponent(Component):
         """
         if source == "COLOR" or source == "RGB":
             if self.is_replay():
-                if 'color' not in self._replay.getStreams():
+                if 'color' not in self._replay.getStreams() and 'rgb' not in self._replay.getStreams():
                     raise Exception('Color stream was not found in specified depthai-recording!')
             else:
                 self.node = pipeline.createColorCamera()

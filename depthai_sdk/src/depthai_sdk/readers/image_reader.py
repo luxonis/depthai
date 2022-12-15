@@ -59,7 +59,7 @@ class ImageReader(AbstractReader):
 
         self.cycle = time.time()
 
-    def read(self):
+    def read(self) -> Dict[str, np.ndarray]:
         # Increase counters
         if 3 < time.time() - self.cycle:
             self.cycle = time.time()
@@ -84,6 +84,12 @@ class ImageReader(AbstractReader):
     def getShape(self, name: str) -> Tuple[int, int]:
         shape = self.frames[name][0].shape
         return (shape[1], shape[0])
+
+    def get_message_size(self, name: str) -> int:
+        size = 1
+        for shape in self.frames[name][0].shape:
+            size *= shape
+        return size
 
     def close(self):
         pass

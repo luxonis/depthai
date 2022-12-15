@@ -1,9 +1,11 @@
 import os
 import time
+from enum import IntEnum
 from threading import Thread
 from time import monotonic
 
 import depthai as dai
+import numpy as np
 
 from depthai_sdk.readers.abstract_reader import AbstractReader
 from depthai_sdk.utils import *
@@ -13,15 +15,35 @@ _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.webm']
 _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '.pbm', '.pgm', '.ppm', '.pxm',
              '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
 
+class ReplayStream:
+    node: dai.node.XLinkIn
+    stream_name: str # XLink stream name
+    queue: dai.DataInputQueue # Input queue
+    frame: np.ndarray # Last read frame from Reader (ndarray)
+    imgFrame: dai.ImgFrame # Last read ImgFrame from Reader (dai.ImgFrame)
+    shape: Tuple[int,int] # width, height
+    disabled: bool
+    size: int # bytes
+    socket_num: dai.CameraBoardSocket = None
+
+    def __init__(self):
+        self.disabled = False
+        self.stream_name = ''
+
+    def get_socket(self) -> dai.CameraBoardSocket:
+        if self.socket_num:
+            return self.socket_num
+
+        if 'color' in self.stream_name or 'rgb' in self.stream_name:
+            return dai.CameraBoardSocket.RGB
+        elif 'left' in self.stream_name:
+            return dai.CameraBoardSocket.LEFT
+        elif 'right' in self.stream_name:
+            return dai.CameraBoardSocket.RIGHT
 
 class Replay:
-    disabledStreams: List[str] = []
-    # Nodes
-    left: dai.node.XLinkIn = None
-    right: dai.node.XLinkIn = None
-    color: dai.node.XLinkIn = None
+    streams: Dict[str, ReplayStream] = dict()
 
-    _inputQueues = dict()  # dai.InputQueue dictionary for each stream
     _seqNum = 0  # Frame sequence number, added to each imgFrame
     _now: monotonic = None
     _colorSize = None
@@ -33,11 +55,7 @@ class Replay:
     thread: Thread = None
     _stop: bool = False  # Stop the thread that's sending frames to the OAK camera
 
-    xins: List[str] = []  # Name of XLinkIn streams
-
     reader: AbstractReader = None
-    frames: Dict[str, np.ndarray] = dict()  # Frames read from Readers
-    imgFrames: Dict[str, dai.ImgFrame] = dict()  # Last frame sent to the device
 
     def __init__(self, path: str):
         """
@@ -95,6 +113,13 @@ class Replay:
             else:
                 raise NotImplementedError('Please select folder')
 
+        # Read all available streams
+        for stream_name in self.reader.getStreams():
+            stream = ReplayStream()
+            stream.shape = self.reader.getShape(stream_name)
+            stream.size = self.reader.get_message_size(stream_name)
+            self.streams[stream_name] = stream
+
     def _get_path(self, path: str) -> Path:
         """
         Either use local depthai-recording, YT link, mp4 url
@@ -132,7 +157,6 @@ class Replay:
         Toggle pausing of sending frames to the OAK camera.
         """
         self._pause = not self._pause
-        print("PAUSE", self._pause)
 
     def setFps(self, fps: float):
         """
@@ -159,7 +183,7 @@ class Replay:
         """
         self._keepAR = keepAspectRatio
 
-    def disableStream(self, streamName: str, disableReading: bool = False):
+    def disableStream(self, stream_name: str, disableReading: bool = False):
         """
         Disable sending a recorded stream to the device.
 
@@ -167,13 +191,22 @@ class Replay:
             streamName(str): Name of the stream to disable (eg. 'left', 'color', 'depth', etc.)
             disableReading (bool, Optional): Also disable reading frames from the file
         """
-        # if streamName not in self.readers:
-        #     print(f"There's no stream '{streamName}' available!")
-        #     return
         if disableReading:
-            self.reader.disableStream(streamName)
+            self.reader.disableStream(stream_name)
 
-        self.disabledStreams.append(streamName)
+        if stream_name not in self.streams:
+            print(f"There's no stream '{stream_name}' available!")
+            return
+
+        self.streams[stream_name].disabled = True
+
+    def specify_socket(self, stream_name: str, socket: dai.CameraBoardSocket):
+        if stream_name not in self.streams:
+            print(f"There's no stream '{stream_name}' available!")
+            return
+
+        self.streams[stream_name].socket_num = socket
+
 
     def sendFrames(self, cb=None) -> bool:
         """
@@ -187,18 +220,17 @@ class Replay:
                 return False  # End of the recording
 
         self._now = monotonic()
-        for name in self.frames:
-            imgFrame = self._createImgFrame(name, self.frames[name])
+        for stream_name, stream in self.streams.items():
+            stream.imgFrame =self._createImgFrame(stream.frame, stream.get_socket())
             # Save the imgFrame
-            self.imgFrames[name] = imgFrame
             if cb:  # callback
-                cb(name, imgFrame)
+                cb(stream_name, stream.imgFrame)
 
             # Don't send these frames to the OAK camera
-            if name in self.disabledStreams: continue
+            if stream.disabled: continue
 
             # Send an imgFrame to the OAK camera
-            self._inputQueues[name].send(imgFrame)
+            stream.queue.send(stream.imgFrame)
 
         self._seqNum += 1
         return True
@@ -214,42 +246,35 @@ class Replay:
         if self._calibData is not None:
             pipeline.setCalibrationData(self._calibData)
 
-        def createXIn(p: dai.Pipeline, name: str):
+        def createXIn(p: dai.Pipeline, xlink_stream_name: str, size: int):
             xin = p.create(dai.node.XLinkIn)
-            xin.setMaxDataSize(self._getMaxSize(name))
-            xin.setStreamName(name + '_in')
-            self.xins.append(name)
+            xin.setMaxDataSize(size)
+            xin.setStreamName(xlink_stream_name)
             return xin
 
-        for name in self.reader.getStreams():
-            if name not in self.disabledStreams:
-                xin = createXIn(pipeline, name)
-                if name.upper() == 'LEFT':
-                    self.left = xin
-                elif name.upper() == 'RIGHT':
-                    self.right = xin
-                elif name.upper() == 'COLOR':
-                    self.color = xin
-                else:
-                    pass  # Not implemented
+        for name, stream in self.streams.items():
+            if stream.disabled: continue
+
+            stream.stream_name = name + '_in'
+            stream.node = createXIn(pipeline, stream.stream_name, stream.size)
 
         return pipeline
 
-    def initStereoDepth(self, stereo: dai.node.StereoDepth):
+    def initStereoDepth(self, stereo: dai.node.StereoDepth, left_name: str='left', right_name: str='right', align_to: str = 'color'):
         streams = self.reader.getStreams()
         if 'left' not in streams or 'right' not in streams:
             raise Exception("Tried to init StereoDepth, but left/right streams aren't available!")
-        stereo.setInputResolution(self.getShape('left'))
+        stereo.setInputResolution(self.getShape(left_name))
 
-        if self.color:  # Enable RGB-depth alignment
+        if align_to:  # Enable RGB-depth alignment
             stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
             if self._colorSize is not None:
                 stereo.setOutputSize(*self._colorSize)
             else:
-                stereo.setOutputSize(*self.getShape('color'))
+                stereo.setOutputSize(*self.getShape(align_to))
 
-        self.left.out.link(stereo.left)
-        self.right.out.link(stereo.right)
+        self.streams[left_name].out.link(stereo.left)
+        self.streams[right_name].out.link(stereo.right)
 
     def start(self, cb):
         """
@@ -274,13 +299,12 @@ class Replay:
         Args:
             device (dai.Device): Device to which we will stream frames
         """
-        for name in self.xins:
-            self._inputQueues[name] = device.getInputQueue(name + '_in')
+        for name, stream in self.streams.items():
+            if stream.stream_name:
+                stream.queue = device.getInputQueue(stream.stream_name)
 
     def getStreams(self) -> List[str]:
-        streams: List[str] = []
-        [streams.append(name) for name in self.reader.getStreams()]
-        return streams
+        return [name for name, stream in self.streams.items()]
 
     def _resizeColor(self, frame):
         if self._colorSize is None:
@@ -304,21 +328,23 @@ class Replay:
         imgFrame.setHeight(shape[1])
         return imgFrame
 
-    def _createImgFrame(self, name: str, cvFrame) -> dai.ImgFrame:
-        imgFrame: dai.ImgFrame
-        if name == 'color':
+    def _createImgFrame(self, cvFrame: np.ndarray, socket: dai.CameraBoardSocket) -> dai.ImgFrame:
+        imgFrame: dai.ImgFrame = None
+
+        print('_createImgFrame', cvFrame.shape, cvFrame.dtype)
+        if cvFrame.shape[-1] == 3:
             # Resize/crop color frame as specified by the user
             cvFrame = self._resizeColor(cvFrame)
             # cv2 reads frames in interleaved format, and most networks expect planar by default
             cvFrame = toPlanar(cvFrame)
             imgFrame = self._createNewFrame(cvFrame)
             imgFrame.setType(dai.RawImgFrame.Type.BGR888p)
-            imgFrame.setInstanceNum(dai.CameraBoardSocket.RGB)
-        elif name == 'left' or name == 'right':
+            imgFrame.setInstanceNum(socket)
+        elif cvFrame.dtype == np.uint8:
             imgFrame = self._createNewFrame(cvFrame)
             imgFrame.setType(dai.RawImgFrame.Type.RAW8)
-            imgFrame.setInstanceNum(getattr(dai.CameraBoardSocket, name.upper()))
-        elif name == 'depth':
+            imgFrame.setInstanceNum(socket)
+        elif cvFrame.dtype == np.uint16:
             imgFrame = self._createNewFrame(cvFrame)
             imgFrame.setType(dai.RawImgFrame.Type.RAW16)
 
@@ -331,38 +357,25 @@ class Replay:
         Returns:
             bool: True if successful, otherwise False.
         """
-        self.frames = dict()
         frames = self.reader.read()
         if not frames:
             return False  # No more frames!
 
         for name, frame in frames.items():
-            self.frames[name] = frame
+            self.streams[name].frame = frame
 
         # Compress 3-plane frame to a single plane
-        for name, frame in self.frames.items():
-            if name in ["left", "right", "disparity"] and len(frame.shape) == 3:
-                self.frames[name] = frame[:, :, 0]  # All 3 planes are the same
+        # for name, frame in self.frames.items():
+        #     if name in ["left", "right", "disparity"] and len(frame.shape) == 3:
+        #         self.frames[name] = frame[:, :, 0]  # All 3 planes are the same
         return True
 
-    def _getMaxSize(self, name: str) -> int:
-        """
-        Used when setting XLinkIn nodes, so they consume the least amount of memory needed.
-        """
-        size = self.getShape(name)
-        bytes_per_pixel = 1
-        if name == 'color':
-            bytes_per_pixel = 3
-        elif name == 'depth':
-            bytes_per_pixel = 2  # 16bit
-        return size[0] * size[1] * bytes_per_pixel
 
     def getShape(self, name: str) -> Tuple[int, int]:
         """
         Get shape of a stream
         """
-        if name in self.reader.getStreams():
-            return self.reader.getShape(name)
+        return self.streams[name].shape
 
     def close(self):
         """
