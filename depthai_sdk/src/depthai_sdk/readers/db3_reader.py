@@ -53,10 +53,7 @@ class Db3Reader(AbstractReader):
         msgType = str(type(msg))
         data = np.frombuffer(msg.data, dtype=np.int8)
         if 'CompressedImage' in msgType:
-            if name in ['color', 'rgb']:
-                return PreviewDecoder.jpegDecode(data, cv2.IMREAD_COLOR)
-            else:  # left, right, disparity
-                return PreviewDecoder.jpegDecode(data, cv2.IMREAD_GRAYSCALE)
+            return PreviewDecoder.jpegDecode(data, cv2.IMREAD_COLOR)
         elif 'Image' in msgType:
             if msg.encoding == 'mono16':
                 data = data.view(np.int16)

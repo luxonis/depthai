@@ -331,7 +331,6 @@ class Replay:
     def _createImgFrame(self, cvFrame: np.ndarray, socket: dai.CameraBoardSocket) -> dai.ImgFrame:
         imgFrame: dai.ImgFrame = None
 
-        print('_createImgFrame', cvFrame.shape, cvFrame.dtype)
         if cvFrame.shape[-1] == 3:
             # Resize/crop color frame as specified by the user
             cvFrame = self._resizeColor(cvFrame)
