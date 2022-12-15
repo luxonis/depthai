@@ -40,6 +40,7 @@ class CameraComponent(Component):
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
         recording is passed during OakCamera initialization. Mocking the camera will send frames from the host to the
         OAK device (via XLinkIn node).
+
         Args:
             source (str): Source of the camera. Either color/rgb/right/left
             resolution (optional): Camera resolution, eg. '800p' or '4k'
