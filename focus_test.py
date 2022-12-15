@@ -18,8 +18,8 @@ parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpForm
             - If the capture is satisfying, press 's' to save the new focus threshold
     
 '''))
-parser.add_argument('-m', '--mono_resolution', dest='mono_resolution', default='480p', help='(800p, 720p, 480p, 400p) (default=480p)', type=str, required=False)
-parser.add_argument('-c', '--color_resolution', dest='color_resolution', default='1080p', help='(4k, 13mp, 12mp, 1080p) (default=1080p)', type=str, required=False)
+parser.add_argument('-m', '--mono_resolution', dest='mono_resolution', default='480p', help='(800p, 720p, 480p, 400p, 1200p) (default=480p)', type=str, required=False)
+parser.add_argument('-c', '--color_resolution', dest='color_resolution', default='1080p', help='(4k, 13mp, 12mp, 1080p, 1200p, 5mp, 4000x3000, 5310x6000, 48p, 720p, 800p) (default=1080p)', type=str, required=False)
 parser.add_argument('-t', '--threshold_multiplier', dest='threshold_multiplier', default=0.85, help='float (between 0 and 1) (default=0.85)', type=float, required=False)
 parser.add_argument('-f', '--fps', dest='fps', default=10, help='int (between 1 and 120) (default=10)', type=int, required=False)
 parser.add_argument('--max_width', dest='width', default=1920, help='int for maxWidth, 0 = original scale (default=1920)', type=int, required=False)
@@ -49,10 +49,13 @@ elif resolution == '480p':
     mono_resolution = dai.MonoCameraProperties.SensorResolution.THE_480_P
 elif resolution == '400p':
     mono_resolution = dai.MonoCameraProperties.SensorResolution.THE_400_P
+elif resolution == '1200p':
+    mono_resolution = dai.MonoCameraProperties.SensorResolution.THE_1200_P
 else:
     print(f'WARNING: mono resolution {args.mono_resolution} not available, defaulting to 480p')
     mono_resolution = dai.MonoCameraProperties.SensorResolution.THE_480_P
 resolution = args.color_resolution.lower()
+
 if resolution == '4k':
     rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_4_K
 elif resolution == '13mp':
@@ -61,6 +64,20 @@ elif resolution == '12mp':
     rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_12_MP
 elif resolution == '1080p':
     rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_1080_P
+elif resolution == '1200p':
+    rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_1200_P
+elif resolution == '4000x3000':
+    rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_4000X3000
+elif resolution == '48mp':
+    rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_48_MP
+elif resolution == '5310x6000':
+    rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_5310X6000
+elif resolution == '5mp':
+    rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_5_MP
+elif resolution == '720p':
+    rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_720_P
+elif resolution == '800p':
+    rgb_resolutiion = dai.ColorCameraProperties.SensorResolution.THE_800_P
 
 if args.threshold_multiplier <= 0 or args.threshold_multiplier >= 1:
     threshold_multiplier = 0.85
