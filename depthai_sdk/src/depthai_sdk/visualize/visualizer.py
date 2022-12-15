@@ -201,21 +201,20 @@ class Visualizer(VisualizerHelper):
         Returns:
             np.ndarray if the platform is PC, None otherwise.
         """
-        if self.IS_INTERACTIVE:
-            # Draw overlays
-            for obj in self.objects:
-                obj.draw(frame)
+        # Draw overlays
+        for obj in self.objects:
+            obj.draw(frame)
 
-            # Resize frame if needed
-            img_scale = self.config.output.img_scale
-            if img_scale:
-                if isinstance(img_scale, Tuple):
-                    frame = cv2.resize(frame, img_scale)
-                elif isinstance(img_scale, float) and img_scale != 1.0:
-                    frame = cv2.resize(frame, dsize=None, fx=img_scale, fy=img_scale)
+        # Resize frame if needed
+        img_scale = self.config.output.img_scale
+        if img_scale:
+            if isinstance(img_scale, Tuple):
+                frame = cv2.resize(frame, img_scale)
+            elif isinstance(img_scale, float) and img_scale != 1.0:
+                frame = cv2.resize(frame, dsize=None, fx=img_scale, fy=img_scale)
 
-            self.reset()
-            return frame
+        self.reset()
+        return frame
 
     def serialize(self) -> str:
         """
