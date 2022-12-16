@@ -363,8 +363,8 @@ class XoutDepth(XoutFrames, XoutClickable):
         depth_frame_color = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
         depth_frame_color = cv2.equalizeHist(depth_frame_color)
 
-        colorize = stereo_config.colorize or self.colorize
-        colormap = stereo_config.colormap or self.colormap
+        colorize = self.colorize or stereo_config.colorize
+        colormap = self.colormap or stereo_config.colormap
         if colorize == StereoColor.GRAY:
             packet.frame = depth_frame_color
         elif colorize == StereoColor.RGB:
