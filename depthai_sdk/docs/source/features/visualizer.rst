@@ -33,14 +33,13 @@ The flow of the :class:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>
 
 1. Once the stream produces the output, corresponding ``Packet`` is sent to the ``Xout`` class.
 2. The ``Xout`` calls ``visualize`` function and parses ``Packet`` and add the required objects to the visualizer.
-3. After objects are added, ``Xout`` calls :func:`draw <depthai_sdk.visualize.visualizer.Visualizer.draw>` method,
-that draws objects on the frame.
+3. After objects are added, ``Xout`` calls :func:`draw <depthai_sdk.visualize.visualizer.Visualizer.draw>` method, that draws objects on the frame.
 
 Configs
 #######
 
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is configurable via
-:class:`VisConfig <depthai_sdk.visualize.configs.VisConfig>` that consists of four auxiliary configs:
+:class:`VisConfig <depthai_sdk.visualize.configs.VisConfig>` that consists of five auxiliary configs:
 :class:`OutputConfig <depthai_sdk.visualize.configs.OutputConfig>`,
 :class:`StereoConfig <depthai_sdk.visualize.configs.StereoConfig>`,
 :class:`TextConfig <depthai_sdk.visualize.configs.TextConfig>`,
@@ -84,19 +83,19 @@ All objects must be derived from :class:`GenericObject <depthai_sdk.visualize.ob
 
 Implemented objects:
 
-* :class:`VisDetections <depthai_sdk.visualize.objects.VisDetections>`
-* :class:`VisText <depthai_sdk.visualize.objects.VisText>`
-* :class:`VisLine <depthai_sdk.visualize.objects.VisLine>`
-* :class:`VisCircle <depthai_sdk.visualize.objects.VisCircle>`
-* :class:`VisTrail <depthai_sdk.visualize.objects.VisTrail>`
+* :class:`VisDetections <depthai_sdk.visualize.objects.VisDetections>`,
+* :class:`VisText <depthai_sdk.visualize.objects.VisText>`,
+* :class:`VisLine <depthai_sdk.visualize.objects.VisLine>`,
+* :class:`VisCircle <depthai_sdk.visualize.objects.VisCircle>`,
+* :class:`VisTrail <depthai_sdk.visualize.objects.VisTrail>`.
 
 Objects can be added to the visualizer using the following methods:
 
-* :func:`add_text <depthai_sdk.visualize.visualizer.Visualizer.add_text>`
-* :func:`add_detections <depthai_sdk.visualize.visualizer.Visualizer.add_detections>`
-* :func:`add_trail <depthai_sdk.visualize.visualizer.Visualizer.add_trail>`
-* :func:`add_circle <depthai_sdk.visualize.visualizer.Visualizer.add_circle>`
-* :func:`add_line <depthai_sdk.visualize.visualizer.Visualizer.add_line>`
+* :func:`add_text <depthai_sdk.visualize.visualizer.Visualizer.add_text>`,
+* :func:`add_detections <depthai_sdk.visualize.visualizer.Visualizer.add_detections>`,
+* :func:`add_trail <depthai_sdk.visualize.visualizer.Visualizer.add_trail>`,
+* :func:`add_circle <depthai_sdk.visualize.visualizer.Visualizer.add_circle>`,
+* :func:`add_line <depthai_sdk.visualize.visualizer.Visualizer.add_line>`.
 
 Create your own object
 ######################
