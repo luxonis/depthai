@@ -4,7 +4,6 @@ from typing import List, Callable
 
 import depthai as dai
 
-from depthai_sdk.callback_context import CallbackContext
 from depthai_sdk.oak_outputs.fps import FPS
 from depthai_sdk.visualize import Visualizer
 
@@ -94,8 +93,7 @@ class XoutBase(ABC):
                     self.visualize(packet)
                 else:
                     # User defined callback
-                    ctx = CallbackContext(packet=packet)
-                    self.callback(ctx)
+                    self.callback(packet, self._visualizer)
 
                 # Record after processing, so that user can modify the frame
                 self.on_record(packet)

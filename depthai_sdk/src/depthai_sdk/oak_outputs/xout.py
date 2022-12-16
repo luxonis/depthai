@@ -6,7 +6,6 @@ import depthai as dai
 import numpy as np
 from distinctipy import distinctipy
 
-from depthai_sdk.callback_context import CallbackContext
 from depthai_sdk.classes.nn_results import Detections, ImgLandmarks
 from depthai_sdk.classes.packets import (
     FramePacket,
@@ -84,8 +83,7 @@ class XoutFrames(XoutBase):
             )
 
         if self.callback:  # Don't display frame, call the callback
-            ctx = CallbackContext(packet, self._visualizer, self._video_recorder)
-            self.callback(ctx)
+            self.callback(packet, self._visualizer)
         else:
             packet.frame = self._visualizer.draw(packet.frame)
             # Draw on the frame

@@ -1,14 +1,10 @@
 import cv2
 import numpy as np
 
-from depthai_sdk import OakCamera, AspectRatioResizeMode, TextPosition
-from depthai_sdk.callback_context import CallbackContext
+from depthai_sdk import OakCamera, TextPosition, Visualizer, TwoStagePacket
 
 
-def callback(ctx: CallbackContext):
-    packet = ctx.packet
-    visualizer = ctx.visualizer
-
+def callback(packet: TwoStagePacket, visualizer: Visualizer):
     for det, rec in zip(packet.detections, packet.nnData):
         age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
         gender = np.squeeze(np.array(rec.getLayerFp16('prob')))

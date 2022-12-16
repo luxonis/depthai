@@ -19,16 +19,15 @@ Example
 .. code-block:: python
 
     import cv2
-    from depthai_sdk import OakCamera, DetectionPacket
-    from depthai_sdk.callback_context import CallbackContext
+    from depthai_sdk import OakCamera, DetectionPacket, Visualizer
 
     with OakCamera() as oak:
         color = oak.create_camera('color')
         nn = oak.create_nn('mobilenet-ssd', color)
 
         # Callback
-        def cb(ctx: CallbackContext):
-            print(packet.imgDetections)
+        def cb(packet: DetectionPacket, visualizer: Visualizer):
+            print(packet.img_detections)
             cv2.imshow(packet.name, packet.frame)
 
         # 1. Callback after visualization:
