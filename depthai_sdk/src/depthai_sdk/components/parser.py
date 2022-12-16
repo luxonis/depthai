@@ -1,8 +1,10 @@
-import depthai as dai
 from typing import Union, Tuple, Optional, Dict, Any, Type
 
+import depthai as dai
 
-def rgbResolution(resolution: Union[None, str, dai.ColorCameraProperties.SensorResolution]) -> dai.ColorCameraProperties.SensorResolution:
+
+def rgb_resolution(resolution: Union[
+    None, str, dai.ColorCameraProperties.SensorResolution]) -> dai.ColorCameraProperties.SensorResolution:
     """
     Parses Color camera resolution based on the string
     """
@@ -25,7 +27,9 @@ def rgbResolution(resolution: Union[None, str, dai.ColorCameraProperties.SensorR
     else:  # Default
         return dai.ColorCameraProperties.SensorResolution.THE_1080_P
 
-def monoResolution(resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution]) -> dai.MonoCameraProperties.SensorResolution:
+
+def mono_resolution(resolution: Union[
+    None, str, dai.MonoCameraProperties.SensorResolution]) -> dai.MonoCameraProperties.SensorResolution:
     """
     Parses Mono camera resolution based on the string
     """
@@ -39,19 +43,21 @@ def monoResolution(resolution: Union[None, str, dai.MonoCameraProperties.SensorR
         return dai.MonoCameraProperties.SensorResolution.THE_720_P
     elif resolution == '480' or resolution == '480P':
         return dai.MonoCameraProperties.SensorResolution.THE_480_P
-    else: # Default
+    else:  # Default
         return dai.MonoCameraProperties.SensorResolution.THE_400_P
 
-def parseResolution(
-    camera: Union[dai.node.ColorCamera, dai.node.MonoCamera, Type],
-    resolution: Union[str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]
-    ):
+
+def parse_resolution(
+        camera: Union[dai.node.ColorCamera, dai.node.MonoCamera, Type],
+        resolution: Union[str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]
+):
     if isinstance(camera, dai.node.ColorCamera) or camera == dai.node.ColorCamera:
-        return rgbResolution(resolution)
+        return rgb_resolution(resolution)
     elif isinstance(camera, type(dai.node.MonoCamera)) or camera == dai.node.ColorCamera:
-        return monoResolution(resolution)
+        return mono_resolution(resolution)
     else:
         raise ValueError("camera must be either MonoCamera or ColorCamera!")
+
 
 def parse_bool(value: str) -> bool:
     if value.upper() in ['1', 'TRUE', 'ON', 'YES']:
@@ -60,6 +66,7 @@ def parse_bool(value: str) -> bool:
         return False
     else:
         raise ValueError(f"Couldn't parse '{value}' to bool!")
+
 
 def parse_usb_speed(speed: Union[None, str, dai.UsbSpeed]) -> Optional[dai.UsbSpeed]:
     if speed is None:
@@ -72,6 +79,7 @@ def parse_usb_speed(speed: Union[None, str, dai.UsbSpeed]) -> Optional[dai.UsbSp
         elif speed.upper() in ['SUPER', '3', 'USB3']:
             return dai.UsbSpeed.SUPER
     raise ValueError(f"Could not parse USB speed '{speed}' to dai.UsbSpeed!")
+
 
 def parse_median_filter(filter: Union[int, dai.MedianFilter]) -> dai.MedianFilter:
     if isinstance(filter, dai.MedianFilter):
@@ -86,7 +94,8 @@ def parse_median_filter(filter: Union[int, dai.MedianFilter]) -> dai.MedianFilte
     else:
         return dai.MedianFilter.MEDIAN_OFF
 
-def parseOpenVinoVersion(version: Union[None, str, dai.OpenVINO.Version]) -> Optional[dai.OpenVINO.Version]:
+
+def parse_open_vino_version(version: Union[None, str, dai.OpenVINO.Version]) -> Optional[dai.OpenVINO.Version]:
     if version is None:
         return None
     if isinstance(version, str):
@@ -100,7 +109,8 @@ def parseOpenVinoVersion(version: Union[None, str, dai.OpenVINO.Version]) -> Opt
         version = getattr(dai.OpenVINO.Version, f"VERSION_{vals[0]}_{vals[1]}")
     return version
 
-def parseSize(size: Union[str, Tuple[int, int]]) -> Tuple[int, int]:
+
+def parse_size(size: Union[str, Tuple[int, int]]) -> Tuple[int, int]:
     if isinstance(size, Tuple):
         return size
     elif isinstance(size, str):
@@ -111,7 +121,7 @@ def parseSize(size: Union[str, Tuple[int, int]]) -> Tuple[int, int]:
         raise ValueError("Size type not supported!")
 
 
-def parseColorCamControl(options: Dict[str, Any], cam: dai.node.ColorCamera):
+def parse_color_cam_control(options: Dict[str, Any], cam: dai.node.ColorCamera):
     from .camera_helper import setCameraControl
     setCameraControl(cam.initialControl,
                      options.get('manualFocus', None),
@@ -126,8 +136,8 @@ def parseColorCamControl(options: Dict[str, Any], cam: dai.node.ColorCamera):
                      )
 
 
-def parseEncode(encode = Union[str, bool, dai.VideoEncoderProperties.Profile]
-                ) -> dai.VideoEncoderProperties.Profile:
+def parse_encode(encode=Union[str, bool, dai.VideoEncoderProperties.Profile]
+                 ) -> dai.VideoEncoderProperties.Profile:
     if isinstance(encode, dai.VideoEncoderProperties.Profile):
         return encode
     elif isinstance(encode, bool) and encode:
@@ -142,7 +152,8 @@ def parseEncode(encode = Union[str, bool, dai.VideoEncoderProperties.Profile]
             return dai.VideoEncoderProperties.Profile.H264_MAIN
     raise ValueError(f"Parsing user-defined encode value '{encode}' failed!")
 
-def parse_cam_socket(socket = Union[str, dai.CameraBoardSocket]) -> dai.CameraBoardSocket:
+
+def parse_cam_socket(socket=Union[str, dai.CameraBoardSocket]) -> dai.CameraBoardSocket:
     if isinstance(socket, dai.CameraBoardSocket):
         return socket
     elif isinstance(socket, str):
@@ -154,4 +165,3 @@ def parse_cam_socket(socket = Union[str, dai.CameraBoardSocket]) -> dai.CameraBo
         elif socket == 'LEFT':
             return dai.CameraBoardSocket.LEFT
     raise ValueError(f"Parsing user-defined camera board socket value '{socket}' failed!")
-

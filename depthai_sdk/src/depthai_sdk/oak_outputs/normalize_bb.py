@@ -11,18 +11,13 @@ class NormalizeBoundingBox:
     resize mode and map coordinates to correct location.
     """
 
-    def __init__(self,
-                 aspectRatio: Tuple[float, float],
-                 arResizeMode: AspectRatioResizeMode,
-                 ):
+    def __init__(self, aspect_ratio: Tuple[float, float], ar_resize_mode: AspectRatioResizeMode):
         """
-        @param aspectRatio: NN input size
-        @param arResizeMode
+        :param aspect_ratio: NN input size
+        :param ar_resize_mode: Aspect ratio resize mode
         """
-        self.aspectRatio = aspectRatio
-        self.arResizeMode = arResizeMode
-
-        pass
+        self.aspect_ratio = aspect_ratio
+        self.ar_resize_mode = ar_resize_mode
 
     def normalize(self, frame, bbox: Tuple[float, float, float, float]) -> np.ndarray:
         """
@@ -38,22 +33,35 @@ class NormalizeBoundingBox:
         bbox = np.array(bbox)
 
         # Edit the bounding boxes before normalizing them
-        if self.arResizeMode == AspectRatioResizeMode.CROP:
-            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[0] / frame.shape[1]
-            sel = 0 if 0 < ar_diff else 1
-            bbox[sel::2] *= 1 - abs(ar_diff)
-            bbox[sel::2] += abs(ar_diff) / 2
-        elif self.arResizeMode == AspectRatioResizeMode.STRETCH:
+        if self.ar_resize_mode == AspectRatioResizeMode.CROP:
+            ar_diff = (self.aspect_ratio[0] / self.aspect_ratio[1]) / (frame.shape[1] / frame.shape[0])
+            if ar_diff < 1:
+                new_w = frame.shape[1] * ar_diff
+                new_h = frame.shape[0]
+                bbox[0] = bbox[0] * new_w + (frame.shape[1] - new_w) / 2
+                bbox[1] = bbox[1] * new_h
+                bbox[2] = bbox[2] * new_w + (frame.shape[1] - new_w) / 2
+                bbox[3] = bbox[3] * new_h
+            else:
+                new_w = frame.shape[1]
+                new_h = frame.shape[0] / ar_diff
+                bbox[0] = bbox[0] * new_w
+                bbox[1] = bbox[1] * new_h + (new_h - frame.shape[0]) / 2
+                bbox[2] = bbox[2] * new_w
+                bbox[3] = bbox[3] * new_h + (new_h - frame.shape[0]) / 2
+
+            return bbox.astype(int)
+        elif self.ar_resize_mode == AspectRatioResizeMode.STRETCH:
             # No need to edit bounding boxes when stretching
             pass
-        elif self.arResizeMode == AspectRatioResizeMode.LETTERBOX:
+        elif self.ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
             # There might be better way of doing this. TODO: test if it works as expected
-            ar_diff = self.aspectRatio[0] / self.aspectRatio[1] - frame.shape[1] / frame.shape[0]
+            ar_diff = self.aspect_ratio[0] / self.aspect_ratio[1] - frame.shape[1] / frame.shape[0]
             sel = 0 if 0 < ar_diff else 1
             nsel = 0 if sel == 1 else 1
             # Get the divisor
-            div = frame.shape[sel] / self.aspectRatio[nsel]
-            letterboxing_ratio = 1 - (frame.shape[nsel] / div) / self.aspectRatio[sel]
+            div = frame.shape[sel] / self.aspect_ratio[nsel]
+            letterboxing_ratio = 1 - (frame.shape[nsel] / div) / self.aspect_ratio[sel]
 
             bbox[sel::2] -= abs(letterboxing_ratio) / 2
             bbox[sel::2] /= 1 - abs(letterboxing_ratio)

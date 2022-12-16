@@ -5,7 +5,7 @@ Replaying
 recorded frames to the OAK device. This is useful especially during development, so we can **record a complex scene** only once and replay it many times to fine-tune
 the pipeline or AI models.
 
-Because :ref:`Recording` saves calibration data and can save synchronized left+right mono streames we can achieve full depth reconstruction.
+Because :ref:`Recording` saves calibration data and can save synchronized left+right mono streams so we can achieve full depth reconstruction.
 
 .. code-block:: python
 
@@ -20,12 +20,12 @@ Replaying support
 
 Replaying feature is quite extensible, and supports a variety of different inputs:
 
-#. Single image
-#. Folder with images. Images are getting rotated every 3 seconds. `Example here <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__.
-#. Url to a video/image
-#. Url to a YouTube video
-#. Path to :ref:`depthai-recording <Replaying a depthai-recording>`
-#. A name of a :ref:`public depthai-recording <Public depthai-recordings>`
+#. Single image.
+#. Folder with images. Images are getting rotated every 3 seconds. `Example here <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__..
+#. Url to a video/image.
+#. Url to a YouTube video.
+#. Path to :ref:`depthai-recording <Replaying a depthai-recording>`.
+#. A name of a :ref:`public depthai-recording <Public depthai-recordings>`.
 
 Replaying a depthai-recording
 #############################
@@ -84,6 +84,10 @@ application (eg. ``OakCamera(recording='cars-california-01')``). Recording will 
      - ``left.mp4``, ``right.mp4``, ``calib.json``
      - 5.8 MB
      - Used by `depth-people-counting <https://github.com/luxonis/depthai-experiments/tree/master/gen2-depth-people-counting>`__ demo
+   * - ``people-construction-vest-01``
+     - ``color.mp4``
+     - 5.2 MB
+     - Used by `ObjectTracker example <https://docs.luxonis.com/projects/api/en/latest/samples/ObjectTracker/object_tracker_video/#object-tracker-on-video>`__ and `pedestrian reidentification <https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification>`__ demo
    * - ``people-images-01``
      - 5x jpg images
      - 2 MB
@@ -96,6 +100,14 @@ application (eg. ``OakCamera(recording='cars-california-01')``). Recording will 
      - ``color.mp4``
      - 86.4 MB
      - Fisheye top-down view, useful for people tracking/counting
+   * - ``people-tracking-above-03``
+     - ``color.mp4``
+     - 16.7 MB
+     - Top-down view, used by `people-tracker <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker>`__ demo
+   * - ``people-tracking-above-04``
+     - ``color.mp4``
+     - 5.3 MB
+     - Top-down view at an angle, source video `here <https://pixabay.com/videos/people-commerce-shop-busy-mall-6387/>`__
 
 
 ..

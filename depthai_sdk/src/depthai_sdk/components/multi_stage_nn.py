@@ -1,20 +1,21 @@
-import depthai as dai
-from typing import Tuple, Union, Optional, List
-from string import Template
 import os
 from pathlib import Path
+from string import Template
+from typing import Tuple, Union, Optional, List
+
+import depthai as dai
 
 
 class MultiStageConfig:
     debug: bool
     show_cropped_frames: bool
     labels: Optional[List[int]]
-    scaleBb: Optional[Tuple[int, int]]
+    scale_bb: Optional[Tuple[int, int]]
 
-    def __init__(self, debug, labels=None, scaleBb=None):
+    def __init__(self, debug, labels=None, scale_bb=None):
         self.debug = debug
         self.labels = labels
-        self.scaleBb = scaleBb
+        self.scale_bb = scale_bb
 
 
 class MultiStageNN:
@@ -25,19 +26,19 @@ class MultiStageNN:
 
     def __init__(self,
                  pipeline: dai.Pipeline,
-                 detection_node: Union[
-                     dai.node.MobileNetDetectionNetwork,
-                     dai.node.MobileNetSpatialDetectionNetwork,
-                     dai.node.YoloDetectionNetwork,
-                     dai.node.YoloSpatialDetectionNetwork],  # Object detection node
-                 highResFrames: dai.Node.Output,
+                 detection_node: Union[dai.node.MobileNetDetectionNetwork,
+                                       dai.node.MobileNetSpatialDetectionNetwork,
+                                       dai.node.YoloDetectionNetwork,
+                                       dai.node.YoloSpatialDetectionNetwork],  # Object detection node
+                 high_res_frames: dai.Node.Output,
                  size: Tuple[int, int],
                  debug=False
                  ) -> None:
         """
         Args:
+
             detections (dai.Node.Output): Object detection output
-            highResFrames (dai.Node.Output): Output that will provide high resolution frames
+            high_res_frames (dai.Node.Output): Output that will provide high resolution frames
         """
         # self._input.node, self._input.stream_input, self.size
 
@@ -46,7 +47,7 @@ class MultiStageNN:
         self._size = size
 
         detection_node.out.link(self.script.inputs['detections'])
-        highResFrames.link(self.script.inputs['frames'])
+        high_res_frames.link(self.script.inputs['frames'])
 
         self.configure(MultiStageConfig(debug))
 
@@ -75,10 +76,10 @@ class MultiStageNN:
                 CHECK_LABELS=f"if det.label not in {str(config.labels)}: continue" if config.labels else "",
                 WIDTH=str(self._size[0]),
                 HEIGHT=str(self._size[1]),
-                SCALE_BB_XMIN=f"-{config.scaleBb[0] / 100}" if config.scaleBb else "",  # % to float value
-                SCALE_BB_YMIN=f"-{config.scaleBb[1] / 100}" if config.scaleBb else "",
-                SCALE_BB_XMAX=f"+{config.scaleBb[0] / 100}" if config.scaleBb else "",
-                SCALE_BB_YMAX=f"+{config.scaleBb[1] / 100}" if config.scaleBb else "",
+                SCALE_BB_XMIN=f"-{config.scale_bb[0] / 100}" if config.scale_bb else "",  # % to float value
+                SCALE_BB_YMIN=f"-{config.scale_bb[1] / 100}" if config.scale_bb else "",
+                SCALE_BB_XMAX=f"+{config.scale_bb[0] / 100}" if config.scale_bb else "",
+                SCALE_BB_YMAX=f"+{config.scale_bb[1] / 100}" if config.scale_bb else "",
             )
             self.script.setScript(code)
             # print(f"\n------------{code}\n---------------")

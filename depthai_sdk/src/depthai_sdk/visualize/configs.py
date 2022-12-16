@@ -44,12 +44,21 @@ class OutputConfig:
 
 
 @dataclass
+class StereoConfig:
+    colorize: StereoColor = StereoColor.RGB
+    colormap: int = cv2.COLORMAP_JET
+    wls_filter: bool = False
+    wls_lambda: float = 1500
+    wls_sigma: float = 1.5
+
+
+@dataclass
 class DetectionConfig:
     """Configuration for drawing bounding boxes."""
     thickness: int = 1
     fill_transparency: float = 0.15
     box_roundness: int = 0
-    color: Tuple[int, int, int] = (255, 255, 255)
+    color: Tuple[int, int, int] = (0, 255, 0)
     bbox_style: BboxStyle = BboxStyle.RECTANGLE
     line_width: float = 0.5
     line_height: float = 0.5
@@ -79,8 +88,10 @@ class TextConfig:
 @dataclass
 class TrackingConfig:
     """Configuration for drawing tracking bounding boxes."""
-    max_length: int = 100
+    max_length: int = -1
+    deletion_lost_threshold: int = 5
     line_thickness: int = 1
+    fading_tails: bool = False
     line_color: Tuple[int, int, int] = (255, 255, 255)
     line_type: int = cv2.LINE_AA
     bg_color: Tuple[int, int, int] = (0, 0, 0)
@@ -99,6 +110,7 @@ class VisConfig:
     """Configuration for visualizer."""
 
     output: OutputConfig = field(default_factory=OutputConfig)
+    stereo: StereoConfig = field(default_factory=StereoConfig)
     detection: DetectionConfig = field(default_factory=DetectionConfig)
     text: TextConfig = field(default_factory=TextConfig)
     tracking: TrackingConfig = field(default_factory=TrackingConfig)

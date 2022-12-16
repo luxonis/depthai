@@ -920,50 +920,52 @@ class NodeGraph(QtCore.QObject):
             BaseNode: the created instance of the node.
         """
         node = self._node_factory.create_node_instance(node_type)
-        if node:
-            node._graph = self
-            node.model._graph_model = self.model
+        if not node:
+            raise TypeError('\n\n>> Cannot find node:\t"{}"\n'.format(node_type))
 
-            wid_types = node.model.__dict__.pop('_TEMP_property_widget_types')
-            prop_attrs = node.model.__dict__.pop('_TEMP_property_attrs')
+        node._graph = self
+        node.model._graph_model = self.model
 
-            if self.model.get_node_common_properties(node.type_) is None:
-                node_attrs = {node.type_: {
-                    n: {'widget_type': wt} for n, wt in wid_types.items()
-                }}
-                for pname, pattrs in prop_attrs.items():
-                    node_attrs[node.type_][pname].update(pattrs)
-                self.model.set_node_common_properties(node_attrs)
+        wid_types = node.model.__dict__.pop('_TEMP_property_widget_types')
+        prop_attrs = node.model.__dict__.pop('_TEMP_property_attrs')
 
-            node.NODE_NAME = self.get_unique_name(name or node.NODE_NAME)
-            node.model.name = node.NODE_NAME
-            node.model.selected = selected
+        if self.model.get_node_common_properties(node.type_) is None:
+            node_attrs = {node.type_: {
+                n: {'widget_type': wt} for n, wt in wid_types.items()
+            }}
+            for pname, pattrs in prop_attrs.items():
+                node_attrs[node.type_][pname].update(pattrs)
+            self.model.set_node_common_properties(node_attrs)
 
-            def format_color(clr):
-                if isinstance(clr, str):
-                    clr = clr.strip('#')
-                    return tuple(int(clr[i:i + 2], 16) for i in (0, 2, 4))
-                return clr
+        node.NODE_NAME = self.get_unique_name(name or node.NODE_NAME)
+        node.model.name = node.NODE_NAME
+        node.model.selected = selected
 
-            if color:
-                node.model.color = format_color(color)
-            if text_color:
-                node.model.text_color = format_color(text_color)
-            if pos:
-                node.model.pos = [float(pos[0]), float(pos[1])]
+        def format_color(clr):
+            if isinstance(clr, str):
+                clr = clr.strip('#')
+                return tuple(int(clr[i:i + 2], 16) for i in (0, 2, 4))
+            return clr
 
-            node.update()
+        if color:
+            node.model.color = format_color(color)
+        if text_color:
+            node.model.text_color = format_color(text_color)
+        if pos:
+            node.model.pos = [float(pos[0]), float(pos[1])]
 
-            if push_undo:
-                undo_cmd = NodeAddedCmd(self, node, node.model.pos)
-                undo_cmd.setText('create node: "{}"'.format(node.NODE_NAME))
-                self._undo_stack.push(undo_cmd)
-            else:
-                NodeAddedCmd(self, node, node.model.pos).redo()
+        node.update()
 
-            self.node_created.emit(node)
-            return node
-        raise TypeError('\n\n>> Cannot find node:\t"{}"\n'.format(node_type))
+        if push_undo:
+            undo_cmd = NodeAddedCmd(self, node, node.model.pos)
+            undo_cmd.setText('create node: "{}"'.format(node.NODE_NAME))
+            self._undo_stack.push(undo_cmd)
+        else:
+            NodeAddedCmd(self, node, node.model.pos).redo()
+
+        self.node_created.emit(node)
+        return node
+
 
     def add_node(self, node, pos=None, selected=True, push_undo=True):
         """

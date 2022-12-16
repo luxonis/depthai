@@ -18,10 +18,10 @@ class ImageSensor:
                  name: str,
                  resolutions: List[str],
                  type: str):
-        from .parser import parseResolution
+        from .parser import parse_resolution
         self.name = name
         self.type = dai.node.ColorCamera if type == 'color' else dai.node.MonoCamera
-        self.resolutions = [parseResolution(self.type, resolution) for resolution in resolutions]
+        self.resolutions = [parse_resolution(self.type, resolution) for resolution in resolutions]
 
     @property
     def maxRes(self) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
@@ -74,15 +74,18 @@ def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
     return lst
 
 
-def getClosestVideoSize(width: int, height: int) -> Tuple[int, int]:
+def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tuple[int, int]:
     """
     For colorCamera.video output
     """
     while True:
-        if width % 3 == 0: break
+        if width % 3 == 0:
+            if not videoEncoder or width % 32 == 0:
+                break
         width -= 1
     while True:
-        if height % 2 == 0: break
+        if height % 2 == 0:
+            break
         height -= 1
     return (width, height)
 

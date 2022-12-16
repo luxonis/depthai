@@ -11,13 +11,9 @@ from depthai_sdk.visualize import Visualizer
 class StreamXout:
     stream: dai.Node.Output
     name: str  # XLinkOut stream name
-    friendly_name: str = None  # Used for eg. recording to a file
-
     def __init__(self, id: int, out: dai.Node.Output):
         self.stream = out
         self.name = f"{str(id)}_{out.name}"
-        self.friendly_name = None
-
 
 class ReplayStream(StreamXout):
     def __init__(self, name: str):
@@ -28,15 +24,15 @@ class XoutBase(ABC):
     callback: Callable  # User defined callback. Called either after visualization (if vis=True) or after syncing.
     queue: Queue  # Queue to which synced Packets will be added. Main thread will get these
     _streams: List[str]  # Streams to listen for
-    _visualizer: Visualizer = None
+    _visualizer: Visualizer
     _fps: FPS
     name: str  # Other Xouts will override this
 
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
+        self._visualizer = None
+        self._packet_name = None
 
-
-    _packet_name: str = None
     def get_packet_name(self) -> str:
         if self._packet_name is None:
             self._packet_name = ";".join([xout.name for xout in self.xstreams()])
@@ -55,23 +51,39 @@ class XoutBase(ABC):
         self._fps = FPS()
 
     @abstractmethod
-    def newMsg(self, name: str, msg) -> None:
+    def new_msg(self, name: str, msg) -> None:
         raise NotImplementedError()
 
     @abstractmethod
     def visualize(self, packet) -> None:
         raise NotImplementedError()
 
+    def on_callback(self, packet) -> None:
+        """
+        Hook called when `callback` or `self.visualize` are used.
+        """
+        pass
+
+    def on_record(self, packet) -> None:
+        """
+        Hook called when `record_path` is used.
+        """
+        pass
+
     # This approach is used as some functions (eg. imshow()) need to be called from
     # main thread, and calling them from callback thread wouldn't work.
-    def checkQueue(self, block=False) -> None:
+    def check_queue(self, block=False) -> None:
         """
         Checks queue for any available messages. If available, call callback. Non-blocking by default.
         """
         try:
             packet = self.queue.get(block=block)
+
             if packet is not None:
                 self._fps.next_iter()
+
+                self.on_callback(packet)
+
                 if self._visualizer:
                     try:
                         self._visualizer.frame_shape = packet.frame.shape
@@ -81,6 +93,10 @@ class XoutBase(ABC):
                     self.visualize(packet)
                 else:
                     # User defined callback
-                    self.callback(packet)
+                    self.callback(packet, self._visualizer)
+
+                # Record after processing, so that user can modify the frame
+                self.on_record(packet)
+
         except Empty:  # Queue empty
             pass
