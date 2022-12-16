@@ -1,6 +1,7 @@
 {
     "model": {
-        "model_name": "deeplabv3"
+        "model_name": "deeplab_v3_mnv2_513x513",
+        "zoo": "depthai"
     },
     "nn_config": {
         "output_format" : "raw"
