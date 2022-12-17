@@ -1,10 +1,9 @@
 import blobconverter
 import cv2
 import numpy as np
-from depthai import NNData, ImgDetections
+from depthai import NNData
 
-from depthai_sdk import OakCamera, Detections
-from depthai_sdk.callback_context import CallbackContext
+from depthai_sdk import OakCamera, Detections, Visualizer, DetectionPacket
 
 
 def decode(nn_data: NNData) -> Detections:
@@ -13,7 +12,7 @@ def decode(nn_data: NNData) -> Detections:
     dets = Detections(nn_data)
 
     for result in results[0][0]:
-        if result[2] > 0.1:
+        if result[2] > 0.5:
             label = int(result[1])
             conf = result[2]
             bbox = result[3:]
@@ -22,14 +21,13 @@ def decode(nn_data: NNData) -> Detections:
     return dets
 
 
-def callback(ctx: CallbackContext):
-    packet = ctx.packet
+def callback(packet: DetectionPacket, visualizer: Visualizer):
     frame = packet.frame
+    frame = visualizer.draw(frame)
+    cv2.imshow('Custom decode function', frame)
 
-    cv2.imshow('Frame', frame)
 
-
-with OakCamera(replay='/Users/daniilpastukhov/Downloads/hout.mp4') as oak:
+with OakCamera() as oak:
     color = oak.create_camera('color')
 
     nn_path = blobconverter.from_zoo(name='person-detection-0200', version='2021.4')

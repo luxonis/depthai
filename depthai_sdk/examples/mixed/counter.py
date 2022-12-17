@@ -2,14 +2,10 @@
 
 import cv2
 
-from depthai_sdk import OakCamera, TextPosition
-from depthai_sdk.callback_context import CallbackContext
+from depthai_sdk import OakCamera, TextPosition, Visualizer, DetectionPacket
 
 
-def callback(ctx: CallbackContext):
-    packet = ctx.packet
-    visualizer = ctx.visualizer
-
+def callback(packet: DetectionPacket, visualizer: Visualizer):
     num = len(packet.img_detections.detections)
     print('New msgs! Number of people detected:', num)
 

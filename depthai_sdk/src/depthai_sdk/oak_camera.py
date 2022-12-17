@@ -1,3 +1,4 @@
+import copy
 import time
 import warnings
 from pathlib import Path
@@ -268,7 +269,7 @@ class OakCamera:
 
         self._oak.device.startPipeline(self._pipeline)
 
-        self._oak.initCallbacks(self._pipeline)
+        self._oak.init_callbacks(self._pipeline)
 
         for xout in self._oak.oak_out_streams:  # Start FPS counters
             xout.start_fps()
@@ -276,7 +277,7 @@ class OakCamera:
         if self.replay:
             self.replay.createQueues(self._oak.device)
             # Called from Replay module on each new frame sent to the device.
-            self.replay.start(self._oak.newMsg)
+            self.replay.start(self._oak.new_msg)
 
         # Check if callbacks (sync/non-sync are set)
         if blocking:
@@ -286,6 +287,11 @@ class OakCamera:
                 self.poll()
 
     def running(self) -> bool:
+        """
+        Check if camera is running.
+        Returns:
+            True if camera is running, False otherwise.
+        """
         return not self._stop
 
     def poll(self):
@@ -299,7 +305,7 @@ class OakCamera:
 
         # TODO: check if components have controls enabled and check whether key == `control`
 
-        self._oak.checkSync()
+        self._oak.check_sync()
 
         if self.replay:
             if self.replay._stop:
@@ -330,7 +336,9 @@ class OakCamera:
             if ov:
                 if self._pipeline.getRequiredOpenVINOVersion() and self._pipeline.getRequiredOpenVINOVersion() != ov:
                     raise Exception(
-                        'Two components forced two different OpenVINO version! Please make sure that all your models are compiled using the same OpenVINO version.')
+                        'Two components forced two different OpenVINO version!'
+                        'Please make sure that all your models are compiled using the same OpenVINO version.'
+                    )
                 self._pipeline.setOpenVINOVersion(ov)
 
         if self._pipeline.getRequiredOpenVINOVersion() == None:
@@ -372,23 +380,22 @@ class OakCamera:
             callback: Where to send synced streams
             visualize: Whether to draw on the frames (like with visualize())
         """
-        visualizer = Visualizer() if visualize else None
         if isinstance(outputs, Callable):
             outputs = [outputs]  # to list
-        self._out_templates.append(SyncConfig(outputs, callback, visualizer))
+
+        self._out_templates.append(SyncConfig(outputs, callback))
 
     def record(self,
                outputs: Union[Callable, List[Callable]],
                path: str,
-               type: RecordType = RecordType.VIDEO,
-               keep_last: int = 0):
+               record_type: RecordType = RecordType.VIDEO):
         """
         Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
         them to the computer in desired format (raw, mp4, mcap, bag..).
         Args:
             outputs (Component/Component output): Component output(s) to be recorded
             path: Folder path where to save these streams
-            type: Record type
+            record_type: Record type
         """
         if isinstance(outputs, Callable):
             outputs = [outputs]  # to list
@@ -397,7 +404,7 @@ class OakCamera:
             if isinstance(outputs[i], Component):
                 outputs[i] = outputs[i].out.main
 
-        record = Record(Path(path).resolve(), type)
+        record = Record(Path(path).resolve(), record_type)
         self._out_templates.append(RecordConfig(outputs, record))
         return record
 
@@ -431,9 +438,7 @@ class OakCamera:
             raise ValueError('Recording visualizer is only supported for a single output.')
 
         visualizer = Visualizer(scale, fps)
-        self._callback(output, callback, visualizer, record_path)
-
-        return visualizer
+        return self._callback(output, callback, visualizer, record_path)
 
     def _callback(self,
                   output: Union[List, Callable, Component],
@@ -448,7 +453,9 @@ class OakCamera:
         if isinstance(output, Component):
             output = output.out.main
 
+        visualizer = copy.deepcopy(visualizer) or Visualizer()
         self._out_templates.append(OutputConfig(output, callback, visualizer, record_path))
+        return visualizer
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):
         """
@@ -458,6 +465,24 @@ class OakCamera:
             callback: Handler function to which the Packet will be sent
         """
         self._callback(output, callback)
+
+    def get_stats_report(self) -> Dict[str, Any]:
+        """
+        Get statistics for the pipeline.
+        """
+        if not self._pipeline_built:
+            return {}
+
+        return self._oak.stats_report()
+
+    def get_info_report(self) -> Dict[str, Any]:
+        """
+        Get information about the device.
+        """
+        if not self._pipeline_built:
+            return {}
+
+        return self._oak.info_report()
 
     @property
     def device(self) -> dai.Device:

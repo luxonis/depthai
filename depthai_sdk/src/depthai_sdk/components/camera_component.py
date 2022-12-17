@@ -2,7 +2,7 @@ from typing import Dict
 
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
-from depthai_sdk.components.parser import parseResolution, parseEncode
+from depthai_sdk.components.parser import parse_resolution, parse_encode
 from depthai_sdk.oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.replay import Replay
@@ -10,10 +10,10 @@ from depthai_sdk.replay import Replay
 
 class CameraComponent(Component):
     # Users should have access to these nodes
-    node: Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera] = None
-    encoder: dai.node.VideoEncoder = None
+    node: Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera]
+    encoder: dai.node.VideoEncoder
 
-    stream: dai.Node.Output = None  # Node output to be used as eg. an input into NN
+    stream: dai.Node.Output  # Node output to be used as eg. an input into NN
     stream_size: Tuple[int, int]  # Output size
 
     # Setting passed at init
@@ -40,6 +40,7 @@ class CameraComponent(Component):
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
         recording is passed during OakCamera initialization. Mocking the camera will send frames from the host to the
         OAK device (via XLinkIn node).
+
         Args:
             source (str): Source of the camera. Either color/rgb/right/left
             resolution (optional): Camera resolution, eg. '800p' or '4k'
@@ -64,19 +65,20 @@ class CameraComponent(Component):
 
         self._create_node(pipeline, source.upper())
 
+        self.encoder = None
         if encode:
             self.encoder = pipeline.createVideoEncoder()
             # MJPEG by default
-            self._encoderProfile = parseEncode(encode)
+            self._encoderProfile = parse_encode(encode)
 
         self._resolution_forced: bool = resolution is not None
         if resolution:
-            self._setResolution(resolution)
+            self._set_resolution(resolution)
         if fps:
-            self._setFps(fps)
+            self._set_fps(fps)
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-        if self.isReplay():  # If replay, don't create camera node
+        if self.is_replay():  # If replay, don't create camera node
             res = self._replay.getShape(self._source)
             # print('resolution', res)
             # resize = getResize(res, width=1200)
@@ -129,8 +131,8 @@ class CameraComponent(Component):
             self.stream = rot_manip.out
 
         if self.encoder:
-            self.encoder.setDefaultProfilePreset(self._getFps(), self._encoderProfile)
-            if self.isReplay():  # TODO - this might be not needed, we check for replay above and return
+            self.encoder.setDefaultProfilePreset(self._get_fps(), self._encoderProfile)
+            if self.is_replay():  # TODO - this might be not needed, we check for replay above and return
                 # Create ImageManip to convert to NV12
                 type_manip = pipeline.createImageManip()
                 type_manip.setFrameType(dai.ImgFrame.Type.NV12)
@@ -138,9 +140,9 @@ class CameraComponent(Component):
 
                 self.stream.link(type_manip.inputImage)
                 type_manip.out.link(self.encoder.input)
-            elif self.isMono():
+            elif self.is_mono():
                 self.stream.link(self.encoder.input)
-            elif self.isColor():
+            elif self.is_color():
                 self.stream.link(self.encoder.input)
             else:
                 raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
@@ -162,7 +164,7 @@ class CameraComponent(Component):
         @param source: User-input source
         """
         if source == "COLOR" or source == "RGB":
-            if self.isReplay():
+            if self.is_replay():
                 if 'color' not in self._replay.getStreams():
                     raise Exception('Color stream was not found in specified depthai-recording!')
             else:
@@ -170,7 +172,7 @@ class CameraComponent(Component):
                 self.node.setBoardSocket(dai.CameraBoardSocket.RGB)
 
         elif source == "RIGHT" or source == "MONO":
-            if self.isReplay():
+            if self.is_replay():
                 if 'right' not in self._replay.getStreams():
                     raise Exception('Right stream was not found in specified depthai-recording!')
             else:
@@ -178,7 +180,7 @@ class CameraComponent(Component):
                 self.node.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
         elif source == "LEFT":
-            if self.isReplay():
+            if self.is_replay():
                 if 'left' not in self._replay.getStreams():
                     raise Exception('Left stream was not found in specified depthai-recording!')
             else:
@@ -199,18 +201,18 @@ class CameraComponent(Component):
         """
 
         # TODO
-        if fps: self._setFps(fps)
-        if resolution: self._setResolution(resolution)
+        if fps: self._set_fps(fps)
+        if resolution: self._set_resolution(resolution)
 
         if preview:
-            from .parser import parseSize
-            preview = parseSize(preview)
+            from .parser import parse_size
+            preview = parse_size(preview)
 
             self.stream_size = preview
 
             if self._replay:
                 self._replay.setResizeColor(preview)
-            elif self.isColor():
+            elif self.is_color():
                 self.node.setPreviewSize(preview)
             else:
                 # TODO: Use ImageManip to set mono frame size
@@ -221,7 +223,7 @@ class CameraComponent(Component):
         if not isinstance(args, Dict):
             args = vars(args)  # Namespace -> Dict
 
-        if self.isColor():
+        if self.is_color():
             self.config_camera(
                 fps=args.get('rgbFps', None),
                 resolution=args.get('rgbResolution', None),
@@ -238,7 +240,7 @@ class CameraComponent(Component):
                 lumaDenoise=args.get('lumaDenoise', None),
                 chromaDenoise=args.get('chromaDenoise', None),
             )
-        elif self.isMono():
+        elif self.is_mono():
             self.config_camera(
                 fps=args.get('monoFps', None),
                 resolution=args.get('monoResolution', None),
@@ -262,7 +264,7 @@ class CameraComponent(Component):
                             lumaDenoise: Optional[int] = None,
                             chromaDenoise: Optional[int] = None,
                             ) -> None:
-        if not self.isColor():
+        if not self.is_color():
             print("Attempted to configure ColorCamera, but this component doesn't have it. Config attempt ignored.")
             return
 
@@ -292,24 +294,24 @@ class CameraComponent(Component):
         if lumaDenoise: self.node.initialControl.setLumaDenoise(lumaDenoise)
         if chromaDenoise: self.node.initialControl.setChromaDenoise(chromaDenoise)
 
-    def _setResolution(self, resolution):
-        if not self.isReplay():
-            self.node.setResolution(parseResolution(type(self.node), resolution))
+    def _set_resolution(self, resolution):
+        if not self.is_replay():
+            self.node.setResolution(parse_resolution(type(self.node), resolution))
         # TODO: support potentially downscaling depthai-recording
 
-    def isReplay(self) -> bool:
+    def is_replay(self) -> bool:
         return self._replay is not None
 
-    def isColor(self) -> bool:
+    def is_color(self) -> bool:
         return isinstance(self.node, dai.node.ColorCamera)
 
-    def isMono(self) -> bool:
+    def is_mono(self) -> bool:
         return isinstance(self.node, dai.node.MonoCamera)
 
-    def _getFps(self):
-        return (self._replay if self.isReplay() else self.node).getFps()
+    def _get_fps(self):
+        return (self._replay if self.is_replay() else self.node).getFps()
 
-    def _setFps(self, fps: float):
+    def _set_fps(self, fps: float):
         (self._replay if self._replay else self.node).setFps(fps)
 
     def config_encoder_h26x(self,
@@ -348,9 +350,9 @@ class CameraComponent(Component):
             self.encoder.setLossless(lossless)
 
     def get_stream_xout(self) -> StreamXout:
-        if self.isReplay():
+        if self.is_replay():
             return ReplayStream(self._source)
-        elif self.isMono():
+        elif self.is_mono():
             return StreamXout(self.node.id, self.stream)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(10)
@@ -372,7 +374,7 @@ class CameraComponent(Component):
             """
             if self._comp.encoder:
                 return self.encoded(pipeline, device)
-            elif self._comp.isReplay():
+            elif self._comp.is_replay():
                 return self.replay(pipeline, device)
             else:
                 return self.camera(pipeline, device)
@@ -381,7 +383,7 @@ class CameraComponent(Component):
             """
             Streams camera output to the OAK camera. Produces FramePacket.
             """
-            out = XoutFrames(self._comp.get_stream_xout(), self._comp._getFps())
+            out = XoutFrames(self._comp.get_stream_xout(), self._comp._get_fps())
             out.name = self._comp._source
             return self._comp._create_xout(pipeline, out)
 
@@ -389,7 +391,7 @@ class CameraComponent(Component):
             """
             If depthai-recording was used, it won't stream anything, but it will instead use frames that were sent to the OAK. Produces FramePacket.
             """
-            out = XoutFrames(ReplayStream(self._comp._source), self._comp._getFps())
+            out = XoutFrames(ReplayStream(self._comp._source), self._comp._get_fps())
             return self._comp._create_xout(pipeline, out)
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -398,17 +400,19 @@ class CameraComponent(Component):
             """
             if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
                 out = XoutMjpeg(
-                    StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                    self._comp.isColor(),
-                    self._comp.encoder.getLossless(),
-                    self._comp.encoder.getFrameRate()
+                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                    color=self._comp.is_color(),
+                    lossless=self._comp.encoder.getLossless(),
+                    fps=self._comp.encoder.getFrameRate(),
+                    frame_shape=self._comp.stream_size
                 )
             else:
                 out = XoutH26x(
-                    StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                    self._comp.isColor(),
-                    self._comp._encoderProfile,
-                    self._comp.encoder.getFrameRate()
+                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                    color=self._comp.is_color(),
+                    profile=self._comp._encoderProfile,
+                    fps=self._comp.encoder.getFrameRate(),
+                    frame_shape=self._comp.stream_size
                 )
             out.name = self._comp._source
             return self._comp._create_xout(pipeline, out)

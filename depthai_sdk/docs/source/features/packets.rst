@@ -10,20 +10,24 @@ Packets are **synchronized collections** of one or more `DepthAI messages <https
 Example
 #######
 
-#. **oak.visualize()**: In the example below SDK won't show the frame to the user, but instead it will send the packet to the callback function. SDK will draw detections (bounding boxes, labels) on the ``packet.frame``.
-#. **oak.callback()**: This will also send ``DetectionPacket`` to the callback function, the only difference is that the SDK won't draw on the frame, so you can draw detections on the frame yourself.
+#. **oak.visualize**: In the example below SDK won't show the frame to the user, but instead it will send the packet to the callback function. SDK will draw detections (bounding boxes, labels) on the ``packet.frame``.
+#. **oak.callback**: This will also send ``DetectionPacket`` to the callback function, the only difference is that the SDK won't draw on the frame, so you can draw detections on the frame yourself.
+
+.. note::
+    If you specify callback function in **oak.visualize**, you need to trigger drawing of detections yourself via **visualizer.draw** method.
 
 .. code-block:: python
 
     import cv2
-    from depthai_sdk import OakCamera, DetectionPacket
+    from depthai_sdk import OakCamera, DetectionPacket, Visualizer
 
     with OakCamera() as oak:
         color = oak.create_camera('color')
         nn = oak.create_nn('mobilenet-ssd', color)
+
         # Callback
-        def cb(packet: DetectionPacket):
-            print(packet.imgDetections)
+        def cb(packet: DetectionPacket, visualizer: Visualizer):
+            print(packet.img_detections)
             cv2.imshow(packet.name, packet.frame)
 
         # 1. Callback after visualization:
@@ -56,6 +60,13 @@ DetectionPacket
 ---------------
 
 .. autoclass:: depthai_sdk.DetectionPacket
+    :members:
+    :undoc-members:
+
+DepthPacket
+---------------
+
+.. autoclass:: depthai_sdk.DepthPacket
     :members:
     :undoc-members:
 

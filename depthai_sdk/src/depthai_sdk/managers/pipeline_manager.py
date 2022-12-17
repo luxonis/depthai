@@ -187,8 +187,8 @@ class PipelineManager:
             )
             # Using CameraComponent's static function. Managers (including this one) will get deprecated when the full SDK
             # refactor is complete.
-            from ..components.parser import parseColorCamControl
-            parseColorCamControl(vars(args), self.nodes.camRgb)
+            from ..components.parser import parse_color_cam_control
+            parse_color_cam_control(vars(args), self.nodes.camRgb)
             return self.nodes.camRgb
 
         self.nodes.camRgb = pipeline.createColorCamera()
