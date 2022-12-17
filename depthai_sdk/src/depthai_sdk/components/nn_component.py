@@ -500,7 +500,9 @@ class NNComponent(Component):
                 try:
                     aspect_ratio_resize_mode = AspectRatioResizeMode[aspect_ratio_resize_mode.upper()]
                 except (AttributeError, KeyError):
-                    print('AR resize mode was not recognizied. Using default LETTERBOX mode.')
+                    print('AR resize mode was not recognizied.'
+                          'Options (case insensitive): STRETCH, CROP, LETTERBOX.'
+                          'Using default LETTERBOX mode.')
 
             self._ar_resize_mode = aspect_ratio_resize_mode
         if conf_threshold and self._is_detector():
@@ -613,7 +615,9 @@ class NNComponent(Component):
             if not self._comp._is_multi_stage():
                 raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
-            out = XoutFrames(frames=StreamXout(self._comp._multi_stage_nn.manip.id, self._comp._multi_stage_nn.manip.out))
+            out = XoutFrames(
+                frames=StreamXout(self._comp._multi_stage_nn.manip.id, self._comp._multi_stage_nn.manip.out)
+            )
 
             return self._comp._create_xout(pipeline, out)
 

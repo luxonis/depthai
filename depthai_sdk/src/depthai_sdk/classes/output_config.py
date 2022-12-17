@@ -4,7 +4,7 @@ from typing import Optional, Callable, List
 
 import depthai as dai
 
-from depthai_sdk.callback_context import CallbackContext
+from depthai_sdk import FramePacket
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout import XoutFrames
 from depthai_sdk.oak_outputs.xout_base import XoutBase
@@ -105,9 +105,8 @@ class SyncConfig(BaseConfig, SequenceNumSync):
 
         self.packets = dict()
 
-    def new_packet(self, ctx: CallbackContext, _=None):
+    def new_packet(self, packet: FramePacket, _=None):
         # print('new packet', packet, packet.name, 'seq num',packet.imgFrame.getSequenceNum())
-        packet = ctx.packet
         synced = self.sync(
             packet.imgFrame.getSequenceNum(),
             packet.name,

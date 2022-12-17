@@ -290,6 +290,11 @@ class OakCamera:
                 self.poll()
 
     def running(self) -> bool:
+        """
+        Check if camera is running.
+        Returns:
+            True if camera is running, False otherwise.
+        """
         return not self._stop
 
     def poll(self):
