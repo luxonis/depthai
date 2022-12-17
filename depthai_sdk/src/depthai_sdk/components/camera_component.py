@@ -93,6 +93,14 @@ class CameraComponent(Component):
                 self.stream = rot_manip.out
             else:
                 self.stream = self.node.out
+        else: # Live-streaming, check whether camera sensor was found on specified port
+            features = [f for f in device.getConnectedCameraFeatures() if f.socket == self.node.getBoardSocket()][0]
+
+            err = "Camera sensor '{}' was found on socket '{}' which doesn't support '{}' sensor type! Supported sensor types: {}."
+            if isinstance(self.node, dai.node.ColorCamera) and dai.CameraSensorType.COLOR not in features.supportedTypes:
+                raise ValueError(err.format(features.sensorName, features.socket, 'COLOR',features.supportedTypes))
+            if isinstance(self.node, dai.node.MonoCamera) and dai.CameraSensorType.MONO not in features.supportedTypes:
+                raise ValueError(err.format(features.sensorName, features.socket, 'MONO',features.supportedTypes))
 
         if isinstance(self.node, dai.node.ColorCamera):
             # DepthAI uses CHW (Planar) channel layout convention for NN inferencing
