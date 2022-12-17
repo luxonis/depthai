@@ -2,7 +2,7 @@ from typing import Dict
 
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
-from depthai_sdk.components.parser import parse_resolution, parse_encode
+from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket
 from depthai_sdk.oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.replay import Replay
@@ -11,6 +11,7 @@ from depthai_sdk.replay import Replay
 class CameraComponent(Component):
     # Users should have access to these nodes
     node: Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera]
+
     encoder: dai.node.VideoEncoder
 
     stream: dai.Node.Output  # Node output to be used as eg. an input into NN
@@ -163,31 +164,34 @@ class CameraComponent(Component):
         Called from __init__ to parse passed `source` argument.
         @param source: User-input source
         """
-        if source == "COLOR" or source == "RGB":
-            if self.is_replay():
-                if 'color' not in self._replay.getStreams():
-                    raise Exception('Color stream was not found in specified depthai-recording!')
-            else:
+        if "," in source: # For OAK FFC cameras, so you can eg. specify "rgb,c" as source
+            parts = source.split(',')
+            source = parts[0]
+
+            if parts[1] in ["C", "COLOR"]:
                 self.node = pipeline.createColorCamera()
-                self.node.setBoardSocket(dai.CameraBoardSocket.RGB)
-
-        elif source == "RIGHT" or source == "MONO":
-            if self.is_replay():
-                if 'right' not in self._replay.getStreams():
-                    raise Exception('Right stream was not found in specified depthai-recording!')
-            else:
+            elif parts[1] in ["M", "MONO"]:
                 self.node = pipeline.createMonoCamera()
-                self.node.setBoardSocket(dai.CameraBoardSocket.RIGHT)
 
-        elif source == "LEFT":
-            if self.is_replay():
-                if 'left' not in self._replay.getStreams():
-                    raise Exception('Left stream was not found in specified depthai-recording!')
-            else:
-                self.node = pipeline.createMonoCamera()
-                self.node.setBoardSocket(dai.CameraBoardSocket.LEFT)
+            self.node.setBoardSocket(parse_camera_socket(source))
+            return
+
+        if self.is_replay():
+            if source not in self._replay.getStreams():
+                raise Exception(f"{source} stream was not found in specified depthai-recording!")
+            return
+
+        socket = parse_camera_socket(source)
+        # By default, we will assume color camera is connected to CAM_A,
+        # while 2x stereo cameras are connected to CAM_B and CAM_C
+        if socket == dai.CameraBoardSocket.CAM_A:
+            self.node = pipeline.createColorCamera()
+        elif socket in [dai.CameraBoardSocket.CAM_B, dai.CameraBoardSocket.CAM_C]:
+            self.node = pipeline.createMonoCamera()
         else:
-            raise ValueError(f"Source name '{source}' not supported!")
+            raise Exception("When specifying other camera sockets, you need to specify whether it's color or mono camera! You can do this with eg. `cam_d,c` for color camera, or `cam_d,m` for mono camera.")
+
+        self.node.setBoardSocket(socket)
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def config_camera(self,
