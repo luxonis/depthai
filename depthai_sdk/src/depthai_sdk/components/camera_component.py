@@ -113,7 +113,7 @@ class CameraComponent(Component):
 
             cams = device.getCameraSensorNames()
             # print('Available sensors on OAK:', cams)
-            sensor_name = cams[dai.CameraBoardSocket.RGB]
+            sensor_name = cams[self.node.getBoardSocket()]
 
             if not self._resolution_forced:  # Find the closest resolution
                 self.node.setResolution(getClosesResolution(sensor_name, width=1200))

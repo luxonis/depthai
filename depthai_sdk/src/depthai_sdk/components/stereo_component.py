@@ -144,7 +144,7 @@ class StereoComponent(Component):
 
         self.node.setRectifyEdgeFillColor(0)
 
-        if self._undistortion_offset:
+        if self._undistortion_offset is not None:
             calibData = device.readCalibration()
             w_frame, h_frame = self._get_stream_size(self.left)
             mapX_left, mapY_left, mapX_right, mapY_right = self._get_maps(w_frame, h_frame, calibData)
