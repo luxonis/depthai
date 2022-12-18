@@ -11,7 +11,7 @@ from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth, XoutFrames
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
-
+from depthai_sdk.components.undistort import _get_mesh
 
 class StereoComponent(Component):
     # Users should have access to these nodes
@@ -137,19 +137,20 @@ class StereoComponent(Component):
         self._right_stream = self._get_output_stream(self.right)
 
         if self._replay:  # Replay
-            self._replay.initStereoDepth(self.node)
-
-        self._left_stream.link(self.node.left)
-        self._right_stream.link(self.node.right)
+            self._replay.initStereoDepth(self.node, left_name=self.left._source_name, right_name=self.right._source_name)
+        else: # initStereoDepth already links the streams for stereo node
+            self._left_stream.link(self.node.left)
+            self._right_stream.link(self.node.right)
 
         self.node.setRectifyEdgeFillColor(0)
 
         if self._undistortion_offset is not None:
-            calibData = device.readCalibration()
+
+            calibData = self._replay._calibData if self._replay else device.readCalibration()
             w_frame, h_frame = self._get_stream_size(self.left)
             mapX_left, mapY_left, mapX_right, mapY_right = self._get_maps(w_frame, h_frame, calibData)
-            mesh_l = self._get_mesh(mapX_left, mapY_left)
-            mesh_r = self._get_mesh(mapX_right, mapY_right)
+            mesh_l = _get_mesh(mapX_left, mapY_left)
+            mesh_r = _get_mesh(mapX_right, mapY_right)
             meshLeft = list(mesh_l.tobytes())
             meshRight = list(mesh_r.tobytes())
             self.node.loadMeshData(meshLeft, meshRight)
@@ -220,38 +221,6 @@ class StereoComponent(Component):
         focalLength = intrinsics[0][0]
         disp_levels = self.node.getMaxDisparity() / 95
         return baseline * focalLength * disp_levels
-
-    def _get_mesh(self, mapX: np.ndarray, mapY: np.ndarray):
-        meshCellSize = 16
-        mesh0 = []
-        # print(mapX.shape)
-        # Creates subsampled mesh which will be loaded on to device to undistort the image
-        for y in range(mapX.shape[0] + 1):  # iterating over height of the image
-            if y % meshCellSize == 0:
-                rowLeft = []
-                for x in range(mapX.shape[1] + 1):  # iterating over width of the image
-                    if x % meshCellSize == 0:
-                        if y == mapX.shape[0] and x == mapX.shape[1]:
-                            rowLeft.append(mapY[y - 1, x - 1])
-                            rowLeft.append(mapX[y - 1, x - 1])
-                        elif y == mapX.shape[0]:
-                            rowLeft.append(mapY[y - 1, x])
-                            rowLeft.append(mapX[y - 1, x])
-                        elif x == mapX.shape[1]:
-                            rowLeft.append(mapY[y, x - 1])
-                            rowLeft.append(mapX[y, x - 1])
-                        else:
-                            rowLeft.append(mapY[y, x])
-                            rowLeft.append(mapX[y, x])
-                if (mapX.shape[1] % meshCellSize) % 2 != 0:
-                    rowLeft.append(0)
-                    rowLeft.append(0)
-
-                mesh0.append(rowLeft)
-
-        mesh0 = np.array(mesh0)
-        # mesh = list(map(tuple, mesh0))
-        return mesh0
 
     def _get_maps(self, width: int, height: int, calib: dai.CalibrationHandler):
         imageSize = (width, height)

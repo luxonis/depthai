@@ -2,7 +2,7 @@ from typing import Tuple
 
 import numpy as np
 
-from depthai_sdk.components.nn_helper import AspectRatioResizeMode
+from depthai_sdk.classes.enum import ResizeMode
 
 
 class NormalizeBoundingBox:
@@ -11,7 +11,7 @@ class NormalizeBoundingBox:
     resize mode and map coordinates to correct location.
     """
 
-    def __init__(self, aspect_ratio: Tuple[float, float], ar_resize_mode: AspectRatioResizeMode):
+    def __init__(self, aspect_ratio: Tuple[float, float], ar_resize_mode: ResizeMode):
         """
         :param aspect_ratio: NN input size
         :param ar_resize_mode: Aspect ratio resize mode
@@ -33,7 +33,7 @@ class NormalizeBoundingBox:
         bbox = np.array(bbox)
 
         # Edit the bounding boxes before normalizing them
-        if self.ar_resize_mode == AspectRatioResizeMode.CROP:
+        if self.ar_resize_mode == ResizeMode.CROP:
             ar_diff = (self.aspect_ratio[0] / self.aspect_ratio[1]) / (frame.shape[1] / frame.shape[0])
             if ar_diff < 1:
                 new_w = frame.shape[1] * ar_diff
@@ -51,10 +51,10 @@ class NormalizeBoundingBox:
                 bbox[3] = bbox[3] * new_h + (new_h - frame.shape[0]) / 2
 
             return bbox.astype(int)
-        elif self.ar_resize_mode == AspectRatioResizeMode.STRETCH:
+        elif self.ar_resize_mode == ResizeMode.STRETCH:
             # No need to edit bounding boxes when stretching
             pass
-        elif self.ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
+        elif self.ar_resize_mode == ResizeMode.LETTERBOX:
             # There might be better way of doing this. TODO: test if it works as expected
             ar_diff = self.aspect_ratio[0] / self.aspect_ratio[1] - frame.shape[1] / frame.shape[0]
             sel = 0 if 0 < ar_diff else 1

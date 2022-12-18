@@ -11,6 +11,7 @@ from depthai_sdk.components.component import Component
 from depthai_sdk.components.integrations.roboflow import RoboflowIntegration
 from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
+from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker
@@ -32,7 +33,7 @@ class NNComponent(Component):
     image_manip: dai.node.ImageManip = None  # ImageManip used to resize the input to match the expected NN input size
 
     # Private properties
-    _ar_resize_mode: AspectRatioResizeMode = AspectRatioResizeMode.LETTERBOX  # Default
+    _ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
     _input: Union[CameraComponent, 'NNComponent']  # Input to the NNComponent node passed on initialization
     _stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
 
@@ -201,7 +202,7 @@ class NNComponent(Component):
                 self._spatial._update_device_info(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
-                self._spatial.config_stereo(align=self._input._source)
+                self._spatial.config_stereo(align=self._input._source_name)
             # Configure Spatial Detection Network
 
         if self._args:
@@ -360,12 +361,12 @@ class NNComponent(Component):
             self.image_manip.inputImage.setQueueSize(2)
 
         # Set Aspect Ratio resizing mode
-        if self._ar_resize_mode == AspectRatioResizeMode.CROP:
+        if self._ar_resize_mode == ResizeMode.CROP:
             # Cropping is already the default mode of the ImageManip node
             self.image_manip.initialConfig.setResize(self._size)
-        elif self._ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
+        elif self._ar_resize_mode == ResizeMode.LETTERBOX:
             self.image_manip.initialConfig.setResizeThumbnail(*self._size)
-        elif self._ar_resize_mode == AspectRatioResizeMode.STRETCH:
+        elif self._ar_resize_mode == ResizeMode.STRETCH:
             self.image_manip.initialConfig.setResize(self._size)
             self.image_manip.setKeepAspectRatio(False)  # Not keeping aspect ratio -> stretching the image
 
@@ -487,7 +488,7 @@ class NNComponent(Component):
 
     def config_nn(self,
                   conf_threshold: Optional[float] = None,
-                  aspect_ratio_resize_mode: Union[AspectRatioResizeMode, str] = None):
+                  aspect_ratio_resize_mode: Union[ResizeMode, str] = None):
         """
         Configures the Detection Network node.
 
@@ -498,7 +499,7 @@ class NNComponent(Component):
         if aspect_ratio_resize_mode:
             if isinstance(aspect_ratio_resize_mode, str):
                 try:
-                    aspect_ratio_resize_mode = AspectRatioResizeMode[aspect_ratio_resize_mode.upper()]
+                    aspect_ratio_resize_mode = ResizeMode[aspect_ratio_resize_mode.upper()]
                 except (AttributeError, KeyError):
                     print('AR resize mode was not recognizied.'
                           'Options (case insensitive): STRETCH, CROP, LETTERBOX.'

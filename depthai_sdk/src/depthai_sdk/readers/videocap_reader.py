@@ -20,14 +20,12 @@ class VideoCapReader(AbstractReader):
 
     def __init__(self, path: Path) -> None:
         if path.is_file():
-            stream = path.stem if (path.stem in ['left', 'right']) else 'color'
-            self.readers[stream] = cv2.VideoCapture(str(path))
+            self.readers[path.stem] = cv2.VideoCapture(str(path))
         else:
             for fileName in os.listdir(str(path)):
                 f_name, ext = os.path.splitext(fileName)
                 if ext not in _videoExt: continue
-                stream = f_name if (f_name == 'left' or f_name == 'right') else 'color'
-                self.readers[stream] = cv2.VideoCapture(str(path / fileName))
+                self.readers[f_name] = cv2.VideoCapture(str(path / fileName))
 
         for name, reader in self.readers.items():
             ok, f = reader.read()

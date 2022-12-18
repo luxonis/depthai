@@ -1,5 +1,6 @@
 from typing import Dict
 
+from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket
@@ -21,7 +22,7 @@ class CameraComponent(Component):
     _replay: Replay  # Replay module
     _args: Dict
     _control: bool
-    _source: str
+    _source_name: str
 
     # Parsed from settings
     _encoderProfile: dai.VideoEncoderProperties.Profile = None
@@ -55,7 +56,7 @@ class CameraComponent(Component):
         self.out = self.Out(self)
 
         # Save passed settings
-        self._source = source
+        self._source_name = source
         self._replay: Replay = replay
         self._args = args
 
@@ -80,11 +81,11 @@ class CameraComponent(Component):
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self.is_replay():  # If replay, don't create camera node
-            res = self._replay.getShape(self._source)
+            res = self._replay.getShape(self._source_name)
             # print('resolution', res)
             # resize = getResize(res, width=1200)
             # self._replay.setResizeColor(resize)
-            self.node = self._replay.streams[self._source].node
+            self.node = self._replay.streams[self._source_name].node
             # print('resize', resize)
             self.node.setMaxDataSize(res[0] * res[1] * 3)
             self.stream_size = res
@@ -158,6 +159,10 @@ class CameraComponent(Component):
             else:
                 raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
 
+    # def enable_undistortion(self, ):
+
+
+
     def _create_rotation_manip(self, pipeline: dai.Pipeline):
         rot_manip = pipeline.createImageManip()
         rgb_rr = dai.RotatedRect()
@@ -206,6 +211,8 @@ class CameraComponent(Component):
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def config_camera(self,
                       # preview: Union[None, str, Tuple[int, int]] = None,
+                      size: Union[None, Tuple[int, int], str] = None,
+                      resize_mode: ResizeMode = ResizeMode.CROP,
                       fps: Optional[float] = None,
                       resolution: Union[
                           None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None
@@ -218,20 +225,22 @@ class CameraComponent(Component):
         if fps: self.setFps(fps)
         if resolution: self._set_resolution(resolution)
 
-        # if preview:
-        #     from .parser import parse_size
-        #     preview = parse_size(preview)
-        #
-        #     self.stream_size = preview
-        #
-        #     if self._replay:
-        #         self._replay.setResizeColor(preview)
-        #     elif self.is_color():
-        #         self.node.setPreviewSize(preview)
-        #     else:
-        #         # TODO: Use ImageManip to set mono frame size
-        #
-        #         raise NotImplementedError("Not yet implemented")
+        if size:
+            from .parser import parse_size
+            size_tuple = parse_size(size)
+
+            if self._replay:
+                self._replay.resize(self._source_name, size_tuple, resize_mode)
+            elif self.is_color():
+                self.node.setStillSize(*size_tuple)
+                self.node.setVideoSize(*size_tuple)
+                self.node.setPreviewSize(*size_tuple)
+                if resize_mode != ResizeMode.CROP:
+                    raise ValueError("Currently only ResizeMode.CROP is supported mode for specifying size!")
+            else:
+                # TODO: Use ImageManip to set mono frame size
+
+                raise NotImplementedError("Not yet implemented")
 
     def _config_camera_args(self, args: Dict):
         if not isinstance(args, Dict):
@@ -263,7 +272,6 @@ class CameraComponent(Component):
             self.config_camera(fps=args.get('fps', None))
 
     def config_color_camera(self,
-                            size: Optional[Tuple[int,int]] = None,
                             interleaved: Optional[bool] = None,
                             colorOrder: Union[None, dai.ColorCameraProperties.ColorOrder, str] = None,
                             # Cam control
@@ -288,11 +296,6 @@ class CameraComponent(Component):
             return
 
         self.node: dai.node.ColorCamera
-
-        if size:
-            self.node.setStillSize(*size)
-            self.node.setVideoSize(*size)
-            self.node.setPreviewSize(*size)
 
         if interleaved: self.node.setInterleaved(interleaved)
         if colorOrder:
@@ -371,7 +374,7 @@ class CameraComponent(Component):
 
     def get_stream_xout(self) -> StreamXout:
         if self.is_replay():
-            return ReplayStream(self._source)
+            return ReplayStream(self._source_name)
         elif self.is_mono():
             return StreamXout(self.node.id, self.stream)
         else:  # ColorCamera
@@ -404,14 +407,14 @@ class CameraComponent(Component):
             Streams camera output to the OAK camera. Produces FramePacket.
             """
             out = XoutFrames(self._comp.get_stream_xout(), self._comp.getFps())
-            out.name = self._comp._source
+            out.name = self._comp._source_name
             return self._comp._create_xout(pipeline, out)
 
         def replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
             If depthai-recording was used, it won't stream anything, but it will instead use frames that were sent to the OAK. Produces FramePacket.
             """
-            out = XoutFrames(ReplayStream(self._comp._source), self._comp.getFps())
+            out = XoutFrames(ReplayStream(self._comp._source_name), self._comp.getFps())
             return self._comp._create_xout(pipeline, out)
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -434,7 +437,7 @@ class CameraComponent(Component):
                     fps=self._comp.encoder.getFrameRate(),
                     frame_shape=self._comp.stream_size
                 )
-            out.name = self._comp._source
+            out.name = self._comp._source_name
             return self._comp._create_xout(pipeline, out)
 
     out: Out
