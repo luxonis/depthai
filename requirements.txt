@@ -12,5 +12,5 @@ opencv-contrib-python==4.4.0.46 ; platform_machine == "armv6l" or platform_machi
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-depthai-data-local/wheels/
 pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" and platform_machine != "aarch64"
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.19.1.0.dev+5ebfc2ee9a9c51d34085aa34aa8a2e0c92b8e073
+depthai==2.19.1.0.dev+f26cb3b61a345ff9e522132ca6afee54ab72633b
 jsonlines
