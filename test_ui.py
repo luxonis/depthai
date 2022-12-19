@@ -342,7 +342,7 @@ class DepthAICamera():
         self.device_name = self.device.getDeviceName()
 
         self.eepromUnionData = {}
-    
+
     def update_eeprom_uinion_data_log(self):
         calibHandler = self.device.readCalibrationOrDefault()
         self.eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
@@ -1227,7 +1227,7 @@ class UiTests(QtWidgets.QMainWindow):
         # self.threadpool.cancel(self.connexion_result)
         if not signal:
             self.print_logs('No camera detected, check the connexion and try again...', 'ERROR')
-            return        
+            return
 
         # Check if there are multiple cameras connected - if so error out
         if signal > 1:
@@ -1235,7 +1235,7 @@ class UiTests(QtWidgets.QMainWindow):
             self.connect_but.setText("CONNECT")
             self.connect_but.adjustSize()
             return
-        
+
         self.print_logs('Camera connected, starting tests...', 'GREEN')
         # self.connect_but.setText("FLASHING")
         # self.connect_but.adjustSize()
@@ -1245,20 +1245,21 @@ class UiTests(QtWidgets.QMainWindow):
         # Update BL if PoE
         # if test_type == 'OAK-D-PRO-POE':
         eeprom_written = False
-        if device_options.get('bootloader') == OPTION_BOOTLOADER_POE:
-            self.update_bootloader()
+        bl_type = device_options.get('bootloader')
+        if bl_type == OPTION_BOOTLOADER_POE:
+            self.update_bootloader(bl_type)
             with dai.Device(dai.OpenVINO.VERSION_2021_4, dai.UsbSpeed.HIGH) as device:
                 if not eeprom_written:
                     self.print_logs('Writing EEPROM...')
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                     eeprom_written = True
-        elif device_options.get('bootloader') == OPTION_BOOTLOADER_USB:
-            self.update_bootloader()
+        elif bl_type == OPTION_BOOTLOADER_USB:
+            self.update_bootloader(bl_type)
             with dai.Device() as device:
                 self.print_logs("Writing EEPROM... ")
                 eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                 eeprom_written = True
-        elif device_options.get('bootloader') == OPTIONS_BOOTLOADER_HEADER_USB:
+        elif bl_type == OPTIONS_BOOTLOADER_HEADER_USB:
             # Flash EEPROM and boot header, then reboot for boot header to take effect
             with dai.Device() as device:
                 usbBootHeader = [77, 65, 50, 120, 176, 0, 0, 0, 128, 10, 0, 0,
@@ -1271,13 +1272,13 @@ class UiTests(QtWidgets.QMainWindow):
                     self.print_logs('Writing EEPROM...')
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                     eeprom_written = True
-        elif device_options.get('bootloader') == 'none':
+        elif bl_type == 'none':
             with dai.Device() as device:
                 if not eeprom_written:
                     eeprom_success, eeprom_msg, eeprom_data = self.flash_eeprom(device)
                     eeprom_written = True
         else:
-            raise RuntimeError(f"bootloader option {device_options.get('bootloader')} not known")
+            raise RuntimeError(f"bootloader option {bl_type} not known")
 
         try:
             self.depth_camera = DepthAICamera()
@@ -1340,7 +1341,7 @@ class UiTests(QtWidgets.QMainWindow):
             test_result['eeprom_data'] = ''
 
 
-        # save data for logging 
+        # save data for logging
         self.depth_camera.update_eeprom_uinion_data_log()
         try:
             self.flash_data_512 = self.depth_camera.device.flashRead(512)
@@ -1434,7 +1435,7 @@ class UiTests(QtWidgets.QMainWindow):
                 self.right_strm_res.setPalette(self.red_pallete)
             self.right_strm_res.setText(test_result['right_strm_res'])
 
-    def update_bootloader_impl(self):
+    def update_bootloader_impl(self, type):
         self.print_logs('Check bootloader')
         deviceInfos = dai.DeviceBootloader.getAllAvailableDevices()
         self.uploaded_bootloader['version'] = dai.DeviceBootloader.getEmbeddedBootloaderVersion()
@@ -1445,22 +1446,24 @@ class UiTests(QtWidgets.QMainWindow):
             with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
                 self.print_logs('Starting Update')
                 self.prog_label.setText('Bootloader')
-                if 'POE' in test_type:
+                if type == OPTION_BOOTLOADER_POE:
                     self.print_logs('Flashing NETWORK bootloader...')
-                    self.uploaded_bootloader['type'] = "NETWORK" 
+                    self.uploaded_bootloader['type'] = "NETWORK"
                     return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, self.update_prog_bar)
-                else:
+                elif type == OPTION_BOOTLOADER_USB:
                     self.print_logs('Flashing USB bootloader...')
-                    self.uploaded_bootloader['type'] = "USB" 
+                    self.uploaded_bootloader['type'] = "USB"
                     return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.USB, self.update_prog_bar)
+                else:
+                    return (False, 'Invalid bootloader type specified')
 
         except RuntimeError as ex:
             # self.print_logs('Device communication failed, check connexions')
             self.uploaded_bootloader = {'uploaded': False}
             return (False, f"Device communication failed, check connexions: {ex}")
 
-    def update_bootloader(self):
-        (result, message) = self.update_bootloader_impl()
+    def update_bootloader(self, type):
+        (result, message) = self.update_bootloader_impl(type)
         self.prog_label.setText('Flash IMU')
         self.update_prog_bar(0)
         if result:
@@ -1603,7 +1606,7 @@ class UiTests(QtWidgets.QMainWindow):
             'flash_first_512B': self.flash_data_512,
         }
         production_support_server_api.add_result(
-            'test', self.depth_camera.id, self.depth_camera.device_name, self.depth_camera.bootloader_version, 
+            'test', self.depth_camera.id, self.depth_camera.device_name, self.depth_camera.bootloader_version,
             dai.__version__, self.depth_camera.start_time, datetime.now(), results
         )
         production_support_server_api.sync()
