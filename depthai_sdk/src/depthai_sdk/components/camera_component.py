@@ -179,7 +179,7 @@ class CameraComponent(Component):
             return
 
         if self.is_replay():
-            if source not in self._replay.getStreams():
+            if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
                 raise Exception(f"{source} stream was not found in specified depthai-recording!")
             return
 
