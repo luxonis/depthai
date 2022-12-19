@@ -6,7 +6,7 @@ import depthai as dai
 import numpy as np
 from distinctipy import distinctipy
 
-from depthai_sdk.callback_context import CallbackContext
+from depthai_sdk.classes.nn_results import Detections, ImgLandmarks
 from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
@@ -38,15 +38,20 @@ class XoutFrames(XoutBase):
     """
     Single message, no syncing required
     """
-    name: str = "Frames"
+    name: str
     fps: float
     frames: StreamXout
+    _video_recorder: VideoRecorder
 
-    def __init__(self, frames: StreamXout, fps: float = 30):
+    def __init__(self, frames: StreamXout, fps: float = 30, frame_shape: Tuple[int, ...] = None):
         self.frames = frames
+        self.name = frames.name
+
         self.fps = fps
         self._video_recorder = None
         self._is_recorder_enabled = None
+        self._frame_shape = frame_shape
+
         super().__init__()
 
     def setup_visualize(self,
@@ -54,19 +59,11 @@ class XoutFrames(XoutBase):
                         name: str = None):
         self._visualizer = visualizer
         self.name = name or self.name
-        # self._video_recorder = recorder
-        # self._is_recorder_enabled = is_recorder_enabled
-        # # TODO we may need to allow user switch between encodings (or disable it)
-        # # Enable encoding for the video recorder
-        # # if recorder:
-        # self._video_recorder[self.name].set_fourcc('avc1')
 
     def setup_recorder(self,
                        recorder: VideoRecorder,
-                       is_recorder_enabled: bool = False,
-                       encoding: str = 'avc1'):
+                       encoding: str = 'mp4v'):
         self._video_recorder = recorder
-        self._is_recorder_enabled = is_recorder_enabled
         # Enable encoding for the video recorder
         self._video_recorder[self.name].set_fourcc(encoding)
 
@@ -75,7 +72,9 @@ class XoutFrames(XoutBase):
         Called from main thread if visualizer is not None.
         """
 
-        self._visualizer.frame_shape = packet.frame.shape
+        # Frame shape may be 1D, that means it's an encoded frame
+        if self._visualizer.frame_shape is None or np.array(self._visualizer.frame_shape).ndim == 1:
+            self._visualizer.frame_shape = self._frame_shape or packet.frame.shape
 
         if self._visualizer.config.output.show_fps:
             self._visualizer.add_text(
@@ -84,8 +83,7 @@ class XoutFrames(XoutBase):
             )
 
         if self.callback:  # Don't display frame, call the callback
-            ctx = CallbackContext(packet, self._visualizer, self._video_recorder)
-            self.callback(ctx)
+            self.callback(packet, self._visualizer)
         else:
             packet.frame = self._visualizer.draw(packet.frame)
             # Draw on the frame
@@ -95,14 +93,12 @@ class XoutFrames(XoutBase):
                 pass
 
     def on_record(self, packet) -> None:
-        if self._is_recorder_enabled:
+        if self._video_recorder:
             # TODO not ideal to check it this way
             if isinstance(self._video_recorder[self.name], AvWriter):
-                print('Writing frame AV')
                 self._video_recorder.write(self.name, packet.imgFrame)
             else:
                 self._video_recorder.write(self.name, packet.frame)
-                print('Writing frame')
         # else:
         #     self._video_recorder.add_to_buffer(self.name, packet.frame)
 
@@ -130,12 +126,14 @@ class XoutMjpeg(XoutFrames):
     lossless: bool
     fps: float
 
-    def __init__(self, frames: StreamXout, color: bool, lossless: bool, fps: float):
+    def __init__(self, frames: StreamXout, color: bool, lossless: bool, fps: float, frame_shape: Tuple[int, ...]):
         super().__init__(frames)
         # We could use cv2.IMREAD_UNCHANGED, but it produces 3 planes (RGB) for mono frame instead of a single plane
         self.flag = cv2.IMREAD_COLOR if color else cv2.IMREAD_GRAYSCALE
         self.lossless = lossless
         self.fps = fps
+        self._frame_shape = frame_shape
+
         if lossless and self._visualizer:
             raise ValueError('Visualizing Lossless MJPEG stream is not supported!')
 
@@ -151,12 +149,19 @@ class XoutH26x(XoutFrames):
     fps: float
     profile: dai.VideoEncoderProperties.Profile
 
-    def __init__(self, frames: StreamXout, color: bool, profile: dai.VideoEncoderProperties.Profile, fps: float):
+    def __init__(self,
+                 frames: StreamXout,
+                 color: bool,
+                 profile: dai.VideoEncoderProperties.Profile,
+                 fps: float,
+                 frame_shape: Tuple[int, ...]):
         super().__init__(frames)
         self.color = color
         self.profile = profile
         self.fps = fps
+        self._frame_shape = frame_shape
         fourcc = 'hevc' if profile == dai.VideoEncoderProperties.Profile.H265_MAIN else 'h264'
+
         import av
         self.codec = av.CodecContext.create(fourcc, "r")
 
@@ -321,6 +326,8 @@ class XoutDepth(XoutFrames, XoutClickable):
                  wls_lambda: float = None,
                  wls_sigma: float = None):
         self.mono_frames = mono_frames
+        XoutFrames.__init__(self, frames=frames, fps=fps)
+        XoutClickable.__init__(self, decay_step=int(self.fps))
 
         self.fps = fps
         self.device = device
@@ -332,13 +339,16 @@ class XoutDepth(XoutFrames, XoutClickable):
         self.wls_lambda = wls_lambda
         self.wls_sigma = wls_sigma
 
-        if use_wls_filter:
-            self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
-
+        self.wls_filter = None
         self.msgs = dict()
 
-        XoutFrames.__init__(self, frames=frames, fps=fps)
-        XoutClickable.__init__(self, decay_step=int(self.fps))
+    def setup_visualize(self,
+                        visualizer: Visualizer,
+                        name: str = None):
+        super().setup_visualize(visualizer, name)
+
+        if self._visualizer.config.stereo.wls_filter or self.use_wls_filter:
+            self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
 
     def visualize(self, packet: DepthPacket):
         depth_frame = packet.imgFrame.getFrame()
@@ -353,8 +363,8 @@ class XoutDepth(XoutFrames, XoutClickable):
         depth_frame_color = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
         depth_frame_color = cv2.equalizeHist(depth_frame_color)
 
-        colorize = stereo_config.colorize or self.colorize
-        colormap = stereo_config.colormap or self.colormap
+        colorize = self.colorize or stereo_config.colorize
+        colormap = self.colormap or stereo_config.colormap
         if colorize == StereoColor.GRAY:
             packet.frame = depth_frame_color
         elif colorize == StereoColor.RGB:
@@ -458,6 +468,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                  nn_results: StreamXout):
         self.det_nn = det_nn
         self.nn_results = nn_results
+
         # Multiple inheritance init
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, nn_results])
@@ -483,43 +494,56 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 self.labels.append((text, color))
 
         self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._ar_resize_mode)
+        try:
+            self.frame_shape = self.det_nn._input.node.getPreviewSize()
+        except AttributeError:
+            self.frame_shape = self.det_nn._input.stream_size  # Replay
+
+        self.frame_shape = np.array(self.frame_shape)[::-1]
+
+    def setup_visualize(self,
+                        visualizer: Visualizer,
+                        name: str = None):
+        super().setup_visualize(visualizer, name)
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
+        if self._visualizer.frame_shape is None:
+            if packet.frame.ndim == 1:
+                self._visualizer.frame_shape = self.frame_shape
+            else:
+                self._visualizer.frame_shape = packet.frame.shape
+
         # Add detections to packet
-        if isinstance(packet, TrackerPacket):
-            pass
-        elif isinstance(packet.img_detections, dai.ImgDetections):
+        if isinstance(packet.img_detections, dai.ImgDetections) \
+                or isinstance(packet.img_detections, dai.SpatialImgDetections) \
+                or isinstance(packet.img_detections, Detections):
             for detection in packet.img_detections.detections:
                 d = _Detection()
                 d.img_detection = detection
                 d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
                 d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
                 bbox = self.normalizer.normalize(
-                    frame=packet.frame,
+                    frame=np.zeros(self._visualizer.frame_shape, dtype=bool),
                     bbox=(detection.xmin, detection.ymin, detection.xmax, detection.ymax)
                 )
                 d.top_left = (int(bbox[0]), int(bbox[1]))
                 d.bottom_right = (int(bbox[2]), int(bbox[3]))
                 packet.detections.append(d)
 
-    def visualize(self, packet: Union[DetectionPacket, TrackerPacket]):
-        # We can't visualize NNData (not decoded)
-        if isinstance(packet, DetectionPacket) and isinstance(packet.img_detections, dai.NNData):
-            raise Exception(
-                "Can't visualize this NN result because it's not an object detection model! Use oak.callback() instead."
-            )
-
-        if isinstance(packet, TrackerPacket):
-            pass  # TrackerPacket draws detection boxes itself
-        elif isinstance(packet.img_detections, dai.ImgDetections):
+            # Add detections to visualizer
             self._visualizer.add_detections(
                 packet.img_detections.detections,
                 self.normalizer,
                 self.labels,
                 is_spatial=packet._is_spatial_detection()
             )
-
-        super().visualize(packet)
+        elif isinstance(packet.img_detections, ImgLandmarks):
+            all_landmarks = packet.img_detections.landmarks
+            colors = packet.img_detections.colors
+            for landmarks in all_landmarks:
+                for i, landmark in enumerate(landmarks):
+                    l = self.normalizer.normalize(frame=np.zeros(packet.frame.shape, dtype=bool), bbox=landmark)
+                    self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[i])
 
     # Check triggers
     def triggers(self, packet: Union[DetectionPacket, TrackerPacket]):
@@ -530,7 +554,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
 
-        decode_fn = self.det_nn._decode_fn or self.det_nn._handler.decode
+        decode_fn = self.det_nn._decode_fn or (self.det_nn._handler.decode if self.det_nn._handler else None)
         packet = DetectionPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
@@ -598,7 +622,7 @@ class XoutTracker(XoutNnResults):
         super().__init__(det_nn, frames, tracklets)
         self.buffer = []
 
-    def visualize(self, packet: TrackerPacket):
+    def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
         try:
             if packet._is_spatial_detection():
                 spatial_points = [packet._get_spatials(det.srcImgDetection)
@@ -608,6 +632,12 @@ class XoutTracker(XoutNnResults):
                 spatial_points = None
         except IndexError:
             spatial_points = None
+
+        if self._visualizer.frame_shape is None:
+            if packet.frame.ndim == 1:
+                self._visualizer.frame_shape = self.frame_shape
+            else:
+                self._visualizer.frame_shape = packet.frame.shape
 
         blacklist = set()
         threshold = self._visualizer.config.tracking.deletion_lost_threshold
@@ -647,8 +677,6 @@ class XoutTracker(XoutNnResults):
                 bbox=bbox,
                 position=TextPosition.MID
             )
-
-        super().visualize(packet)
 
     def package(self, msgs: Dict):
         if self.queue.full():

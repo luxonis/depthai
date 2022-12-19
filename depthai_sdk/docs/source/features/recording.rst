@@ -26,7 +26,7 @@ The script below will save color, left, and right H265 encoded streams into vide
 
     Recording pipeline of the script above
 
-After 20 seconds I stopped the recording and SDK will print where the files were saved (in my case ``./1-18443010D116631200``):
+After 20 seconds we stopped the recording and SDK printed the location of saved files (``./1-18443010D116631200`` in our case):
 
 .. code-block:: bash
 
@@ -63,7 +63,7 @@ This option will write each stream separately to a video file. There are three o
 ---------
 
 Currently, we only support recording ``depth`` to the rosbag (``recording.bag``). In the future we will also support color (which is depth aligned)
-stream and mono streams. You can open the rosbag with the [RealSense Viewer](https://www.intelrealsense.com/sdk-2/#sdk2-tools) to view the depth:
+stream and mono streams. You can open the rosbag with the `RealSense Viewer <https://www.intelrealsense.com/sdk-2/#sdk2-tools>`_ to view the depth:
 
 .. image:: https://user-images.githubusercontent.com/18037362/141661982-f206ed61-b505-4b17-8673-211a4029754b.gif
 
@@ -74,9 +74,9 @@ An alternative to Rosbags are `mcap files <https://github.com/foxglove/mcap>`__ 
 You can find `MCAP recording example here <https://github.com/luxonis/depthai/blob/main/depthai_sdk/examples/recording/mcap-record.py>`__.
 Currently supported streams:
 
-- MJPEG encoded color/left/right/disparity. Lossless MJPEG/H264/H265 aren't supported by Foxglove Studio
-- Non-encoded color/left/right/disparity/depth frames
-- Pointcloud, enable with ``recorder.config_mcap(pointcloud=True)``. It converts depth frame to pointcloud on the host
+- MJPEG encoded color/left/right/disparity. Lossless MJPEG/H264/H265 aren't supported by Foxglove Studio.
+- Non-encoded color/left/right/disparity/depth frames.
+- Pointcloud, enable with ``recorder.config_mcap(pointcloud=True)``. It converts depth frame to pointcloud on the host.
 
 Standalone Foxglove studio streaming demo can be `found here <https://github.com/luxonis/depthai-experiments/blob/master/gen2-foxglove>`__.
 

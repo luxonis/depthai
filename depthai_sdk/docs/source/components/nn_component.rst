@@ -58,7 +58,6 @@ Example usage:
     from depthai import NNData
 
     from depthai_sdk import OakCamera, Detections
-    from depthai_sdk.callback_context import VisualizeContext
 
 
     def decode(nn_data: NNData):
@@ -73,8 +72,7 @@ Example usage:
         return dets
 
 
-    def callback(ctx: VisualizeContext):
-        packet = ctx.packet
+    def callback(packet: DetectionPacket, visualizer: Visualizer):
         detections: Detections = packet.img_detections
         ...
 

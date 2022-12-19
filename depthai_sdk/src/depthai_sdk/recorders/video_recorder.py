@@ -30,8 +30,11 @@ class VideoRecorder(Recorder):
             device: Device to get the streams from.
             xouts: List of output streams.
         """
+        if path is None:
+            return
+
         self.path = path
-        if path.suffix == '':  # If no extension, create a folder
+        if path.suffix == '' and path != Path('.'):  # If no extension, create a folder
             self.path.mkdir(parents=True, exist_ok=True)
 
         for xout in xouts:

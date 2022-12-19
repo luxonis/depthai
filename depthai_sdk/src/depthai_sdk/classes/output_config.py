@@ -4,7 +4,7 @@ from typing import Optional, Callable, List
 
 import depthai as dai
 
-from depthai_sdk.callback_context import CallbackContext
+from depthai_sdk import FramePacket
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout import XoutFrames
 from depthai_sdk.oak_outputs.xout_base import XoutBase
@@ -57,15 +57,16 @@ class OutputConfig(BaseConfig):
             xoutbase.name = self.find_new_name(xoutbase.name, names)
         names.append(xoutbase.name)
 
-        recorder = VideoRecorder()
-        record_path = self.record_path or '.'
-        recorder.update(Path(record_path), device, [xoutbase])
+        recorder = None
+        if self.record_path:
+            recorder = VideoRecorder()
+            recorder.update(Path(self.record_path), device, [xoutbase])
 
         if self.visualizer:
             xoutbase.setup_visualize(visualizer=self.visualizer, name=xoutbase.name)
 
         if self.record_path:
-            xoutbase.setup_recorder(recorder=recorder, is_recorder_enabled=self.record_path is not None)
+            xoutbase.setup_recorder(recorder=recorder)
 
         return [xoutbase]
 
@@ -96,25 +97,23 @@ class SyncConfig(BaseConfig, SequenceNumSync):
     cb: Callable
     visualizer: Visualizer
 
-    def __init__(self, outputs: List[Callable], callback: Callable, visualizer: Visualizer = None):
+    def __init__(self, outputs: List[Callable], callback: Callable):
         self.outputs = outputs
         self.cb = callback
-        self.visualizer = visualizer
 
         SequenceNumSync.__init__(self, len(outputs))
 
         self.packets = dict()
 
-    def new_packet(self, ctx: CallbackContext, _=None):
+    def new_packet(self, packet: FramePacket, _=None):
         # print('new packet', packet, packet.name, 'seq num',packet.imgFrame.getSequenceNum())
-        packet = ctx.packet
         synced = self.sync(
             packet.imgFrame.getSequenceNum(),
             packet.name,
             packet
         )
         if synced:
-            self.cb(synced) if self.visualizer is None else self.cb(synced, self.visualizer)
+            self.cb(synced)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> List[XoutBase]:
         xouts = []
@@ -123,7 +122,6 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             xoutbase.setup_base(self.new_packet)
             xouts.append(xoutbase)
 
-            if self.visualizer:
-                xoutbase.setup_visualize(self.visualizer, xoutbase.name)
+            xoutbase.setup_visualize(Visualizer(), xoutbase.name)
 
         return xouts

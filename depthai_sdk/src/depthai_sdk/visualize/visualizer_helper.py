@@ -53,8 +53,6 @@ class VisualizerHelper:
                 color: Tuple[int, int, int] = None):
         # Background text
 
-        frame = np.array(frame)
-
         cv2.putText(frame, text, coords, cls.text_type, scale,
                     color=backColor if backColor else cls.bg_color,
                     thickness=int(scale * 3),

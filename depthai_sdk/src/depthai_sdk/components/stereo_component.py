@@ -16,8 +16,11 @@ class StereoComponent(Component):
     # Users should have access to these nodes
     node: dai.node.StereoDepth
 
-    left: Union[None, CameraComponent, dai.node.MonoCamera]
-    right: Union[None, CameraComponent, dai.node.MonoCamera]
+    left: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
+    right: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
+
+    _left_stream: dai.Node.Output
+    _right_stream: dai.Node.Output
 
     @property
     def depth(self) -> dai.Node.Output:
@@ -74,11 +77,23 @@ class StereoComponent(Component):
         self._wls_lambda = 8000
         self._wls_sigma = 1.5
 
-    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-        if self._replay:
-            self._replay.initStereoDepth(self.node)
+    def get_output_stream(self, input: Union[CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]) -> dai.Node.Output:
+        if isinstance(input, CameraComponent):
+            return input.stream
+        elif isinstance(input, dai.node.MonoCamera):
+            return input.out
+        elif isinstance(input, dai.node.ColorCamera):
+            return input.video
+        elif isinstance(input, dai.Node.Output):
+            return input
         else:
-            # TODO: check sensor names / device name whether it has stereo camera pair (or maybe calibration?)
+            raise ValueError('get_output_stream() accepts either CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output!')
+
+
+
+    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+        if not self._replay:
+            # Live stream, check whether we have correct cameras
             if len(device.getCameraSensorNames()) == 1:
                 raise Exception('OAK-1 camera does not have Stereo camera pair!')
 
@@ -88,17 +103,6 @@ class StereoComponent(Component):
             if not self.right:
                 self.right = CameraComponent(pipeline, 'right', self._resolution, self._fps, replay=self._replay)
                 self.right._update_device_info(pipeline, device, version)
-
-            # TODO: use self._args to setup the StereoDepth node
-
-            if isinstance(self.left, CameraComponent):
-                self.left = self.left.node  # CameraComponent -> node
-            if isinstance(self.right, CameraComponent):
-                self.right = self.right.node  # CameraComponent -> node
-
-            # Connect Mono cameras to the StereoDepth node
-            self.left.out.link(self.node.left)
-            self.right.out.link(self.node.right)
 
             if 0 < len(device.getIrDrivers()):
                 laser = self._args.get('irDotBrightness', None)
@@ -111,6 +115,18 @@ class StereoComponent(Component):
                 if led is not None:
                     device.setIrFloodLightBrightness(int(led))
                     print(f'Setting IR flood LED brightness to {int(led)}mA')
+
+        self._left_stream = self.get_output_stream(self.left)
+        self._right_stream = self.get_output_stream(self.right)
+
+        if self._replay: # Replay
+            self._replay.initStereoDepth(self.node)
+
+
+        self._left_stream.link(self.node.left)
+        self._right_stream.link(self.node.right)
+
+        self.node.setOutputSize(1200,800)
 
         if self._args:
             self._config_stereo_args(self._args)
@@ -194,7 +210,7 @@ class StereoComponent(Component):
 
             out = XoutDisparity(
                 disparity_frames=StreamXout(self._comp.node.id, self._comp.disparity),
-                mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
+                mono_frames=StreamXout(self._comp.node.id, self._comp._right_stream),
                 max_disp=self._comp.node.getMaxDisparity(),
                 fps=fps,
                 colorize=self._comp._colorize,
@@ -211,7 +227,7 @@ class StereoComponent(Component):
             out = XoutDepth(
                 device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.depth),
-                mono_frames=StreamXout(self._comp.node.id, self._comp.right.out),
+                mono_frames=StreamXout(self._comp.node.id, self._comp._right_stream),
                 fps=fps,
                 colorize=self._comp._colorize,
                 colormap=self._comp._colormap,

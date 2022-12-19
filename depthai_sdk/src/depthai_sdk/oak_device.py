@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict, Any
 
 import depthai as dai
 

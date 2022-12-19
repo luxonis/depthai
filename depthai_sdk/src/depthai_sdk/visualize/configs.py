@@ -47,7 +47,7 @@ class OutputConfig:
 class StereoConfig:
     colorize: StereoColor = StereoColor.RGB
     colormap: int = cv2.COLORMAP_JET
-    wls_filter: bool = True
+    wls_filter: bool = False
     wls_lambda: float = 1500
     wls_sigma: float = 1.5
 
@@ -58,7 +58,7 @@ class DetectionConfig:
     thickness: int = 1
     fill_transparency: float = 0.15
     box_roundness: int = 0
-    color: Tuple[int, int, int] = None
+    color: Tuple[int, int, int] = (0, 255, 0)
     bbox_style: BboxStyle = BboxStyle.RECTANGLE
     line_width: float = 0.5
     line_height: float = 0.5
