@@ -118,13 +118,12 @@ path = '1m'
 with OakCamera(replay=path) as oak:
     oak.replay.setFps(3)
     originalRes = (1920, 1200)
-    res = (1280, 1080)
+    res = (1280, 720)
+    scale = 0.7
     # res = (1280, 720)
-    resizeMode = ResizeMode.FULL_CROP
-    # resizeMode = ResizeMode.LETTERBOX
+    # resizeMode = ResizeMode.FULL_CROP
+    resizeMode = ResizeMode.LETTERBOX
     
-    centerCropOffset = ((originalRes[0] - res[0]) / 2, (originalRes[1] - res[1]) / 2)
-
     cama = oak.create_camera('cama,c', resolution='1200p') # 1920x1200
     cama.config_camera(size=res)
 
@@ -144,7 +143,7 @@ with OakCamera(replay=path) as oak:
 
     # calibData = device.readCalibration()
     calibData = oak.replay._calibData
-    leftMesh, rightMesh, rectIntrinsics = getMesh(calibData, res, centerCropOffset, 0.5)
+    leftMesh, rightMesh, rectIntrinsics = getMesh(calibData, res, (0, 0), scale)
     stereo.node.loadMeshData(leftMesh, rightMesh)
 
     def disp(packet: FramePacket, vis: Visualizer):
