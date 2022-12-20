@@ -265,7 +265,8 @@ class StereoCalibration(object):
                     all_marker_ids.append(ids)
                     all_recovered.append(recoverd)
                 else:
-                    raise RuntimeError("Failed to detect markers in the image")
+                    err_name = f'Failed to detect markers in the image {im}'
+                    raise RuntimeError(err_name)
             else:
                 print(im + " Not found")
                 raise RuntimeError("Failed to detect markers in the image")
@@ -536,11 +537,8 @@ class StereoCalibration(object):
 
         if self.cameraModel == 'perspective':
             flags = 0
-            # flags |= cv2.CALIB_USE_EXTRINSIC_GUESS
-            # print(flags)
-
-            # flags |= cv2.CALIB_FIX_INTRINSIC
-            flags |= cv2.CALIB_USE_INTRINSIC_GUESS
+            flags |= cv2.CALIB_FIX_INTRINSIC
+            # flags |= cv2.CALIB_USE_INTRINSIC_GUESS
             flags |= cv2.CALIB_RATIONAL_MODEL
             # print(flags)
             if traceLevel == 1:
@@ -637,9 +635,6 @@ class StereoCalibration(object):
             else:
                 img_concat = cv2.vconcat(
                     [image_data_pair[0], image_data_pair[1]])
-            # img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
-
-            # draw epipolar lines for debug purposes
 
             line_row = 0
             while isHorizontal and line_row < img_concat.shape[0]:
@@ -902,7 +897,7 @@ class StereoCalibration(object):
        
         r_id = np.identity(3)
         mapx_l, mapy_l = cv2.initUndistortRectifyMap(
-            M_lp, d_l, r_l, M_lp, scaled_res[::-1], cv2.CV_32FC1)
+            M_lp, d_l, r_l, M_rp, scaled_res[::-1], cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
             M_rp, d_r, r_r, M_rp, scaled_res[::-1], cv2.CV_32FC1)
         

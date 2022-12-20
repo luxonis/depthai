@@ -1,0 +1,21 @@
+{
+    "model":
+    {
+        "model_name": "vehicle-detection-0202"
+    },
+    "nn_config":
+    {
+        "output_format" : "detection",
+        "NN_family" : "mobilenet",
+        "confidence_threshold" : 0.4
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            ["","#4CFF38"]
+        ]
+    },
+    "version": 1
+}
+

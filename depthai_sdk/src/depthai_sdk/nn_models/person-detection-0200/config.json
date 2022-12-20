@@ -1,0 +1,23 @@
+{
+    "model":
+    {
+        "model_name": "person-detection-0202",
+        "zoo": "intel"
+    },
+    "nn_config":
+    {
+        "output_format" : "detection",
+        "NN_family" : "mobilenet",
+        "confidence_threshold" : 0.3
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "",
+            ""
+        ]
+    },
+    "version": 1
+}
+

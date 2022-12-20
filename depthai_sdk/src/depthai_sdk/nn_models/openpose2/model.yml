@@ -1,0 +1,15 @@
+description: >-
+  2D human pose estimation from PINTO03009
+documentation: https://github.com/PINTO0309/MobileNetV2-PoseEstimation/tree/master/models/train/test/openvino/mobilenet_v2_1.4_224/FP16
+task_type: human_pose_estimation
+files:
+  - name: FP16/openpose2.xml
+    size: 151699
+    sha256: a8e6929e4b67472fe8086a05c4426d5f49af7e4383c9e9dfda8a5eae48f2529d
+    source: https://raw.githubusercontent.com/PINTO0309/MobileNetV2-PoseEstimation/master/models/train/test/openvino/mobilenet_v2_1.4_224/FP16/frozen-model.xml
+  - name: FP16/openpose2.bin
+    size: 4409440
+    sha256: 4f5d51729dc1cda4da7b402fe3e0af0c0858ac5f0288973623f8a747fa7a77f0
+    source: https://github.com/PINTO0309/MobileNetV2-PoseEstimation/blob/master/models/train/test/openvino/mobilenet_v2_1.4_224/FP16/frozen-model.bin?raw=true
+framework: dldt
+license: https://github.com/PINTO0309/MobileNetV2-PoseEstimation/tree/master/models/train/test/openvino/mobilenet_v2_1.4_224/FP16

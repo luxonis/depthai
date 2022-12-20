@@ -1,8 +1,10 @@
 numpy>=1.19; python_version < "3.7"
 numpy>=1.21; python_version >= "3.7"
-opencv-python>4
 opencv-contrib-python>4
 blobconverter>=1.2.8
-pytube>=11.0.1
-depthai>2
+pytube>=12.1.0
+depthai>=2.18.0
 PyTurboJPEG==1.6.4
+marshmallow==3.17.0
+distinctipy
+xmltodict
