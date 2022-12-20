@@ -12,8 +12,8 @@ import cv2.aruco as aruco
 from pathlib import Path
 from collections import deque
 # Creates a set of 13 polygon coordinates
-traceLevel = 1
-
+traceLevel = 0
+rectProjectionMode = 0
 
 def setPolygonCoordinates(height, width):
     horizontal_shift = width//4
@@ -870,9 +870,12 @@ class StereoCalibration(object):
 
         M_lp = self.scale_intrinsics(M_l, frame_left_shape, scaled_res)
         M_rp = self.scale_intrinsics(M_r, frame_right_shape, scaled_res)
-
-        # p_lp = self.scale_intrinsics(p_l, frame_left_shape, scaled_res)
-        # p_rp = self.scale_intrinsics(p_r, frame_right_shape, scaled_res)
+        if rectProjectionMode:
+            p_lp = self.scale_intrinsics(p_l, frame_left_shape, scaled_res)
+            p_rp = self.scale_intrinsics(p_r, frame_right_shape, scaled_res)
+            print('Projection intrinsics ....')
+            print(p_lp)
+            print(p_rp)
 
         criteria = (cv2.TERM_CRITERIA_EPS +
                     cv2.TERM_CRITERIA_MAX_ITER, 10000, 0.00001)
@@ -881,16 +884,19 @@ class StereoCalibration(object):
         # TODO(Sachin): Check if the stetch is only in calibration Images
         print('Original intrinsics ....')
         print(M_lp)
-        # print(d_l)
         print(M_rp)
-        # print(d_r)
 
         print(f'Width and height is {scaled_res[::-1]}')
         # print(d_r)
-        kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_r, d_r, scaled_res[::-1], 0)
+        # kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_r, d_r, scaled_res[::-1], 0)
+        # kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_r, d_l, scaled_res[::-1], 0)
         # kScaledR, _ = cv2.getOptimalNewCameraMatrix(M_r, d_r, scaled_res[::-1], 0)
-        kScaledR = kScaledL
-        print('Intrinsics from the getOptimalNewCameraMatrix....')
+        kScaledR = kScaledL = M_r
+        if rectProjectionMode:
+            kScaledL = p_lp
+            kScaledR = p_rp
+            
+        print('Intrinsics from the getOptimalNewCameraMatrix/Original ....')
         print(kScaledL)
         print(kScaledR)
         oldEpipolarError = None
@@ -1071,8 +1077,8 @@ class StereoCalibration(object):
                 print('Numer of corners is in left -> {} and right -> {}'.format(
                     len(marker_corners_l), len(marker_corners_r)))
                 return -1
-            lText = cv2.putText(cv2.cvtColor(image_data_pair[0],cv2.COLOR_GRAY2RGB), img_pth_left.name, org, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-            rText = cv2.putText(cv2.cvtColor(image_data_pair[1],cv2.COLOR_GRAY2RGB), img_pth_right.name + " Error: " + str(localError), org, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+            lText = cv2.putText(cv2.cvtColor(image_data_pair[0],cv2.COLOR_GRAY2RGB), img_pth_left.name, org, cv2.FONT_HERSHEY_SIMPLEX, 1, (2, 0, 255), 2, cv2.LINE_AA)
+            rText = cv2.putText(cv2.cvtColor(image_data_pair[1],cv2.COLOR_GRAY2RGB), img_pth_right.name + " Error: " + str(localError), org, cv2.FONT_HERSHEY_SIMPLEX, 1, (2, 0, 255), 2, cv2.LINE_AA)
             image_data_pairs[i] = (lText, rText)
 
 
