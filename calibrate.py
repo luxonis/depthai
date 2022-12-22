@@ -389,7 +389,7 @@ class Main:
                 xout = pipeline.createXLinkOut()
 
                 cam_node.setBoardSocket(stringToCam[cam_id])
-                cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
+                cam_node.setResolution(camToMonoRes[cam_info['sensorName'].upper()])
                 cam_node.setFps(fps)
 
                 xout.setStreamName(cam_info['name'])
@@ -528,7 +528,9 @@ class Main:
 
                 syncCollector.add_msg(key, frameMsg, frameMsg.getTimestamp())
                 gray_frame = None
-                if frameMsg.getType() == dai.RawImgFrame.Type.RAW8:
+                if (frameMsg.getType() == dai.RawImgFrame.Type.RAW8 or
+                   frameMsg.getType() == dai.RawImgFrame.Type.GRAY8 or
+                   frameMsg.getType() == dai.RawImgFrame.Type.RAW10):
                     gray_frame = frameMsg.getCvFrame()
                 else:
                     gray_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
