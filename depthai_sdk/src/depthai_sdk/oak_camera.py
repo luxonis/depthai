@@ -20,7 +20,7 @@ from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
 from depthai_sdk.utils import configPipeline
 from depthai_sdk.visualize import Visualizer
-
+from threading import Thread
 
 class UsbWarning(UserWarning):
     pass
@@ -48,6 +48,8 @@ class OakCamera:
     # Whether to stop running the OAK camera. Used by oak.running()
     _stop: bool = False
 
+    _polling: List[Callable]
+
     def __init__(self,
                  device: Optional[str] = None,  # MxId / IP / USB port
                  usbSpeed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
@@ -69,6 +71,7 @@ class OakCamera:
         self._oak = OakDevice()
         self._pipeline = dai.Pipeline()
         self._pipeline_built = False
+        self._polling = []
 
         self._components: List[Component] = []  # List of components
         self._out_templates: List[BaseConfig] = []
@@ -312,6 +315,9 @@ class OakCamera:
                 self._stop = True
                 return
 
+        for poll in self._polling:
+            poll() # Poll all callbacks
+
         if self.device.isClosed():
             self._stop = True
 
@@ -412,12 +418,15 @@ class OakCamera:
         """
         Shows DepthAI Pipeline graph, which can be useful when debugging. Builds the pipeline (oak.build()).
         """
-        from depthai_sdk.components.pipeline_graph import PipelineGraph
+        from depthai_sdk.components.integrations.depthai_pipeline_graph.depthai_pipeline_graph.pipeline_graph import PipelineGraph
 
         if not self._pipeline_built:
             self.build()  # Build the pipeline
 
-        PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
+        p = PipelineGraph()
+        p.create_graph(self._pipeline.serializeToJson()['pipeline'], self.device)
+        self._polling.append(p.update)
+        print('process started')
 
     def visualize(self,
                   output: Union[List, Callable, Component],
