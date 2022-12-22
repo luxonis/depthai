@@ -457,12 +457,18 @@ class OakCamera:
         if isinstance(output, List):
             for element in output:
                 self._callback(element, callback, visualizer, record_path)
-            return
+            return visualizer
 
         if isinstance(output, Component):
             output = output.out.main
 
+        config = None
+        if visualizer:
+            config = visualizer.config
+
         visualizer = copy.deepcopy(visualizer) or Visualizer()
+        visualizer.config = config if config else visualizer.config
+
         self._out_templates.append(OutputConfig(output, callback, visualizer, record_path))
         return visualizer
 
