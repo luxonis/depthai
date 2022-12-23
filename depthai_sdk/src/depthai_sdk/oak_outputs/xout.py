@@ -547,7 +547,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             for landmarks in all_landmarks:
                 for i, landmark in enumerate(landmarks):
                     l = self.normalizer.normalize(frame=np.zeros(packet.frame.shape, dtype=bool), bbox=landmark)
-                    self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[i])
+                    self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[i], thickness=2)
 
     def package(self, msgs: Dict):
         if self.queue.full():
