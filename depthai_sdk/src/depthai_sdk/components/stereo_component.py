@@ -121,10 +121,9 @@ class StereoComponent(Component):
 
         if self._replay: # Replay
             self._replay.initStereoDepth(self.node)
-
-
-        self._left_stream.link(self.node.left)
-        self._right_stream.link(self.node.right)
+        else:
+            self._left_stream.link(self.node.left)
+            self._right_stream.link(self.node.right)
 
         self.node.setOutputSize(1200,800)
 
