@@ -1,0 +1,40 @@
+{
+    "board_config":
+    {
+        "name": "OAK-D-LR",
+        "revision": "TODO",
+        "cameras":{
+            "LEFT": {
+                "name": "left",
+                "hfov": 90.00,
+                "type": "color",
+                "extrinsics": {
+                    "to_cam": "RIGHT",
+                    "specTranslation": {
+                        "x": -15.0,
+                        "y": 0,
+                        "z": 0
+                    },
+                    "rotation":{
+                        "r": 0,
+                        "p": 0,
+                        "y": 0
+                    }
+
+                }
+
+            },
+            "RIGHT": {
+                "name": "right",
+                "hfov":  90.00,
+                "type": "color"
+            }
+
+        },
+
+        "stereo_config":{
+            "left_cam": "LEFT",
+            "right_cam": "RIGHT"
+        }
+    }
+}

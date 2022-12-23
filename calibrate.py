@@ -8,7 +8,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 import time
 from datetime import datetime, timedelta
-from collections import deque 
+from collections import deque
 from scipy.spatial.transform import Rotation
 import traceback
 
@@ -78,6 +78,7 @@ camToMonoRes = {
                 'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
                 'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
                 'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
+                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
                 }
 
 camToRgbRes = {
@@ -87,6 +88,7 @@ camToRgbRes = {
                 'OV9282' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
+                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
                 }
 
 if hasattr(dai.ColorCameraProperties.SensorResolution, 'THE_1200_P'):
@@ -215,7 +217,7 @@ class HostSync:
         #         if self.remove(obj['timestamp']):
         #             arr.remove(obj)
         #         else: break
-    
+
     def clearQueues(self):
         print('Clearing Queues...')
         for name, msgList in self.arrays.items():
@@ -229,7 +231,7 @@ class HostSync:
             # print(len(pivotMsgList))
 
             if len(msgList) != self.arraySize:
-                return False 
+                return False
 
         for name, pivotMsgList in self.arrays.items():
             print('len(pivotMsgList)')
@@ -238,7 +240,7 @@ class HostSync:
             while pivotMsgListDuplicate:
                 currPivot = pivotMsgListDuplicate.popleft()
                 synced[name] = currPivot['data']
-                
+
                 for subName, msgList in self.arrays.items():
                     print(f'len of {subName}')
                     print(len(msgList))
@@ -323,9 +325,10 @@ class Main:
         # if self.args.board.upper() == 'OAK-D-LITE':
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
-        
+
         self.device = dai.Device()
         cameraProperties = self.device.getConnectedCameraFeatures()
+        print(cameraProperties)
         for properties in cameraProperties:
             for in_cam in self.board_config['cameras'].keys():
                 cam_info = self.board_config['cameras'][in_cam]
@@ -377,7 +380,7 @@ class Main:
                 if left_corner[0][0] - right_corner[0][0] < 0:
                     return False
         return True
-    
+
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
@@ -397,10 +400,13 @@ class Main:
             else:
                 cam_node = pipeline.createColorCamera()
                 xout = pipeline.createXLinkOut()
-                
+
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
+                # If AR0234 bring down resolution to 800p
+                if camToRgbRes[cam_info['sensorName']] == 'AR0234':
+                    cam_node.setIspScale(2,3)
 
                 xout.setStreamName(cam_info['name'])
                 cam_node.isp.link(xout.input)
@@ -508,7 +514,7 @@ class Main:
         for attr in ["boardName", "boardRev"]:
             if getattr(data, attr): return False
         return True
-    
+
     def capture_images_sync(self):
         finished = False
         capturing = False
@@ -538,11 +544,11 @@ class Main:
             resizeHeight = 0
             resizeWidth = 0
             for name, imgFrame in currImageList.items():
-                
+
                 # print(f'original Shape of {name} is {imgFrame.shape}' )
                 currImageList[name] = cv2.resize(
                     imgFrame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
-                
+
                 height, width = currImageList[name].shape
 
                 widthRatio = resizeWidth / width
@@ -551,7 +557,7 @@ class Main:
 
                 # if widthRatio > 1.0 and heightRatio > 1.0 and widthRatio < 1.2 and heightRatio < 1.2:
                 #     continue
-                
+
 
                 if (widthRatio > 0.8 and heightRatio > 0.8 and widthRatio <= 1.0 and heightRatio <= 1.0) or (widthRatio > 1.2 and heightRatio > 1.2) or (resizeHeight == 0):
                     resizeWidth = width
@@ -563,23 +569,23 @@ class Main:
                 #     resizeWidth = width
                 # if height > resizeHeight:
                 #     resizeHeight = height
-            
+
             # print(f'Scale Shape  is {resizeWidth}x{resizeHeight}' )
-            
+
             combinedImage = None
             for name, imgFrame in currImageList.items():
                 height, width = imgFrame.shape
                 if width > resizeWidth and height > resizeHeight:
                     imgFrame = cv2.resize(
                     imgFrame, (0, 0), fx= resizeWidth / width, fy= resizeWidth / width)
-                
+
                 # print(f'final_scaledImageSize is {imgFrame.shape}')
                 if self.polygons is None:
                     self.height, self.width = imgFrame.shape
                     print(self.height, self.width)
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
-                
+
                 localPolygon = np.array([self.polygons[self.current_polygon]])
                 print(localPolygon.shape)
                 print(localPolygon)
@@ -587,27 +593,27 @@ class Main:
                     # perspectiveRotationMatrix = Rotation.from_euler('z', 45, degrees=True).as_matrix()
                     angle = 30.
                     theta = (angle/180.) * np.pi
-                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)], 
+                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)],
                                                         [np.sin(theta),  np.cos(theta)]])
-                    
+
                     localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
-                    localPolygon[0][:, 1] += abs(localPolygon.min())    
+                    localPolygon[0][:, 1] += abs(localPolygon.min())
                 if self.images_captured_polygon == 2:
                     # perspectiveRotationMatrix = Rotation.from_euler('z', -45, degrees=True).as_matrix()
                     angle = -30.
                     theta = (angle/180.) * np.pi
-                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)], 
+                    perspectiveRotationMatrix = np.array([[np.cos(theta), -np.sin(theta)],
                                                         [np.sin(theta),  np.cos(theta)]])
                     localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
-                    localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))    
-                    localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())    
+                    localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))
+                    localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())
 
                 print(localPolygon)
                 print(localPolygon.shape)
                 cv2.polylines(
                     imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
-                
+
                 # TODO(Sachin): Add this back with proper alignment
                 # cv2.putText(
                 #     imgFrame,
@@ -623,7 +629,7 @@ class Main:
                     combinedImage = subImage
                 else:
                     combinedImage = np.hstack((combinedImage, subImage))
-            
+
             key = cv2.waitKey(1)
             if key == 27 or key == ord("q"):
                 print("py: Calibration has been interrupted!")
@@ -642,7 +648,7 @@ class Main:
                     start_timer = False
                     capturing = True
                     print('Start capturing...')
-                
+
                 image_shape = combinedImage.shape
                 cv2.putText(combinedImage, str(timer),
                         (image_shape[1]//2, image_shape[0]//2), font,
@@ -658,11 +664,11 @@ class Main:
                 if syncedMsgs == False:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
-                    continue 
+                    continue
                 for name, frameMsg in syncedMsgs.items():
                     tried[name] = self.parse_frame(frameMsg.getCvFrame(), name)
                     allPassed = allPassed and tried[name]
-                
+
                 if allPassed:
                     if not self.images_captured:
                         leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
@@ -939,7 +945,7 @@ class Main:
                 if cam_info['name'] == 'rgb':
                     reprojection_error_threshold = 3
                 print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
-                
+
                 if cam_info['reprojection_error'] > reprojection_error_threshold:
                     color = red
                     error_text.append("high Reprojection Error")
@@ -957,13 +963,13 @@ class Main:
                 # log_list.append(self.focusSigma[cam_info['name']])
                 # log_list.append(cam_info['reprojection_error'])
                 # color = green///
-                # epErrorZText 
+                # epErrorZText
                 if 'extrinsics' in cam_info:
 
                     if 'to_cam' in cam_info['extrinsics']:
                         right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
                         left_cam = cam_info['name']
-                        
+
                         epipolar_threshold = 0.6
 
                         if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
@@ -983,7 +989,7 @@ class Main:
                         if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
                             calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
                             calibration_handler.setStereoRight(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_right'])
-                        elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:                           
+                        elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:
                             calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
                             calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
 
@@ -1016,7 +1022,7 @@ class Main:
                         is_write_factory_sucessful = False
 
                 if is_write_succesful:
-                    
+
 
                     """ eepromUnionData = {}
                     calibHandler = self.device.readCalibration2()
@@ -1035,7 +1041,7 @@ class Main:
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
-                    
+
                 else:
                     self.device.close()
                     text = "EEPROM write Failed!!"
@@ -1044,12 +1050,12 @@ class Main:
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
                     # return (False, "EEPROM write Failed!!")
-            
+
             else:
                 self.device.close()
                 print(error_text)
-                for text in error_text: 
-                # text = error_text[0]                
+                for text in error_text:
+                # text = error_text[0]
                     resImage = create_blank(900, 512, rgb_color=red)
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
                     cv2.imshow("Result Image", resImage)
@@ -1069,7 +1075,7 @@ class Main:
                 for cam_id in self.board_config['cameras']:
                     name = self.board_config['cameras'][cam_id]['name']
                     Path("dataset/{}".format(name)).mkdir(parents=True, exist_ok=True)
-                
+
             except OSError:
                 traceback.print_exc()
                 print("An error occurred trying to create image dataset directories!")
