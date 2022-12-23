@@ -500,24 +500,6 @@ class OakCamera:
         """
         self._callback(output, callback)
 
-    def get_stats_report(self) -> Dict[str, Any]:
-        """
-        Get statistics for the pipeline.
-        """
-        if not self._pipeline_built:
-            return {}
-
-        return self._oak.stats_report()
-
-    def get_info_report(self) -> Dict[str, Any]:
-        """
-        Get information about the device.
-        """
-        if not self._pipeline_built:
-            return {}
-
-        return self._oak.info_report()
-
     @property
     def device(self) -> dai.Device:
         """
