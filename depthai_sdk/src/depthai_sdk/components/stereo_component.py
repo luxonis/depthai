@@ -97,20 +97,6 @@ class StereoComponent(Component):
                 self.right = CameraComponent(pipeline, 'right', self._resolution, self._fps, replay=self._replay)
                 self.right._update_device_info(pipeline, device, version)
 
-            if isinstance(self.left, CameraComponent):
-                self.left = self.left.node  # CameraComponent -> node
-            if isinstance(self.right, CameraComponent):
-                self.right = self.right.node  # CameraComponent -> node
-
-            # TODO: use self._args to setup the StereoDepth node
-            # Connect Mono cameras to the StereoDepth node
-            self.left.out.link(self.node.left)
-            self.right.out.link(self.node.right)
-
-            if self.encoder:
-                self.encoder.setDefaultProfilePreset(self.left.getFps(), self._encoderProfile)
-                self.node.disparity.link(self.encoder.input)
-
             if 0 < len(device.getIrDrivers()):
                 laser = self._args.get('irDotBrightness', None)
                 laser = int(laser) if laser else 800
@@ -131,6 +117,10 @@ class StereoComponent(Component):
         else:
             self._left_stream.link(self.node.left)
             self._right_stream.link(self.node.right)
+
+        if self.encoder:
+            self.encoder.setDefaultProfilePreset(self.left.getFps(), self._encoderProfile)
+            self.node.disparity.link(self.encoder.input)
 
         self.node.setOutputSize(1200, 800)
 
@@ -261,11 +251,13 @@ class StereoComponent(Component):
                 out = XoutMjpeg(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
                                 color=False,
                                 lossless=self._comp.encoder.getLossless(),
-                                fps=self._comp.encoder.getFrameRate())
+                                fps=self._comp.encoder.getFrameRate(),
+                                frame_shape=(1200, 800))
             else:
                 out = XoutH26x(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
                                color=False,
                                profile=self._comp._encoderProfile,
-                               fps=self._comp.encoder.getFrameRate())
+                               fps=self._comp.encoder.getFrameRate(),
+                               frame_shape=(1200, 800))
 
             return self._comp._create_xout(pipeline, out)
