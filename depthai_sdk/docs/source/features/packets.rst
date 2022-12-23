@@ -45,35 +45,35 @@ Reference
 FramePacket
 -----------
 
-.. autoclass:: depthai_sdk.FramePacket
+.. autoclass:: depthai_sdk.classes.packets.FramePacket
     :members:
     :undoc-members:
 
 SpatialBbMappingPacket
 ----------------------
 
-.. autoclass:: depthai_sdk.SpatialBbMappingPacket
+.. autoclass:: depthai_sdk.classes.packets.SpatialBbMappingPacket
     :members:
     :undoc-members:
 
 DetectionPacket
 ---------------
 
-.. autoclass:: depthai_sdk.DetectionPacket
+.. autoclass:: depthai_sdk.classes.packets.DetectionPacket
     :members:
     :undoc-members:
 
 DepthPacket
 ---------------
 
-.. autoclass:: depthai_sdk.DepthPacket
+.. autoclass:: depthai_sdk.classes.packets.DepthPacket
     :members:
     :undoc-members:
 
 TrackerPacket
 -------------
 
-.. autoclass:: depthai_sdk.TrackerPacket
+.. autoclass:: depthai_sdk.classes.packets.TrackerPacket
     :members:
     :undoc-members:
 
@@ -81,7 +81,7 @@ TrackerPacket
 TwoStagePacket
 --------------
 
-.. autoclass:: depthai_sdk.TwoStagePacket
+.. autoclass:: depthai_sdk.classes.packets.TwoStagePacket
     :members:
     :undoc-members:
 
@@ -89,7 +89,7 @@ TwoStagePacket
 IMUPacket
 ---------
 
-.. autoclass:: depthai_sdk.IMUPacket
+.. autoclass:: depthai_sdk.classes.packets.IMUPacket
     :members:
     :undoc-members:
 
