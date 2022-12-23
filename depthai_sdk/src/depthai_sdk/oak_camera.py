@@ -453,6 +453,7 @@ class OakCamera:
         if isinstance(output, Component):
             output = output.out.main
 
+        visualizer_enabled = visualizer is not None
         config = None
         if visualizer:
             config = visualizer.config
@@ -460,7 +461,7 @@ class OakCamera:
         visualizer = copy.deepcopy(visualizer) or Visualizer()
         visualizer.config = config if config else visualizer.config
 
-        self._out_templates.append(OutputConfig(output, callback, visualizer, record_path))
+        self._out_templates.append(OutputConfig(output, callback, visualizer, visualizer_enabled, record_path))
         return visualizer
 
     def callback(self, output: Union[List, Callable, Component], callback: Callable):

@@ -56,8 +56,10 @@ class XoutFrames(XoutBase):
 
     def setup_visualize(self,
                         visualizer: Visualizer,
+                        visualizer_enabled: bool,
                         name: str = None):
         self._visualizer = visualizer
+        self._visualizer_enabled = visualizer_enabled
         self.name = name or self.name
 
     def setup_recorder(self,
@@ -344,8 +346,9 @@ class XoutDepth(XoutFrames, XoutClickable):
 
     def setup_visualize(self,
                         visualizer: Visualizer,
+                        visualizer_enabled: bool,
                         name: str = None):
-        super().setup_visualize(visualizer, name)
+        super().setup_visualize(visualizer, visualizer_enabled, name)
 
         if self._visualizer.config.stereo.wls_filter or self.use_wls_filter:
             self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
@@ -503,8 +506,9 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
     def setup_visualize(self,
                         visualizer: Visualizer,
+                        visualizer_enabled: bool,
                         name: str = None):
-        super().setup_visualize(visualizer, name)
+        super().setup_visualize(visualizer, visualizer_enabled, name)
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
         if self._visualizer.frame_shape is None:
@@ -937,7 +941,10 @@ class XoutIMU(XoutBase):
 
         super().__init__()
 
-    def setup_visualize(self, visualizer: Visualizer, name: str = None, _=None):
+    def setup_visualize(self,
+                        visualizer: Visualizer,
+                        visualizer_enabled: bool,
+                        name: str = None, _=None):
         from matplotlib import pyplot as plt
 
         self._visualizer = visualizer

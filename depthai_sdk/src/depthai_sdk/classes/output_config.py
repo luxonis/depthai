@@ -31,10 +31,12 @@ class OutputConfig(BaseConfig):
                  output: Callable,
                  callback: Callable,
                  visualizer: Visualizer = None,
+                 visualizer_enabled: bool = False,
                  record_path: Optional[str] = None):
         self.output = output
         self.callback = callback
         self.visualizer = visualizer
+        self.visualizer_enabled = visualizer_enabled
         self.record_path = record_path
 
     def find_new_name(self, name: str, names: List[str]):
@@ -63,7 +65,9 @@ class OutputConfig(BaseConfig):
             recorder.update(Path(self.record_path), device, [xoutbase])
 
         if self.visualizer:
-            xoutbase.setup_visualize(visualizer=self.visualizer, name=xoutbase.name)
+            xoutbase.setup_visualize(visualizer=self.visualizer,
+                                     visualizer_enabled=self.visualizer_enabled,
+                                     name=xoutbase.name)
 
         if self.record_path:
             xoutbase.setup_recorder(recorder=recorder)
