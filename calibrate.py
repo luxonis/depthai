@@ -384,7 +384,7 @@ class Main:
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
-        fps = 10
+        fps = self.args.fps
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
             if cam_info['type'] == 'mono':
@@ -404,9 +404,6 @@ class Main:
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
-                # If AR0234 bring down resolution to 800p
-                if camToRgbRes[cam_info['sensorName']] == 'AR0234':
-                    cam_node.setIspScale(2,3)
 
                 xout.setStreamName(cam_info['name'])
                 cam_node.isp.link(xout.input)
