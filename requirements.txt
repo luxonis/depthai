@@ -6,5 +6,5 @@ depthai-sdk
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-depthai-data-local/wheels/
 pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" and platform_machine != "aarch64" and platform_machine != "arm64"
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-depthai==2.19.1.0.dev+1eb01248fb7e994b51ceec91984bff46e0a5d5f2
+depthai==2.19.1.0.dev+5009c0a90a6d6741a8f53855083953eb1a119ed2
 Qt.py

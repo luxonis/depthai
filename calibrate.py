@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from collections import deque
 from scipy.spatial.transform import Rotation
 import traceback
+import itertools
 
 import cv2
 from cv2 import resize
@@ -177,6 +178,8 @@ def parse_args():
                         help="Enable writing to Factory Calibration.")
     parser.add_argument("-osf", "--outputScaleFactor", type=float, default=0.5,
                         help="set the scaling factor for output visualization. Default: 0.5.")
+    parser.add_argument("-sync", "--minSyncTime", type=float, default=0.2,
+                        help="set the minimum time enforced between frames to keep synchronization. Default: 0.2.")
 
     options = parser.parse_args()
 
@@ -191,100 +194,89 @@ def parse_args():
 
     return options
 
-class HostSync:
-    def __init__(self, deltaMilliSec):
-        self.arrays = {}
-        self.arraySize = 15
-        self.recentFrameTs = None
-        self.deltaMilliSec = timedelta(milliseconds=deltaMilliSec)
-        # self.synced = queue.Queue()
+class MessageSync:
+    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10):
+        self.num_queues = num_queues
+        self.min_diff_timestamp = min_diff_timestamp
+        self.max_num_messages = max_num_messages
+        # self.queues = [deque() for _ in range(num_queues)]
+        self.queues = dict()
+        # self.earliest_ts = {}
 
-    def remove(self, t1):
-            return timedelta(milliseconds=500) < (self.recentFrameTs - t1)
+    def add_msg(self, name, msg):
+        if name not in self.queues:
+            self.queues[name] = deque(maxlen=self.max_num_messages)
+        self.queues[name].append(msg)
 
-    def add_msg(self, name, data, ts):
-        if name not in self.arrays:
-            self.arrays[name] = deque(maxlen=self.arraySize)
-        # Add msg to array
-        self.arrays[name].appendleft({'data': data, 'timestamp': ts})
-        if self.recentFrameTs == None or self.recentFrameTs - ts:
-            self.recentFrameTs = ts
-        # print(len(self.arrays[name]))
-        # print(f'Added Msgs typ {name}')
-        # print(ts)
-        # for name, arr in self.arrays.items():
-        #     for i, obj in enumerate(arr):
-        #         if self.remove(obj['timestamp']):
-        #             arr.remove(obj)
-        #         else: break
+        # if msg.getTimestampDevice() < self.earliest_ts:
+        #     self.earliest_ts = {name: msg.getTimestampDevice()}
 
-    def clearQueues(self):
-        print('Clearing Queues...')
-        for name, msgList in self.arrays.items():
-            self.arrays[name].clear()
-            print(len(self.arrays[name]))
+        # print('Queues: ', end='')
+        # for name in self.queues.keys():
+        #     print('\t: ', name, end='')
+        #     print(self.queues[name], end=', ')
+        #     print()
+        # print()
 
     def get_synced(self):
-        synced = {}
-        for name, msgList in self.arrays.items():
-            # print('len(pivotM---------sgList)')
-            # print(len(pivotMsgList))
 
-            if len(msgList) != self.arraySize:
-                return False
+        # Atleast 3 messages should be buffered
+        min_len = min([len(queue) for queue in self.queues.values()])
+        if min_len == 0:
+            print('Status:', 'exited due to min len == 0', self.queues)
+            return None
 
-        for name, pivotMsgList in self.arrays.items():
-            print('len(pivotMsgList)')
-            print(len(pivotMsgList))
-            pivotMsgListDuplicate = pivotMsgList
-            while pivotMsgListDuplicate:
-                currPivot = pivotMsgListDuplicate.popleft()
-                synced[name] = currPivot['data']
+        # initializing list of list 
+        queue_lengths = []
+        for name in self.queues.keys():
+            queue_lengths.append(range(0, len(self.queues[name])))
+        permutations = list(itertools.product(*queue_lengths))
+        # print ("All possible permutations are : " +  str(permutations))
 
-                for subName, msgList in self.arrays.items():
-                    print(f'len of {subName}')
-                    print(len(msgList))
-                    if name == subName:
-                        continue
-                    msgListDuplicate = msgList.copy()
-                    while msgListDuplicate:
-                        print(f'---len of dup {subName} is {len(msgListDuplicate)}')
-                        currMsg = msgListDuplicate.popleft()
-                        time_diff = abs(currMsg['timestamp'] - currPivot['timestamp'])
-                        print(f'---Time diff is {time_diff} and delta is {self.deltaMilliSec}')
-                        if time_diff < self.deltaMilliSec:
-                            print(f'--------Adding {subName} to sync. Messages left is {len(msgListDuplicate)}')
-                            synced[subName] = currMsg['data']
-                            break
-                    print(f'Size of Synced is {len(synced)} amd array size is {len(self.arrays)}')
-                    if len(synced) == len(self.arrays):
-                        self.clearQueues()
-                        return synced
+        # Return a best combination after being atleast 3 messages deep for all queues
+        min_ts_diff = None
+        for indicies in permutations:
+            tmp = {}
+            i = 0
+            for n in self.queues.keys():
+                tmp[n] = indicies[i]
+                i = i + 1
+            indicies = tmp
 
-            # raise SystemExit(1)
-            self.clearQueues()
-            return False
+            acc_diff = 0.0
+            min_ts = None
+            for name in indicies.keys():
+                msg = self.queues[name][indicies[name]]
+                if min_ts is None:
+                    min_ts = msg.getTimestampDevice().total_seconds()
+            for name in indicies.keys():
+                msg = self.queues[name][indicies[name]]
+                acc_diff = acc_diff + abs(min_ts - msg.getTimestampDevice().total_seconds())
 
+            # Mark minimum
+            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.0001):
+                min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
+                print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
-        """ for name, arr in self.arrays.items():
-            for i, obj in enumerate(arr):
-                time_diff = abs(obj['timestamp'] - self.recentFrameTs)
-                print("Time diff for {0} is {1} milliseconds".format(name ,time_diff.total_seconds() * 1000))
-                # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
-                # time difference is below 20ms, it's considered as synced
-                if time_diff < self.deltaMilliSec:
-                    synced[name] = obj['data']
-                    # print(f"{name}: {i}/{len(arr)}")
-                    break
-        print(f'Size of Synced is {len(synced)} amd array size is {len(self.arrays)}')
-        if len(synced) == len(self.arrays):
-            for name, arr in self.arrays.items():
-                for i, obj in enumerate(arr):
-                    if self.remove(obj['timestamp']):
-                        arr.remove(obj)
-                    else: break
-            return synced
-        return False """
+            if min_ts_diff['ts'] < self.min_diff_timestamp:
+                # Check if atleast 5 messages deep
+                min_queue_depth = None
+                for name in indicies.keys():
+                    if min_queue_depth is None or indicies[name] < min_queue_depth:
+                        min_queue_depth = indicies[name]
+                if min_queue_depth >= 5:
+                    # Retrieve and pop the others
+                    synced = {}
+                    for name in indicies.keys():
+                        synced[name] = self.queues[name][min_ts_diff['indicies'][name]]
+                        # pop out the older messages
+                        for i in range(0, min_ts_diff['indicies'][name]+1):
+                            self.queues[name].popleft()
+
+                    print('Returning synced messages with error:', min_ts_diff['ts'], min_ts_diff['indicies'])
+                    return synced
+
+        # print('Status:', 'Went through all, found nothing', permutations)
 
 class Main:
     output_scale_factor = 0.5
@@ -390,7 +382,6 @@ class Main:
             cam_info = self.board_config['cameras'][cam_id]
             if cam_info['type'] == 'mono':
                 cam_node = pipeline.createMonoCamera()
-                cams[cam_id] = cam_node
                 xout = pipeline.createXLinkOut()
 
                 cam_node.setBoardSocket(stringToCam[cam_id])
@@ -401,7 +392,6 @@ class Main:
                 cam_node.out.link(xout.input)
             else:
                 cam_node = pipeline.createColorCamera()
-                cams[cam_id] = cam_node
                 xout = pipeline.createXLinkOut()
 
                 cam_node.setBoardSocket(stringToCam[cam_id])
@@ -423,28 +413,6 @@ class Main:
                     controlIn.out.link(cam_node.inputControl)
             xout.input.setBlocking(False)
             xout.input.setQueueSize(1)
-
-        if True: #if OAK-D-LR
-            for cam_id in self.board_config['cameras']:
-                # cams[cam_id].initialControl.setExternalTrigger(2, 1)
-                # cams[cam_id].initialControl.setStrobeExternal(48, 1)
-                # cams[cam_id].initialControl.setFrameSyncMode(dai.CameraControl.FrameSyncMode.INPUT)
-                cams[cam_id].initialControl.setManualExposure(15000, 400) # exposure [us], iso
-                cams[cam_id].initialControl.setManualWhiteBalance(4000)  # light temperature in K, 1000..12000
-            # script = pipeline.create(dai.node.Script)
-            # # framePeriodHalf = 1.0 / fps / 2.0
-            # framePeriodHalf = 1.0 / 3 / 2.0
-            # script.setScript(f"""
-            #     import GPIO
-            #     import time
-            #     GPIO.setup(41, GPIO.OUT, GPIO.PULL_NONE, False)
-            #     while True:
-            #         time.sleep({framePeriodHalf})
-            #         GPIO.write(41, GPIO.HIGH)
-            #         time.sleep({framePeriodHalf})
-            #         GPIO.write(41, GPIO.LOW)
-            # """)
-
 
         return pipeline
 
@@ -546,22 +514,40 @@ class Main:
         curr_time = None
 
         self.display_name = "Image Window"
-        syncCollector = HostSync(60)
+        syncCollector = MessageSync(len(self.camera_queue.keys()), self.args.minSyncTime)
+
+        # Clear events
+        self.device.getQueueEvents()
         while not finished:
             currImageList = {}
-            for key in self.camera_queue.keys():
-                frameMsg = self.camera_queue[key].get()
 
-                # print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
+            streams = self.device.getQueueEvents(list(self.camera_queue.keys()))
+            for stream in streams:
+                frames = self.device.getOutputQueue(stream).getAll()
+                for frameMsg in frames:
+                    syncCollector.add_msg(stream, frameMsg)
 
-                syncCollector.add_msg(key, frameMsg, frameMsg.getTimestamp())
+                    print(stream, frameMsg.getTimestampDevice())
+
+            syncedFrames = syncCollector.get_synced()
+            print('synced frames:', syncedFrames)
+            if syncedFrames is None or syncedFrames is False or len(syncedFrames) < len(self.camera_queue.keys()):
+                continue
+
+            for key in syncedFrames.keys():
+                frameMsg = syncedFrames[key]
+                print(f'Timestamp of  {key} is {frameMsg.getTimestampDevice()}')
+
                 gray_frame = None
                 if frameMsg.getType() == dai.RawImgFrame.Type.RAW8:
                     gray_frame = frameMsg.getCvFrame()
                 else:
                     gray_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
                 currImageList[key] = gray_frame
-                # print(gray_frame.shape)
+            tmpCurrImageList = {}
+            for name in sorted(currImageList.keys()):
+                tmpCurrImageList[name] = currImageList[name]
+            currImageList = tmpCurrImageList
 
             resizeHeight = 0
             resizeWidth = 0
@@ -609,8 +595,6 @@ class Main:
                         self.height, self.width)
 
                 localPolygon = np.array([self.polygons[self.current_polygon]])
-                print(localPolygon.shape)
-                print(localPolygon)
                 if self.images_captured_polygon == 1:
                     # perspectiveRotationMatrix = Rotation.from_euler('z', 45, degrees=True).as_matrix()
                     angle = 30.
@@ -630,8 +614,6 @@ class Main:
                     localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))
                     localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())
 
-                print(localPolygon)
-                print(localPolygon.shape)
                 cv2.polylines(
                     imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
@@ -682,7 +664,7 @@ class Main:
             allPassed = True
 
             if capturing:
-                syncedMsgs = syncCollector.get_synced()
+                syncedMsgs = syncedFrames
                 if syncedMsgs == False:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
@@ -804,8 +786,8 @@ class Main:
                 #     print("Timestamp difference ---> l & rgb")
                 lrgb_time = 0
                 if not self.args.disableRgb:
-                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
-                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
+                    lrgb_time = min([abs((recent_left.getTimestampDevice() - recent_color.getTimestampDevice()).microseconds), abs((recent_color.getTimestampDevice() - recent_left.getTimestampDevice()).microseconds)]) / 1000
+                lr_time = min([abs((recent_left.getTimestampDevice() - recent_right.getTimestampDevice()).microseconds), abs((recent_right.getTimestampDevice() - recent_left.getTimestampDevice()).microseconds)]) / 1000
 
                 if debug:
                     print(f'Timestamp difference between l & RGB ---> {lrgb_time} in microseconds')
