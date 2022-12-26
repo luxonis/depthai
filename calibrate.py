@@ -180,6 +180,9 @@ def parse_args():
                         help="set the scaling factor for output visualization. Default: 0.5.")
     parser.add_argument("-sync", "--minSyncTime", type=float, default=0.2,
                         help="set the minimum time enforced between frames to keep synchronization. Default: 0.2.")
+    parser.add_argument("-q", "--minQueueDepth", type=int, default=3,
+                        help="set the minimum queue depth for syncing before retrieving synced frames. Default: 3.")
+
 
     options = parser.parse_args()
 
@@ -195,19 +198,19 @@ def parse_args():
     return options
 
 class MessageSync:
-    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10):
+    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10, min_queue_depth=3):
         self.num_queues = num_queues
         self.min_diff_timestamp = min_diff_timestamp
         self.max_num_messages = max_num_messages
         # self.queues = [deque() for _ in range(num_queues)]
         self.queues = dict()
+        self.queue_depth = min_queue_depth
         # self.earliest_ts = {}
 
     def add_msg(self, name, msg):
         if name not in self.queues:
             self.queues[name] = deque(maxlen=self.max_num_messages)
         self.queues[name].append(msg)
-
         # if msg.getTimestampDevice() < self.earliest_ts:
         #     self.earliest_ts = {name: msg.getTimestampDevice()}
 
@@ -264,7 +267,7 @@ class MessageSync:
                 for name in indicies.keys():
                     if min_queue_depth is None or indicies[name] < min_queue_depth:
                         min_queue_depth = indicies[name]
-                if min_queue_depth >= 5:
+                if min_queue_depth >= self.queue_depth:
                     # Retrieve and pop the others
                     synced = {}
                     for name in indicies.keys():
@@ -387,6 +390,8 @@ class Main:
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
+                # xout.input.setBlocking(False)
+                # xout.input.setQueueSize(4)
 
                 xout.setStreamName(cam_info['name'])
                 cam_node.out.link(xout.input)
@@ -399,6 +404,9 @@ class Main:
                 cam_node.setFps(fps)
 
                 xout.setStreamName(cam_info['name'])
+                # xout.input.setBlocking(False)
+                # xout.input.setQueueSize(4)
+
                 cam_node.isp.link(xout.input)
                 if cam_info['sensorName'] == "OV9*82":
                     cam_node.initialControl.setSharpness(0)
@@ -514,19 +522,19 @@ class Main:
         curr_time = None
 
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue.keys()), self.args.minSyncTime)
+        syncCollector = MessageSync(len(self.camera_queue.keys()), self.args.minSyncTime, self.args.minQueueDepth)
 
         # Clear events
-        self.device.getQueueEvents()
+        streams = self.device.getQueueEvents(list(self.camera_queue.keys()))
         while not finished:
             currImageList = {}
 
             streams = self.device.getQueueEvents(list(self.camera_queue.keys()))
             for stream in streams:
-                frames = self.device.getOutputQueue(stream).getAll()
+                # frames = self.device.getOutputQueue(stream, maxSize=4, blocking=False).tryGetAll()
+                frames = self.device.getOutputQueue(stream).tryGetAll()
                 for frameMsg in frames:
                     syncCollector.add_msg(stream, frameMsg)
-
                     print(stream, frameMsg.getTimestampDevice())
 
             syncedFrames = syncCollector.get_synced()
