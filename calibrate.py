@@ -385,10 +385,12 @@ class Main:
         pipeline = dai.Pipeline()
 
         fps = self.args.fps
+        cams = {}
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
             if cam_info['type'] == 'mono':
                 cam_node = pipeline.createMonoCamera()
+                cams[cam_id] = cam_node
                 xout = pipeline.createXLinkOut()
 
                 cam_node.setBoardSocket(stringToCam[cam_id])
@@ -399,6 +401,7 @@ class Main:
                 cam_node.out.link(xout.input)
             else:
                 cam_node = pipeline.createColorCamera()
+                cams[cam_id] = cam_node
                 xout = pipeline.createXLinkOut()
 
                 cam_node.setBoardSocket(stringToCam[cam_id])
@@ -420,6 +423,28 @@ class Main:
                     controlIn.out.link(cam_node.inputControl)
             xout.input.setBlocking(False)
             xout.input.setQueueSize(1)
+
+        if True: #if OAK-D-LR
+            for cam_id in self.board_config['cameras']:
+                # cams[cam_id].initialControl.setExternalTrigger(2, 1)
+                # cams[cam_id].initialControl.setStrobeExternal(48, 1)
+                # cams[cam_id].initialControl.setFrameSyncMode(dai.CameraControl.FrameSyncMode.INPUT)
+                cams[cam_id].initialControl.setManualExposure(15000, 400) # exposure [us], iso
+                cams[cam_id].initialControl.setManualWhiteBalance(4000)  # light temperature in K, 1000..12000
+            # script = pipeline.create(dai.node.Script)
+            # # framePeriodHalf = 1.0 / fps / 2.0
+            # framePeriodHalf = 1.0 / 3 / 2.0
+            # script.setScript(f"""
+            #     import GPIO
+            #     import time
+            #     GPIO.setup(41, GPIO.OUT, GPIO.PULL_NONE, False)
+            #     while True:
+            #         time.sleep({framePeriodHalf})
+            #         GPIO.write(41, GPIO.HIGH)
+            #         time.sleep({framePeriodHalf})
+            #         GPIO.write(41, GPIO.LOW)
+            # """)
+
 
         return pipeline
 
