@@ -8,3 +8,4 @@ pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" 
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 depthai==2.19.1.0.dev+5009c0a90a6d6741a8f53855083953eb1a119ed2
 Qt.py
+scipy
