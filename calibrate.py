@@ -180,8 +180,8 @@ def parse_args():
                         help="set the scaling factor for output visualization. Default: 0.5.")
     parser.add_argument("-sync", "--minSyncTime", type=float, default=0.2,
                         help="set the minimum time enforced between frames to keep synchronization. Default: 0.2.")
-    parser.add_argument("-q", "--minQueueDepth", type=int, default=3,
-                        help="set the minimum queue depth for syncing before retrieving synced frames. Default: 3.")
+    parser.add_argument("-q", "--minQueueDepth", type=int, default=4,
+                        help="set the minimum queue depth for syncing before retrieving synced frames. Default: 1.")
 
 
     options = parser.parse_args()
