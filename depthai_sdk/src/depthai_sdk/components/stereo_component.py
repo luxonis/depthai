@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Optional, Union, Any, Dict
 
 import cv2
