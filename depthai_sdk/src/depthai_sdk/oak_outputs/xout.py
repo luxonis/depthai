@@ -212,6 +212,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
                  colorize: StereoColor = False,
                  colormap: int = None,
                  use_wls_filter: bool = None,
+                 wls_level: 'WLSLevel' = None,
                  wls_lambda: float = None,
                  wls_sigma: float = None):
         self.mono_frames = mono_frames
@@ -223,8 +224,15 @@ class XoutDisparity(XoutFrames, XoutClickable):
         self.colormap = colormap
 
         self.use_wls_filter = use_wls_filter
-        self.wls_lambda = wls_lambda
-        self.wls_sigma = wls_sigma
+
+        # Prefer to use WLS level if set, otherwise use lambda and sigma
+        if wls_level and use_wls_filter:
+            print(f'Using WLS level: {wls_level.name} (lambda: {wls_level.value[0]}, sigma: {wls_level.value[1]})')
+            self.wls_lambda = wls_level.value[0]
+            self.wls_sigma = wls_level.value[1]
+        else:
+            self.wls_lambda = wls_lambda
+            self.wls_sigma = wls_sigma
 
         if self.use_wls_filter:
             self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
@@ -320,6 +328,7 @@ class XoutDepth(XoutFrames, XoutClickable):
                  colorize: StereoColor = False,
                  colormap: int = None,
                  use_wls_filter: bool = None,
+                 wls_level: 'WLSLevel' = None,
                  wls_lambda: float = None,
                  wls_sigma: float = None):
         self.mono_frames = mono_frames
@@ -334,8 +343,15 @@ class XoutDepth(XoutFrames, XoutClickable):
         self.colormap = colormap
 
         self.use_wls_filter = use_wls_filter
-        self.wls_lambda = wls_lambda
-        self.wls_sigma = wls_sigma
+
+        # Prefer to use WLS level if set, otherwise use lambda and sigma
+        if wls_level and use_wls_filter:
+            print(f'Using WLS level: {wls_level.name} (lambda: {wls_level.value[0]}, sigma: {wls_level.value[1]})')
+            self.wls_lambda = wls_level.value[0]
+            self.wls_sigma = wls_level.value[1]
+        else:
+            self.wls_lambda = wls_lambda
+            self.wls_sigma = wls_sigma
 
         self.wls_filter = None
         self.msgs = dict()
