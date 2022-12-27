@@ -29,7 +29,7 @@ class BboxStyle(IntEnum):
     ROUNDED_CORNERS = 11
 
 
-class StereoColor:
+class StereoColor(IntEnum):
     GRAY = 0
     RGB = 1
     RGBD = 2
