@@ -79,7 +79,7 @@ def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tu
     For colorCamera.video output
     """
     while True:
-        if width % 3 == 0:
+        if width % 2 == 0:
             if not videoEncoder or width % 32 == 0:
                 break
         width -= 1
@@ -124,7 +124,7 @@ def getClosestIspScale(camResolution: Tuple[int, int],
             continue  # ISP output size isn't supported by VideoEncoder
 
         # Currently, new ISP width must be divisible by 2. FW engineers are looking into it.
-        if newW % 2 != 0:
+        if newW % 2 != 0 or newH % 2 != 0:
             continue
 
         err = abs((newW - width) if width else (newH - height))
