@@ -22,7 +22,7 @@ with OakCamera() as oak:
     color = oak.create_camera('color')
 
     det = oak.create_nn('face-detection-retail-0004', color)
-    det.config_nn(aspect_ratio_resize_mode='stretch')
+    det.config_nn(resize_mode='crop')
 
     age_gender = oak.create_nn('age-gender-recognition-retail-0013', input=det)
     # age_gender.config_multistage_nn(show_cropped_frames=True) # For debugging
@@ -31,6 +31,7 @@ with OakCamera() as oak:
     # to the callback function (where it will be displayed)
     oak.visualize(age_gender, callback=callback)
     oak.visualize(det.out.passthrough)
+    oak.visualize(age_gender.out.twostage_crops)
 
     # oak.show_graph() # Show pipeline graph, no need for now
     oak.start(blocking=True)  # This call will block until the app is stopped (by pressing 'Q' button)
