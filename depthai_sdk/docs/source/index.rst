@@ -20,7 +20,7 @@ otherwise take 100s of lines of code, and a few hours of assembling code pieces 
 .. code-block:: python
    :linenos:
 
-   from depthai_sdk import OakCamera, AspectRatioResizeMode
+   from depthai_sdk import OakCamera, ResizeMode
 
    # Download a public depthai-recording and replay it
    with OakCamera(replay='cars-tracking-above-01') as oak:
@@ -29,7 +29,7 @@ otherwise take 100s of lines of code, and a few hours of assembling code pieces 
 
       # Download & run pretrained vehicle detection model and track detections
       nn = oak.create_nn('vehicle-detection-0202', color, tracker=True)
-      nn.config_nn(aspect_ratio_resize_mode=AspectRatioResizeMode.STRETCH)
+      nn.config_nn(resize_mode=ResizeMode.STRETCH)
 
       # Visualize tracklets, show FPS
       visualizer = oak.visualize(nn.out.tracker, fps=True)

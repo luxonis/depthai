@@ -29,7 +29,7 @@ with OakCamera() as oak:
     color = oak.create_camera('color', resolution='1080p')
 
     nn = oak.create_nn('deeplabv3_person', color)
-    nn.config_nn(aspect_ratio_resize_mode='stretch')
+    nn.config_nn(resize_mode='stretch')
 
     oak.callback(nn, callback=callback)
     oak.start(blocking=True)
