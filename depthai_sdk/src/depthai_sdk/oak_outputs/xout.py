@@ -543,11 +543,17 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             )
         elif isinstance(packet.img_detections, ImgLandmarks):
             all_landmarks = packet.img_detections.landmarks
+            all_landmarks_indices = packet.img_detections.landmarks_indices
             colors = packet.img_detections.colors
-            for landmarks in all_landmarks:
+            for landmarks, indices in zip(all_landmarks, all_landmarks_indices):
                 for i, landmark in enumerate(landmarks):
-                    l = self.normalizer.normalize(frame=np.zeros(packet.frame.shape, dtype=bool), bbox=landmark)
-                    self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[i], thickness=2)
+                    l = self.normalizer.normalize(frame=np.zeros(self._visualizer.frame_shape, dtype=bool),
+                                                  bbox=landmark)
+                    idx = indices[i]
+
+                    self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[idx], thickness=4)
+                    self._visualizer.add_circle(coords=tuple(l[0]), radius=8, color=colors[idx], thickness=-1)
+                    self._visualizer.add_circle(coords=tuple(l[1]), radius=8, color=colors[idx], thickness=-1)
 
     def package(self, msgs: Dict):
         if self.queue.full():

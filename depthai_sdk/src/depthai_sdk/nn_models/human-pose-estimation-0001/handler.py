@@ -4,7 +4,7 @@ from depthai import NNData
 
 from depthai_sdk.classes.nn_results import ImgLandmarks
 
-keypoints_mapping = [
+KEYPOINTS_MAPPING = [
     'Nose', 'Neck', 'R-Sho', 'R-Elb', 'R-Wr',
     'L-Sho', 'L-Elb', 'L-Wr', 'R-Hip', 'R-Knee',
     'R-Ank', 'L-Hip', 'L-Knee', 'L-Ank', 'R-Eye',
@@ -14,11 +14,13 @@ POSE_PAIRS = [
     [1, 2], [1, 5], [2, 3], [3, 4], [5, 6], [6, 7], [1, 8], [8, 9], [9, 10], [1, 11],
     [11, 12], [12, 13], [1, 0], [0, 14], [14, 16], [0, 15], [15, 17], [2, 17], [5, 16]
 ]
-map_idx = [
+SORTED_POSE_PAIRS = list(sorted(POSE_PAIRS, key=lambda x: tuple(x)))
+
+MAP_IDX = [
     [31, 32], [39, 40], [33, 34], [35, 36], [41, 42], [43, 44], [19, 20], [21, 22], [23, 24], [25, 26],
     [27, 28], [29, 30], [47, 48], [49, 50], [53, 54], [51, 52], [55, 56], [37, 38], [45, 46]
 ]
-colors = [
+ALL_COLORS = [
     [0, 100, 255], [0, 100, 255], [0, 255, 255], [0, 100, 255], [0, 255, 255], [0, 100, 255], [0, 255, 0],
     [255, 200, 100], [255, 0, 255], [0, 255, 0], [255, 200, 100], [255, 0, 255], [0, 0, 255], [255, 0, 0],
     [200, 200, 0], [255, 0, 0], [200, 200, 0], [0, 0, 0]
@@ -26,8 +28,8 @@ colors = [
 
 NN_HEIGHT, NN_WIDTH = 256, 456
 
-threshold = 0.3
-n_points = 18
+THRESHOLD = 0.3
+N_POINTS = 18
 
 
 def decode(nn_data: NNData) -> ImgLandmarks:
@@ -41,10 +43,10 @@ def decode(nn_data: NNData) -> ImgLandmarks:
     new_keypoints_list = np.zeros((0, 3))
     keypoint_id = 0
 
-    for row in range(n_points):
+    for row in range(N_POINTS):
         prob_map = outputs[0, row, :, :]
         prob_map = cv2.resize(prob_map, (NN_WIDTH, NN_HEIGHT))  # (456, 256)
-        keypoints = get_keypoints(prob_map, threshold=threshold)
+        keypoints = get_keypoints(prob_map, threshold=THRESHOLD)
         new_keypoints_list = np.vstack([new_keypoints_list, *keypoints])
         keypoints_with_id = []
 
@@ -58,22 +60,29 @@ def decode(nn_data: NNData) -> ImgLandmarks:
     new_personwise_keypoints = get_personwise_keypoints(valid_pairs, invalid_pairs, new_keypoints_list)
 
     keypoint_points = []
+    keypoints_indices = []
 
     for n in range(len(new_personwise_keypoints)):
         person_keypoints = []
-        for i in range(n_points - 1):
+        indices = []
+        for i in range(N_POINTS - 1):
             index = new_personwise_keypoints[n][np.array(POSE_PAIRS[i])]
-
             if -1 in index:
                 continue
 
             k1 = np.int32(new_keypoints_list[index.astype(int), 0]) / NN_WIDTH
             k2 = np.int32(new_keypoints_list[index.astype(int), 1]) / NN_HEIGHT
             person_keypoints.append([[k1[0], k2[0]], [k1[1], k2[1]]])
+            indices.append(i)
 
         keypoint_points.append(person_keypoints)
+        keypoints_indices.append(indices)
 
-    return ImgLandmarks(nn_data, keypoint_points, POSE_PAIRS, colors)
+    return ImgLandmarks(nn_data=nn_data,
+                        landmarks=keypoint_points,
+                        landmarks_indices=keypoints_indices,
+                        pairs=POSE_PAIRS,
+                        colors=ALL_COLORS)
 
 
 def get_keypoints(prob_map, threshold=0.2):
@@ -105,9 +114,9 @@ def get_valid_pairs(outputs, w, h, detected_keypoints):
     paf_score_th = 0.2
     conf_th = 0.4
 
-    for k in range(len(map_idx)):
-        paf_a = outputs[0, map_idx[k][0], :, :]
-        paf_b = outputs[0, map_idx[k][1], :, :]
+    for k in range(len(MAP_IDX)):
+        paf_a = outputs[0, MAP_IDX[k][0], :, :]
+        paf_b = outputs[0, MAP_IDX[k][1], :, :]
         paf_a = cv2.resize(paf_a, (w, h))
         paf_b = cv2.resize(paf_b, (w, h))
 
@@ -158,7 +167,7 @@ def get_valid_pairs(outputs, w, h, detected_keypoints):
 def get_personwise_keypoints(valid_pairs, invalid_pairs, keypoints_list):
     personwise_keypoints = -1 * np.ones((0, 19))
 
-    for k in range(len(map_idx)):
+    for k in range(len(MAP_IDX)):
         if k in invalid_pairs:
             continue
 
