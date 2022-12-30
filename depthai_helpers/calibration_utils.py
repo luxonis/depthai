@@ -12,7 +12,8 @@ import cv2.aruco as aruco
 from pathlib import Path
 from collections import deque
 # Creates a set of 13 polygon coordinates
-traceLevel = 2
+traceLevel = 3
+useRectifyProjection = 0
 # trace = 3 -> Undisted image viz
 # trace = 2 -> Print logs
 
@@ -130,6 +131,8 @@ class StereoCalibration(object):
                 cam_info['name'], ret))
             print("Estimated intrinsics of {0}: \n {1}".format(
                 cam_info['name'], intrinsics))
+            print("Estimated dist coeffs of {0}: \n {1}".format(
+                cam_info['name'], dist_coeff))
         
         for camera in board_config['cameras'].keys():
             left_cam_info = board_config['cameras'][camera]
@@ -650,8 +653,8 @@ class StereoCalibration(object):
                          (0, 255, 0), 1)
                 line_col += 40
 
-            img_concat = cv2.resize(
-                img_concat, (0, 0), fx=0.4, fy=0.4)
+            # img_concat = cv2.resize(
+            #     img_concat, (0, 0), fx=0.2, fy=0.2)
 
             # show image
             cv2.imshow('Stereo Pair', img_concat)
@@ -836,6 +839,7 @@ class StereoCalibration(object):
         isHorizontal = True
         if np.absolute(t[1]) > 0.6:
             isHorizontal = False
+            print('Not Horizontal----------------------------------------------------------------')
 
         scale = None
         scale_req = False
@@ -867,12 +871,12 @@ class StereoCalibration(object):
 
         M_lp = self.scale_intrinsics(M_l, frame_left_shape, scaled_res)
         M_rp = self.scale_intrinsics(M_r, frame_right_shape, scaled_res)
-
-        # p_lp = self.scale_intrinsics(p_l, frame_left_shape, scaled_res)
-        # p_rp = self.scale_intrinsics(p_r, frame_right_shape, scaled_res)
+        if useRectifyProjection:
+            p_lp = self.scale_intrinsics(p_l, frame_left_shape, scaled_res)
+            p_rp = self.scale_intrinsics(p_r, frame_right_shape, scaled_res)
 
         criteria = (cv2.TERM_CRITERIA_EPS +
-                    cv2.TERM_CRITERIA_MAX_ITER, 10000, 0.00001)
+                    cv2.TERM_CRITERIA_MAX_ITER, 50000, 0.00000001)
 
         # TODO(Sachin): Observe Images by adding visualization 
         # TODO(Sachin): Check if the stetch is only in calibration Images
@@ -883,23 +887,20 @@ class StereoCalibration(object):
         # print(d_r)
 
         print(f'Width and height is {scaled_res[::-1]}')
-        # print(d_r)
-        # kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_l, d_l, scaled_res[::-1], 0)
-        # kScaledR, _ = cv2.getOptimalNewCameraMatrix(M_r, d_r, scaled_res[::-1], 0)
         kScaledL = M_rp
         kScaledR = kScaledL
-        # print('Intrinsics from the getOptimalNewCameraMatrix....')
-        # print(kScaledL)
-        # print(kScaledR)
-        # oldEpipolarError = None
-        # epQueue = deque()
-        # movePos = True
-       
+        if useRectifyProjection:
+            kScaledL = p_lp
+            kScaledR = p_rp
+            print('Projection is Rectified matrix')
+            print(kScaledL)
+            print(kScaledR)
+        
         r_id = np.identity(3)
         mapx_l, mapy_l = cv2.initUndistortRectifyMap(
-            M_lp, d_l, r_l, M_rp, scaled_res[::-1], cv2.CV_32FC1)
+            M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
         mapx_r, mapy_r = cv2.initUndistortRectifyMap(
-            M_rp, d_r, r_r, M_rp, scaled_res[::-1], cv2.CV_32FC1)
+            M_rp, d_r, r_r, kScaledR, scaled_res[::-1], cv2.CV_32FC1)
         
 
         image_data_pairs = []
@@ -929,17 +930,17 @@ class StereoCalibration(object):
 
             image_data_pairs.append((img_l, img_r))
             
-            if traceLevel == 3:
-                cv2.imshow("undistorted-Left", img_l)
-                cv2.imshow("undistorted-right", img_r)
-                # print(f'image path - {im}')
-                # print(f'Image Undistorted Size {undistorted_img.shape}')
-                k = cv2.waitKey(0)
-                if k == 27:  # Esc key to stop
-                    break
-        if traceLevel == 3:
-          cv2.destroyWindow("undistorted-left")
-          cv2.destroyWindow("undistorted-right")  
+            # if traceLevel == 3:
+            #     cv2.imshow("undistorted-Left", img_l)
+            #     cv2.imshow("undistorted-right", img_r)
+            #     # print(f'image path - {im}')
+            #     # print(f'Image Undistorted Size {undistorted_img.shape}')
+            #     k = cv2.waitKey(0)
+            #     if k == 27:  # Esc key to stop
+            #         break
+        # if traceLevel == 3:
+        #   cv2.destroyWindow("undistorted-left")
+        #   cv2.destroyWindow("undistorted-right")  
         # compute metrics
         imgpoints_r = []
         imgpoints_l = []
@@ -1010,9 +1011,11 @@ class StereoCalibration(object):
                 epi_error_sum = 0
                 for l_pt, r_pt in zip(corners_l, corners_r):
                     if isHorizontal:
-                        epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+                        curr_ep = abs(l_pt[0][1] - r_pt[0][1])
+                        epi_error_sum += curr_ep
                     else:
-                        epi_error_sum += abs(l_pt[0][0] - r_pt[0][0])
+                        curr_ep = abs(l_pt[0][0] - r_pt[0][0])
+                        epi_error_sum += curr_ep
                 localError = epi_error_sum / len(corners_l)
 
                 print("Average Epipolar Error per image on host in " + img_pth_right.name + " : " +
@@ -1024,7 +1027,6 @@ class StereoCalibration(object):
             lText = cv2.putText(cv2.cvtColor(image_data_pair[0],cv2.COLOR_GRAY2RGB), img_pth_left.name, org, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
             rText = cv2.putText(cv2.cvtColor(image_data_pair[1],cv2.COLOR_GRAY2RGB), img_pth_right.name + " Error: " + str(localError), org, cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
             image_data_pairs[i] = (lText, rText)
-
 
         epi_error_sum = 0
         for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):
