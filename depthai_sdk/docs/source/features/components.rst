@@ -13,7 +13,7 @@ their initialization, configuration, and linking. This improves ease of use when
 
 **Reference**
 
-.. autoclass:: depthai_sdk.components.component
+.. autoclass:: depthai_sdk.Component
     :members:
     :undoc-members:
 

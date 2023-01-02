@@ -28,6 +28,6 @@ Component outputs
 Reference
 #########
 
-.. automodule:: depthai_sdk.components.stereo_component
+.. autoclass:: depthai_sdk.StereoComponent
     :members:
     :undoc-members:

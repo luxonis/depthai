@@ -30,6 +30,6 @@ Component outputs
 Reference
 #########
 
-.. autoclass:: depthai_sdk.components.camera_component
+.. autoclass:: depthai_sdk.CameraComponent
     :members:
     :undoc-members:

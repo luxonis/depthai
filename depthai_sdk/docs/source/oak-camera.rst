@@ -31,7 +31,7 @@ Below there are a few basic examples. **See** `all examples here <https://github
 Here are a few demos that have been developed with DepthAI SDK:
 
 #. `age-gender <https://github.com/luxonis/depthai-experiments/tree/master/gen2-age-gender>`__,
-#. `emotion-recognition <https://github.com/luxonis/depthai-experiments/tree/master/gen2-emotion-recognition>`__,
+#. `emotion-recognition <https://github.com/luxonis/depthai-experiments/tree/master/gen2-emotsion-recognition>`__,
 #. `full-fov-nn <https://github.com/luxonis/depthai-experiments/tree/master/gen2-full-fov-nn>`__,
 #. `head-posture-detection <https://github.com/luxonis/depthai-experiments/tree/master/gen2-head-posture-detection>`__,
 #. `pedestrian-reidentification <https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification>`__,
@@ -64,7 +64,7 @@ Run face-detection-retail-0004 on left camera
 Reference
 #########
 
-.. autoclass:: depthai_sdk.oak_camera.OakCamera
+.. autoclass:: depthai_sdk.OakCamera
     :members:
     :undoc-members:
 
