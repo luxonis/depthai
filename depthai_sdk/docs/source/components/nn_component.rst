@@ -89,10 +89,13 @@ Example usage:
 Reference
 #########
 
-.. autoclass:: depthai_sdk.NNComponent
+.. automodule:: depthai_sdk.components.nn_component
     :members:
     :undoc-members:
 
+
+NN results reference
+--------------------
 
 .. automodule:: depthai_sdk.classes.nn_results
     :members:

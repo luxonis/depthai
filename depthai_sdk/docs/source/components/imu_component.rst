@@ -26,6 +26,6 @@ Component outputs
 Reference
 #########
 
-.. autoclass:: depthai_sdk.IMUComponent
+.. autoclass:: depthai_sdk.components.imu_component.IMUComponent
     :members:
     :undoc-members:
