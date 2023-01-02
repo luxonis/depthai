@@ -778,13 +778,15 @@ class XoutTwoStage(XoutNnResults):
             self.msgs[seq][self.nn_results.name] = None
 
         if name == self.second_nn_out.name:
-            if (f := self.second_nn._decode_fn) is not None:
+            f = self.second_nn._decode_fn
+            if f is not None:
                 self.msgs[seq][name].append(f(msg))
             else:
                 self.msgs[seq][name].append(msg)
 
         elif name == self.nn_results.name:
-            if (f := self.det_nn._decode_fn) is not None:
+            f = self.det_nn._decode_fn
+            if f is not None:
                 msg = f(msg)
 
             self.add_detections(seq, msg)
@@ -808,7 +810,8 @@ class XoutTwoStage(XoutNnResults):
                         rect = det[0], det[1], det[2], det[3]
 
                     try:
-                        if (angle := msg.angles[i]) != 0.0:
+                        angle = msg.angles[i]
+                        if angle != 0.0:
                             rr = dai.RotatedRect()
                             rr.center.x = rect[0]
                             rr.center.y = rect[1]
