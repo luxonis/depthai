@@ -70,16 +70,19 @@ class ImgLandmarks(GenericNNOutput):  # In core, extend from NNData
     Examples: `human-pose-estimation-0001`, `openpose2`, `facial-landmarks-68`, `landmarks-regression-retail-0009`.
     """
     landmarks: List[List[Any]]
+    landmarks_indices: List[List[int]]
     pairs: List[Tuple[int, int]]  # Pairs of landmarks, to draw lines between them
     colors: List[Tuple[int, int, int]]  # Color for each landmark (eg. both elbows are in the same color)
 
     def __init__(self,
                  nn_data: NNData,
                  landmarks: List[List[Any]] = None,
+                 landmarks_indices: List[List[int]] = None,
                  pairs: List[Tuple[int, int]] = None,
                  colors: List[Tuple[int, int, int]] = None):
         super().__init__(nn_data)
         self.landmarks = landmarks
+        self.landmarks_indices = landmarks_indices
         self.pairs = pairs
         self.colors = colors
 
