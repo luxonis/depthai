@@ -209,7 +209,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
                  mono_frames: StreamXout,
                  max_disp: float,
                  fps: float,
-                 colorize: StereoColor = False,
+                 colorize: StereoColor = None,
                  colormap: int = None,
                  use_wls_filter: bool = None,
                  wls_level: 'WLSLevel' = None,
@@ -248,13 +248,13 @@ class XoutDisparity(XoutFrames, XoutClickable):
 
         stereo_config = self._visualizer.config.stereo
 
-        if self.use_wls_filter:
+        if self.use_wls_filter or stereo_config.wls_filter:
             self.wls_filter.setLambda(self.wls_lambda or stereo_config.wls_lambda)
             self.wls_filter.setSigmaColor(self.wls_sigma or stereo_config.wls_sigma)
             disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
-        colorize = stereo_config.colorize or self.colorize
-        colormap = stereo_config.colormap or self.colormap
+        colorize = self.colorize if self.colorize is not None else stereo_config.colorize
+        colormap = self.colormap or stereo_config.colormap
         if colorize == StereoColor.GRAY:
             packet.frame = disparity_frame
         elif colorize == StereoColor.RGB:
@@ -325,7 +325,7 @@ class XoutDepth(XoutFrames, XoutClickable):
                  frames: StreamXout,
                  fps: float,
                  mono_frames: StreamXout,
-                 colorize: StereoColor = False,
+                 colorize: StereoColor = None,
                  colormap: int = None,
                  use_wls_filter: bool = None,
                  wls_level: 'WLSLevel' = None,
@@ -370,7 +370,7 @@ class XoutDepth(XoutFrames, XoutClickable):
 
         stereo_config = self._visualizer.config.stereo
 
-        if stereo_config.wls_filter or self.use_wls_filter:
+        if self.use_wls_filter or stereo_config.wls_filter:
             self.wls_filter.setLambda(stereo_config.wls_lambda)
             self.wls_filter.setSigmaColor(stereo_config.wls_sigma)
             depth_frame = self.wls_filter.filter(depth_frame, packet.mono_frame.getCvFrame())
