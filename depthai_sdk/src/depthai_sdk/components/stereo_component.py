@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Optional, Union, Any, Dict
 
-import cv2
 import depthai as dai
 
 from depthai_sdk.components.camera_component import CameraComponent
@@ -71,12 +70,12 @@ class StereoComponent(Component):
             self._encoderProfile = parse_encode(encode)
 
         # Configuration variables
-        self._colorize = StereoColor.GRAY
-        self._colormap = cv2.COLORMAP_TURBO
-        self._use_wls_filter = False
-        self._wls_level = WLSLevel.MEDIUM
-        self._wls_lambda = 8000
-        self._wls_sigma = 1.5
+        self._colorize = None
+        self._colormap = None
+        self._use_wls_filter = None
+        self._wls_level = None
+        self._wls_lambda = None
+        self._wls_sigma = None
 
     def get_output_stream(self, input: Union[
         CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output
@@ -188,22 +187,22 @@ class StereoComponent(Component):
         if colorize is None:
             self._colorize = StereoColor.GRAY
         elif isinstance(colorize, bool):
-            self._colorize = StereoColor.GRAY if colorize else StereoColor.RGB
+            self._colorize = StereoColor.RGB if colorize else StereoColor.GRAY
         elif isinstance(colorize, StereoColor):
             self._colorize = colorize
         elif isinstance(colorize, str):
             self._colorize = StereoColor[colorize.upper()]
 
-        self._colormap = colormap or self._colormap
-        self._use_wls_filter = wls_filter or self._use_wls_filter
+        self._colormap = colormap
+        self._use_wls_filter = wls_filter
 
         if isinstance(wls_level, WLSLevel):
             self._wls_level = wls_level
         elif isinstance(wls_level, str):
             self._wls_level = WLSLevel(wls_level.upper())
 
-        self._wls_lambda = wls_lambda or self._wls_lambda
-        self._wls_sigma = wls_sigma or self._wls_sigma
+        self._wls_lambda = wls_lambda
+        self._wls_sigma = wls_sigma
 
     def _get_disparity_factor(self, device: dai.Device) -> float:
         """
