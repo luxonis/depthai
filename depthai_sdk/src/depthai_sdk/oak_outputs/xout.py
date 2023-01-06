@@ -249,8 +249,8 @@ class XoutDisparity(XoutFrames, XoutClickable):
         stereo_config = self._visualizer.config.stereo
 
         if self.use_wls_filter:
-            self.wls_filter.setLambda(stereo_config.wls_lambda or self.wls_lambda)
-            self.wls_filter.setSigmaColor(stereo_config.wls_sigma or self.wls_sigma)
+            self.wls_filter.setLambda(self.wls_lambda or stereo_config.wls_lambda)
+            self.wls_filter.setSigmaColor(self.wls_sigma or stereo_config.wls_sigma)
             disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
         colorize = stereo_config.colorize or self.colorize
