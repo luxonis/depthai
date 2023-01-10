@@ -184,6 +184,17 @@ class StereoComponent(Component):
                               wls_lambda: float = None,
                               wls_sigma: float = None
                               ) -> None:
+        """
+        Configures postprocessing options.
+
+        Args:
+            colorize: Colorize the disparity map. Can be either a StereoColor enum, string or bool.
+            colormap: Colormap to use for colorizing the disparity map.
+            wls_filter: Enable WLS filter. If enabled, the output will be filtered using WLS filter.
+            wls_level: WLS filter level. Can be either a WLSLevel enum or string.
+            wls_lambda: WLS filter lambda.
+            wls_sigma: WLS filter sigma.
+        """
         if colorize is None:
             self._colorize = StereoColor.GRAY
         elif isinstance(colorize, bool):
