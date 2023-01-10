@@ -14,8 +14,8 @@ from depthai_sdk.visualize.configs import StereoColor
 
 class WLSLevel(Enum):
     """WLS filter level"""
-    LOW = (2000, 0.8)
-    MEDIUM = (8000, 1.5)
+    LOW = (1000, 0.8)
+    MEDIUM = (6000, 1.5)
     HIGH = (12000, 2.0)
 
 
