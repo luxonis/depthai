@@ -15,6 +15,7 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
     IMUPacket, DepthPacket, _Detection
 )
+from depthai_sdk.components.nn_helper import AspectRatioResizeMode
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
@@ -462,7 +463,6 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
     labels: List[Tuple[str, Tuple[int, int, int]]] = None
     normalizer: NormalizeBoundingBox
 
-
     def xstreams(self) -> List[StreamXout]:
         return [self.nn_results, self.frames]
 
@@ -504,7 +504,6 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             self.frame_shape = self.det_nn._input.stream_size  # Replay
 
         self.frame_shape = np.array(self.frame_shape)[::-1]
-
 
         self.segmentation_colormap = None
         # colors = distinctipy.get_colors(n_colors=256, rng=123123, pastel_factor=0.5)
@@ -563,23 +562,32 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                     self._visualizer.add_circle(coords=tuple(l[1]), radius=8, color=colors[idx], thickness=-1)
         elif isinstance(packet.img_detections, SemanticSegmentation):
             if self.segmentation_colormap is None:
-                colors = distinctipy.get_colors(n_colors=256, rng=123123, pastel_factor=0.5)
+                colors = distinctipy.get_colors(n_colors=10, rng=123123, pastel_factor=0.5)
                 rgb_colors = np.array(colors) * 255
                 self.segmentation_colormap = rgb_colors.astype(np.uint8)
 
             mask = np.array(packet.img_detections.mask).astype(np.uint8)
             colorized_mask = np.array(self.segmentation_colormap)[mask]
-            resize_bbox = self.normalizer.normalize(frame=np.zeros(self._visualizer.frame_shape, dtype=bool),
-                                                    bbox=(0., 0., 1., 1.))
-            x1, y1, x2, y2 = resize_bbox
 
-            # Stretch mode
-            if x1 == 0 and y1 == 0:
-                colorized_mask = cv2.resize(colorized_mask, (x2 - x1, y2 - y1))
-            # Crop mode
+            bbox = None
+            if self.normalizer.ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
+                bbox = self.normalizer.get_letterbox_bbox(packet.frame, normalize=True)
+                input_h, input_w = self.normalizer.aspect_ratio
+                resize_bbox = bbox[0] * input_w, bbox[1] * input_h, bbox[2] * input_w, bbox[3] * input_h
+                resize_bbox = np.int0(resize_bbox)
             else:
-                padded_mask = np.zeros((self._visualizer.frame_shape[0], self._visualizer.frame_shape[1], 3), dtype=np.uint8)
-                print(colorized_mask.shape)
+                resize_bbox = self.normalizer.normalize(frame=np.zeros(self._visualizer.frame_shape, dtype=bool),
+                                                        bbox=bbox or (0., 0., 1., 1.))
+
+            x1, y1, x2, y2 = resize_bbox
+            h, w = packet.frame.shape[:2]
+            # Stretch mode
+            if self.normalizer.ar_resize_mode == AspectRatioResizeMode.STRETCH:
+                colorized_mask = cv2.resize(colorized_mask, (w, h))
+            elif self.normalizer.ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
+                colorized_mask = cv2.resize(colorized_mask[y1:y2, x1:x2], (w, h))
+            else:
+                padded_mask = np.zeros((h, w, 3), dtype=np.uint8)
                 resized_mask = cv2.resize(colorized_mask, (x2 - x1, y2 - y1))
                 padded_mask[y1:y2, x1:x2] = resized_mask
                 colorized_mask = padded_mask

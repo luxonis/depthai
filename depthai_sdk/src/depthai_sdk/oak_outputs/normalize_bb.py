@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Any
 
 import numpy as np
 
@@ -70,3 +70,39 @@ class NormalizeBoundingBox:
         normVals = np.full(len(bbox), frame.shape[0])
         normVals[::2] = frame.shape[1]
         return (np.clip(bbox, 0, 1) * normVals).astype(int)
+
+    def get_letterbox_bbox(self, frame, normalize: bool = False) -> Tuple[Any, ...]:
+        """
+        Get letterbox bounding box (area where the image is placed). This is useful when you want to
+        crop the image to the letterbox area.
+
+        Args:
+            frame (numpy.ndarray): Frame to which adjust the bounding box.
+            normalize (bool): If True, the bounding box will be returned in normalized coordinates (0..1).
+
+        Returns:
+            tuple: Bounding box points mapped to pixel values on frame.
+        """
+
+        if self.ar_resize_mode != AspectRatioResizeMode.LETTERBOX:
+            if normalize:
+                return 0, 0, 1, 1
+
+            return 0, 0, frame.shape[1], frame.shape[0]
+
+        img_h, img_w = frame.shape[:2]
+        new_h, new_w = self.aspect_ratio[0], self.aspect_ratio[1]
+        offset_h, offset_w = 0, 0
+        if (new_w / img_w) <= (new_h / img_h):
+            new_h = int(img_h * new_w / img_w)
+            offset_h = (frame.shape[0] - new_h) // 2
+        else:
+            new_w = int(img_w * new_h / img_h)
+            offset_w = (frame.shape[1] - new_w) // 2
+
+        if normalize:
+            offset_h = 1/2 - new_h / (2 * self.aspect_ratio[0])
+            offset_w = 1/2 - new_w / (2 * self.aspect_ratio[1])
+            return offset_w, offset_h, offset_w + new_w / self.aspect_ratio[1], offset_h + new_h / self.aspect_ratio[0]
+
+        return offset_w, offset_h, img_w - offset_w, img_h - offset_h
