@@ -13,7 +13,8 @@ from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
-from depthai_sdk.oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker
+from depthai_sdk.oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker, \
+    XoutNnH26x, XoutNnMjpeg
 from depthai_sdk.oak_outputs.xout_base import StreamXout, XoutBase
 from depthai_sdk.replay import Replay
 
@@ -680,17 +681,28 @@ class NNComponent(Component):
                 raise Exception('Encoder not enabled for the input')
 
             if self._comp._is_multi_stage():
-                out = XoutTwoStage(det_nn=self._comp._input,
-                                   second_nn=self._comp,
-                                   frames=StreamXout(self._comp._input.node.id, self._comp._input.node.passthrough),
-                                   det_out=StreamXout(self._comp._input.node.id, self._comp._input.node.out),
-                                   second_nn_out=StreamXout(self._comp.node.id, self._comp.node.out),
-                                   device=device,
-                                   input_queue_name="input_queue" if self._comp.x_in else None)
+                raise NotImplementedError('Encoded output not supported for 2-stage NNs at the moment.')
+
+            if self._comp._input._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
+                out = XoutNnMjpeg(
+                    det_nn=self._comp,
+                    frames=StreamXout(self._comp._input.encoder.id, self._comp._input.encoder.bitstream),
+                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
+                    color=self._comp._input.is_color(),
+                    lossless=self._comp._input.encoder.getLossless(),
+                    fps=self._comp._input.encoder.getFrameRate(),
+                    frame_shape=self._comp._input.stream_size
+                )
             else:
-                out = XoutNnResults(det_nn=self._comp,
-                                    frames=StreamXout(self._comp.node.id, self._comp._input.encoder.bitstream),
-                                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out))
+                out = XoutNnH26x(
+                    det_nn=self._comp,
+                    frames=StreamXout(self._comp._input.node.id, self._comp._input.encoder.bitstream),
+                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
+                    color=self._comp._input.is_color(),
+                    profile=self._comp._input._encoderProfile,
+                    fps=self._comp._input.encoder.getFrameRate(),
+                    frame_shape=self._comp._input.stream_size
+                )
 
             return self._comp._create_xout(pipeline, out)
 
