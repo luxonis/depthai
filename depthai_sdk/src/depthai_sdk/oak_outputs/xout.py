@@ -134,9 +134,11 @@ class XoutMjpeg(XoutFrames):
         if lossless and self._visualizer:
             raise ValueError('Visualizing Lossless MJPEG stream is not supported!')
 
+    def decode_frame(self, packet: FramePacket) -> np.ndarray:
+        return cv2.imdecode(packet.imgFrame.getData(), self.flag)
+
     def visualize(self, packet: FramePacket):
-        # TODO use PyTurbo
-        packet.frame = cv2.imdecode(packet.imgFrame.getData(), self.flag)
+        packet.frame = self.decode_frame(packet)
         super().visualize(packet)
 
 
@@ -159,16 +161,14 @@ class XoutH26x(XoutFrames):
         import av
         self.codec = av.CodecContext.create(fourcc, "r")
 
-    def visualize(self, packet: FramePacket):
+    def decode_frame(self, packet: FramePacket):
         enc_packets = self.codec.parse(packet.imgFrame.getData())
-
         if len(enc_packets) == 0:
-            return
+            return None
 
         frames = self.codec.decode(enc_packets[-1])
-
         if not frames:
-            return
+            return None
 
         frame = frames[0].to_ndarray(format='bgr24')
 
@@ -176,7 +176,11 @@ class XoutH26x(XoutFrames):
         if not self.color:
             frame = frame[:, :, 0]
 
-        packet.frame = frame
+        return frame
+
+    def visualize(self, packet: FramePacket):
+        decoded_frame = self.decode_frame(packet)
+        packet.frame = decoded_frame
         super().visualize(packet)
 
 
