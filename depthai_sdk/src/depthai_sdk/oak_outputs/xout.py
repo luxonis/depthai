@@ -73,7 +73,10 @@ class XoutFrames(XoutBase):
 
         # Frame shape may be 1D, that means it's an encoded frame
         if self._visualizer.frame_shape is None or np.array(self._visualizer.frame_shape).ndim == 1:
-            self._visualizer.frame_shape = self._frame_shape or packet.frame.shape
+            if self._frame_shape is not None:
+                self._visualizer.frame_shape = self._frame_shape
+            else:
+                self._visualizer.frame_shape = packet.frame.shape
 
         if self._visualizer.config.output.show_fps:
             self._visualizer.add_text(
