@@ -103,13 +103,7 @@ class NNComponent(Component):
 
         # Create NN node
         self.node = pipeline.create(self._node_type)
-
-        if self._config and 'nn_config' in self._config:
-            nn_config = self._config.get("nn_config", {})
-
-            meta = nn_config.get('NN_specific_metadata', None)
-            if self._is_yolo() and meta:
-                self.config_yolo_from_metadata(metadata=meta)
+        self._update_config()
 
     def _forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
@@ -120,10 +114,10 @@ class NNComponent(Component):
         return self._forced_version
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-
         if self._roboflow:
             path = self._roboflow.device_update(device)
             self._parse_config(path)
+            self._update_config()
 
         if self._blob is None:
             self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model'], version))
@@ -476,6 +470,9 @@ class NNComponent(Component):
             print('This is not a YOLO detection network! This configuration attempt will be ignored.')
             return
 
+        if not self.node:
+            raise Exception('YOLO node not initialized!')
+
         self.node.setNumClasses(num_classes)
         self.node.setCoordinateSize(coordinate_size)
         self.node.setAnchors(anchors)
@@ -534,6 +531,19 @@ class NNComponent(Component):
             self.node.setDepthUpperThreshold(upper_threshold)
         if calc_algo:
             self.node.setSpatialCalculationAlgorithm(calc_algo)
+
+    def _update_config(self):
+        if self.node is None or self._config is None:
+            return
+
+        nn_config = self._config.get("nn_config", {})
+
+        meta = nn_config.get('NN_specific_metadata', None)
+        if self._is_yolo() and meta:
+            self.config_yolo_from_metadata(metadata=meta)
+
+        self.config_nn(conf_threshold=nn_config.get('conf_threshold', None))
+
 
     """
     Available outputs (to the host) of this component
