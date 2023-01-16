@@ -954,6 +954,7 @@ class XoutIMU(XoutBase):
         from matplotlib import pyplot as plt
 
         self._visualizer = visualizer
+        self._visualizer_enabled = visualizer_enabled
         self.name = name or self.name
 
         self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
