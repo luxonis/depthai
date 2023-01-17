@@ -1,7 +1,6 @@
 import io
 
 from setuptools import setup
-import pkg_resources
 
 with open('requirements.txt') as f:
     requirements = f.readlines()
