@@ -116,6 +116,7 @@ class OakCamera:
             resolution (str/SensorResolution): Sensor resolution of the camera.
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
+            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         comp = CameraComponent(self._pipeline,
                                source=source,
