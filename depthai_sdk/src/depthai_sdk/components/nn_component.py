@@ -66,7 +66,8 @@ class NNComponent(Component):
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
                  spatial: Union[None, bool, StereoComponent] = None,
                  replay: Optional[Replay] = None,
-                 args: Dict = None  # User defined args
+                 args: Dict = None,  # User defined args
+                 name: Optional[str] = None
                  ) -> None:
         """
         Neural Network component abstracts:
@@ -83,6 +84,7 @@ class NNComponent(Component):
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
             replay (Replay object): Replay
             args (Any, optional): Use user defined arguments when constructing the pipeline
+            name (str, optional): Name of the output stream
         """
         super().__init__()
         self.out = self.Out(self)
@@ -93,6 +95,7 @@ class NNComponent(Component):
         self._args = args
         self._replay = replay
         self._decode_fn = decode_fn or None
+        self.name = name
 
         self.tracker = pipeline.createObjectTracker() if tracker else None
 
@@ -552,17 +555,24 @@ class NNComponent(Component):
             """
 
             if self._comp._is_multi_stage():
+                det_nn_out = StreamXout(id=self._comp._input.node.id,
+                                        out=self._comp._input.node.out,
+                                        name=self._comp._input.name)
+                second_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+
                 out = XoutTwoStage(det_nn=self._comp._input,
                                    second_nn=self._comp,
                                    frames=self._comp._input._input.get_stream_xout(),
-                                   det_out=StreamXout(self._comp._input.node.id, self._comp._input.node.out),
-                                   second_nn_out=StreamXout(self._comp.node.id, self._comp.node.out),
+                                   det_out=det_nn_out,
+                                   second_nn_out=second_nn_out,
                                    device=device,
                                    input_queue_name="input_queue" if self._comp.x_in else None)
             else:
+                det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+
                 out = XoutNnResults(det_nn=self._comp,
                                     frames=self._comp._input.get_stream_xout(),
-                                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out))
+                                    nn_results=det_nn_out)
 
             return self._comp._create_xout(pipeline, out)
 
@@ -572,26 +582,41 @@ class NNComponent(Component):
             Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
             if self._comp._is_multi_stage():
+                det_nn_out = StreamXout(id=self._comp._input.node.id,
+                                        out=self._comp._input.node.out,
+                                        name=self._comp._input.name)
+                frames = StreamXout(id=self._comp._input.node.id,
+                                    out=self._comp._input.node.passthrough,
+                                    name=self._comp.name)
+                second_nn_out = StreamXout(self._comp.node.id, self._comp.node.out, name=self._comp.name)
+
                 out = XoutTwoStage(det_nn=self._comp._input,
                                    second_nn=self._comp,
-                                   frames=StreamXout(self._comp._input.node.id, self._comp._input.node.passthrough),
-                                   det_out=StreamXout(self._comp._input.node.id, self._comp._input.node.out),
-                                   second_nn_out=StreamXout(self._comp.node.id, self._comp.node.out),
+                                   frames=frames,
+                                   det_out=det_nn_out,
+                                   second_nn_out=second_nn_out,
                                    device=device,
                                    input_queue_name="input_queue" if self._comp.x_in else None)
             else:
+                det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+                frames = StreamXout(id=self._comp.node.id, out=self._comp.node.passthrough, name=self._comp.name)
+
                 out = XoutNnResults(det_nn=self._comp,
-                                    frames=StreamXout(self._comp.node.id, self._comp.node.passthrough),
-                                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out))
+                                    frames=frames,
+                                    nn_results=det_nn_out)
 
             return self._comp._create_xout(pipeline, out)
 
         def image_manip(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = XoutFrames(frames=StreamXout(self._comp.image_manip.id, self._comp.image_manip.out))
+            out = XoutFrames(frames=StreamXout(id=self._comp.image_manip.id,
+                                               out=self._comp.image_manip.out,
+                                               name=self._comp.name))
             return self._comp._create_xout(pipeline, out)
 
         def input(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = XoutFrames(frames=StreamXout(self._comp._input.node.id, self._comp._stream_input))
+            out = XoutFrames(frames=StreamXout(id=self._comp._input.node.id,
+                                               out=self._comp._stream_input,
+                                               name=self._comp.name))
             return self._comp._create_xout(pipeline, out)
 
         def spatials(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutSpatialBbMappings:
@@ -602,9 +627,11 @@ class NNComponent(Component):
                 raise Exception('SDK tried to output spatial data (depth + bounding box mappings),'
                                 'but this is not a Spatial Detection network!')
 
-            out = XoutSpatialBbMappings(device=device,
-                                        frames=StreamXout(self._comp.node.id, self._comp.node.passthroughDepth),
-                                        configs=StreamXout(self._comp.node.id, self._comp.node.out))
+            out = XoutSpatialBbMappings(
+                device=device,
+                frames=StreamXout(id=self._comp.node.id, out=self._comp.node.passthroughDepth, name=self._comp.name),
+                configs=StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+            )
 
             return self._comp._create_xout(pipeline, out)
 
@@ -615,9 +642,9 @@ class NNComponent(Component):
             if not self._comp._is_multi_stage():
                 raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
-            out = XoutFrames(
-                frames=StreamXout(self._comp._multi_stage_nn.manip.id, self._comp._multi_stage_nn.manip.out)
-            )
+            out = XoutFrames(frames=StreamXout(id=self._comp._multi_stage_nn.manip.id,
+                                               out=self._comp._multi_stage_nn.manip.out,
+                                               name=self._comp.name))
 
             return self._comp._create_xout(pipeline, out)
 
@@ -636,8 +663,8 @@ class NNComponent(Component):
 
             out = XoutTracker(self._comp,
                               self._comp._input.get_stream_xout(),  # CameraComponent
-                              StreamXout(self._comp.tracker.id, self._comp.tracker.out)
-                              )
+                              StreamXout(id=self._comp.tracker.id, out=self._comp.tracker.out, name=self._comp.name))
+
             return self._comp._create_xout(pipeline, out)
 
     out: Out
