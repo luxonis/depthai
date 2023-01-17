@@ -14,7 +14,7 @@ class StreamXout:
     def __init__(self, id: int, out: dai.Node.Output, name: Optional[str] = None):
         self.stream = out
         if name is not None:
-            self.name = name
+            self.name = f'{name}_{str(out.name)}'
         else:
             self.name = f"{str(id)}_{out.name}"
 
