@@ -19,6 +19,7 @@ class GenericNNOutput:
     def __init__(self, nn_data: NNData):
         self.nn_data = nn_data
 
+
 # First we have Object detection results, which are already standarized with dai.ImgDetections
 
 @dataclass
@@ -59,7 +60,7 @@ class SemanticSegmentation(GenericNNOutput):  # In core, extend from NNData
 
     def __init__(self, nn_data: NNData, mask: List[np.ndarray]):
         super().__init__(nn_data)
-        self.mask: List[np.ndarray] = mask
+        self.mask = mask
 
 
 @dataclass
@@ -97,4 +98,3 @@ class InstanceSegmentation(GenericNNOutput):
 
     def __init__(self, nn_data: NNData, masks: List[np.ndarray], labels: List[int]):
         super().__init__(nn_data)
-

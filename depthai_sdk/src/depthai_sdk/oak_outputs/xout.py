@@ -506,9 +506,6 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         self.frame_shape = np.array(self.frame_shape)[::-1]
 
         self.segmentation_colormap = None
-        # colors = distinctipy.get_colors(n_colors=256, rng=123123, pastel_factor=0.5)
-        # rgb_colors = np.array(colors) * 255
-        # self.segmentation_colormap = rgb_colors.astype(np.uint8)
 
     def setup_visualize(self,
                         visualizer: Visualizer,
@@ -561,13 +558,19 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                     self._visualizer.add_circle(coords=tuple(l[0]), radius=8, color=colors[idx], thickness=-1)
                     self._visualizer.add_circle(coords=tuple(l[1]), radius=8, color=colors[idx], thickness=-1)
         elif isinstance(packet.img_detections, SemanticSegmentation):
+            # Generate colormap if not already generated
             if self.segmentation_colormap is None:
-                colors = distinctipy.get_colors(n_colors=10, rng=123123, pastel_factor=0.5)
-                rgb_colors = np.array(colors) * 255
-                self.segmentation_colormap = rgb_colors.astype(np.uint8)
+                n_classes = len(self.labels) if self.labels else 8
+                self.segmentation_colormap = self._generate_colors(n_classes)
 
             mask = np.array(packet.img_detections.mask).astype(np.uint8)
-            colorized_mask = np.array(self.segmentation_colormap)[mask]
+            try:
+                colorized_mask = np.array(self.segmentation_colormap)[mask]
+            except IndexError:
+                unique_classes = np.unique(mask)
+                max_class = np.max(unique_classes)
+                new_colors = self._generate_colors(max_class - len(self.segmentation_colormap) + 1)
+                self.segmentation_colormap.extend(new_colors)
 
             bbox = None
             if self.normalizer.ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
@@ -606,6 +609,12 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         )
 
         self.queue.put(packet, block=False)
+
+    def _generate_colors(self, n_colors, exclude=None):
+        colors = distinctipy.get_colors(n_colors, exclude / 255 if exclude else None,
+                                        rng=11, pastel_factor=0.3, n_attempts=100)
+        rgb_colors = np.array(colors) * 255
+        return rgb_colors.astype(np.uint8)
 
 
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
