@@ -300,14 +300,16 @@ class OakCamera:
         """
         return not self._stop
 
-    def poll(self):
+    def poll(self) -> int:
         """
         Poll events; cv2.waitKey, send controls to OAK (if controls are enabled), update, check syncs.
+
+        Returns: key pressed from cv2.waitKey
         """
         key = cv2.waitKey(1)
         if key == ord('q'):
             self._stop = True
-            return
+            return key
 
         # TODO: check if components have controls enabled and check whether key == `control`
 
@@ -316,13 +318,15 @@ class OakCamera:
         if self.replay:
             if self.replay._stop:
                 self._stop = True
-                return
+                return key
 
         for poll in self._polling:
             poll() # Poll all callbacks
 
         if self.device.isClosed():
             self._stop = True
+
+        return key
 
     def build(self) -> dai.Pipeline:
         """
