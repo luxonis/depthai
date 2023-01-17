@@ -104,6 +104,7 @@ class OakCamera:
                           None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                      name: Optional[str] = None,
                       ) -> CameraComponent:
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
@@ -123,6 +124,7 @@ class OakCamera:
                                encode=encode,
                                rotation=self._rotation,
                                replay=self.replay,
+                               name=name,
                                args=self._args, )
         self._components.append(comp)
         return comp
