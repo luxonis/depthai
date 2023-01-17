@@ -306,11 +306,11 @@ class OakCamera:
         """
         return not self._stop
 
-    def poll(self) -> int:
+    def poll(self) -> Optional[int]:
         """
         Poll events; cv2.waitKey, send controls to OAK (if controls are enabled), update, check syncs.
 
-        Returns: key pressed from cv2.waitKey
+        Returns: key pressed from cv2.waitKey, or None if
         """
         key = cv2.waitKey(1)
         if key == ord('q'):
@@ -331,6 +331,7 @@ class OakCamera:
 
         if self.device.isClosed():
             self._stop = True
+            return None
 
         return key
 
