@@ -104,6 +104,7 @@ class OakCamera:
                           None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
                       fps: Optional[float] = None,
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                      name: Optional[str] = None,
                       ) -> CameraComponent:
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
@@ -115,6 +116,7 @@ class OakCamera:
             resolution (str/SensorResolution): Sensor resolution of the camera.
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
+            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         comp = CameraComponent(self._pipeline,
                                source=source,
@@ -123,6 +125,7 @@ class OakCamera:
                                encode=encode,
                                rotation=self._rotation,
                                replay=self.replay,
+                               name=name,
                                args=self._args, )
         self._components.append(comp)
         return comp
@@ -134,6 +137,7 @@ class OakCamera:
                   tracker: bool = False,  # Enable object tracker - only for Object detection models
                   spatial: Union[None, bool, StereoComponent] = None,
                   decode_fn: Optional[Callable] = None,
+                  name: Optional[str] = None
                   ) -> NNComponent:
         """
         Creates Neural Network component.
@@ -145,6 +149,7 @@ class OakCamera:
             tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
             decode_fn: Custom decoding function for the model's output
+            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         comp = NNComponent(self._pipeline,
                            model=model,
@@ -154,7 +159,8 @@ class OakCamera:
                            spatial=spatial,
                            decode_fn=decode_fn,
                            replay=self.replay,
-                           args=self._args)
+                           args=self._args,
+                           name=name)
         self._components.append(comp)
         return comp
 
@@ -163,6 +169,7 @@ class OakCamera:
                       fps: Optional[float] = None,
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
+                      name: Optional[str] = None
                       ) -> StereoComponent:
         """
         Create Stereo camera component. If left/right cameras/component aren't specified they will get created internally.
@@ -172,6 +179,7 @@ class OakCamera:
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
+            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         comp = StereoComponent(self._pipeline,
                                resolution=resolution,
@@ -179,7 +187,8 @@ class OakCamera:
                                left=left,
                                right=right,
                                replay=self.replay,
-                               args=self._args)
+                               args=self._args,
+                               name=name)
         self._components.append(comp)
         return comp
 
@@ -297,14 +306,16 @@ class OakCamera:
         """
         return not self._stop
 
-    def poll(self):
+    def poll(self) -> Optional[int]:
         """
         Poll events; cv2.waitKey, send controls to OAK (if controls are enabled), update, check syncs.
+
+        Returns: key pressed from cv2.waitKey, or None if
         """
         key = cv2.waitKey(1)
         if key == ord('q'):
             self._stop = True
-            return
+            return key
 
         # TODO: check if components have controls enabled and check whether key == `control`
 
@@ -313,13 +324,16 @@ class OakCamera:
         if self.replay:
             if self.replay._stop:
                 self._stop = True
-                return
+                return key
 
         for poll in self._polling:
             poll() # Poll all callbacks
 
         if self.device.isClosed():
             self._stop = True
+            return None
+
+        return key
 
     def build(self) -> dai.Pipeline:
         """

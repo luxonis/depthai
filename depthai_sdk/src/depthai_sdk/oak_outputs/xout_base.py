@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from queue import Empty, Queue
-from typing import List, Callable
+from typing import List, Callable, Optional
 
 import depthai as dai
 
@@ -11,9 +11,12 @@ from depthai_sdk.visualize import Visualizer
 class StreamXout:
     stream: dai.Node.Output
     name: str  # XLinkOut stream name
-    def __init__(self, id: int, out: dai.Node.Output):
+    def __init__(self, id: int, out: dai.Node.Output, name: Optional[str] = None):
         self.stream = out
-        self.name = f"{str(id)}_{out.name}"
+        if name is not None:
+            self.name = f'{name}_{str(out.name)}'
+        else:
+            self.name = f"{str(id)}_{out.name}"
 
 class ReplayStream(StreamXout):
     def __init__(self, name: str):

@@ -45,6 +45,7 @@ class StereoComponent(Component):
                  right: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Right mono camera
                  replay: Optional[Replay] = None,
                  args: Any = None,
+                 name: Optional[str] = None
                  ):
         """
         Args:
@@ -55,6 +56,7 @@ class StereoComponent(Component):
             right (None / dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
             replay (Replay object, optional): Replay
             args (Any, optional): Use user defined arguments when constructing the pipeline
+            name (str, optional): Name of the output stream
         """
         super().__init__()
         self.out = self.Out(self)
@@ -63,6 +65,7 @@ class StereoComponent(Component):
         self._resolution = resolution
         self._fps = fps
         self._args = args
+        self.name = name
 
         self.left = left
         self.right = right
@@ -208,8 +211,8 @@ class StereoComponent(Component):
             fps = self._comp.left.getFps() if self._comp._replay is None else self._comp._replay.getFps()
 
             out = XoutDisparity(
-                disparity_frames=StreamXout(self._comp.node.id, self._comp.disparity),
-                mono_frames=StreamXout(self._comp.node.id, self._comp._right_stream),
+                disparity_frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
+                mono_frames=StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name),
                 max_disp=self._comp.node.getMaxDisparity(),
                 fps=fps,
                 colorize=self._comp._colorize,
@@ -225,8 +228,8 @@ class StereoComponent(Component):
             fps = self._comp.left.getFps() if self._comp._replay is None else self._comp._replay.getFps()
             out = XoutDepth(
                 device=device,
-                frames=StreamXout(self._comp.node.id, self._comp.depth),
-                mono_frames=StreamXout(self._comp.node.id, self._comp._right_stream),
+                frames=StreamXout(self._comp.node.id, self._comp.depth, name=self._comp.name),
+                mono_frames=StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name),
                 fps=fps,
                 colorize=self._comp._colorize,
                 colormap=self._comp._colormap,

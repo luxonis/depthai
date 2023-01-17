@@ -35,6 +35,7 @@ class CameraComponent(Component):
                  encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                  rotation: Optional[int] = None,
                  replay: Optional[Replay] = None,
+                 name: Optional[str] = None,
                  args: Dict = None,
                  ):
         """
@@ -58,6 +59,7 @@ class CameraComponent(Component):
         self._source = source
         self._replay: Replay = replay
         self._args = args
+        self.name = name
 
         if rotation not in [None, 0, 90, 180, 270]:
             raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
@@ -366,10 +368,10 @@ class CameraComponent(Component):
         if self.is_replay():
             return ReplayStream(self._source)
         elif self.is_mono():
-            return StreamXout(self.node.id, self.stream)
+            return StreamXout(self.node.id, self.stream, name=self.name)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(10)
-            return StreamXout(self.node.id, self.stream)
+            return StreamXout(self.node.id, self.stream, name=self.name)
 
     """
     Available outputs (to the host) of this component
@@ -413,7 +415,7 @@ class CameraComponent(Component):
             """
             if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
                 out = XoutMjpeg(
-                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream, name=self._comp.name),
                     color=self._comp.is_color(),
                     lossless=self._comp.encoder.getLossless(),
                     fps=self._comp.encoder.getFrameRate(),
@@ -421,7 +423,7 @@ class CameraComponent(Component):
                 )
             else:
                 out = XoutH26x(
-                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream, name=self._comp.name),
                     color=self._comp.is_color(),
                     profile=self._comp._encoderProfile,
                     fps=self._comp.encoder.getFrameRate(),

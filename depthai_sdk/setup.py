@@ -3,7 +3,10 @@ import io
 from setuptools import setup
 
 with open('requirements.txt') as f:
-    required = f.readlines()
+    requirements = f.readlines()
+
+install_requires=[requirement for requirement in requirements if '--' not in requirement]
+
 
 setup(
     name='depthai-sdk',
@@ -18,7 +21,7 @@ setup(
     license='MIT',
     packages=['depthai_sdk'],
     package_dir={"": "src"},  # https://stackoverflow.com/a/67238346/5494277
-    install_requires=required,
+    install_requires=install_requires,
     include_package_data=True,
     extras_require={
         "visualize": ['PySide2',
