@@ -32,8 +32,7 @@ class OutputConfig(BaseConfig):
                  callback: Callable,
                  visualizer: Visualizer = None,
                  visualizer_enabled: bool = False,
-                 record_path: Optional[str] = None,
-                 stream_name: Optional[str] = None):
+                 record_path: Optional[str] = None):
         self.output = output
         self.callback = callback
         self.visualizer = visualizer
