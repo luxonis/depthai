@@ -6,9 +6,11 @@ from depthai_sdk.oak_outputs.xout_base import XoutBase
 
 
 class OakDevice:
-    device: dai.Device = None
-    # fpsHandlers: Dict[str, FPS] = dict()
-    oak_out_streams: List[XoutBase] = []
+    
+    def __init__(self):
+        self.device: dai.Device = None
+        # fpsHandlers: Dict[str, FPS] = dict()
+        self.oak_out_streams: List[XoutBase] = []
 
     @property
     def image_sensors(self) -> List[dai.CameraBoardSocket]:
