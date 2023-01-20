@@ -6,7 +6,7 @@ import depthai as dai
 import numpy as np
 from distinctipy import distinctipy
 
-from depthai_sdk.classes.nn_results import Detections, ImgLandmarks
+from depthai_sdk.classes.nn_results import Detections, ImgLandmarks, SemanticSegmentation
 from depthai_sdk.classes.packets import (
     FramePacket,
     SpatialBbMappingPacket,
@@ -15,6 +15,7 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
     IMUPacket, DepthPacket, _Detection
 )
+from depthai_sdk.components.nn_helper import AspectRatioResizeMode
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
@@ -486,6 +487,8 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         self.frame_shape = np.array(self.frame_shape)[::-1]
 
+        self.segmentation_colormap = None
+
     def setup_visualize(self,
                         visualizer: Visualizer,
                         visualizer_enabled: bool,
@@ -536,6 +539,45 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                     self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[idx], thickness=4)
                     self._visualizer.add_circle(coords=tuple(l[0]), radius=8, color=colors[idx], thickness=-1)
                     self._visualizer.add_circle(coords=tuple(l[1]), radius=8, color=colors[idx], thickness=-1)
+        elif isinstance(packet.img_detections, SemanticSegmentation):
+            # Generate colormap if not already generated
+            if self.segmentation_colormap is None:
+                n_classes = len(self.labels) if self.labels else 8
+                self.segmentation_colormap = self._generate_colors(n_classes)
+
+            mask = np.array(packet.img_detections.mask).astype(np.uint8)
+            try:
+                colorized_mask = np.array(self.segmentation_colormap)[mask]
+            except IndexError:
+                unique_classes = np.unique(mask)
+                max_class = np.max(unique_classes)
+                new_colors = self._generate_colors(max_class - len(self.segmentation_colormap) + 1)
+                self.segmentation_colormap.extend(new_colors)
+
+            bbox = None
+            if self.normalizer.ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
+                bbox = self.normalizer.get_letterbox_bbox(packet.frame, normalize=True)
+                input_h, input_w = self.normalizer.aspect_ratio
+                resize_bbox = bbox[0] * input_w, bbox[1] * input_h, bbox[2] * input_w, bbox[3] * input_h
+                resize_bbox = np.int0(resize_bbox)
+            else:
+                resize_bbox = self.normalizer.normalize(frame=np.zeros(self._visualizer.frame_shape, dtype=bool),
+                                                        bbox=bbox or (0., 0., 1., 1.))
+
+            x1, y1, x2, y2 = resize_bbox
+            h, w = packet.frame.shape[:2]
+            # Stretch mode
+            if self.normalizer.ar_resize_mode == AspectRatioResizeMode.STRETCH:
+                colorized_mask = cv2.resize(colorized_mask, (w, h))
+            elif self.normalizer.ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
+                colorized_mask = cv2.resize(colorized_mask[y1:y2, x1:x2], (w, h))
+            else:
+                padded_mask = np.zeros((h, w, 3), dtype=np.uint8)
+                resized_mask = cv2.resize(colorized_mask, (x2 - x1, y2 - y1))
+                padded_mask[y1:y2, x1:x2] = resized_mask
+                colorized_mask = padded_mask
+
+            self._visualizer.add_mask(colorized_mask, alpha=0.5)
 
     def package(self, msgs: Dict):
         if self.queue.full():
@@ -549,6 +591,12 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         )
 
         self.queue.put(packet, block=False)
+
+    def _generate_colors(self, n_colors, exclude=None):
+        colors = distinctipy.get_colors(n_colors, exclude / 255 if exclude else None,
+                                        rng=11, pastel_factor=0.3, n_attempts=100)
+        rgb_colors = np.array(colors) * 255
+        return rgb_colors.astype(np.uint8)
 
 
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):

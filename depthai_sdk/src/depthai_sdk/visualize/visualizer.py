@@ -12,7 +12,7 @@ from depthai import ImgDetection
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
 from depthai_sdk.visualize.encoder import JSONEncoder
-from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine
+from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask
 from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
 
 
@@ -185,6 +185,21 @@ class Visualizer(VisualizerHelper):
         self.objects.append(line)
         return self
 
+    def add_mask(self, mask: np.ndarray, alpha: float):
+        """
+        Add a mask to the visualizer.
+
+        Args:
+            mask: Mask represented as uint8 numpy array.
+            alpha: Transparency of the mask.
+
+        Returns:
+            self
+        """
+        mask_overlay = VisMask(mask=mask, alpha=alpha)
+        self.add_object(mask_overlay)
+        return self
+
     def draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
@@ -248,6 +263,7 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.output = replace(self.config.output, **kwargs)
+
         return self
 
     def stereo(self,
@@ -260,6 +276,7 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.stereo = replace(self.config.stereo, **kwargs)
+
         return self
 
     def detections(self,
@@ -360,6 +377,16 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.tracking = replace(self.config.tracking, **kwargs)
+
+        return self
+
+    def segmentation(self,
+                     mask_alpha: float = None,
+                     ) -> 'Visualizer':
+        kwargs = self._process_kwargs(locals())
+
+        if len(kwargs) > 0:
+            self.config.segmentation = replace(self.config.segmentation, **kwargs)
 
         return self
 

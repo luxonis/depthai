@@ -743,6 +743,33 @@ class VisCircle(GenericObject):
                    circle_config.line_type)
 
 
+class VisMask(GenericObject):
+    def __init__(self, mask: np.ndarray, alpha: float = None):
+        super().__init__()
+        self.mask = mask
+        self.alpha = alpha
+
+    def prepare(self) -> 'VisMask':
+        return self
+
+    def serialize(self):
+        parent = {
+            'type': 'mask',
+            'mask': self.mask
+        }
+        if len(self.children) > 0:
+            children = [c.serialize() for c in self.children]
+            parent['children'] = children
+
+        return parent
+
+    def draw(self, frame: np.ndarray) -> None:
+        if self.frame_shape is None:
+            self.frame_shape = frame.shape
+
+        cv2.addWeighted(frame, 1 - self.alpha, self.mask, self.alpha, 0, frame)
+
+
 class VisPolygon(GenericObject):
     def __init__(self, polygon):
         super().__init__()

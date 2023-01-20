@@ -98,6 +98,12 @@ class TrackingConfig:
 
 
 @dataclass
+class SegmentationConfig:
+    """Configuration for drawing segmentation masks."""
+    mask_alpha: float = 0.5
+
+
+@dataclass
 class CircleConfig:
     """Configuration for drawing circles."""
     thickness: int = 1

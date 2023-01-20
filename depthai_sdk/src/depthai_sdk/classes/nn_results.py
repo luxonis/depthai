@@ -60,7 +60,7 @@ class SemanticSegmentation(GenericNNOutput):  # In core, extend from NNData
 
     def __init__(self, nn_data: NNData, mask: List[np.ndarray]):
         super().__init__(nn_data)
-        self.mask: List[np.ndarray] = mask
+        self.mask = mask
 
 
 @dataclass
