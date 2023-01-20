@@ -73,7 +73,10 @@ class XoutFrames(XoutBase):
 
         # Frame shape may be 1D, that means it's an encoded frame
         if self._visualizer.frame_shape is None or np.array(self._visualizer.frame_shape).ndim == 1:
-            self._visualizer.frame_shape = self._frame_shape or packet.frame.shape
+            if self._frame_shape is not None:
+                self._visualizer.frame_shape = self._frame_shape
+            else:
+                self._visualizer.frame_shape = packet.frame.shape
 
         if self._visualizer.config.output.show_fps:
             self._visualizer.add_text(
@@ -134,9 +137,11 @@ class XoutMjpeg(XoutFrames):
         if lossless and self._visualizer:
             raise ValueError('Visualizing Lossless MJPEG stream is not supported!')
 
+    def decode_frame(self, packet: FramePacket) -> np.ndarray:
+        return cv2.imdecode(packet.imgFrame.getData(), self.flag)
+
     def visualize(self, packet: FramePacket):
-        # TODO use PyTurbo
-        packet.frame = cv2.imdecode(packet.imgFrame.getData(), self.flag)
+        packet.frame = self.decode_frame(packet)
         super().visualize(packet)
 
 
@@ -159,16 +164,14 @@ class XoutH26x(XoutFrames):
         import av
         self.codec = av.CodecContext.create(fourcc, "r")
 
-    def visualize(self, packet: FramePacket):
+    def decode_frame(self, packet: FramePacket):
         enc_packets = self.codec.parse(packet.imgFrame.getData())
-
         if len(enc_packets) == 0:
-            return
+            return None
 
         frames = self.codec.decode(enc_packets[-1])
-
         if not frames:
-            return
+            return None
 
         frame = frames[0].to_ndarray(format='bgr24')
 
@@ -176,7 +179,14 @@ class XoutH26x(XoutFrames):
         if not self.color:
             frame = frame[:, :, 0]
 
-        packet.frame = frame
+        return frame
+
+    def visualize(self, packet: FramePacket):
+        decoded_frame = self.decode_frame(packet)
+        if decoded_frame is None:
+            return
+
+        packet.frame = decoded_frame
         super().visualize(packet)
 
 
@@ -481,11 +491,11 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._ar_resize_mode)
         try:
-            self.frame_shape = self.det_nn._input.node.getPreviewSize()
+            self._frame_shape = self.det_nn._input.node.getPreviewSize()
         except AttributeError:
-            self.frame_shape = self.det_nn._input.stream_size  # Replay
+            self._frame_shape = self.det_nn._input.stream_size  # Replay
 
-        self.frame_shape = np.array(self.frame_shape)[::-1]
+        self._frame_shape = np.array(self._frame_shape)[::-1]
 
         self.segmentation_colormap = None
 
@@ -498,7 +508,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
         if self._visualizer.frame_shape is None:
             if packet.frame.ndim == 1:
-                self._visualizer.frame_shape = self.frame_shape
+                self._visualizer.frame_shape = self._frame_shape
             else:
                 self._visualizer.frame_shape = packet.frame.shape
 
@@ -662,7 +672,7 @@ class XoutTracker(XoutNnResults):
 
         if self._visualizer.frame_shape is None:
             if packet.frame.ndim == 1:
-                self._visualizer.frame_shape = self.frame_shape
+                self._visualizer.frame_shape = self._frame_shape
             else:
                 self._visualizer.frame_shape = packet.frame.shape
 
@@ -715,6 +725,54 @@ class XoutTracker(XoutNnResults):
         )
         self.queue.put(packet, block=False)
 
+
+class XoutNnH26x(XoutNnResults, XoutH26x):
+    name: str = "H26x NN Results"
+    # Streams
+    frames: StreamXout
+    nn_results: StreamXout
+
+    def __init__(self,
+                 det_nn: 'NNComponent',
+                 frames: StreamXout,
+                 nn_results: StreamXout,
+                 color: bool,
+                 profile: dai.VideoEncoderProperties.Profile,
+                 fps: float,
+                 frame_shape: Tuple[int, ...]):
+        self.nn_results = nn_results
+
+        XoutH26x.__init__(self, frames, color, profile, fps, frame_shape)
+        XoutNnResults.__init__(self, det_nn, frames, nn_results)
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.frames, self.nn_results]
+
+    def visualize(self, packet: FramePacket):
+        decoded_frame = XoutH26x.decode_frame(self, packet)
+        if decoded_frame is None:
+            return
+
+        packet.frame = decoded_frame
+        XoutNnResults.visualize(self, packet)
+
+
+class XoutNnMjpeg(XoutNnResults, XoutMjpeg):
+    def __init__(self,
+                 det_nn: 'NNComponent',
+                 frames: StreamXout,
+                 nn_results: StreamXout,
+                 color: bool,
+                 lossless: bool,
+                 fps: float,
+                 frame_shape: Tuple[int, ...]):
+        self.nn_results = nn_results
+        XoutMjpeg.__init__(self, frames, color, lossless, fps, frame_shape)
+        XoutNnResults.__init__(self, det_nn, frames, nn_results)
+
+    def visualize(self, packet: FramePacket):
+        packet.frame = XoutMjpeg.decode_frame(self, packet)
+        XoutNnResults.visualize(self, packet)
 
 # class TimestampSycn(BaseSync):
 #     """

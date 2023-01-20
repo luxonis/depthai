@@ -5,8 +5,8 @@ import depthai as dai
 
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
-from depthai_sdk.components.parser import parse_cam_socket, parse_median_filter
-from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth
+from depthai_sdk.components.parser import parse_cam_socket, parse_median_filter, parse_encode
+from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth, XoutMjpeg, XoutH26x
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
@@ -21,7 +21,9 @@ class StereoComponent(Component):
                  right: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Right mono camera
                  replay: Optional[Replay] = None,
                  args: Any = None,
-                 name: Optional[str] = None):
+                 name: Optional[str] = None,
+                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
+                 ):
         """
         Args:
             pipeline (dai.Pipeline): DepthAI pipeline
@@ -54,6 +56,12 @@ class StereoComponent(Component):
         self.node: dai.node.StereoDepth = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
+        self.encoder = None
+        if encode:
+            self.encoder = pipeline.createVideoEncoder()
+            # MJPEG by default
+            self._encoderProfile = parse_encode(encode)
+
         # Configuration variables
         self._colorize = StereoColor.GRAY
         self._colormap = cv2.COLORMAP_TURBO
@@ -73,8 +81,8 @@ class StereoComponent(Component):
         elif isinstance(input, dai.Node.Output):
             return input
         else:
-            raise ValueError(
-                'get_output_stream() accepts either CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output!')
+            raise ValueError('get_output_stream() accepts either CameraComponent,'
+                             'dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output!')
 
     def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if not self._replay:
@@ -109,6 +117,10 @@ class StereoComponent(Component):
         else:
             self._left_stream.link(self.node.left)
             self._right_stream.link(self.node.right)
+
+        if self.encoder:
+            self.encoder.setDefaultProfilePreset(self.left.getFps(), self._encoderProfile)
+            self.node.disparity.link(self.encoder.input)
 
         self.node.setOutputSize(1200, 800)
 
@@ -229,4 +241,23 @@ class StereoComponent(Component):
                 wls_lambda=self._comp._wls_lambda,
                 wls_sigma=self._comp._wls_sigma
             )
+            return self._comp._create_xout(pipeline, out)
+
+        def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            if not self._comp.encoder:
+                raise RuntimeError('Encoder not enabled, cannot output encoded frames')
+
+            if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
+                out = XoutMjpeg(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                                color=False,
+                                lossless=self._comp.encoder.getLossless(),
+                                fps=self._comp.encoder.getFrameRate(),
+                                frame_shape=(1200, 800))
+            else:
+                out = XoutH26x(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                               color=False,
+                               profile=self._comp._encoderProfile,
+                               fps=self._comp.encoder.getFrameRate(),
+                               frame_shape=(1200, 800))
+
             return self._comp._create_xout(pipeline, out)

@@ -168,7 +168,8 @@ class OakCamera:
                       fps: Optional[float] = None,
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
-                      name: Optional[str] = None
+                      name: Optional[str] = None,
+                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
                       ) -> StereoComponent:
         """
         Create Stereo camera component. If left/right cameras/component aren't specified they will get created internally.
@@ -187,7 +188,8 @@ class OakCamera:
                                right=right,
                                replay=self.replay,
                                args=self._args,
-                               name=name)
+                               name=name,
+                               encode=encode)
         self._components.append(comp)
         return comp
 
@@ -468,6 +470,8 @@ class OakCamera:
                   callback: Callable,
                   visualizer: Visualizer = None,
                   record_path: Optional[str] = None):
+        visualizer = visualizer or Visualizer()
+
         if isinstance(output, List):
             for element in output:
                 self._callback(element, callback, visualizer, record_path)
@@ -495,24 +499,6 @@ class OakCamera:
             callback: Handler function to which the Packet will be sent
         """
         self._callback(output, callback)
-
-    def get_stats_report(self) -> Dict[str, Any]:
-        """
-        Get statistics for the pipeline.
-        """
-        if not self._pipeline_built:
-            return {}
-
-        return self._oak.stats_report()
-
-    def get_info_report(self) -> Dict[str, Any]:
-        """
-        Get information about the device.
-        """
-        if not self._pipeline_built:
-            return {}
-
-        return self._oak.info_report()
 
     @property
     def device(self) -> dai.Device:

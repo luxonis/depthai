@@ -293,6 +293,10 @@ class VisDetections(GenericObject):
             bbox = detection.xmin, detection.ymin, detection.xmax, detection.ymax
             mock_frame = np.zeros(self.frame_shape, dtype=np.uint8)
 
+            if mock_frame.ndim < 2:
+                print('Frame shape is 1D, please make sure that you are not using encoded frames.'
+                      'If you are using encoded frames, please decode them first.')
+                return self
             # TODO can normalize accept frame shape?
             normalized_bbox = self.normalizer.normalize(mock_frame, bbox) if self.normalizer else bbox
 

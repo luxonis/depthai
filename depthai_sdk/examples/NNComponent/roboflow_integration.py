@@ -8,7 +8,7 @@ with OakCamera() as oak:
     model_config = {
         'source': 'roboflow', # Specify that we are downloading the model from Roboflow
         'model':'american-sign-language-letters/6',
-        'key':'d2OP8nbhA9rZcWd6G8p1' # Fake API key, replace with your own!
+        'key':'181b0f6e43d59ee5ea421cd77f6d9ea2a4b059f8' # Fake API key, replace with your own!
     }
     nn = oak.create_nn(model_config, color)
     oak.visualize(nn, fps=True)
