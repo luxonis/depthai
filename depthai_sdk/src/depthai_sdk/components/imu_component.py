@@ -8,8 +8,6 @@ from depthai_sdk.oak_outputs.xout_base import StreamXout
 
 
 class IMUComponent(Component):
-    node: dai.node.IMU
-
     def __init__(self, pipeline: dai.Pipeline):
         self.out = self.Out(self)
 
@@ -22,7 +20,8 @@ class IMUComponent(Component):
                    report_rate: int = 100,
                    batch_report_threshold: int = 1,
                    max_batch_reports: int = 10,
-                   enable_firmware_update: bool = False) -> None:
+                   enable_firmware_update: bool = False
+                   ) -> None:
         """
         Configure IMU node.
 
@@ -48,10 +47,8 @@ class IMUComponent(Component):
         pass
 
     class Out:
-        _comp: 'IMUComponent'
-
-        def __init__(self, imuComponent: 'IMUComponent'):
-            self._comp = imuComponent
+        def __init__(self, imu_component: 'IMUComponent'):
+            self._comp = imu_component
 
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
@@ -64,5 +61,3 @@ class IMUComponent(Component):
             out = StreamXout(self._comp.node.id, out)
             imu_out = XoutIMU(out)
             return self._comp._create_xout(pipeline, imu_out)
-
-    out: Out

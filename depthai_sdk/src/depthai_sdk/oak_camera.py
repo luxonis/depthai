@@ -20,7 +20,7 @@ from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
 from depthai_sdk.utils import configPipeline
 from depthai_sdk.visualize import Visualizer
-from threading import Thread
+
 
 class UsbWarning(UserWarning):
     pass
@@ -36,23 +36,9 @@ class OakCamera:
     It was designed with interoperability with depthai API in mind.
     """
 
-    # User should be able to access these:
-    _pipeline: dai.Pipeline = None
-    _oak: OakDevice  # Init this object by default
-    _args: Dict[str, Any] = None  # User defined arguments
-    replay: Optional[Replay] = None
-
-    _usb_speed: Optional[dai.UsbSpeed] = None
-    _device_name: str = None  # MxId / IP / USB port
-
-    # Whether to stop running the OAK camera. Used by oak.running()
-    _stop: bool = False
-
-    _polling: List[Callable]
-
     def __init__(self,
                  device: Optional[str] = None,  # MxId / IP / USB port
-                 usbSpeed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
+                 usb_speed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
                  replay: Optional[str] = None,
                  rotation: int = 0,
                  args: Union[bool, Dict] = True
@@ -62,12 +48,24 @@ class OakCamera:
 
         Args:
             device (str, optional): OAK device we want to connect to
-            usb2 (bool, optional): Force USB2 mode
+            usb_speed (str, optional): USB speed we want to use. Defaults to 'auto'.
             replay (str, optional): Replay a depthai-recording - either local path, or from depthai-recordings repo
+            rotation (int, optional): Rotate the camera output by this amount of degrees, 0 by default, 90, 180, 270 are supported.
             args (None, bool, Dict): Use user defined arguments when constructing the pipeline
         """
+        # User should be able to access these:
+        self.replay: Optional[Replay] = None
+
+        self._pipeline: Optional[dai.Pipeline] = None
+        self._args: Optional[Dict[str, Any]] = None  # User defined arguments
+        self._usb_speed: Optional[dai.UsbSpeed] = None
+        self._device_name: Optional[str] = None  # MxId / IP / USB port
+
+        # Whether to stop running the OAK camera. Used by oak.running()
+        self._stop = False
+
         self._device_name = device
-        self._usb_speed = parse_usb_speed(usbSpeed)
+        self._usb_speed = parse_usb_speed(usb_speed)
         self._oak = OakDevice()
         self._pipeline = dai.Pipeline()
         self._pipeline_built = False
@@ -100,8 +98,9 @@ class OakCamera:
 
     def create_camera(self,
                       source: str,
-                      resolution: Union[
-                          None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
+                      resolution: Optional[Union[
+                          str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
+                      ]] = None,
                       fps: Optional[float] = None,
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                       name: Optional[str] = None,
@@ -131,7 +130,7 @@ class OakCamera:
         return comp
 
     def create_nn(self,
-                  model: Union[str, Path],
+                  model: Union[str, Dict, Path],
                   input: Union[CameraComponent, NNComponent],
                   nn_type: Optional[str] = None,
                   tracker: bool = False,  # Enable object tracker - only for Object detection models
@@ -241,19 +240,19 @@ class OakCamera:
         self._rotation = rotation or self._rotation
 
     def config_pipeline(self,
-                        xlinkChunk: Optional[int] = None,
+                        xlink_chunk: Optional[int] = None,
                         calib: Optional[dai.CalibrationHandler] = None,
-                        tuningBlob: Optional[str] = None,
-                        openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
+                        tuning_blob: Optional[str] = None,
+                        openvino_version: Union[None, str, dai.OpenVINO.Version] = None
                         ):
         """
         Configures DepthAI pipeline.
-        @param xlinkChunk: Chunk size of XLink messages. 0 can result in lower latency
+        @param xlink_chunk: Chunk size of XLink messages. 0 can result in lower latency
         @param calib: Calibration data to be uploaded to OAK
-        @param tuningBlob: Camera tuning blob
-        @param openvinoVersion: Force specific OpenVINO version
+        @param tuning_blob: Camera tuning blob
+        @param openvino_version: Force specific OpenVINO version
         """
-        configPipeline(self._pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
+        configPipeline(self._pipeline, xlink_chunk, calib, tuning_blob, openvino_version)
 
     def __enter__(self):
         return self
@@ -327,7 +326,7 @@ class OakCamera:
                 return key
 
         for poll in self._polling:
-            poll() # Poll all callbacks
+            poll()  # Poll all callbacks
 
         if self.device.isClosed():
             self._stop = True
@@ -385,9 +384,9 @@ class OakCamera:
         # User-defined arguments
         if self._args:
             self.config_pipeline(
-                xlinkChunk=self._args.get('xlinkChunkSize', None),
-                tuningBlob=self._args.get('cameraTuning', None),
-                openvinoVersion=self._args.get('openvinoVersion', None),
+                xlink_chunk=self._args.get('xlinkChunkSize', None),
+                tuning_blob=self._args.get('cameraTuning', None),
+                openvino_version=self._args.get('openvinoVersion', None),
             )
 
         return self._pipeline
@@ -432,7 +431,8 @@ class OakCamera:
         """
         Shows DepthAI Pipeline graph, which can be useful when debugging. Builds the pipeline (oak.build()).
         """
-        from depthai_sdk.components.integrations.depthai_pipeline_graph.depthai_pipeline_graph.pipeline_graph import PipelineGraph
+        from depthai_sdk.components.integrations.depthai_pipeline_graph.depthai_pipeline_graph.pipeline_graph import \
+            PipelineGraph
 
         if not self._pipeline_built:
             self.build()  # Build the pipeline

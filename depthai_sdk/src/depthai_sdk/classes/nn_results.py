@@ -19,6 +19,7 @@ class GenericNNOutput:
     def __init__(self, nn_data: NNData):
         self.nn_data = nn_data
 
+
 # First we have Object detection results, which are already standarized with dai.ImgDetections
 
 @dataclass
@@ -69,10 +70,6 @@ class ImgLandmarks(GenericNNOutput):  # In core, extend from NNData
 
     Examples: `human-pose-estimation-0001`, `openpose2`, `facial-landmarks-68`, `landmarks-regression-retail-0009`.
     """
-    landmarks: List[List[Any]]
-    landmarks_indices: List[List[int]]
-    pairs: List[Tuple[int, int]]  # Pairs of landmarks, to draw lines between them
-    colors: List[Tuple[int, int, int]]  # Color for each landmark (eg. both elbows are in the same color)
 
     def __init__(self,
                  nn_data: NNData,
@@ -92,9 +89,10 @@ class InstanceSegmentation(GenericNNOutput):
     """
     Instance segmentation results, with a mask for each instance.
     """
+    # TODO: Finish this, add example models
     masks: List[np.ndarray]  # 2D np.array for each instance
     labels: List[int]  # Class label for each instance
 
     def __init__(self, nn_data: NNData, masks: List[np.ndarray], labels: List[int]):
+        raise NotImplementedError('Instance segmentation not yet implemented')
         super().__init__(nn_data)
-

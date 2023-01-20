@@ -23,9 +23,6 @@ class OutputConfig(BaseConfig):
     """
     Saves callbacks/visualizers until the device is fully initialized. I'll admit it's not the cleanest solution.
     """
-    visualizer: Optional[Visualizer]  # Visualization
-    output: Callable  # Output of the component (a callback)
-    callback: Callable  # Callback that gets called after syncing
 
     def __init__(self,
                  output: Callable,
@@ -33,8 +30,8 @@ class OutputConfig(BaseConfig):
                  visualizer: Visualizer = None,
                  visualizer_enabled: bool = False,
                  record_path: Optional[str] = None):
-        self.output = output
-        self.callback = callback
+        self.output = output  # Output of the component (a callback)
+        self.callback = callback  # Callback that gets called after syncing
         self.visualizer = visualizer
         self.visualizer_enabled = visualizer_enabled
         self.record_path = record_path
@@ -76,9 +73,6 @@ class OutputConfig(BaseConfig):
 
 
 class RecordConfig(BaseConfig):
-    rec: Record
-    outputs: List[Callable]
-
     def __init__(self, outputs: List[Callable], rec: Record):
         self.outputs = outputs
         self.rec = rec
@@ -97,13 +91,9 @@ class RecordConfig(BaseConfig):
 
 
 class SyncConfig(BaseConfig, SequenceNumSync):
-    outputs: List[Callable]
-    cb: Callable
-    visualizer: Visualizer
-
     def __init__(self, outputs: List[Callable], callback: Callable):
         self.outputs = outputs
-        self.cb = callback
+        self.callback = callback
 
         SequenceNumSync.__init__(self, len(outputs))
 
@@ -117,7 +107,7 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             packet
         )
         if synced:
-            self.cb(synced)
+            self.callback(synced)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> List[XoutBase]:
         xouts = []

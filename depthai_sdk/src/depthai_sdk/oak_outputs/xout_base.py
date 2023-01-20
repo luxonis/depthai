@@ -5,12 +5,9 @@ from typing import List, Callable, Optional
 import depthai as dai
 
 from depthai_sdk.oak_outputs.fps import FPS
-from depthai_sdk.visualize import Visualizer
 
 
 class StreamXout:
-    stream: dai.Node.Output
-    name: str  # XLinkOut stream name
     def __init__(self, id: int, out: dai.Node.Output, name: Optional[str] = None):
         self.stream = out
         if name is not None:
@@ -18,24 +15,21 @@ class StreamXout:
         else:
             self.name = f"{str(id)}_{out.name}"
 
+
 class ReplayStream(StreamXout):
     def __init__(self, name: str):
         self.name = name
 
 
 class XoutBase(ABC):
-    callback: Callable  # User defined callback. Called either after visualization (if vis=True) or after syncing.
-    queue: Queue  # Queue to which synced Packets will be added. Main thread will get these
-    _streams: List[str]  # Streams to listen for
-    _visualizer: Visualizer
-    _visualizer_enabled: bool
-    _fps: FPS
-    name: str  # Other Xouts will override this
-
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
         self._visualizer = None
+        self._visualizer_enabled = False
         self._packet_name = None
+        self._fps = None
+        self.queue = None
+        self.callback = None
 
     def get_packet_name(self) -> str:
         if self._packet_name is None:

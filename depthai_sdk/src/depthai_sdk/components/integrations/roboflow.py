@@ -8,8 +8,6 @@ from zipfile import ZipFile
 ROBOFLOW_MODELS = Path.home() / Path('.cache/roboflow-models')
 
 class RoboflowIntegration:
-    config: Dict
-
     def __init__(self, config: Dict):
         if 'key' not in config:
             raise ValueError("To download a model from Roboflow, you need to pass API key ('key')!")

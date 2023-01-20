@@ -1,4 +1,5 @@
 from marshmallow import Schema, fields
+
 from depthai_sdk.classes.yolo_config import YoloConfig
 
 
