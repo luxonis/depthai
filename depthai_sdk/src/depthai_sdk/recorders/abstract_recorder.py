@@ -32,9 +32,6 @@ class OakStream:
         DEPTH = 4  # 16 bit
         IMU = 5
 
-    type: StreamType
-    xlink_name: str
-
     def __init__(self, xout: XoutBase):
         if isinstance(xout, outputs.XoutMjpeg):
             self.type = self.StreamType.MJPEG
@@ -70,23 +67,23 @@ class OakStream:
         elif self.type == self.StreamType.DEPTH:
             return 'y16'
 
-    def isH265(self) -> bool:
+    def is_h265(self) -> bool:
         return self.type == self.StreamType.H265
 
-    def isH264(self) -> bool:
+    def is_h264(self) -> bool:
         return self.type == self.StreamType.H264
 
-    def isH26x(self) -> bool:
-        return self.isH264() or self.isH265()
+    def is_h26x(self) -> bool:
+        return self.is_h264() or self.is_h265()
 
-    def isMjpeg(self) -> bool:
+    def is_mjpeg(self) -> bool:
         return self.type == self.StreamType.MJPEG
 
-    def isRaw(self) -> bool:
+    def is_raw(self) -> bool:
         return self.type == self.StreamType.RAW
 
-    def isDepth(self) -> bool:
+    def is_depth(self) -> bool:
         return self.type == self.StreamType.DEPTH
 
-    def isIMU(self):
+    def is_imu(self):
         return self.type == self.StreamType.IMU

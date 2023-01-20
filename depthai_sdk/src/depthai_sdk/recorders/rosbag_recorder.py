@@ -203,15 +203,27 @@ bool is_recommended # Is this stream recommended by RealSense SDK
 
 
 class RosbagRecorder(Recorder):
-    _closed = False
-    _frame_init: List[str]
+    def __init__(self):
+        super().__init__()
+        self.rgb_meta_conn = None
+        self.calib = None
+        self.rgb_conn = None
+        self.path = None
+        self.start_nanos = None
+        self.writer = None
+        self.dir = None
+        self.CamInfo = None
+        self.depth_conn = None
+        self.depth_meta_conn = None
+        self._frame_init: List[str] = []
+        self._closed = False
 
     def update(self, path: Path, device: dai.Device, _):
-        '''
+        """
         Args:
             path: Path to the folder where rosbag will be saved
             device: depthai.Device object
-        '''
+        """
         if path.suffix != '.bag':
             path = path / 'recording.bag'
         if path.exists():
@@ -308,12 +320,12 @@ class RosbagRecorder(Recorder):
         #     fourcc = "I420"
         #     self.write_colorInfo('/device_0/sensor_1/Color_0/info/camera_info', resolution, self.calib)
 
-    def write(self, name: str, imgFrame: dai.ImgFrame):
+    def write(self, name: str, img_frame: dai.ImgFrame):
         if name not in self._frame_init:
-            self._init_stream(imgFrame)
+            self._init_stream(img_frame)
             self._frame_init.append(name)
 
-        frame = imgFrame.getCvFrame()
+        frame = img_frame.getCvFrame()
         # First frames
         if self.start_nanos == 0: self.start_nanos = time.time_ns()
 
@@ -327,9 +339,9 @@ class RosbagRecorder(Recorder):
                     is_bigendian=0,
                     step=frame.shape[1] * 2,
                     data=frame.flatten().view(dtype=np.int8))
-        type = Image.__msgtype__
+        msg_type = Image.__msgtype__
 
-        self._write(self.rgb_conn if rgb else self.depth_conn, type, img)
+        self._write(self.rgb_conn if rgb else self.depth_conn, msg_type, img)
 
         self.write_keyvalues(self.rgb_meta_conn if rgb else self.depth_meta_conn, {
             'system_time': "%.6f" % time.time(),
@@ -360,57 +372,60 @@ class RosbagRecorder(Recorder):
             c = self.writer.add_connection('/device_0/sensor_1/Color_0/info', streamInfo.__msgtype__)
             self._write(c, streamInfo.__msgtype__, streamInfo)
 
-    def write_keyvalues(self, topicOrConnection, array, connection=False):
+    def write_keyvalues(self, topic_or_connection, array, connection=False):
         type = KeyValue.__msgtype__
         if not connection:
-            c = self.writer.add_connection(topicOrConnection, type, latching=1)
+            c = self.writer.add_connection(topic_or_connection, type, latching=1)
         for name in array:
-            self._write(topicOrConnection if connection else c, type, KeyValue(key=name, value=str(array[name])))
+            self._write(topic_or_connection if connection else c, type, KeyValue(key=name, value=str(array[name])))
 
     def write_uint32(self, topic, uint32):
-        type = UInt32.__msgtype__
-        c = self.writer.add_connection(topic, type, latching=1)
-        self._write(c, type, UInt32(data=uint32))
+        msg_type = UInt32.__msgtype__
+        c = self.writer.add_connection(topic, msg_type, latching=1)
+        self._write(c, msg_type, UInt32(data=uint32))
 
     # translation: [x,y,z]
     # rotation: [x,y,z,w]
     # We will use depth alignment to color camera in case we record depth
-    def write_transform(self, topic, translation=[0, 0, 0], rotation=[0, 0, 0, 0]):
-        type = Transform.__msgtype__
+    def write_transform(self, topic, translation=None, rotation=None):
+        translation = translation or [0, 0, 0]
+        rotation = rotation or [0, 0, 0, 0]
+
+        msg_type = Transform.__msgtype__
         translation = Vector3(x=translation[0], y=translation[1], z=translation[2])
         rotation = Quaternion(x=rotation[0], y=rotation[1], z=rotation[2], w=rotation[3])
-        c = self.writer.add_connection(topic, type, latching=1)
-        self._write(c, type, Transform(translation=translation, rotation=rotation))
+        c = self.writer.add_connection(topic, msg_type, latching=1)
+        self._write(c, msg_type, Transform(translation=translation, rotation=rotation))
 
-    def write_depthInfo(self, topic, resolution, calibData):
+    def write_depthInfo(self, topic, resolution, calib_data):
         # Distortion parameters (k1,k2,t1,t2,k3)
-        dist = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
+        dist = np.array(calib_data.getDistortionCoefficients(dai.CameraBoardSocket.RIGHT))
 
         # Intrinsic camera matrix
-        M_right = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, resolution[0], resolution[1]))
+        M_right = np.array(calib_data.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, resolution[0], resolution[1]))
 
-        R1 = np.array(calibData.getStereoLeftRectificationRotation())
+        R1 = np.array(calib_data.getStereoLeftRectificationRotation())
 
         # Rectification matrix (stereo cameras only)
         H_right = np.matmul(np.matmul(M_right, R1), np.linalg.inv(M_right))
 
         # Projection/camera matrix
-        lr_extrinsics = np.array(calibData.getCameraExtrinsics(dai.CameraBoardSocket.LEFT, dai.CameraBoardSocket.RIGHT))
+        lr_extrinsics = np.array(calib_data.getCameraExtrinsics(dai.CameraBoardSocket.LEFT, dai.CameraBoardSocket.RIGHT))
 
         self.write_cameraInfo(topic, resolution, M_right, H_right, lr_extrinsics)
 
-    def write_colorInfo(self, topic, resolution, calibData):
+    def write_colorInfo(self, topic, resolution, calib_data):
         # Distortion parameters (k1,k2,t1,t2,k3)
-        dist = np.array(calibData.getDistortionCoefficients(dai.CameraBoardSocket.RGB))
+        dist = np.array(calib_data.getDistortionCoefficients(dai.CameraBoardSocket.RGB))
 
         # Intrinsic camera matrix
-        M_color = np.array(calibData.getCameraIntrinsics(dai.CameraBoardSocket.RGB, resolution[0], resolution[1]))
+        M_color = np.array(calib_data.getCameraIntrinsics(dai.CameraBoardSocket.RGB, resolution[0], resolution[1]))
         self.write_cameraInfo(topic, resolution, M_color, np.zeros((3, 3)), np.zeros((4, 4)))
 
     def write_cameraInfo(self, topic, resolution, intrinsics, rect, project):
         # print(topic, resolution)
-        type = self.CamInfo.__msgtype__
-        c = self.writer.add_connection(topic, type, latching=1)
+        msg_type = self.CamInfo.__msgtype__
+        c = self.writer.add_connection(topic, msg_type, latching=1)
         info = self.CamInfo(header=self.get__default_header(),
                             height=resolution[1],
                             width=resolution[0],
@@ -423,7 +438,7 @@ class RosbagRecorder(Recorder):
                             binning_x=0,
                             binning_y=0,
                             roi=self.get_default_roi())
-        self._write(c, type, info)
+        self._write(c, msg_type, info)
 
     def get__default_header(self):
         t = Time(sec=0, nanosec=0)

@@ -38,10 +38,6 @@ class XoutFrames(XoutBase):
     """
     Single message, no syncing required
     """
-    name: str
-    fps: float
-    frames: StreamXout
-    _video_recorder: VideoRecorder
 
     def __init__(self, frames: StreamXout, fps: float = 30, frame_shape: Tuple[int, ...] = None):
         self.frames = frames
@@ -125,8 +121,6 @@ class XoutFrames(XoutBase):
 
 class XoutMjpeg(XoutFrames):
     name: str = "MJPEG Stream"
-    lossless: bool
-    fps: float
 
     def __init__(self, frames: StreamXout, color: bool, lossless: bool, fps: float, frame_shape: Tuple[int, ...]):
         super().__init__(frames)
@@ -147,9 +141,6 @@ class XoutMjpeg(XoutFrames):
 
 class XoutH26x(XoutFrames):
     name = "H26x Stream"
-    color: bool
-    fps: float
-    profile: dai.VideoEncoderProperties.Profile
 
     def __init__(self,
                  frames: StreamXout,
@@ -189,9 +180,6 @@ class XoutH26x(XoutFrames):
 
 
 class XoutClickable:
-    decay_step: int  # How many packets to wait before text disappears
-    buffer: Tuple[int, int, List[int]]
-
     def __init__(self, decay_step: int = 30):
         super().__init__()
         self.buffer = None
@@ -204,8 +192,6 @@ class XoutClickable:
 
 class XoutDisparity(XoutFrames, XoutClickable):
     name: str = "Disparity"
-    multiplier: float
-    fps: float
 
     def __init__(self,
                  disparity_frames: StreamXout,
@@ -315,8 +301,6 @@ class XoutDisparity(XoutFrames, XoutClickable):
 
 # TODO can we merge XoutDispariry and XoutDepth?
 class XoutDepth(XoutFrames, XoutClickable):
-    name: str = "Depth"
-
     def __init__(self,
                  device: dai.Device,
                  frames: StreamXout,
@@ -331,6 +315,7 @@ class XoutDepth(XoutFrames, XoutClickable):
         XoutFrames.__init__(self, frames=frames, fps=fps)
         XoutClickable.__init__(self, decay_step=int(self.fps))
 
+        self.name = 'Depth'
         self.fps = fps
         self.device = device
 
@@ -432,8 +417,6 @@ class XoutDepth(XoutFrames, XoutClickable):
 
 
 class XoutSeqSync(XoutBase, SequenceNumSync):
-    streams: List[StreamXout]
-
     def xstreams(self) -> List[StreamXout]:
         return self.streams
 
@@ -459,8 +442,6 @@ class XoutSeqSync(XoutBase, SequenceNumSync):
 
 class XoutNnResults(XoutSeqSync, XoutFrames):
     name: str = "Object Detection"
-    labels: List[Tuple[str, Tuple[int, int, int]]] = None
-    normalizer: NormalizeBoundingBox
 
     def xstreams(self) -> List[StreamXout]:
         return [self.nn_results, self.frames]
@@ -478,6 +459,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         # Save StreamXout before initializing super()!
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
+        self.labels = None
         if det_nn._labels:
             self.labels = []
             n_colors = [isinstance(label, str) for label in det_nn._labels].count(True)
@@ -571,21 +553,14 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
     name: str = "Depth & Bounding Boxes"
-    # Streams
-    frames: StreamXout
-    configs: StreamXout
-
-    # Save messages
-    depth_msg: Optional[dai.ImgFrame] = None
-    config_msg: Optional[dai.SpatialLocationCalculatorConfig] = None
-
-    factor: float = None
 
     def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
         self.frames = frames
         self.configs = configs
         self.device = device
         self.multiplier = 255 / 95.0
+        self.factor = None
+
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, configs])
 
@@ -619,13 +594,12 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
 
 class XoutTracker(XoutNnResults):
     name: str = "Object Tracker"
-    buffer: List[TrackerPacket]
-    lost_counter: Dict[int, int] = {}
     buffer_size: int = 10
 
     def __init__(self, det_nn, frames: StreamXout, tracklets: StreamXout):
         super().__init__(det_nn, frames, tracklets)
         self.buffer = []
+        self.lost_counter = {}
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
         try:
@@ -733,17 +707,12 @@ class XoutTwoStage(XoutNnResults):
     inferencing.
     """
     name: str = "TwoStage Detection"
-    msgs: Dict[str, Dict[str, Any]] = dict()  # List of messages
     """
     msgs = {
         '1': TwoStageSyncPacket(),
         '2': TwoStageSyncPacket(), 
     }
     """
-    whitelist_labels: Optional[List[int]] = None
-    scale_bb: Optional[Tuple[int, int]] = None
-
-    second_nn_out: StreamXout
 
     def __init__(self,
                  det_nn: 'NNComponent',
@@ -757,8 +726,12 @@ class XoutTwoStage(XoutNnResults):
         # Save StreamXout before initializing super()!
         super().__init__(det_nn, frames, det_out)
 
+        self.msgs: Dict[str, Dict[str, Any]] = dict()
         self.det_nn = det_nn
         self.second_nn = second_nn
+
+        self.whitelist_labels: Optional[List[int]] = None
+        self.scale_bb: Optional[Tuple[int, int]] = None
 
         conf = det_nn._multi_stage_config  # No types due to circular import...
         if conf is not None:
@@ -788,14 +761,16 @@ class XoutTwoStage(XoutNnResults):
             self.msgs[seq][self.nn_results.name] = None
 
         if name == self.second_nn_out.name:
-            if (f := self.second_nn._decode_fn) is not None:
-                self.msgs[seq][name].append(f(msg))
+            fn = self.second_nn._decode_fn
+            if fn is not None:
+                self.msgs[seq][name].append(fn(msg))
             else:
                 self.msgs[seq][name].append(msg)
 
         elif name == self.nn_results.name:
-            if (f := self.det_nn._decode_fn) is not None:
-                msg = f(msg)
+            fn = self.det_nn._decode_fn
+            if fn is not None:
+                msg = fn(msg)
 
             self.add_detections(seq, msg)
 
@@ -818,7 +793,8 @@ class XoutTwoStage(XoutNnResults):
                         rect = det[0], det[1], det[2], det[3]
 
                     try:
-                        if (angle := msg.angles[i]) != 0.0:
+                        angle = msg.angles[i]
+                        if angle != 0.0:
                             rr = dai.RotatedRect()
                             rr.center.x = rect[0]
                             rr.center.y = rect[1]
@@ -871,11 +847,11 @@ class XoutTwoStage(XoutNnResults):
             #     if int(s) <= int(seq):
             #         del self.msgs[s]
 
-            newMsgs = {}
+            new_msgs = {}
             for name, msg in self.msgs.items():
                 if int(name) > int(seq):
-                    newMsgs[name] = msg
-            self.msgs = newMsgs
+                    new_msgs[name] = msg
+            self.msgs = new_msgs
 
     def add_detections(self, seq: str, dets: dai.ImgDetections):
         # Used to match the scaled bounding boxes by the 2-stage NN script node
@@ -927,10 +903,6 @@ class XoutTwoStage(XoutNnResults):
 
 class XoutIMU(XoutBase):
     name: str = 'IMU'
-    imu_out: StreamXout
-
-    packets: List[IMUPacket]
-    start_time: float
 
     def __init__(self, imu_xout: StreamXout):
         self.imu_out = imu_xout
@@ -954,6 +926,7 @@ class XoutIMU(XoutBase):
         from matplotlib import pyplot as plt
 
         self._visualizer = visualizer
+        self._visualizer_enabled = visualizer_enabled
         self.name = name or self.name
 
         self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)

@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Optional
 
 import depthai as dai
 
@@ -6,9 +6,8 @@ from depthai_sdk.oak_outputs.xout_base import XoutBase
 
 
 class OakDevice:
-    
     def __init__(self):
-        self.device: dai.Device = None
+        self.device: Optional[dai.Device] = None
         # fpsHandlers: Dict[str, FPS] = dict()
         self.oak_out_streams: List[XoutBase] = []
 

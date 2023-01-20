@@ -28,15 +28,10 @@ class Visualizer(VisualizerHelper):
     # Constants
     IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt'
 
-    # Fields
-    objects: List[GenericObject]
-    config: VisConfig
-    _frame_shape: Optional[Tuple[int, ...]]
-
     def __init__(self, scale: float = None, fps: bool = False):
         self.platform: Platform = self._detect_platform()
         self.objects: List[GenericObject] = []
-        self._frame_shape = None
+        self._frame_shape: Optional[Tuple[int, ...]] = None
 
         self.config = VisConfig()
 

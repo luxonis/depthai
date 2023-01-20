@@ -19,44 +19,6 @@ from depthai_sdk.replay import Replay
 
 
 class NNComponent(Component):
-    # Public properties
-    node: Union[
-        None,
-        dai.node.NeuralNetwork,
-        dai.node.MobileNetDetectionNetwork,
-        dai.node.MobileNetSpatialDetectionNetwork,
-        dai.node.YoloDetectionNetwork,
-        dai.node.YoloSpatialDetectionNetwork,
-    ]
-    tracker: dai.node.ObjectTracker
-    image_manip: dai.node.ImageManip = None  # ImageManip used to resize the input to match the expected NN input size
-
-    # Private properties
-    _ar_resize_mode: AspectRatioResizeMode = AspectRatioResizeMode.LETTERBOX  # Default
-    _input: Union[CameraComponent, 'NNComponent']  # Input to the NNComponent node passed on initialization
-    _stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
-
-    _blob: dai.OpenVINO.Blob = None
-    _forced_version: Optional[dai.OpenVINO.Version] = None  # Forced OpenVINO version
-    _size: Tuple[int, int]  # Input size to the NN
-    _args: Dict = None
-    _config: Dict = None
-    _node_type: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
-    _roboflow: RoboflowIntegration = None
-
-    _multi_stage_nn: MultiStageNN = None
-    _multi_stage_config: MultiStageConfig = None
-
-    x_in = None
-    _input_queue = None
-
-    _spatial: Union[None, bool, StereoComponent] = None
-    _replay: Replay  # Replay module
-
-    # For visualizer
-    _labels: List = None  # obj detector labels
-    _handler: Callable = None  # Custom model handler for decoding
-
     def __init__(self,
                  pipeline: dai.Pipeline,
                  model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
@@ -87,17 +49,52 @@ class NNComponent(Component):
             name (str, optional): Name of the output stream
         """
         super().__init__()
+
+        self.name = name
         self.out = self.Out(self)
+        self.node: Optional[
+            dai.node.NeuralNetwork,
+            dai.node.MobileNetDetectionNetwork,
+            dai.node.MobileNetSpatialDetectionNetwork,
+            dai.node.YoloDetectionNetwork,
+            dai.node.YoloSpatialDetectionNetwork] = None
+
+        # ImageManip used to resize the input to match the expected NN input size
+        self.image_manip: Optional[dai.node.ImageManip] = None
+        self.x_in: Optional[dai.node.XLinkIn] = None  # Used for multi-stage pipeline
+        self.tracker = pipeline.createObjectTracker() if tracker else None
+
+        # Private properties
+        self._ar_resize_mode: AspectRatioResizeMode = AspectRatioResizeMode.LETTERBOX  # Default
+        self._input: Union[CameraComponent, 'NNComponent']  # Input to the NNComponent node passed on initialization
+        self._stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
+
+        self._blob: Optional[dai.OpenVINO.Blob] = None
+        self._forced_version: Optional[dai.OpenVINO.Version] = None  # Forced OpenVINO version
+        self._size: Optional[Tuple[int, int]] = None  # Input size to the NN
+        self._args: Optional[Dict] = None
+        self._config: Optional[Dict] = None
+        self._node_type: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
+        self._roboflow: Optional[RoboflowIntegration] = None
+
+        self._multi_stage_nn: Optional[MultiStageNN] = None
+        self._multi_stage_config: Optional[MultiStageConfig] = None
+
+        self._input_queue = Optional[None]  # Input queue for multi-stage pipeline
+
+        self._spatial: Optional[Union[bool, StereoComponent]] = None
+        self._replay: Optional[Replay]  # Replay module
+
+        # For visualizer
+        self._labels: Optional[List] = None  # Obj detector labels
+        self._handler: Optional[Callable] = None  # Custom model handler for decoding
 
         # Save passed settings
         self._input = input
         self._spatial = spatial
         self._args = args
         self._replay = replay
-        self._decode_fn = decode_fn or None
-        self.name = name
-
-        self.tracker = pipeline.createObjectTracker() if tracker else None
+        self._decode_fn = decode_fn or None  # Decode function that will be used to decode NN results
 
         # Parse passed settings
         self._parse_model(model)
@@ -241,12 +238,12 @@ class NNComponent(Component):
                 raise ValueError(f"Specified model '{str(model)}' is not supported by DepthAI SDK.\n"
                                  "Check SDK documentation page to see which models are supported.")
 
-    def _parse_node_type(self, nnType: str) -> None:
+    def _parse_node_type(self, nn_type: str) -> None:
         self._node_type = dai.node.NeuralNetwork
-        if nnType:
-            if nnType.upper() == 'YOLO':
+        if nn_type:
+            if nn_type.upper() == 'YOLO':
                 self._node_type = dai.node.YoloSpatialDetectionNetwork if self._is_spatial() else dai.node.YoloDetectionNetwork
-            elif nnType.upper() == 'MOBILENET':
+            elif nn_type.upper() == 'MOBILENET':
                 self._node_type = dai.node.MobileNetSpatialDetectionNetwork if self._is_spatial() else dai.node.MobileNetDetectionNetwork
 
     def _config_spatials_args(self, args):
@@ -547,14 +544,11 @@ class NNComponent(Component):
 
         self.config_nn(conf_threshold=nn_config.get('conf_threshold', None))
 
-
     """
     Available outputs (to the host) of this component
     """
 
     class Out:
-        _comp: 'NNComponent'
-
         def __init__(self, nn_component: 'NNComponent'):
             self._comp = nn_component
 
@@ -676,8 +670,6 @@ class NNComponent(Component):
                               StreamXout(id=self._comp.tracker.id, out=self._comp.tracker.out, name=self._comp.name))
 
             return self._comp._create_xout(pipeline, out)
-
-    out: Out
 
     # Checks
     def _is_spatial(self) -> bool:

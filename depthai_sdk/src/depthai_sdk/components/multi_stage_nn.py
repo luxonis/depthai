@@ -1,71 +1,61 @@
 import os
 from pathlib import Path
 from string import Template
-from typing import Tuple, Union, Optional, List
+from typing import Tuple, Optional, List
 
 import depthai as dai
 
+from depthai_sdk.types import GenericNeuralNetwork
+
 
 class MultiStageConfig:
-    debug: bool
-    show_cropped_frames: bool
-    labels: Optional[List[int]]
-    scale_bb: Optional[Tuple[int, int]]
-
-    def __init__(self, debug, labels=None, scale_bb=None):
+    def __init__(self,
+                 debug: bool,
+                 labels: Optional[List[int]] = None,
+                 scale_bb: Optional[Tuple[int, int]] = None):
         self.debug = debug
         self.labels = labels
         self.scale_bb = scale_bb
 
 
 class MultiStageNN:
-    script: dai.node.Script
-    manip: dai.node.ImageManip  # Cropping ImageManip
-    out: dai.Node.Output  # Cropped imgFrame output
-    _size: Tuple[int, int]
-
     def __init__(self,
                  pipeline: dai.Pipeline,
-                 detection_node: Union[dai.node.MobileNetDetectionNetwork,
-                                       dai.node.MobileNetSpatialDetectionNetwork,
-                                       dai.node.YoloDetectionNetwork,
-                                       dai.node.YoloSpatialDetectionNetwork],  # Object detection node
+                 detection_node: GenericNeuralNetwork,  # Object detection node
                  high_res_frames: dai.Node.Output,
                  size: Tuple[int, int],
                  debug=False
                  ) -> None:
         """
         Args:
-
-            detections (dai.Node.Output): Object detection output
-            high_res_frames (dai.Node.Output): Output that will provide high resolution frames
+            pipeline (dai.Pipeline): Pipeline object
+            detection_node (GenericNeuralNetwork): Object detection NN
+            high_res_frames (dai.Node.Output): Frames corresponding to the detection NN
+            size (Tuple[int, int]): Size of the frames.
+            debug (bool, optional): Enable debug mode. Defaults to False.
         """
-        # self._input.node, self._input.stream_input, self.size
-
-        self.script = pipeline.create(dai.node.Script)
+        self.script: dai.node.Script = pipeline.create(dai.node.Script)
         self.script.setProcessor(dai.ProcessorType.LEON_CSS)  # More stable
-        self._size = size
+        self._size: Tuple[int, int] = size
 
         detection_node.out.link(self.script.inputs['detections'])
         high_res_frames.link(self.script.inputs['frames'])
 
         self.configure(MultiStageConfig(debug))
 
-        self.manip = pipeline.create(dai.node.ImageManip)
+        self.manip: dai.node.ImageManip = pipeline.create(dai.node.ImageManip)
         self.manip.initialConfig.setResize(size)
         self.manip.setWaitForConfigInput(True)
         self.manip.setMaxOutputFrameSize(size[0] * size[1] * 3)
         self.manip.setNumFramesPool(20)
         self.script.outputs['manip_cfg'].link(self.manip.inputConfig)
         self.script.outputs['manip_img'].link(self.manip.inputImage)
-        self.out = self.manip.out
+        self.out: dai.Node.Output = self.manip.out
 
     def configure(self, config: MultiStageConfig = None) -> None:
         """
         Args:
-            debug (bool, default False): Debug script node
-            labels (List[int], optional): Crop & run inference only on objects with these labels
-            scaleBb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
+            config (MultiStageConfig, optional): Configuration object. Defaults to None.
         """
         if config is None:
             return
