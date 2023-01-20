@@ -1,5 +1,4 @@
 import cv2
-import depthai
 
 from depthai_sdk import OakCamera
 from depthai_sdk.visualize.configs import StereoColor
