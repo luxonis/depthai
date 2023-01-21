@@ -29,7 +29,7 @@ class BboxStyle(IntEnum):
     ROUNDED_CORNERS = 11
 
 
-class StereoColor:
+class StereoColor(IntEnum):
     GRAY = 0
     RGB = 1
     RGBD = 2
@@ -48,7 +48,7 @@ class StereoConfig:
     colorize: StereoColor = StereoColor.RGB
     colormap: int = cv2.COLORMAP_JET
     wls_filter: bool = False
-    wls_lambda: float = 1500
+    wls_lambda: float = 8000
     wls_sigma: float = 1.5
 
 

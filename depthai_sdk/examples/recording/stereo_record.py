@@ -7,7 +7,7 @@ with OakCamera() as oak:
     color = oak.create_camera('color', resolution='1080p', fps=5)
     stereo = oak.create_stereo('400p', fps=5)
 
-    stereo.configure_postprocessing(
+    stereo.config_postprocessing(
         colorize=StereoColor.RGB,
         colormap=cv2.COLORMAP_JET,
         wls_filter=True,

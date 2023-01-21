@@ -1,6 +1,6 @@
+from enum import Enum
 from typing import Optional, Union, Any, Dict
 
-import cv2
 import depthai as dai
 
 from depthai_sdk.components.camera_component import CameraComponent
@@ -10,6 +10,13 @@ from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth, XoutMjpeg, Xo
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
+
+
+class WLSLevel(Enum):
+    """WLS filter level"""
+    LOW = (1000, 0.8)
+    MEDIUM = (6000, 1.5)
+    HIGH = (12000, 2.0)
 
 
 class StereoComponent(Component):
@@ -63,11 +70,12 @@ class StereoComponent(Component):
             self._encoderProfile = parse_encode(encode)
 
         # Configuration variables
-        self._colorize = StereoColor.GRAY
-        self._colormap = cv2.COLORMAP_TURBO
-        self._use_wls_filter = False
-        self._wls_lambda = 8000
-        self._wls_sigma = 1.5
+        self._colorize = None
+        self._colormap = None
+        self._use_wls_filter = None
+        self._wls_level = None
+        self._wls_lambda = None
+        self._wls_sigma = None
 
     def get_output_stream(self, input: Union[
         CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output
@@ -168,18 +176,44 @@ class StereoComponent(Component):
         if sigma: self.node.initialConfig.setBilateralFilterSigma(sigma)
         if lr_check_threshold: self.node.initialConfig.setLeftRightCheckThreshold(lr_check_threshold)
 
-    def configure_postprocessing(self,
-                                 colorize: StereoColor = None,
-                                 colormap: int = None,
-                                 wls_filter: bool = None,
-                                 wls_lambda: float = None,
-                                 wls_sigma: float = None
-                                 ) -> None:
-        self._colorize = colorize or self._colorize
-        self._colormap = colormap or self._colormap
-        self._use_wls_filter = wls_filter or self._use_wls_filter
-        self._wls_lambda = wls_lambda or self._wls_lambda
-        self._wls_sigma = wls_sigma or self._wls_sigma
+    def config_postprocessing(self,
+                              colorize: Union[StereoColor, bool] = None,
+                              colormap: int = None,
+                              wls_filter: bool = None,
+                              wls_level: WLSLevel = None,
+                              wls_lambda: float = None,
+                              wls_sigma: float = None
+                              ) -> None:
+        """
+        Configures postprocessing options.
+
+        Args:
+            colorize: Colorize the disparity map. Can be either a StereoColor enum, string or bool.
+            colormap: Colormap to use for colorizing the disparity map.
+            wls_filter: Enable WLS filter. If enabled, the output will be filtered using WLS filter.
+            wls_level: WLS filter level. Can be either a WLSLevel enum or string.
+            wls_lambda: WLS filter lambda.
+            wls_sigma: WLS filter sigma.
+        """
+        if colorize is None:
+            self._colorize = StereoColor.GRAY
+        elif isinstance(colorize, bool):
+            self._colorize = StereoColor.RGB if colorize else StereoColor.GRAY
+        elif isinstance(colorize, StereoColor):
+            self._colorize = colorize
+        elif isinstance(colorize, str):
+            self._colorize = StereoColor[colorize.upper()]
+
+        self._colormap = colormap
+        self._use_wls_filter = wls_filter
+
+        if isinstance(wls_level, WLSLevel):
+            self._wls_level = wls_level
+        elif isinstance(wls_level, str):
+            self._wls_level = WLSLevel(wls_level.upper())
+
+        self._wls_lambda = wls_lambda
+        self._wls_sigma = wls_sigma
 
     def _get_disparity_factor(self, device: dai.Device) -> float:
         """
@@ -227,6 +261,7 @@ class StereoComponent(Component):
                 colorize=self._comp._colorize,
                 colormap=self._comp._colormap,
                 use_wls_filter=self._comp._use_wls_filter,
+                wls_level=self._comp._wls_level,
                 wls_lambda=self._comp._wls_lambda,
                 wls_sigma=self._comp._wls_sigma
             )
@@ -243,6 +278,7 @@ class StereoComponent(Component):
                 colorize=self._comp._colorize,
                 colormap=self._comp._colormap,
                 use_wls_filter=self._comp._use_wls_filter,
+                wls_level=self._comp._wls_level,
                 wls_lambda=self._comp._wls_lambda,
                 wls_sigma=self._comp._wls_sigma
             )
