@@ -119,7 +119,12 @@ class StereoComponent(Component):
             self._right_stream.link(self.node.right)
 
         if self.encoder:
-            self.encoder.setDefaultProfilePreset(self.left.getFps(), self._encoderProfile)
+            try:
+                fps = self.left.get_fps()  # CameraComponent
+            except AttributeError:
+                fps = self.left.getFps()  # MonoCamera
+
+            self.encoder.setDefaultProfilePreset(fps, self._encoderProfile)
             self.node.disparity.link(self.encoder.input)
 
         self.node.setOutputSize(1200, 800)
