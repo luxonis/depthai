@@ -15,7 +15,6 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
     IMUPacket, DepthPacket, _Detection
 )
-from depthai_sdk.components.nn_helper import AspectRatioResizeMode
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
@@ -146,8 +145,6 @@ class XoutMjpeg(XoutFrames):
 
 
 class XoutH26x(XoutFrames):
-    name = "H26x Stream"
-
     def __init__(self,
                  frames: StreamXout,
                  color: bool,
@@ -155,6 +152,7 @@ class XoutH26x(XoutFrames):
                  fps: float,
                  frame_shape: Tuple[int, ...]):
         super().__init__(frames)
+        self.name = 'H26x Stream'
         self.color = color
         self.profile = profile
         self.fps = fps
@@ -468,8 +466,6 @@ class XoutSeqSync(XoutBase, SequenceNumSync):
 
 
 class XoutNnResults(XoutSeqSync, XoutFrames):
-    name: str = "Object Detection"
-
     def xstreams(self) -> List[StreamXout]:
         return [self.nn_results, self.frames]
 
@@ -480,13 +476,13 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         self.det_nn = det_nn
         self.nn_results = nn_results
 
-        # Multiple inheritance init
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, nn_results])
-        # Save StreamXout before initializing super()!
+
+        self.name = 'NN results'
+        self.labels = None
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
-        self.labels = None
         if det_nn._labels:
             self.labels = []
             n_colors = [isinstance(label, str) for label in det_nn._labels].count(True)
@@ -626,17 +622,17 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
 
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
-    name: str = "Depth & Bounding Boxes"
-
     def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
         self.frames = frames
         self.configs = configs
-        self.device = device
-        self.multiplier = 255 / 95.0
-        self.factor = None
 
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, configs])
+
+        self.device = device
+        self.multiplier = 255 / 95.0
+        self.factor = None
+        self.name = 'Depth & Bounding Boxes'
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.configs]
@@ -667,12 +663,12 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
 
 
 class XoutTracker(XoutNnResults):
-    name: str = "Object Tracker"
     buffer_size: int = 10
 
     def __init__(self, det_nn, frames: StreamXout, tracklets: StreamXout):
         super().__init__(det_nn, frames, tracklets)
         self.buffer = []
+        self.name = 'Object Tracker'
         self.lost_counter = {}
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
@@ -828,7 +824,6 @@ class XoutTwoStage(XoutNnResults):
     Each detection (if not on blacklist) will crop the original frame and forward it to the second (stage) NN for
     inferencing.
     """
-    name: str = "TwoStage Detection"
     """
     msgs = {
         '1': TwoStageSyncPacket(),
@@ -851,6 +846,7 @@ class XoutTwoStage(XoutNnResults):
         self.msgs: Dict[str, Dict[str, Any]] = dict()
         self.det_nn = det_nn
         self.second_nn = second_nn
+        self.name = 'Two-stage detection'
 
         self.whitelist_labels: Optional[List[int]] = None
         self.scale_bb: Optional[Tuple[int, int]] = None
@@ -1024,8 +1020,6 @@ class XoutTwoStage(XoutNnResults):
 
 
 class XoutIMU(XoutBase):
-    name: str = 'IMU'
-
     def __init__(self, imu_xout: StreamXout):
         self.imu_out = imu_xout
         self.packets = []
@@ -1040,6 +1034,7 @@ class XoutIMU(XoutBase):
         self.gyroscope_buffer = []
 
         super().__init__()
+        self.name = 'IMU'
 
     def setup_visualize(self,
                         visualizer: Visualizer,

@@ -100,8 +100,8 @@ class CameraComponent(Component):
             sensor_name = cams[dai.CameraBoardSocket.RGB]
 
             if not self._resolution_forced:  # Find the closest resolution
-                self.node.setResolution(getClosesResolution(sensor_name, width=1200))
-                scale = getClosestIspScale(self.node.getIspSize(), width=1200, videoEncoder=(self.encoder is not None))
+                self.node.setResolution(getClosesResolution(sensor_name, width=1300))
+                scale = getClosestIspScale(self.node.getIspSize(), width=1300, videoEncoder=(self.encoder is not None))
                 self.node.setIspScale(*scale)
 
             currSize = self.node.getVideoSize()

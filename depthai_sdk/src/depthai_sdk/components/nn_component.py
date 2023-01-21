@@ -66,7 +66,7 @@ class NNComponent(Component):
         self.tracker = pipeline.createObjectTracker() if tracker else None
 
         # Private properties
-        self._ar_resize_mode: AspectRatioResizeMode = AspectRatioResizeMode.LETTERBOX  # Default
+        self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
         self._input: Union[CameraComponent, 'NNComponent']  # Input to the NNComponent node passed on initialization
         self._stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
 
@@ -355,12 +355,12 @@ class NNComponent(Component):
             self.image_manip.inputImage.setQueueSize(2)
 
         # Set Aspect Ratio resizing mode
-        if self._ar_resize_mode == AspectRatioResizeMode.CROP:
+        if self._ar_resize_mode == ResizeMode.CROP:
             # Cropping is already the default mode of the ImageManip node
             self.image_manip.initialConfig.setResize(self._size)
-        elif self._ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
+        elif self._ar_resize_mode == ResizeMode.LETTERBOX:
             self.image_manip.initialConfig.setResizeThumbnail(*self._size)
-        elif self._ar_resize_mode == AspectRatioResizeMode.STRETCH:
+        elif self._ar_resize_mode == ResizeMode.STRETCH:
             self.image_manip.initialConfig.setResize(self._size)
             self.image_manip.setKeepAspectRatio(False)  # Not keeping aspect ratio -> stretching the image
 
@@ -485,24 +485,24 @@ class NNComponent(Component):
 
     def config_nn(self,
                   conf_threshold: Optional[float] = None,
-                  aspect_ratio_resize_mode: Union[AspectRatioResizeMode, str] = None):
+                  resize_mode: Union[ResizeMode, str] = None):
         """
         Configures the Detection Network node.
 
         Args:
             conf_threshold: (float, optional): Confidence threshold for the detections (0..1]
-            aspect_ratio_resize_mode: (AspectRatioResizeMode, optional): Change aspect ratio resizing mode - to either STRETCH, CROP, or LETTERBOX.
+            resize_mode: (ResizeMode, optional): Change aspect ratio resizing mode - to either STRETCH, CROP, or LETTERBOX.
         """
-        if aspect_ratio_resize_mode:
-            if isinstance(aspect_ratio_resize_mode, str):
+        if resize_mode:
+            if isinstance(resize_mode, str):
                 try:
-                    aspect_ratio_resize_mode = AspectRatioResizeMode[aspect_ratio_resize_mode.upper()]
+                    resize_mode = ResizeMode[resize_mode.upper()]
                 except (AttributeError, KeyError):
                     print('AR resize mode was not recognizied.'
                           'Options (case insensitive): STRETCH, CROP, LETTERBOX.'
                           'Using default LETTERBOX mode.')
 
-            self._ar_resize_mode = aspect_ratio_resize_mode
+            self._ar_resize_mode = resize_mode
         if conf_threshold and self._is_detector():
             self.node.setConfidenceThreshold(conf_threshold)
 
