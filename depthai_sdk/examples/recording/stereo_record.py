@@ -17,9 +17,9 @@ with OakCamera() as oak:
 
     # Record RGB and disparity to records folder
     # Record doesn't work with visualize so the config is ignored
-    oak.record([color.out.main, stereo.out.disparity], 'records')
+    # oak.record([color.out.main, stereo.out.disparity], 'records')
 
     # Record depth only
-    # oak.visualize(stereo.out.depth, record='depth.avi')
+    oak.visualize(stereo.out.disparity, record_path='disparity.avi')
 
     oak.start(blocking=True)
