@@ -4,8 +4,8 @@ from depthai_sdk import OakCamera
 from depthai_sdk.visualize.configs import StereoColor
 
 with OakCamera() as oak:
-    color = oak.create_camera('color', resolution='1080p', fps=5)
-    stereo = oak.create_stereo('400p', fps=5)
+    color = oak.create_camera('color', resolution='1080p', fps=30)
+    stereo = oak.create_stereo('400p', fps=30)
 
     stereo.config_postprocessing(
         colorize=StereoColor.RGB,
