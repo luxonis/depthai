@@ -683,7 +683,7 @@ class NNComponent(Component):
             if self._comp._is_multi_stage():
                 raise NotImplementedError('Encoded output not supported for 2-stage NNs at the moment.')
 
-            if self._comp._input._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
+            if self._comp._input._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
                 out = XoutNnMjpeg(
                     det_nn=self._comp,
                     frames=StreamXout(self._comp._input.encoder.id, self._comp._input.encoder.bitstream),
@@ -699,7 +699,7 @@ class NNComponent(Component):
                     frames=StreamXout(self._comp._input.node.id, self._comp._input.encoder.bitstream),
                     nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
                     color=self._comp._input.is_color(),
-                    profile=self._comp._input._encoderProfile,
+                    profile=self._comp._input._encoder_profile,
                     fps=self._comp._input.encoder.getFrameRate(),
                     frame_shape=self._comp._input.stream_size
                 )
