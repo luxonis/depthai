@@ -14,7 +14,7 @@ class NormalizeBoundingBox:
     def __init__(self, aspect_ratio: Tuple[float, float], resize_mode: ResizeMode):
         """
         :param aspect_ratio: NN input size
-        :param ar_resize_mode: Aspect ratio resize mode
+        :param resize_mode: Aspect ratio resize mode
         """
         self.aspect_ratio = aspect_ratio
         self.resize_mode = resize_mode
@@ -84,7 +84,7 @@ class NormalizeBoundingBox:
             tuple: Bounding box points mapped to pixel values on frame.
         """
 
-        if self.ar_resize_mode != AspectRatioResizeMode.LETTERBOX:
+        if self.resize_mode != ResizeMode.LETTERBOX:
             if normalize:
                 return 0, 0, 1, 1
 

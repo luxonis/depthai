@@ -15,6 +15,7 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
     IMUPacket, DepthPacket, _Detection
 )
+from depthai_sdk.components.nn_helper import ResizeMode
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
@@ -577,7 +578,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 self.segmentation_colormap.extend(new_colors)
 
             bbox = None
-            if self.normalizer.ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
+            if self.normalizer.resize_mode == ResizeMode.LETTERBOX:
                 bbox = self.normalizer.get_letterbox_bbox(packet.frame, normalize=True)
                 input_h, input_w = self.normalizer.aspect_ratio
                 resize_bbox = bbox[0] * input_w, bbox[1] * input_h, bbox[2] * input_w, bbox[3] * input_h
@@ -589,9 +590,9 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             x1, y1, x2, y2 = resize_bbox
             h, w = packet.frame.shape[:2]
             # Stretch mode
-            if self.normalizer.ar_resize_mode == AspectRatioResizeMode.STRETCH:
+            if self.normalizer.resize_mode == ResizeMode.STRETCH:
                 colorized_mask = cv2.resize(colorized_mask, (w, h))
-            elif self.normalizer.ar_resize_mode == AspectRatioResizeMode.LETTERBOX:
+            elif self.normalizer.resize_mode == ResizeMode.LETTERBOX:
                 colorized_mask = cv2.resize(colorized_mask[y1:y2, x1:x2], (w, h))
             else:
                 padded_mask = np.zeros((h, w, 3), dtype=np.uint8)
@@ -785,6 +786,7 @@ class XoutNnMjpeg(XoutNnResults, XoutMjpeg):
     def visualize(self, packet: FramePacket):
         packet.frame = XoutMjpeg.decode_frame(self, packet)
         XoutNnResults.visualize(self, packet)
+
 
 # class TimestampSycn(BaseSync):
 #     """
