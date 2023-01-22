@@ -5,7 +5,7 @@ blobconverter>=1.2.8
 pytube>=12.1.0
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 # This specific commit is needed for the debug mode (oak.show_graph()). TODO: update when depthai has new release
-depthai==2.19.1.0.dev+fb04df87c5068b26b501ead531dba90e30751e74
+depthai>=2.20.0.0
 PyTurboJPEG==1.6.4
 marshmallow==3.17.0
 distinctipy
