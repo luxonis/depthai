@@ -86,7 +86,7 @@ class BlobManager:
         if self._useBlob:
             return self._blobPath
         version = openvinoVersion.name.replace("VERSION_", "").replace("_", ".")
-        if version == "2022.1":
+        if version == "2022.1" or version == "???":
             version = "2021.4" #FIXME
         if self._useZoo:
             try:
