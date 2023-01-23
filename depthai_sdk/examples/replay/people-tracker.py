@@ -1,5 +1,3 @@
-import cv2
-import depthai as dai
 from depthai_sdk import OakCamera, ResizeMode
 
 with OakCamera(replay="people-tracking-above-02") as oak:

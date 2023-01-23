@@ -26,6 +26,9 @@ class VideoWriter(AbstractWriter):
         self._buffer = None
         self._is_buffer_enabled = False
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def init_buffer(self, max_seconds: int):
         if max_seconds > 0:
             self._buffer = deque(maxlen=int(max_seconds * self._fps))

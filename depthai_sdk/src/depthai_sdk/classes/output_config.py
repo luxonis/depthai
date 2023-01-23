@@ -6,7 +6,7 @@ import depthai as dai
 
 from depthai_sdk import FramePacket
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
-from depthai_sdk.oak_outputs.xout import XoutFrames
+from depthai_sdk.oak_outputs.xout import XoutFrames, XoutDepth
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 from depthai_sdk.record import Record
 from depthai_sdk.recorders.video_recorder import VideoRecorder
@@ -23,18 +23,17 @@ class OutputConfig(BaseConfig):
     """
     Saves callbacks/visualizers until the device is fully initialized. I'll admit it's not the cleanest solution.
     """
-    visualizer: Optional[Visualizer]  # Visualization
-    output: Callable  # Output of the component (a callback)
-    callback: Callable  # Callback that gets called after syncing
 
     def __init__(self,
                  output: Callable,
                  callback: Callable,
                  visualizer: Visualizer = None,
+                 visualizer_enabled: bool = False,
                  record_path: Optional[str] = None):
-        self.output = output
-        self.callback = callback
+        self.output = output  # Output of the component (a callback)
+        self.callback = callback  # Callback that gets called after syncing
         self.visualizer = visualizer
+        self.visualizer_enabled = visualizer_enabled
         self.record_path = record_path
 
     def find_new_name(self, name: str, names: List[str]):
@@ -60,10 +59,17 @@ class OutputConfig(BaseConfig):
         recorder = None
         if self.record_path:
             recorder = VideoRecorder()
+
+            if isinstance(xoutbase, XoutDepth):
+                raise NotImplementedError('Depth recording is not implemented yet.'
+                                          'Please use OakCamera.record() instead.')
+
             recorder.update(Path(self.record_path), device, [xoutbase])
 
         if self.visualizer:
-            xoutbase.setup_visualize(visualizer=self.visualizer, name=xoutbase.name)
+            xoutbase.setup_visualize(visualizer=self.visualizer,
+                                     visualizer_enabled=self.visualizer_enabled,
+                                     name=xoutbase.name)
 
         if self.record_path:
             xoutbase.setup_recorder(recorder=recorder)
@@ -72,9 +78,6 @@ class OutputConfig(BaseConfig):
 
 
 class RecordConfig(BaseConfig):
-    rec: Record
-    outputs: List[Callable]
-
     def __init__(self, outputs: List[Callable], rec: Record):
         self.outputs = outputs
         self.rec = rec
@@ -93,13 +96,9 @@ class RecordConfig(BaseConfig):
 
 
 class SyncConfig(BaseConfig, SequenceNumSync):
-    outputs: List[Callable]
-    cb: Callable
-    visualizer: Visualizer
-
     def __init__(self, outputs: List[Callable], callback: Callable):
         self.outputs = outputs
-        self.cb = callback
+        self.callback = callback
 
         SequenceNumSync.__init__(self, len(outputs))
 
@@ -113,7 +112,7 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             packet
         )
         if synced:
-            self.cb(synced)
+            self.callback(synced)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, _) -> List[XoutBase]:
         xouts = []

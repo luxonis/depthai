@@ -8,4 +8,21 @@ Here we have multiple recorder classes:
 
 ### Watch uncontainerized videos
 
-To watch uncontainerized videos (`.h265`, `.mjpeg`) or lossless MJPEG encoded `.mp4` video, you can use `cv2.VideoCapture()`, a simple code is provided at [videoCap.py](videoCap.py).
+To watch uncontainerized videos (`.h265`, `.mjpeg`) or lossless MJPEG encoded `.mp4` video, you can use `cv2.VideoCapture()`. A simple usage:
+
+```python
+import sys
+
+import cv2
+
+if len(sys.argv) <= 1:
+    raise Exception("Specify the path to the video file (.mp4, .mjpeg, .h265, etc.) like `video_cap.py color.mjpeg`")
+
+cap = cv2.VideoCapture(sys.argv[1])
+while cap.isOpened():
+    ok, frame = cap.read()
+    if not ok:
+        break
+    cv2.imshow("Video", frame)
+    if cv2.waitKey(1) == ord("q"): break
+```
