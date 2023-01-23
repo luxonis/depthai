@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'DepthAI SDK Docs'
-copyright = u"@build_year@, Luxonis"
+copyright = 'by Luxonis'
 author = 'Luxonis'
 
 # The full version, including alpha/beta/rc tags
