@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Any, Dict
 
 import numpy as np
 
@@ -54,11 +54,27 @@ class VideoRecorder(Recorder):
                     from .video_writers.file_writer import FileWriter
                     self._writers[name] = FileWriter(self.path, name, fourcc)
 
+    def create_file(self, wr_name: str, subfolder: str, filename: str, buf_name: str):
+        return self._writers[wr_name].create_file(self.path, subfolder, filename, buf_name)
+
+    def init_buffers(self, wr_name: str, buffers: Dict[str, int]):
+        for name, max_seconds in buffers.items():
+            self._writers[wr_name].init_buffer(name, max_seconds)
+
+    def add_to_buffer(self, wr_name: str, buf_name: str, frame: Union[np.ndarray, dai.ImgFrame]):
+        self._writers[wr_name].add_to_buffer(buf_name, frame)
+
+    def is_buffer_full(self, wr_name: str, buf_name: str):
+        return self._writers[wr_name].is_buffer_full(buf_name)
+
+    def is_buffer_empty(self, wr_name: str, buf_name: str):
+        return self._writers[wr_name].is_buffer_empty(buf_name)
+
+    def write_to_file(self, wr_name: str, buf_name: str, file: Any):
+        self._writers[wr_name].write_to_file(buf_name, file)
+
     def write(self, name: str, frame: Union[np.ndarray, dai.ImgFrame]):
         self._writers[name].write(frame)
-
-    def add_to_buffer(self, name: str, frame: Union[np.ndarray, dai.ImgFrame]):
-        self._writers[name].add_to_buffer(frame)
 
     def close(self):
         if self._closed: return

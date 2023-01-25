@@ -7,8 +7,9 @@ from typing import Dict, Any, Optional, List, Union, Callable
 import cv2
 import depthai as dai
 
+from depthai_sdk.trigger_action.actions.abstract_action import Action
 from depthai_sdk.args_parser import ArgsParser
-from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig
+from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig, TriggerActionConfig
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
@@ -18,6 +19,7 @@ from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
+from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.utils import configPipeline
 from depthai_sdk.visualize import Visualizer
 
@@ -512,3 +514,6 @@ class OakCamera:
         if not self._pipeline_built:
             raise Exception("OAK device wasn't booted yet, make sure to call oak.build() or oak.start()!")
         return self._oak.device
+
+    def trigger_action(self, trigger: Trigger, action: Action):
+        self._out_templates.append(TriggerActionConfig(trigger, action))

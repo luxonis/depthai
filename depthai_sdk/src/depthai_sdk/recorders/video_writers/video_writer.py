@@ -1,5 +1,4 @@
 from collections import deque
-from datetime import datetime
 from pathlib import Path
 from typing import Union
 
@@ -16,25 +15,31 @@ class VideoWriter(AbstractWriter):
     _path: str
 
     def __init__(self, path: Path, name: str, fourcc: str, fps: float):
-        self.file = None
+        self._file = None
         self._path = create_writer_dir(path, name, 'avi')
         self._fourcc = None
 
         self._w, self._h = None, None
         self._fps = fps
 
-        self._buffer = None
-        self._is_buffer_enabled = False
+        self._buffers = {}
+
+    def create_file(self, path: Path, subfolder: str, filename: str, buf_name: str):
+        print('Started saving buffer...')
+        if self._buffers[buf_name] is None:
+            raise RuntimeError(f"Buffer {buf_name} is not enabled")
+
+        if len(self._buffers[buf_name]) == 0:
+            return None
+
+        save_path = create_writer_dir(path / subfolder, filename, 'avi')
+        frame = self._buffers[buf_name][0]
+        return self._create_file(save_path, frame)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def init_buffer(self, max_seconds: int):
-        if max_seconds > 0:
-            self._buffer = deque(maxlen=int(max_seconds * self._fps))
-            self._is_buffer_enabled = True
-
-    def _create_file(self, frame: Union[dai.ImgFrame, np.ndarray]):
+    def _create_file(self, path_to_file: Union[Path, str], frame: Union[dai.ImgFrame, np.ndarray]):
         if isinstance(frame, np.ndarray):
             self._h, self._w = frame.shape[:2]
         else:
@@ -54,67 +59,44 @@ class VideoWriter(AbstractWriter):
                 else:
                     self._fourcc = "I420"
 
-        self.file = cv2.VideoWriter(self._path,
-                                    cv2.VideoWriter_fourcc(*self._fourcc),
-                                    self._fps,
-                                    (self._w, self._h),
-                                    isColor=self._fourcc != "GREY")
-
-    def close(self):
-        if self.file:
-            self.file.release()
-
-    def save_snapshot(self, duration: int, dir_path: Union[Path, str] = None):
-        if self._buffer is None:
-            raise RuntimeError("Buffer is not enabled")
-
-        if len(self._buffer) == 0:
-            return None
-
-        snapshot_name = f'snapshot_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.avi'
-        save_path = Path(dir_path or self._path.partition("/")[0], snapshot_name)
-
-        snapshot_file = cv2.VideoWriter(
-            str(save_path),
-            cv2.VideoWriter_fourcc(*self._fourcc),
-            self._fps,
-            (self._w, self._h),
-            isColor=self._fourcc == "I420"
-        )
-
-        # Copy queue
-        buffer_copy = self._buffer.copy()
-
-        n_skip_frames = int(self._fps * (self._fps * duration))
-        while len(buffer_copy) > 0:
-            # Wait til we reach the desired time
-            if n_skip_frames > 0:
-                n_skip_frames -= 1
-                buffer_copy.popleft()
-                continue
-
-            el = buffer_copy.popleft()
-            snapshot_file.write(el if isinstance(el, np.ndarray) else el.getCvFrame())
-
-        snapshot_file.release()
-        print('Snapshot saved to', save_path)
+        return cv2.VideoWriter(path_to_file,
+                               cv2.VideoWriter_fourcc(*self._fourcc),
+                               self._fps,
+                               (self._w, self._h),
+                               isColor=self._fourcc != "GREY")
 
     def set_fourcc(self, fourcc: str):
         self._fourcc = fourcc
 
-    def add_to_buffer(self, frame: Union[dai.ImgFrame, np.ndarray]):
-        if not self._is_buffer_enabled:
+    def init_buffer(self, buf_name: str, max_seconds: int):
+        if max_seconds > 0:
+            self._buffers[buf_name] = deque(maxlen=int(max_seconds * self._fps))
+
+    def add_to_buffer(self, buf_name: str, frame: Union[dai.ImgFrame, np.ndarray]):
+        if self._buffers[buf_name] is None:
             return
 
-        if len(self._buffer) == self._buffer.maxlen:
-            self._buffer.pop()
+        if len(self._buffers[buf_name]) == self._buffers[buf_name].maxlen:
+            self._buffers[buf_name].popleft()  # BEFORE WAS pop()
 
-        self._buffer.append(frame)
+        self._buffers[buf_name].append(frame)
+
+    def is_buffer_full(self, buf_name: str) -> bool:
+        return len(self._buffers[buf_name]) == self._buffers[buf_name].maxlen
+
+    def is_buffer_empty(self, buf_name: str) -> bool:
+        return len(self._buffers[buf_name]) == 0
+
+    def write_to_file(self, buf_name: str, file: cv2.VideoWriter):
+        if len(self._buffers[buf_name]) > 0:
+            el = self._buffers[buf_name].popleft()
+            file.write(el if isinstance(el, np.ndarray) else el.getCvFrame())
 
     def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
-        if self.file is None:
-            self._create_file(frame)
+        if not self._file:
+            self._file = self._create_file(self._path, frame)
+        self._file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
 
-        self.add_to_buffer(frame)
-
-        self.file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
+    def close(self):
+        if self._file:
+            self._file.release()

@@ -5,11 +5,15 @@ from typing import Optional, Callable, List
 import depthai as dai
 
 from depthai_sdk import FramePacket
+from depthai_sdk.trigger_action.actions.abstract_action import Action
+from depthai_sdk.trigger_action.actions.record_action import RecordAction
+from depthai_sdk.trigger_action.controllers import TriggerActionController, RecordController
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout import XoutFrames, XoutDepth
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 from depthai_sdk.record import Record
 from depthai_sdk.recorders.video_recorder import VideoRecorder
+from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize import Visualizer
 
 
@@ -124,3 +128,36 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             xoutbase.setup_visualize(Visualizer(), xoutbase.name)
 
         return xouts
+
+
+class TriggerActionConfig(BaseConfig):  # in future can extend SequenceNumSync
+    trigger: Trigger
+    action: Action
+
+    def __init__(self, trigger: Trigger, action: Action):
+        self.trigger = trigger
+        self.action = action
+
+    def setup(self, pipeline: dai.Pipeline, device, _) -> List[XoutBase]:
+        if isinstance(self.action, RecordAction):
+            controller = RecordController(self.trigger, self.action)
+        else:  # TODO
+            controller = TriggerActionController(self.trigger)
+
+        trigger_xout: XoutBase = self.trigger.input(pipeline, device)
+        action_xout: XoutBase = self.action.input(pipeline, device)
+
+        # seems like necessary thing to do, if I want to work with packets (not msgs) from this xout,
+        # and if I want to check for trigger inside actuator's thread, not inside check_queue
+        trigger_xout.setup_base(controller.new_packet_trigger)
+        action_xout.setup_base(controller.new_packet_action)
+
+        # without setting visualizer up, XoutNnResults.on_callback() won't work
+        trigger_xout.setup_visualize(visualizer=Visualizer(), name=trigger_xout.name, visualizer_enabled=False)
+
+        controller.start(device, action_xout)  # device is not used
+
+        # should be returned, if I want to work with its packets after
+        # (not msgs, like in Record class, that's why RecordConfig returns just self.rec)
+        return [trigger_xout, action_xout]
+
