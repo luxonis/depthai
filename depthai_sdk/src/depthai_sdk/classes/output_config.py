@@ -131,9 +131,6 @@ class SyncConfig(BaseConfig, SequenceNumSync):
 
 
 class TriggerActionConfig(BaseConfig):  # in future can extend SequenceNumSync
-    trigger: Trigger
-    action: Action
-
     def __init__(self, trigger: Trigger, action: Action):
         self.trigger = trigger
         self.action = action

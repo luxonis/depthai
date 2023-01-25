@@ -11,10 +11,7 @@ from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 
 
 class VideoWriter(AbstractWriter):
-    _fps: float
-    _path: str
-
-    def __init__(self, path: Path, name: str, fourcc: str, fps: float):
+    def __init__(self, path: Path, name: str, fourcc: str, fps: float):  # TODO: fourcc is not used
         self._file = None
         self._path = create_writer_dir(path, name, 'avi')
         self._fourcc = None
@@ -77,7 +74,7 @@ class VideoWriter(AbstractWriter):
             return
 
         if len(self._buffers[buf_name]) == self._buffers[buf_name].maxlen:
-            self._buffers[buf_name].popleft()  # BEFORE WAS pop()
+            self._buffers[buf_name].popleft()
 
         self._buffers[buf_name].append(frame)
 

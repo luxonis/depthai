@@ -5,8 +5,6 @@ from depthai_sdk import Component
 
 
 class Action(ABC):
-    input: Callable
-
     def __init__(self, input: Union[Component, Callable]):  # extend to List[Callable] and add sync
         if isinstance(input, Component):
             input = input.out.main

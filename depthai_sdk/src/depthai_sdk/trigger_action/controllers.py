@@ -1,10 +1,8 @@
 import time
 from abc import abstractmethod, ABC
-from collections import deque
 from datetime import timedelta, datetime
-from pathlib import Path
 from threading import Thread
-from typing import Callable, List, Union, Dict, Tuple
+from typing import List, Union, Dict
 
 import depthai as dai
 
@@ -15,11 +13,8 @@ from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 
 
 class TriggerActionController(ABC):
-    last_trigger_time: datetime = datetime.min
-    trigger_condition: Callable
-    trigger_period: Union[timedelta, int]
-
     def __init__(self, trigger: Trigger):
+        self.last_trigger_time = datetime.min
         self.trigger_condition = trigger.condition
         self.trigger_period = trigger.period
 
@@ -37,18 +32,14 @@ class TriggerActionController(ABC):
 
 
 class RecordController(TriggerActionController):
-    path: Path
-    duration: Tuple[int, int]
-    recorder: VideoRecorder
-    stream_name: str
-    buffers_status: Dict[str, Dict[str, Union[int, List[int]]]]
-    last_ts: timedelta = timedelta(0)
-
     def __init__(self, trigger: Trigger, action: RecordAction):
         super().__init__(trigger)
         self.path = action.path
         self.duration = action.duration
         self.recorder = VideoRecorder()
+        self.stream_name = ''  # will be assigned during recorder setup... TODO: is it OK?
+        self.buffers_status: Dict[str, Dict[str, Union[int, List[int]]]] = {}
+        self.last_ts = timedelta(0)
 
     def _run(self):
         while True:

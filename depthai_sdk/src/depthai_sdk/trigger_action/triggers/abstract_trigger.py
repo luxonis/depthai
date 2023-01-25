@@ -6,10 +6,6 @@ from depthai_sdk import Component
 
 
 class Trigger(ABC):
-    input: Callable
-    condition: Callable
-    period: timedelta
-
     def __init__(self, input: Union[Component, Callable], condition: Callable, period: int):
         if isinstance(input, Component):
             input = input.out.main
