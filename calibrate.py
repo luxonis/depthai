@@ -522,7 +522,7 @@ class Main:
         curr_time = None
 
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue.keys()), self.args.minSyncTime, self.args.minQueueDepth)
+        syncCollector = MessageSync(len(self.camera_queue.keys()), min_diff_timestamp=self.args.minSyncTime, min_queue_depth=self.args.minQueueDepth)
 
         # Clear events
         streams = self.device.getQueueEvents(list(self.camera_queue.keys()))
