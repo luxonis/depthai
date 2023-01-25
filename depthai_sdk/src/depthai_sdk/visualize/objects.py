@@ -293,11 +293,14 @@ class VisDetections(GenericObject):
             bbox = detection.xmin, detection.ymin, detection.xmax, detection.ymax
             mock_frame = np.zeros(self.frame_shape, dtype=np.uint8)
 
+            if mock_frame.ndim < 2:
+                print('Frame shape is 1D, please make sure that you are not using encoded frames.'
+                      'If you are using encoded frames, please decode them first.')
+                return self
             # TODO can normalize accept frame shape?
             normalized_bbox = self.normalizer.normalize(mock_frame, bbox) if self.normalizer else bbox
 
-            color = detection_config.color
-            if color is None and self.label_map:
+            if self.label_map:
                 label, color = self.label_map[detection.label]
             else:
                 label, color = str(detection.label), detection_config.color
@@ -457,11 +460,8 @@ class VisText(GenericObject):
             shape = frame.shape[:2]
 
         font_scale = self.size or text_config.font_scale
-
-        if self.size is None:
-            font_scale = min(shape) / (1000 if self.bbox is None else 200) \
-                if text_config.auto_scale \
-                else text_config.font_scale
+        if self.size is None and text_config.auto_scale:
+            font_scale = self.get_text_scale(shape, self.bbox)
 
         # Calculate font thickness
         font_thickness = max(1, int(font_scale * 2)) \
@@ -517,10 +517,8 @@ class VisText(GenericObject):
             shape = self.frame_shape[:2]
 
         font_scale = self.size or text_config.font_scale
-        if self.size is None:
-            font_scale = min(shape) / (1000 if self.bbox is None else 200) \
-                if text_config.auto_scale \
-                else self.size or text_config.font_scale
+        if self.size is None and text_config.auto_scale:
+            font_scale = self.get_text_scale(shape, bbox)
 
         text_width, text_height = 0, 0
         for text in self.text.splitlines():
@@ -550,6 +548,12 @@ class VisText(GenericObject):
             x = bbox[2] - text_width - padding
 
         return x, y
+
+    def get_text_scale(self,
+                       frame_shape: Union[np.ndarray, Tuple[int, ...]],
+                       bbox: Union[np.ndarray, Tuple[int, ...]]
+                       ) -> float:
+        return min(1.0, min(frame_shape) / (1000 if self.bbox is None else 200))
 
 
 class VisTrail(GenericObject):
@@ -741,6 +745,33 @@ class VisCircle(GenericObject):
                    self.color or circle_config.color,
                    self.thickness or circle_config.thickness,
                    circle_config.line_type)
+
+
+class VisMask(GenericObject):
+    def __init__(self, mask: np.ndarray, alpha: float = None):
+        super().__init__()
+        self.mask = mask
+        self.alpha = alpha
+
+    def prepare(self) -> 'VisMask':
+        return self
+
+    def serialize(self):
+        parent = {
+            'type': 'mask',
+            'mask': self.mask
+        }
+        if len(self.children) > 0:
+            children = [c.serialize() for c in self.children]
+            parent['children'] = children
+
+        return parent
+
+    def draw(self, frame: np.ndarray) -> None:
+        if self.frame_shape is None:
+            self.frame_shape = frame.shape
+
+        cv2.addWeighted(frame, 1 - self.alpha, self.mask, self.alpha, 0, frame)
 
 
 class VisPolygon(GenericObject):

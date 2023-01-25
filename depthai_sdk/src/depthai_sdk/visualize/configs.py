@@ -29,7 +29,7 @@ class BboxStyle(IntEnum):
     ROUNDED_CORNERS = 11
 
 
-class StereoColor:
+class StereoColor(IntEnum):
     GRAY = 0
     RGB = 1
     RGBD = 2
@@ -47,8 +47,8 @@ class OutputConfig:
 class StereoConfig:
     colorize: StereoColor = StereoColor.RGB
     colormap: int = cv2.COLORMAP_JET
-    wls_filter: bool = True
-    wls_lambda: float = 1500
+    wls_filter: bool = False
+    wls_lambda: float = 8000
     wls_sigma: float = 1.5
 
 
@@ -58,7 +58,7 @@ class DetectionConfig:
     thickness: int = 1
     fill_transparency: float = 0.15
     box_roundness: int = 0
-    color: Tuple[int, int, int] = None
+    color: Tuple[int, int, int] = (0, 255, 0)
     bbox_style: BboxStyle = BboxStyle.RECTANGLE
     line_width: float = 0.5
     line_height: float = 0.5
@@ -95,6 +95,12 @@ class TrackingConfig:
     line_color: Tuple[int, int, int] = (255, 255, 255)
     line_type: int = cv2.LINE_AA
     bg_color: Tuple[int, int, int] = (0, 0, 0)
+
+
+@dataclass
+class SegmentationConfig:
+    """Configuration for drawing segmentation masks."""
+    mask_alpha: float = 0.5
 
 
 @dataclass

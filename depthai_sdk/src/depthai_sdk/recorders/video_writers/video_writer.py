@@ -12,11 +12,11 @@ from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 
 
 class VideoWriter(AbstractWriter):
-    file = None
     _fps: float
     _path: str
 
     def __init__(self, path: Path, name: str, fourcc: str, fps: float):
+        self.file = None
         self._path = create_writer_dir(path, name, 'avi')
         self._fourcc = None
 
@@ -25,6 +25,9 @@ class VideoWriter(AbstractWriter):
 
         self._buffer = None
         self._is_buffer_enabled = False
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def init_buffer(self, max_seconds: int):
         if max_seconds > 0:

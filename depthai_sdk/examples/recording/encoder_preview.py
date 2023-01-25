@@ -1,14 +1,12 @@
 from pathlib import Path
 
-from depthai_sdk import OakCamera, FramePacket
-from depthai_sdk.callback_context import CallbackContext
+from depthai_sdk import OakCamera, Visualizer
 from depthai_sdk.recorders.video_writers.av_writer import AvWriter
 
 rec = AvWriter(Path('./'), 'color', 'mjpeg', fps=30)
 
 
-def save_raw_mjpeg(ctx: CallbackContext):
-    packet: FramePacket = ctx.packet
+def save_raw_mjpeg(packet, visualizer: Visualizer):
     rec.write(packet.imgFrame)
 
 

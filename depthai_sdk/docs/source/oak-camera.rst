@@ -3,11 +3,11 @@ OakCamera
 
 The **OakCamera** class abstracts:
 
-- DepthAI API pipeline building with :ref:`Components`
-- Stream :ref:`recording <Recording>` and :ref:`replaying <Replaying>`
-- Debugging features (such as ``oak.show_graph()``)
-- :ref:`AI model <AI models>` sourcing and decoding
-- Message syncing & visualization, and much more
+- DepthAI API pipeline building with :ref:`Components`.
+- Stream :ref:`recording <Recording>` and :ref:`replaying <Replaying>`.
+- Debugging features (such as ``oak.show_graph()``).
+- :ref:`AI model <AI models>` sourcing and decoding.
+- Message syncing & visualization, and much more.
 
 .. note::
     This class will be in **alpha stage** until **depthai-sdk 2.0.0**, so there will likely be some API changes.
@@ -30,15 +30,15 @@ Below there are a few basic examples. **See** `all examples here <https://github
 
 Here are a few demos that have been developed with DepthAI SDK:
 
-#. `age-gender <https://github.com/luxonis/depthai-experiments/tree/master/gen2-age-gender>`__
-#. `emotion-recognition <https://github.com/luxonis/depthai-experiments/tree/master/gen2-emotsion-recognition>`__
-#. `full-fov-nn <https://github.com/luxonis/depthai-experiments/tree/master/gen2-full-fov-nn>`__
-#. `head-posture-detection <https://github.com/luxonis/depthai-experiments/tree/master/gen2-head-posture-detection>`__
-#. `pedestrian-reidentification <https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification>`__
-#. `people-counter <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__
-#. `people-tracker <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker>`__
-#. `mask-detection <https://github.com/luxonis/depthai-experiments/tree/master/gen2-mask-detection>`__
-#. `yolo <https://github.com/luxonis/depthai-experiments/tree/master/gen2-yolo>`__
+#. `age-gender <https://github.com/luxonis/depthai-experiments/tree/master/gen2-age-gender>`__,
+#. `emotion-recognition <https://github.com/luxonis/depthai-experiments/tree/master/gen2-emotsion-recognition>`__,
+#. `full-fov-nn <https://github.com/luxonis/depthai-experiments/tree/master/gen2-full-fov-nn>`__,
+#. `head-posture-detection <https://github.com/luxonis/depthai-experiments/tree/master/gen2-head-posture-detection>`__,
+#. `pedestrian-reidentification <https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification>`__,
+#. `people-counter <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__,
+#. `people-tracker <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker>`__,
+#. `mask-detection <https://github.com/luxonis/depthai-experiments/tree/master/gen2-mask-detection>`__,
+#. `yolo <https://github.com/luxonis/depthai-experiments/tree/master/gen2-yolo>`__.
 
 
 Preview color and mono cameras

@@ -1,3 +1,4 @@
+import copy
 import time
 import warnings
 from pathlib import Path
@@ -35,21 +36,9 @@ class OakCamera:
     It was designed with interoperability with depthai API in mind.
     """
 
-    # User should be able to access these:
-    _pipeline: dai.Pipeline = None
-    _oak: OakDevice  # Init this object by default
-    _args: Dict[str, Any] = None  # User defined arguments
-    replay: Optional[Replay] = None
-
-    _usb_speed: Optional[dai.UsbSpeed] = None
-    _device_name: str = None  # MxId / IP / USB port
-
-    # Whether to stop running the OAK camera. Used by oak.running()
-    _stop: bool = False
-
     def __init__(self,
                  device: Optional[str] = None,  # MxId / IP / USB port
-                 usbSpeed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
+                 usb_speed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
                  replay: Optional[str] = None,
                  rotation: int = 0,
                  args: Union[bool, Dict] = True
@@ -59,15 +48,28 @@ class OakCamera:
 
         Args:
             device (str, optional): OAK device we want to connect to
-            usb2 (bool, optional): Force USB2 mode
+            usb_speed (str, optional): USB speed we want to use. Defaults to 'auto'.
             replay (str, optional): Replay a depthai-recording - either local path, or from depthai-recordings repo
+            rotation (int, optional): Rotate the camera output by this amount of degrees, 0 by default, 90, 180, 270 are supported.
             args (None, bool, Dict): Use user defined arguments when constructing the pipeline
         """
+        # User should be able to access these:
+        self.replay: Optional[Replay] = None
+
+        self._pipeline: Optional[dai.Pipeline] = None
+        self._args: Optional[Dict[str, Any]] = None  # User defined arguments
+        self._usb_speed: Optional[dai.UsbSpeed] = None
+        self._device_name: Optional[str] = None  # MxId / IP / USB port
+
+        # Whether to stop running the OAK camera. Used by oak.running()
+        self._stop = False
+
         self._device_name = device
-        self._usb_speed = parse_usb_speed(usbSpeed)
+        self._usb_speed = parse_usb_speed(usb_speed)
         self._oak = OakDevice()
         self._pipeline = dai.Pipeline()
         self._pipeline_built = False
+        self._polling = []
 
         self._components: List[Component] = []  # List of components
         self._out_templates: List[BaseConfig] = []
@@ -96,10 +98,12 @@ class OakCamera:
 
     def create_camera(self,
                       source: str,
-                      resolution: Union[
-                          None, str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution] = None,
+                      resolution: Optional[Union[
+                          str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
+                      ]] = None,
                       fps: Optional[float] = None,
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                      name: Optional[str] = None,
                       ) -> CameraComponent:
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
@@ -111,6 +115,7 @@ class OakCamera:
             resolution (str/SensorResolution): Sensor resolution of the camera.
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
+            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         comp = CameraComponent(self._pipeline,
                                source=source,
@@ -119,17 +124,19 @@ class OakCamera:
                                encode=encode,
                                rotation=self._rotation,
                                replay=self.replay,
+                               name=name,
                                args=self._args, )
         self._components.append(comp)
         return comp
 
     def create_nn(self,
-                  model: Union[str, Path],
+                  model: Union[str, Dict, Path],
                   input: Union[CameraComponent, NNComponent],
                   nn_type: Optional[str] = None,
                   tracker: bool = False,  # Enable object tracker - only for Object detection models
                   spatial: Union[None, bool, StereoComponent] = None,
                   decode_fn: Optional[Callable] = None,
+                  name: Optional[str] = None
                   ) -> NNComponent:
         """
         Creates Neural Network component.
@@ -141,6 +148,7 @@ class OakCamera:
             tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
             decode_fn: Custom decoding function for the model's output
+            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         comp = NNComponent(self._pipeline,
                            model=model,
@@ -150,7 +158,8 @@ class OakCamera:
                            spatial=spatial,
                            decode_fn=decode_fn,
                            replay=self.replay,
-                           args=self._args)
+                           args=self._args,
+                           name=name)
         self._components.append(comp)
         return comp
 
@@ -159,6 +168,8 @@ class OakCamera:
                       fps: Optional[float] = None,
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
+                      name: Optional[str] = None,
+                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
                       ) -> StereoComponent:
         """
         Create Stereo camera component. If left/right cameras/component aren't specified they will get created internally.
@@ -168,6 +179,7 @@ class OakCamera:
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
+            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         comp = StereoComponent(self._pipeline,
                                resolution=resolution,
@@ -175,7 +187,9 @@ class OakCamera:
                                left=left,
                                right=right,
                                replay=self.replay,
-                               args=self._args)
+                               args=self._args,
+                               name=name,
+                               encode=encode)
         self._components.append(comp)
         return comp
 
@@ -228,19 +242,19 @@ class OakCamera:
         self._rotation = rotation or self._rotation
 
     def config_pipeline(self,
-                        xlinkChunk: Optional[int] = None,
+                        xlink_chunk: Optional[int] = None,
                         calib: Optional[dai.CalibrationHandler] = None,
-                        tuningBlob: Optional[str] = None,
-                        openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
+                        tuning_blob: Optional[str] = None,
+                        openvino_version: Union[None, str, dai.OpenVINO.Version] = None
                         ):
         """
         Configures DepthAI pipeline.
-        @param xlinkChunk: Chunk size of XLink messages. 0 can result in lower latency
+        @param xlink_chunk: Chunk size of XLink messages. 0 can result in lower latency
         @param calib: Calibration data to be uploaded to OAK
-        @param tuningBlob: Camera tuning blob
-        @param openvinoVersion: Force specific OpenVINO version
+        @param tuning_blob: Camera tuning blob
+        @param openvino_version: Force specific OpenVINO version
         """
-        configPipeline(self._pipeline, xlinkChunk, calib, tuningBlob, openvinoVersion)
+        configPipeline(self._pipeline, xlink_chunk, calib, tuning_blob, openvino_version)
 
     def __enter__(self):
         return self
@@ -286,16 +300,23 @@ class OakCamera:
                 self.poll()
 
     def running(self) -> bool:
+        """
+        Check if camera is running.
+        Returns:
+            True if camera is running, False otherwise.
+        """
         return not self._stop
 
-    def poll(self):
+    def poll(self) -> Optional[int]:
         """
         Poll events; cv2.waitKey, send controls to OAK (if controls are enabled), update, check syncs.
+
+        Returns: key pressed from cv2.waitKey, or None if
         """
         key = cv2.waitKey(1)
         if key == ord('q'):
             self._stop = True
-            return
+            return key
 
         # TODO: check if components have controls enabled and check whether key == `control`
 
@@ -304,10 +325,16 @@ class OakCamera:
         if self.replay:
             if self.replay._stop:
                 self._stop = True
-                return
+                return key
+
+        for poll in self._polling:
+            poll()  # Poll all callbacks
 
         if self.device.isClosed():
             self._stop = True
+            return None
+
+        return key
 
     def build(self) -> dai.Pipeline:
         """
@@ -359,9 +386,9 @@ class OakCamera:
         # User-defined arguments
         if self._args:
             self.config_pipeline(
-                xlinkChunk=self._args.get('xlinkChunkSize', None),
-                tuningBlob=self._args.get('cameraTuning', None),
-                openvinoVersion=self._args.get('openvinoVersion', None),
+                xlink_chunk=self._args.get('xlinkChunkSize', None),
+                tuning_blob=self._args.get('cameraTuning', None),
+                openvino_version=self._args.get('openvinoVersion', None),
             )
 
         return self._pipeline
@@ -374,10 +401,10 @@ class OakCamera:
             callback: Where to send synced streams
             visualize: Whether to draw on the frames (like with visualize())
         """
-        visualizer = Visualizer() if visualize else None
         if isinstance(outputs, Callable):
             outputs = [outputs]  # to list
-        self._out_templates.append(SyncConfig(outputs, callback, visualizer))
+
+        self._out_templates.append(SyncConfig(outputs, callback))
 
     def record(self,
                outputs: Union[Callable, List[Callable]],
@@ -406,12 +433,16 @@ class OakCamera:
         """
         Shows DepthAI Pipeline graph, which can be useful when debugging. Builds the pipeline (oak.build()).
         """
-        from depthai_sdk.components.pipeline_graph import PipelineGraph
+        from depthai_sdk.components.integrations.depthai_pipeline_graph.depthai_pipeline_graph.pipeline_graph import \
+            PipelineGraph
 
         if not self._pipeline_built:
             self.build()  # Build the pipeline
 
-        PipelineGraph(self._pipeline.serializeToJson()['pipeline'])
+        p = PipelineGraph()
+        p.create_graph(self._pipeline.serializeToJson()['pipeline'], self.device)
+        self._polling.append(p.update)
+        print('process started')
 
     def visualize(self,
                   output: Union[List, Callable, Component],
@@ -432,24 +463,33 @@ class OakCamera:
             raise ValueError('Recording visualizer is only supported for a single output.')
 
         visualizer = Visualizer(scale, fps)
-        self._callback(output, callback, visualizer, record_path)
-
-        return visualizer
+        return self._callback(output, callback, visualizer, record_path)
 
     def _callback(self,
                   output: Union[List, Callable, Component],
                   callback: Callable,
                   visualizer: Visualizer = None,
                   record_path: Optional[str] = None):
+        visualizer = visualizer or Visualizer()
+
         if isinstance(output, List):
             for element in output:
                 self._callback(element, callback, visualizer, record_path)
-            return
+            return visualizer
 
         if isinstance(output, Component):
             output = output.out.main
 
-        self._out_templates.append(OutputConfig(output, callback, visualizer, record_path))
+        visualizer_enabled = visualizer is not None
+        config = None
+        if visualizer:
+            config = visualizer.config
+
+        visualizer = copy.deepcopy(visualizer) or Visualizer()
+        visualizer.config = config if config else visualizer.config
+
+        self._out_templates.append(OutputConfig(output, callback, visualizer, visualizer_enabled, record_path))
+        return visualizer
 
     def callback(self,
                  output: Union[List, Callable, Component],

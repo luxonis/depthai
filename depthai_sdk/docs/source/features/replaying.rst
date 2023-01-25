@@ -5,7 +5,7 @@ Replaying
 recorded frames to the OAK device. This is useful especially during development, so we can **record a complex scene** only once and replay it many times to fine-tune
 the pipeline or AI models.
 
-Because :ref:`Recording` saves calibration data and can save synchronized left+right mono streames we can achieve full depth reconstruction.
+Because :ref:`Recording` saves calibration data and can save synchronized left+right mono streams so we can achieve full depth reconstruction.
 
 .. code-block:: python
 
@@ -20,12 +20,12 @@ Replaying support
 
 Replaying feature is quite extensible, and supports a variety of different inputs:
 
-#. Single image
-#. Folder with images. Images are getting rotated every 3 seconds. `Example here <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__.
-#. Url to a video/image
-#. Url to a YouTube video
-#. Path to :ref:`depthai-recording <Replaying a depthai-recording>`
-#. A name of a :ref:`public depthai-recording <Public depthai-recordings>`
+#. Single image.
+#. Folder with images. Images are getting rotated every 3 seconds. `Example here <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__..
+#. Url to a video/image.
+#. Url to a YouTube video.
+#. Path to :ref:`depthai-recording <Replaying a depthai-recording>`.
+#. A name of a :ref:`public depthai-recording <Public depthai-recordings>`.
 
 Replaying a depthai-recording
 #############################

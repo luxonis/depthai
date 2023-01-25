@@ -9,7 +9,7 @@ import depthai as dai
 BLOBS_PATH = Path.home() / Path('.cache/blobs')
 
 
-class AspectRatioResizeMode(IntEnum):
+class ResizeMode(IntEnum):
     """
     If NN input frame is in different aspect ratio than what the model expect, we have 3 different
     modes of operation. Full documentation:

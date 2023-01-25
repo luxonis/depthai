@@ -1,5 +1,6 @@
 import time
 
+
 class FPS:
     def __init__(self):
         self.timestamp = time.time() + 1

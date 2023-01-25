@@ -70,8 +70,6 @@ class DetectionPacket(FramePacket):
     """
     Output from Detection Network nodes - image frame + image detections. Inherits FramePacket.
     """
-    img_detections: Union[dai.ImgDetections, dai.SpatialImgDetections]
-    detections: List[_Detection]
 
     def __init__(self,
                  name: str,
@@ -84,7 +82,7 @@ class DetectionPacket(FramePacket):
     def _is_spatial_detection(self) -> bool:
         return isinstance(self.img_detections, dai.SpatialImgDetections)
 
-    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
+    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color) -> None:
         det = _Detection()
         det.img_detection = img_det
         det.label_str = txt
@@ -98,16 +96,14 @@ class TrackerPacket(FramePacket):
     """
     Output of Object Tracker node. Tracklets + Image frame. Inherits FramePacket.
     """
-    daiTracklets: dai.Tracklets
-    detections: List[_TrackingDetection]
 
     def __init__(self,
                  name: str,
                  img_frame: dai.ImgFrame,
                  tracklets: dai.Tracklets):
         super().__init__(name, img_frame, img_frame.getCvFrame())
+        self.detections: List[_TrackingDetection] = []
         self.daiTracklets = tracklets
-        self.detections = []
 
     def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
         det = _TrackingDetection()
@@ -133,9 +129,6 @@ class TwoStagePacket(DetectionPacket):
     """
     Output of 2-stage NN pipeline; Image frame, Image detections and multiple NNData results. Inherits DetectionPacket.
     """
-    nnData: List[dai.NNData]
-    labels: List[int] = None
-    _cntr: int = 0  # Label counter
 
     def __init__(self, name: str,
                  img_frame: dai.ImgFrame,
@@ -164,8 +157,6 @@ class TwoStagePacket(DetectionPacket):
 
 
 class IMUPacket:
-    data: List[dai.IMUData]
-
     def __init__(self, data: List[dai.IMUData]):
         self.data = data
 

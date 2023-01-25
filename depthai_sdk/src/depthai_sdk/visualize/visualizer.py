@@ -12,7 +12,7 @@ from depthai import ImgDetection
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
 from depthai_sdk.visualize.encoder import JSONEncoder
-from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine
+from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask
 from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
 
 
@@ -28,15 +28,10 @@ class Visualizer(VisualizerHelper):
     # Constants
     IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt'
 
-    # Fields
-    objects: List[GenericObject]
-    config: VisConfig
-    _frame_shape: Optional[Tuple[int, ...]]
-
     def __init__(self, scale: float = None, fps: bool = False):
         self.platform: Platform = self._detect_platform()
         self.objects: List[GenericObject] = []
-        self._frame_shape = None
+        self._frame_shape: Optional[Tuple[int, ...]] = None
 
         self.config = VisConfig()
 
@@ -63,7 +58,8 @@ class Visualizer(VisualizerHelper):
                        normalizer: NormalizeBoundingBox = None,
                        label_map: List[Tuple[str, Tuple]] = None,
                        spatial_points: List[dai.Point3f] = None,
-                       is_spatial=False) -> 'Visualizer':
+                       is_spatial=False,
+                       ) -> 'Visualizer':
         """
         Add detections to the visualizer.
 
@@ -189,6 +185,21 @@ class Visualizer(VisualizerHelper):
         self.objects.append(line)
         return self
 
+    def add_mask(self, mask: np.ndarray, alpha: float):
+        """
+        Add a mask to the visualizer.
+
+        Args:
+            mask: Mask represented as uint8 numpy array.
+            alpha: Transparency of the mask.
+
+        Returns:
+            self
+        """
+        mask_overlay = VisMask(mask=mask, alpha=alpha)
+        self.add_object(mask_overlay)
+        return self
+
     def draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
@@ -196,33 +207,24 @@ class Visualizer(VisualizerHelper):
 
         Args:
             frame: The frame to draw on.
-            name: The name of the displayed window.
 
         Returns:
             np.ndarray if the platform is PC, None otherwise.
         """
-        if self.IS_INTERACTIVE:
-            # Draw overlays
-            for obj in self.objects:
-                obj.draw(frame)
+        # Draw overlays
+        for obj in self.objects:
+            obj.draw(frame)
 
-            # Resize frame if needed
-            img_scale = self.config.output.img_scale
-            if img_scale:
-                if isinstance(img_scale, Tuple):
-                    frame = cv2.resize(frame, img_scale)
-                elif isinstance(img_scale, float) and img_scale != 1.0:
-                    frame = cv2.resize(frame, dsize=None, fx=img_scale, fy=img_scale)
+        # Resize frame if needed
+        img_scale = self.config.output.img_scale
+        if img_scale:
+            if isinstance(img_scale, Tuple):
+                frame = cv2.resize(frame, img_scale)
+            elif isinstance(img_scale, float) and img_scale != 1.0:
+                frame = cv2.resize(frame, dsize=None, fx=img_scale, fy=img_scale)
 
-            self.reset()
-            return frame
-        else:
-
-            # print(json.dumps(self.serialize()))
-            # TODO encode/serialize and send everything to robothub
-            pass
-
-        self.reset()  # Clear objects
+        self.reset()
+        return frame
 
     def serialize(self) -> str:
         """
@@ -261,6 +263,7 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.output = replace(self.config.output, **kwargs)
+
         return self
 
     def stereo(self,
@@ -273,6 +276,7 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.stereo = replace(self.config.stereo, **kwargs)
+
         return self
 
     def detections(self,
@@ -373,6 +377,16 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.tracking = replace(self.config.tracking, **kwargs)
+
+        return self
+
+    def segmentation(self,
+                     mask_alpha: float = None,
+                     ) -> 'Visualizer':
+        kwargs = self._process_kwargs(locals())
+
+        if len(kwargs) > 0:
+            self.config.segmentation = replace(self.config.segmentation, **kwargs)
 
         return self
 

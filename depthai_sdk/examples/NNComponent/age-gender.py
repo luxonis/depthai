@@ -1,14 +1,10 @@
 import cv2
 import numpy as np
 
-from depthai_sdk import OakCamera, AspectRatioResizeMode, TextPosition
-from depthai_sdk.callback_context import CallbackContext
+from depthai_sdk import OakCamera, TextPosition, Visualizer, TwoStagePacket
 
 
-def callback(ctx: CallbackContext):
-    packet = ctx.packet
-    visualizer = ctx.visualizer
-
+def callback(packet: TwoStagePacket, visualizer: Visualizer):
     for det, rec in zip(packet.detections, packet.nnData):
         age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
         gender = np.squeeze(np.array(rec.getLayerFp16('prob')))
@@ -26,8 +22,7 @@ with OakCamera() as oak:
     color = oak.create_camera('color')
 
     det = oak.create_nn('face-detection-retail-0004', color)
-    # AspectRatioResizeMode has to be CROP for 2-stage pipelines at the moment
-    det.config_nn(aspect_ratio_resize_mode=AspectRatioResizeMode.CROP)
+    det.config_nn(resize_mode='crop')
 
     age_gender = oak.create_nn('age-gender-recognition-retail-0013', input=det)
     # age_gender.config_multistage_nn(show_cropped_frames=True) # For debugging
@@ -36,6 +31,7 @@ with OakCamera() as oak:
     # to the callback function (where it will be displayed)
     oak.visualize(age_gender, callback=callback)
     oak.visualize(det.out.passthrough)
+    oak.visualize(age_gender.out.twostage_crops)
 
     # oak.show_graph() # Show pipeline graph, no need for now
     oak.start(blocking=True)  # This call will block until the app is stopped (by pressing 'Q' button)

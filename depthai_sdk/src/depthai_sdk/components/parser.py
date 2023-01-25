@@ -68,6 +68,29 @@ def parse_bool(value: str) -> bool:
         raise ValueError(f"Couldn't parse '{value}' to bool!")
 
 
+def parse_camera_socket(value: str) -> dai.CameraBoardSocket:
+    value = value.upper()
+    if value in ["COLOR", "RGB", "CENTER", "CAMA", "CAM_A", "CAM-A"]:
+        return dai.CameraBoardSocket.CAM_A
+    elif value in ["LEFT", "CAMB", "CAM_B", "CAM-B"]:
+        return dai.CameraBoardSocket.CAM_B
+    elif value in ["RIGHT", "CAMC", "CAM_C", "CAM-C"]:
+        return dai.CameraBoardSocket.CAM_C
+    elif value in ["RIGHT", "CAMC", "CAM_C", "CAM-C"]:
+        return dai.CameraBoardSocket.CAM_C
+    elif value in ["CAMD", "CAM_D", "CAM-D"]:
+        return dai.CameraBoardSocket.CAM_D
+    elif value in ["CAME", "CAM_E", "CAM-E"]:
+        return dai.CameraBoardSocket.CAM_E
+    elif value in ["CAMF", "CAM_F", "CAM-F"]:
+        return dai.CameraBoardSocket.CAM_F
+    elif value in ["CAMG", "CAM_G", "CAM-G"]:
+        return dai.CameraBoardSocket.CAM_G
+    elif value in ["CAMH", "CAM_H", "CAM-H"]:
+        return dai.CameraBoardSocket.CAM_H
+    else:
+        raise ValueError(f"Camera socket name '{value}' not supported!")
+
 def parse_usb_speed(speed: Union[None, str, dai.UsbSpeed]) -> Optional[dai.UsbSpeed]:
     if speed is None:
         return None
