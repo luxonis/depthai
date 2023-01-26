@@ -308,6 +308,9 @@ class OakCamera:
         self._oak.check_sync()
 
         if self.replay:
+            if key == ord(' '):
+                self.replay.togglePause()
+
             if self.replay._stop:
                 self._stop = True
                 return
