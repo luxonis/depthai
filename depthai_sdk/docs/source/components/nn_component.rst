@@ -21,12 +21,12 @@ Usage
 
 .. code-block:: python
 
-    from depthai_sdk import OakCamera, AspectRatioResizeMode
+    from depthai_sdk import OakCamera, ResizeMode
 
     with OakCamera(recording='cars-tracking-above-01') as oak:
         color = oak.create_camera('color')
         nn = oak.create_nn('vehicle-detection-0202', color, tracker=True)
-        nn.config_nn(aspectRatioResizeMode=AspectRatioResizeMode.STRETCH)
+        nn.config_nn(ResizeMode=ResizeMode.STRETCH)
         oak.visualize([nn.out.tracker, nn.out.passthrough], fps=True)
         # oak.show_graph()
         oak.start(blocking=True)

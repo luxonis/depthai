@@ -47,7 +47,6 @@ cameraResolutions: Dict[Any, Tuple[int, int]] = {
     dai.ColorCameraProperties.SensorResolution.THE_13_MP: (4208, 3120),
     dai.ColorCameraProperties.SensorResolution.THE_12_MP: (4056, 3040),
     dai.ColorCameraProperties.SensorResolution.THE_4_K: (3840, 2160),
-    dai.ColorCameraProperties.SensorResolution.THE_1200_P: (1920, 1080),
     dai.ColorCameraProperties.SensorResolution.THE_1080_P: (1920, 1080),
     dai.ColorCameraProperties.SensorResolution.THE_800_P: (1280, 800),
     dai.ColorCameraProperties.SensorResolution.THE_720_P: (1280, 720),
@@ -81,12 +80,12 @@ def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tu
     For colorCamera.video output
     """
     while True:
-        if width % 2 == 0:
-            if not videoEncoder or width % 32 == 0:
+        if width % 2 == 0: # YUV420/NV12 width needs to be an even number to be convertible to BGR on host using cv2
+            if not videoEncoder or width % 32 == 0: # VideoEncoder HW limitation - width must be divisible by 32
                 break
         width -= 1
     while True:
-        if height % 2 == 0:
+        if height % 2 == 0: # YUV420/NV12 height needs to be an even number to be convertible to BGR on host using cv2
             break
         height -= 1
     return (width, height)
@@ -125,8 +124,10 @@ def getClosestIspScale(camResolution: Tuple[int, int],
                  height and newH % 8 != 0)):
             continue  # ISP output size isn't supported by VideoEncoder
 
-        # Currently, new ISP width must be divisible by 2. FW engineers are looking into it.
-        if newW % 2 != 0:
+        # Currently, new ISP width must be divisible by 2.
+        # TODO: Width even number requirement was temporarily added because sometimes images were very zoomed. Engineers
+        # are looking into it, and we will remove this check once this is fixed in firmware.
+        if newW % 2 != 0 or newH % 2 != 0:
             continue
 
         err = abs((newW - width) if width else (newH - height))

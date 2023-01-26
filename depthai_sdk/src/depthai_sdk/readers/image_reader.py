@@ -28,14 +28,15 @@ class ImageReader(AbstractReader):
     it will send them as color frames. If it has multiple frames of the same stream it will cycle them with 1.5 sec
     delay.
     """
-    frames: Dict[str, List] = {
-        'color': [],
-        'left': [],
-        'right': [],
-    }
-    cntr: Dict[str, int] = dict()
 
     def __init__(self, path: Path) -> None:
+        self.frames: Dict[str, List] = {
+            'color': [],
+            'left': [],
+            'right': [],
+        }
+        self.cntr: Dict[str, int] = dict()
+
         if path.is_file():
             stream, flag = get_name_flag(path.stem)
             self.frames[stream].append(cv2.imread(str(path), flag))

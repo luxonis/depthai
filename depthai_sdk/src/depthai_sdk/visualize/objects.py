@@ -293,6 +293,10 @@ class VisDetections(GenericObject):
             bbox = detection.xmin, detection.ymin, detection.xmax, detection.ymax
             mock_frame = np.zeros(self.frame_shape, dtype=np.uint8)
 
+            if mock_frame.ndim < 2:
+                print('Frame shape is 1D, please make sure that you are not using encoded frames.'
+                      'If you are using encoded frames, please decode them first.')
+                return self
             # TODO can normalize accept frame shape?
             normalized_bbox = self.normalizer.normalize(mock_frame, bbox) if self.normalizer else bbox
 
@@ -741,6 +745,33 @@ class VisCircle(GenericObject):
                    self.color or circle_config.color,
                    self.thickness or circle_config.thickness,
                    circle_config.line_type)
+
+
+class VisMask(GenericObject):
+    def __init__(self, mask: np.ndarray, alpha: float = None):
+        super().__init__()
+        self.mask = mask
+        self.alpha = alpha
+
+    def prepare(self) -> 'VisMask':
+        return self
+
+    def serialize(self):
+        parent = {
+            'type': 'mask',
+            'mask': self.mask
+        }
+        if len(self.children) > 0:
+            children = [c.serialize() for c in self.children]
+            parent['children'] = children
+
+        return parent
+
+    def draw(self, frame: np.ndarray) -> None:
+        if self.frame_shape is None:
+            self.frame_shape = frame.shape
+
+        cv2.addWeighted(frame, 1 - self.alpha, self.mask, self.alpha, 0, frame)
 
 
 class VisPolygon(GenericObject):

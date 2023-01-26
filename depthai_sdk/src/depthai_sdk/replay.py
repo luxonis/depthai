@@ -25,10 +25,6 @@ class ReplayStream:
     _shape: Tuple[int, int] # width, height
     disabled: bool
     size_bytes: int # bytes
-    camera_socket: dai.CameraBoardSocket = None
-
-    resize: Tuple[int,int] = None
-    resize_mode: ResizeMode = None
 
     @property
     def shape(self) -> Tuple[int,int]:
@@ -37,6 +33,10 @@ class ReplayStream:
     def __init__(self):
         self.disabled = False
         self.stream_name = ''
+        self.camera_socket: dai.CameraBoardSocket = None
+
+    	self.resize: Tuple[int,int] = None
+    	self.resize_mode: ResizeMode = None
 
     def get_socket(self) -> dai.CameraBoardSocket:
         if self.camera_socket:
@@ -50,20 +50,6 @@ class ReplayStream:
         # raise Exception("Please specify replay stream CameraBoardSocket via replay.specify_socket()")
 
 class Replay:
-    streams: Dict[str, ReplayStream] = dict()
-
-    _seqNum = 0  # Frame sequence number, added to each imgFrame
-    _now: monotonic = None
-    _keepAR = True  # By default, crop image as needed to keep the aspect ratio
-    _pause = False
-    _calibData = None
-
-    fps: float = 30.0
-    thread: Thread = None
-    _stop: bool = False  # Stop the thread that's sending frames to the OAK camera
-
-    reader: AbstractReader = None
-
     def __init__(self, path: str):
         """
         Helper file to replay recorded depthai stream. It reads from recorded files (mjpeg/avi/mp4/h265/h264/bag)
@@ -74,6 +60,30 @@ class Replay:
             path (str): Path to the recording folder
         """
         self.path = self._get_path(path)
+
+        self.disabledStreams: List[str] = []
+        # Nodes
+        self.left: Optional[dai.node.XLinkIn] = None
+        self.right: Optional[dai.node.XLinkIn] = None
+        self.color: Optional[dai.node.XLinkIn] = None
+
+        self._inputQueues = dict()  # dai.InputQueue dictionary for each stream
+        self._seqNum = 0  # Frame sequence number, added to each imgFrame
+        self._now: monotonic = None
+        self._colorSize = None
+        self._keepAR = True  # By default, crop image as needed to keep the aspect ratio
+        self._pause = False
+        self._calibData = None
+
+        self.fps: float = 30.0
+        self.thread: Optional[Thread] = None
+        self._stop: bool = False  # Stop the thread that's sending frames to the OAK camera
+
+        self.xins: List[str] = []  # Name of XLinkIn streams
+
+        self.reader: Optional[AbstractReader] = None
+        self.frames: Dict[str, np.ndarray] = dict()  # Frames read from Readers
+        self.imgFrames: Dict[str, dai.ImgFrame] = dict()  # Last frame sent to the device
 
         def cntFilesExt(path: Path, ext: Union[str, List[str]]) -> int:
             def fileWithExt(file: str) -> bool:
@@ -106,9 +116,9 @@ class Replay:
                 raise RuntimeError("Path invalid - no recordings found.")
 
             # Read calibration file
-            calibFile = self.path / 'calib.json'
-            if calibFile.exists():
-                self._calibData = dai.CalibrationHandler(str(calibFile))
+            calib_file = self.path / 'calib.json'
+            if calib_file.exists():
+                self._calibData = dai.CalibrationHandler(str(calib_file))
 
         else:  # Provided path is a file
             if self.path.suffix in _videoExt:
@@ -143,21 +153,22 @@ class Replay:
         if Path(path).resolve().exists():
             return Path(path).resolve()
 
-        recordingName: str = path
+        recording_name: str = path
         # Check if we have it stored locally
-        path: Path = getLocalRecording(recordingName)
+        path: Path = getLocalRecording(recording_name)
         if path is not None:
             return path
+
         # Try to download from the server
         dic = getAvailableRecordings()
-        if recordingName in dic:
-            arr = dic[recordingName]
-            print("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB".format(recordingName,
+        if recording_name in dic:
+            arr = dic[recording_name]
+            print("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB".format(recording_name,
                                                                                                         arr[1] / 1e6))
-            path = downloadRecording(recordingName, arr[0])
+            path = downloadRecording(recording_name, arr[0])
             return path
         else:
-            raise ValueError(f"DepthAI recording '{recordingName}' was not found on the server!")
+            raise ValueError(f"DepthAI recording '{recording_name}' was not found on the server!")
 
     def togglePause(self):
         """

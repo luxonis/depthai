@@ -9,9 +9,7 @@ emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 def callback(packet: TwoStagePacket, visualizer: Visualizer):
     for det, rec in zip(packet.detections, packet.nnData):
         emotion_results = np.array(rec.getFirstLayerFp16())
-        print(det, emotion_results)
         emotion_name = emotions[np.argmax(emotion_results)]
-        print(emotion_name)
 
         visualizer.add_text(emotion_name,
                             bbox=(*det.top_left, *det.bottom_right),
@@ -25,7 +23,7 @@ with OakCamera() as oak:
     color = oak.create_camera('color')
     det = oak.create_nn('face-detection-retail-0004', color)
     # Passthrough is enabled for debugging purposes
-    det.config_nn(aspect_ratio_resize_mode='stretch')
+    det.config_nn(resize_mode='crop')
 
     emotion_nn = oak.create_nn('emotions-recognition-retail-0003', input=det)
     # emotion_nn.config_multistage_nn(show_cropped_frames=True) # For debugging
