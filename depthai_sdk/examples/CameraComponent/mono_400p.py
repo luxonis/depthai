@@ -1,4 +1,3 @@
-import cv2
 from depthai_sdk import OakCamera
 
 with OakCamera() as oak:

@@ -17,7 +17,6 @@ _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '
              '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
 
 class ReplayStream:
-    node: dai.node.XLinkIn
     stream_name: str # XLink stream name
     queue: dai.DataInputQueue # Input queue
     frame: np.ndarray # Last read frame from Reader (ndarray)
@@ -31,12 +30,13 @@ class ReplayStream:
         return self.resize if self.resize else self._shape
 
     def __init__(self):
+        self.node: dai.node.XLinkIn = None
         self.disabled = False
         self.stream_name = ''
         self.camera_socket: dai.CameraBoardSocket = None
 
-    	self.resize: Tuple[int,int] = None
-    	self.resize_mode: ResizeMode = None
+        self.resize: Tuple[int,int] = None
+        self.resize_mode: ResizeMode = None
 
     def get_socket(self) -> dai.CameraBoardSocket:
         if self.camera_socket:
@@ -62,10 +62,7 @@ class Replay:
         self.path = self._get_path(path)
 
         self.disabledStreams: List[str] = []
-        # Nodes
-        self.left: Optional[dai.node.XLinkIn] = None
-        self.right: Optional[dai.node.XLinkIn] = None
-        self.color: Optional[dai.node.XLinkIn] = None
+        self.streams: Dict[str, ReplayStream] = {}
 
         self._inputQueues = dict()  # dai.InputQueue dictionary for each stream
         self._seqNum = 0  # Frame sequence number, added to each imgFrame
@@ -170,19 +167,19 @@ class Replay:
         else:
             raise ValueError(f"DepthAI recording '{recording_name}' was not found on the server!")
 
-    def togglePause(self):
+    def toggle_pause(self):
         """
         Toggle pausing of sending frames to the OAK camera.
         """
         self._pause = not self._pause
 
-    def setFps(self, fps: float):
+    def set_fps(self, fps: float):
         """
         Sets frequency at which Replay module will send frames to the camera. Default 30FPS.
         """
         self.fps = fps
 
-    def getFps(self) -> float:
+    def get_fps(self) -> float:
         return self.fps
 
     def resize(self, stream_name: str, size: Tuple[int,int], mode: ResizeMode = ResizeMode.STRETCH):
@@ -319,6 +316,7 @@ class Replay:
         Args:
             device (dai.Device): Device to which we will stream frames
         """
+
         for name, stream in self.streams.items():
             if stream.stream_name:
                 stream.queue = device.getInputQueue(stream.stream_name)

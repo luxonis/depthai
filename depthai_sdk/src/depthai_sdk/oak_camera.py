@@ -280,6 +280,20 @@ class OakCamera:
         if not self._pipeline_built:
             self.build()  # Build the pipeline
 
+        # Remove unused nodes. There's a better way though.
+        # self._pipeline.
+        # schema = self._pipeline.serializeToJson()['pipeline']
+        # used_nodes = []
+        # for conn in schema['connections']:
+        #     print()
+        #     used_nodes.append(conn["node1Id"])
+        #     used_nodes.append(conn["node2Id"])
+        #
+        # for node in self._pipeline.getAllNodes():
+        #     if node.id not in used_nodes:
+        #         print(f"Removed node {node} (id: {node.id}) from the pipeline as it hasn't been used!")
+        #         self._pipeline.remove(node)
+
         self._oak.device.startPipeline(self._pipeline)
 
         self._oak.init_callbacks(self._pipeline)
@@ -298,6 +312,8 @@ class OakCamera:
             while self.running():
                 time.sleep(0.001)
                 self.poll()
+
+            cv2.destroyAllWindows()
 
     def running(self) -> bool:
         """
@@ -324,7 +340,7 @@ class OakCamera:
 
         if self.replay:
             if key == ord(' '):
-                self.replay.togglePause()
+                self.replay.toggle_pause()
 
             if self.replay._stop:
                 self._stop = True

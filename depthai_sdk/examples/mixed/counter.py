@@ -17,7 +17,7 @@ def callback(packet: DetectionPacket, visualizer: Visualizer):
 with OakCamera(replay='people-images-01') as oak:
     color = oak.create_camera('color')
     nn = oak.create_nn('person-detection-retail-0013', color)
-    oak.replay.setFps(3)
+    oak.replay.set_fps(3)
 
     oak.visualize(nn, callback=callback)
     # oak.show_graph()

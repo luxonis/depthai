@@ -77,7 +77,10 @@ class CameraComponent(Component):
             # print('resolution', res)
             # resize = getResize(res, width=1200)
             # self._replay.setResizeColor(resize)
-            self.node = self._replay.streams[self._source_name].node
+            stream = self._replay.streams[self._source_name]
+            if stream.node is None:
+                return # Stream disabled
+            self.node = stream.node
             # print('resize', resize)
             self.node.setMaxDataSize(res[0] * res[1] * 3)
             self.stream_size = res
@@ -151,10 +154,6 @@ class CameraComponent(Component):
             else:
                 raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
 
-    # def enable_undistortion(self, ):
-
-
-
     def _create_rotation_manip(self, pipeline: dai.Pipeline):
         rot_manip = pipeline.createImageManip()
         rgb_rr = dai.RotatedRect()
@@ -171,6 +170,11 @@ class CameraComponent(Component):
         Called from __init__ to parse passed `source` argument.
         @param source: User-input source
         """
+        if self.is_replay():
+            if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
+                raise Exception(f"{source} stream was not found in specified depthai-recording!")
+            return
+
         if "," in source:  # For OAK FFC cameras, so you can eg. specify "rgb,c" as source
             parts = source.split(',')
             source = parts[0]
@@ -181,11 +185,6 @@ class CameraComponent(Component):
                 self.node = pipeline.createMonoCamera()
 
             self.node.setBoardSocket(parse_camera_socket(source))
-            return
-
-        if self.is_replay():
-            if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
-                raise Exception(f"{source} stream was not found in specified depthai-recording!")
             return
 
         socket = parse_camera_socket(source)
@@ -287,7 +286,7 @@ class CameraComponent(Component):
             print("Attempted to configure ColorCamera, but this component doesn't have it. Config attempt ignored.")
             return
 
-        if self._replay is not None:
+        if self.is_replay():
             print('Tried configuring ColorCamera, but replaying is enabled. Config attempt ignored.')
             return
 
@@ -328,10 +327,16 @@ class CameraComponent(Component):
         return isinstance(self.node, dai.node.MonoCamera)
 
     def get_fps(self):
-        return (self._replay if self.is_replay() else self.node).getFps()
+        if self.is_replay():
+            self._replay.get_fps()
+        else:
+            self.node.getFps()
 
     def set_fps(self, fps: float):
-        (self._replay if self._replay else self.node).setFps(fps)
+        if self.is_replay():
+            self._replay.set_fps(fps)
+        else:
+            self.node.setFps(fps)
 
     def config_encoder_h26x(self,
                             rate_control_mode: Optional[dai.VideoEncoderProperties.RateControlMode] = None,
@@ -401,7 +406,7 @@ class CameraComponent(Component):
             """
             Streams camera output to the OAK camera. Produces FramePacket.
             """
-            out = XoutFrames(self._comp.get_stream_xout(), self._comp.getFps())
+            out = XoutFrames(self._comp.get_stream_xout(), self._comp.get_fps())
             out.name = self._comp._source_name
             return self._comp._create_xout(pipeline, out)
 
@@ -410,7 +415,7 @@ class CameraComponent(Component):
             If depthai-recording was used, it won't stream anything, but it will instead use frames that were sent to the OAK.
             Produces FramePacket.
             """
-            out = XoutFrames(ReplayStream(self._comp._source_name), self._comp.getFps())
+            out = XoutFrames(ReplayStream(self._comp._source_name), self._comp.get_fps())
             return self._comp._create_xout(pipeline, out)
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
