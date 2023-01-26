@@ -177,7 +177,7 @@ class StereoComponent(Component):
 
     def config_stereo(self,
                       confidence: Optional[int] = None,
-                      align: Union[None, str, dai.CameraBoardSocket] = None,
+                      align: Union[None, str, dai.CameraBoardSocket, dai.RawStereoDepthConfig.AlgorithmControl.DepthAlign] = None,
                       median: Union[None, int, dai.MedianFilter] = None,
                       extended: Optional[bool] = None,
                       subpixel: Optional[bool] = None,
@@ -189,7 +189,13 @@ class StereoComponent(Component):
         Configures StereoDepth modes and options.
         """
         if confidence: self.node.initialConfig.setConfidenceThreshold(confidence)
-        if align: self.node.setDepthAlign(parse_cam_socket(align))
+        if align:
+            if isinstance(align, dai.CameraBoardSocket) or \
+                isinstance(align, dai.RawStereoDepthConfig.AlgorithmControl.DepthAlign):
+                self.node.setDepthAlign(align)
+            elif isinstance(align, str):
+                self.node.setDepthAlign(parse_cam_socket(align))
+
         if median: self.node.setMedianFilter(parse_median_filter(median))
         if extended: self.node.initialConfig.setExtendedDisparity(extended)
         if subpixel: self.node.initialConfig.setSubpixel(subpixel)
