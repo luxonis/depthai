@@ -11,25 +11,20 @@ from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth, XoutMjpeg, Xo
 from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
+from depthai_sdk.components.undistort import _get_mesh
 
 class WLSLevel(Enum):
     """WLS filter level"""
     LOW = (1000, 0.8)
     MEDIUM = (6000, 1.5)
     HIGH = (12000, 2.0)
-from depthai_sdk.components.undistort import _get_mesh
 
 class StereoComponent(Component):
     # Users should have access to these nodes
     node: dai.node.StereoDepth
 
-    left: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
-    right: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
-
     _left_stream: dai.Node.Output
     _right_stream: dai.Node.Output
-
-    _undistortion_offset: int = None
 
     @property
     def depth(self) -> dai.Node.Output:
@@ -66,8 +61,8 @@ class StereoComponent(Component):
         super().__init__()
         self.out = self.Out(self)
 
-        left: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
-        right: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
+        self.left: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
+        self.right: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
 
         self._replay: Optional[Replay] = replay
         self._resolution: Optional[Union[str, dai.MonoCameraProperties.SensorResolution]] = resolution
@@ -94,6 +89,8 @@ class StereoComponent(Component):
         self._wls_level = None
         self._wls_lambda = None
         self._wls_sigma = None
+
+        self._undistortion_offset: Optional[int] = None
 
     def _get_output_stream(self, input: Union[
         CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output
