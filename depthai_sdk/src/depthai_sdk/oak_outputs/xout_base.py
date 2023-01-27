@@ -1,19 +1,20 @@
 from abc import ABC, abstractmethod
 from queue import Empty, Queue
-from typing import List, Callable
+from typing import List, Callable, Optional
 
 import depthai as dai
 
 from depthai_sdk.oak_outputs.fps import FPS
-from depthai_sdk.visualize import Visualizer
 
 
 class StreamXout:
-    stream: dai.Node.Output
-    name: str  # XLinkOut stream name
-    def __init__(self, id: int, out: dai.Node.Output):
+    def __init__(self, id: int, out: dai.Node.Output, name: Optional[str] = None):
         self.stream = out
-        self.name = f"{str(id)}_{out.name}"
+        if name is not None:
+            self.name = f'{name}_{str(out.name)}'
+        else:
+            self.name = f"{str(id)}_{out.name}"
+
 
 class ReplayStream(StreamXout):
     def __init__(self, name: str):
@@ -21,18 +22,14 @@ class ReplayStream(StreamXout):
 
 
 class XoutBase(ABC):
-    callback: Callable  # User defined callback. Called either after visualization (if vis=True) or after syncing.
-    queue: Queue  # Queue to which synced Packets will be added. Main thread will get these
-    _streams: List[str]  # Streams to listen for
-    _visualizer: Visualizer
-    _fps: FPS
-    name: str  # Other Xouts will override this
-    TYPE = "" # Readonly
-
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
         self._visualizer = None
+        self._visualizer_enabled = False
         self._packet_name = None
+        self._fps = None
+        self.queue = None
+        self.callback = None
 
     def get_packet_name(self) -> str:
         if self._packet_name is None:
@@ -85,7 +82,7 @@ class XoutBase(ABC):
 
                 self.on_callback(packet)
 
-                if self._visualizer:
+                if self._visualizer_enabled:
                     try:
                         self._visualizer.frame_shape = packet.frame.shape
                     except AttributeError:

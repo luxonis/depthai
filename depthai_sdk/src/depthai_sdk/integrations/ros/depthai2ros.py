@@ -1,14 +1,15 @@
-from typing import Tuple, List
 from enum import Enum
+from typing import Tuple
 
 import depthai as dai
 import numpy as np
-from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point, Transform, TransformStamped
+import std_msgs
+from genpy.rostime import Time
 # from std_msgs.msg import Header, ColorRGBA, String
 # from visualization_msgs.msg import ImageMarker
-from genpy.rostime import Time
+from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import Vector3, Quaternion, Transform
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField, Imu  # s, PointCloud
-import std_msgs
 from tf.msg import tfMessage
 
 """
@@ -22,6 +23,7 @@ tf2_ros
 tf
 """
 
+
 class ImuSyncMethod(Enum):
     LINEAR_INTERPOLATE_ACCEL = 'LINEAR_INTERPOLATE_ACCEL'
     LINEAR_INTERPOLATE_GYRO = 'LINEAR_INTERPOLATE_GYRO'
@@ -29,12 +31,11 @@ class ImuSyncMethod(Enum):
 
 
 class DepthAi2Ros1:
-    xyz = dict()
-
     def __init__(self, device: dai.Device) -> None:
         self.start_time = dai.Clock.now()
         self.device = device
         self.imu_packets = []
+        self.xyz = dict()
 
     def header(self, msg: dai.Buffer) -> std_msgs.msg.Header:
         header = std_msgs.msg.Header()
@@ -42,9 +43,9 @@ class DepthAi2Ros1:
         # secs / nanosecs
         header.stamp = Time(int(ts), (ts % 1) * 1e6)
         try:
-            header.frame_id = str(msg.getSequenceNum()) # ImgFrame
+            header.frame_id = str(msg.getSequenceNum())  # ImgFrame
         except:
-            header.frame_id = str(msg.sequence) # IMUReport
+            header.frame_id = str(msg.sequence)  # IMUReport
         return header
 
     def CompressedImage(self, imgFrame: dai.ImgFrame) -> CompressedImage:
@@ -54,7 +55,8 @@ class DepthAi2Ros1:
         msg.data = imgFrame.getData().tobytes()
         return msg
 
-    def Imu(self, imu_packet: dai.IMUPacket, sync_mode: ImuSyncMethod = ImuSyncMethod.LINEAR_INTERPOLATE_ACCEL, linear_accel_cov: float = 0., angular_velocity_cov: float = 0) -> Imu:
+    def Imu(self, imu_packet: dai.IMUPacket, sync_mode: ImuSyncMethod = ImuSyncMethod.LINEAR_INTERPOLATE_ACCEL,
+            linear_accel_cov: float = 0., angular_velocity_cov: float = 0) -> Imu:
         if len(self.imu_packets) > 20:
             self.imu_packets.pop(0)
 
@@ -85,8 +87,10 @@ class DepthAi2Ros1:
         msg.orientation.w = 1.0
 
         msg.orientation_covariance = [-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        msg.linear_acceleration_covariance = [linear_accel_cov, 0.0, 0.0, 0.0, linear_accel_cov, 0.0, 0.0, 0.0, linear_accel_cov]
-        msg.angular_velocity_covariance = [angular_velocity_cov, 0.0, 0.0, 0.0, angular_velocity_cov, 0.0, 0.0, 0.0, angular_velocity_cov]
+        msg.linear_acceleration_covariance = [linear_accel_cov, 0.0, 0.0, 0.0, linear_accel_cov, 0.0, 0.0, 0.0,
+                                              linear_accel_cov]
+        msg.angular_velocity_covariance = [angular_velocity_cov, 0.0, 0.0, 0.0, angular_velocity_cov, 0.0, 0.0, 0.0,
+                                           angular_velocity_cov]
 
         return msg
 
@@ -99,7 +103,7 @@ class DepthAi2Ros1:
         res.y = self._lerp(a.y, b.y, t)
         res.z = self._lerp(a.z, b.z, t)
         return res
-    
+
     def fillImuData_LinearInterpolation(self, sync_mode: ImuSyncMethod):
         accel_hist = []
         gyro_hist = []
@@ -202,7 +206,6 @@ class DepthAi2Ros1:
 
         return interp_imu_packets
 
-
     def Image(self, imgFrame: dai.ImgFrame) -> Image:
         msg = Image()
         msg.header = self.header(imgFrame)
@@ -213,29 +216,29 @@ class DepthAi2Ros1:
 
         type = imgFrame.getType()
         TYPE = dai.ImgFrame.Type
-        if type == TYPE.RAW16: # Depth
+        if type == TYPE.RAW16:  # Depth
             msg.encoding = 'mono16'
-            msg.step *= 2 # 2 bytes per pixel
+            msg.step *= 2  # 2 bytes per pixel
             msg.data = imgFrame.getData().tobytes()
-        elif type in [TYPE.GRAY8, TYPE.RAW8]: # Mono frame
+        elif type in [TYPE.GRAY8, TYPE.RAW8]:  # Mono frame
             msg.encoding = 'mono8'
-            msg.data = imgFrame.getData().tobytes()
+            msg.data = imgFrame.getData().tobytes()  # np.array(imgFrame.getFrame()).tobytes()
         else:
             msg.encoding = 'bgr8'
             msg.data = imgFrame.getCvFrame().tobytes()
         return msg
 
     def TfMessage(self,
-           imgFrame: dai.ImgFrame,
-           translation: Tuple[float,float,float] = (0., 0., 0.),
-           rotation: Tuple[float,float,float, float] = (0., 0., 0., 0.)) -> tfMessage:
+                  imgFrame: dai.ImgFrame,
+                  translation: Tuple[float, float, float] = (0., 0., 0.),
+                  rotation: Tuple[float, float, float, float] = (0., 0., 0., 0.)) -> tfMessage:
         msg = tfMessage()
         tf = TransformStamped()
         tf.header = self.header(imgFrame)
         tf.child_frame_id = str(imgFrame.getSequenceNum())
         tf.transform = Transform(
-            translation = Vector3(x=translation[0], y=translation[1], z=translation[2]),
-            rotation = Quaternion(x=rotation[0], y=rotation[1], z=rotation[2], w=rotation[3])
+            translation=Vector3(x=translation[0], y=translation[1], z=translation[2]),
+            rotation=Quaternion(x=rotation[0], y=rotation[1], z=rotation[2], w=rotation[3])
         )
         msg.transforms.append(tf)
         return msg

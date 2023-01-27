@@ -71,7 +71,7 @@ stream and mono streams. You can open the rosbag with the `RealSense Viewer <htt
 -----------------
 
 An alternative to Rosbags are `mcap files <https://github.com/foxglove/mcap>`__ which can be viewed with `Foxglove studio <https://foxglove.dev/>`__.
-You can find `MCAP recording example here <https://github.com/luxonis/depthai/blob/main/depthai_sdk/examples/recording/mcap-record.py>`__.
+You can find `MCAP recording example here <https://github.com/luxonis/depthai/blob/main/depthai_sdk/examples/recording/mcap_record.py>`__.
 Currently supported streams:
 
 - MJPEG encoded color/left/right/disparity. Lossless MJPEG/H264/H265 aren't supported by Foxglove Studio.
