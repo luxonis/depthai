@@ -8,7 +8,7 @@ import cv2
 import depthai as dai
 
 from depthai_sdk.args_parser import ArgsParser
-from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig
+from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig, RosStreamConfig
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
@@ -499,6 +499,16 @@ class OakCamera:
             callback: Handler function to which the Packet will be sent
         """
         self._callback(output, callback)
+
+    def ros_stream(self, output: Union[List, Callable, Component]):
+        if not isinstance(output, List):
+            output = [output]
+
+        for i in range(len(output)):
+            if isinstance(output[i], Component):
+                output[i] = output[i].out.main
+
+        self._out_templates.append(RosStreamConfig(output))
 
     @property
     def device(self) -> dai.Device:
