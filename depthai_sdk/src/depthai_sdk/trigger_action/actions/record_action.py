@@ -10,11 +10,21 @@ class RecordAction(Action):
     def __init__(self,
                  input: Union[Component, Callable],
                  path: str,
-                 duration: Tuple[Union[int, timedelta], Union[int, timedelta]]
+                 duration_before_trigger: Union[int, timedelta],
+                 duration_after_trigger: Union[timedelta, int]
                  ):
         super().__init__(input)
         self.path = Path(path).resolve()
-        self.duration = duration
+        if isinstance(duration_before_trigger, timedelta):
+            duration_before_trigger = duration_before_trigger.total_seconds()
+        if isinstance(duration_after_trigger, timedelta):
+            duration_after_trigger = duration_after_trigger.total_seconds()
+        if duration_before_trigger > 0 and duration_after_trigger > 0:
+            self.duration_before_trigger = duration_before_trigger
+            self.duration_after_trigger = duration_after_trigger
+        else:
+            raise ValueError("Recording durations before and after trigger must be positive integers "
+                             "or positive timedelta objects")
 
     def action(self):
-        pass
+        pass  # Is done in RecordController, probably needs to be changed...
