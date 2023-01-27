@@ -106,6 +106,15 @@ class NNComponent(Component):
         self.node = pipeline.create(self._node_type)
         self._update_config()
 
+    def get_name(self):
+        model = self._config.get('model', None)
+        if model is not None:
+            return model.get('model_name', None)
+        return None
+
+    def get_labels(self):
+        return [l.upper() if isinstance(l, str) else l[0].upper() for l in self._labels]
+
     def _forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
         Checks whether the component forces a specific OpenVINO version. This function is called after
