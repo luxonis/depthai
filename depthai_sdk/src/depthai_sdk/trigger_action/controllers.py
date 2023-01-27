@@ -55,8 +55,8 @@ class RecordController(TriggerActionController):
             buf_name = f'bt_{rbt_id}'
             subfolder = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
             self.recorder.create_file(wr_name=self.stream_name,
-                                   subfolder=subfolder,
-                                   buf_name=buf_name)
+                                      subfolder=subfolder,
+                                      buf_name=buf_name)
 
             # Write before trigger buffer into file
             while not self.recorder.is_buffer_empty(self.stream_name, buf_name):

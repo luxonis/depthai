@@ -60,10 +60,10 @@ class VideoWriter(AbstractWriter):
                     self._fourcc = "I420"
 
         self._file = cv2.VideoWriter(path_to_file,
-                               cv2.VideoWriter_fourcc(*self._fourcc),
-                               self._fps,
-                               (self._w, self._h),
-                               isColor=self._fourcc != "GREY")
+                                     cv2.VideoWriter_fourcc(*self._fourcc),
+                                     self._fps,
+                                     (self._w, self._h),
+                                     isColor=self._fourcc != "GREY")
 
     def init_buffer(self, name: str, max_seconds: int):
         if max_seconds > 0:
@@ -91,10 +91,11 @@ class VideoWriter(AbstractWriter):
             n_elems -= 1
 
     def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
-        if self._file is None:
+        if not self._file:
             path_to_file = create_writer_dir(self.path, self.name, 'avi')  # What if the file already exists?
             self._create_file(path_to_file, frame)
         self._file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
 
     def close(self):
-        self._file.release()
+        if self._file:
+            self._file.release()
