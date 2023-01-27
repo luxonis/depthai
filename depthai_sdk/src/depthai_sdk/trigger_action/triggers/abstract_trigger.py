@@ -12,12 +12,10 @@ class Trigger(ABC):
         self.input = input
         self.condition = condition
         if isinstance(cooldown, timedelta):
-            if cooldown.total_seconds() >= 0:
-                self.cooldown = cooldown
-            else:
-                raise ValueError("Cooldown time must be a non-negative integer or a non-negative timedelta object")
+            cooldown = cooldown.total_seconds()
+        if cooldown >= 0:
+            self.cooldown = timedelta(seconds=cooldown)
         else:
-            if cooldown >= 0:
-                self.cooldown = timedelta(seconds=cooldown)
-            else:
-                raise ValueError("Cooldown time must be a non-negative integer or a non-negative timedelta object")
+            raise ValueError("Cooldown time must be a non-negative integer or a non-negative timedelta object")
+        self.cooldown = timedelta(seconds=cooldown)
+

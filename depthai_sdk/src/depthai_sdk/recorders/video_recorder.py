@@ -1,4 +1,4 @@
-from typing import Union, Any, Dict
+from typing import Union, Dict
 
 import numpy as np
 
@@ -54,8 +54,11 @@ class VideoRecorder(Recorder):
                     from .video_writers.file_writer import FileWriter
                     self._writers[name] = FileWriter(self.path, name, fourcc)
 
-    def create_file(self, wr_name: str, subfolder: str, buf_name: str):  # get frames' properties for the file from buf_name
-        self._writers[wr_name].create_file(subfolder, buf_name)
+    def create_file_for_buffer(self, wr_name: str, subfolder: str, buf_name: str):  # get frames' properties for the file from buf_name
+        self._writers[wr_name].create_file_for_buffer(subfolder, buf_name)
+
+    def create_file(self, wr_name: str, subfolder: str, frame: Union[np.ndarray, dai.ImgFrame]):
+        self._writers[wr_name].create_file(subfolder, frame)
 
     def init_buffers(self, wr_name: str, buffers: Dict[str, int]):
         for name, max_seconds in buffers.items():

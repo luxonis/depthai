@@ -54,9 +54,9 @@ class RecordController(TriggerActionController):
             # Create cv2.VideoWriter file
             buf_name = f'bt_{rbt_id}'
             subfolder = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
-            self.recorder.create_file(wr_name=self.stream_name,
-                                      subfolder=subfolder,
-                                      buf_name=buf_name)
+            self.recorder.create_file_for_buffer(wr_name=self.stream_name,
+                                                 subfolder=subfolder,
+                                                 buf_name=buf_name)
 
             # Write before trigger buffer into file
             while not self.recorder.is_buffer_empty(self.stream_name, buf_name):
@@ -103,14 +103,14 @@ class RecordController(TriggerActionController):
     def new_packet_action(self, packet: FramePacket, _=None):  # visualizer seems redundant here
         # Write into the only writing before trigger buffer
         wbt_id = self.buffers_status['writing']['bt']
-        self.recorder.add_to_buffer(self.stream_name, f'bt_{wbt_id}', packet.frame)
+        self.recorder.add_to_buffer(self.stream_name, f'bt_{wbt_id}', packet.imgFrame)
 
         # Write into all writing after trigger buffers
         wat_ids = self.buffers_status['writing']['at']
         for i, buffer_id in enumerate(list(wat_ids)):
             buffer = f'at_{buffer_id}'
             if not self.recorder.is_buffer_full(self.stream_name, buffer):
-                self.recorder.add_to_buffer(self.stream_name, buffer, packet.frame)
+                self.recorder.add_to_buffer(self.stream_name, buffer, packet.imgFrame)
             else:
                 wat_ids.pop(i)
                 self.buffers_status['ready']['at'].append(buffer_id)

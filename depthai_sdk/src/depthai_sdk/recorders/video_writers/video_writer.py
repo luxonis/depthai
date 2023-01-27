@@ -6,21 +6,17 @@ import cv2
 import depthai as dai
 import numpy as np
 
-from depthai_sdk.recorders.video_writers import AbstractWriter
+from depthai_sdk.recorders.video_writers import BaseWriter
 from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 
 
-class VideoWriter(AbstractWriter):
+class VideoWriter(BaseWriter):
     def __init__(self, path: Path, name: str, fourcc: str, fps: float):  # TODO: fourcc is not used
-        self.path = path
-        self.name = name
+        super().__init__(path, name)
 
         self._fourcc = None
         self._w, self._h = None, None
         self._fps = fps
-
-        self._buffers: Dict[str, deque] = {}
-        self._file = None
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
@@ -28,18 +24,21 @@ class VideoWriter(AbstractWriter):
     def set_fourcc(self, fourcc: str):
         self._fourcc = fourcc
 
-    def create_file(self, subfolder: str, bufname: str):
-        if self._buffers[bufname] is None:
-            raise RuntimeError(f"Buffer {bufname} is not enabled")
+    def create_file_for_buffer(self, subfolder: str, buf_name: str):
+        if self._buffers[buf_name] is None:
+            raise RuntimeError(f"Buffer {buf_name} is not enabled")
 
-        if len(self._buffers[bufname]) == 0:
+        if len(self._buffers[buf_name]) == 0:
             return None
 
+        frame = self._buffers[buf_name][0]
+        self.create_file(subfolder, frame)
+
+    def create_file(self, subfolder: str, frame: Union[dai.ImgFrame, np.ndarray]):
         path_to_file = create_writer_dir(self.path / subfolder, self.name, 'avi')
-        frame = self._buffers[bufname][0]
         self._create_file(path_to_file, frame)
 
-    def _create_file(self, path_to_file: Union[Path, str], frame: Union[dai.ImgFrame, np.ndarray]):
+    def _create_file(self, path_to_file: str, frame: Union[dai.ImgFrame, np.ndarray]):
         if isinstance(frame, np.ndarray):
             self._h, self._w = frame.shape[:2]
         else:
@@ -65,37 +64,11 @@ class VideoWriter(AbstractWriter):
                                      (self._w, self._h),
                                      isColor=self._fourcc != "GREY")
 
-    def init_buffer(self, name: str, max_seconds: int):
-        if max_seconds > 0:
-            self._buffers[name] = deque(maxlen=int(max_seconds * self._fps))
-
-    def add_to_buffer(self, name: str, frame: Union[dai.ImgFrame, np.ndarray]):
-        if self._buffers[name] is None:
-            return
-
-        if len(self._buffers[name]) == self._buffers[name].maxlen:
-            self._buffers[name].popleft()
-
-        self._buffers[name].append(frame)
-
-    def is_buffer_full(self, name: str) -> bool:
-        return len(self._buffers[name]) == self._buffers[name].maxlen
-
-    def is_buffer_empty(self, name: str) -> bool:
-        return len(self._buffers[name]) == 0
-
-    def write_from_buffer(self, name: str, n_elems: int):
-        while len(self._buffers[name]) > 0 and n_elems > 0:
-            frame = self._buffers[name].popleft()
-            self.write(frame)
-            n_elems -= 1
-
     def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
-        if not self._file:
-            path_to_file = create_writer_dir(self.path, self.name, 'avi')  # What if the file already exists?
-            self._create_file(path_to_file, frame)
+        if self._file is None:
+            self.create_file(subfolder='', frame=frame)
         self._file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
 
     def close(self):
-        if self._file:
+        if self._file is not None:
             self._file.release()
