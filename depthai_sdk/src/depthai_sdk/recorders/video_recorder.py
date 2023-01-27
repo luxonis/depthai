@@ -54,8 +54,8 @@ class VideoRecorder(Recorder):
                     from .video_writers.file_writer import FileWriter
                     self._writers[name] = FileWriter(self.path, name, fourcc)
 
-    def create_file(self, wr_name: str, subfolder: str, filename: str, buf_name: str):
-        return self._writers[wr_name].create_file(self.path, subfolder, filename, buf_name)
+    def create_file(self, wr_name: str, subfolder: str, buf_name: str):  # get frames' properties for the file from buf_name
+        self._writers[wr_name].create_file(subfolder, buf_name)
 
     def init_buffers(self, wr_name: str, buffers: Dict[str, int]):
         for name, max_seconds in buffers.items():
@@ -70,14 +70,18 @@ class VideoRecorder(Recorder):
     def is_buffer_empty(self, wr_name: str, buf_name: str):
         return self._writers[wr_name].is_buffer_empty(buf_name)
 
-    def write_to_file(self, wr_name: str, buf_name: str, file: Any):
-        self._writers[wr_name].write_to_file(buf_name, file)
+    def write_from_buffer(self, wr_name: str, buf_name: str, n_elems: int):
+        self._writers[wr_name].write_from_buffer(buf_name, n_elems)
 
     def write(self, name: str, frame: Union[np.ndarray, dai.ImgFrame]):
         self._writers[name].write(frame)
 
+    def close_writer(self, name: str):
+        self._writers[name].close()
+
     def close(self):
-        if self._closed: return
+        if self._closed:
+            return
         self._closed = True
         print("Video Recorder saved stream(s) to folder:", str(self.path))
         # Close opened files
