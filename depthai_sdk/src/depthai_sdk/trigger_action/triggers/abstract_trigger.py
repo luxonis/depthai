@@ -6,9 +6,18 @@ from depthai_sdk import Component
 
 
 class Trigger(ABC):
-    def __init__(self, input: Union[Component, Callable], condition: Callable, period: int):
+    def __init__(self, input: Union[Component, Callable], condition: Callable, cooldown: Union[timedelta, int]):
         if isinstance(input, Component):
             input = input.out.main
         self.input = input
         self.condition = condition
-        self.period = timedelta(seconds=period)
+        if isinstance(cooldown, timedelta):
+            if cooldown.total_seconds() >= 0:
+                self.cooldown = cooldown
+            else:
+                raise ValueError("Cooldown time must be a non-negative integer or a non-negative timedelta object")
+        else:
+            if cooldown >= 0:
+                self.cooldown = timedelta(seconds=cooldown)
+            else:
+                raise ValueError("Cooldown time must be a non-negative integer or a non-negative timedelta object")
