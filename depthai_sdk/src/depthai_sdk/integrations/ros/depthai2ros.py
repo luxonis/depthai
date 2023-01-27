@@ -1,4 +1,4 @@
-from enum import Enum
+
 from typing import Tuple
 
 import depthai as dai
@@ -11,6 +11,7 @@ from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import Vector3, Quaternion, Transform
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField, Imu  # s, PointCloud
 from tf.msg import tfMessage
+from .imu_interpolation import ImuSyncMethod
 
 """
 --extra-index-url https://rospypi.github.io/simple/
@@ -24,17 +25,11 @@ tf
 """
 
 
-class ImuSyncMethod(Enum):
-    LINEAR_INTERPOLATE_ACCEL = 'LINEAR_INTERPOLATE_ACCEL'
-    LINEAR_INTERPOLATE_GYRO = 'LINEAR_INTERPOLATE_GYRO'
-    COPY = 'COPY'
-
-
 class DepthAi2Ros1:
     def __init__(self, device: dai.Device) -> None:
         self.start_time = dai.Clock.now()
         self.device = device
-        self.imu_packets = []
+
         self.xyz = dict()
 
     def header(self, msg: dai.Buffer) -> std_msgs.msg.Header:
@@ -94,117 +89,7 @@ class DepthAi2Ros1:
 
         return msg
 
-    def _lerp(self, a, b, t):
-        return a * (1.0 - t) + b * t
 
-    def _lerpImu(self, a, b, t):
-        res = a.__class__()
-        res.x = self._lerp(a.x, b.x, t)
-        res.y = self._lerp(a.y, b.y, t)
-        res.z = self._lerp(a.z, b.z, t)
-        return res
-
-    def fillImuData_LinearInterpolation(self, sync_mode: ImuSyncMethod):
-        accel_hist = []
-        gyro_hist = []
-        interp_imu_packets = []
-
-        for i in range(len(self.imu_packets)):
-            if len(accel_hist) == 0:
-                accel_hist.append(self.imu_packets[i].acceleroMeter)
-            elif accel_hist[-1].sequence != self.imu_packets[i].acceleroMeter.sequence:
-                accel_hist.append(self.imu_packets[i].acceleroMeter)
-
-            if len(gyro_hist) == 0:
-                gyro_hist.append(self.imu_packets[i].gyroscope)
-            elif gyro_hist[-1].sequence != self.imu_packets[i].gyroscope.sequence:
-                gyro_hist.append(self.imu_packets[i].gyroscope)
-
-            if sync_mode.value == ImuSyncMethod.LINEAR_INTERPOLATE_ACCEL:
-                if len(accel_hist) < 3:
-                    continue
-                else:
-                    accel0 = dai.IMUReportAccelerometer()
-                    accel0.sequence = -1
-
-                    while len(accel_hist) > 0:
-                        if accel0.sequence == -1:
-                            accel0 = accel_hist.pop(0)
-                        else:
-                            accel1 = accel_hist.pop(0)
-                            dt = (accel1.timestamp.get() - accel0.timestamp.get()).total_seconds() * 1000
-
-                            while len(gyro_hist) > 0:
-                                curr_gyro = gyro_hist[0]
-
-                                if curr_gyro.timestamp.get() > accel0.timestamp.get() and curr_gyro.timestamp.get() <= accel1.timestamp.get():
-                                    diff = (curr_gyro.timestamp.get() - accel0.timestamp.get()).total_seconds() * 1000
-                                    alpha = diff / dt
-                                    interp_accel = self._lerpImu(accel0, accel1, alpha)
-                                    imu_packet = dai.IMUPacket()
-                                    imu_packet.acceleroMeter = interp_accel
-                                    imu_packet.gyroscope = curr_gyro
-                                    interp_imu_packets.append(imu_packet)
-                                    gyro_hist.pop(0)
-
-                                elif curr_gyro.timestamp.get() > accel1.timestamp.get():
-                                    accel0 = accel1
-                                    if len(accel_hist) > 0:
-                                        accel1 = accel_hist.pop(0)
-                                        dt = (accel1.timestamp.get() - accel0.timestamp.get()).total_seconds() * 1000
-                                    else:
-                                        break
-                                else:
-                                    gyro_hist.pop(0)
-
-                            accel0 = accel1
-
-                    accel_hist.append(accel0)
-
-            elif sync_mode == ImuSyncMethod.LINEAR_INTERPOLATE_GYRO:
-                if len(gyro_hist) < 3:
-                    continue
-                else:
-                    gyro0 = dai.IMUReportGyroscope()
-                    gyro0.sequence = -1
-
-                    while len(gyro_hist) > 0:
-                        if gyro0.sequence == -1:
-                            gyro0 = gyro_hist.pop(0)
-                        else:
-                            gyro1 = gyro_hist.pop(0)
-                            dt = (gyro1.timestamp.get() - gyro0.timestamp.get()).total_seconds() * 1000
-
-                            while len(accel_hist) > 0:
-                                curr_accel = accel_hist[0]
-
-                                if curr_accel.timestamp.get() > gyro0.timestamp.get() and curr_accel.timestamp.get() <= gyro1.timestamp.get():
-                                    diff = (curr_accel.timestamp.get() - gyro0.timestamp.get()).total_seconds() * 1000
-                                    alpha = diff / dt
-                                    interp_gyro = self._lerpImu(gyro0, gyro1, alpha)
-                                    imu_packet = dai.IMUPacket()
-                                    imu_packet.acceleroMeter = curr_accel
-                                    imu_packet.gyroscope = interp_gyro
-                                    interp_imu_packets.append(imu_packet)
-                                    accel_hist.pop(0)
-
-                                elif curr_accel.timestamp.get() > gyro1.timestamp.get():
-                                    gyro0 = gyro1
-
-                                    if len(gyro_hist) > 0:
-                                        gyro1 = gyro_hist.pop(0)
-                                        dt = (gyro1.timestamp.get() - gyro0.timestamp.get()).total_seconds() * 1000
-                                    else:
-                                        break
-
-                                else:
-                                    accel_hist.pop(0)
-
-                            gyro0 = gyro1
-
-                    gyro_hist.append(gyro0)
-
-        return interp_imu_packets
 
     def Image(self, imgFrame: dai.ImgFrame) -> Image:
         msg = Image()

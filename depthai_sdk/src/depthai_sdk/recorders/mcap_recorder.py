@@ -42,9 +42,9 @@ class McapRecorder(Recorder, RosBase):
         RosBase.update(self, device, xouts)
 
         for xout in xouts:
-            if xout.isH26x():
+            if xout.is_h26x():
                 raise Exception("MCAP recording only supports MJPEG encoding!")
-            if xout.isMjpeg() and xout.lossless:
+            if xout.is_mjpeg() and xout.lossless:
                 # Foxglove Studio doesn't (yet?) support Lossless MJPEG
                 raise Exception("MCAP recording doesn't support Lossless MJPEG encoding!")
 

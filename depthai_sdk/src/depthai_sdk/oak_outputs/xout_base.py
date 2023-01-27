@@ -100,35 +100,44 @@ class XoutBase(ABC):
             pass
 
     def fourcc(self) -> str:
-        if self.TYPE == 'MJPEG':
+        if self.is_mjpeg():
             return 'mjpeg'
-        elif self.TYPE == 'H264':
+        elif self.is_h264():
             return 'h264'
-        elif self.TYPE == 'H265':
+        elif self.is_h265():
             return 'hevc'
-        elif self.TYPE == 'DEPTH':
+        elif self.is_depth():
             return 'y16'
         # TODO: add for mono, rgb, nv12, yuv...
         else:
             return None
 
-    def isH265(self) -> bool:
-        return self.TYPE == 'H265'
+    def is_h265(self) -> bool:
+        if type(self).__name__ == 'XoutH26x':
+            # XoutH26x class has profile attribute
+            return self.profile == dai.VideoEncoderProperties.Profile.H265_MAIN
+        return False
 
-    def isH264(self) -> bool:
-        return self.TYPE == 'H264'
+    def is_h264(self) -> bool:
+        if type(self).__name__ == 'XoutH26x':
+            # XoutH26x class has profile attribute
+            return self.profile != dai.VideoEncoderProperties.Profile.H265_MAIN
+        return False
 
-    def isH26x(self) -> bool:
-        return self.isH264() or self.isH265()
+    def is_h26x(self) -> bool:
+        return type(self).__name__ == 'XoutH26x'
 
-    def isMjpeg(self) -> bool:
-        return self.TYPE == 'MJPEG'
+    def is_mjpeg(self) -> bool:
+        return type(self).__name__ == 'XoutMjpeg'
 
-    def isRaw(self) -> bool:
-        return self.TYPE == 'RAW'
+    def is_raw(self) -> bool:
+        return type(self).__name__ == 'XoutFrames'
 
-    def isDepth(self) -> bool:
-        return self.TYPE == 'DEPTH'
+    def is_depth(self) -> bool:
+        return type(self).__name__ == 'XoutDepth'
 
-    def isIMU(self):
-        return self.TYPE == 'IMU'
+    def is_disparity(self) -> bool:
+        return type(self).__name__ == 'XoutDisparity'
+
+    def is_imu(self):
+        return type(self).__name__ == 'XoutIMU'

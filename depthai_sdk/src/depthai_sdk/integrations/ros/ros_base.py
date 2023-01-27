@@ -5,22 +5,21 @@ import depthai as dai
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField, Imu
 from depthai_sdk.integrations.ros.depthai2ros import Bridge
 
+
+class RosStream:
+    datatype: dai.DatatypeEnum  # dai datatype of the stream
+    xout: XoutBase  # From which Xout is the stream
+    topic: str  # Topic name, eg. color/compressed
+    ros_type: Any  # CompressedImage, Image, IMU, PointCloud2...
+
 class RosBase:
     """
     Base class that is used by ros streaming component and mcap recorder.
     """
-
-    class RosStream:
-        datatype: dai.DatatypeEnum  # dai datatype of the stream
-        xout: XoutBase  # From which Xout is the stream
-        topic: str  # Topic name, eg. color/compressed
-        ros_type: Any  # CompressedImage, Image, IMU, PointCloud2...
-
-    streams: Dict[str, RosStream]  # key = xlink stream name
-    pointcloud: bool = False  # Convert depth -> pointcloud
-    bridge: Bridge
-
     def __init__(self):
+        self.streams: Dict[str, RosStream]  # key = xlink stream name
+        self.pointcloud: bool = False  # Convert depth -> pointcloud
+        self.bridge: Bridge
         self.streams = dict()
 
     def update(self, device: dai.Device, xouts: List[XoutFrames]):
@@ -28,21 +27,21 @@ class RosBase:
 
         for xout in xouts:
             for stream in xout.xstreams():
-                rs = self.RosStream()
+                rs = RosStream()
                 rs.datatype = stream.stream.possibleDatatypes[0].datatype
                 name = xout.name.lower()
 
-                if xout.isDepth() and not stream.name.endswith('depth'):
+                if xout.is_depth() and not stream.name.endswith('depth'):
                     # Mono right frame for WLS, skip
                     continue
 
-                if xout.isMjpeg():
+                if xout.is_mjpeg():
                     rs.topic = f'/{name}/compressed'
                     rs.ros_type = CompressedImage
-                elif xout.isDepth() and self.pointcloud:
+                elif xout.is_depth() and self.pointcloud:
                     rs.topic = '/pointcloud/raw'
                     rs.ros_type = PointCloud2
-                elif xout.isIMU():
+                elif xout.is_imu():
                     rs.topic = '/imu'
                     rs.ros_type = Imu
                 else: # Non-encoded frames; rgb, mono, depth
