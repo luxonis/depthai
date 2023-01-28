@@ -91,7 +91,7 @@ class XoutBase(ABC):
                     self.visualize(packet)
                 else:
                     # User defined callback
-                    self.callback(packet, self._visualizer)
+                    self.callback(packet)
 
                 # Record after processing, so that user can modify the frame
                 self.on_record(packet)

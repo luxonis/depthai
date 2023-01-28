@@ -85,7 +85,7 @@ class XoutFrames(XoutBase):
             )
 
         if self.callback:  # Don't display frame, call the callback
-            self.callback(packet, self._visualizer)
+            self.callback(packet)
         else:
             packet.frame = self._visualizer.draw(packet.frame)
             # Draw on the frame
@@ -114,7 +114,7 @@ class XoutFrames(XoutBase):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
 
-        packet = FramePacket(name, msg, msg.getCvFrame())
+        packet = FramePacket(name, msg, msg.getCvFrame(), self._visualizer)
 
         self.queue.put(packet, block=False)
 
@@ -307,6 +307,7 @@ class XoutDisparity(XoutFrames, XoutClickable):
                 self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.mono_frames.name],
+                self._visualizer
             )
             self.queue.put(packet, block=False)
 
@@ -432,6 +433,7 @@ class XoutDepth(XoutFrames, XoutClickable):
                 self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.mono_frames.name],
+                self._visualizer
             )
             self.queue.put(packet, block=False)
 
@@ -610,7 +612,8 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         packet = DetectionPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
-            msgs[self.nn_results.name] if decode_fn is None else decode_fn(msgs[self.nn_results.name])
+            msgs[self.nn_results.name] if decode_fn is None else decode_fn(msgs[self.nn_results.name]),
+            self._visualizer
         )
 
         self.queue.put(packet, block=False)
@@ -659,6 +662,7 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
             self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.configs.name],
+            self._visualizer
         )
         self.queue.put(packet, block=False)
 
@@ -735,6 +739,7 @@ class XoutTracker(XoutNnResults):
             self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.nn_results.name],
+            self._visualizer
         )
         self.queue.put(packet, block=False)
 
@@ -958,7 +963,8 @@ class XoutTwoStage(XoutNnResults):
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.nn_results.name],
                 self.msgs[seq][self.second_nn_out.name],
-                self.whitelist_labels
+                self.whitelist_labels,
+                self._visualizer
             )
             self.queue.put(packet, block=False)
 

@@ -467,8 +467,6 @@ class OakCamera:
                   callback: Callable,
                   visualizer: Visualizer = None,
                   record_path: Optional[str] = None):
-        visualizer = visualizer or Visualizer()
-
         if isinstance(output, List):
             for element in output:
                 self._callback(element, callback, visualizer, record_path)
@@ -488,14 +486,15 @@ class OakCamera:
         self._out_templates.append(OutputConfig(output, callback, visualizer, visualizer_enabled, record_path))
         return visualizer
 
-    def callback(self, output: Union[List, Callable, Component], callback: Callable):
+    def callback(self, output: Union[List, Callable, Component], callback: Callable, enable_visualizer: bool = False):
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
-            output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
-            callback: Handler function to which the Packet will be sent
+            output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output.
+            callback: Handler function to which the Packet will be sent.
+            enable_visualizer: Whether to enable visualizer for this output.
         """
-        self._callback(output, callback)
+        self._callback(output, callback, Visualizer() if enable_visualizer else None)
 
     @property
     def device(self) -> dai.Device:
