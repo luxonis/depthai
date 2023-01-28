@@ -1,10 +1,11 @@
 import cv2
 
-from depthai_sdk import OakCamera, VisualizerHelper, DetectionPacket, Visualizer
+from depthai_sdk import OakCamera, VisualizerHelper, DetectionPacket
 from depthai_sdk.visualize.visualizer_helper import FramePosition
 
 
-def callback(packet: DetectionPacket, visualizer: Visualizer):
+def callback(packet: DetectionPacket):
+    visualizer = packet.visualizer
     print('Detections:', packet.img_detections.detections)
     VisualizerHelper.print(packet.frame, 'BottomRight!', FramePosition.BottomRight)
     frame = visualizer.draw(packet.frame)
