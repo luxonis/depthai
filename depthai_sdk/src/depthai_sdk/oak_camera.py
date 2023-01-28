@@ -393,6 +393,16 @@ class OakCamera:
 
         return self._pipeline
 
+    def _get_component_outputs(self, output: Union[List, Callable, Component]) -> List[Callable]:
+        if not isinstance(output, List):
+            output = [output]
+
+        for i in range(len(output)):
+            if isinstance(output[i], Component):
+                # Select default (main) output of the component
+                output[i] = output[i].out.main
+        return output
+
     def sync(self, outputs: Union[Callable, List[Callable]], callback: Callable, visualize=False):
         """
         Synchronize multiple components outputs forward them to the callback.
@@ -418,15 +428,8 @@ class OakCamera:
             path: Folder path where to save these streams
             record_type: Record type
         """
-        if isinstance(outputs, Callable):
-            outputs = [outputs]  # to list
-
-        for i in range(len(outputs)):
-            if isinstance(outputs[i], Component):
-                outputs[i] = outputs[i].out.main
-
         record = Record(Path(path).resolve(), record_type)
-        self._out_templates.append(RecordConfig(outputs, record))
+        self._out_templates.append(RecordConfig(self._get_component_outputs(outputs), record))
         return record
 
     def show_graph(self):
@@ -501,14 +504,7 @@ class OakCamera:
         self._callback(output, callback)
 
     def ros_stream(self, output: Union[List, Callable, Component]):
-        if not isinstance(output, List):
-            output = [output]
-
-        for i in range(len(output)):
-            if isinstance(output[i], Component):
-                output[i] = output[i].out.main
-
-        self._out_templates.append(RosStreamConfig(output))
+        self._out_templates.append(RosStreamConfig(self._get_component_outputs(output)))
 
     @property
     def device(self) -> dai.Device:

@@ -108,11 +108,12 @@ class RosStreamConfig(BaseConfig):
             xoutbase.setup_base(None)
             xouts.append(xoutbase)
 
-        # envs = os.environ
+        envs = os.environ
         # if 'ROS_VERSION' not in envs:
         #     raise Exception('ROS not found! Please install or source the ROS you would like to use.')
         #
-        # version = envs['ROS_VERSION']
+        version = envs['ROS_VERSION']
+        print('rosversion', version)
         # if version == '1':
         #     from depthai_sdk.integrations.ros.ros1_streaming import Ros1Streaming
         #     self.ros = Ros1Streaming()
@@ -125,12 +126,12 @@ class RosStreamConfig(BaseConfig):
         self.ros.update(device, xouts)
         return [self]
 
-    def newMsg(self, name, msg):
-        print('RosStreamConfig new msg!', name, msg)
+    def new_msg(self, name, msg):
         self.ros.new_msg(name, msg)
-
-    def checkQueue(self, _):
+    def check_queue(self, block):
         pass  # No queues
+    def start_fps(self):
+        pass
 
     # def is_ros1(self) -> bool:
     #     try:

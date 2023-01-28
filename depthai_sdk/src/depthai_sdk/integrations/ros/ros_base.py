@@ -3,7 +3,7 @@ from depthai_sdk.oak_outputs.xout import XoutFrames
 from depthai_sdk.oak_outputs.xout_base import XoutBase
 import depthai as dai
 from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField, Imu
-from depthai_sdk.integrations.ros.depthai2ros import Bridge
+from depthai_sdk.integrations.ros.depthai2ros2 import DepthAi2Ros2
 
 
 class RosStream:
@@ -19,11 +19,11 @@ class RosBase:
     def __init__(self):
         self.streams: Dict[str, RosStream]  # key = xlink stream name
         self.pointcloud: bool = False  # Convert depth -> pointcloud
-        self.bridge: Bridge
+        self.bridge: DepthAi2Ros2
         self.streams = dict()
 
     def update(self, device: dai.Device, xouts: List[XoutFrames]):
-        self.bridge = Bridge(device)
+        self.bridge = DepthAi2Ros2(device)
 
         for xout in xouts:
             for stream in xout.xstreams():
@@ -53,7 +53,7 @@ class RosBase:
     def new_ros_msg(self, topic: str, ros_msg) -> None:
         raise NotImplementedError('Abstract function, override it!')
 
-    def new_msg(self, name: str, daiMsg: dai.ADatatype):
+    def new_msg(self, name: str, dai_msg: dai.ADatatype):
         if name not in self.streams:  # Not relevant
             return
 
@@ -62,12 +62,14 @@ class RosBase:
 
         msg = None
         if stream.ros_type == CompressedImage:
-            msg = self.bridge.CompressedImage(daiMsg)
-        elif stream.ros_type == PointCloud2:
-            msg = self.bridge.PointCloud2(daiMsg)
-        elif stream.ros_type == Imu:
-            msg = self.bridge.Imu(daiMsg)
+            dai_msg: dai.ImgFrame
+            msg = self.bridge.CompressedImage(dai_msg)
+        # elif stream.ros_type == PointCloud2:
+        #     msg = self.bridge.PointCloud2(dai_msg)
+        # elif stream.ros_type == Imu:
+        #     msg = self.bridge.Imu(dai_msg)
         elif stream.ros_type == Image:
-            msg = self.bridge.Image(daiMsg)
+            dai_msg: dai.ImgFrame
+            msg = self.bridge.Image(dai_msg)
 
         self.new_ros_msg(stream.topic, msg)

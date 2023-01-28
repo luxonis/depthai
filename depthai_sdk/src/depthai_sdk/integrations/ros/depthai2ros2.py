@@ -1,4 +1,4 @@
-from typing import Tuple, List
+from typing import Tuple, List, Union
 import depthai as dai
 import numpy as np
 import rclpy
@@ -8,9 +8,9 @@ import rclpy.node as node
 # from std_msgs.msg import Header, ColorRGBA, String
 # from visualization_msgs.msg import ImageMarker
 
-from sensor_msgs.msg import CompressedImage, Image #, PointCloud2, PointField, Imu  # s, PointCloud
-import std_msgs
-
+from sensor_msgs.msg import CompressedImage, Image  # , PointCloud2, PointField, Imu  # s, PointCloud
+from std_msgs.msg import Header
+from builtin_interfaces.msg import Time
 
 class DepthAi2Ros2:
     xyz = dict()
@@ -20,28 +20,30 @@ class DepthAi2Ros2:
         self.device = device
         self.imu_packets = []
 
-    def header(self, msg: dai.Buffer) -> std_msgs.msg.Header:
-        header = std_msgs.msg.Header()
-        ts = (msg.getTimestamp() - self.start_time).total_seconds()
-        # secs / nanosecs
-        header.stamp = Time(int(ts), (ts % 1) * 1e6)
+
+    def header(self, msg, dai_msg: Union[dai.ImgFrame, dai.IMUReport]) -> Header:
         try:
-            header.frame_id = str(msg.getSequenceNum())  # ImgFrame
+            msg.header.frame_id = str(dai_msg.getSequenceNum())  # ImgFrame
         except:
-            header.frame_id = str(msg.sequence)  # IMUReport
-        return header
+            msg.header.frame_id = str(dai_msg.sequence)  # IMUReport
+
+        ts = dai_msg.getTimestampDevice() - self.start_time
+
+        # secs / nanosecs
+        msg.header.stamp = Time(sec=ts.seconds, nanosec=ts.microseconds*1000)
+        return msg
+
 
     def CompressedImage(self, imgFrame: dai.ImgFrame) -> CompressedImage:
         msg = CompressedImage()
-        msg.header = self.header(imgFrame)
+        self.header(msg, imgFrame)
         msg.format = "jpeg"
         msg.data = imgFrame.getData().tobytes()
         return msg
 
-
     def Image(self, imgFrame: dai.ImgFrame) -> Image:
         msg = Image()
-        msg.header = self.header(imgFrame)
+        self.header(msg, imgFrame)
         msg.height = imgFrame.getHeight()
         msg.width = imgFrame.getWidth()
         msg.step = imgFrame.getWidth()

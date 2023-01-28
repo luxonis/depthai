@@ -5,7 +5,7 @@ import depthai as dai
 from mcap_ros1.writer import Writer as Ros1Writer
 
 from depthai_sdk.recorders.abstract_recorder import *
-from depthai_sdk.integrations.ros.depthai2ros import Bridge
+# from depthai_sdk.integrations.ros.depthai2ros import DepthAi2Ros1
 from depthai_sdk.oak_outputs.xout import XoutFrames
 from depthai_sdk.integrations.ros.ros_base import RosBase
 
