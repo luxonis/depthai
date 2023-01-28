@@ -106,7 +106,7 @@ class NNComponent(Component):
         self.node = pipeline.create(self._node_type)
         self._update_config()
 
-    def _forced_openvino_version(self) -> dai.OpenVINO.Version:
+    def forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
         Checks whether the component forces a specific OpenVINO version. This function is called after
         Camera has been configured and right before we connect to the OAK camera.
@@ -114,7 +114,7 @@ class NNComponent(Component):
         """
         return self._forced_version
 
-    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._roboflow:
             path = self._roboflow.device_update(device)
             self._parse_config(path)
@@ -193,7 +193,7 @@ class NNComponent(Component):
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
                 self._spatial = StereoComponent(pipeline, args=self._args, replay=self._replay)
-                self._spatial._update_device_info(pipeline, device, version)
+                self._spatial.on_init(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
                 self._spatial.config_stereo(align=self._input._source)

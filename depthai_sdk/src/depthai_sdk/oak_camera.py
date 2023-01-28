@@ -61,12 +61,13 @@ class OakCamera:
         self._usb_speed: Optional[dai.UsbSpeed] = None
         self._device_name: Optional[str] = None  # MxId / IP / USB port
 
+        self._device_name = device
+        self._oak = OakDevice()
+        self._init_device()
+
         # Whether to stop running the OAK camera. Used by oak.running()
         self._stop = False
-
-        self._device_name = device
         self._usb_speed = parse_usb_speed(usb_speed)
-        self._oak = OakDevice()
         self._pipeline = dai.Pipeline()
         self._pipeline_built = False
         self._polling = []
@@ -125,7 +126,7 @@ class OakCamera:
                                rotation=self._rotation,
                                replay=self.replay,
                                name=name,
-                               args=self._args, )
+                               args=self._args)
         self._components.append(comp)
         return comp
 
@@ -180,6 +181,7 @@ class OakCamera:
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
+            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
         comp = StereoComponent(self._pipeline,
                                resolution=resolution,
@@ -206,24 +208,22 @@ class OakCamera:
         Connect to the OAK camera
         """
         if self._device_name:
-            deviceInfo = dai.DeviceInfo(self._device_name)
+            device_info = dai.DeviceInfo(self._device_name)
         else:
-            (found, deviceInfo) = dai.Device.getFirstAvailableDevice()
+            (found, device_info) = dai.Device.getFirstAvailableDevice()
             if not found:
                 raise Exception("No OAK device found to connect to!")
 
-        version = self._pipeline.getOpenVINOVersion()
-
         if self._usb_speed == dai.UsbSpeed.SUPER:
             self._oak.device = dai.Device(
-                version=version,
-                deviceInfo=deviceInfo,
+                version=dai.OpenVINO.VERSION_UNIVERSAL,
+                deviceInfo=device_info,
                 usb2Mode=True
             )
         else:
             self._oak.device = dai.Device(
-                version=version,
-                deviceInfo=deviceInfo,
+                version=dai.OpenVINO.VERSION_UNIVERSAL,
+                deviceInfo=device_info,
                 maxUsbSpeed=dai.UsbSpeed.SUPER if self._usb_speed is None else self._usb_speed
             )
 
@@ -353,7 +353,7 @@ class OakCamera:
         # First go through each component to check whether any is forcing an OpenVINO version
         # TODO: check each component's SHAVE usage
         for c in self._components:
-            ov = c._forced_openvino_version()
+            ov = c.forced_openvino_version()
             if ov:
                 if self._pipeline.getRequiredOpenVINOVersion() and self._pipeline.getRequiredOpenVINOVersion() != ov:
                     raise Exception(
@@ -362,17 +362,14 @@ class OakCamera:
                     )
                 self._pipeline.setOpenVINOVersion(ov)
 
-        if self._pipeline.getRequiredOpenVINOVersion() == None:
+        if self._pipeline.getRequiredOpenVINOVersion() is None:
             # Force 2021.4 as it's better supported (blobconverter, compile tool) for now.
             self._pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
-
-        # Connect to the OAK camera
-        self._init_device()
 
         # Go through each component
         for component in self._components:
             # Update the component now that we can query device info
-            component._update_device_info(self._pipeline, self._oak.device, self._pipeline.getOpenVINOVersion())
+            component.on_init(self._pipeline, self._oak.device, self._pipeline.getOpenVINOVersion())
 
         # Create XLinkOuts based on visualizers/callbacks enabled
 
@@ -505,6 +502,11 @@ class OakCamera:
         """
         Returns dai.Device object. oak.built() has to be called before querying this property!
         """
-        if not self._pipeline_built:
-            raise Exception("OAK device wasn't booted yet, make sure to call oak.build() or oak.start()!")
         return self._oak.device
+
+    @property
+    def sensors(self) -> List[dai.CameraBoardSocket]:
+        """
+        Returns list of all sensors added to the pipeline.
+        """
+        return self._oak.image_sensors
