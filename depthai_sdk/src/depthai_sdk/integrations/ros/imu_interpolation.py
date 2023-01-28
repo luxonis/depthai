@@ -3,29 +3,22 @@ from typing import List
 import numpy as np
 import depthai as dai
 
-from rosbags.typesys.types import sensor_msgs__msg__Imu as Imu
-from rosbags.typesys.types import geometry_msgs__msg__Quaternion as Quaternion
-from rosbags.typesys.types import geometry_msgs__msg__Vector3 as Vector3
-from rosbags.typesys.types import std_msgs__msg__Header as Header
-from rosbags.typesys.types import builtin_interfaces__msg__Time as Time
 
 class ImuSyncMethod(Enum):
     LINEAR_INTERPOLATE_ACCEL = 'LINEAR_INTERPOLATE_ACCEL'
     LINEAR_INTERPOLATE_GYRO = 'LINEAR_INTERPOLATE_GYRO'
     COPY = 'COPY'
 
+
 class ImuInterpolation:
     def __init__(self):
         self.imu_packets: List[dai.IMUPacket] = []
 
-    def header(self, packet: dai.IMUPacket) -> Header:
-        report = packet.acceleroMeter or packet.gyroscope or packet.magneticField or packet.rotationVector
-        td = report.getTimestampDevice()
-        time = Time(sec=td.seconds, nanosec=td.microseconds * 1000)
-        return Header(stamp=time, frame_id=str(report.sequence))
-
-    def Imu(self, imu_packet: dai.IMUPacket, sync_mode: ImuSyncMethod = ImuSyncMethod.LINEAR_INTERPOLATE_ACCEL,
-            linear_accel_cov: float = 0., angular_velocity_cov: float = 0) -> Imu:
+    def Imu(self, msg, imu_packet: dai.IMUPacket,
+            sync_mode: ImuSyncMethod = ImuSyncMethod.LINEAR_INTERPOLATE_ACCEL,
+            linear_accel_cov: float = 0., angular_velocity_cov: float = 0.):
+        # TODO: rather pass classes (Imu, Quaternion, Vector3) and create object here?
+        # When passing ros_imu_msg make sure all attributes are already defined!
 
         self.imu_packets.append(imu_packet)
         if 20 < len(self.imu_packets):
@@ -36,37 +29,27 @@ class ImuInterpolation:
             if 0 < len(interp_imu_packets):
                 imu_packet = interp_imu_packets[-1]
 
-        linear_acceleration = Vector3(0,0,0)
         if imu_packet.acceleroMeter is not None:
-            linear_acceleration = Vector3(
-                imu_packet.acceleroMeter.x,
-                imu_packet.acceleroMeter.y,
-                imu_packet.acceleroMeter.z
-            )
+            msg.linear_acceleration.x = imu_packet.acceleroMeter.x
+            msg.linear_acceleration.y = imu_packet.acceleroMeter.y
+            msg.linear_acceleration.z = imu_packet.acceleroMeter.z
 
-        angular_velocity = Vector3(0, 0, 0)
         if imu_packet.gyroscope is not None:
-            angular_velocity = Vector3(
-                imu_packet.gyroscope.x,
-                imu_packet.gyroscope.y,
-                imu_packet.gyroscope.z
-            )
+            msg.angular_velocity.x = imu_packet.gyroscope.x
+            msg.angular_velocity.y = imu_packet.gyroscope.y
+            msg.angular_velocity.z = imu_packet.gyroscope.z
 
-        linear_acceleration_covariance = [linear_accel_cov, 0.0, 0.0, 0.0, linear_accel_cov, 0.0, 0.0, 0.0,
-                                              linear_accel_cov]
-        angular_velocity_covariance = [angular_velocity_cov, 0.0, 0.0, 0.0, angular_velocity_cov, 0.0, 0.0, 0.0,
-                                           angular_velocity_cov]
+        msg.linear_acceleration_covariance = np.array([linear_accel_cov, 0.0, 0.0, 0.0, linear_accel_cov, 0.0, 0.0, 0.0,
+                                                       linear_accel_cov])
+        msg.angular_velocity_covariance = np.array([angular_velocity_cov, 0.0, 0.0, 0.0, angular_velocity_cov, 0.0,
+                                                    0.0, 0.0, angular_velocity_cov])
 
-        return Imu(
-            header=self.header(imu_packet),
-            orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
-            orientation_covariance=np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-            angular_velocity=angular_velocity,
-            angular_velocity_covariance=np.array(angular_velocity_covariance),
-            linear_acceleration=linear_acceleration,
-            linear_acceleration_covariance=np.array(linear_acceleration_covariance)
-        )
+        msg.orientation.x = 0.0
+        msg.orientation.y = 0.0
+        msg.orientation.z = 0.0
+        msg.orientation.w = 0.0
 
+        msg.orientation_covariance = np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
     def _lerp(self, a, b, t):
         return a * (1.0 - t) + b * t

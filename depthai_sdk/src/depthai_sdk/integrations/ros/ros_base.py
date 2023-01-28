@@ -66,8 +66,8 @@ class RosBase:
             msg = self.bridge.CompressedImage(dai_msg)
         # elif stream.ros_type == PointCloud2:
         #     msg = self.bridge.PointCloud2(dai_msg)
-        # elif stream.ros_type == Imu:
-        #     msg = self.bridge.Imu(dai_msg)
+        elif stream.ros_type == Imu:
+            msg = self.bridge.Imu(dai_msg)
         elif stream.ros_type == Image:
             dai_msg: dai.ImgFrame
             msg = self.bridge.Image(dai_msg)

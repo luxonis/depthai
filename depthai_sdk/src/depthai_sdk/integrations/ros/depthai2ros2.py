@@ -1,3 +1,4 @@
+import time
 from typing import Tuple, List, Union
 import depthai as dai
 import numpy as np
@@ -7,10 +8,14 @@ import rclpy.node as node
 # from geometry_msgs.msg import Vector3, Quaternion, Pose2D, Point, Transform, TransformStamped
 # from std_msgs.msg import Header, ColorRGBA, String
 # from visualization_msgs.msg import ImageMarker
+from geometry_msgs.msg import Vector3, Quaternion
 
-from sensor_msgs.msg import CompressedImage, Image  # , PointCloud2, PointField, Imu  # s, PointCloud
+from sensor_msgs.msg import CompressedImage, Image, Imu  # , PointCloud2, PointField, Imu  # s, PointCloud
 from std_msgs.msg import Header
 from builtin_interfaces.msg import Time
+
+from depthai_sdk.integrations.ros.imu_interpolation import ImuInterpolation
+
 
 class DepthAi2Ros2:
     xyz = dict()
@@ -19,31 +24,29 @@ class DepthAi2Ros2:
         self.start_time = dai.Clock.now()
         self.device = device
         self.imu_packets = []
+        self.imu_interpolation = ImuInterpolation()
 
-
-    def header(self, msg, dai_msg: Union[dai.ImgFrame, dai.IMUReport]) -> Header:
+    def set_header(self, msg, dai_msg: Union[dai.ImgFrame, dai.IMUReport]) -> Header:
         try:
             msg.header.frame_id = str(dai_msg.getSequenceNum())  # ImgFrame
         except:
             msg.header.frame_id = str(dai_msg.sequence)  # IMUReport
 
         ts = dai_msg.getTimestampDevice() - self.start_time
-
         # secs / nanosecs
-        msg.header.stamp = Time(sec=ts.seconds, nanosec=ts.microseconds*1000)
+        msg.header.stamp = Time(sec=ts.seconds, nanosec=ts.microseconds * 1000)
         return msg
-
 
     def CompressedImage(self, imgFrame: dai.ImgFrame) -> CompressedImage:
         msg = CompressedImage()
-        self.header(msg, imgFrame)
+        self.set_header(msg, imgFrame)
         msg.format = "jpeg"
-        msg.data = imgFrame.getData().tobytes()
+        msg.data.frombytes(imgFrame.getData())
         return msg
 
     def Image(self, imgFrame: dai.ImgFrame) -> Image:
         msg = Image()
-        self.header(msg, imgFrame)
+        self.set_header(msg, imgFrame)
         msg.height = imgFrame.getHeight()
         msg.width = imgFrame.getWidth()
         msg.step = imgFrame.getWidth()
@@ -54,17 +57,15 @@ class DepthAi2Ros2:
         if type == TYPE.RAW16:  # Depth
             msg.encoding = 'mono16'
             msg.step *= 2  # 2 bytes per pixel
-            msg.data = imgFrame.getData().tobytes()
+            msg.data.frombytes(imgFrame.getData())
         elif type in [TYPE.GRAY8, TYPE.RAW8]:  # Mono frame
             msg.encoding = 'mono8'
-            msg.data = imgFrame.getData().tobytes()
+            msg.data.frombytes(imgFrame.getData())
         else:
             msg.encoding = 'bgr8'
-            msg.data = imgFrame.getCvFrame().tobytes()
+            msg.data.frombytes(imgFrame.getCvFrame())
         return msg
-    #
-    #
-    #
+
     # def TfMessage(self,
     #               imgFrame: dai.ImgFrame,
     #               translation: Tuple[float, float, float] = (0., 0., 0.),
@@ -137,3 +138,20 @@ class DepthAi2Ros2:
     #
     #     xyz = np.stack([x_coord, y_coord], axis=-1)
     #     self.xyz[str(height)] = np.pad(xyz, ((0, 0), (0, 0), (0, 1)), "constant", constant_values=1.0)
+    def Imu(self, dai_msg):
+        dai_msg: dai.IMUData
+        for packet in dai_msg.packets:
+            msg = Imu(
+                orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+                orientation_covariance=np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+                angular_velocity=Vector3(x=0.0, y=0.0, z=0.0),
+                angular_velocity_covariance=np.zeros(9),
+                linear_acceleration=Vector3(x=0.0,y=0.0, z=0.0),
+                linear_acceleration_covariance=np.zeros(9)
+            )
+            report = packet.acceleroMeter or packet.gyroscope or packet.magneticField or packet.rotationVector
+            self.set_header(msg, report)
+            self.imu_interpolation.Imu(msg, packet)
+            # TODO: publish from here directly, so single IMUData can result in more Imu packets?
+            return msg
+

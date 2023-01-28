@@ -109,20 +109,19 @@ class RosStreamConfig(BaseConfig):
             xouts.append(xoutbase)
 
         envs = os.environ
-        # if 'ROS_VERSION' not in envs:
-        #     raise Exception('ROS not found! Please install or source the ROS you would like to use.')
-        #
+        if 'ROS_VERSION' not in envs:
+            raise Exception('ROS not found! Please install or source the ROS you would like to use.')
+
         version = envs['ROS_VERSION']
-        print('rosversion', version)
-        # if version == '1':
-        #     from depthai_sdk.integrations.ros.ros1_streaming import Ros1Streaming
-        #     self.ros = Ros1Streaming()
-        # elif version == '2':
-        from depthai_sdk.integrations.ros.ros2_streaming import Ros2Streaming
-        self.ros = Ros2Streaming()
-        # else:
-        #     raise Exception(f"ROS version '{version}' not recognized! Should be either '1' or '2'")
-        #
+        if version == '1':
+            from depthai_sdk.integrations.ros.ros1_streaming import Ros1Streaming
+            self.ros = Ros1Streaming()
+        elif version == '2':
+            from depthai_sdk.integrations.ros.ros2_streaming import Ros2Streaming
+            self.ros = Ros2Streaming()
+        else:
+            raise Exception(f"ROS version '{version}' not recognized! Should be either '1' or '2'")
+
         self.ros.update(device, xouts)
         return [self]
 
