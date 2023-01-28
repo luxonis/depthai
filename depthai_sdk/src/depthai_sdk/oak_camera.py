@@ -476,12 +476,10 @@ class OakCamera:
             output = output.out.main
 
         visualizer_enabled = visualizer is not None
-        config = None
-        if visualizer:
+        if visualizer_enabled:
             config = visualizer.config
-
-        visualizer = copy.deepcopy(visualizer) or Visualizer()
-        visualizer.config = config if config else visualizer.config
+            visualizer = copy.deepcopy(visualizer) or Visualizer()
+            visualizer.config = config if config else visualizer.config
 
         self._out_templates.append(OutputConfig(output, callback, visualizer, visualizer_enabled, record_path))
         return visualizer
