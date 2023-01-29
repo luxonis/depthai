@@ -31,4 +31,4 @@ class DetectionTrigger(Trigger):
             label_str = self.labels[det.label]
             if dets_of_interest.get(label_str) is not None:
                 dets_of_interest[label_str] += 1
-        return list(dets_of_interest.values()) >= list(self.min_detections.values())
+        return all(a >= b for a, b in zip(list(dets_of_interest.values()), list(self.min_detections.values())))
