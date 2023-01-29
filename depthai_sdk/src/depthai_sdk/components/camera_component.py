@@ -3,8 +3,10 @@ from typing import Dict
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket
-from depthai_sdk.oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
-from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
+from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
+from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.replay import Replay
 
 

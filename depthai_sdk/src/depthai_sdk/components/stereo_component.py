@@ -6,8 +6,11 @@ import depthai as dai
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_cam_socket, parse_median_filter, parse_encode
-from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth, XoutMjpeg, XoutH26x
-from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
+from depthai_sdk.oak_outputs.xout.xout_disparity import XoutDisparity
+from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
+from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
+from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
 

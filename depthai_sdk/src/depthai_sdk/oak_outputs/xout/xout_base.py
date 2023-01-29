@@ -1,3 +1,4 @@
+import warnings
 from abc import ABC, abstractmethod
 from queue import Empty, Queue
 from typing import List, Callable, Optional
@@ -88,7 +89,10 @@ class XoutBase(ABC):
                     except AttributeError:
                         pass  # Not all packets have frame attribute
 
-                    self.visualize(packet)
+                    try:
+                        self.visualize(packet)
+                    except AttributeError:
+                        warnings.warn('OpenCV may not be installed, cannot visualize frames')
                 else:
                     # User defined callback
                     self.callback(packet)

@@ -3,7 +3,11 @@ from enum import IntEnum
 from types import SimpleNamespace
 from typing import Tuple, Union, List, Any, Dict
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import distinctipy
 import numpy as np
@@ -33,15 +37,18 @@ class FramePosition(IntEnum):
     BottomRight = 22
 
 
-default_color_map = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_TURBO)
-default_color_map[0] = [0, 0, 0]
+if cv2 is not None:
+    default_color_map = cv2.applyColorMap(np.arange(256, dtype=np.uint8), cv2.COLORMAP_TURBO)
+    default_color_map[0] = [0, 0, 0]
+else:
+    default_color_map = None
 
 
 class VisualizerHelper:
     bg_color = (0, 0, 0)
     front_color = (255, 255, 255)
-    text_type = cv2.FONT_HERSHEY_SIMPLEX
-    line_type = cv2.LINE_AA
+    text_type = 0  # cv2.FONT_HERSHEY_SIMPLEX
+    line_type = 16  # cv2.LINE_AA
 
     @classmethod
     def putText(cls,
@@ -127,7 +134,7 @@ def rectangle(src,
               color: Tuple[int, int, int],
               thickness=-1,
               radius=0.1,
-              line_type=cv2.LINE_AA,
+              line_type=16,  # cv2.LINE_AA
               alpha=0.15):
     """
     Draw the rectangle (bounding box) on the frame.
@@ -373,7 +380,7 @@ def calc_disp_multiplier(device: dai.Device, size: Tuple[int, int]) -> float:
     return baseline * focal_length
 
 
-def hex_to_bgr(hex: str) -> Tuple[int, int, int]:
+def hex_to_bgr(hex: str) -> Tuple[int, ...]:
     """
     "#ff1f00" (red) => (0, 31, 255)
     """

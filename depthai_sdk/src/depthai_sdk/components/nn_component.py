@@ -13,9 +13,11 @@ from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
-from depthai_sdk.oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker, \
-    XoutNnH26x, XoutNnMjpeg
-from depthai_sdk.oak_outputs.xout_base import StreamXout, XoutBase
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_nn import XoutTwoStage, XoutNnResults, XoutSpatialBbMappings
+from depthai_sdk.oak_outputs.xout.xout_nn_encoded import XoutNnMjpeg, XoutNnH26x
+from depthai_sdk.oak_outputs.xout.xout_tracker import XoutTracker
 from depthai_sdk.replay import Replay
 
 

@@ -2,7 +2,10 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Tuple
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 
 class TextPosition(IntEnum):
@@ -46,7 +49,7 @@ class OutputConfig:
 @dataclass
 class StereoConfig:
     colorize: StereoColor = StereoColor.RGB
-    colormap: int = cv2.COLORMAP_JET
+    colormap: int = 2  # cv2.COLORMAP_JET
     wls_filter: bool = False
     wls_lambda: float = 8000
     wls_sigma: float = 1.5
@@ -70,7 +73,7 @@ class DetectionConfig:
 @dataclass
 class TextConfig:
     """Configuration for drawing labels."""
-    font_face: int = cv2.FONT_HERSHEY_SIMPLEX
+    font_face: int = 0  # cv2.FONT_HERSHEY_SIMPLEX
     font_color: Tuple[int, int, int] = (255, 255, 255)
     font_transparency: float = 0.5
     font_scale: float = 1.0
@@ -80,7 +83,7 @@ class TextConfig:
     bg_transparency: float = 0.5
     bg_color: Tuple[int, int, int] = (0, 0, 0)
 
-    line_type: int = cv2.LINE_AA
+    line_type: int = 16  # cv2.LINE_AA
 
     auto_scale: bool = True
 
@@ -93,7 +96,7 @@ class TrackingConfig:
     line_thickness: int = 1
     fading_tails: bool = False
     line_color: Tuple[int, int, int] = (255, 255, 255)
-    line_type: int = cv2.LINE_AA
+    line_type: int = 16  # cv2.LINE_AA
     bg_color: Tuple[int, int, int] = (0, 0, 0)
 
 
@@ -108,7 +111,7 @@ class CircleConfig:
     """Configuration for drawing circles."""
     thickness: int = 1
     color: Tuple[int, int, int] = (255, 255, 255)
-    line_type: int = cv2.LINE_AA
+    line_type: int = 16  # cv2.LINE_AA
 
 
 @dataclass

@@ -3,8 +3,8 @@ from typing import List
 import depthai as dai
 
 from depthai_sdk.components.component import Component, XoutBase
-from depthai_sdk.oak_outputs.xout import XoutIMU
-from depthai_sdk.oak_outputs.xout_base import StreamXout
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
+from depthai_sdk.oak_outputs.xout.xout_imu import XoutIMU
 
 
 class IMUComponent(Component):

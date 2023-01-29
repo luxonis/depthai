@@ -1,7 +1,12 @@
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Optional
 
 import depthai as dai
 import numpy as np
+
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 
 class _Detection:
@@ -39,9 +44,13 @@ class FramePacket:
 
     name: str  # ImgFrame stream name
     imgFrame: dai.ImgFrame  # Original depthai message
-    frame: np.ndarray  # cv2 frame for visualization
+    frame: Optional[np.ndarray]  # cv2 frame for visualization
 
-    def __init__(self, name: str, img_frame: dai.ImgFrame, frame: np.ndarray, visualizer: 'Visualizer' = None):
+    def __init__(self,
+                 name: str,
+                 img_frame: dai.ImgFrame,
+                 frame: Optional[np.ndarray],
+                 visualizer: 'Visualizer' = None):
         self.name = name
         self.imgFrame = img_frame
         self.frame = frame
@@ -56,7 +65,10 @@ class DepthPacket(FramePacket):
                  disparity_frame: dai.ImgFrame,
                  mono_frame: dai.ImgFrame,
                  visualizer: 'Visualizer' = None):
-        super().__init__(name, disparity_frame, disparity_frame.getCvFrame(), visualizer)
+        super().__init__(name=name,
+                         img_frame=disparity_frame,
+                         frame=disparity_frame.getCvFrame() if cv2 else None,
+                         visualizer=visualizer)
         self.mono_frame = mono_frame
 
 
@@ -66,9 +78,15 @@ class SpatialBbMappingPacket(FramePacket):
     """
     spatials: dai.SpatialImgDetections
 
-    def __init__(self, name: str, img_frame: dai.ImgFrame, spatials: dai.SpatialImgDetections,
+    def __init__(self,
+                 name: str,
+                 img_frame: dai.ImgFrame,
+                 spatials: dai.SpatialImgDetections,
                  visualizer: 'Visualizer' = None):
-        super().__init__(name, img_frame, img_frame.getFrame(), visualizer)
+        super().__init__(name=name,
+                         img_frame=img_frame,
+                         frame=img_frame.getFrame() if cv2 else None,
+                         visualizer=visualizer)
         self.spatials = spatials
 
 
@@ -82,7 +100,10 @@ class DetectionPacket(FramePacket):
                  img_frame: dai.ImgFrame,
                  img_detections: Union[dai.ImgDetections, dai.SpatialImgDetections],
                  visualizer: 'Visualizer' = None):
-        super().__init__(name, img_frame, img_frame.getCvFrame(), visualizer)
+        super().__init__(name=name,
+                         img_frame=img_frame,
+                         frame=img_frame.getCvFrame() if cv2 else None,
+                         visualizer=visualizer)
         self.img_detections = img_detections
         self.detections = []
 
@@ -109,7 +130,10 @@ class TrackerPacket(FramePacket):
                  img_frame: dai.ImgFrame,
                  tracklets: dai.Tracklets,
                  visualizer: 'Visualizer' = None):
-        super().__init__(name, img_frame, img_frame.getCvFrame(), visualizer)
+        super().__init__(name=name,
+                         img_frame=img_frame,
+                         frame=img_frame.getCvFrame() if cv2 else None,
+                         visualizer=visualizer)
         self.detections: List[_TrackingDetection] = []
         self.daiTracklets = tracklets
 
@@ -144,8 +168,11 @@ class TwoStagePacket(DetectionPacket):
                  nn_data: List[dai.NNData],
                  labels: List[int],
                  visualizer: 'Visualizer' = None):
-        super().__init__(name, img_frame, img_detections, visualizer)
-        self.frame = self.imgFrame.getCvFrame()
+        super().__init__(name=name,
+                         img_frame=img_frame,
+                         img_detections=img_detections,
+                         visualizer=visualizer)
+        self.frame = self.imgFrame.getCvFrame() if cv2 else None
         self.nnData = nn_data
         self.labels = labels
         self._cntr = 0

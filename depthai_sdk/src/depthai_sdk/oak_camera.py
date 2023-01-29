@@ -4,7 +4,13 @@ import warnings
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, Callable
 
-import cv2
+from depthai_sdk.visualize.visualizer import Visualizer
+
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 
 from depthai_sdk.args_parser import ArgsParser
@@ -19,7 +25,6 @@ from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
 from depthai_sdk.utils import configPipeline
-from depthai_sdk.visualize import Visualizer
 
 
 class UsbWarning(UserWarning):
@@ -313,10 +318,13 @@ class OakCamera:
 
         Returns: key pressed from cv2.waitKey, or None if
         """
-        key = cv2.waitKey(1)
-        if key == ord('q'):
-            self._stop = True
-            return key
+        if cv2:
+            key = cv2.waitKey(1)
+            if key == ord('q'):
+                self._stop = True
+                return key
+        else:
+            key = -1
 
         # TODO: check if components have controls enabled and check whether key == `control`
 
