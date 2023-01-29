@@ -5,8 +5,7 @@ from setuptools import setup
 with open('requirements.txt') as f:
     requirements = f.readlines()
 
-install_requires=[requirement for requirement in requirements if '--' not in requirement]
-
+install_requires = [requirement for requirement in requirements if '--' not in requirement]
 
 setup(
     name='depthai-sdk',
@@ -31,7 +30,15 @@ setup(
         "replay": ['mcap>=0.0.10',
                    'mcap-ros1-support==0.0.8',
                    'rosbags==0.9.11'],
-        "record": ['av']
+        "record": ['av'],
+        "minimal": ['numpy',
+                    'blobconverter',
+                    'depthai',
+                    'PyTurboJPEG',
+                    'marshmallow',
+                    'distinctipy',
+                    'xmltodict',
+                    ]
     },
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
