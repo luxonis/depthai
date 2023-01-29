@@ -1,15 +1,33 @@
-from abc import ABC, abstractmethod
-from typing import Callable, Union
+from typing import Callable, Union, List, Dict, Optional
 
-from depthai_sdk import Component
+from depthai_sdk import Component, FramePacket
 
 
-class Action(ABC):
-    def __init__(self, input: Union[Component, Callable]):  # extend to List[Callable]
-        if isinstance(input, Component):
-            input = input.out.main
-        self.input = input
+class Action:
+    def __init__(self,
+                 inputs: Optional[Union[Component, Callable, List[Union[Component, Callable]]]] = None,
+                 action: Optional[Callable] = None):
+        if inputs:
+            if isinstance(inputs, Component):
+                inputs = inputs.out.main
 
-    @abstractmethod
-    def action(self):
-        raise NotImplementedError()
+            if isinstance(inputs, Callable):
+                inputs = [inputs]
+
+            for i in range(len(inputs)):
+                if isinstance(inputs[i], Component):
+                    inputs[i] = inputs[i].out.main
+
+        self.inputs = inputs
+        self.stream_names: List[str] = []
+        self.action = action
+
+    def after_trigger(self):
+        if self.action:
+            self.action()
+
+    def process_packets(self, packets: Dict[str, FramePacket]):
+        pass
+
+    def run_thread(self):
+        pass

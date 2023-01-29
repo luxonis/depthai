@@ -16,6 +16,7 @@ class Trigger(ABC):
         if cooldown >= 0:
             self.cooldown = timedelta(seconds=cooldown)
         else:
-            raise ValueError("Cooldown time must be a non-negative integer or a non-negative timedelta object")
+            raise ValueError("Cooldown time must be a non-negative integer or "
+                             "a timedelta object representing non-negative time difference")
         self.cooldown = timedelta(seconds=cooldown)
 

@@ -7,7 +7,7 @@ import depthai as dai
 from depthai_sdk import FramePacket
 from depthai_sdk.trigger_action.actions.abstract_action import Action
 from depthai_sdk.trigger_action.actions.record_action import RecordAction
-from depthai_sdk.trigger_action.controllers import TriggerActionController, RecordController
+from depthai_sdk.trigger_action.trigger_action import TriggerAction
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout import XoutFrames, XoutDepth
 from depthai_sdk.oak_outputs.xout_base import XoutBase
@@ -130,31 +130,30 @@ class SyncConfig(BaseConfig, SequenceNumSync):
         return xouts
 
 
-class TriggerActionConfig(BaseConfig):  # in future can extend SequenceNumSync
+class TriggerActionConfig(BaseConfig):
     def __init__(self, trigger: Trigger, action: Action):
         self.trigger = trigger
         self.action = action
 
     def setup(self, pipeline: dai.Pipeline, device, _) -> List[XoutBase]:
-        if isinstance(self.action, RecordAction):
-            controller = RecordController(self.trigger, self.action)
-        else:  # TODO
-            controller = TriggerActionController(self.trigger)
+        controller = TriggerAction(self.trigger, self.action)
 
         trigger_xout: XoutBase = self.trigger.input(pipeline, device)
-        action_xout: XoutBase = self.action.input(pipeline, device)
-
-        # seems like necessary thing to do, if I want to work with packets (not msgs) from this xout,
-        # and if I want to check for trigger inside actuator's thread, not inside check_queue
         trigger_xout.setup_base(controller.new_packet_trigger)
-        action_xout.setup_base(controller.new_packet_action)
-
         # without setting visualizer up, XoutNnResults.on_callback() won't work
         trigger_xout.setup_visualize(visualizer=Visualizer(), name=trigger_xout.name, visualizer_enabled=False)
 
-        controller.start(device, action_xout)  # device is not used
+        action_xouts = []
+        if self.action.inputs:
+            for output in self.action.inputs:
+                xout: XoutBase = output(pipeline, device)
+                xout.setup_base(controller.new_packet_action)
+                action_xouts.append(xout)
 
-        # should be returned, if I want to work with its packets after
-        # (not msgs, like in Record class, that's why RecordConfig returns just self.rec)
-        return [trigger_xout, action_xout]
+        if isinstance(self.action, RecordAction):
+            self.action.setup(device, action_xouts)  # creates writers for VideoRecorder()
+
+        self.action.run_thread()  # if specified any
+
+        return [trigger_xout] + action_xouts
 

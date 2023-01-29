@@ -37,22 +37,29 @@ class VideoRecorder(Recorder):
             self.path.mkdir(parents=True, exist_ok=True)
 
         for xout in xouts:
-            name = xout.name
+            # for example, 'color_bitstream' (encoded) or 'color_video' (unencoded),
+            # if component was created with name='color'
+            wr_name = xout.frames.name
+            filename = xout.name  # for example, 'color' --> file is color.mp4 (encoded) or color.avi (unencoded)
             stream = OakStream(xout)
             fourcc = stream.fourcc()  # TODO add default fourcc? stream.fourcc() can be None.
             if stream.is_raw():
                 from .video_writers.video_writer import VideoWriter
-                self._writers[name] = VideoWriter(self.path, name, fourcc, xout.fps)
+                self._writers[wr_name] = VideoWriter(self.path, filename, fourcc, xout.fps)
             else:
                 try:
                     from .video_writers.av_writer import AvWriter
-                    self._writers[name] = AvWriter(self.path, name, fourcc, xout.fps)
+                    self._writers[wr_name] = AvWriter(self.path, filename, fourcc, xout.fps)
                 except Exception as e:
                     # TODO here can be other errors, not only import error
                     print('Exception while creating AvWriter: ', e)
                     print('Falling back to FileWriter, saving uncontainerized encoded streams.')
                     from .video_writers.file_writer import FileWriter
-                    self._writers[name] = FileWriter(self.path, name, fourcc)
+                    self._writers[wr_name] = FileWriter(self.path, filename, fourcc)
+
+    def create_files_for_buffer(self, subfolder: str, buf_name: str):
+        for _, writer in self._writers.items():
+            writer.create_file_for_buffer(subfolder, buf_name)
 
     def create_file_for_buffer(self, wr_name: str, subfolder: str, buf_name: str):  # get frames' properties for the file from buf_name
         self._writers[wr_name].create_file_for_buffer(subfolder, buf_name)
@@ -60,9 +67,14 @@ class VideoRecorder(Recorder):
     def create_file(self, wr_name: str, subfolder: str, frame: Union[np.ndarray, dai.ImgFrame]):
         self._writers[wr_name].create_file(subfolder, frame)
 
-    def init_buffers(self, wr_name: str, buffers: Dict[str, int]):
-        for name, max_seconds in buffers.items():
-            self._writers[wr_name].init_buffer(name, max_seconds)
+    def init_buffers(self, buffers: Dict[str, int]):
+        for _, writer in self._writers.items():
+            for name, max_seconds in buffers.items():
+                writer.init_buffer(name, max_seconds)
+
+    def add_to_buffers(self, buf_name: str, frames: Dict[str, Union[np.ndarray, dai.ImgFrame]]):
+        for name, writer in self._writers.items():
+            writer.add_to_buffer(buf_name, frames[name])
 
     def add_to_buffer(self, wr_name: str, buf_name: str, frame: Union[np.ndarray, dai.ImgFrame]):
         self._writers[wr_name].add_to_buffer(buf_name, frame)
@@ -79,8 +91,9 @@ class VideoRecorder(Recorder):
     def write(self, name: str, frame: Union[np.ndarray, dai.ImgFrame]):
         self._writers[name].write(frame)
 
-    def close_writer(self, name: str):
-        self._writers[name].close()
+    def close_files(self):
+        for _, writer in self._writers.items():
+            writer.close()
 
     def close(self):
         if self._closed:
