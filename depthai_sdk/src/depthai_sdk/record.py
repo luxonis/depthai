@@ -75,15 +75,7 @@ class Record(XoutSeqSync):
             raise ValueError(f"Recording type '{self.record_type}' isn't supported!")
 
     def package(self, msgs: Dict):
-        # Here we get sequence-num synced messages:)
-        mapped = dict()
-        for name, msg in msgs.items():
-            if name in self.name_mapping:  # Map to friendly name
-                mapped[self.name_mapping[name]] = msg
-            else:
-                mapped[name] = msg
-
-        self.frame_q.put(mapped)
+        self.frame_q.put(msgs)
 
     def visualize(self, packet: FramePacket) -> None:
         pass  # No need.
@@ -101,9 +93,6 @@ class Record(XoutSeqSync):
         if self.record_type == RecordType.VIDEO:
             self._streams = [out.frames.name for out in xouts]  # required by XoutSeqSync
             self.stream_num = len(xouts)
-            self.name_mapping = dict()
-            for xout in xouts:
-                self.name_mapping[xout.frames.name] = xout.name
         else:  # For MCAP/Ros bags we don't need msg syncing
             self.new_msg = self.no_sync
 
