@@ -110,10 +110,11 @@ class RosStreamConfig(BaseConfig):
 
         envs = os.environ
         if 'ROS_VERSION' not in envs:
-            raise Exception('ROS not found! Please install or source the ROS you would like to use.')
+            raise Exception('ROS installation not found! Please install or source the ROS you would like to use.')
 
         version = envs['ROS_VERSION']
         if version == '1':
+            raise Exception('ROS1 publsihing is not yet supported!')
             from depthai_sdk.integrations.ros.ros1_streaming import Ros1Streaming
             self.ros = Ros1Streaming()
         elif version == '2':
