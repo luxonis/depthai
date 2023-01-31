@@ -139,6 +139,7 @@ class DepthAICamera():
     def __init__(self):
         global update_res
         self.pipeline = dai.Pipeline()
+        self.eepromUnionData = {}
         self.start_time = datetime.now()
 
         if 'FFC' in test_type:
@@ -341,8 +342,6 @@ class DepthAICamera():
 
         self.device_name = self.device.getDeviceName()
 
-        self.eepromUnionData = {}
-    
     def update_eeprom_uinion_data_log(self):
         calibHandler = self.device.readCalibrationOrDefault()
         self.eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
