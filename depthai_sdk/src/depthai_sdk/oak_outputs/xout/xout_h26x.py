@@ -6,6 +6,11 @@ from depthai_sdk.classes import FramePacket
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 
+try:
+    import av
+except ImportError:
+    av = None
+
 
 class XoutH26x(XoutFrames):
     def __init__(self,
@@ -21,11 +26,12 @@ class XoutH26x(XoutFrames):
         self.fps = fps
         self._frame_shape = frame_shape
         fourcc = 'hevc' if profile == dai.VideoEncoderProperties.Profile.H265_MAIN else 'h264'
-
-        import av
-        self.codec = av.CodecContext.create(fourcc, "r")
+        self.codec = av.CodecContext.create(fourcc, "r") if av else None
 
     def decode_frame(self, packet: FramePacket):
+        if not self.codec:
+            raise ImportError('av is not installed. Please install it with `pip install av`')
+
         enc_packets = self.codec.parse(packet.imgFrame.getData())
         if len(enc_packets) == 0:
             return None
