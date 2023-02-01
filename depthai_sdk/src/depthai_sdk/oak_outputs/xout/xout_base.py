@@ -89,10 +89,11 @@ class XoutBase(ABC):
                     except AttributeError:
                         pass  # Not all packets have frame attribute
 
-                    try:
-                        self.visualize(packet)
-                    except AttributeError:
-                        warnings.warn('OpenCV may not be installed, cannot visualize frames')
+                    if self._visualizer:
+                        try:
+                            self.visualize(packet)
+                        except AttributeError:
+                            warnings.warn('OpenCV (or another libraries) may not be installed, cannot visualize frames')
                 else:
                     # User defined callback
                     self.callback(packet)
