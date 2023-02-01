@@ -3,7 +3,10 @@ import warnings
 from pathlib import Path
 from typing import Callable, Union, List, Dict
 
-import blobconverter
+try:
+    import blobconverter
+except ImportError:
+    blobconverter = None
 
 from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.components.camera_component import CameraComponent
