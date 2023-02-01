@@ -75,12 +75,13 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         super().setup_visualize(visualizer, visualizer_enabled, name)
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
-        if self._visualizer.frame_shape is None:
+        if self._visualizer and self._visualizer.frame_shape is None:
             shape = packet.imgFrame.getFrame().shape
             if len(shape) == 1:
                 self._visualizer.frame_shape = self._frame_shape
             else:
                 self._visualizer.frame_shape = shape[1::-1]
+                self._frame_shape = shape[1::-1]
 
         # Add detections to packet
         if isinstance(packet.img_detections, dai.ImgDetections) \
@@ -92,27 +93,31 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
                 d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
                 bbox = self.normalizer.normalize(
-                    frame=np.zeros(self._visualizer.frame_shape, dtype=bool),
+                    frame=np.zeros(self._frame_shape, dtype=bool),
                     bbox=(detection.xmin, detection.ymin, detection.xmax, detection.ymax)
                 )
                 d.top_left = (int(bbox[0]), int(bbox[1]))
                 d.bottom_right = (int(bbox[2]), int(bbox[3]))
                 packet.detections.append(d)
 
-            # Add detections to visualizer
-            self._visualizer.add_detections(
-                packet.img_detections.detections,
-                self.normalizer,
-                self.labels,
-                is_spatial=packet._is_spatial_detection()
-            )
+            if self._visualizer:
+                # Add detections to visualizer
+                self._visualizer.add_detections(
+                    packet.img_detections.detections,
+                    self.normalizer,
+                    self.labels,
+                    is_spatial=packet._is_spatial_detection()
+                )
         elif isinstance(packet.img_detections, ImgLandmarks):
+            if not self._visualizer:
+                return
+
             all_landmarks = packet.img_detections.landmarks
             all_landmarks_indices = packet.img_detections.landmarks_indices
             colors = packet.img_detections.colors
             for landmarks, indices in zip(all_landmarks, all_landmarks_indices):
                 for i, landmark in enumerate(landmarks):
-                    l = self.normalizer.normalize(frame=np.zeros(self._visualizer.frame_shape, dtype=bool),
+                    l = self.normalizer.normalize(frame=np.zeros(self._frame_shape, dtype=bool),
                                                   bbox=landmark)
                     idx = indices[i]
 
@@ -120,6 +125,9 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                     self._visualizer.add_circle(coords=tuple(l[0]), radius=8, color=colors[idx], thickness=-1)
                     self._visualizer.add_circle(coords=tuple(l[1]), radius=8, color=colors[idx], thickness=-1)
         elif isinstance(packet.img_detections, SemanticSegmentation):
+            if not self._visualizer:
+                return
+
             # Generate colormap if not already generated
             if self.segmentation_colormap is None:
                 n_classes = len(self.labels) if self.labels else 8
@@ -141,7 +149,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 resize_bbox = bbox[0] * input_w, bbox[1] * input_h, bbox[2] * input_w, bbox[3] * input_h
                 resize_bbox = np.int0(resize_bbox)
             else:
-                resize_bbox = self.normalizer.normalize(frame=np.zeros(self._visualizer.frame_shape, dtype=bool),
+                resize_bbox = self.normalizer.normalize(frame=np.zeros(self._frame_shape, dtype=bool),
                                                         bbox=bbox or (0., 0., 1., 1.))
 
             x1, y1, x2, y2 = resize_bbox

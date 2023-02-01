@@ -50,7 +50,6 @@ class XoutFrames(XoutBase):
         """
         Called from main thread if visualizer is not None.
         """
-
         # Frame shape may be 1D, that means it's an encoded frame
         if self._visualizer.frame_shape is None or np.array(self._visualizer.frame_shape).ndim == 1:
             if self._frame_shape is not None:
@@ -93,7 +92,6 @@ class XoutFrames(XoutBase):
 
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
-
 
         packet = FramePacket(name,
                              msg,
