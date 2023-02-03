@@ -39,6 +39,7 @@ Here are a few demos that have been developed with DepthAI SDK:
 #. `people-tracker <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker>`__,
 #. `mask-detection <https://github.com/luxonis/depthai-experiments/tree/master/gen2-mask-detection>`__,
 #. `yolo <https://github.com/luxonis/depthai-experiments/tree/master/gen2-yolo>`__.
+#. `Roboflow <https://blog.roboflow.com/deploy-roboflow-model-luxonis-depth-sdk>`__.
 
 
 Preview color and mono cameras
@@ -58,6 +59,12 @@ Run face-detection-retail-0004 on left camera
 *********************************************
 
 .. literalinclude:: ../../examples/NNComponent/face_detection_left.py
+   :language: python
+
+Deploy models from Roboflow and Roboflow Universe with Depth SDK
+*********************************************
+
+.. literalinclude:: ../../examples/NNComponent/roboflow_integration.py
    :language: python
 
 
