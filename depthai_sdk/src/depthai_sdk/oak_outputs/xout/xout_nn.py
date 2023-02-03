@@ -80,8 +80,8 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             if len(shape) == 1:
                 self._visualizer.frame_shape = self._frame_shape
             else:
-                self._visualizer.frame_shape = shape[1::-1]
-                self._frame_shape = shape[1::-1]
+                self._visualizer.frame_shape = shape[1:]
+                self._frame_shape = shape[1:]
 
         # Add detections to packet
         if isinstance(packet.img_detections, dai.ImgDetections) \
