@@ -957,6 +957,11 @@ class StereoCalibration(object):
             marker_corners_r, ids_r, _, _ = cv2.aruco.refineDetectedMarkers(image_data_pair[1], self.board,
                                                                             marker_corners_r, ids_r,
                                                                             rejectedCorners=rejectedImgPoints)
+
+            if ids_l is None or ids_r is None:
+                print(f'No markers found in the undistorted image pair {images_left[i]} and {images_right[i]}')
+                continue
+
             print(f'Marekrs length r is {len(marker_corners_r)}')
             print(f'Marekrs length l is {len(marker_corners_l)}')
             res2_l = cv2.aruco.interpolateCornersCharuco(
