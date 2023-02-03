@@ -2,7 +2,9 @@
 
 import cv2
 
-from depthai_sdk import OakCamera, TextPosition, DetectionPacket
+from depthai_sdk import OakCamera
+from depthai_sdk.classes import DetectionPacket
+from depthai_sdk.visualize.configs import TextPosition
 
 
 def callback(packet: DetectionPacket):

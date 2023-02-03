@@ -1,7 +1,8 @@
 import cv2
 
-from depthai_sdk import OakCamera, VisualizerHelper, DetectionPacket
-from depthai_sdk.visualize.visualizer_helper import FramePosition
+from depthai_sdk import OakCamera
+from depthai_sdk.classes import DetectionPacket
+from depthai_sdk.visualize.visualizer_helper import FramePosition, VisualizerHelper
 
 
 def callback(packet: DetectionPacket):
