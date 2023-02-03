@@ -3,7 +3,8 @@ import cv2
 import numpy as np
 from depthai import NNData
 
-from depthai_sdk import OakCamera, Detections, DetectionPacket
+from depthai_sdk import OakCamera
+from depthai_sdk.classes import Detections, DetectionPacket
 
 
 def decode(nn_data: NNData) -> Detections:

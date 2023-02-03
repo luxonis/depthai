@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
 
-from depthai_sdk import OakCamera, TextPosition, TwoStagePacket
+from depthai_sdk import OakCamera
+from depthai_sdk.classes import TwoStagePacket
+from depthai_sdk.visualize.configs import TextPosition
 
 emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 

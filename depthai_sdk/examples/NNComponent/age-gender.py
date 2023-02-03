@@ -1,12 +1,14 @@
 import cv2
 import numpy as np
 
-from depthai_sdk import OakCamera, TextPosition, TwoStagePacket
+from depthai_sdk import OakCamera
+from depthai_sdk.classes import TwoStagePacket
+from depthai_sdk.visualize.configs import TextPosition
 
 
 def callback(packet: TwoStagePacket):
     visualizer = packet.visualizer
-
+    print(visualizer.serialize())
     for det, rec in zip(packet.detections, packet.nnData):
         age = int(float(np.squeeze(np.array(rec.getLayerFp16('age_conv3')))) * 100)
         gender = np.squeeze(np.array(rec.getLayerFp16('prob')))
