@@ -8,6 +8,9 @@ Usage
 
 .. code-block:: python
 
+    from depthai_sdk import OakCamera
+    from depthai_sdk.classes import IMUPacket
+
     with OakCamera() as oak:
         imu = oak.create_imu()
         imu.config_imu(report_rate=400, batch_report_threshold=5)
@@ -26,6 +29,6 @@ Component outputs
 Reference
 #########
 
-.. autoclass:: depthai_sdk.IMUComponent
+.. autoclass:: depthai_sdk.components.IMUComponent
     :members:
     :undoc-members:
