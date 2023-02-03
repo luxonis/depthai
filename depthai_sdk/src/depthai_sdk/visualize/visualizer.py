@@ -4,7 +4,11 @@ from dataclasses import replace
 from enum import Enum
 from typing import List, Tuple, Optional, Union, Any, Dict
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection

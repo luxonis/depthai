@@ -3,7 +3,10 @@ import warnings
 from pathlib import Path
 from typing import Callable, Union, List, Dict
 
-import blobconverter
+try:
+    import blobconverter
+except ImportError:
+    blobconverter = None
 
 from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.components.camera_component import CameraComponent
@@ -13,9 +16,11 @@ from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
-from depthai_sdk.oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker, \
-    XoutNnH26x, XoutNnMjpeg
-from depthai_sdk.oak_outputs.xout_base import StreamXout, XoutBase
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_nn import XoutTwoStage, XoutNnResults, XoutSpatialBbMappings
+from depthai_sdk.oak_outputs.xout.xout_nn_encoded import XoutNnMjpeg, XoutNnH26x
+from depthai_sdk.oak_outputs.xout.xout_tracker import XoutTracker
 from depthai_sdk.replay import Replay
 
 
@@ -106,7 +111,7 @@ class NNComponent(Component):
         self.node = pipeline.create(self._node_type)
         self._update_config()
 
-    def _forced_openvino_version(self) -> dai.OpenVINO.Version:
+    def forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
         Checks whether the component forces a specific OpenVINO version. This function is called after
         Camera has been configured and right before we connect to the OAK camera.
@@ -114,7 +119,7 @@ class NNComponent(Component):
         """
         return self._forced_version
 
-    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._roboflow:
             path = self._roboflow.device_update(device)
             self._parse_config(path)
@@ -193,7 +198,7 @@ class NNComponent(Component):
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
                 self._spatial = StereoComponent(pipeline, args=self._args, replay=self._replay)
-                self._spatial._update_device_info(pipeline, device, version)
+                self._spatial.on_init(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
                 self._spatial.config_stereo(align=self._input._source)

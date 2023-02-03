@@ -3,8 +3,10 @@ from typing import Dict
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket
-from depthai_sdk.oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
-from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
+from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
+from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.replay import Replay
 
 
@@ -20,8 +22,7 @@ class CameraComponent(Component):
                  rotation: Optional[int] = None,
                  replay: Optional[Replay] = None,
                  name: Optional[str] = None,
-                 args: Dict = None,
-                 ):
+                 args: Dict = None):
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
         recording is passed during OakCamera initialization. Mocking the camera will send frames from the host to the
@@ -46,6 +47,7 @@ class CameraComponent(Component):
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
 
         # Save passed settings
+        self._pipeline = pipeline
         self._source = source
         self._replay: Replay = replay
         self._args: Dict = args
@@ -56,11 +58,11 @@ class CameraComponent(Component):
 
         self._rotation = rotation
 
-        self._create_node(pipeline, source.upper())
+        self._create_node(self._pipeline, source.upper())
 
         self.encoder = None
         if encode:
-            self.encoder = pipeline.createVideoEncoder()
+            self.encoder = self._pipeline.createVideoEncoder()
             # MJPEG by default
             self._encoder_profile = parse_encode(encode)
 
@@ -70,7 +72,7 @@ class CameraComponent(Component):
         if fps:
             self.set_fps(fps)
 
-    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self.is_replay():  # If replay, don't create camera node
             res = self._replay.getShape(self._source)
             # print('resolution', res)
@@ -104,8 +106,8 @@ class CameraComponent(Component):
                 scale = getClosestIspScale(self.node.getIspSize(), width=1300, videoEncoder=(self.encoder is not None))
                 self.node.setIspScale(*scale)
 
-            currSize = self.node.getVideoSize()
-            closest = getClosestVideoSize(*currSize)
+            curr_size = self.node.getVideoSize()
+            closest = getClosestVideoSize(*curr_size)
             self.node.setVideoSize(*closest)
             self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 

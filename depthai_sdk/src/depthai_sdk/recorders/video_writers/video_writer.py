@@ -3,7 +3,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 

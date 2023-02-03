@@ -5,8 +5,8 @@ from typing import List
 
 import depthai as dai
 
+import depthai_sdk
 import depthai_sdk.oak_outputs.xout as outputs
-from depthai_sdk.oak_outputs.xout_base import XoutBase
 
 
 class Recorder(ABC):
@@ -32,23 +32,23 @@ class OakStream:
         DEPTH = 4  # 16 bit
         IMU = 5
 
-    def __init__(self, xout: XoutBase):
-        if isinstance(xout, outputs.XoutMjpeg):
+    def __init__(self, xout: outputs.xout_base.XoutBase):
+        if isinstance(xout, depthai_sdk.oak_outputs.xout.xout_mjpeg.XoutMjpeg):
             self.type = self.StreamType.MJPEG
             self.xlink_name = xout.frames.name
-        elif isinstance(xout, outputs.XoutH26x):
+        elif isinstance(xout, outputs.xout_h26x.XoutH26x):
             self.xlink_name = xout.frames.name
             if xout.profile == dai.VideoEncoderProperties.Profile.H265_MAIN:
                 self.type = self.StreamType.H265
             else:
                 self.type = self.StreamType.H264
-        elif isinstance(xout, outputs.XoutDepth):
+        elif isinstance(xout, outputs.xout_depth.XoutDepth):
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.DEPTH  # TODO is depth raw or should it be DEPTH?
-        elif isinstance(xout, outputs.XoutDisparity):
+        elif isinstance(xout, outputs.xout_disparity.XoutDisparity):
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.RAW
-        elif isinstance(xout, outputs.XoutFrames):
+        elif isinstance(xout, depthai_sdk.oak_outputs.xout.xout_frames.XoutFrames):
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.RAW
         elif isinstance(xout, outputs.XoutIMU):

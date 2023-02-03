@@ -2,7 +2,10 @@ import os
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 from depthai_sdk.readers.abstract_reader import AbstractReader
 

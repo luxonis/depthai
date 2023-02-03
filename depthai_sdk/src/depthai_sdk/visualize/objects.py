@@ -2,7 +2,11 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Tuple, List, Union
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
@@ -318,7 +322,7 @@ class VisDetections(GenericObject):
                                        bbox=normalized_bbox,
                                        position=TextPosition.BOTTOM_RIGHT))
 
-            if not detection_config.hide_label and len(label) > 0:
+            if cv2 and not detection_config.hide_label and len(label) > 0:
                 # Place label in the bounding box
                 self.add_child(VisText(text=label.capitalize(), bbox=normalized_bbox,
                                        position=detection_config.label_position,

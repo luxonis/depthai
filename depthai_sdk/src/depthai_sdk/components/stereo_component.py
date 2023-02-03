@@ -6,8 +6,11 @@ import depthai as dai
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_cam_socket, parse_median_filter, parse_encode
-from depthai_sdk.oak_outputs.xout import XoutDisparity, XoutDepth, XoutMjpeg, XoutH26x
-from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout
+from depthai_sdk.oak_outputs.xout.xout_disparity import XoutDisparity
+from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
+from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
+from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
 
@@ -92,7 +95,7 @@ class StereoComponent(Component):
             raise ValueError('get_output_stream() accepts either CameraComponent,'
                              'dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output!')
 
-    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if not self._replay:
             # Live stream, check whether we have correct cameras
             if len(device.getCameraSensorNames()) == 1:
@@ -100,10 +103,10 @@ class StereoComponent(Component):
 
             if not self.left:
                 self.left = CameraComponent(pipeline, 'left', self._resolution, self._fps, replay=self._replay)
-                self.left._update_device_info(pipeline, device, version)
+                self.left.on_init(pipeline, device, version)
             if not self.right:
                 self.right = CameraComponent(pipeline, 'right', self._resolution, self._fps, replay=self._replay)
-                self.right._update_device_info(pipeline, device, version)
+                self.right.on_init(pipeline, device, version)
 
             if 0 < len(device.getIrDrivers()):
                 laser = self._args.get('irDotBrightness', None)
