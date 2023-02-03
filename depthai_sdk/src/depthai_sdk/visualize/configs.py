@@ -33,9 +33,9 @@ class BboxStyle(IntEnum):
 
 
 class StereoColor(IntEnum):
-    GRAY = 0
-    RGB = 1
-    RGBD = 2
+    GRAY = 1
+    RGB = 2
+    RGBD = 3
 
 
 @dataclass

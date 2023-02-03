@@ -67,16 +67,15 @@ class XoutDisparity(XoutFrames, Clickable):
             self.wls_filter.setSigmaColor(self.wls_sigma or stereo_config.wls_sigma)
             disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
-        colorize = self.colorize if self.colorize is not None else stereo_config.colorize
+        colorize = self.colorize or stereo_config.colorize
         colormap = self.colormap or stereo_config.colormap
         if colorize == StereoColor.GRAY:
             packet.frame = disparity_frame
         elif colorize == StereoColor.RGB:
-            packet.frame = cv2.applyColorMap(disparity_frame, colormap or cv2.COLORMAP_JET)
+            packet.frame = cv2.applyColorMap(disparity_frame, colormap)
         elif colorize == StereoColor.RGBD:
             packet.frame = cv2.applyColorMap(
-                (disparity_frame * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
-                colormap or cv2.COLORMAP_JET
+                (disparity_frame * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8), colormap
             )
 
         if self._visualizer.config.output.clickable:

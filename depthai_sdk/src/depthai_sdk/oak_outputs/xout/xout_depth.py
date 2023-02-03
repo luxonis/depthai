@@ -80,11 +80,11 @@ class XoutDepth(XoutFrames, Clickable):
         if colorize == StereoColor.GRAY:
             packet.frame = depth_frame_color
         elif colorize == StereoColor.RGB:
-            packet.frame = cv2.applyColorMap(depth_frame_color, colormap or cv2.COLORMAP_JET)
+            packet.frame = cv2.applyColorMap(depth_frame_color, colormap)
         elif colorize == StereoColor.RGBD:
             packet.frame = cv2.applyColorMap(
                 (depth_frame_color * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8),
-                stereo_config.colormap or cv2.COLORMAP_JET
+                stereo_config.colormap
             )
 
         if self._visualizer.config.output.clickable:
