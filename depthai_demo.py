@@ -3,6 +3,9 @@ import atexit
 import signal
 import sys
 
+from depthai_sdk.fps import FPSHandler
+from depthai_sdk.previews import Previews
+
 if sys.version_info[0] < 3:
     raise Exception("Must be using Python 3")
 import argparse
@@ -12,7 +15,6 @@ import time
 import traceback
 from functools import cmp_to_key
 from itertools import cycle
-from pathlib import Path
 import platform
 from pathlib import Path
 
@@ -51,7 +53,7 @@ from log_system_information import make_sys_report
 from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.version_check import checkRequirementsVersion
-from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, createBlankFrame
+from depthai_sdk import loadModule, getDeviceInfo, downloadYTVideo, createBlankFrame
 from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
 
@@ -870,7 +872,7 @@ def runQt():
                 else:
                     self.updateArg("monoFps", fps)
             if resolution is not None:
-                if name == "color": 
+                if name == "color":
                     res = getRgbResolution(resolution)
                     self.updateArg("rgbResolution", res)
                     # Not ideal, we need to refactor this (throw the whole SDK away)
