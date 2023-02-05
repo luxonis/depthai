@@ -286,7 +286,7 @@ class Visualizer(VisualizerHelper):
     def detections(self,
                    thickness: int = None,
                    fill_transparency: float = None,
-                   box_roundness: float = None,
+                   bbox_roundness: float = None,
                    color: Tuple[int, int, int] = None,
                    bbox_style: BboxStyle = None,
                    line_width: float = None,
@@ -299,7 +299,7 @@ class Visualizer(VisualizerHelper):
         Args:
             thickness: Thickness of the bounding box.
             fill_transparency: Transparency of the bounding box.
-            box_roundness: Roundness of the bounding box.
+            bbox_roundness: Roundness of the bounding box.
             color: Color of the bounding box.
             bbox_style: Style of the bounding box.
             line_width: Width of the bbox horizontal lines CORNERS or ROUNDED_CORNERS style is used.
