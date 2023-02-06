@@ -76,12 +76,15 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
         if self._visualizer and self._visualizer.frame_shape is None:
-            shape = packet.imgFrame.getFrame().shape
+            try:
+                shape = packet.imgFrame.getCvFrame().shape[:2]
+            except RuntimeError as e:
+                raise RuntimeError(f'Error getting frame shape - {e}')
             if len(shape) == 1:
                 self._visualizer.frame_shape = self._frame_shape
             else:
-                self._visualizer.frame_shape = shape[1:]
-                self._frame_shape = shape[1:]
+                self._visualizer.frame_shape = shape
+                self._frame_shape = shape
 
         # Add detections to packet
         if isinstance(packet.img_detections, dai.ImgDetections) \
