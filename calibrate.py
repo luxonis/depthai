@@ -953,7 +953,7 @@ class Main:
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
 
-            return status, error_text
+            return status, error_text, result_config
 
         except Exception as e:
             self.close()
@@ -1074,18 +1074,16 @@ class Main:
         #     print(e)
         #     print("Writing in except...")
         #     is_write_succesful = self.device.flashCalibration2(calibration_handler)
-
+        is_write_factory_sucessful = None
         if self.args.factoryCalibration:
             try:
                 self.device.flashFactoryCalibration(calibration_handler)
                 is_write_factory_sucessful = True
-            except RuntimeError:
-                print("flashFactoryCalibration Failed...")
+            except RuntimeError as e:
+                print(f"flashFactoryCalibration Failed..., {e}")
                 is_write_factory_sucessful = False
 
-        if is_write_succesful:
-
-
+        if is_write_succesful and is_write_factory_sucessful is True or is_write_factory_sucessful is None:
             """ eepromUnionData = {}
             calibHandler = self.device.readCalibration2()
             eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
@@ -1107,8 +1105,15 @@ class Main:
         else:
             self.close()
             text = "EEPROM write Failed!!"
+            errors = []
+            if is_write_succesful is False:
+                errors.append("User calibration failed.")
+            if is_write_factory_sucessful is False:
+                errors.append("Factory calibration failed.")
             resImage = create_blank(900, 512, rgb_color=red)
             cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+            for i, error in enumerate(errors):
+                cv2.putText(resImage, error, (10, 300 + i * 50), font, 2, (0, 0, 0), 2)
             cv2.imshow("Result Image", resImage)
             cv2.waitKey(0)
             # return (False, "EEPROM write Failed!!")
@@ -1131,7 +1136,7 @@ class Main:
             self.capture_images_sync()
         self.dataset_path = str(Path("dataset").absolute())
         if 'process' in self.args.mode:
-            status, result_config = self.calibrate()
+            status, err_text, result_config = self.calibrate()
             if 'flash' in self.args.mode:
                 self.flash(result_config)
 
