@@ -154,7 +154,7 @@ def parse_args():
                         help="Disable rgb camera Calibration")
     parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
                         help="Interchange Left and right camera port.")
-    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
+    parser.add_argument("-m", "--mode", default=['capture', 'process', 'flash'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
@@ -293,6 +293,7 @@ class Main:
     def __init__(self):
         global debug
         self.args = parse_args()
+        self.device = None
         debug = self.args.debug
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
@@ -321,26 +322,27 @@ class Main:
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
 
-        self.device = dai.Device()
-        cameraProperties = self.device.getConnectedCameraFeatures()
-        print(cameraProperties)
-        for properties in cameraProperties:
-            for in_cam in self.board_config['cameras'].keys():
-                cam_info = self.board_config['cameras'][in_cam]
-                if properties.socket == stringToCam[in_cam]:
-                    self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
-                    print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
-                    self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
-                    # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
-                    break
+        if 'capture' in self.args.mode or 'flash' in self.args.mode:
+            self.device = dai.Device()
+            cameraProperties = self.device.getConnectedCameraFeatures()
+            print(cameraProperties)
+            for properties in cameraProperties:
+                for in_cam in self.board_config['cameras'].keys():
+                    cam_info = self.board_config['cameras'][in_cam]
+                    if properties.socket == stringToCam[in_cam]:
+                        self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
+                        print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
+                        self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
+                        # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
+                        break
 
-        pipeline = self.create_pipeline()
-        self.device.startPipeline(pipeline)
+            pipeline = self.create_pipeline()
+            self.device.startPipeline(pipeline)
 
-        self.camera_queue = {}
-        for config_cam in self.board_config['cameras']:
-            cam = self.board_config['cameras'][config_cam]
-            self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
+            self.camera_queue = {}
+            for config_cam in self.board_config['cameras']:
+                cam = self.board_config['cameras'][config_cam]
+                self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
 
         """ cameraProperties = self.device.getConnectedCameraProperties()
         for properties in cameraProperties:
@@ -353,6 +355,10 @@ class Main:
         # self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
         # if not self.args.disableRgb:
         #     self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
+
+    def close(self):
+        if self.device:
+            self.device.close()
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
@@ -921,150 +927,24 @@ class Main:
             print("Starting image processingxxccx")
             print(self.args.squaresX)
             status, result_config = stereo_calib.calibrate(
-                                        self.board_config,
-                                        self.dataset_path,
-                                        self.args.squareSizeCm,
-                                        self.args.markerSizeCm,
-                                        self.args.squaresX,
-                                        self.args.squaresY,
-                                        self.args.cameraMode,
-                                        self.args.rectifiedDisp) # Turn off enable disp rectify
+                    self.board_config,
+                    self.dataset_path,
+                    self.args.squareSizeCm,
+                    self.args.markerSizeCm,
+                    self.args.squaresX,
+                    self.args.squaresY,
+                    self.args.cameraMode,
+                    self.args.rectifiedDisp) # Turn off enable disp rectify
 
-            calibration_handler = self.device.readCalibration()
-            try:
-                if self.empty_calibration(calibration_handler):
-                    calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
-            except Exception as e:
-                print('Device closed in exception..' )
-                self.device.close()
-                print(e)
-                print(traceback.format_exc())
-                raise SystemExit(1)
+            calibration_handler = dai.CalibrationHandler()
+            status, error_text = self.prepare_calibration_handler(result_config, calibration_handler)
 
-            # calibration_handler.set
-            error_text = []
+            if status == True:
 
-            for camera in result_config['cameras'].keys():
-                cam_info = result_config['cameras'][camera]
-                # log_list.append(self.ccm_selected[cam_info['name']])
-
-                color = green
-                reprojection_error_threshold = 1.0
-                if cam_info['size'][1] > 720:
-                    print(cam_info['size'][1])
-                    reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
-
-                if cam_info['name'] == 'rgb':
-                    reprojection_error_threshold = 3
-                print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
-
-                if cam_info['reprojection_error'] > reprojection_error_threshold:
-                    color = red
-                    error_text.append("high Reprojection Error")
-                text = cam_info['name'] + ' Reprojection Error: ' + format(cam_info['reprojection_error'], '.6f')
-                print(text)
-                # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
-
-                calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
-                calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
-                calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
-
-                if cam_info['hasAutofocus']:
-                    calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
-
-                # log_list.append(self.focusSigma[cam_info['name']])
-                # log_list.append(cam_info['reprojection_error'])
-                # color = green///
-                # epErrorZText
-                if 'extrinsics' in cam_info:
-
-                    if 'to_cam' in cam_info['extrinsics']:
-                        right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
-                        left_cam = cam_info['name']
-
-                        epipolar_threshold = 0.6
-
-                        if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
-                            color = red
-                            error_text.append("high epipolar error between " + left_cam + " and " + right_cam)
-                        elif cam_info['extrinsics']['epipolar_error'] == -1:
-                            color = red
-                            error_text.append("Epiploar validation failed between " + left_cam + " and " + right_cam)
-
-                        # log_list.append(cam_info['extrinsics']['epipolar_error'])
-                        # text = left_cam + "-" + right_cam + ' Avg Epipolar error: ' + format(cam_info['extrinsics']['epipolar_error'], '.6f')
-                        # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
-                        # vis_y += 30
-                        specTranslation = np.array([cam_info['extrinsics']['specTranslation']['x'], cam_info['extrinsics']['specTranslation']['y'], cam_info['extrinsics']['specTranslation']['z']], dtype=np.float32)
-
-                        calibration_handler.setCameraExtrinsics(stringToCam[camera], stringToCam[cam_info['extrinsics']['to_cam']], cam_info['extrinsics']['rotation_matrix'], cam_info['extrinsics']['translation'], specTranslation)
-                        if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
-                            calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
-                            calibration_handler.setStereoRight(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_right'])
-                        elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:
-                            calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
-                            calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
-
-            if len(error_text) == 0:
-                print('Flashing Calibration data into ')
-                # print(calib_dest_path)
-
-                eeepromData = calibration_handler.getEepromData()
-                print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
-                eeepromData.version = 7
-                print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
-                mx_serial_id = self.device.getDeviceInfo().getMxId()
-                calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
-                calibration_handler.eepromToJsonFile(calib_dest_path)
-                # try:
-                self.device.flashCalibration2(calibration_handler)
-                is_write_succesful = True
-                # except RuntimeError as e:
-                #     is_write_succesful = False
-                #     print(e)
-                #     print("Writing in except...")
-                #     is_write_succesful = self.device.flashCalibration2(calibration_handler)
-
-                if self.args.factoryCalibration:
-                    try:
-                        self.device.flashFactoryCalibration(calibration_handler)
-                        is_write_factory_sucessful = True
-                    except RuntimeError:
-                        print("flashFactoryCalibration Failed...")
-                        is_write_factory_sucessful = False
-
-                if is_write_succesful:
-
-
-                    """ eepromUnionData = {}
-                    calibHandler = self.device.readCalibration2()
-                    eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
-
-                    calibHandler = self.device.readFactoryCalibration()
-                    eepromUnionData['calibrationFactory'] = calibHandler.eepromToJson()
-
-                    eepromUnionData['calibrationUserRaw'] = self.device.readCalibrationRaw()
-                    eepromUnionData['calibrationFactoryRaw'] = self.device.readFactoryCalibrationRaw()
-                    with open(calib_dest_path, "w") as outfile:
-                        json.dump(eepromUnionData, outfile, indent=4) """
-                    self.device.close()
-                    text = "EEPROM written succesfully"
-                    resImage = create_blank(900, 512, rgb_color=green)
-                    cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
-                    cv2.imshow("Result Image", resImage)
-                    cv2.waitKey(0)
-
-                else:
-                    self.device.close()
-                    text = "EEPROM write Failed!!"
-                    resImage = create_blank(900, 512, rgb_color=red)
-                    cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
-                    cv2.imshow("Result Image", resImage)
-                    cv2.waitKey(0)
-                    # return (False, "EEPROM write Failed!!")
+                print('Successfully calibrated')
+                print(json.dumps(calibration_handler.eepromToJson(), indent=4))
 
             else:
-                self.device.close()
                 print(error_text)
                 for text in error_text:
                 # text = error_text[0]
@@ -1072,12 +952,167 @@ class Main:
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
+
+            return status, error_text
+
         except Exception as e:
-            self.device.close()
+            self.close()
             print('Device closed in exception..' )
             print(e)
             print(traceback.format_exc())
             raise SystemExit(1)
+
+
+    def prepare_calibration_handler(self, result_config, calibration_handler):
+
+        # calibration_handler.set
+        error_text = []
+
+        for camera in result_config['cameras'].keys():
+            cam_info = result_config['cameras'][camera]
+            # log_list.append(self.ccm_selected[cam_info['name']])
+
+            color = green
+            reprojection_error_threshold = 1.0
+            if cam_info['size'][1] > 720:
+                print(cam_info['size'][1])
+                reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
+
+            if cam_info['name'] == 'rgb':
+                reprojection_error_threshold = 3
+            print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
+
+            if cam_info['reprojection_error'] > reprojection_error_threshold:
+                color = red
+                error_text.append("high Reprojection Error")
+            text = cam_info['name'] + ' Reprojection Error: ' + format(cam_info['reprojection_error'], '.6f')
+            print(text)
+            # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
+
+            calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
+            calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
+            calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
+
+            if 'hasAutofocus' in cam_info and cam_info['hasAutofocus']:
+                calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
+
+            # log_list.append(self.focusSigma[cam_info['name']])
+            # log_list.append(cam_info['reprojection_error'])
+            # color = green///
+            # epErrorZText
+            if 'extrinsics' in cam_info:
+
+                if 'to_cam' in cam_info['extrinsics']:
+                    right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
+                    left_cam = cam_info['name']
+
+                    epipolar_threshold = 0.6
+
+                    if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
+                        color = red
+                        error_text.append("high epipolar error between " + left_cam + " and " + right_cam)
+                    elif cam_info['extrinsics']['epipolar_error'] == -1:
+                        color = red
+                        error_text.append("Epiploar validation failed between " + left_cam + " and " + right_cam)
+
+                    # log_list.append(cam_info['extrinsics']['epipolar_error'])
+                    # text = left_cam + "-" + right_cam + ' Avg Epipolar error: ' + format(cam_info['extrinsics']['epipolar_error'], '.6f')
+                    # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
+                    # vis_y += 30
+                    specTranslation = np.array([cam_info['extrinsics']['specTranslation']['x'], cam_info['extrinsics']['specTranslation']['y'], cam_info['extrinsics']['specTranslation']['z']], dtype=np.float32)
+
+                    calibration_handler.setCameraExtrinsics(stringToCam[camera], stringToCam[cam_info['extrinsics']['to_cam']], cam_info['extrinsics']['rotation_matrix'], cam_info['extrinsics']['translation'], specTranslation)
+                    if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
+                        calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
+                        calibration_handler.setStereoRight(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_right'])
+                    elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:
+                        calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
+                        calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
+
+        return len(error_text) == 0, error_text
+
+    def flash(self, result_config):
+
+        calibration_handler = self.device.readCalibration()
+        try:
+            if self.empty_calibration(calibration_handler):
+                calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
+        except Exception as e:
+            print('Device closed in exception..' )
+            self.close()
+            print(e)
+            print(traceback.format_exc())
+            raise SystemExit(1)
+
+        status, error_text = self.prepare_calibration_handler(result_config, calibration_handler)
+
+        if status == False:
+            self.close()
+            print(error_text)
+            for text in error_text:
+            # text = error_text[0]
+                resImage = create_blank(900, 512, rgb_color=red)
+                cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+                cv2.imshow("Result Image", resImage)
+                cv2.waitKey(0)
+
+        print('Flashing Calibration data into ')
+        # print(calib_dest_path)
+
+        eeepromData = calibration_handler.getEepromData()
+        print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
+        eeepromData.version = 7
+        print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
+        mx_serial_id = self.device.getDeviceInfo().getMxId()
+        calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
+        calibration_handler.eepromToJsonFile(calib_dest_path)
+        # try:
+        self.device.flashCalibration2(calibration_handler)
+        is_write_succesful = True
+        # except RuntimeError as e:
+        #     is_write_succesful = False
+        #     print(e)
+        #     print("Writing in except...")
+        #     is_write_succesful = self.device.flashCalibration2(calibration_handler)
+
+        if self.args.factoryCalibration:
+            try:
+                self.device.flashFactoryCalibration(calibration_handler)
+                is_write_factory_sucessful = True
+            except RuntimeError:
+                print("flashFactoryCalibration Failed...")
+                is_write_factory_sucessful = False
+
+        if is_write_succesful:
+
+
+            """ eepromUnionData = {}
+            calibHandler = self.device.readCalibration2()
+            eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
+
+            calibHandler = self.device.readFactoryCalibration()
+            eepromUnionData['calibrationFactory'] = calibHandler.eepromToJson()
+
+            eepromUnionData['calibrationUserRaw'] = self.device.readCalibrationRaw()
+            eepromUnionData['calibrationFactoryRaw'] = self.device.readFactoryCalibrationRaw()
+            with open(calib_dest_path, "w") as outfile:
+                json.dump(eepromUnionData, outfile, indent=4) """
+            self.close()
+            text = "EEPROM written succesfully"
+            resImage = create_blank(900, 512, rgb_color=green)
+            cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+            cv2.imshow("Result Image", resImage)
+            cv2.waitKey(0)
+
+        else:
+            self.close()
+            text = "EEPROM write Failed!!"
+            resImage = create_blank(900, 512, rgb_color=red)
+            cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+            cv2.imshow("Result Image", resImage)
+            cv2.waitKey(0)
+            # return (False, "EEPROM write Failed!!")
+
 
     def run(self):
         if 'capture' in self.args.mode:
@@ -1096,7 +1131,10 @@ class Main:
             self.capture_images_sync()
         self.dataset_path = str(Path("dataset").absolute())
         if 'process' in self.args.mode:
-            self.calibrate()
+            status, result_config = self.calibrate()
+            if 'flash' in self.args.mode:
+                self.flash(result_config)
+
         print('py: DONE.')
 
 
