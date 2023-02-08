@@ -284,13 +284,13 @@ class CameraComponent(Component):
             self.node.setVideoSize(*size)
             self.node.setPreviewSize(*size)
 
-        if interleaved: self.node.setInterleaved(interleaved)
+        if interleaved is not None: self.node.setInterleaved(interleaved)
         if color_order:
             if isinstance(color_order, str):
                 color_order = getattr(dai.ColorCameraProperties.ColorOrder, color_order.upper())
             self.node.setColorOrder(color_order)
 
-        if manual_focus: self.node.initialControl.setManualFocus(manual_focus)
+        if manual_focus is not None: self.node.initialControl.setManualFocus(manual_focus)
         if af_mode: self.node.initialControl.setAutoFocusMode(af_mode)
         if awb_mode: self.node.initialControl.setAutoWhiteBalanceMode(awb_mode)
         if scene_mode: self.node.initialControl.setSceneMode(scene_mode)
@@ -300,9 +300,9 @@ class CameraComponent(Component):
         if isp_scale:
             self._resolution_forced = True
             self.node.setIspScale(*isp_scale)
-        if sharpness: self.node.initialControl.setSharpness(sharpness)
-        if luma_denoise: self.node.initialControl.setLumaDenoise(luma_denoise)
-        if chroma_denoise: self.node.initialControl.setChromaDenoise(chroma_denoise)
+        if sharpness is not None: self.node.initialControl.setSharpness(sharpness)
+        if luma_denoise is not None: self.node.initialControl.setLumaDenoise(luma_denoise)
+        if chroma_denoise is not None: self.node.initialControl.setChromaDenoise(chroma_denoise)
 
     def _set_resolution(self, resolution):
         if not self.is_replay():
@@ -335,13 +335,13 @@ class CameraComponent(Component):
         if self._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
             raise Exception('Video encoder was set to MJPEG while trying to configure H26X attributes!')
 
-        if rate_control_mode:
+        if rate_control_mode is not None:
             self.encoder.setRateControlMode(rate_control_mode)
-        if keyframe_freq:
+        if keyframe_freq is not None:
             self.encoder.setKeyframeFrequency(keyframe_freq)
-        if bitrate_kbps:
+        if bitrate_kbps is not None:
             self.encoder.setBitrateKbps(bitrate_kbps)
-        if num_b_frames:
+        if num_b_frames is not None:
             self.encoder.setNumBFrames(num_b_frames)
 
     def config_encoder_mjpeg(self,
@@ -355,9 +355,9 @@ class CameraComponent(Component):
                 f'Video encoder was set to {self._encoder_profile} while trying to configure MJPEG attributes!'
             )
 
-        if quality:
+        if quality is not None:
             self.encoder.setQuality(quality)
-        if lossless:
+        if lossless is not None:
             self.encoder.setLossless(lossless)
 
     def get_stream_xout(self) -> StreamXout:

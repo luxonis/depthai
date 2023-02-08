@@ -58,12 +58,16 @@ class ImageReader(AbstractReader):
         for name, arr in self.frames.items():
             self.cntr[name] = 0
 
-        self.cycle = time.time()
+        self.last_cycle_time = time.time()
+        self.cycle_sec = 3.0 # Images get cycled every 3 seconds by default
+
+    def set_cycle_fps(self, fps): # Called from replay.py on set_fps()
+        self.cycle_sec = 1.0 / fps
 
     def read(self):
         # Increase counters
-        if 3 < time.time() - self.cycle:
-            self.cycle = time.time()
+        if self.cycle_sec < time.time() - self.last_cycle_time:
+            self.last_cycle_time = time.time()
             for name in self.cntr:
                 self.cntr[name] += 1
                 if len(self.frames[name]) <= self.cntr[name]:
