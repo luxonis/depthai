@@ -55,7 +55,7 @@ class StereoComponent(Component):
         self._left_stream: dai.Node.Output
         self._right_stream: dai.Node.Output
 
-        self.colormap = None
+        self.colormap = dai.Colormap.STEREO_TURBO
 
         self._replay: Optional[Replay] = replay
         self._resolution: Optional[Union[str, dai.MonoCameraProperties.SensorResolution]] = resolution
