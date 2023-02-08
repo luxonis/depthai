@@ -32,8 +32,8 @@ class StereoComponent(Component):
                  replay: Optional[Replay] = None,
                  args: Any = None,
                  name: Optional[str] = None,
-                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
-                 ):
+                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                 colormap: Optional[dai.Colormap] = None):
         """
         Args:
             pipeline (dai.Pipeline): DepthAI pipeline
@@ -44,15 +44,19 @@ class StereoComponent(Component):
             replay (Replay object, optional): Replay
             args (Any, optional): Use user defined arguments when constructing the pipeline
             name (str, optional): Name of the output stream
+            encode (str/bool/Profile, optional): Encode the output stream
+            colormap (dai.Colormap, optional): Colormap to apply to the output stream
         """
         super().__init__()
         self.out = self.Out(self)
 
-        left: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
-        right: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
+        self.left: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
+        self.right: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]
 
-        _left_stream: dai.Node.Output
-        _right_stream: dai.Node.Output
+        self._left_stream: dai.Node.Output
+        self._right_stream: dai.Node.Output
+
+        self.colormap = colormap
 
         self._replay: Optional[Replay] = replay
         self._resolution: Optional[Union[str, dai.MonoCameraProperties.SensorResolution]] = resolution
@@ -74,7 +78,7 @@ class StereoComponent(Component):
 
         # Configuration variables
         self._colorize = None
-        self._colormap = None
+        self._postprocess_colormap = None
         self._use_wls_filter = None
         self._wls_level = None
         self._wls_lambda = None
@@ -129,6 +133,14 @@ class StereoComponent(Component):
             self._left_stream.link(self.node.left)
             self._right_stream.link(self.node.right)
 
+        colormap_manip = None
+        if self.colormap:
+            colormap_manip = pipeline.create(dai.node.ImageManip)
+            colormap_manip.initialConfig.setColormap(self.colormap, self.node.initialConfig.getMaxDisparity())
+            colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
+            colormap_manip.setMaxOutputFrameSize(1200 * 800 * 3)
+            self.node.disparity.link(colormap_manip.inputImage)
+
         if self.encoder:
             try:
                 fps = self.left.get_fps()  # CameraComponent
@@ -136,7 +148,10 @@ class StereoComponent(Component):
                 fps = self.left.getFps()  # MonoCamera
 
             self.encoder.setDefaultProfilePreset(fps, self._encoderProfile)
-            self.node.disparity.link(self.encoder.input)
+            if colormap_manip:
+                colormap_manip.out.link(self.encoder.input)
+            else:
+                self.node.disparity.link(self.encoder.input)
 
         self.node.setOutputSize(1200, 800)
 
@@ -207,7 +222,7 @@ class StereoComponent(Component):
         elif isinstance(colorize, str):
             self._colorize = StereoColor[colorize.upper()]
 
-        self._colormap = colormap
+        self._postprocess_colormap = colormap
         self._use_wls_filter = wls_filter
 
         if isinstance(wls_level, WLSLevel):
@@ -262,7 +277,7 @@ class StereoComponent(Component):
                 max_disp=self._comp.node.getMaxDisparity(),
                 fps=fps,
                 colorize=self._comp._colorize,
-                colormap=self._comp._colormap,
+                colormap=self._comp._postprocess_colormap,
                 use_wls_filter=self._comp._use_wls_filter,
                 wls_level=self._comp._wls_level,
                 wls_lambda=self._comp._wls_lambda,
@@ -279,7 +294,7 @@ class StereoComponent(Component):
                 mono_frames=StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name),
                 fps=fps,
                 colorize=self._comp._colorize,
-                colormap=self._comp._colormap,
+                colormap=self._comp._postprocess_colormap,
                 use_wls_filter=self._comp._use_wls_filter,
                 wls_level=self._comp._wls_level,
                 wls_lambda=self._comp._wls_lambda,
@@ -293,13 +308,13 @@ class StereoComponent(Component):
 
             if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
                 out = XoutMjpeg(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                                color=False,
+                                color=self._comp.colormap is not None,
                                 lossless=self._comp.encoder.getLossless(),
                                 fps=self._comp.encoder.getFrameRate(),
                                 frame_shape=(1200, 800))
             else:
                 out = XoutH26x(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                               color=False,
+                               color=self._comp.colormap is not None,
                                profile=self._comp._encoderProfile,
                                fps=self._comp.encoder.getFrameRate(),
                                frame_shape=(1200, 800))
