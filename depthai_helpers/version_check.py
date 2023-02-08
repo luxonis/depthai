@@ -1,3 +1,5 @@
+import sys
+
 import depthai
 from pathlib import Path
 
@@ -9,7 +11,11 @@ def getVersionFromRequirements(package_name, req_path):
                 #not commented out and has version indicator (==)
                 if not line.startswith('#') and '==' in line:
                     try:
-                        version = line.split('==')[1]
+                        split = line.split('==')
+                        name = split[0]
+                        if name != package_name:
+                            continue
+                        version = split[1]
                         version = version.split(';')[0]
                         #remove any whitespace
                         version = version.strip()
@@ -46,15 +52,17 @@ def checkRequirementsVersion():
     daiVersionRequired = getVersionFromRequirements('depthai', Path(__file__).parent / Path('../requirements.txt'))
     if daiVersionRequired is not None:
         if daiVersionRequired != getVersion('depthai'):
-            raise SystemExit(f"\033[1;5;31mVersion mismatch\033[0m\033[91m between installed depthai lib and the required one by the script.\033[0m \n\
+            print(f"\033[1;5;31mVersion mismatch\033[0m\033[91m between installed depthai lib and the required one by the script.\033[0m \n\
                 Required:  {daiVersionRequired}\n\
                 Installed: {getVersion('depthai')}\n\
                 \033[91mRun: python3 install_requirements.py \033[0m")
+            sys.exit(42)
 
     daiSdkVersionRequired = getVersionFromRequirements('depthai-sdk', Path(__file__).parent / Path('../requirements.txt'))
     if daiSdkVersionRequired is not None:
-        if daiSdkVersionRequired != getVersion('depthai_sdk'):
-            raise SystemExit(f"\033[1;5;31mVersion mismatch\033[0m\033[91m between installed depthai-sdk lib and the required one by the script.\033[0m \n\
+        if daiSdkVersionRequired != getVersion('depthai-sdk'):
+            print(f"\033[1;5;31mVersion mismatch\033[0m\033[91m between installed depthai-sdk lib and the required one by the script.\033[0m \n\
                 Required:  {daiSdkVersionRequired}\n\
                 Installed: {getVersion('depthai_sdk')}\n\
                 \033[91mRun: python3 install_requirements.py \033[0m")
+            sys.exit(42)
