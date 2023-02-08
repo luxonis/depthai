@@ -46,7 +46,7 @@ cameraResolutions: Dict[Any, Tuple[int, int]] = {
     dai.ColorCameraProperties.SensorResolution.THE_13_MP: (4208, 3120),
     dai.ColorCameraProperties.SensorResolution.THE_12_MP: (4056, 3040),
     dai.ColorCameraProperties.SensorResolution.THE_4_K: (3840, 2160),
-    dai.ColorCameraProperties.SensorResolution.THE_1200_P: (1920, 1080),
+    dai.ColorCameraProperties.SensorResolution.THE_1200_P: (1920, 1200),
     dai.ColorCameraProperties.SensorResolution.THE_1080_P: (1920, 1080),
     dai.ColorCameraProperties.SensorResolution.THE_800_P: (1280, 800),
     dai.ColorCameraProperties.SensorResolution.THE_720_P: (1280, 720),
