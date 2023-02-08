@@ -110,7 +110,7 @@ class StereoComponent(Component):
 
             if 0 < len(device.getIrDrivers()):
                 laser = self._args.get('irDotBrightness', None)
-                laser = int(laser) if laser else 800
+                laser = laser if laser is not None else 800
                 if 0 < laser:
                     device.setIrLaserDotProjectorBrightness(laser)
                     print(f'Setting IR laser dot projector brightness to {laser}mA')
@@ -170,14 +170,14 @@ class StereoComponent(Component):
         """
         Configures StereoDepth modes and options.
         """
-        if confidence: self.node.initialConfig.setConfidenceThreshold(confidence)
-        if align: self.node.setDepthAlign(parse_cam_socket(align))
-        if median: self.node.setMedianFilter(parse_median_filter(median))
-        if extended: self.node.initialConfig.setExtendedDisparity(extended)
-        if subpixel: self.node.initialConfig.setSubpixel(subpixel)
-        if lr_check: self.node.initialConfig.setLeftRightCheck(lr_check)
-        if sigma: self.node.initialConfig.setBilateralFilterSigma(sigma)
-        if lr_check_threshold: self.node.initialConfig.setLeftRightCheckThreshold(lr_check_threshold)
+        if confidence is not None: self.node.initialConfig.setConfidenceThreshold(confidence)
+        if align is not None: self.node.setDepthAlign(parse_cam_socket(align))
+        if median is not None: self.node.setMedianFilter(parse_median_filter(median))
+        if extended is not None: self.node.initialConfig.setExtendedDisparity(extended)
+        if subpixel is not None: self.node.initialConfig.setSubpixel(subpixel)
+        if lr_check is not None: self.node.initialConfig.setLeftRightCheck(lr_check)
+        if sigma is not None: self.node.initialConfig.setBilateralFilterSigma(sigma)
+        if lr_check_threshold is not None: self.node.initialConfig.setLeftRightCheckThreshold(lr_check_threshold)
 
     def config_postprocessing(self,
                               colorize: Union[StereoColor, bool] = None,
