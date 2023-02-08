@@ -50,3 +50,11 @@ def checkRequirementsVersion():
                 Required:  {daiVersionRequired}\n\
                 Installed: {getVersion('depthai')}\n\
                 \033[91mRun: python3 install_requirements.py \033[0m")
+
+    daiSdkVersionRequired = getVersionFromRequirements('depthai-sdk', Path(__file__).parent / Path('../requirements.txt'))
+    if daiSdkVersionRequired is not None:
+        if daiSdkVersionRequired != getVersion('depthai_sdk'):
+            raise SystemExit(f"\033[1;5;31mVersion mismatch\033[0m\033[91m between installed depthai-sdk lib and the required one by the script.\033[0m \n\
+                Required:  {daiSdkVersionRequired}\n\
+                Installed: {getVersion('depthai_sdk')}\n\
+                \033[91mRun: python3 install_requirements.py \033[0m")
