@@ -42,7 +42,7 @@ class ImageReader(AbstractReader):
             self.frames[stream].append(cv2.imread(str(path), flag))
         else:
             shape = None
-            for fileName in os.listdir(str(path)):
+            for fileName in sorted(os.listdir(str(path))):
                 f_name, ext = os.path.splitext(fileName)
                 if ext not in _imageExt: continue
                 stream, flag = get_name_flag(f_name)
