@@ -33,8 +33,7 @@ class StereoComponent(Component):
                  replay: Optional[Replay] = None,
                  args: Any = None,
                  name: Optional[str] = None,
-                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-                 colormap: Optional[dai.Colormap] = None):
+                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None):
         """
         Args:
             pipeline (dai.Pipeline): DepthAI pipeline
@@ -46,7 +45,6 @@ class StereoComponent(Component):
             args (Any, optional): Use user defined arguments when constructing the pipeline
             name (str, optional): Name of the output stream
             encode (str/bool/Profile, optional): Encode the output stream
-            colormap (dai.Colormap, optional): Colormap to apply to the output stream
         """
         super().__init__()
         self.out = self.Out(self)
@@ -57,7 +55,7 @@ class StereoComponent(Component):
         self._left_stream: dai.Node.Output
         self._right_stream: dai.Node.Output
 
-        self.colormap = colormap
+        self.colormap = None
 
         self._replay: Optional[Replay] = replay
         self._resolution: Optional[Union[str, dai.MonoCameraProperties.SensorResolution]] = resolution

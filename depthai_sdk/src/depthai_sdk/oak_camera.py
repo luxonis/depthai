@@ -175,8 +175,7 @@ class OakCamera:
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
                       name: Optional[str] = None,
-                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-                      colormap: dai.Colormap = None
+                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
                       ) -> StereoComponent:
         """
         Create Stereo camera component. If left/right cameras/component aren't specified they will get created internally.
@@ -188,7 +187,6 @@ class OakCamera:
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
-            colormap (dai.Colormap): Colormap to be applied to the depth map. If None, no colormap will be applied.
         """
         comp = StereoComponent(self._pipeline,
                                resolution=resolution,
@@ -198,8 +196,7 @@ class OakCamera:
                                replay=self.replay,
                                args=self._args,
                                name=name,
-                               encode=encode,
-                               colormap=colormap)
+                               encode=encode)
         self._components.append(comp)
         return comp
 
