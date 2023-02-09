@@ -238,7 +238,7 @@ class StereoComponent(Component):
         self._wls_lambda = wls_lambda
         self._wls_sigma = wls_sigma
 
-    def set_colormap(self, colormap: dai.Colormap):
+    def set_colormap(self, colormap: 'dai.Colormap'):
         """
         Sets the colormap to use for colorizing the disparity map. Used for on-device postprocessing.
 

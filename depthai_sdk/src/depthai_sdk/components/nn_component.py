@@ -76,10 +76,12 @@ class NNComponent(Component):
         self._stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
 
         self._blob: Optional[dai.OpenVINO.Blob] = None
+        self._blob_path_rvc3: Union[str, Path] = None
         self._forced_version: Optional[dai.OpenVINO.Version] = None  # Forced OpenVINO version
         self._size: Optional[Tuple[int, int]] = None  # Input size to the NN
         self._args: Optional[Dict] = None
         self._config: Optional[Dict] = None
+        self._rvc_version = 2
         self._node_type: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
         self._roboflow: Optional[RoboflowIntegration] = None
 
@@ -125,19 +127,70 @@ class NNComponent(Component):
             self._parse_config(path)
             self._update_config()
 
+        # First check if the device is RVC2 or RVC3
+        device_info = device.getDeviceInfo()
+        if not hasattr(dai, "X_LINK_RVC3"):
+            # Assume RVC2 in this case
+            self._rvc_version = 2
+        elif device_info.platform == dai.X_LINK_MYRIAD_X:
+            self._rvc_version = 2
+        elif device_info.platform == dai.X_LINK_RVC3:
+            self._rvc_version = 3
+        else:
+            raise ValueError("Could not get the rvc version from the device.")
+
+        if self._blob is None and self._rvc_version == 2:
+            if 'model' not in self._config:
+                raise RuntimeError("No model specified in the config")
+            self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model'], version))
+
         if self._blob is None:
             self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model'], version))
 
         # TODO: update NN input based on camera resolution
-        self.node.setBlob(self._blob)
+        if self._rvc_version == 2:
+            self.node.setBlob(self._blob)
+            # TODO: Check if rvc_version of the model and the device match, otherwise throw
+        elif self._rvc_version == 3:
+            if self._blob_path_rvc3 is None:
+                raise ValueError("Device was determined to be RVC3, but no RVC3 blob provided.")
+            self.node.setBlob(self._blob_path_rvc3)
+        else:
+            raise ValueError(
+                "Invalid rvc_version set. Only rvc_version=2 and rvc_version=3 are supported at the moment")
+
         self._out = self.node.out
 
-        if 1 < len(self._blob.networkInputs):
-            raise NotImplementedError()
+        if self._config:
+            nnConfig = self._config.get("nn_config", {})
+            if self._is_detector() and 'confidence_threshold' in nnConfig:
+                self.node.setConfidenceThreshold(float(nnConfig['confidence_threshold']))
 
-        nn_in: dai.TensorInfo = next(iter(self._blob.networkInputs.values()))
-        # TODO: support models that expect mono img
-        self._size: Tuple[int, int] = (nn_in.dims[0], nn_in.dims[1])
+        meta = nnConfig.get('NN_specific_metadata', None)
+        if self._is_yolo() and meta:
+            self.config_yolo_from_metadata(metadata=meta)
+
+        if self._rvc_version == 2:
+            if 1 < len(self._blob.networkInputs):
+                raise NotImplementedError()
+
+            nn_in: dai.TensorInfo = next(iter(self._blob.networkInputs.values()))
+            # TODO: support models that expect mono img
+            self._size: Tuple[int, int] = (nn_in.dims[0], nn_in.dims[1])
+        elif self._rvc_version == 3:
+            # Information can't be parsed from the blob on RVC3, so relay on JSON config having the data
+            if not self._config:
+                raise ValueError("RVC3 only supported when a config is loaded")
+            input_size = self._config.get("nn_config", {}).get("input_size", "")
+            if len(input_size) == 0:
+                raise ValueError("RVC3 needs to get input_size from JSON")
+            try:
+                sizes = [int(dim) for dim in input_size.split("x")]
+                if len(sizes) != 2:
+                    raise ValueError(f"Couldn't parse input dimensions for the model: {input_size}")
+                self._size: Tuple[int, int] = tuple(sizes)
+            except Exception as ex:
+                raise RuntimeError(f"Failed parsing input dimensions from input: {ex}")
         # maxSize = dims
 
         if isinstance(self._input, CameraComponent):
@@ -297,6 +350,10 @@ class NNComponent(Component):
 
             if 'blob' in model:
                 self._blob = dai.OpenVINO.Blob(model['blob'])
+
+        if 'model_rvc3' in self._config:
+            model = self._config['model_rvc3']
+            self._blob_path_rvc3 = model['blob']  # No way to parse RVC3 blob on the host right now, leave it as a path
 
         # Parse OpenVINO version
         if "openvino_version" in self._config:
