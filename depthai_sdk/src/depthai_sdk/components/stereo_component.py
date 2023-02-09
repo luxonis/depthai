@@ -152,7 +152,7 @@ class StereoComponent(Component):
             else:
                 self.node.disparity.link(self.encoder.input)
 
-        self.node.setOutputSize(1200, 800)
+        self.node.setOutputSize(1280, 800)
 
         if self._args:
             self._config_stereo_args(self._args)
