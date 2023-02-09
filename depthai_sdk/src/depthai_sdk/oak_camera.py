@@ -221,13 +221,13 @@ class OakCamera:
 
         if self._usb_speed == dai.UsbSpeed.SUPER:
             self._oak.device = dai.Device(
-                version=dai.OpenVINO.VERSION_UNIVERSAL,
+                version=dai.OpenVINO.VERSION_2021_4,
                 deviceInfo=device_info,
                 usb2Mode=True
             )
         else:
             self._oak.device = dai.Device(
-                version=dai.OpenVINO.VERSION_UNIVERSAL,
+                version=dai.OpenVINO.VERSION_2021_4,
                 deviceInfo=device_info,
                 maxUsbSpeed=dai.UsbSpeed.SUPER if self._usb_speed is None else self._usb_speed
             )
