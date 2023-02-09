@@ -19,6 +19,12 @@ class Model(Schema):
     bin = fields.Str(required=False)
 
 
+class ModelRVC3(Schema):
+    # A string, either path or url to .blob
+    blob = fields.Str(required=False)
+    # TODO support other formats as well
+
+
 class NNConfig(Schema):
     NN_family = fields.Str(required=False)
     confidence_threshold = fields.Float(required=False)
@@ -29,7 +35,8 @@ class NNConfig(Schema):
 
 class Config(Schema):
     # Specifies where the model is/how to download it. It should contain one of the following
-    model = fields.Nested(Model)
+    model = fields.Nested(Model, required=False)
+    model_rvc3 = fields.Nested(ModelRVC3, required=False)
     # Path to the python script that contains decode() function that decodes dai.NNData into standardized NN results
     handler = fields.Str(required=False)
     nn_config = fields.Nested(NNConfig)  # Contains NN configuration data
