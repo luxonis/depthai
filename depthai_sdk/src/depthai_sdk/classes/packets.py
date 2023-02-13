@@ -31,6 +31,9 @@ class _Detection:
 
 class _TrackingDetection(_Detection):
     tracklet: dai.Tracklet
+    speed: float = 0.0  # m/s
+    speed_kmph: float = 0.0  # km/h
+    speed_mph: float = 0.0  # mph
 
 
 class _TwoStageDetection(_Detection):
