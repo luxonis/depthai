@@ -113,7 +113,9 @@ class CameraComponent(Component):
 
             self.node.setPreviewSize(*self.node.getVideoSize())
             self.stream_size = self.node.getPreviewSize()
-            self.stream = self.node.preview if self.encoder is None else self.node.video
+            # Temporarly use isp output on RVC3, since it works on more sensors
+            self.stream = self.node.isp
+            # self.stream = self.node.preview if self.encoder is None else self.node.video
 
         elif isinstance(self.node, dai.node.MonoCamera):
             self.stream_size = self.node.getResolutionSize()
