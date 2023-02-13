@@ -1,4 +1,5 @@
 import json
+import os
 import warnings
 from pathlib import Path
 from typing import Callable, Union, List, Dict
@@ -76,7 +77,6 @@ class NNComponent(Component):
         self._stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
 
         self._blob: Optional[dai.OpenVINO.Blob] = None
-        self._blob_path_rvc3: Union[str, Path] = None
         self._forced_version: Optional[dai.OpenVINO.Version] = None  # Forced OpenVINO version
         self._size: Optional[Tuple[int, int]] = None  # Input size to the NN
         self._args: Optional[Dict] = None
@@ -112,6 +112,9 @@ class NNComponent(Component):
         # Create NN node
         self.node = pipeline.create(self._node_type)
         self._update_config()
+
+        # RVC3 specific
+        self._hef_model = False
 
     def forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
@@ -152,9 +155,10 @@ class NNComponent(Component):
             self.node.setBlob(self._blob)
             # TODO: Check if rvc_version of the model and the device match, otherwise throw
         elif self._rvc_version == 3:
-            if self._blob_path_rvc3 is None:
-                raise ValueError("Device was determined to be RVC3, but no RVC3 blob provided.")
-            self.node.setBlob(self._blob_path_rvc3)
+            if "model_rvc3" not in self._config:
+                raise ValueError("Device is recognized to be RVC3 but no RVC3 model specified!")
+            self._set_model_rvc3(self._config["model_rvc3"])
+
         else:
             raise ValueError(
                 "Invalid rvc_version set. Only rvc_version=2 and rvc_version=3 are supported at the moment")
@@ -261,6 +265,28 @@ class NNComponent(Component):
             if self._is_spatial():
                 self._config_spatials_args(self._args)
 
+    def _set_model_rvc3(self, model_rvc3):
+        if "blob" in model_rvc3:
+            # Open vino blob
+            self.node.setBlob(model_rvc3["blob"])
+        elif "hef" in model_rvc3:
+            self._hef_model = True
+            self.node.setXmlModelPath(model_rvc3["hef"], os.devnull) # TODO this is a bit of an API misuse
+            self.node.setBackend("hailo")
+            dequantize_outputs=False
+            if "dequantize_outputs" in model_rvc3["hef"]:
+                dequantize_outputs = model_rvc3["hef"]["dequantize_outputs"]
+            if dequantize_outputs:
+                self.node.setBackendProperties({"output_format": "float"})
+            else:
+                print("Setting backend properties")
+                self.node.setBackendProperties({"output_format": "uint8",
+                                                "quantization_in": "true",
+                                                "quantization_out": "true",})
+
+        else:
+            raise ValueError("Blob not specified for RVC3")
+
     def _parse_model(self, model):
         """
         Called when NNComponent is initialized. Parses "model" argument passed by user.
@@ -351,10 +377,6 @@ class NNComponent(Component):
             if 'blob' in model:
                 self._blob = dai.OpenVINO.Blob(model['blob'])
 
-        if 'model_rvc3' in self._config:
-            model = self._config['model_rvc3']
-            self._blob_path_rvc3 = model['blob']  # No way to parse RVC3 blob on the host right now, leave it as a path
-
         # Parse OpenVINO version
         if "openvino_version" in self._config:
             self._forced_version = parse_open_vino_version(self._config.get("openvino_version"))
@@ -411,7 +433,10 @@ class NNComponent(Component):
             self.image_manip = pipeline.create(dai.node.ImageManip)
             self._stream_input.link(self.image_manip.inputImage)
             self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
-            self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
+            if self._hef_model and self._rvc_version == 3:
+                self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.RGB888i)
+            else:
+                self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
             # Set to non-blocking
             self.image_manip.inputImage.setBlocking(False)
             self.image_manip.inputImage.setQueueSize(2)

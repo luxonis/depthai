@@ -22,7 +22,10 @@ class Model(Schema):
 class ModelRVC3(Schema):
     # A string, either path or url to .blob
     blob = fields.Str(required=False)
-    # TODO support other formats as well
+
+    # Experimental
+    hef = fields.Str(required=False)
+    dequantize_outputs = fields.Bool(required=False, false=True)
 
 
 class NNConfig(Schema):
