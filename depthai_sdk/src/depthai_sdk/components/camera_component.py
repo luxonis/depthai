@@ -65,6 +65,7 @@ class CameraComponent(Component):
             self.encoder = self._pipeline.createVideoEncoder()
             # MJPEG by default
             self._encoder_profile = parse_encode(encode)
+            self.encoder.setDefaultProfilePreset(self.get_fps(), self._encoder_profile)
 
         self._resolution_forced: bool = resolution is not None
         if resolution:
@@ -130,7 +131,7 @@ class CameraComponent(Component):
             self.stream = rot_manip.out
 
         if self.encoder:
-            self.encoder.setDefaultProfilePreset(self.get_fps(), self._encoder_profile)
+            # self.encoder.setDefaultProfilePreset(self.get_fps(), self._encoder_profile)
             if self.is_replay():  # TODO - this might be not needed, we check for replay above and return
                 # Create ImageManip to convert to NV12
                 type_manip = pipeline.createImageManip()
