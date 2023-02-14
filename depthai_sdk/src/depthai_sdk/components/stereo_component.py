@@ -24,11 +24,6 @@ class WLSLevel(Enum):
     HIGH = (12000, 2.0)
 
 class StereoComponent(Component):
-    # Users should have access to these nodes
-    node: dai.node.StereoDepth
-
-    _left_stream: dai.Node.Output
-    _right_stream: dai.Node.Output
 
     @property
     def depth(self) -> dai.Node.Output:
