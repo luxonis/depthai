@@ -70,6 +70,7 @@ class NNComponent(Component):
         self.image_manip: Optional[dai.node.ImageManip] = None
         self.x_in: Optional[dai.node.XLinkIn] = None  # Used for multi-stage pipeline
         self.tracker = pipeline.createObjectTracker() if tracker else None
+        self.apply_tracking_filter = False
 
         # Private properties
         self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
@@ -412,7 +413,8 @@ class NNComponent(Component):
                        track_labels: Optional[List[int]] = None,
                        assignment_policy: Optional[dai.TrackerIdAssignmentPolicy] = None,
                        max_obj: Optional[int] = None,
-                       threshold: Optional[float] = None
+                       threshold: Optional[float] = None,
+                       apply_tracking_filter: Optional[bool] = None,
                        ):
         """
         Configure Object Tracker node (if it's enabled).
@@ -447,6 +449,9 @@ class NNComponent(Component):
 
         if threshold is not None:
             self.tracker.setTrackerThreshold(threshold)
+
+        if apply_tracking_filter is not None:
+            self.apply_tracking_filter = apply_tracking_filter
 
     def config_yolo_from_metadata(self, metadata: Dict):
         """
@@ -674,7 +679,9 @@ class NNComponent(Component):
 
             out = XoutTracker(det_nn=self._comp,
                               frames=self._comp._input.get_stream_xout(),  # CameraComponent
-                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out))
+                              device=device,
+                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out),
+                              apply_kalman=self._comp.apply_tracking_filter)
 
             return self._comp._create_xout(pipeline, out)
 
