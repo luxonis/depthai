@@ -4,8 +4,10 @@ from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket
-from depthai_sdk.oak_outputs.xout import XoutFrames, XoutMjpeg, XoutH26x
-from depthai_sdk.oak_outputs.xout_base import XoutBase, StreamXout, ReplayStream
+from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
+from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.replay import Replay
 
 
@@ -21,8 +23,7 @@ class CameraComponent(Component):
                  rotation: Optional[int] = None,
                  replay: Optional[Replay] = None,
                  name: Optional[str] = None,
-                 args: Dict = None,
-                 ):
+                 args: Dict = None):
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
         recording is passed during OakCamera initialization. Mocking the camera will send frames from the host to the
@@ -47,7 +48,8 @@ class CameraComponent(Component):
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
 
         # Save passed settings
-        self._source_name = source
+        self._pipeline = pipeline
+        self._source = source
         self._replay: Replay = replay
         self._args: Dict = args
         self.name = name
@@ -57,11 +59,11 @@ class CameraComponent(Component):
 
         self._rotation = rotation
 
-        self._create_node(pipeline, source.upper())
+        self._create_node(self._pipeline, source.upper())
 
         self.encoder = None
         if encode:
-            self.encoder = pipeline.createVideoEncoder()
+            self.encoder = self._pipeline.createVideoEncoder()
             # MJPEG by default
             self._encoder_profile = parse_encode(encode)
 
@@ -71,7 +73,7 @@ class CameraComponent(Component):
         if fps:
             self.set_fps(fps)
 
-    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self.is_replay():  # If replay, don't create camera node
             res = self._replay.getShape(self._source_name)
             # print('resolution', res)
@@ -116,8 +118,8 @@ class CameraComponent(Component):
                 scale = getClosestIspScale(self.node.getIspSize(), width=1300, videoEncoder=(self.encoder is not None))
                 self.node.setIspScale(*scale)
 
-            currSize = self.node.getVideoSize()
-            closest = getClosestVideoSize(*currSize)
+            curr_size = self.node.getVideoSize()
+            closest = getClosestVideoSize(*curr_size)
             self.node.setVideoSize(*closest)
             self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 
@@ -292,13 +294,18 @@ class CameraComponent(Component):
 
         self.node: dai.node.ColorCamera
 
-        if interleaved: self.node.setInterleaved(interleaved)
+        if size:
+            self.node.setStillSize(*size)
+            self.node.setVideoSize(*size)
+            self.node.setPreviewSize(*size)
+
+        if interleaved is not None: self.node.setInterleaved(interleaved)
         if color_order:
             if isinstance(color_order, str):
                 color_order = getattr(dai.ColorCameraProperties.ColorOrder, color_order.upper())
             self.node.setColorOrder(color_order)
 
-        if manual_focus: self.node.initialControl.setManualFocus(manual_focus)
+        if manual_focus is not None: self.node.initialControl.setManualFocus(manual_focus)
         if af_mode: self.node.initialControl.setAutoFocusMode(af_mode)
         if awb_mode: self.node.initialControl.setAutoWhiteBalanceMode(awb_mode)
         if scene_mode: self.node.initialControl.setSceneMode(scene_mode)
@@ -308,9 +315,9 @@ class CameraComponent(Component):
         if isp_scale:
             self._resolution_forced = True
             self.node.setIspScale(*isp_scale)
-        if sharpness: self.node.initialControl.setSharpness(sharpness)
-        if luma_denoise: self.node.initialControl.setLumaDenoise(luma_denoise)
-        if chroma_denoise: self.node.initialControl.setChromaDenoise(chroma_denoise)
+        if sharpness is not None: self.node.initialControl.setSharpness(sharpness)
+        if luma_denoise is not None: self.node.initialControl.setLumaDenoise(luma_denoise)
+        if chroma_denoise is not None: self.node.initialControl.setChromaDenoise(chroma_denoise)
 
     def _set_resolution(self, resolution):
         if not self.is_replay():
@@ -349,13 +356,13 @@ class CameraComponent(Component):
         if self._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
             raise Exception('Video encoder was set to MJPEG while trying to configure H26X attributes!')
 
-        if rate_control_mode:
+        if rate_control_mode is not None:
             self.encoder.setRateControlMode(rate_control_mode)
-        if keyframe_freq:
+        if keyframe_freq is not None:
             self.encoder.setKeyframeFrequency(keyframe_freq)
-        if bitrate_kbps:
+        if bitrate_kbps is not None:
             self.encoder.setBitrateKbps(bitrate_kbps)
-        if num_b_frames:
+        if num_b_frames is not None:
             self.encoder.setNumBFrames(num_b_frames)
 
     def config_encoder_mjpeg(self,
@@ -369,9 +376,9 @@ class CameraComponent(Component):
                 f'Video encoder was set to {self._encoder_profile} while trying to configure MJPEG attributes!'
             )
 
-        if quality:
+        if quality is not None:
             self.encoder.setQuality(quality)
-        if lossless:
+        if lossless is not None:
             self.encoder.setLossless(lossless)
 
     def get_stream_xout(self) -> StreamXout:

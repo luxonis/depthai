@@ -9,6 +9,8 @@ Usage
 
 .. code-block:: python
 
+    from depthai_sdk import OakCamera
+
     with OakCamera() as oak:
         # Create stereo component, initialize left/right MonoCamera nodes for 800P and 60FPS
         stereo = oak.create_stereo('800p', fps=60)
@@ -28,6 +30,6 @@ Component outputs
 Reference
 #########
 
-.. autoclass:: depthai_sdk.StereoComponent
+.. autoclass:: depthai_sdk.components.StereoComponent
     :members:
     :undoc-members:

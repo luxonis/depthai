@@ -2,10 +2,13 @@
 
 import cv2
 
-from depthai_sdk import OakCamera, TextPosition, Visualizer, DetectionPacket
+from depthai_sdk import OakCamera
+from depthai_sdk.classes import DetectionPacket
+from depthai_sdk.visualize.configs import TextPosition
 
 
-def callback(packet: DetectionPacket, visualizer: Visualizer):
+def callback(packet: DetectionPacket):
+    visualizer = packet.visualizer
     num = len(packet.img_detections.detections)
     print('New msgs! Number of people detected:', num)
 
@@ -17,7 +20,7 @@ def callback(packet: DetectionPacket, visualizer: Visualizer):
 with OakCamera(replay='people-images-01') as oak:
     color = oak.create_camera('color')
     nn = oak.create_nn('person-detection-retail-0013', color)
-    oak.replay.set_fps(3)
+    oak.replay.setFps(0.5)
 
     oak.visualize(nn, callback=callback)
     # oak.show_graph()

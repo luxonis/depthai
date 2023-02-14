@@ -57,8 +57,8 @@ Example usage:
     import numpy as np
     from depthai import NNData
 
-    from depthai_sdk import OakCamera, Detections
-
+    from depthai_sdk import OakCamera
+    from depthai_sdk.classes import Detections
 
     def decode(nn_data: NNData):
         layer = nn_data.getFirstLayerFp16()
@@ -89,7 +89,7 @@ Example usage:
 Reference
 #########
 
-.. autoclass:: depthai_sdk.NNComponent
+.. autoclass:: depthai_sdk.components.NNComponent
     :members:
     :undoc-members:
 

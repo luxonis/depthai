@@ -3,8 +3,8 @@ from typing import List
 import depthai as dai
 
 from depthai_sdk.components.component import Component, XoutBase
-from depthai_sdk.oak_outputs.xout import XoutIMU
-from depthai_sdk.oak_outputs.xout_base import StreamXout
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
+from depthai_sdk.oak_outputs.xout.xout_imu import XoutIMU
 
 
 class IMUComponent(Component):
@@ -43,7 +43,7 @@ class IMUComponent(Component):
         self.node.setMaxBatchReports(maxBatchReports=max_batch_reports)
         self.node.enableFirmwareUpdate(enable_firmware_update)
 
-    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         pass
 
     class Out:

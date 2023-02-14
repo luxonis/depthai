@@ -177,7 +177,10 @@ class Replay:
         """
         Sets frequency at which Replay module will send frames to the camera. Default 30FPS.
         """
-        self.fps = fps
+        if type(self.reader).__name__ == 'ImageReader':
+            self.reader.set_cycle_fps(fps)
+        else:
+            self.fps = fps
 
     def get_fps(self) -> float:
         return self.fps
