@@ -1,7 +1,8 @@
 import math
 import depthai as dai
 from typing import *
-
+import numpy as np
+import cv2
 
 class ImageSensor:
     name: str
@@ -58,6 +59,7 @@ cameraResolutions: Dict[Any, Tuple[int, int]] = {
 }
 
 
+
 def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
     """
     Calculates all supported
@@ -73,7 +75,6 @@ def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
                     lst.append((n / d, (n, d)))
     lst.sort(reverse=True)
     return lst
-
 
 def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tuple[int, int]:
     """

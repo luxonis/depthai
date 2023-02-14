@@ -4,7 +4,11 @@ import urllib.request
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 import requests

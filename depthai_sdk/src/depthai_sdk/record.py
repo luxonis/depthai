@@ -8,7 +8,8 @@ from typing import Dict, List
 import depthai as dai
 
 from depthai_sdk.classes.packets import FramePacket
-from depthai_sdk.oak_outputs.xout import XoutSeqSync, XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.recorders.abstract_recorder import Recorder
 
 

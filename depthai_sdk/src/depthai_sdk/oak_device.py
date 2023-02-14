@@ -2,7 +2,7 @@ from typing import List, Optional
 
 import depthai as dai
 
-from depthai_sdk.oak_outputs.xout_base import XoutBase
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
 
 
 class OakDevice:

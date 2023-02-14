@@ -5,12 +5,11 @@ from setuptools import setup
 with open('requirements.txt') as f:
     requirements = f.readlines()
 
-install_requires=[requirement for requirement in requirements if '--' not in requirement]
-
+install_requires = [requirement for requirement in requirements if '--' not in requirement]
 
 setup(
     name='depthai-sdk',
-    version='1.9.2',
+    version='1.9.4',
     description='This package provides an abstraction of the DepthAI API library.',
     long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
@@ -31,15 +30,16 @@ setup(
         "replay": ['mcap>=0.0.10',
                    'mcap-ros1-support==0.0.8',
                    'rosbags==0.9.11'],
-        "record": ['av',
-                   'sensor_msgs',
-                   'geometry_msgs',
-                   'std_msgs',
-                   'genpy']
+        "record": ['av'],
+        "minimal": ['numpy',
+                    'blobconverter',
+                    'depthai',
+                    'PyTurboJPEG',
+                    'marshmallow',
+                    'distinctipy',
+                    'xmltodict',
+                    ]
     },
-    dependency_links=[
-        'https://rospypi.github.io/simple/'
-    ],
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
         "Source Code": "https://github.com/luxonis/depthai/tree/main/depthai_sdk",

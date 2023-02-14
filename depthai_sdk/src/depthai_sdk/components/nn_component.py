@@ -3,7 +3,10 @@ import warnings
 from pathlib import Path
 from typing import Callable, Union, List, Dict
 
-import blobconverter
+try:
+    import blobconverter
+except ImportError:
+    blobconverter = None
 
 from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.components.camera_component import CameraComponent
@@ -11,11 +14,14 @@ from depthai_sdk.components.component import Component
 from depthai_sdk.integrations.roboflow import RoboflowIntegration
 from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
+from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
-from depthai_sdk.oak_outputs.xout import XoutNnResults, XoutTwoStage, XoutSpatialBbMappings, XoutFrames, XoutTracker, \
-    XoutNnH26x, XoutNnMjpeg
-from depthai_sdk.oak_outputs.xout_base import StreamXout, XoutBase
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_nn import XoutTwoStage, XoutNnResults, XoutSpatialBbMappings
+from depthai_sdk.oak_outputs.xout.xout_nn_encoded import XoutNnMjpeg, XoutNnH26x
+from depthai_sdk.oak_outputs.xout.xout_tracker import XoutTracker
 from depthai_sdk.replay import Replay
 
 
@@ -106,7 +112,7 @@ class NNComponent(Component):
         self.node = pipeline.create(self._node_type)
         self._update_config()
 
-    def _forced_openvino_version(self) -> dai.OpenVINO.Version:
+    def forced_openvino_version(self) -> dai.OpenVINO.Version:
         """
         Checks whether the component forces a specific OpenVINO version. This function is called after
         Camera has been configured and right before we connect to the OAK camera.
@@ -114,7 +120,7 @@ class NNComponent(Component):
         """
         return self._forced_version
 
-    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._roboflow:
             path = self._roboflow.device_update(device)
             self._parse_config(path)
@@ -193,7 +199,7 @@ class NNComponent(Component):
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
                 self._spatial = StereoComponent(pipeline, args=self._args, replay=self._replay)
-                self._spatial._update_device_info(pipeline, device, version)
+                self._spatial.on_init(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
                 self._spatial.config_stereo(align=self._input._source)
@@ -424,22 +430,22 @@ class NNComponent(Component):
                           "This configuration attempt will be ignored.")
             return
 
-        if tracker_type:
+        if tracker_type is not None:
             self.tracker.setTrackerType(type=tracker_type)
 
-        if track_labels and 0 < len(track_labels):
+        if track_labels is not None and 0 < len(track_labels):
             labels = [self._parse_label(l) for l in track_labels]
             self.tracker.setDetectionLabelsToTrack(labels)
 
-        if assignment_policy:
+        if assignment_policy is not None:
             self.tracker.setTrackerIdAssignmentPolicy(assignment_policy)
 
-        if max_obj:
+        if max_obj is not None:
             if 60 < max_obj:
                 raise ValueError("Maximum objects to track is 60!")
             self.tracker.setMaxObjectsToTrack(max_obj)
 
-        if threshold:
+        if threshold is not None:
             self.tracker.setTrackerThreshold(threshold)
 
     def config_yolo_from_metadata(self, metadata: Dict):
@@ -480,7 +486,7 @@ class NNComponent(Component):
         self.node.setAnchorMasks(masks)
         self.node.setIouThreshold(iou_threshold)
 
-        if conf_threshold:
+        if conf_threshold is not None:
             self.node.setConfidenceThreshold(conf_threshold)
 
     def config_nn(self,
@@ -503,7 +509,7 @@ class NNComponent(Component):
                           'Using default LETTERBOX mode.')
 
             self._ar_resize_mode = resize_mode
-        if conf_threshold and self._is_detector():
+        if conf_threshold is not None and self._is_detector():
             self.node.setConfidenceThreshold(conf_threshold)
 
     def config_spatial(self,
@@ -524,11 +530,11 @@ class NNComponent(Component):
             print('This is not a Spatial Detection network! This configuration attempt will be ignored.')
             return
 
-        if bb_scale_factor:
+        if bb_scale_factor is not None:
             self.node.setBoundingBoxScaleFactor(bb_scale_factor)
-        if lower_threshold:
+        if lower_threshold is not None:
             self.node.setDepthLowerThreshold(lower_threshold)
-        if upper_threshold:
+        if upper_threshold is not None:
             self.node.setDepthUpperThreshold(upper_threshold)
         if calc_algo:
             self.node.setSpatialCalculationAlgorithm(calc_algo)

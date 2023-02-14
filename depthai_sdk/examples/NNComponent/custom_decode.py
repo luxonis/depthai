@@ -3,7 +3,8 @@ import cv2
 import numpy as np
 from depthai import NNData
 
-from depthai_sdk import OakCamera, Detections, Visualizer, DetectionPacket
+from depthai_sdk import OakCamera
+from depthai_sdk.classes import Detections, DetectionPacket
 
 
 def decode(nn_data: NNData) -> Detections:
@@ -21,7 +22,8 @@ def decode(nn_data: NNData) -> Detections:
     return dets
 
 
-def callback(packet: DetectionPacket, visualizer: Visualizer):
+def callback(packet: DetectionPacket):
+    visualizer = packet.visualizer
     frame = packet.frame
     frame = visualizer.draw(frame)
     cv2.imshow('Custom decode function', frame)

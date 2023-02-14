@@ -14,7 +14,7 @@ class RosbagReader(AbstractReader):
     """
 
     def __init__(self, folder: Path) -> None:
-        self.reader = Reader(source)
+        self.reader = Reader(folder)
         self.reader.open()
         if '/device_0/sensor_0/Depth_0/image/data' not in self.reader.topics:
             raise Exception("Provided rosbag can't find required topic (`/device_0/sensor_0/Depth_0/image/data`)")
@@ -23,7 +23,9 @@ class RosbagReader(AbstractReader):
     def read(self):
         connection, _, rawdata = next(self.generator)
         msg = deserialize_cdr(ros1_to_cdr(rawdata, connection.msgtype), connection.msgtype)
-        return msg.data.view(np.int16).reshape((msg.height, msg.width))
+        return {
+            'depth': msg.data.view(np.int16).reshape((msg.height, msg.width))
+        }
 
     def getStreams(self) -> List[str]:
         return ["depth"]  # Only depth recording is supported
@@ -32,6 +34,11 @@ class RosbagReader(AbstractReader):
         connection, _, rawdata = next(self.reader.messages('/device_0/sensor_0/Depth_0/image/data'))
         msg = deserialize_cdr(ros1_to_cdr(rawdata, connection.msgtype), connection.msgtype)
         return (msg.width, msg.height)
+
+    def get_message_size(self, name: str) -> int:
+        connection, _, rawdata = next(self.reader.messages('/device_0/sensor_0/Depth_0/image/data'))
+        msg = deserialize_cdr(ros1_to_cdr(rawdata, connection.msgtype), connection.msgtype)
+        return len(msg.data) # TODO: test
 
     def close(self):
         self.reader.close()

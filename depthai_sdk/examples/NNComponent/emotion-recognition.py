@@ -1,12 +1,16 @@
 import cv2
 import numpy as np
 
-from depthai_sdk import OakCamera, ResizeMode, TextPosition, TwoStagePacket, Visualizer
+from depthai_sdk import OakCamera
+from depthai_sdk.classes import TwoStagePacket
+from depthai_sdk.visualize.configs import TextPosition
 
 emotions = ['neutral', 'happy', 'sad', 'surprise', 'anger']
 
 
-def callback(packet: TwoStagePacket, visualizer: Visualizer):
+def callback(packet: TwoStagePacket):
+    visualizer = packet.visualizer
+
     for det, rec in zip(packet.detections, packet.nnData):
         emotion_results = np.array(rec.getFirstLayerFp16())
         emotion_name = emotions[np.argmax(emotion_results)]
