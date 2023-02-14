@@ -14,6 +14,7 @@ from depthai_sdk.components.component import Component
 from depthai_sdk.components.integrations.roboflow import RoboflowIntegration
 from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
+from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
@@ -201,7 +202,7 @@ class NNComponent(Component):
                 self._spatial.on_init(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
-                self._spatial.config_stereo(align=self._input._source)
+                self._spatial.config_stereo(align=self._input._source_name)
             # Configure Spatial Detection Network
 
         if self._args:
