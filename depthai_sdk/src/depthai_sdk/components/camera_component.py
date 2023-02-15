@@ -75,11 +75,11 @@ class CameraComponent(Component):
 
     def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self.is_replay():  # If replay, don't create camera node
-            res = self._replay.getShape(self._source_name)
+            res = self._replay.getShape(self._source)
             # print('resolution', res)
             # resize = getResize(res, width=1200)
             # self._replay.setResizeColor(resize)
-            stream = self._replay.streams[self._source_name]
+            stream = self._replay.streams[self._source]
             if stream.node is None:
                 return # Stream disabled
             self.node = stream.node
@@ -230,7 +230,7 @@ class CameraComponent(Component):
             size_tuple = parse_size(size)
 
             if self._replay:
-                self._replay.resize(self._source_name, size_tuple, resize_mode)
+                self._replay.resize(self._source, size_tuple, resize_mode)
             elif self.is_color():
                 self.node.setStillSize(*size_tuple)
                 self.node.setVideoSize(*size_tuple)
@@ -297,11 +297,6 @@ class CameraComponent(Component):
 
         self.node: dai.node.ColorCamera
 
-        if size:
-            self.node.setStillSize(*size)
-            self.node.setVideoSize(*size)
-            self.node.setPreviewSize(*size)
-
         if interleaved is not None: self.node.setInterleaved(interleaved)
         if color_order:
             if isinstance(color_order, str):
@@ -336,11 +331,11 @@ class CameraComponent(Component):
     def is_mono(self) -> bool:
         return isinstance(self.node, dai.node.MonoCamera)
 
-    def get_fps(self):
+    def get_fps(self) -> float:
         if self.is_replay():
-            self._replay.get_fps()
+            return self._replay.get_fps()
         else:
-            self.node.getFps()
+            return self.node.getFps()
 
     def set_fps(self, fps: float):
         if self.is_replay():
@@ -386,12 +381,14 @@ class CameraComponent(Component):
 
     def get_stream_xout(self) -> StreamXout:
         if self.is_replay():
-            return ReplayStream(self._source_name)
+            return ReplayStream(self._source)
         elif self.is_mono():
             return StreamXout(self.node.id, self.stream, name=self.name)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(10)
-            return StreamXout(self.node.id, self.stream, name=self.name)
+            # node.video instead of preview (self.stream) was used to reduce bandwidth
+            # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
+            return StreamXout(self.node.id, self.node.video, name=self.name)
 
     """
     Available outputs (to the host) of this component
@@ -417,7 +414,7 @@ class CameraComponent(Component):
             Streams camera output to the OAK camera. Produces FramePacket.
             """
             out = XoutFrames(self._comp.get_stream_xout(), self._comp.get_fps())
-            out.name = self._comp._source_name
+            out.name = self._comp._source
             return self._comp._create_xout(pipeline, out)
 
         def replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -425,7 +422,7 @@ class CameraComponent(Component):
             If depthai-recording was used, it won't stream anything, but it will instead use frames that were sent to the OAK.
             Produces FramePacket.
             """
-            out = XoutFrames(ReplayStream(self._comp._source_name), self._comp.get_fps())
+            out = XoutFrames(ReplayStream(self._comp._source), self._comp.get_fps())
             return self._comp._create_xout(pipeline, out)
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -449,5 +446,5 @@ class CameraComponent(Component):
                     fps=self._comp.encoder.getFrameRate(),
                     frame_shape=self._comp.stream_size
                 )
-            out.name = self._comp._source_name
+            out.name = self._comp._source
             return self._comp._create_xout(pipeline, out)

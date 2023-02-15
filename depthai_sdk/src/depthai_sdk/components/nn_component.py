@@ -11,7 +11,7 @@ except ImportError:
 from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
-from depthai_sdk.components.integrations.roboflow import RoboflowIntegration
+from depthai_sdk.integrations.roboflow import RoboflowIntegration
 from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
 from depthai_sdk.classes.enum import ResizeMode
@@ -202,7 +202,7 @@ class NNComponent(Component):
                 self._spatial.on_init(pipeline, device, version)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
-                self._spatial.config_stereo(align=self._input._source_name)
+                self._spatial.config_stereo(align=self._input._source)
             # Configure Spatial Detection Network
 
         if self._args:
@@ -279,7 +279,7 @@ class NNComponent(Component):
 
         if 'source' in self._config:
             if self._config['source'] == 'roboflow':
-                from depthai_sdk.components.integrations.roboflow import RoboflowIntegration
+                from depthai_sdk.integrations.roboflow import RoboflowIntegration
                 self._roboflow = RoboflowIntegration(self._config)
                 self._parse_node_type('YOLO')  # Roboflow only supports YOLO models
                 return

@@ -35,15 +35,15 @@ def _run(recorder: Recorder, frame_queue: Queue):
 
 class RecordType(IntEnum):
     VIDEO = 1  # Save to video file
-    BAG = 2  # To ROS .bag
+    ROSBAG = 2  # To ROS .bag
     MCAP = 3  # To .mcap
+    DB3 = 4 # To .db3 (ros2)
 
 
 class Record(XoutSeqSync):
     """
     This class records depthai streams from OAK cameras into different formats.
-    Available formats: .h265, .mjpeg, .mp4, .mcap, .bag
-    It will also save calibration .json, so depth reconstruction will
+    It will also save calibration .json, so depth reconstruction will be possible.
     """
 
     def __init__(self, path: Path, record_type: RecordType):
@@ -69,9 +69,12 @@ class Record(XoutSeqSync):
         elif self.record_type == RecordType.VIDEO:
             from .recorders.video_recorder import VideoRecorder
             self.recorder = VideoRecorder()
-        elif self.record_type == RecordType.BAG:
-            from .recorders.rosbag_recorder import RosbagRecorder
-            self.recorder = RosbagRecorder()
+        elif self.record_type == RecordType.ROSBAG:
+            from .recorders.rosbag_recorder import Rosbag1Recorder
+            self.recorder = Rosbag1Recorder()
+        elif self.record_type == RecordType.DB3:
+            from .recorders.rosbag_recorder import Rosbag2Recorder
+            self.recorder = Rosbag2Recorder()
         else:
             raise ValueError(f"Recording type '{self.record_type}' isn't supported!")
 
@@ -105,7 +108,7 @@ class Record(XoutSeqSync):
             self.name_mapping = dict()
             for xout in xouts:
                 self.name_mapping[xout.frames.name] = xout.name
-        else:  # For MCAP/Ros bags we don't need msg syncing
+        else:  # For MCAP/Rosbags we don't need msg syncing
             self.new_msg = self.no_sync
 
         self.mxid = device.getMxId()

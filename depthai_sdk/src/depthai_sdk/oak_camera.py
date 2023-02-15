@@ -14,7 +14,7 @@ except ImportError:
 import depthai as dai
 
 from depthai_sdk.args_parser import ArgsParser
-from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig
+from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig, RosStreamConfig
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
@@ -417,6 +417,16 @@ class OakCamera:
 
         return self._pipeline
 
+    def _get_component_outputs(self, output: Union[List, Callable, Component]) -> List[Callable]:
+        if not isinstance(output, List):
+            output = [output]
+
+        for i in range(len(output)):
+            if isinstance(output[i], Component):
+                # Select default (main) output of the component
+                output[i] = output[i].out.main
+        return output
+
     def sync(self, outputs: Union[Callable, List[Callable]], callback: Callable, visualize=False):
         """
         Synchronize multiple components outputs forward them to the callback.
@@ -442,15 +452,8 @@ class OakCamera:
             path: Folder path where to save these streams
             record_type: Record type
         """
-        if isinstance(outputs, Callable):
-            outputs = [outputs]  # to list
-
-        for i in range(len(outputs)):
-            if isinstance(outputs[i], Component):
-                outputs[i] = outputs[i].out.main
-
         record = Record(Path(path).resolve(), record_type)
-        self._out_templates.append(RecordConfig(outputs, record))
+        self._out_templates.append(RecordConfig(self._get_component_outputs(outputs), record))
         return record
 
     def show_graph(self):
@@ -520,6 +523,9 @@ class OakCamera:
             enable_visualizer: Whether to enable visualizer for this output.
         """
         self._callback(output, callback, Visualizer() if enable_visualizer else None)
+
+    def ros_stream(self, output: Union[List, Callable, Component]):
+        self._out_templates.append(RosStreamConfig(self._get_component_outputs(output)))
 
     @property
     def device(self) -> dai.Device:

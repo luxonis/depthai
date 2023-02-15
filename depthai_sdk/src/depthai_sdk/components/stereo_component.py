@@ -154,7 +154,7 @@ class StereoComponent(Component):
         self._right_stream = self._get_output_stream(self.right)
 
         if self._replay:  # Replay
-            self._replay.initStereoDepth(self.node, left_name=self.left._source_name, right_name=self.right._source_name)
+            self._replay.initStereoDepth(self.node, left_name=self.left._source, right_name=self.right._source)
         else:
             self._left_stream.link(self.node.left)
             self._right_stream.link(self.node.right)

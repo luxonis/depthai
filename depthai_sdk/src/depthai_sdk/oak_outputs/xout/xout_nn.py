@@ -8,7 +8,7 @@ from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
 from depthai_sdk.classes.packets import (
     _Detection, DetectionPacket, TrackerPacket, SpatialBbMappingPacket, TwoStagePacket
 )
-from depthai_sdk.components.nn_helper import ResizeMode
+from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
