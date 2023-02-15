@@ -88,7 +88,7 @@ class CameraComponent(Component):
             self.stream_size = res
             self.stream = self.node.out
             if self._rotation:
-                rot_manip = self._create_rotation_manip(pipeline) if self._rotation else None
+                rot_manip = self._create_rotation_manip(pipeline)
                 self.node.out.link(rot_manip.inputImage)
                 self.stream = rot_manip.out
             else:
@@ -135,9 +135,12 @@ class CameraComponent(Component):
             self._config_camera_args(self._args)
 
         if self._rotation:
-            rot_manip = self._create_rotation_manip(pipeline) if self._rotation else None
-            self.stream.link(rot_manip.inputImage)
-            self.stream = rot_manip.out
+            if self._rotation == 180 and not self.is_replay():
+                self.node.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
+            else:
+                rot_manip = self._create_rotation_manip(pipeline)
+                self.stream.link(rot_manip.inputImage)
+                self.stream = rot_manip.out
 
         if self.encoder:
             self.encoder.setDefaultProfilePreset(self.get_fps(), self._encoder_profile)
