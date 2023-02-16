@@ -1,3 +1,20 @@
+# Calibration
+Before running the calibration script please make sure that you have the `depthai-boards` submodule inside the `resources` folder and installed all Python requirements. You can do this by running the following script:
+```bash
+python3 install_requirements.py
+``` 
+
+> **Note:** You can install the `depthai-boards` submodule manually by running `git submodule update --init --recursive`
+
+
+You can start the calibration script by running the following command:
+```bash
+python3 calibrate.py -brd <device baord file> -s <square size in cm> -db
+```
+
+For more info about the calibration please check the [calibration tutorial](https://docs.luxonis.com/en/latest/pages/calibration/).
+
+
 # DepthAI API Demo Program
 
 [![Discord](https://img.shields.io/discord/790680891252932659?label=Discord)](https://discord.gg/luxonis)

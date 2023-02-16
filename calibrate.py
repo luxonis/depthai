@@ -307,7 +307,10 @@ class Main:
         if self.args.board:
             board_path = Path(self.args.board)
             if not board_path.exists():
-                board_path = (Path(__file__).parent / 'resources/boards' / self.args.board.upper()).with_suffix('.json').resolve()
+                boards_dir = Path(__file__).parent / 'resources/depthai-boards/boards'
+                if not boards_dir.exists():
+                    raise ValueError(f'Depthai boards directory not found. Please check if {boards_dir} exists. If not, make sure the depthai-boards submodule is initialized and updated. (git submodule update --init --recursive')
+                board_path = (boards_dir / self.args.board.upper()).with_suffix('.json').resolve()
                 if not board_path.exists():
                     raise ValueError(
                         'Board config not found: {}'.format(board_path))
