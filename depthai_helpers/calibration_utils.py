@@ -944,6 +944,7 @@ class StereoCalibration(object):
         imgpoints_r = []
         imgpoints_l = []
         # new_imagePairs = []
+        no_markers_found_error_count = 0
         for i, image_data_pair in enumerate(image_data_pairs):
             #             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             marker_corners_l, ids_l, rejectedImgPoints = cv2.aruco.detectMarkers(
@@ -959,9 +960,13 @@ class StereoCalibration(object):
                                                                             rejectedCorners=rejectedImgPoints)
 
             if ids_l is None or ids_r is None:
+                no_markers_found_error_count += 1
                 print(f'No markers found in the undistorted image pair {images_left[i]} and {images_right[i]}')
                 continue
 
+            if no_markers_found_error_count > 2:
+                raise Exception('No markers found in more than 2 undistored images. Please make sure that your calibration board is flat and not too close to the border of the image.')
+                
             print(f'Marekrs length r is {len(marker_corners_r)}')
             print(f'Marekrs length l is {len(marker_corners_l)}')
             res2_l = cv2.aruco.interpolateCornersCharuco(
