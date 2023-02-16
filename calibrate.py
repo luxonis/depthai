@@ -105,14 +105,14 @@ SETTINGS = {
     },
     'count': {
         'flag': "-c", 'flag_long': "--count", 'default': 3, 'type': int, 'min': 1, 'max': 10,
-        'label': "Images per capture", 'help': "Number of images per polygon to capture. Default: 1."
+        'label': "Images per polygon", 'help': "Number of images per polygon to capture. Default: 1."
     },
     'squareSizeCm': {
-        'flag': "-s", 'flag_long': "--squareSizeCm", 'default': 2.5, 'type': float, 'min': 2.2,
-        'label': "Square size (cm)", 'help': "Square size of calibration pattern used in centimeters. Default: 2.0cm."
+        'flag': "-s", 'flag_long': "--squareSizeCm", 'default': 2.5, 'type': float, 'min': 2.2, 'step': 0.5,
+        'label': "Square size (cm)", 'help': "Square size of calibration pattern used in centimeters. Default: 2.5cm."
     },
     'markerSizeCm': {
-        'flag': "-ms", 'flag_long': "--markerSizeCm", 'default': None, 'type': float, 
+        'flag': "-ms", 'flag_long': "--markerSizeCm", 'default': None, 'type': float, 'step': 0.5, 
         'label': "Marker size (cm)", 'help': "Marker size in charuco boards."
     },
     'defaultBoard': {
@@ -152,7 +152,7 @@ SETTINGS = {
         'label': "Flip horizontaly", 'help': "Invert horizontal axis of the camera for the display"
     },
     'outputScaleFactor': {
-        'flag': "-osf", 'flag_long': "--outputScaleFactor", 'default': 0.5, 'type': float, 'min': 0.1, 'max': 2.0,
+        'flag': "-osf", 'flag_long': "--outputScaleFactor", 'default': 0.5, 'type': float, 'min': 0.1, 'max': 2.0, 'step': 0.1,
         'label': "Visualization scale factor", 'help': "Set the scaling factor for output visualization. Default: 0.5."
     },
     'maxEpiploarError': {
@@ -476,6 +476,7 @@ class Main:
                 widget = QtWidgets.QDoubleSpinBox()
                 widget.setMinimum(properties.get('min', 0))
                 widget.setMaximum(properties.get('max', 100))
+                widget.setSingleStep(properties.get('step', 0.1))
                 widget.setValue(getattr(self.args, name))
                 widget.valueChanged.connect(lambda v, n=name: setattr(self.args, n, v))
             elif properties['type'] == str:
