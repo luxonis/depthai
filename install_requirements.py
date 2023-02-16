@@ -7,6 +7,11 @@ import os
 script_directory = os.path.dirname(os.path.realpath(__file__))
 this_platform = platform.machine()
 
+
+def update_submodules():
+    scriptDirectory = os.path.dirname(os.path.realpath(__file__))
+    subprocess.check_call(['git', 'submodule', 'update', '--init', '--recursive'], cwd=scriptDirectory)
+
 # https://stackoverflow.com/a/58026969/5494277
 # Check if in virtual environment
 in_venv = getattr(sys, "real_prefix", getattr(sys, "base_prefix", sys.prefix)) != sys.prefix
@@ -48,3 +53,6 @@ try:
     subprocess.check_call(pip_package_install + ["-r", "requirements-optional.txt"], cwd=script_directory, stderr=subprocess.DEVNULL)
 except subprocess.CalledProcessError as ex:
     print("Optional dependencies were not installed. This is not an error.")
+
+
+update_submodules()
