@@ -140,8 +140,8 @@ SETTINGS = {
         'label': "Swap left and right cameras", 'help': "Interchange Left and right camera port."
     },
     'mode': {
-        'flag': "-m", 'flag_long': "--mode", 'default': ['capture', 'process'], 'nargs': '*', 'type': str, 
-        'help': "Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process')."
+        'flag': "-m", 'flag_long': "--mode", 'default': ['capture', 'process'], 'nargs': '*', 'type': str, 'multichoice_options': ['capture', 'process'],
+        'label': "Mode", 'help': "Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process')."
     },
     'invert_v': {
         'flag': "-iv", 'flag_long': "--invertVertical", 'default': False, 'type': bool, 'action': "store_true", 
@@ -240,6 +240,8 @@ def parse_args():
 
 
     options = parser.parse_args()
+
+    print(options)
 
     # Set some extra defaults, `-brd` would override them
     if options.markerSizeCm is None:
@@ -375,6 +377,8 @@ class Main:
                 self.board_config = json.load(fp)
                 self.board_config = self.board_config['board_config']
                 self.board_config_backup = self.board_config
+        else:
+            raise ValueError(f'Please specify the board config file using --board argument.')
 
         # TODO: set the total images
         # random polygons for count
@@ -461,7 +465,6 @@ class Main:
             label = properties.get('label')
             if label is None:
                 continue
-
             if properties['type'] == bool:
                 widget = QtWidgets.QCheckBox()
                 widget.setChecked(getattr(self.args, name))
@@ -485,6 +488,17 @@ class Main:
                     widget.addItems(properties['options'])
                     widget.setCurrentText(getattr(self.args, name))
                     widget.currentTextChanged.connect(lambda v, n=name: setattr(self.args, n, v))
+                elif 'multichoice_options' in properties:
+                    # create a row of checkboxes
+                    widget = QtWidgets.QWidget()
+                    widget.setLayout(QtWidgets.QHBoxLayout())
+                    checkboxes = {}
+                    for choice in properties['multichoice_options']:
+                        checkbox = QtWidgets.QCheckBox(choice)
+                        checkbox.setChecked(choice in getattr(self.args, name))
+                        checkbox.stateChanged.connect(lambda v, n=name, c=choice: setattr(self.args, n, [n for n, c in checkboxes.items() if c.isChecked()]))
+                        checkboxes[choice] = checkbox
+                        widget.layout().addWidget(checkbox)
                 else:
                     widget = QtWidgets.QLineEdit()
                     widget.setText(getattr(self.args, name))
