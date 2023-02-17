@@ -26,6 +26,7 @@ class ModelRVC3(Schema):
     # Experimental
     hef = fields.Str(required=False)
     dequantize_outputs = fields.Bool(required=False, false=True)
+    outstream_names_add = fields.String(required=False)
 
 
 class NNConfig(Schema):

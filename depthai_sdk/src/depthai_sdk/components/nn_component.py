@@ -147,9 +147,6 @@ class NNComponent(Component):
                 raise RuntimeError("No model specified in the config")
             self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model'], version))
 
-        if self._blob is None:
-            self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model'], version))
-
         # TODO: update NN input based on camera resolution
         if self._rvc_version == 2:
             self.node.setBlob(self._blob)
@@ -273,16 +270,24 @@ class NNComponent(Component):
             self._hef_model = True
             self.node.setXmlModelPath(model_rvc3["hef"], os.devnull) # TODO this is a bit of an API misuse
             self.node.setBackend("hailo")
+
+            outstream_names_add = ""
+            if "outstream_names_add" in model_rvc3:
+                outstream_names_add = model_rvc3["outstream_names_add"]
+
             dequantize_outputs=False
-            if "dequantize_outputs" in model_rvc3["hef"]:
-                dequantize_outputs = model_rvc3["hef"]["dequantize_outputs"]
+            if "dequantize_outputs" in model_rvc3:
+                dequantize_outputs = model_rvc3["dequantize_outputs"]
             if dequantize_outputs:
-                self.node.setBackendProperties({"output_format": "float"})
+                self.node.setBackendProperties({"output_format": "float",
+                                                "outstream_names_add": outstream_names_add})
             else:
                 print("Setting backend properties")
                 self.node.setBackendProperties({"output_format": "uint8",
                                                 "quantization_in": "true",
-                                                "quantization_out": "true",})
+                                                "quantization_out": "true",
+                                                "outstream_names_add": outstream_names_add})
+
 
         else:
             raise ValueError("Blob not specified for RVC3")
