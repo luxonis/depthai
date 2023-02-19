@@ -1,6 +1,6 @@
 import math
 from collections import defaultdict
-from typing import Union, Dict
+from typing import Union, Dict, Optional
 
 import depthai as dai
 import numpy as np
@@ -22,7 +22,8 @@ class XoutTracker(XoutNnResults):
                  frames: StreamXout,
                  device: dai.Device,
                  tracklets: StreamXout,
-                 apply_kalman: bool = False):
+                 apply_kalman: bool = False,
+                 forget_after_n_frames: Optional[int] = None):
         super().__init__(det_nn, frames, tracklets)
         self.name = 'Object Tracker'
         self.device = device
@@ -36,6 +37,7 @@ class XoutTracker(XoutNnResults):
         self.blacklist = set()
 
         self.apply_kalman = apply_kalman
+        self.forget_after_n_frames = forget_after_n_frames
         self.kalman_filters: Dict[int, Dict[str, KalmanFilter]] = {}
 
     def setup_visualize(self,
@@ -48,9 +50,11 @@ class XoutTracker(XoutNnResults):
         self._set_frame_shape(packet)
         spatial_points = self._get_spatial_points(packet)
 
-        threshold = 5  # TODO make not visualizer specific (old code: self._visualizer.config.tracking.deletion_lost_threshold)
+        threshold = self.forget_after_n_frames
 
-        self._update_lost_counter(packet, threshold)
+        if threshold:
+            self._update_lost_counter(packet, threshold)
+
         self._update_buffers(packet, spatial_points)
 
         # Optional kalman filter
@@ -119,19 +123,19 @@ class XoutTracker(XoutNnResults):
             label_map=self.labels
         )
 
-    def _update_lost_counter(self, packet, lost_threshold):
-        self.blacklist.clear()  # Clear blacklist every frame
-
+    def _update_lost_counter(self, packet, lost_threshold: int):
         for i, tracklet in enumerate(packet.daiTracklets.tracklets):
             if tracklet.status == dai.Tracklet.TrackingStatus.NEW:
+                self.__remove_from_blacklist(tracklet)
                 self.lost_counter[tracklet.id] = 0
             elif tracklet.status == dai.Tracklet.TrackingStatus.TRACKED:
+                self.__remove_from_blacklist(tracklet)
                 self.lost_counter[tracklet.id] = 0
             elif tracklet.status == dai.Tracklet.TrackingStatus.LOST and tracklet.id in self.lost_counter:
                 self.lost_counter[tracklet.id] += 1
 
             if tracklet.id in self.lost_counter and self.lost_counter[tracklet.id] >= lost_threshold:
-                self.blacklist.add(tracklet.id)
+                self.__add_to_blacklist(tracklet)
                 self.lost_counter.pop(tracklet.id)
 
     def _update_buffers(self, packet, spatial_points=None):
@@ -153,9 +157,8 @@ class XoutTracker(XoutNnResults):
         tracklets = []
 
         for i, tracklet in enumerate(packet.daiTracklets.tracklets):
-            # if tracklet.id in self.blacklist:  # Skip blacklisted tracklets
-                # self.kalman_filters.pop(tracklet.id, None)
-                # continue
+            if tracklet.id in self.blacklist:  # Skip blacklisted tracklets
+                continue
 
             meas_vec_space = 0
             meas_std_space = 0
@@ -208,11 +211,17 @@ class XoutTracker(XoutNnResults):
                 new_tracklet = self.__create_tracklet(tracklet, rect, vec_space if is_3d else None)
                 tracklets.append(new_tracklet)
 
+            elif tracklet.status == dai.Tracklet.TrackingStatus.REMOVED:
+                self.kalman_filters.pop(tracklet.id, None)
+
             if tracklets:
                 packet.daiTracklets.tracklets = tracklets
 
     def _add_detections(self, packet, tracklet2speed):
         for tracklet in packet.daiTracklets.tracklets:
+            if tracklet.id in self.blacklist:  # Skip blacklisted tracklets
+                continue
+
             d = _TrackingDetection()
             img_d = tracklet.srcImgDetection
             d.tracklet = tracklet
@@ -328,3 +337,11 @@ class XoutTracker(XoutNnResults):
             print("Warning: calibration data missing, using OAK-D defaults")
             self.baseline = 75
             self.focal = 440
+
+    def __add_to_blacklist(self, tracklet):
+        if tracklet.id not in self.blacklist:
+            self.blacklist.add(tracklet.id)
+
+    def __remove_from_blacklist(self, tracklet):
+        if tracklet.id in self.blacklist:
+            self.blacklist.remove(tracklet.id)
