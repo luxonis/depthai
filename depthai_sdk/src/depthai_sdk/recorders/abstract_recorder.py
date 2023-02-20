@@ -30,7 +30,7 @@ class OakStream:
         IMU = 5
 
     def __init__(self, xout: outputs.xout_base.XoutBase):
-        if isinstance(xout, depthai_sdk.oak_outputs.xout.xout_mjpeg.XoutMjpeg):
+        if isinstance(xout, outputs.xout_mjpeg.XoutMjpeg):
             self.type = self.StreamType.MJPEG
             self.xlink_name = xout.frames.name
         elif isinstance(xout, outputs.xout_h26x.XoutH26x):
@@ -45,7 +45,7 @@ class OakStream:
         elif isinstance(xout, outputs.xout_disparity.XoutDisparity):
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.RAW
-        elif isinstance(xout, depthai_sdk.oak_outputs.xout.xout_frames.XoutFrames):
+        elif isinstance(xout, outputs.xout_frames.XoutFrames):
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.RAW
         elif isinstance(xout, outputs.XoutIMU):
