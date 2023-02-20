@@ -77,6 +77,12 @@ camToRgbRes = {
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P
                 }
 
+antibandingOpts = {
+    'off': dai.CameraControl.AntiBandingMode.OFF,
+    '50':  dai.CameraControl.AntiBandingMode.MAINS_50_HZ,
+    '60':  dai.CameraControl.AntiBandingMode.MAINS_60_HZ,
+}
+
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
     # Create black blank image
@@ -151,8 +157,6 @@ def parse_args():
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
-    parser.add_argument("-fps", "--fps", default=10, type=int,
-                        required=False, help="Set capture FPS for all cameras. Default: %(default)s")
     parser.add_argument("-cd", "--captureDelay", default=5, type=int,
                         required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
     parser.add_argument("-d", "--debug", default=False, action="store_true", help="Enable debug logs.")
@@ -160,6 +164,10 @@ def parse_args():
                         help="Enable writing to Factory Calibration.")
     parser.add_argument("-osf", "--outputScaleFactor", type=float, default=0.5,
                         help="set the scaling factor for output visualization. Default: 0.5.")
+    parser.add_argument('-fps', '--framerate', type=float, default=10,
+                        help="FPS to set for all cameras. Default: %(default)s")
+    parser.add_argument('-ab', '--antibanding', default='50', choices={'off', '50', '60'},
+                        help="Set antibanding/antiflicker algo for lights that flicker at mains frequency. Default: %(default)s [Hz]")
 
     options = parser.parse_args()
 
@@ -370,7 +378,7 @@ class Main:
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
-        fps = 10
+        fps = self.args.framerate
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
             if cam_info['type'] == 'mono':
@@ -406,6 +414,8 @@ class Main:
                     controlIn = pipeline.createXLinkIn()
                     controlIn.setStreamName(cam_info['name'] + '-control')
                     controlIn.out.link(cam_node.inputControl)
+
+            cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
             xout.input.setBlocking(False)
             xout.input.setQueueSize(1)
 
