@@ -1,5 +1,6 @@
 from typing import Dict
 
+from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket
@@ -48,8 +49,8 @@ class CameraComponent(Component):
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
 
         # Save passed settings
-        self._pipeline = pipeline
         self.name = name
+        self._pipeline = pipeline
         self._source = source
         self._replay: Replay = replay
         self._args: Dict = args
@@ -85,17 +86,28 @@ class CameraComponent(Component):
             # print('resolution', res)
             # resize = getResize(res, width=1200)
             # self._replay.setResizeColor(resize)
-            self.node: dai.node.XLinkIn = getattr(self._replay, self._source)
+            stream = self._replay.streams[self._source]
+            if stream.node is None:
+                return # Stream disabled
+            self.node = stream.node
             # print('resize', resize)
             self.node.setMaxDataSize(res[0] * res[1] * 3)
             self.stream_size = res
             self.stream = self.node.out
             if self._rotation:
-                rot_manip = self._create_rotation_manip(pipeline) if self._rotation else None
+                rot_manip = self._create_rotation_manip(pipeline)
                 self.node.out.link(rot_manip.inputImage)
                 self.stream = rot_manip.out
             else:
                 self.stream = self.node.out
+        else: # Live-streaming, check whether camera sensor was found on specified port
+            features = [f for f in device.getConnectedCameraFeatures() if f.socket == self.node.getBoardSocket()][0]
+
+            err = "Camera sensor '{}' was found on socket '{}' which doesn't support '{}' sensor type! Supported sensor types: {}."
+            if isinstance(self.node, dai.node.ColorCamera) and dai.CameraSensorType.COLOR not in features.supportedTypes:
+                raise ValueError(err.format(features.sensorName, features.socket, 'COLOR',features.supportedTypes))
+            if isinstance(self.node, dai.node.MonoCamera) and dai.CameraSensorType.MONO not in features.supportedTypes:
+                raise ValueError(err.format(features.sensorName, features.socket, 'MONO',features.supportedTypes))
 
         if isinstance(self.node, dai.node.ColorCamera):
             # DepthAI uses CHW (Planar) channel layout convention for NN inferencing
@@ -106,7 +118,7 @@ class CameraComponent(Component):
 
             cams = device.getCameraSensorNames()
             # print('Available sensors on OAK:', cams)
-            sensor_name = cams[dai.CameraBoardSocket.RGB]
+            sensor_name = cams[self.node.getBoardSocket()]
 
             if not self._resolution_forced:  # Find the closest resolution
                 self.node.setResolution(getClosesResolution(sensor_name, width=1300))
@@ -130,9 +142,12 @@ class CameraComponent(Component):
             self._config_camera_args(self._args)
 
         if self._rotation:
-            rot_manip = self._create_rotation_manip(pipeline) if self._rotation else None
-            self.stream.link(rot_manip.inputImage)
-            self.stream = rot_manip.out
+            if self._rotation == 180 and not self.is_replay():
+                self.node.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
+            else:
+                rot_manip = self._create_rotation_manip(pipeline)
+                self.stream.link(rot_manip.inputImage)
+                self.stream = rot_manip.out
 
         if self.encoder:
             self.encoder.setDefaultProfilePreset(self.get_fps(), self._encoder_profile)
@@ -177,6 +192,11 @@ class CameraComponent(Component):
         Called from __init__ to parse passed `source` argument.
         @param source: User-input source
         """
+        if self.is_replay():
+            if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
+                raise Exception(f"{source} stream was not found in specified depthai-recording!")
+            return
+
         if "," in source:  # For OAK FFC cameras, so you can eg. specify "rgb,c" as source
             parts = source.split(',')
             source = parts[0]
@@ -187,11 +207,6 @@ class CameraComponent(Component):
                 self.node = pipeline.createMonoCamera()
 
             self.node.setBoardSocket(parse_camera_socket(source))
-            return
-
-        if self.is_replay():
-            if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
-                raise Exception(f"{source} stream was not found in specified depthai-recording!")
             return
 
         socket = parse_camera_socket(source)
@@ -215,6 +230,8 @@ class CameraComponent(Component):
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def config_camera(self,
                       # preview: Union[None, str, Tuple[int, int]] = None,
+                      size: Union[None, Tuple[int, int], str] = None,
+                      resize_mode: ResizeMode = ResizeMode.CROP,
                       fps: Optional[float] = None,
                       resolution: Optional[Union[
                           str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
@@ -228,20 +245,22 @@ class CameraComponent(Component):
         if fps: self.set_fps(fps)
         if resolution: self._set_resolution(resolution)
 
-        # if preview:
-        #     from .parser import parse_size
-        #     preview = parse_size(preview)
-        #
-        #     self.stream_size = preview
-        #
-        #     if self._replay:
-        #         self._replay.setResizeColor(preview)
-        #     elif self.is_color():
-        #         self.node.setPreviewSize(preview)
-        #     else:
-        #         # TODO: Use ImageManip to set mono frame size
-        #
-        #         raise NotImplementedError("Not yet implemented")
+        if size:
+            from .parser import parse_size
+            size_tuple = parse_size(size)
+
+            if self._replay:
+                self._replay.resize(self._source, size_tuple, resize_mode)
+            elif self.is_color():
+                self.node.setStillSize(*size_tuple)
+                self.node.setVideoSize(*size_tuple)
+                self.node.setPreviewSize(*size_tuple)
+                if resize_mode != ResizeMode.CROP:
+                    raise ValueError("Currently only ResizeMode.CROP is supported mode for specifying size!")
+            else:
+                # TODO: Use ImageManip to set mono frame size
+
+                raise NotImplementedError("Not yet implemented")
 
     def _config_camera_args(self, args: Dict):
         if not isinstance(args, Dict):
@@ -276,7 +295,6 @@ class CameraComponent(Component):
         self.controls_enabled = True
 
     def config_color_camera(self,
-                            size: Optional[Tuple[int, int]] = None,
                             interleaved: Optional[bool] = None,
                             color_order: Union[None, dai.ColorCameraProperties.ColorOrder, str] = None,
                             # Cam control
@@ -296,22 +314,17 @@ class CameraComponent(Component):
             print("Attempted to configure ColorCamera, but this component doesn't have it. Config attempt ignored.")
             return
 
-        if self._replay is not None:
+        if self.is_replay():
             print('Tried configuring ColorCamera, but replaying is enabled. Config attempt ignored.')
             return
 
-        if size:
-            self.node.setStillSize(*size)
-            self.node.setVideoSize(*size)
-            self.node.setPreviewSize(*size)
-
-        if interleaved: self.node.setInterleaved(interleaved)
+        if interleaved is not None: self.node.setInterleaved(interleaved)
         if color_order:
             if isinstance(color_order, str):
                 color_order = getattr(dai.ColorCameraProperties.ColorOrder, color_order.upper())
             self.node.setColorOrder(color_order)
 
-        if manual_focus: self.node.initialControl.setManualFocus(manual_focus)
+        if manual_focus is not None: self.node.initialControl.setManualFocus(manual_focus)
         if af_mode: self.node.initialControl.setAutoFocusMode(af_mode)
         if awb_mode: self.node.initialControl.setAutoWhiteBalanceMode(awb_mode)
         if scene_mode: self.node.initialControl.setSceneMode(scene_mode)
@@ -321,9 +334,9 @@ class CameraComponent(Component):
         if isp_scale:
             self._resolution_forced = True
             self.node.setIspScale(*isp_scale)
-        if sharpness: self.node.initialControl.setSharpness(sharpness)
-        if luma_denoise: self.node.initialControl.setLumaDenoise(luma_denoise)
-        if chroma_denoise: self.node.initialControl.setChromaDenoise(chroma_denoise)
+        if sharpness is not None: self.node.initialControl.setSharpness(sharpness)
+        if luma_denoise is not None: self.node.initialControl.setLumaDenoise(luma_denoise)
+        if chroma_denoise is not None: self.node.initialControl.setChromaDenoise(chroma_denoise)
 
     def _set_resolution(self, resolution):
         if not self.is_replay():
@@ -339,11 +352,17 @@ class CameraComponent(Component):
     def is_mono(self) -> bool:
         return isinstance(self.node, dai.node.MonoCamera)
 
-    def get_fps(self):
-        return (self._replay if self.is_replay() else self.node).getFps()
+    def get_fps(self) -> float:
+        if self.is_replay():
+            return self._replay.get_fps()
+        else:
+            return self.node.getFps()
 
     def set_fps(self, fps: float):
-        (self._replay if self._replay else self.node).setFps(fps)
+        if self.is_replay():
+            self._replay.set_fps(fps)
+        else:
+            self.node.setFps(fps)
 
     def config_encoder_h26x(self,
                             rate_control_mode: Optional[dai.VideoEncoderProperties.RateControlMode] = None,
@@ -356,13 +375,13 @@ class CameraComponent(Component):
         if self._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
             raise Exception('Video encoder was set to MJPEG while trying to configure H26X attributes!')
 
-        if rate_control_mode:
+        if rate_control_mode is not None:
             self.encoder.setRateControlMode(rate_control_mode)
-        if keyframe_freq:
+        if keyframe_freq is not None:
             self.encoder.setKeyframeFrequency(keyframe_freq)
-        if bitrate_kbps:
+        if bitrate_kbps is not None:
             self.encoder.setBitrateKbps(bitrate_kbps)
-        if num_b_frames:
+        if num_b_frames is not None:
             self.encoder.setNumBFrames(num_b_frames)
 
     def config_encoder_mjpeg(self,
@@ -376,9 +395,9 @@ class CameraComponent(Component):
                 f'Video encoder was set to {self._encoder_profile} while trying to configure MJPEG attributes!'
             )
 
-        if quality:
+        if quality is not None:
             self.encoder.setQuality(quality)
-        if lossless:
+        if lossless is not None:
             self.encoder.setLossless(lossless)
 
     def get_stream_xout(self) -> StreamXout:
@@ -388,7 +407,9 @@ class CameraComponent(Component):
             return StreamXout(self.node.id, self.stream, name=self.name)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(10)
-            return StreamXout(self.node.id, self.stream, name=self.name)
+            # node.video instead of preview (self.stream) was used to reduce bandwidth
+            # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
+            return StreamXout(self.node.id, self.node.video, name=self.name)
 
     """
     Available outputs (to the host) of this component

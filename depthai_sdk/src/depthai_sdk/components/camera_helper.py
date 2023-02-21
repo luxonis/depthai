@@ -1,7 +1,8 @@
 import math
 import depthai as dai
 from typing import *
-
+import numpy as np
+import cv2
 
 class ImageSensor:
     name: str
@@ -46,6 +47,7 @@ cameraResolutions: Dict[Any, Tuple[int, int]] = {
     dai.ColorCameraProperties.SensorResolution.THE_13_MP: (4208, 3120),
     dai.ColorCameraProperties.SensorResolution.THE_12_MP: (4056, 3040),
     dai.ColorCameraProperties.SensorResolution.THE_4_K: (3840, 2160),
+    dai.ColorCameraProperties.SensorResolution.THE_1200_P: (1920, 1200),
     dai.ColorCameraProperties.SensorResolution.THE_1080_P: (1920, 1080),
     dai.ColorCameraProperties.SensorResolution.THE_800_P: (1280, 800),
     dai.ColorCameraProperties.SensorResolution.THE_720_P: (1280, 720),
@@ -55,6 +57,7 @@ cameraResolutions: Dict[Any, Tuple[int, int]] = {
     dai.MonoCameraProperties.SensorResolution.THE_480_P: (640, 480),
     dai.MonoCameraProperties.SensorResolution.THE_400_P: (640, 400),
 }
+
 
 
 def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
@@ -72,7 +75,6 @@ def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
                     lst.append((n / d, (n, d)))
     lst.sort(reverse=True)
     return lst
-
 
 def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tuple[int, int]:
     """

@@ -64,7 +64,7 @@ class ImageReader(AbstractReader):
     def set_cycle_fps(self, fps): # Called from replay.py on set_fps()
         self.cycle_sec = 1.0 / fps
 
-    def read(self):
+    def read(self) -> Dict[str, np.ndarray]:
         # Increase counters
         if self.cycle_sec < time.time() - self.last_cycle_time:
             self.last_cycle_time = time.time()
@@ -89,6 +89,12 @@ class ImageReader(AbstractReader):
     def getShape(self, name: str) -> Tuple[int, int]:
         shape = self.frames[name][0].shape
         return (shape[1], shape[0])
+
+    def get_message_size(self, name: str) -> int:
+        size = 1
+        for shape in self.frames[name][0].shape:
+            size *= shape
+        return size
 
     def close(self):
         pass

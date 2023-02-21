@@ -1,8 +1,7 @@
 from typing import Tuple, Any
-
 import numpy as np
+from depthai_sdk.classes.enum import ResizeMode
 
-from depthai_sdk.components.nn_helper import ResizeMode
 
 
 class NormalizeBoundingBox:
@@ -10,7 +9,6 @@ class NormalizeBoundingBox:
     Normalized bounding box (BB) received from the device. It will also take into account type of aspect ratio
     resize mode and map coordinates to correct location.
     """
-
     def __init__(self, aspect_ratio: Tuple[float, float], resize_mode: ResizeMode):
         """
         :param aspect_ratio: NN input size
@@ -33,6 +31,7 @@ class NormalizeBoundingBox:
         bbox = np.array(bbox)
 
         # Edit the bounding boxes before normalizing them
+
         if self.resize_mode == ResizeMode.CROP:
             ar_diff = (self.aspect_ratio[0] / self.aspect_ratio[1]) / (frame.shape[1] / frame.shape[0])
             if ar_diff < 1:
