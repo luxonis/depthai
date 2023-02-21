@@ -59,8 +59,6 @@ class CameraComponent(Component):
         if rotation not in [None, 0, 90, 180, 270]:
             raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
 
-        self._rotation = rotation
-
         self._create_node(self._pipeline, source.upper())
 
         # Camera controls (exposure, gain, etc.)
