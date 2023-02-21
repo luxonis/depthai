@@ -14,6 +14,8 @@ import numpy as np
 import requests
 import xmltodict
 
+from .logger import get_logger, set_logging_level
+
 DEPTHAI_RECORDINGS_PATH = Path.home() / Path('.cache/depthai-recordings')
 DEPTHAI_RECORDINGS_URL = 'https://depthai-recordings.fra1.digitaloceanspaces.com/'
 
