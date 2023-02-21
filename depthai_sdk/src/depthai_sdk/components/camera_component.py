@@ -289,7 +289,7 @@ class CameraComponent(Component):
         else:  # Replay
             self.config_camera(fps=args.get('fps', None))
 
-    def enable_keyboard_control(self) -> None:
+    def enable_controls(self) -> None:
         self.controls_enabled = True
 
     def config_color_camera(self,
