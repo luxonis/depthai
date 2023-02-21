@@ -11,6 +11,9 @@ class Component(ABC):
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
 
+    def __init__(self):
+        self.controls_enabled = False
+
     def forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
         """
         Checks whether the component forces a specific OpenVINO version. Only used by NNComponent (which overrides this
@@ -22,9 +25,15 @@ class Component(ABC):
     @abstractmethod
     def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         """
-        This function will be called after the app connects to the Device
+        This function will be called before the device has been started.
         """
         raise NotImplementedError("Every component needs to include 'updateDeviceInfo()' method!")
+
+    def on_start(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+        """
+        This function will be called after the device has been started.
+        """
+        pass
 
     def _stream_name_ok(self, pipeline: dai.Pipeline, name: str) -> bool:
         # Check if there's already an XLinkOut stream with this name

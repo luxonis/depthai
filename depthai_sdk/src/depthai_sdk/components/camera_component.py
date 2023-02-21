@@ -3,11 +3,12 @@ from typing import Dict
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, ReplayStream, XoutBase
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
 from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
-from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.replay import Replay
+from depthai_sdk.utils.camera_controls import ControlConfig, CameraControls
 
 
 class CameraComponent(Component):
@@ -48,10 +49,11 @@ class CameraComponent(Component):
 
         # Save passed settings
         self._pipeline = pipeline
+        self.name = name
         self._source = source
         self._replay: Replay = replay
         self._args: Dict = args
-        self.name = name
+        self._rotation = rotation
 
         if rotation not in [None, 0, 90, 180, 270]:
             raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
@@ -59,6 +61,11 @@ class CameraComponent(Component):
         self._rotation = rotation
 
         self._create_node(self._pipeline, source.upper())
+
+        # Camera controls (exposure, gain, etc.)
+        self.control_queue = None
+        self.control_config = ControlConfig()
+        self.camera_controls: Optional[CameraControls] = None
 
         self.encoder = None
         if encode:
@@ -144,6 +151,16 @@ class CameraComponent(Component):
             else:
                 raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
 
+        if self.controls_enabled:
+            control_x_in = pipeline.createXLinkIn()
+            control_x_in.setStreamName('control')
+            control_x_in.out.link(self.node.inputControl)
+
+    def on_start(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+        if self.controls_enabled:
+            self.control_queue = device.getInputQueue('control')
+            self.camera_controls = CameraControls(self.control_queue)
+
     def _create_rotation_manip(self, pipeline: dai.Pipeline):
         rot_manip = pipeline.createImageManip()
         rgb_rr = dai.RotatedRect()
@@ -191,6 +208,9 @@ class CameraComponent(Component):
             )
 
         self.node.setBoardSocket(socket)
+
+    def control_on_pressed_key(self, key: int):
+        self.camera_controls.send_controls_by_key(key)
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def config_camera(self,
@@ -252,6 +272,9 @@ class CameraComponent(Component):
         else:  # Replay
             self.config_camera(fps=args.get('fps', None))
 
+    def enable_keyboard_control(self) -> None:
+        self.controls_enabled = True
+
     def config_color_camera(self,
                             size: Optional[Tuple[int, int]] = None,
                             interleaved: Optional[bool] = None,
@@ -277,20 +300,18 @@ class CameraComponent(Component):
             print('Tried configuring ColorCamera, but replaying is enabled. Config attempt ignored.')
             return
 
-        self.node: dai.node.ColorCamera
-
         if size:
             self.node.setStillSize(*size)
             self.node.setVideoSize(*size)
             self.node.setPreviewSize(*size)
 
-        if interleaved is not None: self.node.setInterleaved(interleaved)
+        if interleaved: self.node.setInterleaved(interleaved)
         if color_order:
             if isinstance(color_order, str):
                 color_order = getattr(dai.ColorCameraProperties.ColorOrder, color_order.upper())
             self.node.setColorOrder(color_order)
 
-        if manual_focus is not None: self.node.initialControl.setManualFocus(manual_focus)
+        if manual_focus: self.node.initialControl.setManualFocus(manual_focus)
         if af_mode: self.node.initialControl.setAutoFocusMode(af_mode)
         if awb_mode: self.node.initialControl.setAutoWhiteBalanceMode(awb_mode)
         if scene_mode: self.node.initialControl.setSceneMode(scene_mode)
@@ -300,9 +321,9 @@ class CameraComponent(Component):
         if isp_scale:
             self._resolution_forced = True
             self.node.setIspScale(*isp_scale)
-        if sharpness is not None: self.node.initialControl.setSharpness(sharpness)
-        if luma_denoise is not None: self.node.initialControl.setLumaDenoise(luma_denoise)
-        if chroma_denoise is not None: self.node.initialControl.setChromaDenoise(chroma_denoise)
+        if sharpness: self.node.initialControl.setSharpness(sharpness)
+        if luma_denoise: self.node.initialControl.setLumaDenoise(luma_denoise)
+        if chroma_denoise: self.node.initialControl.setChromaDenoise(chroma_denoise)
 
     def _set_resolution(self, resolution):
         if not self.is_replay():
@@ -335,13 +356,13 @@ class CameraComponent(Component):
         if self._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
             raise Exception('Video encoder was set to MJPEG while trying to configure H26X attributes!')
 
-        if rate_control_mode is not None:
+        if rate_control_mode:
             self.encoder.setRateControlMode(rate_control_mode)
-        if keyframe_freq is not None:
+        if keyframe_freq:
             self.encoder.setKeyframeFrequency(keyframe_freq)
-        if bitrate_kbps is not None:
+        if bitrate_kbps:
             self.encoder.setBitrateKbps(bitrate_kbps)
-        if num_b_frames is not None:
+        if num_b_frames:
             self.encoder.setNumBFrames(num_b_frames)
 
     def config_encoder_mjpeg(self,
@@ -355,9 +376,9 @@ class CameraComponent(Component):
                 f'Video encoder was set to {self._encoder_profile} while trying to configure MJPEG attributes!'
             )
 
-        if quality is not None:
+        if quality:
             self.encoder.setQuality(quality)
-        if lossless is not None:
+        if lossless:
             self.encoder.setLossless(lossless)
 
     def get_stream_xout(self) -> StreamXout:

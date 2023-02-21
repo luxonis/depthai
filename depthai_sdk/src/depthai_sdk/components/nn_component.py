@@ -86,8 +86,6 @@ class NNComponent(Component):
         self._multi_stage_nn: Optional[MultiStageNN] = None
         self._multi_stage_config: Optional[MultiStageConfig] = None
 
-        self._input_queue = Optional[None]  # Input queue for multi-stage pipeline
-
         self._spatial: Optional[Union[bool, StereoComponent]] = None
         self._replay: Optional[Replay]  # Replay module
 
@@ -429,22 +427,22 @@ class NNComponent(Component):
                           "This configuration attempt will be ignored.")
             return
 
-        if tracker_type is not None:
+        if tracker_type:
             self.tracker.setTrackerType(type=tracker_type)
 
-        if track_labels is not None and 0 < len(track_labels):
+        if track_labels and 0 < len(track_labels):
             labels = [self._parse_label(l) for l in track_labels]
             self.tracker.setDetectionLabelsToTrack(labels)
 
-        if assignment_policy is not None:
+        if assignment_policy:
             self.tracker.setTrackerIdAssignmentPolicy(assignment_policy)
 
-        if max_obj is not None:
+        if max_obj:
             if 60 < max_obj:
                 raise ValueError("Maximum objects to track is 60!")
             self.tracker.setMaxObjectsToTrack(max_obj)
 
-        if threshold is not None:
+        if threshold:
             self.tracker.setTrackerThreshold(threshold)
 
     def config_yolo_from_metadata(self, metadata: Dict):
@@ -485,7 +483,7 @@ class NNComponent(Component):
         self.node.setAnchorMasks(masks)
         self.node.setIouThreshold(iou_threshold)
 
-        if conf_threshold is not None:
+        if conf_threshold:
             self.node.setConfidenceThreshold(conf_threshold)
 
     def config_nn(self,
@@ -508,7 +506,7 @@ class NNComponent(Component):
                           'Using default LETTERBOX mode.')
 
             self._ar_resize_mode = resize_mode
-        if conf_threshold is not None and self._is_detector():
+        if conf_threshold and self._is_detector():
             self.node.setConfidenceThreshold(conf_threshold)
 
     def config_spatial(self,
@@ -529,11 +527,11 @@ class NNComponent(Component):
             print('This is not a Spatial Detection network! This configuration attempt will be ignored.')
             return
 
-        if bb_scale_factor is not None:
+        if bb_scale_factor:
             self.node.setBoundingBoxScaleFactor(bb_scale_factor)
-        if lower_threshold is not None:
+        if lower_threshold:
             self.node.setDepthLowerThreshold(lower_threshold)
-        if upper_threshold is not None:
+        if upper_threshold:
             self.node.setDepthUpperThreshold(upper_threshold)
         if calc_algo:
             self.node.setSpatialCalculationAlgorithm(calc_algo)

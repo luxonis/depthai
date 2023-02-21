@@ -289,6 +289,9 @@ class OakCamera:
 
         self._oak.init_callbacks(self._pipeline)
 
+        for component in self._components:
+            component.on_start(self._pipeline, self.device, self._pipeline.getOpenVINOVersion())
+
         for xout in self._oak.oak_out_streams:  # Start FPS counters
             xout.start_fps()
 
@@ -326,7 +329,10 @@ class OakCamera:
         else:
             key = -1
 
-        # TODO: check if components have controls enabled and check whether key == `control`
+        # Check for controls
+        for comp in self._components:
+            if comp.controls_enabled and isinstance(comp, CameraComponent):
+                comp.control_on_pressed_key(key)
 
         self._oak.check_sync()
 
