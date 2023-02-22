@@ -10,6 +10,7 @@ import time
 import json
 import cv2.aruco as aruco
 from pathlib import Path
+from functools import reduce
 from collections import deque
 # Creates a set of 13 polygon coordinates
 traceLevel = 0
@@ -530,7 +531,7 @@ class StereoCalibration(object):
                 return -1, "Stereo Calib failed due to less common features"
 
         stereocalib_criteria = (cv2.TERM_CRITERIA_COUNT +
-                                cv2.TERM_CRITERIA_EPS, 50000, 1e-9)
+                                cv2.TERM_CRITERIA_EPS, 1000, 1e-9)
 
         if self.cameraModel == 'perspective':
             flags = 0
@@ -588,10 +589,28 @@ class StereoCalibration(object):
 
             return [ret, R, T, R_l, R_r, P_l, P_r]
         elif self.cameraModel == 'fisheye':
+            # make sure all images have the same points
+            common_ids = reduce(np.intersect1d, allIds_l + allIds_r)
+            common_obj_points = self.board.chessboardCorners[common_ids.reshape(-1,1)]
+            all_common_obj_points = []
+            all_common_left_img_points = []
+            all_common_right_img_points = []
+            for left_ids, left_img_points, right_ids, right_img_points in zip(allIds_l, allCorners_l, allIds_r, allCorners_r):
+                common_left_img_points = left_img_points[np.in1d(left_ids, common_ids)]
+                common_right_img_points = right_img_points[np.in1d(right_ids, common_ids)]
+
+                all_common_left_img_points.append(common_left_img_points)
+                all_common_right_img_points.append(common_right_img_points)
+                all_common_obj_points.append(common_obj_points)
+
             flags = 0
-            flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
-            flags |= cv2.fisheye.CALIB_CHECK_COND
+            # flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
+            # flags |= cv2.fisheye.CALIB_CHECK_COND
             flags |= cv2.fisheye.CALIB_FIX_SKEW
+            flags |= cv2.fisheye.CALIB_FIX_INTRINSIC
+            flags |= cv2.fisheye.CALIB_FIX_K1
+            flags |= cv2.fisheye.CALIB_FIX_K2
+            flags |= cv2.fisheye.CALIB_FIX_K3 
             # flags |= cv2.CALIB_FIX_INTRINSIC
             # flags |= cv2.CALIB_RATIONAL_MODEL
             # TODO(sACHIN): Try without intrinsic guess
@@ -611,8 +630,8 @@ class StereoCalibration(object):
             del obj_pts[4]
             del right_corners_sampled[4]
             del left_corners_sampled[4]
-            ret, M1, d1, M2, d2, R, T, E, F = cv2.fisheye.stereoCalibrate(
-                obj_pts, left_corners_sampled, right_corners_sampled,
+            (ret, M1, d1, M2, d2, R, T), E, F = cv2.fisheye.stereoCalibrate(
+                all_common_obj_points, all_common_left_img_points, all_common_right_img_points,
                 cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
                 flags=flags, criteria=stereocalib_criteria), None, None
 
@@ -621,9 +640,9 @@ class StereoCalibration(object):
                 distCoeff_l,
                 cameraMatrix_r,
                 distCoeff_r,
-                imsize, R, T)
+                imsize, R, T, flags=0)
             
-            return [ret, R, T, R_l, R_r]
+            return [ret, R, T, R_l, R_r, P_l, P_r]
 
     def display_rectification(self, image_data_pairs, isHorizontal):
         print(
@@ -698,11 +717,17 @@ class StereoCalibration(object):
             return img
     
     def sgdEpipolar(self, images_left, images_right, M_lp, d_l, M_rp, d_r, r_l, r_r, kScaledL, kScaledR, scaled_res, isHorizontal):
-        mapx_l, mapy_l = cv2.initUndistortRectifyMap(
-            M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
-        mapx_r, mapy_r = cv2.initUndistortRectifyMap(
-            M_rp, d_r, r_r, kScaledR, scaled_res[::-1], cv2.CV_32FC1)
-        
+        if self.cameraModel == 'perspective':
+            mapx_l, mapy_l = cv2.initUndistortRectifyMap(
+                M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.initUndistortRectifyMap(
+                M_rp, d_r, r_r, kScaledR, scaled_res[::-1], cv2.CV_32FC1)
+        else:
+            mapx_l, mapy_l = cv2.fisheye.initUndistortRectifyMap(
+                M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.fisheye.initUndistortRectifyMap(
+                M_rp, d_r, r_r, kScaledR, scaled_res[::-1], cv2.CV_32FC1)
+
         
         image_data_pairs = []
         imagesCount = 0
@@ -952,11 +977,16 @@ class StereoCalibration(object):
 
 
 
-        mapx_l, mapy_l = cv2.initUndistortRectifyMap(
-            M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
-        mapx_r, mapy_r = cv2.initUndistortRectifyMap(
-            M_rp, d_r, r_r, kScaledR, scaled_res[::-1], cv2.CV_32FC1)
-        
+        if self.cameraModel == 'perspective':
+            mapx_l, mapy_l = cv2.initUndistortRectifyMap(
+                M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.initUndistortRectifyMap(
+                M_rp, d_r, r_r, kScaledR, scaled_res[::-1], cv2.CV_32FC1)
+        else:
+            mapx_l, mapy_l = cv2.fisheye.initUndistortRectifyMap(
+                M_lp, d_l, r_l, kScaledL, scaled_res[::-1], cv2.CV_32FC1)
+            mapx_r, mapy_r = cv2.fisheye.initUndistortRectifyMap(
+                M_rp, d_r, r_r, kScaledR, scaled_res[::-1], cv2.CV_32FC1)
 
         image_data_pairs = []
         for image_left, image_right in zip(images_left, images_right):
@@ -1103,10 +1133,16 @@ class StereoCalibration(object):
         print("Mesh path")
         print(curr_path)
 
-        map_x_l, map_y_l = cv2.initUndistortRectifyMap(
-            self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
-        map_x_r, map_y_r = cv2.initUndistortRectifyMap(
-            self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
+        if self.cameraModel == "perspective":
+            map_x_l, map_y_l = cv2.initUndistortRectifyMap(
+                self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
+            map_x_r, map_y_r = cv2.initUndistortRectifyMap(
+                self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
+        else:    
+            map_x_l, map_y_l = cv2.fisheye.initUndistortRectifyMap(
+                self.M1, self.d1, self.R1, self.M2, self.img_shape, cv2.CV_32FC1)
+            map_x_r, map_y_r = cv2.fisheye.initUndistortRectifyMap(
+                self.M2, self.d2, self.R2, self.M2, self.img_shape, cv2.CV_32FC1)
 
         """ 
         map_x_l_fp32 = map_x_l.astype(np.float32)
