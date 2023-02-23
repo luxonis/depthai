@@ -635,7 +635,7 @@ class StereoCalibration(object):
                 cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
                 flags=flags, criteria=stereocalib_criteria), None, None
 
-            R_l, R_r, P_l, P_r, Q = cv2.fisheye.stereoRectify(
+            R_l, R_r, P_l, P_r, Q, _, _ = cv2.stereoRectify(
                 cameraMatrix_l,
                 distCoeff_l,
                 cameraMatrix_r,
@@ -861,9 +861,7 @@ class StereoCalibration(object):
         images_right.sort()
         assert len(images_left) != 0, "ERROR: Images not read correctly"
         assert len(images_right) != 0, "ERROR: Images not read correctly"
-        isHorizontal = True
-        if np.absolute(t[1]) > 0.2:
-            isHorizontal = False
+        isHorizontal = np.absolute(t[0]) > np.absolute(t[1])
 
         scale = None
         scale_req = False
