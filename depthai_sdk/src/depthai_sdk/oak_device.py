@@ -10,6 +10,7 @@ class OakDevice:
         self.device: Optional[dai.Device] = None
         # fpsHandlers: Dict[str, FPS] = dict()
         self.oak_out_streams: List[XoutBase] = []
+        self.max_queue_size = 4
 
     @property
     def image_sensors(self) -> List[dai.CameraBoardSocket]:
@@ -27,7 +28,7 @@ class OakDevice:
             if isinstance(node, dai.node.XLinkOut):
                 stream_name = node.getStreamName()
                 # self.fpsHandlers[name] = FPS()
-                self.device.getOutputQueue(stream_name, maxSize=4, blocking=False).addCallback(
+                self.device.getOutputQueue(stream_name, maxSize=self.max_queue_size, blocking=False).addCallback(
                     lambda name, msg: self.new_msg(name, msg)
                 )
 
@@ -41,3 +42,6 @@ class OakDevice:
         """
         for sync in self.oak_out_streams:
             sync.check_queue(block=False)  # Don't block!
+
+    def set_max_queue_size(self, size: int):
+        self.max_queue_size = size
