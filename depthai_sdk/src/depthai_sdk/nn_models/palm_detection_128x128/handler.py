@@ -12,7 +12,7 @@ def decode(nn_data):
     :return:
     """
     if nn_data is None:
-        return []
+        return Detections(nn_data)
 
     shape = (128, 128)
     num_keypoints = 7
@@ -38,7 +38,7 @@ def decode(nn_data):
     ]
 
     if len(palm_coords) == 0:
-        return []
+        return Detections(nn_data)
 
     nms = non_max_suppression(
         boxes=np.concatenate(palm_coords).reshape(-1, 4),
@@ -47,7 +47,7 @@ def decode(nn_data):
     )
 
     if nms is None:
-        return []
+        return Detections(nn_data)
 
     detections = Detections(nn_data)
     for i, box in enumerate(nms):
