@@ -1,11 +1,11 @@
 {
     "board_config":
     {
-        "name": "AR0234DEV",
+        "name": "FFC-3P",
         "revision": "R1M0E1",
         "cameras":{
             "CAM_C": {
-                "name": "right",
+                "name": "left",
                 "hfov": 140,
                 "type": "color",
                 "extrinsics": {
@@ -23,7 +23,7 @@
                 }
             },
             "CAM_B": {
-                "name": "left",
+                "name": "right",
                 "hfov": 140,
                 "type": "color",
                 "extrinsics": {
@@ -48,8 +48,8 @@
 
         },
         "stereo_config":{
-            "left_cam": "CAM_B",
-            "right_cam": "CAM_C"
+            "left_cam": "CAM_C",
+            "right_cam": "CAM_B"
         }
     }
 }

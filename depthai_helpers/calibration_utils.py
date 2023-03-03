@@ -12,10 +12,12 @@ import cv2.aruco as aruco
 from pathlib import Path
 from functools import reduce
 from collections import deque
+from depthai_helpers.stereoRectify import stereoRectify
 # Creates a set of 13 polygon coordinates
 traceLevel = 0
 rectProjectionMode = 0
 
+colors = [(0, 255 , 0), (0, 0, 255)]
 def setPolygonCoordinates(height, width):
     horizontal_shift = width//4
     vertical_shift = height//4
@@ -478,15 +480,17 @@ class StereoCalibration(object):
                 obj_pts_sub.append(one_pts[allIds[i][j]])
             obj_points.append(np.array(obj_pts_sub, dtype=np.float32))
 
-        cameraMatrixInit = np.array([[500,    0.0,      643.9126],
-                                    [0.0,     500,  387.56018],
-                                    [0.0,        0.0,        1.0]])
+        cameraMatrixInit = np.array([[907.84859625,   0.0        , 995.15888273],
+                                     [  0.0       ,  889.29269629, 627.49748034],
+                                     [  0.0       ,    0.0       ,    1.0      ]])
  
         print("Camera Matrix initialization.............")
         print(cameraMatrixInit)
         flags = 0
         # flags |= cv2.fisheye.CALIB_CHECK_COND 
         # flags |= cv2.fisheye.CALIB_USE_INTRINSIC_GUESS 
+        flags |= cv2.fisheye.CALIB_USE_INTRINSIC_GUESS 
+        # flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
         flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_CHECK_COND + cv2.fisheye.CALIB_FIX_SKEW
 
         distCoeffsInit = np.zeros((4, 1))
@@ -546,23 +550,18 @@ class StereoCalibration(object):
                 print('Printing Extrinsics guesses...')
                 print(r_in)
                 print(t_in)
-            if 1:
-                ret, M1, d1, M2, d2, R, T, E, F, _ = cv2.stereoCalibrateExtended(
-                    obj_pts, left_corners_sampled, right_corners_sampled,
-                    cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
-                    R=r_in, T=t_in, criteria=stereocalib_criteria , flags=flags)
-            else:
-                ret, cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, R, T, E, F, _ = cv2.stereoCalibrateExtended(
-                                                                            obj_pts, left_corners_sampled, right_corners_sampled,
-                                                                            cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
-                                                                            R=r_in, T=t_in, criteria=stereocalib_criteria , flags=flags)
+            ret, M1, d1, M2, d2, R, T, E, F, _ = cv2.stereoCalibrateExtended(
+                obj_pts, left_corners_sampled, right_corners_sampled,
+                cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
+                R=r_in, T=t_in, criteria=stereocalib_criteria , flags=flags)
+
 
             print(f'Reprojection error is {ret}')
             print('Printing Extrinsics res...')
             print(R)
             print(T)
             r_euler = Rotation.from_matrix(R).as_euler('xyz', degrees=True)
-            print(f'Euler angles in XYZ {r_euler}')
+            print(f'Euler angles in XYZ {r_euler} degs')
 
 
             # ret, M1, d1, M2, d2, R, T, E, F = cv2.stereoCalibrate(
@@ -606,12 +605,12 @@ class StereoCalibration(object):
             flags = 0
             # flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
             # flags |= cv2.fisheye.CALIB_CHECK_COND
-            flags |= cv2.fisheye.CALIB_FIX_SKEW
+            # flags |= cv2.fisheye.CALIB_FIX_SKEW
             flags |= cv2.fisheye.CALIB_FIX_INTRINSIC
             flags |= cv2.fisheye.CALIB_FIX_K1
             flags |= cv2.fisheye.CALIB_FIX_K2
             flags |= cv2.fisheye.CALIB_FIX_K3 
-            # flags |= cv2.CALIB_FIX_INTRINSIC
+            flags |= cv2.fisheye.CALIB_FIX_K4
             # flags |= cv2.CALIB_RATIONAL_MODEL
             # TODO(sACHIN): Try without intrinsic guess
             # flags |= cv2.CALIB_USE_INTRINSIC_GUESS
@@ -635,42 +634,127 @@ class StereoCalibration(object):
                 cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
                 flags=flags, criteria=stereocalib_criteria), None, None
 
-            R_l, R_r, P_l, P_r, Q, _, _ = cv2.stereoRectify(
+            print(f'Reprojection error is {ret}')
+            print('Printing Extrinsics res...')
+            print(R)
+            print(T)
+            r_euler = Rotation.from_matrix(R).as_euler('xyz', degrees=True)
+            print(f'Euler angles in XYZ {r_euler} degs')
+            isHorizontal = np.absolute(T[0]) > np.absolute(T[1])
+            
+            if 0:
+                if not isHorizontal:
+                    rotated_k_l = cameraMatrix_l.copy()
+                    rotated_k_r = cameraMatrix_r.copy()
+                    rotated_k_l[0][0] = cameraMatrix_l[1][1] # swap fx and fy
+                    rotated_k_r[0][0] = cameraMatrix_r[1][1] # swap fx and fy
+                    rotated_k_l[1][1] = cameraMatrix_l[0][0] # swap fx and fy
+                    rotated_k_r[1][1] = cameraMatrix_r[0][0] # swap fx and fy
+
+                    rotated_k_l[0][2] = cameraMatrix_l[1][2] # swap optical center x and y
+                    rotated_k_r[0][2] = cameraMatrix_r[1][2] # swap optical center x and y
+                    rotated_k_l[1][2] = cameraMatrix_l[0][2] # swap optical center x and y
+                    rotated_k_r[1][2] = cameraMatrix_r[0][2] # swap optical center x and y
+                    
+                    T_mod = T.copy()
+                    T_mod[0] = T[1]
+                    T_mod[1] = T[0]
+                    
+                    r = Rotation.from_euler('xyz', [r_euler[1], r_euler[0], r_euler[2]], degrees=True)
+                    R_mod = r.as_matrix()
+                    print(f' Image size is {imsize} and modified iamge size is {imsize[::-1]}')
+                    R_l, R_r, P_l, P_r, Q = cv2.fisheye.stereoRectify(
+                        rotated_k_l,
+                        distCoeff_l,
+                        rotated_k_r,
+                        distCoeff_r,
+                        imsize[::-1], R_mod, T_mod, flags=0)
+                    # TODO revier things back to original style for Rotation and translation
+                    r_euler = Rotation.from_matrix(R_l).as_euler('xyz', degrees=True)
+                    R_l = Rotation.from_euler('xyz', [r_euler[1], r_euler[0], r_euler[2]], degrees=True).as_matrix()
+
+                    r_euler = Rotation.from_matrix(R_r).as_euler('xyz', degrees=True)
+                    R_r = Rotation.from_euler('xyz', [r_euler[1], r_euler[0], r_euler[2]], degrees=True).as_matrix()
+
+                    temp = P_l[0][0]
+                    P_l[0][0] = P_l[1][1]
+                    P_l[1][1] = temp
+                    temp = P_r[0][0]
+                    P_r[0][0] = P_r[1][1]
+                    P_r[1][1] = temp
+                    
+                    temp = P_l[0][2]
+                    P_l[0][2] = P_l[1][2]
+                    P_l[1][2] = temp
+                    temp = P_r[0][2]
+                    P_r[0][2] = P_r[1][2]
+                    P_r[1][2] = temp
+                    
+                    temp = P_l[0][3]
+                    P_l[0][3] = P_l[1][3]
+                    P_l[1][3] = temp
+                    temp = P_r[0][3]
+                    P_r[0][3] = P_r[1][3]
+                    P_r[1][3] = temp
+                else:
+                    R_l, R_r, P_l, P_r, Q = cv2.fisheye.stereoRectify(
+                        cameraMatrix_l,
+                        distCoeff_l,
+                        cameraMatrix_r,
+                        distCoeff_r,
+                        imsize, R, T, flags=0)
+            R_l, R_r, P_l, P_r, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
                 cameraMatrix_l,
                 distCoeff_l,
                 cameraMatrix_r,
                 distCoeff_r,
-                imsize, R, T, flags=0)
+                imsize, R, T) # , alpha=0.1
+
+            if 0:
+                R_l, R_r = stereoRectify(R, T)
+            
+            r_euler = Rotation.from_matrix(R_l).as_euler('xyz', degrees=True)
+            print(f'R_L Euler angles in XYZ {r_euler}')
+            r_euler = Rotation.from_matrix(R_r).as_euler('xyz', degrees=True)
+            print(f'R_R Euler angles in XYZ {r_euler}')            
             
             return [ret, R, T, R_l, R_r, P_l, P_r]
 
-    def display_rectification(self, image_data_pairs, isHorizontal):
+    def display_rectification(self, image_data_pairs, images_corners_l, images_corners_r, image_epipolar_color, isHorizontal):
         print(
             "Displaying Stereo Pair for visual inspection. Press the [ESC] key to exit.")
-        for image_data_pair in image_data_pairs:
+        for idx, image_data_pair in enumerate(image_data_pairs):
             if isHorizontal:
                 img_concat = cv2.hconcat(
                     [image_data_pair[0], image_data_pair[1]])
+                for left_pt, right_pt, colorMode in zip(images_corners_l[idx], images_corners_r[idx], image_epipolar_color[idx]):
+                    cv2.line(img_concat,
+                             (int(left_pt[0][0]), int(left_pt[0][1])), (int(right_pt[0][0]) + image_data_pair[0].shape[1], int(right_pt[0][1])),
+                             colors[colorMode], 1)
             else:
                 img_concat = cv2.vconcat(
                     [image_data_pair[0], image_data_pair[1]])
+                for left_pt, right_pt, colorMode in zip(images_corners_l[idx], images_corners_r[idx], image_epipolar_color[idx]):
+                    cv2.line(img_concat,
+                             (int(left_pt[0][0]), int(left_pt[0][1])), (int(right_pt[0][0]), int(right_pt[0][1])  + image_data_pair[0].shape[0]),
+                             colors[colorMode], 1)
             # img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
 
             # draw epipolar lines for debug purposes
 
-            line_row = 0
-            while isHorizontal and line_row < img_concat.shape[0]:
-                cv2.line(img_concat,
-                         (0, line_row), (img_concat.shape[1], line_row),
-                         (0, 255, 0), 1)
-                line_row += 30
+            # line_row = 0
+            # while isHorizontal and line_row < img_concat.shape[0]                
+                # cv2.line(img_concat,
+                #          (0, line_row), (img_concat.shape[1], line_row),
+                #          (0, 255, 0), 1)
+                # line_row += 30
 
-            line_col = 0
-            while not isHorizontal and line_col < img_concat.shape[1]:
-                cv2.line(img_concat,
-                         (line_col, 0), (line_col, img_concat.shape[0]),
-                         (0, 255, 0), 1)
-                line_col += 40
+            # line_col = 0
+            # while not isHorizontal and line_col < img_concat.shape[1]:
+            #     cv2.line(img_concat,
+            #              (line_col, 0), (line_col, img_concat.shape[0]),
+            #              (0, 255, 0), 1)
+            #     line_col += 40
 
             img_concat = cv2.resize(
                 img_concat, (0, 0), fx=0.8, fy=0.8)
@@ -1021,12 +1105,13 @@ class StereoCalibration(object):
                 k = cv2.waitKey(0)
                 if k == 27:  # Esc key to stop
                     break
-        if traceLevel == 3:
-          cv2.destroyWindow("undistorted-left")
+        if traceLevel == 4:
+          cv2.destroyWindow("undistorted-Left")
           cv2.destroyWindow("undistorted-right")  
         # compute metrics
         imgpoints_r = []
         imgpoints_l = []
+        image_epipolar_color = []
         # new_imagePairs = []
         for i, image_data_pair in enumerate(image_data_pairs):
             #             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -1089,17 +1174,24 @@ class StereoCalibration(object):
                     corners_l.append(res2_l[1][j])
                     corners_r.append(res2_r[1][idx])
 
-                imgpoints_l.extend(corners_l)
-                imgpoints_r.extend(corners_r)
+                imgpoints_l.append(corners_l)
+                imgpoints_r.append(corners_r)
                 epi_error_sum = 0
+                corner_epipolar_color = []
                 for l_pt, r_pt in zip(corners_l, corners_r):
                     if isHorizontal:
-                        epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+                        curr_epipolar_error = abs(l_pt[0][1] - r_pt[0][1])
                     else:
-                        epi_error_sum += abs(l_pt[0][0] - r_pt[0][0])
+                        curr_epipolar_error = abs(l_pt[0][0] - r_pt[0][0])
+                    if curr_epipolar_error >= 1:
+                        corner_epipolar_color.append(1)
+                    else:
+                        corner_epipolar_color.append(0)
+                    epi_error_sum += curr_epipolar_error
                 localError = epi_error_sum / len(corners_l)
+                image_epipolar_color.append(corner_epipolar_color)
 
-                print("Average Epipolar Error per image on host in " + img_pth_right.name + " : " +
+                print("Epipolar Error per image on host in " + img_pth_right.name + " : " +
                       str(localError))
             else:
                 print('Numer of corners is in left -> {} and right -> {}'.format(
@@ -1111,17 +1203,20 @@ class StereoCalibration(object):
 
 
         epi_error_sum = 0
-        for l_pt, r_pt in zip(imgpoints_l, imgpoints_r):
-            if isHorizontal:
-                epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
-            else:
-                epi_error_sum += abs(l_pt[0][0] - r_pt[0][0])
+        total_corners = 0
+        for corners_l, corners_r in zip(imgpoints_l, imgpoints_r):
+            total_corners += len(corners_l)
+            for l_pt, r_pt in zip(corners_l, corners_r):
+                if isHorizontal:
+                    epi_error_sum += abs(l_pt[0][1] - r_pt[0][1])
+                else:
+                    epi_error_sum += abs(l_pt[0][0] - r_pt[0][0])
 
-        avg_epipolar = epi_error_sum / len(imgpoints_r)
+        avg_epipolar = epi_error_sum / total_corners
         print("Average Epipolar Error is : " + str(avg_epipolar))
 
         if self.enable_rectification_disp:
-            self.display_rectification(image_data_pairs, isHorizontal)
+            self.display_rectification(image_data_pairs, imgpoints_l, imgpoints_r, image_epipolar_color, isHorizontal)
 
         return avg_epipolar
 
