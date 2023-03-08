@@ -1,27 +1,30 @@
-from typing import Optional, Union, Any, Dict, Tuple
-import cv2
-import numpy as np
 import warnings
 from enum import Enum
-import depthai as dai
+from typing import Optional, Union, Any, Dict, Tuple
 
+import cv2
+import depthai as dai
+import numpy as np
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_cam_socket, parse_median_filter, parse_encode
+from depthai_sdk.components.undistort import _get_mesh
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
 from depthai_sdk.oak_outputs.xout.xout_disparity import XoutDisparity
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
 from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
-from depthai_sdk.components.undistort import _get_mesh
+
 
 class WLSLevel(Enum):
     """WLS filter level"""
     LOW = (1000, 0.8)
     MEDIUM = (6000, 1.5)
     HIGH = (12000, 2.0)
+
 
 class StereoComponent(Component):
 
@@ -111,7 +114,9 @@ class StereoComponent(Component):
             raise ValueError('get_output_stream() accepts either CameraComponent,'
                              'dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output!')
 
-    def _get_stream_size(self, input: Union[CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]) -> Optional[Tuple[int, int]]:
+    def _get_stream_size(self,
+                         input: Union[CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]) -> \
+            Optional[Tuple[int, int]]:
         if isinstance(input, CameraComponent):
             return input.stream_size
         elif isinstance(input, dai.node.MonoCamera):
@@ -182,7 +187,6 @@ class StereoComponent(Component):
         self.node.setRectifyEdgeFillColor(0)
 
         if self._undistortion_offset is not None:
-
             calibData = self._replay._calibData if self._replay else device.readCalibration()
             w_frame, h_frame = self._get_stream_size(self.left)
             mapX_left, mapY_left, mapX_right, mapY_right = self._get_maps(w_frame, h_frame, calibData)
@@ -195,8 +199,7 @@ class StereoComponent(Component):
         if self._args:
             self._config_stereo_args(self._args)
 
-
-    def config_undistortion(self, M2_offset:int =0):
+    def config_undistortion(self, M2_offset: int = 0):
         self._undistortion_offset = M2_offset
 
     def _config_stereo_args(self, args: Dict):
@@ -375,7 +378,6 @@ class StereoComponent(Component):
                 fps=fps)
             out.name = 'Rectified right'
             return self._comp._create_xout(pipeline, out)
-
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             if self._comp.colormap:
