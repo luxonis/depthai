@@ -284,13 +284,12 @@ class XoutTracker(XoutNnResults):
     @staticmethod
     def _get_spatial_points(packet) -> list:
         try:
-            # print(packet._is_spatial_detection())
-            # if packet._is_spatial_detection():
-            spatial_points = [packet._get_spatials(det.srcImgDetection)
-                              for det in
-                              packet.daiTracklets.tracklets]
-            # else:
-            #     spatial_points = None
+            if packet._is_spatial_detection():
+                spatial_points = [packet._get_spatials(det.srcImgDetection)
+                                  for det in
+                                  packet.daiTracklets.tracklets]
+            else:
+                spatial_points = None
         except IndexError:
             spatial_points = None
 
