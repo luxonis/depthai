@@ -70,6 +70,8 @@ class NNComponent(Component):
         self.image_manip: Optional[dai.node.ImageManip] = None
         self.x_in: Optional[dai.node.XLinkIn] = None  # Used for multi-stage pipeline
         self.tracker = pipeline.createObjectTracker() if tracker else None
+        self.apply_tracking_filter = False
+        self.forget_after_n_frames = None
 
         # Private properties
         self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
@@ -423,7 +425,9 @@ class NNComponent(Component):
                        track_labels: Optional[List[int]] = None,
                        assignment_policy: Optional[dai.TrackerIdAssignmentPolicy] = None,
                        max_obj: Optional[int] = None,
-                       threshold: Optional[float] = None
+                       threshold: Optional[float] = None,
+                       apply_tracking_filter: Optional[bool] = None,
+                       forget_after_n_frames: Optional[int] = None,
                        ):
         """
         Configure Object Tracker node (if it's enabled).
@@ -434,6 +438,8 @@ class NNComponent(Component):
             assignment_policy (dai.TrackerType, optional): Set object tracker ID assignment policy
             max_obj (int, optional): Set max objects to track. Max 60.
             threshold (float, optional): Set threshold for object detection confidence. Default: 0.0
+            apply_tracking_filter (bool, optional): Set whether to apply Kalman filter to the tracked objects. Done on the host.
+            forget_after_n_frames (int, optional): Set how many frames to track an object before forgetting it.
         """
 
         if self.tracker is None:
@@ -458,6 +464,12 @@ class NNComponent(Component):
 
         if threshold is not None:
             self.tracker.setTrackerThreshold(threshold)
+
+        if apply_tracking_filter is not None:
+            self.apply_tracking_filter = apply_tracking_filter
+
+        if forget_after_n_frames is not None:
+            self.forget_after_n_frames = forget_after_n_frames
 
     def config_yolo_from_metadata(self, metadata: Dict):
         """
@@ -684,7 +696,10 @@ class NNComponent(Component):
 
             out = XoutTracker(det_nn=self._comp,
                               frames=self._comp._input.get_stream_xout(),  # CameraComponent
-                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out))
+                              device=device,
+                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out),
+                              apply_kalman=self._comp.apply_tracking_filter,
+                              forget_after_n_frames=self._comp.forget_after_n_frames)
 
             return self._comp._create_xout(pipeline, out)
 
