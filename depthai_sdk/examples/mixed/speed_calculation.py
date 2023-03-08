@@ -18,9 +18,8 @@ with OakCamera() as oak:
 
     nn = oak.create_nn('face-detection-retail-0004', color, spatial=stereo, tracker=True)
     nn.config_nn(resize_mode='stretch')
-    nn.config_tracker(apply_tracking_filter=True, forget_after_n_frames=20)
 
     visualizer = oak.visualize(nn.out.tracker, callback=callback, fps=True)
-    visualizer.tracking(speed=True).text(auto_scale=False)
+    visualizer.tracking(speed=True).text(auto_scale=True)
 
     oak.start(blocking=True)
