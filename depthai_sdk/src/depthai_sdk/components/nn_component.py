@@ -433,7 +433,7 @@ class NNComponent(Component):
             track_labels (List[int], optional): Set detection labels to track
             assignment_policy (dai.TrackerType, optional): Set object tracker ID assignment policy
             max_obj (int, optional): Set max objects to track. Max 60.
-            threshold (float, optional): Set threshold for object detection confidence. Default: 0.0
+            threshold (float, optional): Specify tracker threshold. Default: 0.0
         """
 
         if self.tracker is None:

@@ -94,6 +94,12 @@ Both of the models above are supported by this SDK, so they will be downloaded a
    * - ``yolov6nr3_coco_640x352``
      - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov6nr3_coco_640x352>`__
      - 32
+   * - ``yolov7tiny_coco_640x352``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov7tiny_coco_640x352>`__
+     - 23
+   * - ``yolov7tiny_coco_416x416``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov7tiny_coco_416x416>`__
+     - 29
    * - ``yolov8n_coco_640x352``
      - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov8n_coco_640x352>`__
      - 22
