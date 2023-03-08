@@ -4,7 +4,6 @@ from typing import Union, Dict, Optional
 
 import depthai as dai
 import numpy as np
-
 from depthai_sdk.classes import DetectionPacket, TrackerPacket
 from depthai_sdk.classes.packets import _TrackingDetection
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
@@ -47,7 +46,9 @@ class XoutTracker(XoutNnResults):
         super().setup_visualize(visualizer, visualizer_enabled, name)
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
-        self._set_frame_shape(packet)
+        if self._visualizer:
+            self._visualizer.frame_shape = self._frame_shape
+
         spatial_points = self._get_spatial_points(packet)
 
         threshold = self.forget_after_n_frames
