@@ -24,7 +24,8 @@ class MultiStageNN:
                  detection_node: GenericNeuralNetwork,  # Object detection node
                  high_res_frames: dai.Node.Output,
                  size: Tuple[int, int],
-                 debug=False
+                 debug=False,
+                 num_frames_pool: int = 20
                  ) -> None:
         """
         Args:
@@ -33,6 +34,7 @@ class MultiStageNN:
             high_res_frames (dai.Node.Output): Frames corresponding to the detection NN
             size (Tuple[int, int]): Size of the frames.
             debug (bool, optional): Enable debug mode. Defaults to False.
+            num_frames_pool (int, optional): Number of frames to keep in the pool. Defaults to 20.
         """
         self.script: dai.node.Script = pipeline.create(dai.node.Script)
         self.script.setProcessor(dai.ProcessorType.LEON_CSS)  # More stable
@@ -47,7 +49,7 @@ class MultiStageNN:
         self.manip.initialConfig.setResize(size)
         self.manip.setWaitForConfigInput(True)
         self.manip.setMaxOutputFrameSize(size[0] * size[1] * 3)
-        self.manip.setNumFramesPool(20)
+        self.manip.setNumFramesPool(num_frames_pool)
         self.script.outputs['manip_cfg'].link(self.manip.inputConfig)
         self.script.outputs['manip_img'].link(self.manip.inputImage)
         self.out: dai.Node.Output = self.manip.out

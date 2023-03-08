@@ -1,9 +1,11 @@
 from typing import Any, List, Dict
-from depthai_sdk.oak_outputs.xout import XoutFrames
-from depthai_sdk.oak_outputs.xout_base import XoutBase
+
 import depthai as dai
-from sensor_msgs.msg import CompressedImage, Image, PointCloud2, PointField, Imu
+from sensor_msgs.msg import CompressedImage, Image, PointCloud2, Imu
+
 from depthai_sdk.integrations.ros.depthai2ros2 import DepthAi2Ros2
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 
 
 class RosStream:
@@ -12,10 +14,12 @@ class RosStream:
     topic: str  # Topic name, eg. color/compressed
     ros_type: Any  # CompressedImage, Image, IMU, PointCloud2...
 
+
 class RosBase:
     """
     Base class that is used by ros streaming component and mcap recorder.
     """
+
     def __init__(self):
         self.streams: Dict[str, RosStream]  # key = xlink stream name
         self.pointcloud: bool = False  # Convert depth -> pointcloud
@@ -44,7 +48,7 @@ class RosBase:
                 elif xout.is_imu():
                     rs.topic = '/imu'
                     rs.ros_type = Imu
-                else: # Non-encoded frames; rgb, mono, depth
+                else:  # Non-encoded frames; rgb, mono, depth
                     rs.topic = f'/{name}/raw'
                     rs.ros_type = Image
 

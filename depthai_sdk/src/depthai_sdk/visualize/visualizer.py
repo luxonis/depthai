@@ -90,7 +90,7 @@ class Visualizer(VisualizerHelper):
                  size: int = None,
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
-                 outline: bool = False,
+                 outline: bool = True,
                  bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10) -> 'Visualizer':
