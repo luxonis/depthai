@@ -278,7 +278,7 @@ class StereoComponent(Component):
         if isinstance(wls_level, WLSLevel):
             self._wls_level = wls_level
         elif isinstance(wls_level, str):
-            self._wls_level = WLSLevel(wls_level.upper())
+            self._wls_level = WLSLevel[wls_level.upper()]
 
         self._wls_lambda = wls_lambda
         self._wls_sigma = wls_sigma
