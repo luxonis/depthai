@@ -91,6 +91,18 @@ Both of the models above are supported by this SDK, so they will be downloaded a
    * - ``yolov6n_coco_640x640``
      - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov6n_coco_640x640>`__
      - 26
+   * - ``yolov6nr3_coco_640x352``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov6nr3_coco_640x352>`__
+     - 32
+   * - ``yolov7tiny_coco_640x352``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov7tiny_coco_640x352>`__
+     - 23
+   * - ``yolov7tiny_coco_416x416``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov7tiny_coco_416x416>`__
+     - 29
+   * - ``yolov8n_coco_640x352``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov8n_coco_640x352>`__
+     - 22
 
 
 ``*`` - FPS was measured using only color camera (1080P) and 1 NN using callbacks (without visualization)

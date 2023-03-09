@@ -218,7 +218,7 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
             self.factor = calc_disp_multiplier(self.device, size)
 
         depth = np.array(packet.imgFrame.getFrame())
-        with np.errstate(divide='ignore'):
+        with np.errstate(all='ignore'):
             disp = (self.factor / depth).astype(np.uint8)
 
         packet.frame = colorize_disparity(disp, multiplier=self.multiplier)

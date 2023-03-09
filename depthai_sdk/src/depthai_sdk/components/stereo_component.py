@@ -132,6 +132,9 @@ class StereoComponent(Component):
             if len(device.getCameraSensorNames()) == 1:
                 raise Exception('OAK-1 camera does not have Stereo camera pair!')
 
+            # If not specified, default to 400P resolution for faster processing
+            self._resolution = self._resolution or dai.MonoCameraProperties.SensorResolution.THE_400_P
+
             if not self.left:
                 self.left = CameraComponent(pipeline, 'left', self._resolution, self._fps, replay=self._replay)
                 self.left.on_init(pipeline, device, version)

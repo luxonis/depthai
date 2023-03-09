@@ -1,0 +1,113 @@
+{
+    "model":
+    {
+        "model_name": "yolov7tiny_coco_640x352",
+        "zoo": "depthai"
+    },
+    "nn_config":
+    {
+        "output_format" : "detection",
+        "NN_family" : "YOLO",
+        "NN_specific_metadata" :
+        {
+            "classes" : 80,
+            "coordinates" : 4,
+            "anchors" : [12.0, 16.0, 19.0, 36.0, 40.0, 28.0, 36.0, 75.0, 76.0, 55.0, 72.0, 146.0, 142.0, 110.0, 192.0, 243.0, 459.0, 401.0],
+            "anchor_masks" : {
+                "side80": [0, 1, 2],
+                "side40": [3, 4, 5],
+                "side20": [6, 7, 8]
+            },
+            "iou_threshold" : 0.5,
+            "confidence_threshold" : 0.5
+        }
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "person",
+            "bicycle",
+            "car",
+            "motorbike",
+            "aeroplane",
+            "bus",
+            "train",
+            "truck",
+            "boat",
+            "traffic light",
+            "fire hydrant",
+            "stop sign",
+            "parking meter",
+            "bench",
+            "bird",
+            "cat",
+            "dog",
+            "horse",
+            "sheep",
+            "cow",
+            "elephant",
+            "bear",
+            "zebra",
+            "giraffe",
+            "backpack",
+            "umbrella",
+            "handbag",
+            "tie",
+            "suitcase",
+            "frisbee",
+            "skis",
+            "snowboard",
+            "sports ball",
+            "kite",
+            "baseball bat",
+            "baseball glove",
+            "skateboard",
+            "surfboard",
+            "tennis racket",
+            "bottle",
+            "wine glass",
+            "cup",
+            "fork",
+            "knife",
+            "spoon",
+            "bowl",
+            "banana",
+            "apple",
+            "sandwich",
+            "orange",
+            "broccoli",
+            "carrot",
+            "hot dog",
+            "pizza",
+            "donut",
+            "cake",
+            "chair",
+            "sofa",
+            "pottedplant",
+            "bed",
+            "diningtable",
+            "toilet",
+            "tvmonitor",
+            "laptop",
+            "mouse",
+            "remote",
+            "keyboard",
+            "cell phone",
+            "microwave",
+            "oven",
+            "toaster",
+            "sink",
+            "refrigerator",
+            "book",
+            "clock",
+            "vase",
+            "scissors",
+            "teddy bear",
+            "hair drier",
+            "toothbrush"        
+        ]
+    },
+    "version": 1
+}
+
