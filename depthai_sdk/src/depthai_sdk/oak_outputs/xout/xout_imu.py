@@ -42,15 +42,16 @@ class XoutIMU(XoutBase):
 
         self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
         labels = ['x', 'y', 'z']
+        colors = ['r', 'g', 'b']
 
         for i in range(3):
-            self.acceleration_lines.append(self.axes[0].plot([], [], label=f'Acceleration {labels[i]}')[0])
+            self.acceleration_lines.append(self.axes[0].plot([], [], label=f'Acceleration {labels[i]}', color=colors[i])[0])
             self.axes[0].set_ylabel('Acceleration (m/s^2)')
             self.axes[0].set_xlabel('Time (s)')
             self.axes[0].legend()
 
         for i in range(3):
-            self.gyroscope_lines.append(self.axes[1].plot([], [], label=f'Gyroscope {labels[i]}')[0])
+            self.gyroscope_lines.append(self.axes[1].plot([], [], label=f'Gyroscope {labels[i]}', color=colors[i])[0])
             self.axes[1].set_ylabel('Gyroscope (rad/s)')
             self.axes[1].set_xlabel('Time (s)')
             self.axes[1].legend()
@@ -60,8 +61,8 @@ class XoutIMU(XoutBase):
             self.start_time = packet.data[0].acceleroMeter.timestamp.get()
 
         acceleration_x = [el.acceleroMeter.x for el in packet.data]
-        acceleration_z = [el.acceleroMeter.y for el in packet.data]
-        acceleration_y = [el.acceleroMeter.z for el in packet.data]
+        acceleration_y = [el.acceleroMeter.y for el in packet.data]
+        acceleration_z = [el.acceleroMeter.z for el in packet.data]
 
         t_acceleration = [(el.acceleroMeter.timestamp.get() - self.start_time).total_seconds() for el in packet.data]
 

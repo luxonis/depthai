@@ -3,9 +3,6 @@ import atexit
 import signal
 import sys
 
-from depthai_sdk.fps import FPSHandler
-from depthai_sdk.previews import Previews
-
 if sys.version_info[0] < 3:
     raise Exception("Must be using Python 3")
 import argparse
@@ -30,6 +27,8 @@ try:
     import numpy as np
     from depthai_sdk.managers import ArgsManager, getMonoResolution, getRgbResolution
     from depthai_helpers.app_manager import App
+    from depthai_sdk.fps import FPSHandler
+    from depthai_sdk.previews import Previews
 except Exception as ex:
     print("Third party libraries failed to import: {}".format(ex))
     print("Run \"python3 install_requirements.py\" to install dependencies")

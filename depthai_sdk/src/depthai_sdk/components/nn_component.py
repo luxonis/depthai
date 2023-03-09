@@ -70,6 +70,8 @@ class NNComponent(Component):
         self.image_manip: Optional[dai.node.ImageManip] = None
         self.x_in: Optional[dai.node.XLinkIn] = None  # Used for multi-stage pipeline
         self.tracker = pipeline.createObjectTracker() if tracker else None
+        self.apply_tracking_filter = False
+        self.forget_after_n_frames = None
 
         # Private properties
         self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
@@ -84,8 +86,10 @@ class NNComponent(Component):
         self._node_type: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
         self._roboflow: Optional[RoboflowIntegration] = None
 
+        # Multi-stage pipeline
         self._multi_stage_nn: Optional[MultiStageNN] = None
         self._multi_stage_config: Optional[MultiStageConfig] = None
+        self._multi_stage_num_frame_pool = 20
 
         self._spatial: Optional[Union[bool, StereoComponent]] = None
         self._replay: Optional[Replay]  # Replay module
@@ -152,7 +156,7 @@ class NNComponent(Component):
             # Crop the high-resolution frames, so it matches object detection frame aspect ratio
 
             self.image_manip = pipeline.createImageManip()
-            self.image_manip.setNumFramesPool(10)
+            self.image_manip.setNumFramesPool(self._multi_stage_num_frame_pool)
             self.image_manip_config = dai.ImageManipConfig()
             self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
 
@@ -162,7 +166,11 @@ class NNComponent(Component):
                 self.image_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
 
                 # Create script node, get HQ frames from input.
-                self._multi_stage_nn = MultiStageNN(pipeline, self._input.node, self.image_manip.out, self._size)
+                self._multi_stage_nn = MultiStageNN(pipeline=pipeline,
+                                                    detection_node=self._input.node,
+                                                    high_res_frames=self.image_manip.out,
+                                                    size=self._size,
+                                                    num_frames_pool=self._multi_stage_num_frame_pool)
                 self._multi_stage_nn.configure(self._multi_stage_config)
                 self._multi_stage_nn.out.link(self.node.input)  # Cropped frames
 
@@ -311,6 +319,8 @@ class NNComponent(Component):
             if not callable(getattr(self._handler, "decode", None)):
                 raise RuntimeError("Custom model handler does not contain 'decode' method!")
 
+            self._decode_fn = self._handler.decode
+
         if 'nn_config' in self._config:
             nn_config = self._config.get("nn_config", {})
 
@@ -374,6 +384,7 @@ class NNComponent(Component):
                              debug=False,
                              labels: Optional[List[int]] = None,
                              scale_bb: Optional[Tuple[int, int]] = None,
+                             num_frame_pool: int = None
                              ) -> None:
         """
         Configures the MultiStage NN pipeline. Available if the input to this NNComponent is Detection NNComponent.
@@ -382,12 +393,14 @@ class NNComponent(Component):
             debug (bool, default False): Debug script node
             labels (List[int], optional): Crop & run inference only on objects with these labels
             scale_bb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
+            num_frame_pool (int, optional): Number of frames to pool for inference. If None, will use the default value.
         """
         if not self._is_multi_stage():
             print("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible!"
                   "This configuration attempt will be ignored.")
             return
 
+        self._multi_stage_num_frame_pool = num_frame_pool
         self._multi_stage_config = MultiStageConfig(debug, labels, scale_bb)
 
     def _parse_label(self, label: Union[str, int]) -> int:
@@ -410,7 +423,9 @@ class NNComponent(Component):
                        track_labels: Optional[List[int]] = None,
                        assignment_policy: Optional[dai.TrackerIdAssignmentPolicy] = None,
                        max_obj: Optional[int] = None,
-                       threshold: Optional[float] = None
+                       threshold: Optional[float] = None,
+                       apply_tracking_filter: Optional[bool] = None,
+                       forget_after_n_frames: Optional[int] = None,
                        ):
         """
         Configure Object Tracker node (if it's enabled).
@@ -421,6 +436,8 @@ class NNComponent(Component):
             assignment_policy (dai.TrackerType, optional): Set object tracker ID assignment policy
             max_obj (int, optional): Set max objects to track. Max 60.
             threshold (float, optional): Set threshold for object detection confidence. Default: 0.0
+            apply_tracking_filter (bool, optional): Set whether to apply Kalman filter to the tracked objects. Done on the host.
+            forget_after_n_frames (int, optional): Set how many frames to track an object before forgetting it.
         """
 
         if self.tracker is None:
@@ -446,6 +463,12 @@ class NNComponent(Component):
         if threshold:
             self.tracker.setTrackerThreshold(threshold)
 
+        if apply_tracking_filter is not None:
+            self.apply_tracking_filter = apply_tracking_filter
+
+        if forget_after_n_frames is not None:
+            self.forget_after_n_frames = forget_after_n_frames
+
     def config_yolo_from_metadata(self, metadata: Dict):
         """
         Configures (Spatial) Yolo Detection Network node with a dictionary. Calls config_yolo().
@@ -469,7 +492,6 @@ class NNComponent(Component):
                     ) -> None:
         """
         Configures (Spatial) Yolo Detection Network node.
-
         """
         if not self._is_yolo():
             print('This is not a YOLO detection network! This configuration attempt will be ignored.')
@@ -672,7 +694,10 @@ class NNComponent(Component):
 
             out = XoutTracker(det_nn=self._comp,
                               frames=self._comp._input.get_stream_xout(),  # CameraComponent
-                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out))
+                              device=device,
+                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out),
+                              apply_kalman=self._comp.apply_tracking_filter,
+                              forget_after_n_frames=self._comp.forget_after_n_frames)
 
             return self._comp._create_xout(pipeline, out)
 

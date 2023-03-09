@@ -68,3 +68,6 @@ class VideoCapReader(AbstractReader):
     def disableStream(self, name: str):
         if name in self.readers:
             self.readers.pop(name)
+
+    def get_message_size(self, name: str) -> int:
+        return self.shapes[name][0] * self.shapes[name][1] * 3

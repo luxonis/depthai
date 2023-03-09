@@ -4,16 +4,17 @@ from typing import Dict
 import depthai as dai
 from mcap_ros1.writer import Writer as Ros1Writer
 
-from depthai_sdk.recorders.abstract_recorder import *
-# from depthai_sdk.integrations.ros.depthai2ros import DepthAi2Ros1
-from depthai_sdk.oak_outputs.xout import XoutFrames
 from depthai_sdk.integrations.ros.ros_base import RosBase
+# from depthai_sdk.integrations.ros.depthai2ros import DepthAi2Ros1
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.recorders.abstract_recorder import *
 
 
 class McapRecorder(Recorder, RosBase):
     """
     This is a helper class that lets you save frames into mcap (.mcap), which can be replayed using Foxglove studio app.
     """
+
     def __init__(self):
         self.path = None
         self.converter = None
@@ -24,7 +25,6 @@ class McapRecorder(Recorder, RosBase):
         self._pcl = False
         self._stream_type: Dict[str, OakStream] = dict()
         self._name_mapping: Dict[str, str] = dict()  # XLink name to nice name mapping
-
 
     def update(self, path: Path, device: dai.Device, xouts: List['XoutFrames']):
         """

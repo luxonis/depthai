@@ -533,6 +533,14 @@ class OakCamera:
     def ros_stream(self, output: Union[List, Callable, Component]):
         self._out_templates.append(RosStreamConfig(self._get_component_outputs(output)))
 
+    def set_max_queue_size(self, size: int):
+        """
+        Set maximum queue size for all outputs. This is the maximum number of frames that can be stored in the queue.
+        Args:
+            size: Maximum queue size for all outputs.
+        """
+        self._oak.set_max_queue_size(size)
+
     @property
     def device(self) -> dai.Device:
         """

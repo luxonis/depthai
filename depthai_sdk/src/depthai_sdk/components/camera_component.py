@@ -59,6 +59,9 @@ class CameraComponent(Component):
         if rotation not in [None, 0, 90, 180, 270]:
             raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
 
+        self._num_frames_pool = 10
+        self._preview_num_frames_pool = 4
+
         self._create_node(self._pipeline, source.upper())
 
         # Camera controls (exposure, gain, etc.)
@@ -86,7 +89,7 @@ class CameraComponent(Component):
             # self._replay.setResizeColor(resize)
             stream = self._replay.streams[self._source]
             if stream.node is None:
-                return # Stream disabled
+                return  # Stream disabled
             self.node = stream.node
             # print('resize', resize)
             self.node.setMaxDataSize(res[0] * res[1] * 3)
@@ -98,7 +101,7 @@ class CameraComponent(Component):
                 self.stream = rot_manip.out
             else:
                 self.stream = self.node.out
-        else: # Live-streaming, check whether camera sensor was found on specified port
+        else:  # Live-streaming, check whether camera sensor was found on specified port
             features = [f for f in device.getConnectedCameraFeatures() if f.socket == self.node.getBoardSocket()][0]
 
             err = "Camera sensor '{}' was found on socket '{}' which doesn't support '{}' sensor type! Supported sensor types: {}."
@@ -112,7 +115,7 @@ class CameraComponent(Component):
             self.node.setInterleaved(False)
             # DepthAI uses BGR color order convention for NN inferencing
             self.node.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
-            self.node.setPreviewNumFramesPool(4)
+            self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
 
             cams = device.getCameraSensorNames()
             # print('Available sensors on OAK:', cams)
@@ -404,10 +407,22 @@ class CameraComponent(Component):
         elif self.is_mono():
             return StreamXout(self.node.id, self.stream, name=self.name)
         else:  # ColorCamera
-            self.node.setVideoNumFramesPool(10)
+            self.node.setVideoNumFramesPool(self._num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
             return StreamXout(self.node.id, self.node.video, name=self.name)
+
+    def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
+        """
+        Set the number of frames to be stored in the pool.
+
+        :param num_frames: Number of frames to be stored in the pool.
+        :param preview_num_frames: Number of frames to be stored in the pool for the preview stream.
+        """
+        if self.is_color():
+            self._num_frames_pool = num_frames
+            if preview_num_frames is not None:
+                self._preview_num_frames_pool = preview_num_frames
 
     """
     Available outputs (to the host) of this component

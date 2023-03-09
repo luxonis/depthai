@@ -16,7 +16,7 @@ The **OakCamera** class abstracts:
 Interoperability with DepthAI API
 ---------------------------------
 
-DepthAI SDK was develop with `DepthAI API <https://docs.luxonis.com/projects/api/en/latest/>`__ interoperability in mind.
+DepthAI SDK was developed with `DepthAI API <https://docs.luxonis.com/projects/api/en/latest/>`__ interoperability in mind.
 Users can access all depthai API nodes inside components, and after ``oak.build()`` also the `dai.Pipeline <https://docs.luxonis.com/projects/api/en/latest/components/pipeline/>`__
 and `dai.Device <https://docs.luxonis.com/projects/api/en/latest/components/device/>`__ objects.
 
