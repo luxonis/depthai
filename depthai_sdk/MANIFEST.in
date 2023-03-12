@@ -7,6 +7,7 @@ recursive-include src/depthai_sdk/nn_models *.yml
 recursive-include src/depthai_sdk/nn_models config.json
 
 include src/depthai_sdk/oak_outputs/*.py
+include src/depthai_sdk/oak_outputs/xout/*.py
 include src/depthai_sdk/readers/*.py
 recursive-include src/depthai_sdk/recorders *.py
 include src/depthai_sdk/visualize/*.py

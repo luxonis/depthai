@@ -3,11 +3,13 @@ import io
 from setuptools import setup
 
 with open('requirements.txt') as f:
-    required = f.readlines()
+    requirements = f.readlines()
+
+install_requires = [requirement for requirement in requirements if '--' not in requirement]
 
 setup(
     name='depthai-sdk',
-    version='1.9.0',
+    version='1.9.4.1',
     description='This package provides an abstraction of the DepthAI API library.',
     long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
@@ -18,7 +20,7 @@ setup(
     license='MIT',
     packages=['depthai_sdk'],
     package_dir={"": "src"},  # https://stackoverflow.com/a/67238346/5494277
-    install_requires=required,
+    install_requires=install_requires,
     include_package_data=True,
     extras_require={
         "visualize": ['PySide2',
@@ -28,7 +30,15 @@ setup(
         "replay": ['mcap>=0.0.10',
                    'mcap-ros1-support==0.0.8',
                    'rosbags==0.9.11'],
-        "record": ['av']
+        "record": ['av'],
+        "minimal": ['numpy',
+                    'blobconverter',
+                    'depthai',
+                    'PyTurboJPEG',
+                    'marshmallow',
+                    'distinctipy',
+                    'xmltodict',
+                    ]
     },
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",

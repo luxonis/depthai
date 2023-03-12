@@ -2,7 +2,10 @@ import os
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 
 from depthai_sdk.readers.abstract_reader import AbstractReader
 
@@ -13,11 +16,12 @@ class VideoCapReader(AbstractReader):
     """
     Reads stream from mp4, mjpeg, h264, h265
     """
-    initialFrames: Dict[str, Any] = dict()
-    shapes: Dict[str, Tuple[int, int]] = dict()
-    readers: Dict[str, cv2.VideoCapture] = dict()
 
     def __init__(self, path: Path) -> None:
+        self.initialFrames: Dict[str, Any] = dict()
+        self.shapes: Dict[str, Tuple[int, int]] = dict()
+        self.readers: Dict[str, cv2.VideoCapture] = dict()
+
         if path.is_file():
             stream = path.stem if (path.stem in ['left', 'right']) else 'color'
             self.readers[stream] = cv2.VideoCapture(str(path))

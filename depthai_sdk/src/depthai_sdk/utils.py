@@ -4,7 +4,11 @@ import urllib.request
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 import requests
@@ -86,6 +90,8 @@ def downloadContent(url: str) -> Path:
 def downloadRecording(name: str, keys: List[str]) -> Path:
     (DEPTHAI_RECORDINGS_PATH / name).mkdir(parents=True, exist_ok=True)
     for key in keys:
+        if key.endswith('/'):  # Folder
+            continue
         url = DEPTHAI_RECORDINGS_URL + key
         _downloadFile(str(DEPTHAI_RECORDINGS_PATH / key), url)
         print('Downloaded', key)
