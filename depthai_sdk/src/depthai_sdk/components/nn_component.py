@@ -27,6 +27,7 @@ from depthai_sdk.replay import Replay
 
 class NNComponent(Component):
     def __init__(self,
+                 device: dai.Device,
                  pipeline: dai.Pipeline,
                  model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
                  input: Union[CameraComponent, 'NNComponent'],
@@ -116,22 +117,13 @@ class NNComponent(Component):
         self.node = pipeline.create(self._node_type)
         self._update_config()
 
-    def forced_openvino_version(self) -> dai.OpenVINO.Version:
-        """
-        Checks whether the component forces a specific OpenVINO version. This function is called after
-        Camera has been configured and right before we connect to the OAK camera.
-        @return: Forced OpenVINO version (optional).
-        """
-        return self._forced_version
-
-    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._roboflow:
             path = self._roboflow.device_update(device)
             self._parse_config(path)
             self._update_config()
 
         if self._blob is None:
-            self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model'], version))
+            self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model']))
 
         # TODO: update NN input based on camera resolution
         self.node.setBlob(self._blob)
@@ -206,8 +198,7 @@ class NNComponent(Component):
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
-                self._spatial = StereoComponent(pipeline, args=self._args, replay=self._replay)
-                self._spatial.on_init(pipeline, device, version)
+                self._spatial = StereoComponent(device, pipeline, args=self._args, replay=self._replay)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
                 self._spatial.config_stereo(align=self._input._source)
@@ -216,6 +207,15 @@ class NNComponent(Component):
         if self._args:
             if self._is_spatial():
                 self._config_spatials_args(self._args)
+
+    def forced_openvino_version(self) -> dai.OpenVINO.Version:
+        """
+        Checks whether the component forces a specific OpenVINO version. This function is called after
+        Camera has been configured and right before we connect to the OAK camera.
+        @return: Forced OpenVINO version (optional).
+        """
+        return self._forced_version
+
 
     def _parse_model(self, model):
         """
@@ -331,12 +331,14 @@ class NNComponent(Component):
             if nn_family:
                 self._parse_node_type(nn_family)
 
-    def _blob_from_config(self, model: Dict, version: dai.OpenVINO.Version) -> str:
+    def _blob_from_config(self, model: Dict, version: Optional[dai.OpenVINO.Version] = None) -> str:
         """
         Gets the blob from the config file.
         """
-        vals = str(version).split('_')
-        version_str = f"{vals[1]}.{vals[2]}"
+        version_str = None
+        if version is not None:
+            vals = str(version).split('_')
+            version_str = f"{vals[1]}.{vals[2]}"
 
         if 'model_name' in model:  # Use blobconverter to download the model
             zoo_type = model.get("zoo", 'intel')

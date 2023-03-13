@@ -78,8 +78,6 @@ def parse_camera_socket(value: str) -> dai.CameraBoardSocket:
         return dai.CameraBoardSocket.CAM_B
     elif value in ["RIGHT", "CAMC", "CAM_C", "CAM-C"]:
         return dai.CameraBoardSocket.CAM_C
-    elif value in ["RIGHT", "CAMC", "CAM_C", "CAM-C"]:
-        return dai.CameraBoardSocket.CAM_C
     elif value in ["CAMD", "CAM_D", "CAM-D"]:
         return dai.CameraBoardSocket.CAM_D
     elif value in ["CAME", "CAM_E", "CAM-E"]:

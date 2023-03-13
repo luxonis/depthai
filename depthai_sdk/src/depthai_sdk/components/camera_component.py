@@ -10,9 +10,9 @@ from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.replay import Replay
 
-
 class CameraComponent(Component):
     def __init__(self,
+                 device: dai.Device,
                  pipeline: dai.Pipeline,
                  source: str,
                  resolution: Optional[Union[
@@ -30,6 +30,8 @@ class CameraComponent(Component):
         OAK device (via XLinkIn node).
 
         Args:
+            device (dai.Device): OAK device
+            pipeline (dai.Pipeline): OAK pipeline
             source (str): Source of the camera. Either color/rgb/right/left
             resolution (optional): Camera resolution, eg. '800p' or '4k'
             fps (float, optional): Camera FPS
@@ -42,41 +44,26 @@ class CameraComponent(Component):
         super().__init__()
         self.out = self.Out(self)
 
-        self.node: Optional[Union[dai.node.MonoCamera, dai.node.XLinkIn, dai.node.ColorCamera]] = None
+        self.node: Optional[Union[dai.node.ColorCamera, dai.node.MonoCamera, dai.node.XLinkIn]] = None
         self.encoder: Optional[dai.node.VideoEncoder] = None
+
         self.stream: Optional[dai.Node.Output] = None  # Node output to be used as eg. an input into NN
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
 
-        # Save passed settings
-        self._pipeline = pipeline
         self._source = source
-        self._replay: Replay = replay
+        self._replay: Optional[Replay] = replay
         self._args: Dict = args
         self.name = name
 
         if rotation not in [None, 0, 90, 180, 270]:
             raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
 
-        self._rotation = rotation
         self._num_frames_pool = 10
         self._preview_num_frames_pool = 4
 
-        self._create_node(self._pipeline, source.upper())
-
-        self.encoder = None
-        if encode:
-            self.encoder = self._pipeline.createVideoEncoder()
-            # MJPEG by default
-            self._encoder_profile = parse_encode(encode)
-
-        self._resolution_forced: bool = resolution is not None
-        if resolution:
-            self._set_resolution(resolution)
-        if fps:
-            self.set_fps(fps)
-
-    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-        if self.is_replay():  # If replay, don't create camera node
+        if self.is_replay():
+            if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
+                raise Exception(f"{source} stream was not found in specified depthai-recording!")
             res = self._replay.getShape(self._source)
             # print('resolution', res)
             # resize = getResize(res, width=1200)
@@ -84,26 +71,63 @@ class CameraComponent(Component):
             stream = self._replay.streams[self._source]
             if stream.node is None:
                 return  # Stream disabled
+
             self.node = stream.node
             # print('resize', resize)
             self.node.setMaxDataSize(res[0] * res[1] * 3)
             self.stream_size = res
             self.stream = self.node.out
-            if self._rotation:
-                rot_manip = self._create_rotation_manip(pipeline)
+
+            if rotation in [90, 180, 270]:
+                rot_manip = self._create_rotation_manip(pipeline, rotation)
                 self.node.out.link(rot_manip.inputImage)
                 self.stream = rot_manip.out
+                if rotation in [90, 270]:
+                    self.stream_size = self.stream_size[::-1]
+
+        # Livestreaming, not replay
+        else:
+            node_type: dai.node = None
+            source = source.upper()
+            # When sensors can be either color or mono (eg. AR0234), we allow specifying it
+            if "," in source:  # For sensors that support multiple
+                parts = source.split(',')
+                source = parts[0]
+                if parts[1] in ["C", "COLOR"]:
+                    node_type = dai.node.ColorCamera
+                elif parts[1] in ["M", "MONO"]:
+                    node_type = dai.node.MonoCamera
+                else:
+                    raise Exception("Please specify sensor type with c/color or m/mono after the ',' - eg. `cam = oak.create_camera('cama,c')`")
+
+            socket = parse_camera_socket(source)
+            sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == socket][0]
+
+            if node_type is not None: # User specified camera type
+                if node_type == dai.node.ColorCamera and dai.CameraSensorType.COLOR not in sensor.supportedTypes:
+                    raise Exception(f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support COLOR mode!")
+                if node_type == dai.node.MonoCamera and dai.CameraSensorType.MONO not in sensor.supportedTypes:
+                    raise Exception(f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support MONO mode!")
             else:
-                self.stream = self.node.out
-        else:  # Live-streaming, check whether camera sensor was found on specified port
-            features = [f for f in device.getConnectedCameraFeatures() if f.socket == self.node.getBoardSocket()][0]
+                type = sensor.supportedTypes[0]
+                if type == dai.CameraSensorType.COLOR:
+                    node_type = dai.node.ColorCamera
+                elif type == dai.CameraSensorType.MONO:
+                    node_type = dai.node.MonoCamera
+                else:
+                    raise Exception(f"{sensor} doesn't support either COLOR or MONO ")
 
-            err = "Camera sensor '{}' was found on socket '{}' which doesn't support '{}' sensor type! Supported sensor types: {}."
-            if isinstance(self.node, dai.node.ColorCamera) and dai.CameraSensorType.COLOR not in features.supportedTypes:
-                raise ValueError(err.format(features.sensorName, features.socket, 'COLOR',features.supportedTypes))
-            if isinstance(self.node, dai.node.MonoCamera) and dai.CameraSensorType.MONO not in features.supportedTypes:
-                raise ValueError(err.format(features.sensorName, features.socket, 'MONO',features.supportedTypes))
+            # Create the node, and set the socket
+            self.node = pipeline.create(node_type)
+            self.node.setBoardSocket(socket)
 
+        self._resolution_forced: bool = resolution is not None
+        if resolution:
+            self._set_resolution(resolution)
+        if fps:
+            self.set_fps(fps)
+
+        # Default configuration for the nodes
         if isinstance(self.node, dai.node.ColorCamera):
             # DepthAI uses CHW (Planar) channel layout convention for NN inferencing
             self.node.setInterleaved(False)
@@ -127,25 +151,26 @@ class CameraComponent(Component):
 
             self.node.setPreviewSize(*self.node.getVideoSize())
             self.stream_size = self.node.getPreviewSize()
-            self.stream = self.node.preview if self.encoder is None else self.node.video
+            self.stream = self.node.preview
 
         elif isinstance(self.node, dai.node.MonoCamera):
             self.stream_size = self.node.getResolutionSize()
             self.stream = self.node.out
 
-        if self._args:
-            self._config_camera_args(self._args)
-
-        if self._rotation:
-            if self._rotation == 180 and not self.is_replay():
+        if rotation and not self.is_replay():
+            if rotation == 180:
                 self.node.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
             else:
-                rot_manip = self._create_rotation_manip(pipeline)
+                rot_manip = self._create_rotation_manip(pipeline, rotation)
                 self.stream.link(rot_manip.inputImage)
                 self.stream = rot_manip.out
+                self.stream_size = self.stream_size[::-1]
 
-        if self.encoder:
+        if encode:
+            self.encoder = pipeline.createVideoEncoder()
+            self._encoder_profile = parse_encode(encode)  # MJPEG by default
             self.encoder.setDefaultProfilePreset(self.get_fps(), self._encoder_profile)
+
             if self.is_replay():  # TODO - this might be not needed, we check for replay above and return
                 # Create ImageManip to convert to NV12
                 type_manip = pipeline.createImageManip()
@@ -157,57 +182,25 @@ class CameraComponent(Component):
             elif self.is_mono():
                 self.stream.link(self.encoder.input)
             elif self.is_color():
-                self.stream.link(self.encoder.input)
+                self.node.video.link(self.encoder.input)
             else:
                 raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
 
-    def _create_rotation_manip(self, pipeline: dai.Pipeline):
+        if self._args:
+            self._config_camera_args(self._args)
+
+
+    def _create_rotation_manip(self, pipeline: dai.Pipeline, rotation: int):
         rot_manip = pipeline.createImageManip()
         rgb_rr = dai.RotatedRect()
         w, h = self.stream_size
         rgb_rr.center.x, rgb_rr.center.y = w // 2, h // 2
-        rgb_rr.size.width, rgb_rr.size.height = (w, h) if self._rotation % 180 == 0 else (h, w)
-        rgb_rr.angle = self._rotation
+        rgb_rr.size.width, rgb_rr.size.height = (w, h) if rotation % 180 == 0 else (h, w)
+        rgb_rr.angle = rotation
         rot_manip.initialConfig.setCropRotatedRect(rgb_rr, False)
         rot_manip.setMaxOutputFrameSize(w * h * 3)
         return rot_manip
 
-    def _create_node(self, pipeline: dai.Pipeline, source: str) -> None:
-        """
-        Called from __init__ to parse passed `source` argument.
-        @param source: User-input source
-        """
-        if self.is_replay():
-            if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
-                raise Exception(f"{source} stream was not found in specified depthai-recording!")
-            return
-
-        if "," in source:  # For OAK FFC cameras, so you can eg. specify "rgb,c" as source
-            parts = source.split(',')
-            source = parts[0]
-
-            if parts[1] in ["C", "COLOR"]:
-                self.node = pipeline.createColorCamera()
-            elif parts[1] in ["M", "MONO"]:
-                self.node = pipeline.createMonoCamera()
-
-            self.node.setBoardSocket(parse_camera_socket(source))
-            return
-
-        socket = parse_camera_socket(source)
-        # By default, we will assume color camera is connected to CAM_A,
-        # while 2x stereo cameras are connected to CAM_B and CAM_C
-        if socket == dai.CameraBoardSocket.CAM_A:
-            self.node = pipeline.createColorCamera()
-        elif socket in [dai.CameraBoardSocket.CAM_B, dai.CameraBoardSocket.CAM_C]:
-            self.node = pipeline.createMonoCamera()
-        else:
-            raise Exception(
-                "When specifying other camera sockets, you need to specify whether it's color or mono camera!"
-                "You can do this with eg. `cam_d,c` for color camera, or `cam_d,m` for mono camera."
-            )
-
-        self.node.setBoardSocket(socket)
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def config_camera(self,

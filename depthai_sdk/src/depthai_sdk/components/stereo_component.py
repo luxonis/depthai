@@ -39,6 +39,7 @@ class StereoComponent(Component):
         return self.node.disparity
 
     def __init__(self,
+                 device: dai.Device,
                  pipeline: dai.Pipeline,
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
@@ -99,34 +100,6 @@ class StereoComponent(Component):
 
         self._undistortion_offset: Optional[int] = None
 
-    def _get_output_stream(self, input: Union[
-        CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output
-    ]) -> dai.Node.Output:
-        if isinstance(input, CameraComponent):
-            return input.stream
-        elif isinstance(input, dai.node.MonoCamera):
-            return input.out
-        elif isinstance(input, dai.node.ColorCamera):
-            return input.video
-        elif isinstance(input, dai.Node.Output):
-            return input
-        else:
-            raise ValueError('get_output_stream() accepts either CameraComponent,'
-                             'dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output!')
-
-    def _get_stream_size(self,
-                         input: Union[CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]) -> \
-            Optional[Tuple[int, int]]:
-        if isinstance(input, CameraComponent):
-            return input.stream_size
-        elif isinstance(input, dai.node.MonoCamera):
-            return input.getResolutionSize()
-        elif isinstance(input, dai.node.ColorCamera):
-            return input.getVideoSize()
-        else:
-            return None
-
-    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if not self._replay:
             # Live stream, check whether we have correct cameras
             if len(device.getCameraSensorNames()) == 1:
@@ -136,11 +109,9 @@ class StereoComponent(Component):
             self._resolution = self._resolution or dai.MonoCameraProperties.SensorResolution.THE_400_P
 
             if not self.left:
-                self.left = CameraComponent(pipeline, 'left', self._resolution, self._fps, replay=self._replay)
-                self.left.on_init(pipeline, device, version)
+                self.left = CameraComponent(device, pipeline, 'left', self._resolution, self._fps, replay=self._replay)
             if not self.right:
-                self.right = CameraComponent(pipeline, 'right', self._resolution, self._fps, replay=self._replay)
-                self.right.on_init(pipeline, device, version)
+                self.right = CameraComponent(device, pipeline, 'right', self._resolution, self._fps, replay=self._replay)
 
             if 0 < len(device.getIrDrivers()):
                 laser = self._args.get('irDotBrightness', None)
@@ -201,6 +172,33 @@ class StereoComponent(Component):
 
         if self._args:
             self._config_stereo_args(self._args)
+
+    def _get_output_stream(self, input: Union[
+        CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output
+    ]) -> dai.Node.Output:
+        if isinstance(input, CameraComponent):
+            return input.stream
+        elif isinstance(input, dai.node.MonoCamera):
+            return input.out
+        elif isinstance(input, dai.node.ColorCamera):
+            return input.video
+        elif isinstance(input, dai.Node.Output):
+            return input
+        else:
+            raise ValueError('get_output_stream() accepts either CameraComponent,'
+                             'dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output!')
+
+    def _get_stream_size(self,
+                         input: Union[CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]) -> \
+            Optional[Tuple[int, int]]:
+        if isinstance(input, CameraComponent):
+            return input.stream_size
+        elif isinstance(input, dai.node.MonoCamera):
+            return input.getResolutionSize()
+        elif isinstance(input, dai.node.ColorCamera):
+            return input.getVideoSize()
+        else:
+            return None
 
     def config_undistortion(self, M2_offset: int = 0):
         self._undistortion_offset = M2_offset

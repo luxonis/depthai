@@ -8,7 +8,9 @@ from depthai_sdk.oak_outputs.xout.xout_imu import XoutIMU
 
 
 class IMUComponent(Component):
-    def __init__(self, pipeline: dai.Pipeline):
+    def __init__(self,
+                 device: dai.Device,
+                 pipeline: dai.Pipeline):
         self.out = self.Out(self)
 
         super().__init__()
@@ -42,9 +44,6 @@ class IMUComponent(Component):
         self.node.setBatchReportThreshold(batchReportThreshold=batch_report_threshold)
         self.node.setMaxBatchReports(maxBatchReports=max_batch_reports)
         self.node.enableFirmwareUpdate(enable_firmware_update)
-
-    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-        pass
 
     class Out:
         def __init__(self, imu_component: 'IMUComponent'):
