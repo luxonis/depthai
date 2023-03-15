@@ -30,7 +30,7 @@ class NNComponent(Component):
                  device: dai.Device,
                  pipeline: dai.Pipeline,
                  model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
-                 input: Union[CameraComponent, 'NNComponent'],
+                 input: Union[CameraComponent, 'NNComponent', dai.Node.Output],
                  nn_type: Optional[str] = None,  # Either 'yolo' or 'mobilenet'
                  decode_fn: Optional[Callable] = None,
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
@@ -48,7 +48,7 @@ class NNComponent(Component):
 
         Args:
             model (Union[str, Path, Dict]): str for SDK supported model / Path to blob or custom model's json
-            input: (Union[Component, dai.Node.Output]): Input to the NN. If nn_component that is object detector, crop HQ frame at detections (Script node + ImageManip node)
+            input: (Union[Component, dai.Node.Output, dai.Node.Output]): Input to the NN. If nn_component that is object detector, crop HQ frame at detections (Script node + ImageManip node)
             nn_type (str, optional): Type of the NN - Either 'Yolo' or 'MobileNet'
             tracker (bool, default False): Enable object tracker - only for Object detection models
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
@@ -76,13 +76,13 @@ class NNComponent(Component):
 
         # Private properties
         self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
-        self._input: Union[CameraComponent, 'NNComponent']  # Input to the NNComponent node passed on initialization
+        self._input: Union[CameraComponent, 'NNComponent', dai.Node.Output] = input # Input to the NNComponent node passed on initialization
         self._stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
 
         self._blob: Optional[dai.OpenVINO.Blob] = None
         self._forced_version: Optional[dai.OpenVINO.Version] = None  # Forced OpenVINO version
         self._size: Optional[Tuple[int, int]] = None  # Input size to the NN
-        self._args: Optional[Dict] = None
+        self._args: Optional[Dict] = args
         self._config: Optional[Dict] = None
         self._node_type: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
         self._roboflow: Optional[RoboflowIntegration] = None
@@ -94,18 +94,14 @@ class NNComponent(Component):
 
         self._input_queue = Optional[None]  # Input queue for multi-stage pipeline
 
-        self._spatial: Optional[Union[bool, StereoComponent]] = None
-        self._replay: Optional[Replay]  # Replay module
+        self._spatial: Optional[Union[bool, StereoComponent]] = spatial
+        self._replay: Optional[Replay] = replay  # Replay module
 
         # For visualizer
         self._labels: Optional[List] = None  # Obj detector labels
         self._handler: Optional[Callable] = None  # Custom model handler for decoding
 
         # Save passed settings
-        self._input = input
-        self._spatial = spatial
-        self._args = args
-        self._replay = replay
         self._decode_fn = decode_fn or None  # Decode function that will be used to decode NN results
 
         # Parse passed settings
@@ -190,6 +186,9 @@ class NNComponent(Component):
 
                 self.image_manip.out.link(self.node.input)
                 self.node.input.setQueueSize(20)
+        elif isinstance(self._input, dai.Node.Output):
+            self._stream_input = self._input
+            self._setup_resize_manip(pipeline).link(self.node.input)
         else:
             raise ValueError(
                 "'input' argument passed on init isn't supported!"
@@ -604,9 +603,9 @@ class NNComponent(Component):
                                    input_queue_name="input_queue" if self._comp.x_in else None)
             else:
                 det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
-
+                input_stream = self._comp._stream_input
                 out = XoutNnResults(det_nn=self._comp,
-                                    frames=self._comp._input.get_stream_xout(),
+                                    frames=StreamXout(id=input_stream.getParent().id, out=input_stream, name=self._comp.name),
                                     nn_results=det_nn_out)
 
             return self._comp._create_xout(pipeline, out)
