@@ -14,7 +14,7 @@ class CameraComponent(Component):
     def __init__(self,
                  device: dai.Device,
                  pipeline: dai.Pipeline,
-                 source: str,
+                 source: Union[str, dai.CameraBoardSocket],
                  resolution: Optional[Union[
                      str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
                  ]] = None,
@@ -32,7 +32,7 @@ class CameraComponent(Component):
         Args:
             device (dai.Device): OAK device
             pipeline (dai.Pipeline): OAK pipeline
-            source (str): Source of the camera. Either color/rgb/right/left
+            source (str or dai.CameraBoardSocket): Source of the camera. Either color/rgb/right/left
             resolution (optional): Camera resolution, eg. '800p' or '4k'
             fps (float, optional): Camera FPS
             encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
@@ -50,7 +50,7 @@ class CameraComponent(Component):
         self.stream: Optional[dai.Node.Output] = None  # Node output to be used as eg. an input into NN
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
 
-        self._source = source
+        self._source = str(source)
         self._replay: Optional[Replay] = replay
         self._args: Dict = args
         self.name = name
@@ -84,21 +84,21 @@ class CameraComponent(Component):
                 self.stream = rot_manip.out
                 if rotation in [90, 270]:
                     self.stream_size = self.stream_size[::-1]
-
         # Livestreaming, not replay
         else:
             node_type: dai.node = None
-            source = source.upper()
-            # When sensors can be either color or mono (eg. AR0234), we allow specifying it
-            if "," in source:  # For sensors that support multiple
-                parts = source.split(',')
-                source = parts[0]
-                if parts[1] in ["C", "COLOR"]:
-                    node_type = dai.node.ColorCamera
-                elif parts[1] in ["M", "MONO"]:
-                    node_type = dai.node.MonoCamera
-                else:
-                    raise Exception("Please specify sensor type with c/color or m/mono after the ',' - eg. `cam = oak.create_camera('cama,c')`")
+            if isinstance(source, str):
+                source = source.upper()
+                # When sensors can be either color or mono (eg. AR0234), we allow specifying it
+                if "," in source:  # For sensors that support multiple
+                    parts = source.split(',')
+                    source = parts[0]
+                    if parts[1] in ["C", "COLOR"]:
+                        node_type = dai.node.ColorCamera
+                    elif parts[1] in ["M", "MONO"]:
+                        node_type = dai.node.MonoCamera
+                    else:
+                        raise Exception("Please specify sensor type with c/color or m/mono after the ',' - eg. `cam = oak.create_camera('cama,c')`")
 
             socket = parse_camera_socket(source)
             sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == socket][0]
@@ -135,12 +135,12 @@ class CameraComponent(Component):
             self.node.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
             self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
 
-            cams = device.getCameraSensorNames()
-            # print('Available sensors on OAK:', cams)
-            sensor_name = cams[self.node.getBoardSocket()]
 
             if not self._resolution_forced:  # Find the closest resolution
-                self.node.setResolution(getClosesResolution(sensor_name, width=1300))
+                sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == self.node.getBoardSocket()][0]
+                sensor_type = dai.CameraSensorType.COLOR if dai.node.ColorCamera else dai.CameraSensorType.MONO
+                res = getClosesResolution(sensor, sensor_type, width=1300)
+                self.node.setResolution(res)
                 scale = getClosestIspScale(self.node.getIspSize(), width=1300, videoEncoder=(self.encoder is not None))
                 self.node.setIspScale(*scale)
 

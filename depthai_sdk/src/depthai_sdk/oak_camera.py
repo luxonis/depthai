@@ -62,7 +62,7 @@ class OakCamera:
         # User should be able to access these:
         self.replay: Optional[Replay] = None
 
-        self._pipeline = dai.Pipeline()
+        self.pipeline = dai.Pipeline()
         self._args: Optional[Dict[str, Any]] = None  # User defined arguments
         self._oak = OakDevice()
 
@@ -117,7 +117,7 @@ class OakCamera:
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         comp = CameraComponent(self._oak.device,
-                               self._pipeline,
+                               self.pipeline,
                                source=source,
                                resolution=resolution,
                                fps=fps,
@@ -128,6 +128,40 @@ class OakCamera:
                                args=self._args)
         self._components.append(comp)
         return comp
+
+    def create_all_cameras(self,
+                           resolution: Optional[Union[
+                          str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
+                      ]] = None,
+                           fps: Optional[float] = None,
+                           encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                           ) -> List[CameraComponent]:
+        """
+        Creates Camera component for each camera sensors on the OAK camera.
+
+        Args:
+            resolution (str/SensorResolution): Sensor resolution of the camera.
+            fps (float): Sensor FPS
+            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
+        """
+        components: List[CameraComponent] = []
+        # Loop over all available camera sensors
+        for cam_sensor in self._oak.device.getConnectedCameraFeatures():
+            comp = CameraComponent(self._oak.device,
+                                   self.pipeline,
+                                   source=cam_sensor.socket,
+                                   resolution=resolution,
+                                   fps=fps,
+                                   encode=encode,
+                                   rotation=self._rotation,
+                                   replay=self.replay,
+                                   name=None,
+                                   args=self._args)
+            components.append(comp)
+
+        self._components.extend(components)
+        return components
+
 
     def create_nn(self,
                   model: Union[str, Dict, Path],
@@ -151,7 +185,7 @@ class OakCamera:
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         comp = NNComponent(self._oak.device,
-                           self._pipeline,
+                           self.pipeline,
                            model=model,
                            input=input,
                            nn_type=nn_type,
@@ -184,7 +218,7 @@ class OakCamera:
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
         comp = StereoComponent(self._oak.device,
-                               self._pipeline,
+                               self.pipeline,
                                resolution=resolution,
                                fps=fps,
                                left=left,
@@ -200,7 +234,7 @@ class OakCamera:
         """
         Create IMU component
         """
-        comp = IMUComponent(self._oak.device, self._pipeline)
+        comp = IMUComponent(self._oak.device, self.pipeline)
         self._components.append(comp)
         return comp
 
@@ -247,7 +281,7 @@ class OakCamera:
         @param tuning_blob: Camera tuning blob
         @param openvino_version: Force specific OpenVINO version
         """
-        configPipeline(self._pipeline, xlink_chunk, calib, tuning_blob, openvino_version)
+        configPipeline(self.pipeline, xlink_chunk, calib, tuning_blob, openvino_version)
 
     def __enter__(self):
         return self
@@ -286,9 +320,9 @@ class OakCamera:
         #         print(f"Removed node {node} (id: {node.id}) from the pipeline as it hasn't been used!")
         #         self._pipeline.remove(node)
 
-        self._oak.device.startPipeline(self._pipeline)
+        self._oak.device.startPipeline(self.pipeline)
 
-        self._oak.init_callbacks(self._pipeline)
+        self._oak.init_callbacks(self.pipeline)
 
         for xout in self._oak.oak_out_streams:  # Start FPS counters
             xout.start_fps()
@@ -362,23 +396,23 @@ class OakCamera:
         self._built = True
 
         if self.replay:
-            self.replay.initPipeline(self._pipeline)
+            self.replay.initPipeline(self.pipeline)
 
         # First go through each component to check whether any is forcing an OpenVINO version
         # TODO: check each component's SHAVE usage
         for c in self._components:
             ov = c.forced_openvino_version()
             if ov:
-                if self._pipeline.getRequiredOpenVINOVersion() and self._pipeline.getRequiredOpenVINOVersion() != ov:
+                if self.pipeline.getRequiredOpenVINOVersion() and self.pipeline.getRequiredOpenVINOVersion() != ov:
                     raise Exception(
                         'Two components forced two different OpenVINO version!'
                         'Please make sure that all your models are compiled using the same OpenVINO version.'
                     )
-                self._pipeline.setOpenVINOVersion(ov)
+                self.pipeline.setOpenVINOVersion(ov)
 
-        if self._pipeline.getRequiredOpenVINOVersion() is None:
+        if self.pipeline.getRequiredOpenVINOVersion() is None:
             # Force 2021.4 as it's better supported (blobconverter, compile tool) for now.
-            self._pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
+            self.pipeline.setOpenVINOVersion(dai.OpenVINO.VERSION_2021_4)
 
 
         # Create XLinkOuts based on visualizers/callbacks enabled
@@ -386,7 +420,7 @@ class OakCamera:
         # TODO: clean this up and potentially move elsewhere
         names = []
         for out in self._out_templates:
-            xouts = out.setup(self._pipeline, self._oak.device, names)
+            xouts = out.setup(self.pipeline, self._oak.device, names)
             self._oak.oak_out_streams.extend(xouts)
 
         # User-defined arguments
@@ -397,7 +431,7 @@ class OakCamera:
                 openvino_version=self._args.get('openvinoVersion', None),
             )
 
-        return self._pipeline
+        return self.pipeline
 
     def _get_component_outputs(self, output: Union[List, Callable, Component]) -> List[Callable]:
         if not isinstance(output, List):
@@ -447,7 +481,7 @@ class OakCamera:
             PipelineGraph
 
         p = PipelineGraph()
-        p.create_graph(self._pipeline.serializeToJson()['pipeline'], self.device)
+        p.create_graph(self.pipeline.serializeToJson()['pipeline'], self.device)
         self._polling.append(p.update)
         print('process started')
 
