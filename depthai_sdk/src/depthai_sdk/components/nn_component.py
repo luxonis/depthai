@@ -321,7 +321,7 @@ class NNComponent(Component):
             if not callable(getattr(self._handler, "decode", None)):
                 raise RuntimeError("Custom model handler does not contain 'decode' method!")
 
-            self._decode_fn = self._handler.decode
+            self._decode_fn = self._handler.decode if self._decode_fn is None else self._decode_fn
 
         if 'nn_config' in self._config:
             nn_config = self._config.get("nn_config", {})
