@@ -70,14 +70,15 @@ def parse_bool(value: str) -> bool:
         raise ValueError(f"Couldn't parse '{value}' to bool!")
 
 
-def parse_camera_socket(value: str) -> dai.CameraBoardSocket:
+def parse_camera_socket(value: Union[str, dai.CameraBoardSocket]) -> dai.CameraBoardSocket:
+    if isinstance(value, dai.CameraBoardSocket):
+        return value
+
     value = value.upper()
     if value in ["COLOR", "RGB", "CENTER", "CAMA", "CAM_A", "CAM-A"]:
         return dai.CameraBoardSocket.CAM_A
     elif value in ["LEFT", "CAMB", "CAM_B", "CAM-B"]:
         return dai.CameraBoardSocket.CAM_B
-    elif value in ["RIGHT", "CAMC", "CAM_C", "CAM-C"]:
-        return dai.CameraBoardSocket.CAM_C
     elif value in ["RIGHT", "CAMC", "CAM_C", "CAM-C"]:
         return dai.CameraBoardSocket.CAM_C
     elif value in ["CAMD", "CAM_D", "CAM-D"]:
