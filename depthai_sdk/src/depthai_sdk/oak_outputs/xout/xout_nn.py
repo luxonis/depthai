@@ -130,6 +130,10 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 self.segmentation_colormap = self._generate_colors(n_classes)
 
             mask = np.array(packet.img_detections.mask).astype(np.uint8)
+
+            if mask.ndim == 3:
+                mask = np.argmax(mask, axis=0)
+
             try:
                 colorized_mask = np.array(self.segmentation_colormap)[mask]
             except IndexError:
@@ -137,6 +141,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 max_class = np.max(unique_classes)
                 new_colors = self._generate_colors(max_class - len(self.segmentation_colormap) + 1)
                 self.segmentation_colormap.extend(new_colors)
+                colorized_mask = np.array(self.segmentation_colormap)[mask]
 
             bbox = None
             if self.normalizer.resize_mode == ResizeMode.LETTERBOX:
