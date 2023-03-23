@@ -30,7 +30,7 @@ class Platform(Enum):
 
 class Visualizer(VisualizerHelper):
     # Constants
-    IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt'
+    IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt' or os.uname().sysname == "Darwin"
 
     def __init__(self, scale: float = None, fps: bool = False):
         self.platform: Platform = self._detect_platform()
