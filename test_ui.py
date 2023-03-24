@@ -1297,7 +1297,7 @@ class UiTests(QtWidgets.QMainWindow):
         self.connect_but.adjustSize()
         self.update_imu = True
         location = WIDTH, 0
-        if 'FFC-4P' not in test_type:
+        if 'FFC' not in test_type:
             if 'SR' not in test_type:
                 self.rgb = Camera(lambda: self.depth_camera.get_image('RGB'), colorMode, 'RGB Preview', location)
                 self.rgb.show()
@@ -1614,7 +1614,7 @@ class UiTests(QtWidgets.QMainWindow):
 
     def disconnect(self):
         if hasattr(self, 'depth_camera'):
-            if 'FFC-4P' not in test_type:
+            if 'FFC' not in test_type:
                 if 'SR' not in test_type:
                     del self.rgb
                     del self.jpeg
