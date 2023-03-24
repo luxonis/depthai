@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from collections import deque 
 from scipy.spatial.transform import Rotation
 import traceback
+import itertools
 
 import cv2
 from cv2 import resize
@@ -74,7 +75,9 @@ camToRgbRes = {
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
-                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P
+                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
+                'ar0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
+                'imx412' : dai.ColorCameraProperties.SensorResolution.THE_1080_P,
                 }
 
 antibandingOpts = {
@@ -277,6 +280,91 @@ class HostSync:
             return synced
         return False """
 
+
+class MessageSync:
+    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=4, min_queue_depth=3):
+        self.num_queues = num_queues
+        self.min_diff_timestamp = min_diff_timestamp
+        self.max_num_messages = max_num_messages
+        # self.queues = [deque() for _ in range(num_queues)]
+        self.queues = dict()
+        self.queue_depth = min_queue_depth
+        # self.earliest_ts = {}
+
+    def add_msg(self, name, msg):
+        if name not in self.queues:
+            self.queues[name] = deque(maxlen=self.max_num_messages)
+        self.queues[name].append(msg)
+        # if msg.getTimestampDevice() < self.earliest_ts:
+        #     self.earliest_ts = {name: msg.getTimestampDevice()}
+
+        # print('Queues: ', end='')
+        # for name in self.queues.keys():
+        #     print('\t: ', name, end='')
+        #     print(self.queues[name], end=', ')
+        #     print()
+        # print()
+
+    def get_synced(self):
+
+        # Atleast 3 messages should be buffered
+        min_len = min([len(queue) for queue in self.queues.values()])
+        if min_len == 0:
+            print('Status:', 'exited due to min len == 0', self.queues)
+            return None
+
+        # initializing list of list 
+        queue_lengths = []
+        for name in self.queues.keys():
+            queue_lengths.append(range(0, len(self.queues[name])))
+        permutations = list(itertools.product(*queue_lengths))
+        # print ("All possible permutations are : " +  str(permutations))
+
+        # Return a best combination after being atleast 3 messages deep for all queues
+        min_ts_diff = None
+        for indicies in permutations:
+            tmp = {}
+            i = 0
+            for n in self.queues.keys():
+                tmp[n] = indicies[i]
+                i = i + 1
+            indicies = tmp
+
+            acc_diff = 0.0
+            min_ts = None
+            for name in indicies.keys():
+                msg = self.queues[name][indicies[name]]
+                if min_ts is None:
+                    min_ts = msg.getTimestampDevice().total_seconds()
+            for name in indicies.keys():
+                msg = self.queues[name][indicies[name]]
+                acc_diff = acc_diff + abs(min_ts - msg.getTimestampDevice().total_seconds())
+
+            # Mark minimum
+            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.0001):
+                min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
+                print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
+
+            if min_ts_diff['ts'] < self.min_diff_timestamp:
+                # Check if atleast 5 messages deep
+                min_queue_depth = None
+                for name in indicies.keys():
+                    if min_queue_depth is None or indicies[name] < min_queue_depth:
+                        min_queue_depth = indicies[name]
+                if min_queue_depth >= self.queue_depth:
+                    # Retrieve and pop the others
+                    synced = {}
+                    for name in indicies.keys():
+                        synced[name] = self.queues[name][min_ts_diff['indicies'][name]]
+                        # pop out the older messages
+                        for i in range(0, min_ts_diff['indicies'][name]+1):
+                            self.queues[name].popleft()
+
+                    print('Returning synced messages with error:', min_ts_diff['ts'], min_ts_diff['indicies'])
+                    return synced
+
+        # print('
+
 class Main:
     output_scale_factor = 0.5
     polygons = None
@@ -415,7 +503,7 @@ class Main:
                     controlIn.setStreamName(cam_info['name'] + '-control')
                     controlIn.out.link(cam_node.inputControl)
 
-            cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
+            # cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
             xout.input.setBlocking(False)
             xout.input.setQueueSize(1)
 
@@ -519,7 +607,7 @@ class Main:
         curr_time = None
 
         self.display_name = "Image Window"
-        syncCollector = HostSync(60)
+        syncCollector = MessageSync(len(self.camera_queue), 10)
         while not finished:
             currImageList = {}
             for key in self.camera_queue.keys():
@@ -527,7 +615,7 @@ class Main:
 
                 # print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
 
-                syncCollector.add_msg(key, frameMsg, frameMsg.getTimestamp())
+                syncCollector.add_msg(key, frameMsg)
                 gray_frame = None
                 if frameMsg.getType() == dai.RawImgFrame.Type.RAW8:
                     gray_frame = frameMsg.getCvFrame()
@@ -577,13 +665,13 @@ class Main:
                 # print(f'final_scaledImageSize is {imgFrame.shape}')
                 if self.polygons is None:
                     self.height, self.width = imgFrame.shape
-                    print(self.height, self.width)
+                    # print(self.height, self.width)
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
                 
                 localPolygon = np.array([self.polygons[self.current_polygon]])
-                print(localPolygon.shape)
-                print(localPolygon)
+                # print(localPolygon.shape)
+                # print(localPolygon)
                 if self.images_captured_polygon == 1:
                     # perspectiveRotationMatrix = Rotation.from_euler('z', 45, degrees=True).as_matrix()
                     angle = 30.
@@ -603,8 +691,8 @@ class Main:
                     localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))    
                     localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())    
 
-                print(localPolygon)
-                print(localPolygon.shape)
+                # print(localPolygon)
+                # print(localPolygon.shape)
                 cv2.polylines(
                     imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
@@ -661,6 +749,7 @@ class Main:
                         self.camera_queue[key].getAll()
                     continue 
                 for name, frameMsg in syncedMsgs.items():
+                    print(f"Time stamp of {name} is {frameMsg.getTimestamp()}")
                     tried[name] = self.parse_frame(frameMsg.getCvFrame(), name)
                     allPassed = allPassed and tried[name]
                 
