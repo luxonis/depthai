@@ -347,7 +347,7 @@ class StereoComponent(Component):
                 warnings.warn('Colormap set with `set_colormap` is ignored when using disparity output. '
                               'Please use `configure_postprocessing` instead.')
 
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.getFps()
+            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
 
             out = XoutDisparity(
                 disparity_frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
@@ -385,7 +385,7 @@ class StereoComponent(Component):
                 warnings.warn('Colormap set with `set_colormap` is ignored when using depth output. '
                               'Please use `configure_postprocessing` instead.')
 
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.getFps()
+            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
             out = XoutDepth(
                 device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.depth, name=self._comp.name),
