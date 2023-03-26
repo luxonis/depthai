@@ -93,10 +93,11 @@ class OakCamera:
 
         if replay is not None:
             self.replay = Replay(replay)
+            self.replay.initPipeline(self.pipeline)
             print('Available streams from recording:', self.replay.getStreams())
 
     def create_camera(self,
-                      source: str,
+                      source: Union[str, dai.CameraBoardSocket],
                       resolution: Optional[Union[
                           str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
                       ]] = None,
@@ -110,7 +111,7 @@ class OakCamera:
         OAK device (via XLinkIn node).
 
         Args:
-            source (str): Either 'color', 'left' or 'right' (these 2 will create MonoCamera nodes)
+            source (str / dai.CameraBoardSocket): Camera source
             resolution (str/SensorResolution): Sensor resolution of the camera.
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
@@ -394,9 +395,6 @@ class OakCamera:
         if self._built:
             return
         self._built = True
-
-        if self.replay:
-            self.replay.initPipeline(self.pipeline)
 
         # First go through each component to check whether any is forcing an OpenVINO version
         # TODO: check each component's SHAVE usage

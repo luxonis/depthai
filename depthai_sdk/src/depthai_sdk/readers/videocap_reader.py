@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
+import depthai as dai
 
 try:
     import cv2
@@ -8,6 +9,7 @@ except ImportError:
     cv2 = None
 
 from depthai_sdk.readers.abstract_reader import AbstractReader
+from depthai_sdk.components.parser import parse_camera_socket
 
 _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264']
 
@@ -29,7 +31,26 @@ class VideoCapReader(AbstractReader):
             for fileName in os.listdir(str(path)):
                 f_name, ext = os.path.splitext(fileName)
                 if ext not in _videoExt: continue
-                stream = f_name if (f_name == 'left' or f_name == 'right') else 'color'
+
+                # Check if name of the file starts with left.. right.., or CameraBoardSocket
+                if f_name.startswith('CameraBoardSocket'):
+                    f_name = f_name.split('CameraBoardSocket.')[1]
+
+                try:
+                    socket = parse_camera_socket(f_name)
+                except ValueError:
+                    # Invalid file name
+                    continue
+
+                # TODO: avoid changing stream names, just use socket
+                stream = str(socket)
+                if socket == dai.CameraBoardSocket.CAM_A:
+                    stream = 'color'
+                elif socket == dai.CameraBoardSocket.CAM_B:
+                    stream = 'left'
+                elif socket == dai.CameraBoardSocket.CAM_C:
+                    stream = 'right'
+
                 self.readers[stream] = cv2.VideoCapture(str(path / fileName))
 
         for name, reader in self.readers.items():
