@@ -13,7 +13,7 @@ from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
+from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutMessageSync
 from depthai_sdk.visualize.visualizer import Visualizer
 from depthai_sdk.visualize.visualizer_helper import hex_to_bgr, calc_disp_multiplier, colorize_disparity, draw_mappings
 
@@ -23,7 +23,7 @@ except ImportError:
     cv2 = None
 
 
-class XoutNnResults(XoutSeqSync, XoutFrames):
+class XoutNnResults(XoutMessageSync, XoutFrames):
     def xstreams(self) -> List[StreamXout]:
         return [self.nn_results, self.frames]
 
@@ -35,7 +35,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         self.nn_results = nn_results
 
         XoutFrames.__init__(self, frames)
-        XoutSeqSync.__init__(self, [frames, nn_results])
+        XoutMessageSync.__init__(self, [frames, nn_results])
 
         self.name = 'NN results'
         self.labels = None
@@ -216,13 +216,13 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         return rgb_colors.astype(np.uint8)
 
 
-class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
+class XoutSpatialBbMappings(XoutMessageSync, XoutFrames):
     def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
         self.frames = frames
         self.configs = configs
 
         XoutFrames.__init__(self, frames)
-        XoutSeqSync.__init__(self, [frames, configs])
+        XoutMessageSync.__init__(self, [frames, configs])
 
         self.device = device
         self.multiplier = 255 / 95.0
@@ -383,7 +383,7 @@ class XoutTwoStage(XoutNnResults):
             self.msgs[seq][name] = msg
             # print(f'Added frame seq {seq}')
         else:
-            raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
+            raise ValueError('Message from unknown stream name received by TwoStageMessageSync!')
 
         if self.synced(seq):
             # print('Synced', seq)

@@ -9,7 +9,7 @@ import depthai as dai
 
 from depthai_sdk.classes.packets import FramePacket
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
+from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutMessageSync
 from depthai_sdk.recorders.abstract_recorder import Recorder
 
 
@@ -40,7 +40,7 @@ class RecordType(IntEnum):
     DB3 = 4 # To .db3 (ros2)
 
 
-class Record(XoutSeqSync):
+class Record(XoutMessageSync):
     """
     This class records depthai streams from OAK cameras into different formats.
     It will also save calibration .json, so depth reconstruction will be possible.
@@ -103,7 +103,7 @@ class Record(XoutSeqSync):
         start recording threads, and initialize all queues.
         """
         if self.record_type == RecordType.VIDEO:
-            self._streams = [out.frames.name for out in xouts]  # required by XoutSeqSync
+            self._streams = [out.frames.name for out in xouts]  # required by XoutMessageSync
             self.stream_num = len(xouts)
             self.name_mapping = dict()
             for xout in xouts:

@@ -128,7 +128,7 @@ class XoutDepth(XoutFrames, Clickable):
         elif name == self.mono_frames.name:
             self.msgs[seq][name] = msg
         else:
-            raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
+            raise ValueError('Message from unknown stream name received by TwoStageMessageSync!')
 
         if len(self.msgs[seq]) == len(self.xstreams()):
             # Frames synced!

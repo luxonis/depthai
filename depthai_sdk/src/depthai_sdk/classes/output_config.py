@@ -5,7 +5,7 @@ from typing import Optional, Callable, List
 import depthai as dai
 
 from depthai_sdk.classes import FramePacket
-from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.oak_outputs.syncing import MessageSync
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
@@ -150,12 +150,12 @@ class RosStreamConfig(BaseConfig):
     #         return False
 
 
-class SyncConfig(BaseConfig, SequenceNumSync):
+class SyncConfig(BaseConfig, MessageSync):
     def __init__(self, outputs: List[Callable], callback: Callable):
         self.outputs = outputs
         self.callback = callback
 
-        SequenceNumSync.__init__(self, len(outputs))
+        MessageSync.__init__(self, len(outputs))
 
         self.packets = dict()
 
