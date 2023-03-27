@@ -690,7 +690,7 @@ class NNComponent(Component):
                 det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
                 input_stream = self._comp._stream_input
                 out = XoutNnResults(det_nn=self._comp,
-                                    frames=StreamXout(id=input_stream.getParent().id, out=input_stream, name=self._comp.name),
+                                    frames=StreamXout(id=self._comp.node.id, out=input_stream, name=self._comp.name),
                                     nn_results=det_nn_out)
 
             return self._comp._create_xout(pipeline, out)

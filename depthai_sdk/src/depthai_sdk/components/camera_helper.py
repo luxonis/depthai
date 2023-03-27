@@ -21,7 +21,6 @@ colorResolutions: Dict[dai.ColorCameraProperties.SensorResolution, Tuple[int,int
     dai.ColorCameraProperties.SensorResolution.THE_4_K: (3840, 2160),
     dai.ColorCameraProperties.SensorResolution.THE_1200_P: (1920, 1200),  # AR0234
     dai.ColorCameraProperties.SensorResolution.THE_1080_P: (1920, 1080),
-    dai.ColorCameraProperties.SensorResolution.THE_1440X1080: (1440, 1080),
     dai.ColorCameraProperties.SensorResolution.THE_5_MP: (2592, 1944),  # OV5645
     dai.ColorCameraProperties.SensorResolution.THE_800_P: (1280, 800),  # OV9782
     dai.ColorCameraProperties.SensorResolution.THE_720_P: (1280, 720),

@@ -60,7 +60,16 @@ class CameraComponent(Component):
 
         self._num_frames_pool = 10
         self._preview_num_frames_pool = 4
-
+        device_info = device.getDeviceInfo()
+        if not hasattr(dai, "X_LINK_RVC3"):
+            # Assume RVC2 in this case
+            self._rvc_version = 2
+        elif device_info.platform == dai.X_LINK_MYRIAD_X:
+            self._rvc_version = 2
+        elif device_info.platform == dai.X_LINK_RVC3:
+            self._rvc_version = 3
+        else:
+            raise ValueError("Could not get the rvc version from the device.")
         if self.is_replay():
             if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
                 raise Exception(f"{source} stream was not found in specified depthai-recording!")
@@ -104,11 +113,13 @@ class CameraComponent(Component):
             sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == socket][0]
 
             if node_type is not None: # User specified camera type
-                if node_type == dai.node.ColorCamera and dai.CameraSensorType.COLOR not in sensor.supportedTypes:
-                    raise Exception(f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support COLOR mode!")
-                if node_type == dai.node.MonoCamera and dai.CameraSensorType.MONO not in sensor.supportedTypes:
-                    raise Exception(f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support MONO mode!")
+                pass # Skip the check unitl autodicsovery is implemented on RVC3
+                # if node_type == dai.node.ColorCamera and dai.CameraSensorType.COLOR not in sensor.supportedTypes:
+                #     raise Exception(f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support COLOR mode!")
+                # if node_type == dai.node.MonoCamera and dai.CameraSensorType.MONO not in sensor.supportedTypes:
+                #     raise Exception(f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support MONO mode!")
             else:
+                raise Exception(f"User didn't specify camera type, auto discovery not working yet on RVC3! Specify if the sensor is color or mono with eg. `cam = oak.create_camera('cama,c')")
                 type = sensor.supportedTypes[0]
                 if type == dai.CameraSensorType.COLOR:
                     node_type = dai.node.ColorCamera
@@ -137,6 +148,9 @@ class CameraComponent(Component):
 
 
             if not self._resolution_forced:  # Find the closest resolution
+                # First check if the device is RVC2 or RVC3
+                if self._rvc_version == 3:
+                    raise RuntimeError("RVC3 resolution autodiscovery not supported yet!")
                 sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == self.node.getBoardSocket()][0]
                 sensor_type = dai.CameraSensorType.COLOR if dai.node.ColorCamera else dai.CameraSensorType.MONO
                 res = getClosesResolution(sensor, sensor_type, width=1300)
@@ -184,7 +198,7 @@ class CameraComponent(Component):
             elif self.is_mono():
                 self.stream.link(self.encoder.input)
             elif self.is_color():
-                self.node.video.link(self.encoder.input)
+                self.node.isp.link(self.encoder.input)
             else:
                 raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
 
@@ -385,7 +399,7 @@ class CameraComponent(Component):
             self.node.setVideoNumFramesPool(self._num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
-            return StreamXout(self.node.id, self.node.video, name=self.name)
+            return StreamXout(self.node.id, self.node.isp, name=self.name)
 
     def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
         """
