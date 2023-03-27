@@ -12,17 +12,19 @@ def rgb_resolution(resolution: Union[
         return resolution
 
     resolution = str(resolution).upper()
-    if resolution == '3120' or resolution == '13MP':
+    if resolution in ['3120', '13MP']:
         return dai.ColorCameraProperties.SensorResolution.THE_13_MP
-    elif resolution == '3040' or resolution == '12MP':
+    elif resolution in ['3040', '12MP']:
         return dai.ColorCameraProperties.SensorResolution.THE_12_MP
-    elif resolution == '2160' or resolution == '4K':
+    elif resolution in ['2160', '4K']:
         return dai.ColorCameraProperties.SensorResolution.THE_4_K
     # elif resolution == '1920' or resolution == '5MP':
     #     return dai.ColorCameraProperties.SensorResolution.THE_5_MP
-    elif resolution == '800' or resolution == '800P':
+    elif resolution in ['1200', '1200P']:
+        return dai.ColorCameraProperties.SensorResolution.THE_1200_P
+    elif resolution in ['800', '800P']:
         return dai.ColorCameraProperties.SensorResolution.THE_800_P
-    elif resolution == '720' or resolution == '720P':
+    elif resolution in ['720', '720P']:
         return dai.ColorCameraProperties.SensorResolution.THE_720_P
     else:  # Default
         return dai.ColorCameraProperties.SensorResolution.THE_1080_P
@@ -68,14 +70,15 @@ def parse_bool(value: str) -> bool:
         raise ValueError(f"Couldn't parse '{value}' to bool!")
 
 
-def parse_camera_socket(value: str) -> dai.CameraBoardSocket:
+def parse_camera_socket(value: Union[str, dai.CameraBoardSocket]) -> dai.CameraBoardSocket:
+    if isinstance(value, dai.CameraBoardSocket):
+        return value
+
     value = value.upper()
     if value in ["COLOR", "RGB", "CENTER", "CAMA", "CAM_A", "CAM-A"]:
         return dai.CameraBoardSocket.CAM_A
     elif value in ["LEFT", "CAMB", "CAM_B", "CAM-B"]:
         return dai.CameraBoardSocket.CAM_B
-    elif value in ["RIGHT", "CAMC", "CAM_C", "CAM-C"]:
-        return dai.CameraBoardSocket.CAM_C
     elif value in ["RIGHT", "CAMC", "CAM_C", "CAM-C"]:
         return dai.CameraBoardSocket.CAM_C
     elif value in ["CAMD", "CAM_D", "CAM-D"]:

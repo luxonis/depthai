@@ -12,9 +12,10 @@ except ImportError:
 from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
-from depthai_sdk.components.integrations.roboflow import RoboflowIntegration
+from depthai_sdk.integrations.roboflow import RoboflowIntegration
 from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
 from depthai_sdk.components.nn_helper import *
+from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
@@ -27,9 +28,10 @@ from depthai_sdk.replay import Replay
 
 class NNComponent(Component):
     def __init__(self,
+                 device: dai.Device,
                  pipeline: dai.Pipeline,
                  model: Union[str, Path, Dict],  # str for SDK supported model or Path to custom model's json
-                 input: Union[CameraComponent, 'NNComponent'],
+                 input: Union[CameraComponent, 'NNComponent', dai.Node.Output],
                  nn_type: Optional[str] = None,  # Either 'yolo' or 'mobilenet'
                  decode_fn: Optional[Callable] = None,
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
@@ -47,7 +49,7 @@ class NNComponent(Component):
 
         Args:
             model (Union[str, Path, Dict]): str for SDK supported model / Path to blob or custom model's json
-            input: (Union[Component, dai.Node.Output]): Input to the NN. If nn_component that is object detector, crop HQ frame at detections (Script node + ImageManip node)
+            input: (Union[Component, dai.Node.Output, dai.Node.Output]): Input to the NN. If nn_component that is object detector, crop HQ frame at detections (Script node + ImageManip node)
             nn_type (str, optional): Type of the NN - Either 'Yolo' or 'MobileNet'
             tracker (bool, default False): Enable object tracker - only for Object detection models
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
@@ -70,38 +72,38 @@ class NNComponent(Component):
         self.image_manip: Optional[dai.node.ImageManip] = None
         self.x_in: Optional[dai.node.XLinkIn] = None  # Used for multi-stage pipeline
         self.tracker = pipeline.createObjectTracker() if tracker else None
+        self.apply_tracking_filter = False
+        self.forget_after_n_frames = None
 
         # Private properties
         self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
-        self._input: Union[CameraComponent, 'NNComponent']  # Input to the NNComponent node passed on initialization
+        self._input: Union[CameraComponent, 'NNComponent', dai.Node.Output] = input # Input to the NNComponent node passed on initialization
         self._stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
 
         self._blob: Optional[dai.OpenVINO.Blob] = None
         self._forced_version: Optional[dai.OpenVINO.Version] = None  # Forced OpenVINO version
         self._size: Optional[Tuple[int, int]] = None  # Input size to the NN
-        self._args: Optional[Dict] = None
+        self._args: Optional[Dict] = args
         self._config: Optional[Dict] = None
         self._rvc_version = 2
         self._node_type: dai.node = dai.node.NeuralNetwork  # Type of the node for `node`
         self._roboflow: Optional[RoboflowIntegration] = None
 
+        # Multi-stage pipeline
         self._multi_stage_nn: Optional[MultiStageNN] = None
         self._multi_stage_config: Optional[MultiStageConfig] = None
+        self._multi_stage_num_frame_pool = 20
 
         self._input_queue = Optional[None]  # Input queue for multi-stage pipeline
 
-        self._spatial: Optional[Union[bool, StereoComponent]] = None
-        self._replay: Optional[Replay]  # Replay module
+        self._spatial: Optional[Union[bool, StereoComponent]] = spatial
+        self._replay: Optional[Replay] = replay  # Replay module
 
         # For visualizer
         self._labels: Optional[List] = None  # Obj detector labels
         self._handler: Optional[Callable] = None  # Custom model handler for decoding
 
         # Save passed settings
-        self._input = input
-        self._spatial = spatial
-        self._args = args
-        self._replay = replay
         self._decode_fn = decode_fn or None  # Decode function that will be used to decode NN results
 
         # Parse passed settings
@@ -113,18 +115,9 @@ class NNComponent(Component):
         self.node = pipeline.create(self._node_type)
         self._update_config()
 
+
         # RVC3 specific
         self._hef_model = False
-
-    def forced_openvino_version(self) -> dai.OpenVINO.Version:
-        """
-        Checks whether the component forces a specific OpenVINO version. This function is called after
-        Camera has been configured and right before we connect to the OAK camera.
-        @return: Forced OpenVINO version (optional).
-        """
-        return self._forced_version
-
-    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         if self._roboflow:
             path = self._roboflow.device_update(device)
             self._parse_config(path)
@@ -143,9 +136,7 @@ class NNComponent(Component):
             raise ValueError("Could not get the rvc version from the device.")
 
         if self._blob is None and self._rvc_version == 2:
-            if 'model' not in self._config:
-                raise RuntimeError("No model specified in the config")
-            self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model'], version))
+            self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model']))
 
         # TODO: update NN input based on camera resolution
         if self._rvc_version == 2:
@@ -207,7 +198,7 @@ class NNComponent(Component):
             # Crop the high-resolution frames, so it matches object detection frame aspect ratio
 
             self.image_manip = pipeline.createImageManip()
-            self.image_manip.setNumFramesPool(10)
+            self.image_manip.setNumFramesPool(self._multi_stage_num_frame_pool)
             self.image_manip_config = dai.ImageManipConfig()
             self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
 
@@ -217,7 +208,11 @@ class NNComponent(Component):
                 self.image_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
 
                 # Create script node, get HQ frames from input.
-                self._multi_stage_nn = MultiStageNN(pipeline, self._input.node, self.image_manip.out, self._size)
+                self._multi_stage_nn = MultiStageNN(pipeline=pipeline,
+                                                    detection_node=self._input.node,
+                                                    high_res_frames=self.image_manip.out,
+                                                    size=self._size,
+                                                    num_frames_pool=self._multi_stage_num_frame_pool)
                 self._multi_stage_nn.configure(self._multi_stage_config)
                 self._multi_stage_nn.out.link(self.node.input)  # Cropped frames
 
@@ -243,6 +238,9 @@ class NNComponent(Component):
 
                 self.image_manip.out.link(self.node.input)
                 self.node.input.setQueueSize(20)
+        elif isinstance(self._input, dai.Node.Output):
+            self._stream_input = self._input
+            self._setup_resize_manip(pipeline).link(self.node.input)
         else:
             raise ValueError(
                 "'input' argument passed on init isn't supported!"
@@ -251,8 +249,7 @@ class NNComponent(Component):
 
         if self._spatial:
             if isinstance(self._spatial, bool):  # Create new StereoComponent
-                self._spatial = StereoComponent(pipeline, args=self._args, replay=self._replay)
-                self._spatial.on_init(pipeline, device, version)
+                self._spatial = StereoComponent(device, pipeline, args=self._args, replay=self._replay)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
                 self._spatial.config_stereo(align=self._input._source)
@@ -291,6 +288,15 @@ class NNComponent(Component):
 
         else:
             raise ValueError("Blob not specified for RVC3")
+
+    def forced_openvino_version(self) -> dai.OpenVINO.Version:
+        """
+        Checks whether the component forces a specific OpenVINO version. This function is called after
+        Camera has been configured and right before we connect to the OAK camera.
+        @return: Forced OpenVINO version (optional).
+        """
+        return self._forced_version
+
 
     def _parse_model(self, model):
         """
@@ -362,7 +368,7 @@ class NNComponent(Component):
 
         if 'source' in self._config:
             if self._config['source'] == 'roboflow':
-                from depthai_sdk.components.integrations.roboflow import RoboflowIntegration
+                from depthai_sdk.integrations.roboflow import RoboflowIntegration
                 self._roboflow = RoboflowIntegration(self._config)
                 self._parse_node_type('YOLO')  # Roboflow only supports YOLO models
                 return
@@ -396,6 +402,8 @@ class NNComponent(Component):
             if not callable(getattr(self._handler, "decode", None)):
                 raise RuntimeError("Custom model handler does not contain 'decode' method!")
 
+            self._decode_fn = self._handler.decode if self._decode_fn is None else self._decode_fn
+
         if 'nn_config' in self._config:
             nn_config = self._config.get("nn_config", {})
 
@@ -404,12 +412,14 @@ class NNComponent(Component):
             if nn_family:
                 self._parse_node_type(nn_family)
 
-    def _blob_from_config(self, model: Dict, version: dai.OpenVINO.Version) -> str:
+    def _blob_from_config(self, model: Dict, version: Optional[dai.OpenVINO.Version] = None) -> str:
         """
         Gets the blob from the config file.
         """
-        vals = str(version).split('_')
-        version_str = f"{vals[1]}.{vals[2]}"
+        version_str = None
+        if version is not None:
+            vals = str(version).split('_')
+            version_str = f"{vals[1]}.{vals[2]}"
 
         if 'model_name' in model:  # Use blobconverter to download the model
             zoo_type = model.get("zoo", 'intel')
@@ -462,6 +472,7 @@ class NNComponent(Component):
                              debug=False,
                              labels: Optional[List[int]] = None,
                              scale_bb: Optional[Tuple[int, int]] = None,
+                             num_frame_pool: int = None
                              ) -> None:
         """
         Configures the MultiStage NN pipeline. Available if the input to this NNComponent is Detection NNComponent.
@@ -470,12 +481,14 @@ class NNComponent(Component):
             debug (bool, default False): Debug script node
             labels (List[int], optional): Crop & run inference only on objects with these labels
             scale_bb (Tuple[int, int], optional): Scale detection bounding boxes (x, y) before cropping the frame. In %.
+            num_frame_pool (int, optional): Number of frames to pool for inference. If None, will use the default value.
         """
         if not self._is_multi_stage():
             print("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible!"
                   "This configuration attempt will be ignored.")
             return
 
+        self._multi_stage_num_frame_pool = num_frame_pool
         self._multi_stage_config = MultiStageConfig(debug, labels, scale_bb)
 
     def _parse_label(self, label: Union[str, int]) -> int:
@@ -498,7 +511,9 @@ class NNComponent(Component):
                        track_labels: Optional[List[int]] = None,
                        assignment_policy: Optional[dai.TrackerIdAssignmentPolicy] = None,
                        max_obj: Optional[int] = None,
-                       threshold: Optional[float] = None
+                       threshold: Optional[float] = None,
+                       apply_tracking_filter: Optional[bool] = None,
+                       forget_after_n_frames: Optional[int] = None,
                        ):
         """
         Configure Object Tracker node (if it's enabled).
@@ -508,7 +523,9 @@ class NNComponent(Component):
             track_labels (List[int], optional): Set detection labels to track
             assignment_policy (dai.TrackerType, optional): Set object tracker ID assignment policy
             max_obj (int, optional): Set max objects to track. Max 60.
-            threshold (float, optional): Set threshold for object detection confidence. Default: 0.0
+            threshold (float, optional): Specify tracker threshold. Default: 0.0
+            apply_tracking_filter (bool, optional): Set whether to apply Kalman filter to the tracked objects. Done on the host.
+            forget_after_n_frames (int, optional): Set how many frames to track an object before forgetting it.
         """
 
         if self.tracker is None:
@@ -516,23 +533,29 @@ class NNComponent(Component):
                           "This configuration attempt will be ignored.")
             return
 
-        if tracker_type:
+        if tracker_type is not None:
             self.tracker.setTrackerType(type=tracker_type)
 
-        if track_labels and 0 < len(track_labels):
+        if track_labels is not None and 0 < len(track_labels):
             labels = [self._parse_label(l) for l in track_labels]
             self.tracker.setDetectionLabelsToTrack(labels)
 
-        if assignment_policy:
+        if assignment_policy is not None:
             self.tracker.setTrackerIdAssignmentPolicy(assignment_policy)
 
-        if max_obj:
+        if max_obj is not None:
             if 60 < max_obj:
                 raise ValueError("Maximum objects to track is 60!")
             self.tracker.setMaxObjectsToTrack(max_obj)
 
-        if threshold:
+        if threshold is not None:
             self.tracker.setTrackerThreshold(threshold)
+
+        if apply_tracking_filter is not None:
+            self.apply_tracking_filter = apply_tracking_filter
+
+        if forget_after_n_frames is not None:
+            self.forget_after_n_frames = forget_after_n_frames
 
     def config_yolo_from_metadata(self, metadata: Dict):
         """
@@ -557,7 +580,6 @@ class NNComponent(Component):
                     ) -> None:
         """
         Configures (Spatial) Yolo Detection Network node.
-
         """
         if not self._is_yolo():
             print('This is not a YOLO detection network! This configuration attempt will be ignored.')
@@ -572,7 +594,7 @@ class NNComponent(Component):
         self.node.setAnchorMasks(masks)
         self.node.setIouThreshold(iou_threshold)
 
-        if conf_threshold:
+        if conf_threshold is not None:
             self.node.setConfidenceThreshold(conf_threshold)
 
     def config_nn(self,
@@ -595,7 +617,7 @@ class NNComponent(Component):
                           'Using default LETTERBOX mode.')
 
             self._ar_resize_mode = resize_mode
-        if conf_threshold and self._is_detector():
+        if conf_threshold is not None and self._is_detector():
             self.node.setConfidenceThreshold(conf_threshold)
 
     def config_spatial(self,
@@ -616,11 +638,11 @@ class NNComponent(Component):
             print('This is not a Spatial Detection network! This configuration attempt will be ignored.')
             return
 
-        if bb_scale_factor:
+        if bb_scale_factor is not None:
             self.node.setBoundingBoxScaleFactor(bb_scale_factor)
-        if lower_threshold:
+        if lower_threshold is not None:
             self.node.setDepthLowerThreshold(lower_threshold)
-        if upper_threshold:
+        if upper_threshold is not None:
             self.node.setDepthUpperThreshold(upper_threshold)
         if calc_algo:
             self.node.setSpatialCalculationAlgorithm(calc_algo)
@@ -666,9 +688,9 @@ class NNComponent(Component):
                                    input_queue_name="input_queue" if self._comp.x_in else None)
             else:
                 det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
-
+                input_stream = self._comp._stream_input
                 out = XoutNnResults(det_nn=self._comp,
-                                    frames=self._comp._input.get_stream_xout(),
+                                    frames=StreamXout(id=input_stream.getParent().id, out=input_stream, name=self._comp.name),
                                     nn_results=det_nn_out)
 
             return self._comp._create_xout(pipeline, out)
@@ -760,7 +782,10 @@ class NNComponent(Component):
 
             out = XoutTracker(det_nn=self._comp,
                               frames=self._comp._input.get_stream_xout(),  # CameraComponent
-                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out))
+                              device=device,
+                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out),
+                              apply_kalman=self._comp.apply_tracking_filter,
+                              forget_after_n_frames=self._comp.forget_after_n_frames)
 
             return self._comp._create_xout(pipeline, out)
 
