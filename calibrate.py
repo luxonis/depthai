@@ -1031,7 +1031,8 @@ class Main:
                 calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
                 calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
                 calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
-
+                if self.args.cameraMode != 'perspective':
+                    calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Fisheye)
                 if cam_info['hasAutofocus']:
                     calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
 

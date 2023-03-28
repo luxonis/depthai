@@ -12,7 +12,6 @@ import cv2.aruco as aruco
 from pathlib import Path
 from functools import reduce
 from collections import deque
-from depthai_helpers.stereoRectify import stereoRectify
 # Creates a set of 13 polygon coordinates
 traceLevel = 0
 rectProjectionMode = 0
@@ -588,19 +587,11 @@ class StereoCalibration(object):
 
             return [ret, R, T, R_l, R_r, P_l, P_r]
         elif self.cameraModel == 'fisheye':
-            # make sure all images have the same points
-            common_ids = reduce(np.intersect1d, allIds_l + allIds_r)
-            common_obj_points = self.board.chessboardCorners[common_ids.reshape(-1,1)]
-            all_common_obj_points = []
-            all_common_left_img_points = []
-            all_common_right_img_points = []
-            for left_ids, left_img_points, right_ids, right_img_points in zip(allIds_l, allCorners_l, allIds_r, allCorners_r):
-                common_left_img_points = left_img_points[np.in1d(left_ids, common_ids)]
-                common_right_img_points = right_img_points[np.in1d(right_ids, common_ids)]
-
-                all_common_left_img_points.append(common_left_img_points)
-                all_common_right_img_points.append(common_right_img_points)
-                all_common_obj_points.append(common_obj_points)
+            # make sure all images have the same *number of* points
+            min_num_points = min([len(pts) for pts in obj_pts])
+            obj_pts_truncated = [pts[:min_num_points] for pts in obj_pts]
+            left_corners_truncated = [pts[:min_num_points] for pts in left_corners_sampled]
+            right_corners_truncated = [pts[:min_num_points] for pts in right_corners_sampled]
 
             flags = 0
             # flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
@@ -619,18 +610,8 @@ class StereoCalibration(object):
             # flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_CHECK_COND + cv2.fisheye.CALIB_FIX_SKEW
             if traceLevel == 3:
                 print('Fisyeye stereo model..................')
-                print(len(left_corners_sampled))
-                for i in range(0, len(left_corners_sampled)):
-                    print(f'{len(left_corners_sampled[i])} -- {len(obj_pts[i])}')
-                print('Right cornered samples..................')
-                print(len(right_corners_sampled))
-                for i in range(0, len(right_corners_sampled)):
-                    print(f'{len(right_corners_sampled[i])} -- {len(obj_pts[i])}')
-            del obj_pts[4]
-            del right_corners_sampled[4]
-            del left_corners_sampled[4]
             (ret, M1, d1, M2, d2, R, T), E, F = cv2.fisheye.stereoCalibrate(
-                all_common_obj_points, all_common_left_img_points, all_common_right_img_points,
+                obj_pts_truncated, left_corners_truncated, right_corners_truncated,
                 cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
                 flags=flags, criteria=stereocalib_criteria), None, None
 
@@ -709,9 +690,6 @@ class StereoCalibration(object):
                 cameraMatrix_r,
                 distCoeff_r,
                 imsize, R, T) # , alpha=0.1
-
-            if 0:
-                R_l, R_r = stereoRectify(R, T)
             
             r_euler = Rotation.from_matrix(R_l).as_euler('xyz', degrees=True)
             print(f'R_L Euler angles in XYZ {r_euler}')
