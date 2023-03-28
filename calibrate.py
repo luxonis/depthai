@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from collections import deque
 from scipy.spatial.transform import Rotation
 import traceback
+import subprocess
 
 import cv2
 from cv2 import resize
@@ -310,10 +311,22 @@ class Main:
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
+        depthai_boards_path = Path(__file__).parent / 'resources/depthai_boards/boards'
+
+        if not depthai_boards_path.exists():
+            # try to update submodules
+            try:
+                print("DepthAI boards directory not found! Trying to update submodules...")
+                subprocess.run(['git', 'submodule', 'update', '--init', '--recursive'], check=True)
+                if not depthai_boards_path.exists():
+                    raise Exception("depthai_boards submodule not found after updating submodules.")
+            except Exception:
+                raise ValueError(f"Could not download depthai_boards submodule. Please make sure you have cloned the depthai-boards submodule. Run the following command to clone it: git submodule update --init --recursive")
+
         if self.args.board:
             board_path = Path(self.args.board)
             if not board_path.exists():
-                board_path = (Path(__file__).parent / 'resources/boards' / self.args.board.upper()).with_suffix('.json').resolve()
+                board_path = (depthai_boards_path / self.args.board.upper()).with_suffix('.json').resolve()
                 if not board_path.exists():
                     raise ValueError(
                         'Board config not found: {}'.format(board_path))
