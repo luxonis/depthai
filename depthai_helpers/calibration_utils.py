@@ -448,8 +448,11 @@ class StereoCalibration(object):
             print(cameraMatrixInit)
 
         distCoeffsInit = np.zeros((5, 1))
-        flags = (cv2.CALIB_USE_INTRINSIC_GUESS + 
-                 cv2.CALIB_RATIONAL_MODEL)
+        flags = (
+            + cv2.CALIB_USE_INTRINSIC_GUESS
+            + cv2.CALIB_RATIONAL_MODEL 
+            # + cv2.CALIB_FIX_K6
+        )
 
     #     flags = (cv2.CALIB_RATIONAL_MODEL)
         (ret, camera_matrix, distortion_coefficients,
@@ -540,6 +543,7 @@ class StereoCalibration(object):
             flags |= cv2.CALIB_FIX_INTRINSIC
             # flags |= cv2.CALIB_USE_INTRINSIC_GUESS
             flags |= cv2.CALIB_RATIONAL_MODEL
+            # flags |= cv2.CALIB_FIX_K6
             # print(flags)
             if traceLevel == 1:
                 print('Printing Extrinsics guesses...')

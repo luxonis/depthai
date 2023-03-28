@@ -167,7 +167,7 @@ def parse_args():
     #                     help="Sets the maximum epiploar allowed with rectification")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
-    parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
+    parser.add_argument("-rlp", "--rgbLensPosition", default=-1, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
     parser.add_argument("-fps", "--fps", default=10, type=int,
                         required=False, help="Set capture FPS for all cameras. Default: %(default)s")
@@ -190,6 +190,12 @@ def parse_args():
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
 
+    if options.rgbLensPosition < 0:
+        if options.board == "OAK-D-LITE":
+            options.rgbLensPosition = 25
+        else:
+            options.rgbLensPosition = 135
+            
     return options
 
 class HostSync:
