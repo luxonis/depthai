@@ -12,6 +12,7 @@ import cv2.aruco as aruco
 from pathlib import Path
 from functools import reduce
 from collections import deque
+from depthai_helpers.image_scaler import ImageScaler
 # Creates a set of 13 polygon coordinates
 traceLevel = 0
 rectProjectionMode = 0
@@ -195,7 +196,7 @@ class StereoCalibration(object):
 
         return 1, board_config
 
-    def analyze_charuco(self, images, scale_req=False, req_resolution=(800, 1280)):
+    def analyze_charuco(self, images, resize_img_func = None):
         """
         Charuco base pose estimation.
         """
@@ -216,31 +217,10 @@ class StereoCalibration(object):
             img_pth = Path(im)
             frame = cv2.imread(im)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            expected_height = gray.shape[0]*(req_resolution[1]/gray.shape[1])
+            if resize_img_func is not None:
+                gray = resize_img_func(gray)
 
-            if scale_req and not (gray.shape[0] == req_resolution[0] and gray.shape[1] == req_resolution[1]):
-                if int(expected_height) == req_resolution[0]:
-                    # resizing to have both stereo and rgb to have same
-                    # resolution to capture extrinsics of the rgb-right camera
-                    gray = cv2.resize(gray, req_resolution[::-1],
-                                      interpolation=cv2.INTER_CUBIC)
-                else:
-                    # resizing and cropping to have both stereo and rgb to have same resolution
-                    # to calculate extrinsics of the rgb-right camera
-                    scale_width = req_resolution[1]/gray.shape[1]
-                    dest_res = (
-                        int(gray.shape[1] * scale_width), int(gray.shape[0] * scale_width))
-                    gray = cv2.resize(
-                        gray, dest_res, interpolation=cv2.INTER_CUBIC)
-                    if gray.shape[0] < req_resolution[0]:
-                        raise RuntimeError("resizeed height of rgb is smaller than required. {0} < {1}".format(
-                            gray.shape[0], req_resolution[0]))
-                    # print(gray.shape[0] - req_resolution[0])
-                    del_height = (gray.shape[0] - req_resolution[0]) // 2
-                    # gray = gray[: req_resolution[0], :]
-                    gray = gray[del_height: del_height + req_resolution[0], :]
-
-                count += 1
+            count += 1
             marker_corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(
                 gray, self.aruco_dictionary)
             marker_corners, ids, refusd, recoverd = cv2.aruco.refineDetectedMarkers(gray, self.board,
@@ -320,46 +300,18 @@ class StereoCalibration(object):
         # print(images_left[0])
         # print(images_right[0])
 
-        scale = None
-        scale_req = False
-        frame_left_shape = cv2.imread(images_left[0], 0).shape # (h,w)
-        frame_right_shape = cv2.imread(images_right[0], 0).shape
-        scalable_res = frame_left_shape
-        scaled_res = frame_right_shape
+        frame_left_shape = cv2.imread(images_left[0], 0).shape[:2][::-1] # (w,h)
+        frame_right_shape = cv2.imread(images_right[0], 0).shape[:2][::-1]
 
-        if frame_right_shape[0] < frame_left_shape[0] and frame_right_shape[1] < frame_left_shape[1]:
-            scale_req = True
-            scale = frame_right_shape[1] / frame_left_shape[1]
-        elif frame_right_shape[0] > frame_left_shape[0] and frame_right_shape[1] > frame_left_shape[1]:
-            scale_req = True
-            scale = frame_left_shape[1] / frame_right_shape[1]
-            scalable_res = frame_right_shape
-            scaled_res = frame_left_shape
+        scaler = ImageScaler(frame_left_shape, frame_right_shape)
 
-        if scale_req:
-            scaled_height = scale * scalable_res[0]
-            diff = scaled_height - scaled_res[0]
-            # if scaled_height <  smaller_res[0]:
-            if diff < 0:
-                scaled_res = (int(scaled_height), scaled_res[1])
-
-        print(
-            f'Is scale Req: {scale_req}\n scale value: {scale} \n scalable Res: {scalable_res} \n scale Res: {scaled_res}')
-        print("Original res Left :{}".format(frame_left_shape))
-        print("Original res Right :{}".format(frame_right_shape))
-        print("Scale res :{}".format(scaled_res))
-
-        # scaled_res = (scaled_height, )
-        M_lp = self.scale_intrinsics(M_l, frame_left_shape, scaled_res)
-        M_rp = self.scale_intrinsics(M_r, frame_right_shape, scaled_res)
+        M_lp, M_rp = scaler.transform_intrinsics(M_l, M_r)
 
         # print("~~~~~~~~~~~ POSE ESTIMATION LEFT CAMERA ~~~~~~~~~~~~~")
-        allCorners_l, allIds_l, _, _, imsize_l, _ = self.analyze_charuco(
-            images_left, scale_req, scaled_res)
+        allCorners_l, allIds_l, _, _, imsize_l, _ = self.analyze_charuco(images_left, scaler.transform_img_a)
 
         # print("~~~~~~~~~~~ POSE ESTIMATION RIGHT CAMERA ~~~~~~~~~~~~~")
-        allCorners_r, allIds_r, _, _, imsize_r, _ = self.analyze_charuco(
-            images_right, scale_req, scaled_res)
+        allCorners_r, allIds_r, _, _, imsize_r, _ = self.analyze_charuco(images_right, scaler.transform_img_b)
 
         print(f'Image size of right side (w, h):{imsize_r}')
         print(f'Image size of left side (w, h):{imsize_l}')
@@ -368,26 +320,6 @@ class StereoCalibration(object):
 
         return self.calibrate_stereo(
             allCorners_l, allIds_l, allCorners_r, allIds_r, imsize_r, M_lp, d_l, M_rp, d_r, guess_translation, guess_rotation)
-
-    def scale_intrinsics(self, intrinsics, originalShape, destShape):
-        scale = destShape[1] / originalShape[1] # scale on width
-        scale_mat = np.array([[scale, 0, 0], [0, scale, 0], [0, 0, 1]])
-        scaled_intrinsics = np.matmul(scale_mat, intrinsics)
-        """ print("Scaled height offset : {}".format(
-            (originalShape[0] * scale - destShape[0]) / 2))
-        print("Scaled width offset : {}".format(
-            (originalShape[1] * scale - destShape[1]) / 2)) """
-        scaled_intrinsics[1][2] -= (originalShape[0]      # c_y - along height of the image
-                                    * scale - destShape[0]) / 2
-        scaled_intrinsics[0][2] -= (originalShape[1]     # c_x width of the image
-                                    * scale - destShape[1]) / 2
-        if traceLevel == 2:
-            print('original_intrinsics')
-            print(intrinsics)
-            print('scaled_intrinsics')
-            print(scaled_intrinsics)
-
-        return scaled_intrinsics
 
     def fisheye_undistort_visualizaation(self, img_list, K, D, img_size):
         for im in img_list:
@@ -925,39 +857,15 @@ class StereoCalibration(object):
         assert len(images_right) != 0, "ERROR: Images not read correctly"
         isHorizontal = np.absolute(t[0]) > np.absolute(t[1])
 
-        scale = None
-        scale_req = False
-        frame_left_shape = cv2.imread(images_left[0], 0).shape
-        frame_right_shape = cv2.imread(images_right[0], 0).shape
-        scalable_res = frame_left_shape
-        scaled_res = frame_right_shape
-        if frame_right_shape[0] < frame_left_shape[0] and frame_right_shape[1] < frame_left_shape[1]:
-            scale_req = True
-            scale = frame_right_shape[1] / frame_left_shape[1]
-        elif frame_right_shape[0] > frame_left_shape[0] and frame_right_shape[1] > frame_left_shape[1]:
-            scale_req = True
-            scale = frame_left_shape[1] / frame_right_shape[1]
-            scalable_res = frame_right_shape
-            scaled_res = frame_left_shape
+        frame_left_shape = cv2.imread(images_left[0], 0).shape[:2][::-1] # (w,h)
+        frame_right_shape = cv2.imread(images_right[0], 0).shape[:2][::-1]
+        scaler = ImageScaler(frame_left_shape, frame_right_shape)
 
-        if scale_req:
-            scaled_height = scale * scalable_res[0]
-            diff = scaled_height - scaled_res[0]
-            # if scaled_height <  smaller_res[0]:
-            if diff < 0:
-                scaled_res = (int(scaled_height), scaled_res[1])
+        M_lp, M_rp = scaler.transform_intrinsics(M_l, M_r)
+        scaled_res = scaler.target_size[::-1] # (h, w)
 
-        print(
-            f'Is scale Req: {scale_req}\n scale value: {scale} \n scalable Res: {scalable_res} \n scale Res: {scaled_res}')
-        print("Original res Left :{}".format(frame_left_shape))
-        print("Original res Right :{}".format(frame_right_shape))
-        # print("Scale res :{}".format(scaled_res))
-
-        M_lp = self.scale_intrinsics(M_l, frame_left_shape, scaled_res)
-        M_rp = self.scale_intrinsics(M_r, frame_right_shape, scaled_res)
         if rectProjectionMode:
-            p_lp = self.scale_intrinsics(p_l, frame_left_shape, scaled_res)
-            p_rp = self.scale_intrinsics(p_r, frame_right_shape, scaled_res)
+            p_lp, p_rp = scaler.transform_intrinsics(p_l, p_r)
             print('Projection intrinsics ....')
             print(p_lp)
             print(p_rp)
@@ -971,7 +879,6 @@ class StereoCalibration(object):
         print(M_lp)
         print(M_rp)
 
-        print(f'Width and height is {scaled_res[::-1]}')
         # print(d_r)
         # kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_r, d_r, scaled_res[::-1], 0)
         # kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_r, d_l, scaled_res[::-1], 0)
