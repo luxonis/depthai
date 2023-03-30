@@ -92,11 +92,14 @@ class XoutBase(ABC):
                     if self._visualizer:
                         try:
                             self.visualize(packet)
-                        except AttributeError:
-                            warnings.warn('OpenCV (or another libraries) may not be installed, cannot visualize frames')
+                        except Exception as e:
+                            warnings.warn(f'An error occurred while visualizing: {e}')
                 else:
                     # User defined callback
-                    self.callback(packet)
+                    try:
+                        self.callback(packet)
+                    except Exception as e:
+                        warnings.warn(f'An error occurred while calling callback: {e}')
 
                 # Record after processing, so that user can modify the frame
                 self.on_record(packet)
