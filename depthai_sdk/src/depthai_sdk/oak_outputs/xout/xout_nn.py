@@ -60,12 +60,19 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 self.labels.append((text, color))
 
         self.normalizer = NormalizeBoundingBox(det_nn._size, det_nn._ar_resize_mode)
-        try:
-            self._frame_shape = self.det_nn._input.node.getPreviewSize()
-        except AttributeError:
-            self._frame_shape = self.det_nn._input.stream_size  # Replay
 
-        self._frame_shape = np.array(self._frame_shape)[::-1]
+        self._frame_shape = None
+        if isinstance(self.det_nn._input, dai.Node.Output):
+            pass # No good way to get size of dai.Node.Output. We will set it on first received frame
+        else: # CameeraComponent / NNComponent
+            if isinstance(self.det_nn._input.node, dai.node.ColorCamera):
+                self._frame_shape = self.det_nn._input.node.getPreviewSize()
+            elif isinstance(self.det_nn._input.node, dai.node.MonoCamera):
+                self._frame_shape = self.det_nn._input.node.getResolutionSize()
+            elif isinstance(self.det_nn._input.node, dai.node.XLinkIn): # Replay
+                self._frame_shape = self.det_nn._input.stream_size
+            # [width, height] to [height, width]
+            self._frame_shape = np.array(self._frame_shape)[::-1]
 
         self.segmentation_colormap = None
 
@@ -76,6 +83,14 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         super().setup_visualize(visualizer, visualizer_enabled, name)
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
+        # Convert Grayscale to BGR
+        if len(packet.frame.shape) == 2:
+            packet.frame = np.dstack((packet.frame, packet.frame, packet.frame))
+
+        if self._frame_shape is None:
+            # Lazy-load the frame shape
+            self._frame_shape = np.array([packet.frame.shape[0], packet.frame.shape[1]])
+
         if self._visualizer:
             self._visualizer.frame_shape = self._frame_shape
 
@@ -130,6 +145,10 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 self.segmentation_colormap = self._generate_colors(n_classes)
 
             mask = np.array(packet.img_detections.mask).astype(np.uint8)
+
+            if mask.ndim == 3:
+                mask = np.argmax(mask, axis=0)
+
             try:
                 colorized_mask = np.array(self.segmentation_colormap)[mask]
             except IndexError:
@@ -137,6 +156,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 max_class = np.max(unique_classes)
                 new_colors = self._generate_colors(max_class - len(self.segmentation_colormap) + 1)
                 self.segmentation_colormap.extend(new_colors)
+                colorized_mask = np.array(self.segmentation_colormap)[mask]
 
             bbox = None
             if self.normalizer.resize_mode == ResizeMode.LETTERBOX:

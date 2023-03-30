@@ -19,13 +19,6 @@ class Component(ABC):
         """
         return None
 
-    @abstractmethod
-    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
-        """
-        This function will be called after the app connects to the Device
-        """
-        raise NotImplementedError("Every component needs to include 'updateDeviceInfo()' method!")
-
     def _stream_name_ok(self, pipeline: dai.Pipeline, name: str) -> bool:
         # Check if there's already an XLinkOut stream with this name
         for node in pipeline.getAllNodes():

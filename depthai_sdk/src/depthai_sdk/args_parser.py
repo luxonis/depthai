@@ -133,7 +133,7 @@ class ArgsParser:
         # parser.add_argument("--cameraSharpness", type=_commaSeparated("all", int), nargs="+",
         #                     help="Specify image sharpness")
 
-        # Depth related arguments
+        # StereoDepth related arguments
         parser.add_argument("-dct", "--disparityConfidenceThreshold", type=_checkRange(0, 255),
                             help="Disparity confidence threshold, used for depth measurement.")
         parser.add_argument("-lrct", "--lrcThreshold", type=_checkRange(0, 10),
