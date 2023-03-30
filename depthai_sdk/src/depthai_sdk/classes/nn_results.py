@@ -54,7 +54,7 @@ class SemanticSegmentation(GenericNNOutput):  # In core, extend from NNData
     """
     Semantic segmentation results, with a mask for each class.
 
-    Examples: `DeeplabV3`, `Lanenet`, `road-semgentation-adas-0001`.
+    Examples: `DeeplabV3`, `Lanenet`, `road-segmentation-adas-0001`.
     """
     mask: List[np.ndarray]  # 2D np.array for each class
 
