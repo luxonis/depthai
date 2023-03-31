@@ -111,7 +111,7 @@ class Record(XoutMessageSync):
         else:  # For MCAP/Rosbags we don't need msg syncing
             self.new_msg = self.no_sync
 
-        self.mxid = device.getMxId()
+        self.mxid = device.getDeviceInfo().getMxId()
         self.path = self._create_folder(self.folder, self.mxid)
         calib_data = device.readCalibration()
         calib_data.eepromToJsonFile(str(self.path / "calib.json"))
