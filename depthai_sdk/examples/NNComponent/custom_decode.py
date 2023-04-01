@@ -8,6 +8,13 @@ from depthai_sdk.classes import Detections, DetectionPacket
 
 
 def decode(nn_data: NNData) -> Detections:
+    """
+    Custom decode function for the NN component. Decode function has to accept NNData argument.
+    The return type should preferably be a class that inherits from depthai_sdk.classes.GenericNNOutput,
+    which support visualization. But this is not required, i.e. the function can return arbitrary type.
+
+    The decoded output can be accessed from the packet object in the callback function via packet.img_detections.
+    """
     layer = nn_data.getFirstLayerFp16()
     results = np.array(layer).reshape((1, 1, -1, 7))
     dets = Detections(nn_data)
