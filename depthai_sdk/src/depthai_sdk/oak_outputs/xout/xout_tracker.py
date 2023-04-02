@@ -1,3 +1,4 @@
+import logging
 import math
 from collections import defaultdict
 from typing import Union, Dict, Optional
@@ -334,7 +335,7 @@ class XoutTracker(XoutNnResults):
             fov = calib.getFov(calib.getStereoLeftCameraId())
             self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(fov / 2)))
         else:
-            print("Warning: calibration data missing, using OAK-D defaults")
+            logging.warning("Calibration data missing, using OAK-D defaults")
             self.baseline = 75
             self.focal = 440
 
