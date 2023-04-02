@@ -1,3 +1,4 @@
+import logging
 import warnings
 from typing import List
 
@@ -42,7 +43,9 @@ class XoutDisparity(XoutFrames, Clickable):
 
         # Prefer to use WLS level if set, otherwise use lambda and sigma
         if wls_level and use_wls_filter:
-            print(f'Using WLS level: {wls_level.name} (lambda: {wls_level.value[0]}, sigma: {wls_level.value[1]})')
+            logging.debug(
+                f'Using WLS level: {wls_level.name} (lambda: {wls_level.value[0]}, sigma: {wls_level.value[1]})'
+            )
             self.wls_lambda = wls_level.value[0]
             self.wls_sigma = wls_level.value[1]
         else:

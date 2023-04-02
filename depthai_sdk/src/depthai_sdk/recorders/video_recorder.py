@@ -1,3 +1,4 @@
+import logging
 from typing import Union
 
 import numpy as np
@@ -49,8 +50,8 @@ class VideoRecorder(Recorder):
                     self._writers[name] = AvWriter(self.path, name, fourcc, xout.fps)
                 except Exception as e:
                     # TODO here can be other errors, not only import error
-                    print('Exception while creating AvWriter: ', e)
-                    print('Falling back to FileWriter, saving uncontainerized encoded streams.')
+                    logging.warning(f'Exception while creating AvWriter: {e}.'
+                                    '\nFalling back to FileWriter, saving uncontainerized encoded streams.')
                     from .video_writers.file_writer import FileWriter
                     self._writers[name] = FileWriter(self.path, name, fourcc)
 
@@ -63,7 +64,7 @@ class VideoRecorder(Recorder):
     def close(self):
         if self._closed: return
         self._closed = True
-        print("Video Recorder saved stream(s) to folder:", str(self.path))
+        logging.info("Video Recorder saved stream(s) to folder:", str(self.path))
         # Close opened files
         for name, writer in self._writers.items():
             writer.close()

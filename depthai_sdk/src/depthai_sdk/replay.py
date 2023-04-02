@@ -1,11 +1,10 @@
+import logging
 import os
 import time
-from enum import IntEnum
 from threading import Thread
 from time import monotonic
 
 import depthai as dai
-import numpy as np
 
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.readers.abstract_reader import AbstractReader
@@ -16,17 +15,18 @@ _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.webm']
 _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '.pbm', '.pgm', '.ppm', '.pxm',
              '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
 
+
 class ReplayStream:
-    stream_name: str # XLink stream name
-    queue: dai.DataInputQueue # Input queue
-    frame: np.ndarray # Last read frame from Reader (ndarray)
-    imgFrame: dai.ImgFrame # Last read ImgFrame from Reader (dai.ImgFrame)
-    _shape: Tuple[int, int] # width, height
+    stream_name: str  # XLink stream name
+    queue: dai.DataInputQueue  # Input queue
+    frame: np.ndarray  # Last read frame from Reader (ndarray)
+    imgFrame: dai.ImgFrame  # Last read ImgFrame from Reader (dai.ImgFrame)
+    _shape: Tuple[int, int]  # width, height
     disabled: bool
-    size_bytes: int # bytes
+    size_bytes: int  # bytes
 
     @property
-    def shape(self) -> Tuple[int,int]:
+    def shape(self) -> Tuple[int, int]:
         return self.resize if self.resize else self._shape
 
     def __init__(self):
@@ -35,7 +35,7 @@ class ReplayStream:
         self.stream_name = ''
         self.camera_socket: dai.CameraBoardSocket = None
 
-        self.resize: Tuple[int,int] = None
+        self.resize: Tuple[int, int] = None
         self.resize_mode: ResizeMode = None
 
     def get_socket(self) -> dai.CameraBoardSocket:
@@ -48,6 +48,7 @@ class ReplayStream:
         else:
             return dai.CameraBoardSocket.RGB
         # raise Exception("Please specify replay stream CameraBoardSocket via replay.specify_socket()")
+
 
 class Replay:
     def __init__(self, path: str):
@@ -160,8 +161,8 @@ class Replay:
         dic = getAvailableRecordings()
         if recording_name in dic:
             arr = dic[recording_name]
-            print("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB".format(recording_name,
-                                                                                                        arr[1] / 1e6))
+            logging.info("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB"
+                         .format(recording_name, arr[1] / 1e6))
             path = downloadRecording(recording_name, arr[0])
             return path
         else:
@@ -185,7 +186,7 @@ class Replay:
     def get_fps(self) -> float:
         return self.fps
 
-    def resize(self, stream_name: str, size: Tuple[int,int], mode: ResizeMode = ResizeMode.STRETCH):
+    def resize(self, stream_name: str, size: Tuple[int, int], mode: ResizeMode = ResizeMode.STRETCH):
         """
         Resize color frames prior to sending them to the device.
 
@@ -212,14 +213,14 @@ class Replay:
             self.reader.disableStream(stream_name)
 
         if stream_name not in self.streams:
-            print(f"There's no stream '{stream_name}' available!")
+            logging.info(f"There's no stream '{stream_name}' available!")
             return
 
         self.streams[stream_name].disabled = True
 
     def specify_socket(self, stream_name: str, socket: dai.CameraBoardSocket):
         if stream_name not in self.streams:
-            print(f"There's no stream '{stream_name}' available!")
+            logging.info(f"There's no stream '{stream_name}' available!")
             return
         self.streams[stream_name].camera_socket = socket
 
@@ -248,7 +249,11 @@ class Replay:
 
         return pipeline
 
-    def initStereoDepth(self, stereo: dai.node.StereoDepth, left_name: str='left', right_name: str='right', align_to: str = ''):
+    def initStereoDepth(self,
+                        stereo: dai.node.StereoDepth,
+                        left_name: str = 'left',
+                        right_name: str = 'right',
+                        align_to: str = ''):
         if left_name not in self.streams or right_name not in self.streams:
             raise Exception("Tried to init StereoDepth, but left/right streams aren't available!")
 
@@ -282,7 +287,7 @@ class Replay:
             if not self.sendFrames(cb): break
             time.sleep(delay)
             if self._stop: break
-        print('Replay `run` thread stopped')
+        logging.info('Replay `run` thread stopped')
         self._stop = True
 
     def sendFrames(self, cb=None) -> bool:
@@ -298,7 +303,7 @@ class Replay:
 
         self._now = monotonic()
         for stream_name, stream in self.streams.items():
-            stream.imgFrame =self._createImgFrame(stream)
+            stream.imgFrame = self._createImgFrame(stream)
             # Save the imgFrame
             if cb:  # callback
                 cb(stream_name, stream.imgFrame)
@@ -327,7 +332,7 @@ class Replay:
     def getStreams(self) -> List[str]:
         return [name for name, stream in self.streams.items()]
 
-    def _resize_frame(self, frame: np.ndarray, size: Tuple[int,int], mode: ResizeMode) -> np.ndarray:
+    def _resize_frame(self, frame: np.ndarray, size: Tuple[int, int], mode: ResizeMode) -> np.ndarray:
         if mode == ResizeMode.STRETCH:
             # No need to keep aspect ratio, image will be squished
             return cv2.resize(frame, size)
@@ -339,7 +344,7 @@ class Replay:
             start_w = int((w - size[0]) / 2)
             h = frame.shape[0]
             start_h = int((h - size[1]) / 2)
-            return frame[start_h:h-start_h, start_w:w-start_w]
+            return frame[start_h:h - start_h, start_w:w - start_w]
 
     def _createNewFrame(self, cvFrame) -> dai.ImgFrame:
         imgFrame = dai.ImgFrame()
@@ -356,8 +361,7 @@ class Replay:
         if stream.resize:
             cvFrame = self._resize_frame(cvFrame, stream.resize, stream.resize_mode)
 
-
-        if cvFrame.shape[-1] == 3: # 3 channels = RGB
+        if cvFrame.shape[-1] == 3:  # 3 channels = RGB
             # Resize/crop color frame as specified by the user
             # cv2 reads frames in interleaved format, and most networks expect planar by default
             cvFrame = toPlanar(cvFrame)
@@ -395,7 +399,6 @@ class Replay:
         #     if name in ["left", "right", "disparity"] and len(frame.shape) == 3:
         #         self.frames[name] = frame[:, :, 0]  # All 3 planes are the same
         return True
-
 
     def getShape(self, name: str) -> Tuple[int, int]:
         """

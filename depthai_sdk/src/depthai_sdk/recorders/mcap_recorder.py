@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import Dict
 
@@ -87,4 +88,4 @@ class McapRecorder(Recorder, RosBase):
         self._closed = True
         self.ros_writer.finish()
         self.stream.close()
-        print(".MCAP recording saved at", self.path)
+        logging.info(".MCAP recording saved at", self.path)

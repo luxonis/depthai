@@ -1,3 +1,4 @@
+import logging
 from threading import Thread
 from typing import Dict, Any
 from queue import Queue
@@ -15,7 +16,7 @@ def ros_thread(queue: Queue):
         for topic, msg in msgs.items():
             if topic not in publishers:
                 publishers[topic] = node.create_publisher(type(msg), topic, 10)
-                print('SDK started publishing ROS messages to', topic)
+                logging.info('SDK started publishing ROS messages to', topic)
             publishers[topic].publish(msg)
         rclpy.spin_once(node, timeout_sec=0.001)  # 1ms timeout
 

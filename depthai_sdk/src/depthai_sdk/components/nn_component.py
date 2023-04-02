@@ -1,4 +1,5 @@
 import json
+import logging
 import warnings
 from pathlib import Path
 from typing import Callable, Union, List, Dict
@@ -76,7 +77,7 @@ class NNComponent(Component):
 
         # Private properties
         self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
-        self._input: Union[CameraComponent, 'NNComponent', dai.Node.Output] = input # Input to the NNComponent node passed on initialization
+        self._input: Union[CameraComponent, 'NNComponent', dai.Node.Output] = input  # Input to the NNComponent node passed on initialization
         self._stream_input: dai.Node.Output  # Node Output that will be used as the input for this NNComponent
 
         self._blob: Optional[dai.OpenVINO.Blob] = None
@@ -169,7 +170,7 @@ class NNComponent(Component):
                 self.node.input.setBlocking(True)
                 self.node.input.setQueueSize(20)
             else:
-                print('Using on-host decoding for multi-stage NN')
+                logging.debug('Using on-host decoding for multi-stage NN')
                 # Custom NN
                 self.image_manip.setResize(*self._size)
                 self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
@@ -215,7 +216,6 @@ class NNComponent(Component):
         """
         return self._forced_version
 
-
     def _parse_model(self, model):
         """
         Called when NNComponent is initialized. Parses "model" argument passed by user.
@@ -242,7 +242,7 @@ class NNComponent(Component):
                 model = models[str(model)] / 'config.json'
                 self._parse_config(model)
             elif str(model) in zoo_models:
-                print(
+                logging.warning(
                     'Models from the OpenVINO Model Zoo do not carry any metadata'
                     ' (e.g., label map, decoding logic). Please keep this in mind when using models from Zoo.'
                 )
@@ -318,9 +318,9 @@ class NNComponent(Component):
             self._handler = loadModule(model_config.parent / self._config["handler"])
 
             if not callable(getattr(self._handler, "decode", None)):
-                raise RuntimeError("Custom model handler does not contain 'decode' method!")
-
-            self._decode_fn = self._handler.decode if self._decode_fn is None else self._decode_fn
+                logging.debug("Custom model handler does not contain 'decode' method!")
+            else:
+                self._decode_fn = self._handler.decode if self._decode_fn is None else self._decode_fn
 
         if 'nn_config' in self._config:
             nn_config = self._config.get("nn_config", {})
@@ -381,8 +381,6 @@ class NNComponent(Component):
             self.image_manip.initialConfig.setResize(self._size)
             self.image_manip.setKeepAspectRatio(False)  # Not keeping aspect ratio -> stretching the image
 
-        return self.image_manip.out
-
     def config_multistage_nn(self,
                              debug=False,
                              labels: Optional[List[int]] = None,
@@ -399,8 +397,8 @@ class NNComponent(Component):
             num_frame_pool (int, optional): Number of frames to pool for inference. If None, will use the default value.
         """
         if not self._is_multi_stage():
-            print("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible!"
-                  "This configuration attempt will be ignored.")
+            logging.warning("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible!"
+                            "This configuration attempt will be ignored.")
             return
 
         self._multi_stage_num_frame_pool = num_frame_pool
@@ -497,7 +495,7 @@ class NNComponent(Component):
         Configures (Spatial) Yolo Detection Network node.
         """
         if not self._is_yolo():
-            print('This is not a YOLO detection network! This configuration attempt will be ignored.')
+            logging.warning('This is not a YOLO detection network! This configuration attempt will be ignored.')
             return
 
         if not self.node:
@@ -527,11 +525,11 @@ class NNComponent(Component):
                 try:
                     resize_mode = ResizeMode[resize_mode.upper()]
                 except (AttributeError, KeyError):
-                    print('AR resize mode was not recognizied.'
-                          'Options (case insensitive): STRETCH, CROP, LETTERBOX.'
-                          'Using default LETTERBOX mode.')
+                    logging.warning('AR resize mode was not recognizied.'
+                                    'Options (case insensitive): STRETCH, CROP, LETTERBOX.'
+                                    'Using default LETTERBOX mode.')
 
-            self._ar_resize_mode = resize_mode
+            self._change_resize_mode(resize_mode)
         if conf_threshold is not None and self._is_detector():
             self.node.setConfidenceThreshold(conf_threshold)
 
@@ -550,7 +548,7 @@ class NNComponent(Component):
             calc_algo (dai.SpatialLocationCalculatorAlgorithm, optional): Specifies spatial location calculator algorithm: Average/Min/Max
         """
         if not self._is_spatial():
-            print('This is not a Spatial Detection network! This configuration attempt will be ignored.')
+            logging.warning('This is not a Spatial Detection network! This configuration attempt will be ignored.')
             return
 
         if bb_scale_factor is not None:
@@ -605,7 +603,9 @@ class NNComponent(Component):
                 det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
                 input_stream = self._comp._stream_input
                 out = XoutNnResults(det_nn=self._comp,
-                                    frames=StreamXout(id=input_stream.getParent().id, out=input_stream, name=self._comp.name),
+                                    frames=StreamXout(id=input_stream.getParent().id,
+                                                      out=input_stream,
+                                                      name=self._comp.name),
                                     nn_results=det_nn_out)
 
             return self._comp._create_xout(pipeline, out)
