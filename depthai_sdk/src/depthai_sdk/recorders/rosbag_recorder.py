@@ -2,6 +2,7 @@
 This is a helper class that let's you save depth frames into rosbag (.bag), which can be replayed using RealSense Viewer app.
 '''
 import datetime
+import logging
 import os
 import time
 from pathlib import Path
@@ -414,7 +415,7 @@ class _RosbagBaseRecorder(Recorder):
     def close(self):
         if self._closed: return
         self._closed = True
-        print("ROS .bag saved at: ", str(self.path))
+        logging.info("ROS .bag saved at: ", str(self.path))
         self.writer.close()
 
     # def write_streamInfo(self, depth=False, rgb=False):

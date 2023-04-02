@@ -1,3 +1,4 @@
+import traceback
 import warnings
 from abc import ABC, abstractmethod
 from queue import Empty, Queue
@@ -85,21 +86,17 @@ class XoutBase(ABC):
 
                 if self._visualizer_enabled:
                     try:
-                        self._visualizer.frame_shape = packet.frame.shape
-                    except AttributeError:
-                        pass  # Not all packets have frame attribute
-
-                    if self._visualizer:
-                        try:
-                            self.visualize(packet)
-                        except Exception as e:
-                            warnings.warn(f'An error occurred while visualizing: {e}')
+                        self.visualize(packet)
+                    except Exception as e:
+                        warnings.warn(f'An error occurred while visualizing: {e}')
+                        traceback.print_exc()
                 else:
                     # User defined callback
                     try:
                         self.callback(packet)
                     except Exception as e:
                         warnings.warn(f'An error occurred while calling callback: {e}')
+                        traceback.print_exc()
 
                 # Record after processing, so that user can modify the frame
                 self.on_record(packet)

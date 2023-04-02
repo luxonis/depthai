@@ -1,4 +1,5 @@
 import copy
+import logging
 import time
 import warnings
 from pathlib import Path
@@ -94,7 +95,7 @@ class OakCamera:
         if replay is not None:
             self.replay = Replay(replay)
             self.replay.initPipeline(self.pipeline)
-            print('Available streams from recording:', self.replay.getStreams())
+            logging.info('Available streams from recording:', self.replay.getStreams())
 
     def create_camera(self,
                       source: Union[str, dai.CameraBoardSocket],
@@ -288,9 +289,9 @@ class OakCamera:
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        print("Closing OAK camera")
+        logging.info("Closing OAK camera")
         if self.replay:
-            print("Closing replay")
+            logging.info("Closing replay")
             self.replay.close()
         if self._oak.device is not None:
             self._oak.device.close()
@@ -481,7 +482,7 @@ class OakCamera:
         p = PipelineGraph()
         p.create_graph(self.pipeline.serializeToJson()['pipeline'], self.device)
         self._polling.append(p.update)
-        print('process started')
+        logging.info('Process started')
 
     def visualize(self,
                   output: Union[List, Callable, Component],

@@ -112,7 +112,6 @@ class XoutIMU(XoutBase):
         if self.callback:  # Don't display frame, call the callback
             self.callback(packet)
         else:
-            packet.frame = self._visualizer.draw(packet.frame)
             cv2.imshow(self.name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:

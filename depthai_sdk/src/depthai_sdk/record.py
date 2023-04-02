@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 from enum import IntEnum
 from pathlib import Path
 from queue import Queue
@@ -30,7 +31,7 @@ def _run(recorder: Recorder, frame_queue: Queue):
             break
     # Close all recorders - Can't use ExitStack with VideoWriter
     recorder.close()
-    print('Exiting store frame thread')
+    logging.info('Exiting store frame thread')
 
 
 class RecordType(IntEnum):
@@ -125,7 +126,7 @@ class Record(XoutSeqSync):
     # TODO: support pointclouds in MCAP
     def config_mcap(self, pointcloud: bool):
         if self.record_type != RecordType.MCAP:
-            print(f"Recorder type is {self.record_type}, not MCAP! Config attempt ignored.")
+            logging.info(f"Recorder type is {self.record_type}, not MCAP! Config attempt ignored.")
             return
         self.recorder.set_pointcloud(pointcloud)
 

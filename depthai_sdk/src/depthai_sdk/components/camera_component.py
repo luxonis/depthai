@@ -1,14 +1,16 @@
+import logging
 from typing import Dict
 
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
 from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
-from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.replay import Replay
+
 
 class CameraComponent(Component):
     def __init__(self,
@@ -98,16 +100,23 @@ class CameraComponent(Component):
                     elif parts[1] in ["M", "MONO"]:
                         node_type = dai.node.MonoCamera
                     else:
-                        raise Exception("Please specify sensor type with c/color or m/mono after the ',' - eg. `cam = oak.create_camera('cama,c')`")
+                        raise Exception(
+                            "Please specify sensor type with c/color or m/mono after the ','"
+                            " - eg. `cam = oak.create_camera('cama,c')`"
+                        )
 
             socket = parse_camera_socket(source)
             sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == socket][0]
 
-            if node_type is not None: # User specified camera type
+            if node_type is not None:  # User specified camera type
                 if node_type == dai.node.ColorCamera and dai.CameraSensorType.COLOR not in sensor.supportedTypes:
-                    raise Exception(f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support COLOR mode!")
+                    raise Exception(
+                        f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support COLOR mode!"
+                    )
                 if node_type == dai.node.MonoCamera and dai.CameraSensorType.MONO not in sensor.supportedTypes:
-                    raise Exception(f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support MONO mode!")
+                    raise Exception(
+                        f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support MONO mode!"
+                    )
             else:
                 type = sensor.supportedTypes[0]
                 if type == dai.CameraSensorType.COLOR:
@@ -134,7 +143,6 @@ class CameraComponent(Component):
             # DepthAI uses BGR color order convention for NN inferencing
             self.node.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
             self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
-
 
             if not self._resolution_forced:  # Find the closest resolution
                 sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == self.node.getBoardSocket()][0]
@@ -189,7 +197,6 @@ class CameraComponent(Component):
         if self._args:
             self._config_camera_args(self._args)
 
-
     def _create_rotation_manip(self, pipeline: dai.Pipeline, rotation: int):
         rot_manip = pipeline.createImageManip()
         rgb_rr = dai.RotatedRect()
@@ -200,7 +207,6 @@ class CameraComponent(Component):
         rot_manip.initialConfig.setCropRotatedRect(rgb_rr, False)
         rot_manip.setMaxOutputFrameSize(w * h * 3)
         return rot_manip
-
 
     # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def config_camera(self,
@@ -283,11 +289,13 @@ class CameraComponent(Component):
                             chroma_denoise: Optional[int] = None,
                             ) -> None:
         if not self.is_color():
-            print("Attempted to configure ColorCamera, but this component doesn't have it. Config attempt ignored.")
+            logging.info(
+                'Attempted to configure ColorCamera, but this component doesn\'t have it. Config attempt ignored.'
+            )
             return
 
         if self.is_replay():
-            print('Tried configuring ColorCamera, but replaying is enabled. Config attempt ignored.')
+            logging.info('Tried configuring ColorCamera, but replaying is enabled. Config attempt ignored.')
             return
 
         self.node: dai.node.ColorCamera

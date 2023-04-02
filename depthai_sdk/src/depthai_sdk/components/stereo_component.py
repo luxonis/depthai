@@ -1,3 +1,4 @@
+import logging
 import warnings
 from enum import Enum
 from typing import Optional, Union, Any, Dict, Tuple
@@ -70,7 +71,7 @@ class StereoComponent(Component):
         self._left_stream: dai.Node.Output
         self._right_stream: dai.Node.Output
 
-        self.colormap = None
+        self.colormap = None  # for on-device colorization
 
         self._replay: Optional[Replay] = replay
         self._resolution: Optional[Union[str, dai.MonoCameraProperties.SensorResolution]] = resolution
@@ -84,13 +85,14 @@ class StereoComponent(Component):
         self.node: dai.node.StereoDepth = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
+        # Encoder
         self.encoder = None
         if encode:
             self.encoder = pipeline.createVideoEncoder()
             # MJPEG by default
             self._encoderProfile = parse_encode(encode)
 
-        # Configuration variables
+        # Postprocessing options
         self._colorize = None
         self._postprocess_colormap = None
         self.wls_enabled = None
@@ -118,12 +120,12 @@ class StereoComponent(Component):
                 laser = laser if laser is not None else 800
                 if 0 < laser:
                     device.setIrLaserDotProjectorBrightness(laser)
-                    print(f'Setting IR laser dot projector brightness to {laser}mA')
+                    logging.info(f'Setting IR laser dot projector brightness to {laser}mA')
 
                 led = self._args.get('irFloodBrightness', None)
                 if led is not None:
                     device.setIrFloodLightBrightness(int(led))
-                    print(f'Setting IR flood LED brightness to {int(led)}mA')
+                    logging.info(f'Setting IR flood LED brightness to {int(led)}mA')
 
             input_size = self._get_stream_size(self.left)
             if input_size:
@@ -138,14 +140,6 @@ class StereoComponent(Component):
             self._left_stream.link(self.node.left)
             self._right_stream.link(self.node.right)
 
-        colormap_manip = None
-        if self.colormap:
-            colormap_manip = pipeline.create(dai.node.ImageManip)
-            colormap_manip.initialConfig.setColormap(self.colormap, self.node.initialConfig.getMaxDisparity())
-            colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
-            colormap_manip.setMaxOutputFrameSize(1200 * 800 * 3)
-            self.node.disparity.link(colormap_manip.inputImage)
-
         if self.encoder:
             try:
                 fps = self.left.get_fps()  # CameraComponent
@@ -153,10 +147,7 @@ class StereoComponent(Component):
                 fps = self.left.getFps()  # MonoCamera
 
             self.encoder.setDefaultProfilePreset(fps, self._encoderProfile)
-            if colormap_manip:
-                colormap_manip.out.link(self.encoder.input)
-            else:
-                self.node.disparity.link(self.encoder.input)
+            self.node.disparity.link(self.encoder.input)
 
         self.node.setRectifyEdgeFillColor(0)
 
@@ -287,10 +278,26 @@ class StereoComponent(Component):
     def set_colormap(self, colormap: dai.Colormap):
         """
         Sets the colormap to use for colorizing the disparity map. Used for on-device postprocessing.
+        Works only with `encoded` output.
+        Note: This setting can affect the performance.
 
         Args:
             colormap: Colormap to use for colorizing the disparity map.
         """
+        if self.colormap != colormap and self.encoder:
+            colormap_manip = self.node.getParentPipeline().create(dai.node.ImageManip)
+            colormap_manip.initialConfig.setColormap(colormap, self.node.initialConfig.getMaxDisparity())
+            colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
+            h, w = self.left.stream_size
+            colormap_manip.setMaxOutputFrameSize(h * w * 3)
+            self.node.disparity.link(colormap_manip.inputImage)
+
+            if self.encoder:
+                self.node.disparity.unlink(self.encoder.input)
+                colormap_manip.out.link(self.encoder.input)
+        elif not self.encoder:
+            warnings.warn('At the moment, colormap can be used only if encoder is enabled.')
+
         self.colormap = colormap
 
     def _get_disparity_factor(self, device: dai.Device) -> float:
@@ -343,10 +350,6 @@ class StereoComponent(Component):
             return self.depth(pipeline, device)
 
         def disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            if self._comp.colormap:
-                warnings.warn('Colormap set with `set_colormap` is ignored when using disparity output. '
-                              'Please use `configure_postprocessing` instead.')
-
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
 
             out = XoutDisparity(
@@ -381,10 +384,6 @@ class StereoComponent(Component):
             return self._comp._create_xout(pipeline, out)
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            if self._comp.colormap:
-                warnings.warn('Colormap set with `set_colormap` is ignored when using depth output. '
-                              'Please use `configure_postprocessing` instead.')
-
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
             out = XoutDepth(
                 device=device,
