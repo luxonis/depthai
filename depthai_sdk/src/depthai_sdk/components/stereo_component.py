@@ -140,14 +140,6 @@ class StereoComponent(Component):
             self._left_stream.link(self.node.left)
             self._right_stream.link(self.node.right)
 
-        colormap_manip = None
-        if self.colormap:
-            colormap_manip = pipeline.create(dai.node.ImageManip)
-            colormap_manip.initialConfig.setColormap(self.colormap, self.node.initialConfig.getMaxDisparity())
-            colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
-            colormap_manip.setMaxOutputFrameSize(1200 * 800 * 3)
-            self.node.disparity.link(colormap_manip.inputImage)
-
         if self.encoder:
             try:
                 fps = self.left.get_fps()  # CameraComponent
@@ -155,10 +147,7 @@ class StereoComponent(Component):
                 fps = self.left.getFps()  # MonoCamera
 
             self.encoder.setDefaultProfilePreset(fps, self._encoderProfile)
-            if colormap_manip:
-                colormap_manip.out.link(self.encoder.input)
-            else:
-                self.node.disparity.link(self.encoder.input)
+            self.node.disparity.link(self.encoder.input)
 
         self.node.setRectifyEdgeFillColor(0)
 
@@ -289,10 +278,26 @@ class StereoComponent(Component):
     def set_colormap(self, colormap: dai.Colormap):
         """
         Sets the colormap to use for colorizing the disparity map. Used for on-device postprocessing.
+        Works only with `encoded` output.
+        Note: This setting can affect the performance.
 
         Args:
             colormap: Colormap to use for colorizing the disparity map.
         """
+        if self.colormap != colormap and self.encoder:
+            colormap_manip = self.node.getParentPipeline().create(dai.node.ImageManip)
+            colormap_manip.initialConfig.setColormap(colormap, self.node.initialConfig.getMaxDisparity())
+            colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
+            h, w = self.left.stream_size
+            colormap_manip.setMaxOutputFrameSize(h * w * 3)
+            self.node.disparity.link(colormap_manip.inputImage)
+
+            if self.encoder:
+                self.node.disparity.unlink(self.encoder.input)
+                colormap_manip.out.link(self.encoder.input)
+        elif not self.encoder:
+            warnings.warn('At the moment, colormap can be used only if encoder is enabled.')
+
         self.colormap = colormap
 
     def _get_disparity_factor(self, device: dai.Device) -> float:
