@@ -371,15 +371,27 @@ class NNComponent(Component):
             self.image_manip.inputImage.setBlocking(False)
             self.image_manip.inputImage.setQueueSize(2)
 
-        # Set Aspect Ratio resizing mode
-        if self._ar_resize_mode == ResizeMode.CROP:
-            # Cropping is already the default mode of the ImageManip node
-            self.image_manip.initialConfig.setResize(self._size)
-        elif self._ar_resize_mode == ResizeMode.LETTERBOX:
-            self.image_manip.initialConfig.setResizeThumbnail(*self._size)
-        elif self._ar_resize_mode == ResizeMode.STRETCH:
-            self.image_manip.initialConfig.setResize(self._size)
-            self.image_manip.setKeepAspectRatio(False)  # Not keeping aspect ratio -> stretching the image
+        self.image_manip.initialConfig.setResizeThumbnail(*self._size)
+        return self.image_manip.out
+
+    def _change_resize_mode(self, mode: ResizeMode) -> None:
+        """
+        Changes the resize mode of the ImageManip node.
+
+        Args:
+            mode (ResizeMode): Resize mode to use
+        """
+        self._ar_resize_mode = mode
+
+        if self.image_manip:
+            if self._ar_resize_mode == ResizeMode.CROP:
+                # Cropping is already the default mode of the ImageManip node
+                self.image_manip.initialConfig.setResize(self._size)
+            elif self._ar_resize_mode == ResizeMode.LETTERBOX:
+                self.image_manip.initialConfig.setResizeThumbnail(*self._size)
+            elif self._ar_resize_mode == ResizeMode.STRETCH:
+                self.image_manip.initialConfig.setResize(self._size)
+                self.image_manip.setKeepAspectRatio(False)  # Not keeping aspect ratio -> stretching the image
 
     def config_multistage_nn(self,
                              debug=False,
