@@ -12,6 +12,7 @@ from collections import deque
 from scipy.spatial.transform import Rotation
 import traceback
 import subprocess
+import itertools
 
 import cv2
 from cv2 import resize
@@ -79,7 +80,7 @@ camToMonoRes = {
                 'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
                 'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
                 'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
-                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
+                'AR0234' : dai.MonoCameraProperties.SensorResolution.THE_1200_P,
                 }
 
 camToRgbRes = {
@@ -92,9 +93,6 @@ camToRgbRes = {
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
                 'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
                 }
-
-if hasattr(dai.ColorCameraProperties.SensorResolution, 'THE_1200_P'):
-    camToRgbRes['AR0234'] = dai.ColorCameraProperties.SensorResolution.THE_1200_P
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
@@ -155,7 +153,7 @@ def parse_args():
                         help="Disable rgb camera Calibration")
     parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
                         help="Interchange Left and right camera port.")
-    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
+    parser.add_argument("-m", "--mode", default=['capture', 'process', 'flash'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
@@ -179,6 +177,11 @@ def parse_args():
                         help="Enable writing to Factory Calibration.")
     parser.add_argument("-osf", "--outputScaleFactor", type=float, default=0.5,
                         help="set the scaling factor for output visualization. Default: 0.5.")
+    parser.add_argument("-sync", "--minSyncTime", type=float, default=0.2,
+                        help="set the minimum time enforced between frames to keep synchronization. Default: 0.2.")
+    parser.add_argument("-q", "--minQueueDepth", type=int, default=4,
+                        help="set the minimum queue depth for syncing before retrieving synced frames. Default: 1.")
+
 
     options = parser.parse_args()
 
@@ -199,100 +202,89 @@ def parse_args():
             
     return options
 
-class HostSync:
-    def __init__(self, deltaMilliSec):
-        self.arrays = {}
-        self.arraySize = 15
-        self.recentFrameTs = None
-        self.deltaMilliSec = timedelta(milliseconds=deltaMilliSec)
-        # self.synced = queue.Queue()
+class MessageSync:
+    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10, min_queue_depth=3):
+        self.num_queues = num_queues
+        self.min_diff_timestamp = min_diff_timestamp
+        self.max_num_messages = max_num_messages
+        # self.queues = [deque() for _ in range(num_queues)]
+        self.queues = dict()
+        self.queue_depth = min_queue_depth
+        # self.earliest_ts = {}
 
-    def remove(self, t1):
-            return timedelta(milliseconds=500) < (self.recentFrameTs - t1)
+    def add_msg(self, name, msg):
+        if name not in self.queues:
+            self.queues[name] = deque(maxlen=self.max_num_messages)
+        self.queues[name].append(msg)
+        # if msg.getTimestampDevice() < self.earliest_ts:
+        #     self.earliest_ts = {name: msg.getTimestampDevice()}
 
-    def add_msg(self, name, data, ts):
-        if name not in self.arrays:
-            self.arrays[name] = deque(maxlen=self.arraySize)
-        # Add msg to array
-        self.arrays[name].appendleft({'data': data, 'timestamp': ts})
-        if self.recentFrameTs == None or self.recentFrameTs - ts:
-            self.recentFrameTs = ts
-        # print(len(self.arrays[name]))
-        # print(f'Added Msgs typ {name}')
-        # print(ts)
-        # for name, arr in self.arrays.items():
-        #     for i, obj in enumerate(arr):
-        #         if self.remove(obj['timestamp']):
-        #             arr.remove(obj)
-        #         else: break
-
-    def clearQueues(self):
-        print('Clearing Queues...')
-        for name, msgList in self.arrays.items():
-            self.arrays[name].clear()
-            print(len(self.arrays[name]))
+        # print('Queues: ', end='')
+        # for name in self.queues.keys():
+        #     print('\t: ', name, end='')
+        #     print(self.queues[name], end=', ')
+        #     print()
+        # print()
 
     def get_synced(self):
-        synced = {}
-        for name, msgList in self.arrays.items():
-            # print('len(pivotM---------sgList)')
-            # print(len(pivotMsgList))
 
-            if len(msgList) != self.arraySize:
-                return False
+        # Atleast 3 messages should be buffered
+        min_len = min([len(queue) for queue in self.queues.values()])
+        if min_len == 0:
+            print('Status:', 'exited due to min len == 0', self.queues)
+            return None
 
-        for name, pivotMsgList in self.arrays.items():
-            print('len(pivotMsgList)')
-            print(len(pivotMsgList))
-            pivotMsgListDuplicate = pivotMsgList
-            while pivotMsgListDuplicate:
-                currPivot = pivotMsgListDuplicate.popleft()
-                synced[name] = currPivot['data']
+        # initializing list of list 
+        queue_lengths = []
+        for name in self.queues.keys():
+            queue_lengths.append(range(0, len(self.queues[name])))
+        permutations = list(itertools.product(*queue_lengths))
+        # print ("All possible permutations are : " +  str(permutations))
 
-                for subName, msgList in self.arrays.items():
-                    print(f'len of {subName}')
-                    print(len(msgList))
-                    if name == subName:
-                        continue
-                    msgListDuplicate = msgList.copy()
-                    while msgListDuplicate:
-                        print(f'---len of dup {subName} is {len(msgListDuplicate)}')
-                        currMsg = msgListDuplicate.popleft()
-                        time_diff = abs(currMsg['timestamp'] - currPivot['timestamp'])
-                        print(f'---Time diff is {time_diff} and delta is {self.deltaMilliSec}')
-                        if time_diff < self.deltaMilliSec:
-                            print(f'--------Adding {subName} to sync. Messages left is {len(msgListDuplicate)}')
-                            synced[subName] = currMsg['data']
-                            break
-                    print(f'Size of Synced is {len(synced)} amd array size is {len(self.arrays)}')
-                    if len(synced) == len(self.arrays):
-                        self.clearQueues()
-                        return synced
+        # Return a best combination after being atleast 3 messages deep for all queues
+        min_ts_diff = None
+        for indicies in permutations:
+            tmp = {}
+            i = 0
+            for n in self.queues.keys():
+                tmp[n] = indicies[i]
+                i = i + 1
+            indicies = tmp
 
-            # raise SystemExit(1)
-            self.clearQueues()
-            return False
+            acc_diff = 0.0
+            min_ts = None
+            for name in indicies.keys():
+                msg = self.queues[name][indicies[name]]
+                if min_ts is None:
+                    min_ts = msg.getTimestampDevice().total_seconds()
+            for name in indicies.keys():
+                msg = self.queues[name][indicies[name]]
+                acc_diff = acc_diff + abs(min_ts - msg.getTimestampDevice().total_seconds())
 
+            # Mark minimum
+            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.0001):
+                min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
+                print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
-        """ for name, arr in self.arrays.items():
-            for i, obj in enumerate(arr):
-                time_diff = abs(obj['timestamp'] - self.recentFrameTs)
-                print("Time diff for {0} is {1} milliseconds".format(name ,time_diff.total_seconds() * 1000))
-                # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
-                # time difference is below 20ms, it's considered as synced
-                if time_diff < self.deltaMilliSec:
-                    synced[name] = obj['data']
-                    # print(f"{name}: {i}/{len(arr)}")
-                    break
-        print(f'Size of Synced is {len(synced)} amd array size is {len(self.arrays)}')
-        if len(synced) == len(self.arrays):
-            for name, arr in self.arrays.items():
-                for i, obj in enumerate(arr):
-                    if self.remove(obj['timestamp']):
-                        arr.remove(obj)
-                    else: break
-            return synced
-        return False """
+            if min_ts_diff['ts'] < self.min_diff_timestamp:
+                # Check if atleast 5 messages deep
+                min_queue_depth = None
+                for name in indicies.keys():
+                    if min_queue_depth is None or indicies[name] < min_queue_depth:
+                        min_queue_depth = indicies[name]
+                if min_queue_depth >= self.queue_depth:
+                    # Retrieve and pop the others
+                    synced = {}
+                    for name in indicies.keys():
+                        synced[name] = self.queues[name][min_ts_diff['indicies'][name]]
+                        # pop out the older messages
+                        for i in range(0, min_ts_diff['indicies'][name]+1):
+                            self.queues[name].popleft()
+
+                    print('Returning synced messages with error:', min_ts_diff['ts'], min_ts_diff['indicies'])
+                    return synced
+
+        # print('Status:', 'Went through all, found nothing', permutations)
 
 class Main:
     output_scale_factor = 0.5
@@ -306,6 +298,7 @@ class Main:
     def __init__(self):
         global debug
         self.args = parse_args()
+        self.device = None
         debug = self.args.debug
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
@@ -335,6 +328,8 @@ class Main:
                 self.board_config = self.board_config['board_config']
                 self.board_config_backup = self.board_config
 
+        self.dest_path = Path(__file__).parent / 'resources'
+
         # TODO: set the total images
         # random polygons for count
         self.total_images = self.args.count * \
@@ -346,26 +341,27 @@ class Main:
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
 
-        self.device = dai.Device()
-        cameraProperties = self.device.getConnectedCameraFeatures()
-        print(cameraProperties)
-        for properties in cameraProperties:
-            for in_cam in self.board_config['cameras'].keys():
-                cam_info = self.board_config['cameras'][in_cam]
-                if properties.socket == stringToCam[in_cam]:
-                    self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
-                    print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
-                    self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
-                    # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
-                    break
+        if 'capture' in self.args.mode or 'flash' in self.args.mode:
+            self.device = dai.Device()
+            cameraProperties = self.device.getConnectedCameraFeatures()
+            print(cameraProperties)
+            for properties in cameraProperties:
+                for in_cam in self.board_config['cameras'].keys():
+                    cam_info = self.board_config['cameras'][in_cam]
+                    if properties.socket == stringToCam[in_cam]:
+                        self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
+                        print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
+                        self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
+                        # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
+                        break
 
-        pipeline = self.create_pipeline()
-        self.device.startPipeline(pipeline)
+            pipeline = self.create_pipeline()
+            self.device.startPipeline(pipeline)
 
-        self.camera_queue = {}
-        for config_cam in self.board_config['cameras']:
-            cam = self.board_config['cameras'][config_cam]
-            self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
+            self.camera_queue = {}
+            for config_cam in self.board_config['cameras']:
+                cam = self.board_config['cameras'][config_cam]
+                self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
 
         """ cameraProperties = self.device.getConnectedCameraProperties()
         for properties in cameraProperties:
@@ -378,6 +374,10 @@ class Main:
         # self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
         # if not self.args.disableRgb:
         #     self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
+
+    def close(self):
+        if self.device:
+            self.device.close()
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
@@ -404,7 +404,8 @@ class Main:
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
-        fps = 10
+        fps = self.args.fps
+        cams = {}
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
             if cam_info['type'] == 'mono':
@@ -414,6 +415,8 @@ class Main:
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
+                # xout.input.setBlocking(False)
+                # xout.input.setQueueSize(4)
 
                 xout.setStreamName(cam_info['name'])
                 cam_node.out.link(xout.input)
@@ -424,11 +427,15 @@ class Main:
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
+
                 # If AR0234 bring down resolution to 800p
-                if camToRgbRes[cam_info['sensorName']] == 'AR0234':
+                if cam_info['sensorName'] == 'AR0234':
                     cam_node.setIspScale(2,3)
 
                 xout.setStreamName(cam_info['name'])
+                # xout.input.setBlocking(False)
+                # xout.input.setQueueSize(4)
+
                 cam_node.isp.link(xout.input)
                 if cam_info['sensorName'] == "OV9*82":
                     cam_node.initialControl.setSharpness(0)
@@ -544,22 +551,40 @@ class Main:
         curr_time = None
 
         self.display_name = "Image Window"
-        syncCollector = HostSync(60)
+        syncCollector = MessageSync(len(self.camera_queue.keys()), min_diff_timestamp=self.args.minSyncTime, min_queue_depth=self.args.minQueueDepth)
+
+        # Clear events
+        streams = self.device.getQueueEvents(list(self.camera_queue.keys()))
         while not finished:
             currImageList = {}
-            for key in self.camera_queue.keys():
-                frameMsg = self.camera_queue[key].get()
 
-                # print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
+            streams = self.device.getQueueEvents(list(self.camera_queue.keys()))
+            for stream in streams:
+                # frames = self.device.getOutputQueue(stream, maxSize=4, blocking=False).tryGetAll()
+                frames = self.device.getOutputQueue(stream).tryGetAll()
+                for frameMsg in frames:
+                    syncCollector.add_msg(stream, frameMsg)
+                    print(stream, frameMsg.getTimestampDevice())
 
-                syncCollector.add_msg(key, frameMsg, frameMsg.getTimestamp())
+            syncedFrames = syncCollector.get_synced()
+            print('synced frames:', syncedFrames)
+            if syncedFrames is None or syncedFrames is False or len(syncedFrames) < len(self.camera_queue.keys()):
+                continue
+
+            for key in syncedFrames.keys():
+                frameMsg = syncedFrames[key]
+                print(f'Timestamp of  {key} is {frameMsg.getTimestampDevice()}')
+
                 gray_frame = None
                 if frameMsg.getType() == dai.RawImgFrame.Type.RAW8:
                     gray_frame = frameMsg.getCvFrame()
                 else:
                     gray_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
                 currImageList[key] = gray_frame
-                # print(gray_frame.shape)
+            tmpCurrImageList = {}
+            for name in sorted(currImageList.keys()):
+                tmpCurrImageList[name] = currImageList[name]
+            currImageList = tmpCurrImageList
 
             resizeHeight = 0
             resizeWidth = 0
@@ -607,8 +632,6 @@ class Main:
                         self.height, self.width)
 
                 localPolygon = np.array([self.polygons[self.current_polygon]])
-                print(localPolygon.shape)
-                print(localPolygon)
                 if self.images_captured_polygon == 1:
                     # perspectiveRotationMatrix = Rotation.from_euler('z', 45, degrees=True).as_matrix()
                     angle = 30.
@@ -628,8 +651,6 @@ class Main:
                     localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))
                     localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())
 
-                print(localPolygon)
-                print(localPolygon.shape)
                 cv2.polylines(
                     imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
@@ -680,7 +701,7 @@ class Main:
             allPassed = True
 
             if capturing:
-                syncedMsgs = syncCollector.get_synced()
+                syncedMsgs = syncedFrames
                 if syncedMsgs == False:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
@@ -802,8 +823,8 @@ class Main:
                 #     print("Timestamp difference ---> l & rgb")
                 lrgb_time = 0
                 if not self.args.disableRgb:
-                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
-                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
+                    lrgb_time = min([abs((recent_left.getTimestampDevice() - recent_color.getTimestampDevice()).microseconds), abs((recent_color.getTimestampDevice() - recent_left.getTimestampDevice()).microseconds)]) / 1000
+                lr_time = min([abs((recent_left.getTimestampDevice() - recent_right.getTimestampDevice()).microseconds), abs((recent_right.getTimestampDevice() - recent_left.getTimestampDevice()).microseconds)]) / 1000
 
                 if debug:
                     print(f'Timestamp difference between l & RGB ---> {lrgb_time} in microseconds')
@@ -921,7 +942,6 @@ class Main:
     def calibrate(self):
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
-        dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
 
@@ -929,150 +949,24 @@ class Main:
             print("Starting image processingxxccx")
             print(self.args.squaresX)
             status, result_config = stereo_calib.calibrate(
-                                        self.board_config,
-                                        self.dataset_path,
-                                        self.args.squareSizeCm,
-                                        self.args.markerSizeCm,
-                                        self.args.squaresX,
-                                        self.args.squaresY,
-                                        self.args.cameraMode,
-                                        self.args.rectifiedDisp) # Turn off enable disp rectify
+                    self.board_config,
+                    self.dataset_path,
+                    self.args.squareSizeCm,
+                    self.args.markerSizeCm,
+                    self.args.squaresX,
+                    self.args.squaresY,
+                    self.args.cameraMode,
+                    self.args.rectifiedDisp) # Turn off enable disp rectify
 
-            calibration_handler = self.device.readCalibration()
-            try:
-                if self.empty_calibration(calibration_handler):
-                    calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
-            except Exception as e:
-                print('Device closed in exception..' )
-                self.device.close()
-                print(e)
-                print(traceback.format_exc())
-                raise SystemExit(1)
+            calibration_handler = dai.CalibrationHandler()
+            status, error_text = self.prepare_calibration_handler(result_config, calibration_handler)
 
-            # calibration_handler.set
-            error_text = []
+            if status == True:
 
-            for camera in result_config['cameras'].keys():
-                cam_info = result_config['cameras'][camera]
-                # log_list.append(self.ccm_selected[cam_info['name']])
-
-                color = green
-                reprojection_error_threshold = 1.0
-                if cam_info['size'][1] > 720:
-                    print(cam_info['size'][1])
-                    reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
-
-                if cam_info['name'] == 'rgb':
-                    reprojection_error_threshold = 3
-                print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
-
-                if cam_info['reprojection_error'] > reprojection_error_threshold:
-                    color = red
-                    error_text.append("high Reprojection Error")
-                text = cam_info['name'] + ' Reprojection Error: ' + format(cam_info['reprojection_error'], '.6f')
-                print(text)
-                # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
-
-                calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
-                calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
-                calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
-
-                if cam_info['hasAutofocus']:
-                    calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
-
-                # log_list.append(self.focusSigma[cam_info['name']])
-                # log_list.append(cam_info['reprojection_error'])
-                # color = green///
-                # epErrorZText
-                if 'extrinsics' in cam_info:
-
-                    if 'to_cam' in cam_info['extrinsics']:
-                        right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
-                        left_cam = cam_info['name']
-
-                        epipolar_threshold = 0.6
-
-                        if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
-                            color = red
-                            error_text.append("high epipolar error between " + left_cam + " and " + right_cam)
-                        elif cam_info['extrinsics']['epipolar_error'] == -1:
-                            color = red
-                            error_text.append("Epiploar validation failed between " + left_cam + " and " + right_cam)
-
-                        # log_list.append(cam_info['extrinsics']['epipolar_error'])
-                        # text = left_cam + "-" + right_cam + ' Avg Epipolar error: ' + format(cam_info['extrinsics']['epipolar_error'], '.6f')
-                        # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
-                        # vis_y += 30
-                        specTranslation = np.array([cam_info['extrinsics']['specTranslation']['x'], cam_info['extrinsics']['specTranslation']['y'], cam_info['extrinsics']['specTranslation']['z']], dtype=np.float32)
-
-                        calibration_handler.setCameraExtrinsics(stringToCam[camera], stringToCam[cam_info['extrinsics']['to_cam']], cam_info['extrinsics']['rotation_matrix'], cam_info['extrinsics']['translation'], specTranslation)
-                        if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
-                            calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
-                            calibration_handler.setStereoRight(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_right'])
-                        elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:
-                            calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
-                            calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
-
-            if len(error_text) == 0:
-                print('Flashing Calibration data into ')
-                # print(calib_dest_path)
-
-                eeepromData = calibration_handler.getEepromData()
-                print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
-                eeepromData.version = 7
-                print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
-                mx_serial_id = self.device.getDeviceInfo().getMxId()
-                calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
-                calibration_handler.eepromToJsonFile(calib_dest_path)
-                # try:
-                self.device.flashCalibration2(calibration_handler)
-                is_write_succesful = True
-                # except RuntimeError as e:
-                #     is_write_succesful = False
-                #     print(e)
-                #     print("Writing in except...")
-                #     is_write_succesful = self.device.flashCalibration2(calibration_handler)
-
-                if self.args.factoryCalibration:
-                    try:
-                        self.device.flashFactoryCalibration(calibration_handler)
-                        is_write_factory_sucessful = True
-                    except RuntimeError:
-                        print("flashFactoryCalibration Failed...")
-                        is_write_factory_sucessful = False
-
-                if is_write_succesful:
-
-
-                    """ eepromUnionData = {}
-                    calibHandler = self.device.readCalibration2()
-                    eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
-
-                    calibHandler = self.device.readFactoryCalibration()
-                    eepromUnionData['calibrationFactory'] = calibHandler.eepromToJson()
-
-                    eepromUnionData['calibrationUserRaw'] = self.device.readCalibrationRaw()
-                    eepromUnionData['calibrationFactoryRaw'] = self.device.readFactoryCalibrationRaw()
-                    with open(calib_dest_path, "w") as outfile:
-                        json.dump(eepromUnionData, outfile, indent=4) """
-                    self.device.close()
-                    text = "EEPROM written succesfully"
-                    resImage = create_blank(900, 512, rgb_color=green)
-                    cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
-                    cv2.imshow("Result Image", resImage)
-                    cv2.waitKey(0)
-
-                else:
-                    self.device.close()
-                    text = "EEPROM write Failed!!"
-                    resImage = create_blank(900, 512, rgb_color=red)
-                    cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
-                    cv2.imshow("Result Image", resImage)
-                    cv2.waitKey(0)
-                    # return (False, "EEPROM write Failed!!")
+                print('Successfully calibrated')
+                print(json.dumps(calibration_handler.eepromToJson(), indent=4))
 
             else:
-                self.device.close()
                 print(error_text)
                 for text in error_text:
                 # text = error_text[0]
@@ -1080,12 +974,174 @@ class Main:
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
+
+            return status, error_text, result_config
+
         except Exception as e:
-            self.device.close()
+            self.close()
             print('Device closed in exception..' )
             print(e)
             print(traceback.format_exc())
             raise SystemExit(1)
+
+
+    def prepare_calibration_handler(self, result_config, calibration_handler):
+
+        # calibration_handler.set
+        error_text = []
+
+        for camera in result_config['cameras'].keys():
+            cam_info = result_config['cameras'][camera]
+            # log_list.append(self.ccm_selected[cam_info['name']])
+
+            color = green
+            reprojection_error_threshold = 1.0
+            if cam_info['size'][1] > 720:
+                print(cam_info['size'][1])
+                reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
+
+            if cam_info['name'] == 'rgb':
+                reprojection_error_threshold = 3
+            print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
+
+            if cam_info['reprojection_error'] > reprojection_error_threshold:
+                color = red
+                error_text.append("high Reprojection Error")
+            text = cam_info['name'] + ' Reprojection Error: ' + format(cam_info['reprojection_error'], '.6f')
+            print(text)
+            # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
+
+            calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
+            calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
+            calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
+
+            if 'hasAutofocus' in cam_info and cam_info['hasAutofocus']:
+                calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
+
+            # log_list.append(self.focusSigma[cam_info['name']])
+            # log_list.append(cam_info['reprojection_error'])
+            # color = green///
+            # epErrorZText
+            if 'extrinsics' in cam_info:
+
+                if 'to_cam' in cam_info['extrinsics']:
+                    right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
+                    left_cam = cam_info['name']
+
+                    epipolar_threshold = 0.6
+
+                    if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
+                        color = red
+                        error_text.append("high epipolar error between " + left_cam + " and " + right_cam)
+                    elif cam_info['extrinsics']['epipolar_error'] == -1:
+                        color = red
+                        error_text.append("Epiploar validation failed between " + left_cam + " and " + right_cam)
+
+                    # log_list.append(cam_info['extrinsics']['epipolar_error'])
+                    # text = left_cam + "-" + right_cam + ' Avg Epipolar error: ' + format(cam_info['extrinsics']['epipolar_error'], '.6f')
+                    # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
+                    # vis_y += 30
+                    specTranslation = np.array([cam_info['extrinsics']['specTranslation']['x'], cam_info['extrinsics']['specTranslation']['y'], cam_info['extrinsics']['specTranslation']['z']], dtype=np.float32)
+
+                    calibration_handler.setCameraExtrinsics(stringToCam[camera], stringToCam[cam_info['extrinsics']['to_cam']], cam_info['extrinsics']['rotation_matrix'], cam_info['extrinsics']['translation'], specTranslation)
+                    if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
+                        calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
+                        calibration_handler.setStereoRight(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_right'])
+                    elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:
+                        calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
+                        calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
+
+        return len(error_text) == 0, error_text
+
+    def flash(self, result_config):
+
+        calibration_handler = self.device.readCalibration()
+        try:
+            if self.empty_calibration(calibration_handler):
+                calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
+        except Exception as e:
+            print('Device closed in exception..' )
+            self.close()
+            print(e)
+            print(traceback.format_exc())
+            raise SystemExit(1)
+
+        status, error_text = self.prepare_calibration_handler(result_config, calibration_handler)
+
+        if status == False:
+            self.close()
+            print(error_text)
+            for text in error_text:
+            # text = error_text[0]
+                resImage = create_blank(900, 512, rgb_color=red)
+                cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+                cv2.imshow("Result Image", resImage)
+                cv2.waitKey(0)
+
+            return
+
+        print('Flashing Calibration data into ')
+        # print(calib_dest_path)
+
+        eeepromData = calibration_handler.getEepromData()
+        print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
+        eeepromData.version = 7
+        print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
+        mx_serial_id = self.device.getDeviceInfo().getMxId()
+        calib_dest_path = self.dest_path / f"{mx_serial_id}.json"
+        calibration_handler.eepromToJsonFile(calib_dest_path)
+        # try:
+        self.device.flashCalibration2(calibration_handler)
+        is_write_succesful = True
+        # except RuntimeError as e:
+        #     is_write_succesful = False
+        #     print(e)
+        #     print("Writing in except...")
+        #     is_write_succesful = self.device.flashCalibration2(calibration_handler)
+        is_write_factory_sucessful = None
+        if self.args.factoryCalibration:
+            try:
+                self.device.flashFactoryCalibration(calibration_handler)
+                is_write_factory_sucessful = True
+            except RuntimeError as e:
+                print(f"flashFactoryCalibration Failed..., {e}")
+                is_write_factory_sucessful = False
+
+        if is_write_succesful and is_write_factory_sucessful is True or is_write_factory_sucessful is None:
+            """ eepromUnionData = {}
+            calibHandler = self.device.readCalibration2()
+            eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
+
+            calibHandler = self.device.readFactoryCalibration()
+            eepromUnionData['calibrationFactory'] = calibHandler.eepromToJson()
+
+            eepromUnionData['calibrationUserRaw'] = self.device.readCalibrationRaw()
+            eepromUnionData['calibrationFactoryRaw'] = self.device.readFactoryCalibrationRaw()
+            with open(calib_dest_path, "w") as outfile:
+                json.dump(eepromUnionData, outfile, indent=4) """
+            self.close()
+            text = "EEPROM written succesfully"
+            resImage = create_blank(900, 512, rgb_color=green)
+            cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+            cv2.imshow("Result Image", resImage)
+            cv2.waitKey(0)
+
+        else:
+            self.close()
+            text = "EEPROM write Failed!!"
+            errors = []
+            if is_write_succesful is False:
+                errors.append("User calibration failed.")
+            if is_write_factory_sucessful is False:
+                errors.append("Factory calibration failed.")
+            resImage = create_blank(900, 512, rgb_color=red)
+            cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
+            for i, error in enumerate(errors):
+                cv2.putText(resImage, error, (10, 300 + i * 50), font, 2, (0, 0, 0), 2)
+            cv2.imshow("Result Image", resImage)
+            cv2.waitKey(0)
+            # return (False, "EEPROM write Failed!!")
+
 
     def run(self):
         if 'capture' in self.args.mode:
@@ -1104,7 +1160,10 @@ class Main:
             self.capture_images_sync()
         self.dataset_path = str(Path("dataset").absolute())
         if 'process' in self.args.mode:
-            self.calibrate()
+            status, err_text, result_config = self.calibrate()
+            if 'flash' in self.args.mode:
+                self.flash(result_config)
+
         print('py: DONE.')
 
 
