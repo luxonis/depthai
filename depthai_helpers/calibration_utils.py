@@ -448,8 +448,11 @@ class StereoCalibration(object):
             print(cameraMatrixInit)
 
         distCoeffsInit = np.zeros((5, 1))
-        flags = (cv2.CALIB_USE_INTRINSIC_GUESS + 
-                 cv2.CALIB_RATIONAL_MODEL)
+        flags = (
+            + cv2.CALIB_USE_INTRINSIC_GUESS
+            + cv2.CALIB_RATIONAL_MODEL 
+            # + cv2.CALIB_FIX_K6
+        )
 
     #     flags = (cv2.CALIB_RATIONAL_MODEL)
         (ret, camera_matrix, distortion_coefficients,
@@ -540,6 +543,7 @@ class StereoCalibration(object):
             flags |= cv2.CALIB_FIX_INTRINSIC
             # flags |= cv2.CALIB_USE_INTRINSIC_GUESS
             flags |= cv2.CALIB_RATIONAL_MODEL
+            # flags |= cv2.CALIB_FIX_K6
             # print(flags)
             if traceLevel == 1:
                 print('Printing Extrinsics guesses...')
@@ -944,6 +948,7 @@ class StereoCalibration(object):
         imgpoints_r = []
         imgpoints_l = []
         # new_imagePairs = []
+        no_markers_found_error_count = 0
         for i, image_data_pair in enumerate(image_data_pairs):
             #             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             marker_corners_l, ids_l, rejectedImgPoints = cv2.aruco.detectMarkers(
@@ -957,6 +962,15 @@ class StereoCalibration(object):
             marker_corners_r, ids_r, _, _ = cv2.aruco.refineDetectedMarkers(image_data_pair[1], self.board,
                                                                             marker_corners_r, ids_r,
                                                                             rejectedCorners=rejectedImgPoints)
+
+            if ids_l is None or ids_r is None:
+                no_markers_found_error_count += 1
+                print(f'No markers found in the undistorted image pair {images_left[i]} and {images_right[i]}')
+                continue
+
+            if no_markers_found_error_count > 2:
+                raise Exception('No markers found in more than 2 undistored images. Please make sure that your calibration board is flat and not too close to the border of the image.')
+                
             print(f'Marekrs length r is {len(marker_corners_r)}')
             print(f'Marekrs length l is {len(marker_corners_l)}')
             res2_l = cv2.aruco.interpolateCornersCharuco(

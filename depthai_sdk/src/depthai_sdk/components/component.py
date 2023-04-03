@@ -1,7 +1,9 @@
-import depthai as dai
-from typing import Optional
-from depthai_sdk.oak_outputs.xout_base import XoutBase, ReplayStream
 from abc import ABC, abstractmethod
+from typing import Optional
+
+import depthai as dai
+
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
 
 
 class Component(ABC):
@@ -9,7 +11,7 @@ class Component(ABC):
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
 
-    def _forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
+    def forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
         """
         Checks whether the component forces a specific OpenVINO version. Only used by NNComponent (which overrides this
         method). This function is called after Camera has been configured and right before we connect to the OAK camera.
@@ -18,7 +20,7 @@ class Component(ABC):
         return None
 
     @abstractmethod
-    def _update_device_info(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
+    def on_init(self, pipeline: dai.Pipeline, device: dai.Device, version: dai.OpenVINO.Version):
         """
         This function will be called after the app connects to the Device
         """

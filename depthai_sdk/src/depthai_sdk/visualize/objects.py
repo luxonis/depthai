@@ -2,7 +2,11 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Tuple, List, Union
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
@@ -293,6 +297,10 @@ class VisDetections(GenericObject):
             bbox = detection.xmin, detection.ymin, detection.xmax, detection.ymax
             mock_frame = np.zeros(self.frame_shape, dtype=np.uint8)
 
+            if mock_frame.ndim < 2:
+                print('Frame shape is 1D, please make sure that you are not using encoded frames.'
+                      'If you are using encoded frames, please decode them first.')
+                return self
             # TODO can normalize accept frame shape?
             normalized_bbox = self.normalizer.normalize(mock_frame, bbox) if self.normalizer else bbox
 
@@ -314,9 +322,9 @@ class VisDetections(GenericObject):
                                        bbox=normalized_bbox,
                                        position=TextPosition.BOTTOM_RIGHT))
 
-            if not detection_config.hide_label and len(label) > 0:
+            if cv2 and not detection_config.hide_label and len(label) > 0:
                 # Place label in the bounding box
-                self.add_child(VisText(text=label, bbox=normalized_bbox,
+                self.add_child(VisText(text=label.capitalize(), bbox=normalized_bbox,
                                        position=detection_config.label_position,
                                        padding=detection_config.label_padding))
 
@@ -393,6 +401,10 @@ class VisText(GenericObject):
     def __init__(self,
                  text: str,
                  coords: Tuple[int, int] = None,
+                 size: int = None,
+                 color: Tuple[int, int, int] = None,
+                 thickness: int = None,
+                 outline: bool = True,
                  bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10):
@@ -405,15 +417,23 @@ class VisText(GenericObject):
             `coords` and `bbox` arguments are mutually exclusive. If you specify `coords`, `bbox` will be ignored.
 
         Args:
-            text: Text.
-            coords: Coordinates.
-            bbox: Bounding box.
-            position: Position.
+            text: Text content.
+            coords: Text coordinates.
+            size: Font size
+            color: Text color.
+            thickness: Font thickness.
+            outline: Enable outline if set to True, disable otherwise.
+            bbox: Bounding box where to place text.
+            position: Position w.r.t. to frame (or bbox if is set).
             padding: Padding.
         """
         super().__init__()
         self.text = text
         self.coords = coords
+        self.size = size
+        self.color = color
+        self.thickness = thickness
+        self.outline = outline
         self.bbox = bbox
         self.position = position
         self.padding = padding
@@ -443,27 +463,29 @@ class VisText(GenericObject):
         else:
             shape = frame.shape[:2]
 
-        font_scale = min(shape) / (1000 if self.bbox is None else 200) \
-            if text_config.auto_scale \
-            else text_config.font_scale
+        font_scale = self.size or text_config.font_scale
+        if self.size is None and text_config.auto_scale:
+            font_scale = self.get_text_scale(shape, self.bbox)
 
         # Calculate font thickness
-        font_thickness = max(1, int(font_scale * 2)) if text_config.auto_scale else text_config.font_thickness
+        font_thickness = max(1, int(font_scale * 2)) \
+            if text_config.auto_scale else self.thickness or text_config.font_thickness
 
         dy = cv2.getTextSize(self.text, text_config.font_face, font_scale, font_thickness)[0][1] + 10
 
         for line in self.text.splitlines():
             y = self.coords[1]
 
-            # Background
-            cv2.putText(img=frame,
-                        text=line,
-                        org=self.coords,
-                        fontFace=text_config.font_face,
-                        fontScale=font_scale,
-                        color=text_config.bg_color,
-                        thickness=font_thickness + 1,
-                        lineType=text_config.line_type)
+            if self.outline:
+                # Background
+                cv2.putText(img=frame,
+                            text=line,
+                            org=self.coords,
+                            fontFace=text_config.font_face,
+                            fontScale=font_scale,
+                            color=text_config.bg_color,
+                            thickness=font_thickness + 1,
+                            lineType=text_config.line_type)
 
             # Front text
             cv2.putText(img=frame,
@@ -471,7 +493,7 @@ class VisText(GenericObject):
                         org=self.coords,
                         fontFace=text_config.font_face,
                         fontScale=font_scale,
-                        color=text_config.font_color,
+                        color=self.color or text_config.font_color,
                         thickness=font_thickness,
                         lineType=text_config.line_type)
 
@@ -498,9 +520,9 @@ class VisText(GenericObject):
         else:
             shape = self.frame_shape[:2]
 
-        font_scale = min(shape) / (1000 if self.bbox is None else 200) \
-            if text_config.auto_scale \
-            else text_config.font_scale
+        font_scale = self.size or text_config.font_scale
+        if self.size is None and text_config.auto_scale:
+            font_scale = self.get_text_scale(shape, bbox)
 
         text_width, text_height = 0, 0
         for text in self.text.splitlines():
@@ -510,11 +532,6 @@ class VisText(GenericObject):
                                         thickness=text_config.font_thickness)[0]
             text_width = max(text_width, text_size[0])
             text_height += text_size[1]
-
-        # text_size = cv2.getTextSize(text=self.text,
-        #                             fontFace=text_config.font_face,
-        #                             fontScale=font_scale,
-        #                             thickness=text_config.font_thickness)[0]
 
         x, y = bbox[0], bbox[1]
 
@@ -535,6 +552,12 @@ class VisText(GenericObject):
             x = bbox[2] - text_width - padding
 
         return x, y
+
+    def get_text_scale(self,
+                       frame_shape: Union[np.ndarray, Tuple[int, ...]],
+                       bbox: Union[np.ndarray, Tuple[int, ...]]
+                       ) -> float:
+        return min(1.0, min(frame_shape) / (1000 if self.bbox is None else 200))
 
 
 class VisTrail(GenericObject):
@@ -569,11 +592,14 @@ class VisTrail(GenericObject):
     def prepare(self) -> 'VisTrail':
         grouped_tracklets = self.groupby_tracklet()
         h, w = self.frame_shape[:2]
+        tracking_config = self.config.tracking
 
         for tracklet_id, tracklets in grouped_tracklets.items():
-            thicknesses = np.linspace(start=1,
-                                      stop=self.config.tracking.line_thickness,
-                                      num=len(tracklets)).astype(np.int16)
+            color = tracking_config.line_color
+            if color is None and self.label_map:
+                label, color = self.label_map[tracklets[0].label]
+            else:
+                label, color = str(tracklets[0].label), tracking_config.line_color
 
             tracklet_length = 0
             for i in reversed(range(len(tracklets) - 1)):
@@ -582,11 +608,18 @@ class VisTrail(GenericObject):
                 p1 = int(w * (d1.xmin + d1.xmax) // 2), int(h * (d1.ymin + d1.ymax) // 2)
                 d2 = tracklets[i + 1].srcImgDetection
                 p2 = int(w * (d2.xmin + d2.xmax) // 2), int(h * (d2.ymin + d2.ymax) // 2)
-                tracklet_length += np.linalg.norm(np.array(p1) - np.array(p2))
-                if tracklet_length > self.config.tracking.max_length:
-                    break
+                if tracking_config.max_length != -1:
+                    tracklet_length += np.linalg.norm(np.array(p1) - np.array(p2))
+                    if tracklet_length > tracking_config.max_length:
+                        break
 
-                self.add_child(VisLine(p1, p2, color=self.label_map[tracklets[i].label][1], thickness=thicknesses[i]))
+                thickness = tracking_config.line_thickness
+                if tracking_config.fading_tails:
+                    thickness = max(1, int(np.ceil(thickness * i / len(tracklets))))
+
+                self.add_child(VisLine(p1, p2,
+                                       color=color,
+                                       thickness=thickness))
 
         return self
 
@@ -716,6 +749,33 @@ class VisCircle(GenericObject):
                    self.color or circle_config.color,
                    self.thickness or circle_config.thickness,
                    circle_config.line_type)
+
+
+class VisMask(GenericObject):
+    def __init__(self, mask: np.ndarray, alpha: float = None):
+        super().__init__()
+        self.mask = mask
+        self.alpha = alpha
+
+    def prepare(self) -> 'VisMask':
+        return self
+
+    def serialize(self):
+        parent = {
+            'type': 'mask',
+            'mask': self.mask
+        }
+        if len(self.children) > 0:
+            children = [c.serialize() for c in self.children]
+            parent['children'] = children
+
+        return parent
+
+    def draw(self, frame: np.ndarray) -> None:
+        if self.frame_shape is None:
+            self.frame_shape = frame.shape
+
+        cv2.addWeighted(frame, 1 - self.alpha, self.mask, self.alpha, 0, frame)
 
 
 class VisPolygon(GenericObject):

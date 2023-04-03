@@ -16,7 +16,6 @@ class McapReader(AbstractReader):
     Reads all saved streams from .mcap recording.
     Supported ROS messages: Image (depth), CompressedImage (left, right, color, disparity)
     """
-    _readFrames = dict()
 
     def __init__(self, folder: Path) -> None:
         # Get available topics
@@ -24,6 +23,8 @@ class McapReader(AbstractReader):
             reader = make_reader(file)
             channels = reader.get_summary().channels
             self._topics = [c.topic.split('/')[0] for _, c in channels.items()]
+
+        self._readFrames = dict()
 
         # Init msg array
         for topic in self._topics:
@@ -33,6 +34,7 @@ class McapReader(AbstractReader):
         decoder = Decoder(StreamReader(str(source)))
         self.msgs = decoder.messages
         # Prepare initial frames so we can get frame size
+
         self._prepareFrames()
 
     def read(self):

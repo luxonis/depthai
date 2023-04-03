@@ -1,0 +1,75 @@
+#!/bin/bash
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+DEPTHAI_DIR="$(dirname "$SCRIPT_DIR")"
+LUXONIS_DEPTHAI_HOME="$(dirname "$DEPTHAI_DIR")"
+VENV_DIR="$LUXONIS_DEPTHAI_HOME/venv"
+echo "running demo app"
+echo "$SCRIPT_DIR"
+
+if [ "$LUXONIS_DEPTHAI_HOME" = "" ]; then
+  echo ':::::::::::::::::::::::::::::::::::::::'
+  echo "Something is worng."
+  echo "SCRIPT_DIR = $SCRIPT_DIR"
+  echo "LUXONIS_DEPTHAI_HOME = $LUXONIS_DEPTHAI_HOME"
+  echo '\nLSCRIPT_DIR is probably wrong, see:.\n'
+  echo 'Using following script to find the location of this script.'
+  echo 'SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )'
+  echo "https://stackoverflow.com/questions/59895/how-do-i-get-the-directory-where-a-bash-script-is-located-from-within-the-script"
+  echo ':::::::::::::::::::::::::::::::::::::::'
+  exit 1
+fi
+
+# check depthai directory exists
+if [ -d "$DEPTHAI_DIR" ]; then
+  echo "OK. Depthai dir exists on $DEPTHAI_DIR."
+else
+  echo "Depthai repo should be on $LUXONIS_DEPTHAI_HOME/$APP_NAME, but it does not exist."
+  echo "git clone depthai in this directory, or use the installation script again."
+  echo "git clone https://github.com/luxonis/depthai.git $LUXONIS_DEPTHAI_HOME/$APP_NAME"
+  exit 3
+fi
+
+echo ""
+
+# check venv exists
+venv_chosen="false"
+while [ "$venv_chosen" = "false" ]
+do
+  if [ -d "$VENV_DIR" ]; then
+    echo "OK. Virtual environment dir exists on $VENV_DIR."
+    venv_chosen="true"
+  else
+    echo "Virtual environment not found in $VENV_DIR"
+    echo "Input depthai venv absolute path, e.g. [~/luxonis/venv] or re-run the depthai installation script."
+    read -p $'Input path to venv and press ANY key or just press ANY key to exit\n' -r venv_path
+    if [ "$venv_path" = "" ]; then
+          exit 3
+    fi
+    if [ -f "$venv_path/bin/activate" ]; then
+      venv_chosen="true"
+    fi
+    VENV_DIR=venv_path
+  fi
+done
+
+source "$VENV_DIR/bin/activate"
+
+# add pyqt5 to pythonpath if on arm
+python_version=$(python3 --version)
+nr_1="${python_version:7:1}"
+nr_2=$(echo "${python_version:9:2}" | tr -d -c 0-9)
+
+if [[ $(uname -m) == 'arm64' ]]; then
+    #if [[ $(uname -s) == "Darwin" ]]; then
+    if [[ ":$PYTHONPATH:" == *":/opt/homebrew/lib/python3.10/site-packages:"* ]]; then
+      echo "/opt/homebrew/lib/python$nr_1.$nr_2/site-packages already in PYTHONPATH"
+    else
+      export "PYTHONPATH=/opt/homebrew/lib/python$nr_1.$nr_2/site-packages:"$PYTHONPATH
+      echo "/opt/homebrew/lib/pythonv$nr_1.$nr_2/site-packages added to PYTHONPATH"
+    fi
+fi
+
+echo "running launcher with python version"
+echo python --version
+python "$DEPTHAI_DIR"/launcher/launcher.py

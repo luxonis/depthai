@@ -9,6 +9,7 @@ Getting Started
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is created upon calling
 :func:`oak.visualize <depthai_sdk.OakCamera.visualize>`, which returns :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` instance.
 Once it is created, the visualizer configs can be modified using :func:`output <depthai_sdk.visualize.visualizer.Visualizer.output>`,
+:func:`stereo <depthai_sdk.visualize.visualizer.Visualizer.stereo>`,
 :func:`text <depthai_sdk.visualize.visualizer.Visualizer.text>`,
 :func:`detections <depthai_sdk.visualize.visualizer.Visualizer.detections>`,
 :func:`tracking <depthai_sdk.visualize.visualizer.Visualizer.tracking>` methods.
@@ -19,13 +20,7 @@ Example how :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` can
 
     with OakCamera() as oak:
         cam = oak.create_camera(...)
-        visualizer = cam.visualize(cam.out.main)
-
-:func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` automatically detects the platform the application is running on and chooses the way to handle the output.
-At the moment, it distinguishes between two platforms:
-
-* :attr:`PC <depthai_sdk.visualize.visualizer.Platform.PC>`, where the output is displayed in a window.
-* :attr:`RobotHub <depthai_sdk.visualize.visualizer.Platform.ROBOTHUB>`, where the output is shared with the RobotHub application.
+        visualizer = oak.visualize(cam.out.main)
 
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is primarily used alongside with :ref:`Packets`
 in ``oak_outputs.xout`` module.
@@ -38,15 +33,15 @@ The flow of the :class:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>
 
 1. Once the stream produces the output, corresponding ``Packet`` is sent to the ``Xout`` class.
 2. The ``Xout`` calls ``visualize`` function and parses ``Packet`` and add the required objects to the visualizer.
-3. After objects are added, ``Xout`` calls :func:`draw <depthai_sdk.visualize.visualizer.Visualizer.draw>` method,
-that produces the output depending on the platform.
+3. After objects are added, ``Xout`` calls :func:`draw <depthai_sdk.visualize.visualizer.Visualizer.draw>` method, that draws objects on the frame.
 
 Configs
 #######
 
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is configurable via
-:class:`VisConfig <depthai_sdk.visualize.configs.VisConfig>` that consists of four auxiliary configs:
+:class:`VisConfig <depthai_sdk.visualize.configs.VisConfig>` that consists of five auxiliary configs:
 :class:`OutputConfig <depthai_sdk.visualize.configs.OutputConfig>`,
+:class:`StereoConfig <depthai_sdk.visualize.configs.StereoConfig>`,
 :class:`TextConfig <depthai_sdk.visualize.configs.TextConfig>`,
 :class:`DetectionConfig <depthai_sdk.visualize.configs.DetectionConfig>`,
 and :class:`TrackingConfig <depthai_sdk.visualize.configs.TrackingConfig>`.
@@ -54,6 +49,7 @@ Each config's type has its own set of parameters, which effects how the correspo
 
 There are the following methods for modifying the default configuration:
 :func:`output <depthai_sdk.visualize.visualizer.Visualizer.output>`,
+:func:`stereo <depthai_sdk.visualize.visualizer.Visualizer.stereo>`,
 :func:`text <depthai_sdk.visualize.visualizer.Visualizer.text>`,
 :func:`detections <depthai_sdk.visualize.visualizer.Visualizer.detections>`,
 :func:`tracking <depthai_sdk.visualize.visualizer.Visualizer.tracking>`.
@@ -61,14 +57,14 @@ The arguments should be passed as key-value arguments with the same signature as
 e.g., ``text(font_size=2, font_color=(255,123,200))``.
 
 The modified configuration will be applied to every created objects. The methods support
-fluent interface and can be chained, e.g., ``visualizer.text(font_size=2).bbox(color=(255, 0, 0))``.
+fluent interface and can be chained, e.g., ``visualizer.text(font_size=2).detections(color=(255, 0, 0))``.
 
 Example how to configure the visualizer:
 
 .. code-block:: python
 
         visualizer = oak.visualize(camera.out.main)
-        visualizer.bbox(
+        visualizer.detections(
             bbox_style=BboxStyle.RECTANGLE,
             label_position=TextPosition.MID,
         ).text(
@@ -87,18 +83,19 @@ All objects must be derived from :class:`GenericObject <depthai_sdk.visualize.ob
 
 Implemented objects:
 
-* :class:`VisDetections <depthai_sdk.visualize.objects.VisDetections>`
-* :class:`VisText <depthai_sdk.visualize.objects.VisText>`
-* :class:`VisLine <depthai_sdk.visualize.objects.VisLine>`
-* :class:`VisCircle <depthai_sdk.visualize.objects.VisCircle>`
-* :class:`VisTrail <depthai_sdk.visualize.objects.VisTrail>`
+* :class:`VisDetections <depthai_sdk.visualize.objects.VisDetections>`,
+* :class:`VisText <depthai_sdk.visualize.objects.VisText>`,
+* :class:`VisLine <depthai_sdk.visualize.objects.VisLine>`,
+* :class:`VisCircle <depthai_sdk.visualize.objects.VisCircle>`,
+* :class:`VisTrail <depthai_sdk.visualize.objects.VisTrail>`.
 
 Objects can be added to the visualizer using the following methods:
 
-* :func:`add_text <depthai_sdk.visualize.visualizer.Visualizer.add_text>`
-* :func:`add_detections <depthai_sdk.visualize.visualizer.Visualizer.add_detections>`
-* :func:`add_trail <depthai_sdk.visualize.visualizer.Visualizer.add_trail>`
-* :func:`add_circle <depthai_sdk.visualize.visualizer.Visualizer.add_circle>`
+* :func:`add_text <depthai_sdk.visualize.visualizer.Visualizer.add_text>`,
+* :func:`add_detections <depthai_sdk.visualize.visualizer.Visualizer.add_detections>`,
+* :func:`add_trail <depthai_sdk.visualize.visualizer.Visualizer.add_trail>`,
+* :func:`add_circle <depthai_sdk.visualize.visualizer.Visualizer.add_circle>`,
+* :func:`add_line <depthai_sdk.visualize.visualizer.Visualizer.add_line>`.
 
 Create your own object
 ######################
@@ -146,7 +143,7 @@ The following script will visualize the output of face detection model.
         det = oak.create_nn('face-detection-retail-0004', camera)
 
         visualizer = oak.visualize(det.out.main, fps=True)
-        visualizer.bbox(
+        visualizer.detections(
             color=(0, 255, 0),
             thickness=2,
             bbox_style=BboxStyle.RECTANGLE,

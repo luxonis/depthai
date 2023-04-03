@@ -18,10 +18,10 @@ class ImageSensor:
                  name: str,
                  resolutions: List[str],
                  type: str):
-        from .parser import parseResolution
+        from .parser import parse_resolution
         self.name = name
         self.type = dai.node.ColorCamera if type == 'color' else dai.node.MonoCamera
-        self.resolutions = [parseResolution(self.type, resolution) for resolution in resolutions]
+        self.resolutions = [parse_resolution(self.type, resolution) for resolution in resolutions]
 
     @property
     def maxRes(self) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
@@ -74,15 +74,18 @@ def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
     return lst
 
 
-def getClosestVideoSize(width: int, height: int) -> Tuple[int, int]:
+def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tuple[int, int]:
     """
     For colorCamera.video output
     """
     while True:
-        if width % 3 == 0: break
+        if width % 2 == 0: # YUV420/NV12 width needs to be an even number to be convertible to BGR on host using cv2
+            if not videoEncoder or width % 32 == 0: # VideoEncoder HW limitation - width must be divisible by 32
+                break
         width -= 1
     while True:
-        if height % 2 == 0: break
+        if height % 2 == 0: # YUV420/NV12 height needs to be an even number to be convertible to BGR on host using cv2
+            break
         height -= 1
     return (width, height)
 
@@ -120,8 +123,10 @@ def getClosestIspScale(camResolution: Tuple[int, int],
                  height and newH % 8 != 0)):
             continue  # ISP output size isn't supported by VideoEncoder
 
-        # Currently, new ISP width must be divisible by 2. FW engineers are looking into it.
-        if newW % 2 != 0:
+        # Currently, new ISP width must be divisible by 2.
+        # TODO: Width even number requirement was temporarily added because sometimes images were very zoomed. Engineers
+        # are looking into it, and we will remove this check once this is fixed in firmware.
+        if newW % 2 != 0 or newH % 2 != 0:
             continue
 
         err = abs((newW - width) if width else (newH - height))

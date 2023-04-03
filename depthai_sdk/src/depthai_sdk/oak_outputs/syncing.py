@@ -2,7 +2,6 @@ from typing import Dict, List, Any, Optional
 
 
 class SequenceNumSync:
-    msgs: Dict[str, Dict[str, Any]]  # List of messages.
     """
         msgs = {seqNum: {name: message}}
         Example:
@@ -18,32 +17,27 @@ class SequenceNumSync:
             }
         }
         """
-    streamNum: int
 
-    def __init__(self, streamNum: int):
-        self.msgs = dict()
-        self.streamNum = streamNum
+    def __init__(self, stream_num: int):
+        self.msgs: Dict[str, Dict[str, Any]] = dict()
+        self.stream_num: int = stream_num
 
+    def sync(self, seq_num: int, name: str, msg) -> Optional[Dict]:
+        seq_num = str(seq_num)
+        if seq_num not in self.msgs: self.msgs[seq_num] = dict()
 
-    def sync(self, seqNum: int, name: str, msg) -> Optional[Dict]:
-        seqNum = str(seqNum)
-        if seqNum not in self.msgs: self.msgs[seqNum] = dict()
+        self.msgs[seq_num][name] = (msg)
 
-        self.msgs[seqNum][name] = (msg)
-
-        if self.streamNum == len(self.msgs[seqNum]):
+        if self.stream_num == len(self.msgs[seq_num]):
             # We have sequence num synced frames!
-            ret = self.msgs[seqNum]
+            ret = self.msgs[seq_num]
 
             # Remove previous msgs
-            newMsgs = {}
+            new_msgs = {}
             for name, msg in self.msgs.items():
-                if int(name) > int(seqNum):
-                    newMsgs[name] = msg
-            self.msgs = newMsgs
+                if int(name) > int(seq_num):
+                    new_msgs[name] = msg
+            self.msgs = new_msgs
 
             return ret
         return None
-
-
-

@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from collections import deque
 from scipy.spatial.transform import Rotation
 import traceback
+import subprocess
 import itertools
 
 import cv2
@@ -90,6 +91,7 @@ camToRgbRes = {
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
+                'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
                 }
 
 if hasattr(dai.ColorCameraProperties.SensorResolution, 'THE_1200_P'):
@@ -167,7 +169,7 @@ def parse_args():
     #                     help="Sets the maximum epiploar allowed with rectification")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
-    parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
+    parser.add_argument("-rlp", "--rgbLensPosition", default=-1, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
     parser.add_argument("-fps", "--fps", default=10, type=int,
                         required=False, help="Set capture FPS for all cameras. Default: %(default)s")
@@ -195,6 +197,12 @@ def parse_args():
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
 
+    if options.rgbLensPosition < 0:
+        if options.board == "OAK-D-LITE":
+            options.rgbLensPosition = 25
+        else:
+            options.rgbLensPosition = 135
+            
     return options
 
 class MessageSync:
@@ -299,10 +307,22 @@ class Main:
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
+        depthai_boards_path = Path(__file__).parent / 'resources/depthai_boards/boards'
+
+        if not depthai_boards_path.exists():
+            # try to update submodules
+            try:
+                print("DepthAI boards directory not found! Trying to update submodules...")
+                subprocess.run(['git', 'submodule', 'update', '--init', '--recursive'], check=True)
+                if not depthai_boards_path.exists():
+                    raise Exception("depthai_boards submodule not found after updating submodules.")
+            except Exception:
+                raise ValueError(f"Could not download depthai_boards submodule. Please make sure you have cloned the depthai-boards submodule. Run the following command to clone it: git submodule update --init --recursive")
+
         if self.args.board:
             board_path = Path(self.args.board)
             if not board_path.exists():
-                board_path = (Path(__file__).parent / 'resources/boards' / self.args.board.upper()).with_suffix('.json').resolve()
+                board_path = (depthai_boards_path / self.args.board.upper()).with_suffix('.json').resolve()
                 if not board_path.exists():
                     raise ValueError(
                         'Board config not found: {}'.format(board_path))
