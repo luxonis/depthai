@@ -94,9 +94,6 @@ camToRgbRes = {
                 'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
                 }
 
-if hasattr(dai.ColorCameraProperties.SensorResolution, 'THE_1200_P'):
-    camToRgbRes['AR0234'] = dai.ColorCameraProperties.SensorResolution.THE_1200_P
-
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
     # Create black blank image
@@ -430,6 +427,10 @@ class Main:
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
+
+                # If AR0234 bring down resolution to 800p
+                if cam_info['sensorName'] == 'AR0234':
+                    cam_node.setIspScale(2,3)
 
                 xout.setStreamName(cam_info['name'])
                 # xout.input.setBlocking(False)
