@@ -80,7 +80,7 @@ camToMonoRes = {
                 'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
                 'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
                 'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
-                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
+                'AR0234' : dai.MonoCameraProperties.SensorResolution.THE_1200_P,
                 }
 
 camToRgbRes = {
@@ -330,6 +330,8 @@ class Main:
                 self.board_config = json.load(fp)
                 self.board_config = self.board_config['board_config']
                 self.board_config_backup = self.board_config
+
+        self.dest_path = Path(__file__).parent / 'resources'
 
         # TODO: set the total images
         # random polygons for count
@@ -939,7 +941,6 @@ class Main:
     def calibrate(self):
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
-        dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
 
@@ -1076,6 +1077,8 @@ class Main:
                 cv2.imshow("Result Image", resImage)
                 cv2.waitKey(0)
 
+            return
+
         print('Flashing Calibration data into ')
         # print(calib_dest_path)
 
@@ -1084,7 +1087,7 @@ class Main:
         eeepromData.version = 7
         print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
         mx_serial_id = self.device.getDeviceInfo().getMxId()
-        calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
+        calib_dest_path = self.dest_path / f"{mx_serial_id}.json"
         calibration_handler.eepromToJsonFile(calib_dest_path)
         # try:
         self.device.flashCalibration2(calibration_handler)
