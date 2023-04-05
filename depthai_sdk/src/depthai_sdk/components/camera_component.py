@@ -316,6 +316,12 @@ class CameraComponent(Component):
         if isp_scale:
             self._resolution_forced = True
             self.node.setIspScale(*isp_scale)
+
+            self.node.setPreviewSize(*self.node.getIspSize())
+            self.node.setVideoSize(*self.node.getIspSize())
+            self.stream_size = self.node.getIspSize()
+            self.stream = self.node.preview
+
         if sharpness is not None: self.node.initialControl.setSharpness(sharpness)
         if luma_denoise is not None: self.node.initialControl.setLumaDenoise(luma_denoise)
         if chroma_denoise is not None: self.node.initialControl.setChromaDenoise(chroma_denoise)
