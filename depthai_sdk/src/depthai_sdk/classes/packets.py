@@ -44,21 +44,29 @@ class FramePacket:
     """
     Contains only dai.ImgFrame message and cv2 frame, which is used by visualization logic.
     """
-
-    name: str  # ImgFrame stream name
-    imgFrame: dai.ImgFrame  # Original depthai message
-    frame: Optional[np.ndarray]  # cv2 frame for visualization
-
     def __init__(self,
                  name: str,
                  img_frame: dai.ImgFrame,
                  frame: Optional[np.ndarray],
                  visualizer: 'Visualizer' = None):
-        self.name = name
-        self.imgFrame = img_frame
-        self.frame = frame
+        self.name: str = name # ImgFrame stream name
+        self.imgFrame: dai.ImgFrame = img_frame # Original depthai message
+        self.frame: Optional[np.ndarray] = frame # cv2 frame for visualization
         self.visualizer = visualizer
 
+
+class PointcloudPacket:
+    def __init__(self,
+                 name: str,
+                 points: np.ndarray,
+                 depth_map: dai.ImgFrame,
+                 color_frame: Optional[np.ndarray],
+                 visualizer: 'Visualizer' = None):
+        self.name = name
+        self.points = points
+        self.depth_imgFrame = dai.ImgFrame
+        self.color_frame = color_frame
+        self.visualizer = visualizer
 
 class DepthPacket(FramePacket):
     mono_frame: dai.ImgFrame

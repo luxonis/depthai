@@ -217,6 +217,7 @@ class StereoComponent(Component):
                       lr_check: Optional[bool] = None,
                       sigma: Optional[int] = None,
                       lr_check_threshold: Optional[int] = None,
+                      subpixel_bits: Optional[int] = None,
                       ) -> None:
         """
         Configures StereoDepth modes and options.
@@ -229,6 +230,7 @@ class StereoComponent(Component):
         if lr_check is not None: self.node.initialConfig.setLeftRightCheck(lr_check)
         if sigma is not None: self.node.initialConfig.setBilateralFilterSigma(sigma)
         if lr_check_threshold is not None: self.node.initialConfig.setLeftRightCheckThreshold(lr_check_threshold)
+        if subpixel_bits is not None: self.node.initialConfig.setSubpixelFractionalBits(subpixel_bits)
 
     def config_postprocessing(self,
                               colorize: Union[StereoColor, bool] = None,
