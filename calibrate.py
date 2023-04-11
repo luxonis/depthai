@@ -76,8 +76,6 @@ camToRgbRes = {
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
-                'ar0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
-                'imx412' : dai.ColorCameraProperties.SensorResolution.THE_1080_P,
                 }
 
 antibandingOpts = {
@@ -486,7 +484,7 @@ class Main:
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 sensorName = cam_info['sensorName']
                 print(f'Sensor name is {sensorName}')
-                cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
+                cam_node.setResolution(camToRgbRes[cam_info['sensorName'].upper()])
                 cam_node.setFps(fps)
 
                 xout.setStreamName(cam_info['name'])
@@ -744,7 +742,7 @@ class Main:
 
             if capturing:
                 syncedMsgs = syncCollector.get_synced()
-                if syncedMsgs == False:
+                if syncedMsgs == False or syncedMsgs == None:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
                     continue 
