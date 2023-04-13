@@ -84,11 +84,24 @@ class XoutDepth(XoutFrames, Clickable):
             self.wls_filter.setSigmaColor(stereo_config.wls_sigma)
             depth_frame = self.wls_filter.filter(depth_frame, packet.mono_frame.getCvFrame())
 
-        depth_frame_color = cv2.normalize(depth_frame, None, 256, 0, cv2.NORM_INF, cv2.CV_8UC3)
-        depth_frame_color = cv2.equalizeHist(depth_frame_color)
+        # Getting 1st and 99th percentile to remove outliers takes about 10ms at 800P.
+        # If we downscale depth by 4, we can get the same result min/max result in 3ms at 800P.
+        # We remove all invalid (0) depth values, otherwise 1st percentile will always be 0.
+        depth_downscaled = depth_frame[::4]
+        min_depth = np.percentile(depth_downscaled[depth_downscaled != 0], 1)
+        max_depth = np.percentile(depth_downscaled, 99)
+
+        # Takes about 15ms at 800P
+        depth_frame_color = np.interp(depth_frame, (min_depth, max_depth), (0, 255)).astype(np.uint8)
 
         colorize = self.colorize or stereo_config.colorize
-        colormap = self.colormap or stereo_config.colormap
+        if self.colormap is not None:
+            colormap = self.colormap
+        else:
+            # We flip the map so it's the same as disparity (red == close), which is inverse to depth
+            colormap = np.flip(stereo_config.colormap, axis=0)
+            colormap[0] = [0, 0, 0] # Invalidate pixels 0 to be black
+
         if colorize == StereoColor.GRAY:
             packet.frame = depth_frame_color
         elif colorize == StereoColor.RGB:

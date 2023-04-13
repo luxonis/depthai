@@ -80,7 +80,12 @@ class XoutDisparity(XoutFrames, Clickable):
             disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
         colorize = self.colorize or stereo_config.colorize
-        colormap = self.colormap or stereo_config.colormap
+        if self.colormap is not None:
+            colormap = self.colormap
+        else:
+            colormap = stereo_config.colormap
+            colormap[0] = [0, 0, 0] # Invalidate pixels 0 to be black
+
         if colorize == StereoColor.GRAY:
             packet.frame = disparity_frame
         elif colorize == StereoColor.RGB:
