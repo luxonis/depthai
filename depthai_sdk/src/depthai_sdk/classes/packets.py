@@ -29,6 +29,18 @@ class _Detection:
         return self.img_detection.xmin, self.img_detection.ymin, self.img_detection.xmax, self.img_detection.ymax
 
 
+class NNDataPacket:
+    """
+    Contains only dai.NNData message
+    """
+    name: str  # NNData stream name
+    nn_data: dai.NNData  # Original depthai message
+
+    def __init__(self, name: str, nn_data: dai.NNData):
+        self.name = name
+        self.nn_data = nn_data
+
+
 class _TrackingDetection(_Detection):
     tracklet: dai.Tracklet
     speed: float = 0.0  # m/s

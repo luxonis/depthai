@@ -7,11 +7,11 @@ from distinctipy import distinctipy
 from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.classes.packets import (
-    _Detection, DetectionPacket, TrackerPacket, SpatialBbMappingPacket, TwoStagePacket
+    _Detection, DetectionPacket, TrackerPacket, SpatialBbMappingPacket, TwoStagePacket, NNDataPacket
 )
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
-from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.visualize.visualizer import Visualizer
@@ -21,6 +21,28 @@ try:
     import cv2
 except ImportError:
     cv2 = None
+
+class XoutNnData(XoutBase):
+    def __init__(self, xout: StreamXout):
+        self.nndata_out = xout
+        super().__init__()
+        self.name = 'NNData'
+
+    def visualize(self, packet: NNDataPacket):
+        print('Visualization of NNData is not supported')
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.nndata_out]
+
+    def new_msg(self, name: str, msg: dai.NNData) -> None:
+        if name not in self._streams:
+            return
+
+        if self.queue.full():
+            self.queue.get()  # Get one, so queue isn't full
+
+        packet = NNDataPacket(name=self.name, nn_data=msg)
+        self.queue.put(packet, block=False)
 
 
 class XoutNnResults(XoutSeqSync, XoutFrames):
