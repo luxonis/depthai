@@ -7,7 +7,7 @@ rec = AvWriter(Path('./'), 'color', 'mjpeg', fps=30)
 
 
 def save_raw_mjpeg(packet):
-    rec.write(packet.imgFrame)
+    rec.write(packet.msg)
 
 
 with OakCamera() as oak:

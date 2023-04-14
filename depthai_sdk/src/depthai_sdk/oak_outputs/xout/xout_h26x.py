@@ -32,7 +32,7 @@ class XoutH26x(XoutFrames):
         if not self.codec:
             raise ImportError('av is not installed. Please install it with `pip install av`')
 
-        enc_packets = self.codec.parse(packet.imgFrame.getData())
+        enc_packets = self.codec.parse(packet.msg.getData())
         if len(enc_packets) == 0:
             return None
 
