@@ -29,18 +29,6 @@ class _Detection:
         return self.img_detection.xmin, self.img_detection.ymin, self.img_detection.xmax, self.img_detection.ymax
 
 
-class NNDataPacket:
-    """
-    Contains only dai.NNData message
-    """
-    name: str  # NNData stream name
-    nn_data: dai.NNData  # Original depthai message
-
-    def __init__(self, name: str, nn_data: dai.NNData):
-        self.name = name
-        self.nn_data = nn_data
-
-
 class _TrackingDetection(_Detection):
     tracklet: dai.Tracklet
     speed: float = 0.0  # m/s
@@ -51,6 +39,16 @@ class _TrackingDetection(_Detection):
 class _TwoStageDetection(_Detection):
     nn_data: dai.NNData
 
+class NNDataPacket:
+    """
+    Contains only dai.NNData message
+    """
+    name: str  # NNData stream name
+    msg: dai.NNData  # Original depthai message
+
+    def __init__(self, name: str, nn_data: dai.NNData):
+        self.name = name
+        self.msg = nn_data
 
 class FramePacket:
     """
@@ -58,16 +56,16 @@ class FramePacket:
     """
 
     name: str  # ImgFrame stream name
-    imgFrame: dai.ImgFrame  # Original depthai message
+    msg: dai.ImgFrame  # Original depthai message
     frame: Optional[np.ndarray]  # cv2 frame for visualization
 
     def __init__(self,
                  name: str,
-                 img_frame: dai.ImgFrame,
+                 msg: dai.ImgFrame,
                  frame: Optional[np.ndarray],
                  visualizer: 'Visualizer' = None):
         self.name = name
-        self.imgFrame = img_frame
+        self.msg = msg
         self.frame = frame
         self.visualizer = visualizer
 
@@ -81,7 +79,7 @@ class DepthPacket(FramePacket):
                  mono_frame: dai.ImgFrame,
                  visualizer: 'Visualizer' = None):
         super().__init__(name=name,
-                         img_frame=disparity_frame,
+                         msg=disparity_frame,
                          frame=disparity_frame.getCvFrame() if cv2 else None,
                          visualizer=visualizer)
         self.mono_frame = mono_frame
@@ -95,12 +93,12 @@ class SpatialBbMappingPacket(FramePacket):
 
     def __init__(self,
                  name: str,
-                 img_frame: dai.ImgFrame,
+                 msg: dai.ImgFrame,
                  spatials: dai.SpatialImgDetections,
                  visualizer: 'Visualizer' = None):
         super().__init__(name=name,
-                         img_frame=img_frame,
-                         frame=img_frame.getFrame() if cv2 else None,
+                         msg=msg,
+                         frame=msg.getFrame() if cv2 else None,
                          visualizer=visualizer)
         self.spatials = spatials
 
@@ -112,12 +110,12 @@ class DetectionPacket(FramePacket):
 
     def __init__(self,
                  name: str,
-                 img_frame: dai.ImgFrame,
+                 msg: dai.ImgFrame,
                  img_detections: Union[dai.ImgDetections, dai.SpatialImgDetections],
                  visualizer: 'Visualizer' = None):
         super().__init__(name=name,
-                         img_frame=img_frame,
-                         frame=img_frame.getCvFrame() if cv2 else None,
+                         msg=msg,
+                         frame=msg.getCvFrame() if cv2 else None,
                          visualizer=visualizer)
         self.img_detections = img_detections
         self.detections = []
@@ -142,12 +140,12 @@ class TrackerPacket(FramePacket):
 
     def __init__(self,
                  name: str,
-                 img_frame: dai.ImgFrame,
+                 msg: dai.ImgFrame,
                  tracklets: dai.Tracklets,
                  visualizer: 'Visualizer' = None):
         super().__init__(name=name,
-                         img_frame=img_frame,
-                         frame=img_frame.getCvFrame() if cv2 else None,
+                         msg=msg,
+                         frame=msg.getCvFrame() if cv2 else None,
                          visualizer=visualizer)
         self.detections: List[_TrackingDetection] = []
         self.daiTracklets = tracklets
@@ -178,16 +176,16 @@ class TwoStagePacket(DetectionPacket):
     """
 
     def __init__(self, name: str,
-                 img_frame: dai.ImgFrame,
+                 msg: dai.ImgFrame,
                  img_detections: dai.ImgDetections,
                  nn_data: List[dai.NNData],
                  labels: List[int],
                  visualizer: 'Visualizer' = None):
         super().__init__(name=name,
-                         img_frame=img_frame,
+                         msg=msg,
                          img_detections=img_detections,
                          visualizer=visualizer)
-        self.frame = self.imgFrame.getCvFrame() if cv2 else None
+        self.frame = self.msg.getCvFrame() if cv2 else None
         self.nnData = nn_data
         self.labels = labels
         self._cntr = 0

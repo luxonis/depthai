@@ -77,7 +77,7 @@ class XoutFrames(XoutBase):
         if self._video_recorder:
             # TODO not ideal to check it this way
             if isinstance(self._video_recorder[self.name], AvWriter):
-                self._video_recorder.write(self.name, packet.imgFrame)
+                self._video_recorder.write(self.name, packet.msg)
             else:
                 self._video_recorder.write(self.name, packet.frame)
         # else:

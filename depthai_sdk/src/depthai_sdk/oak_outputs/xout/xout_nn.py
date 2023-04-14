@@ -221,7 +221,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
     def _set_frame_shape(self, packet):
         try:
-            shape = packet.imgFrame.getCvFrame().shape[:2]
+            shape = packet.msg.getCvFrame().shape[:2]
         except RuntimeError as e:
             raise RuntimeError(f'Error getting frame shape - {e}')
         if self._visualizer and self._visualizer.frame_shape is None and len(shape) == 1:
@@ -256,10 +256,10 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
 
     def visualize(self, packet: SpatialBbMappingPacket):
         if not self.factor:
-            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
+            size = (packet.msg.getWidth(), packet.msg.getHeight())
             self.factor = calc_disp_multiplier(self.device, size)
 
-        depth = np.array(packet.imgFrame.getFrame())
+        depth = np.array(packet.msg.getFrame())
         with np.errstate(all='ignore'):
             disp = (self.factor / depth).astype(np.uint8)
 
