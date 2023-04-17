@@ -52,12 +52,5 @@ Source code
            :language: python
            :linenos:
 
-    .. tab:: C++
-
-        Also `available on GitHub <https://github.com/luxonis/depthai-core/blob/main/examples/mixed/rgb_encoding_mono_mobilenet.cpp>`__
-
-        .. literalinclude:: ../../../../depthai-core/examples/mixed/rgb_encoding_mono_mobilenet.cpp
-           :language: cpp
-           :linenos:
 
 .. include::  /includes/footer-short.rst
