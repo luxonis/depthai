@@ -2,7 +2,6 @@ import subprocess
 from abc import abstractmethod
 from pathlib import Path
 from typing import Optional, Callable, List
-from attr import has
 import depthai as dai
 
 from depthai_sdk.classes import FramePacket
