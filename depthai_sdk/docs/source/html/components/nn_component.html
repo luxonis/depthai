@@ -1,0 +1,943 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>NNComponent &mdash; DepthAI SDK Docs 1.9.2 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/index.css" type="text/css" />
+  <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="StereoComponent" href="stereo_component.html" />
+    <link rel="prev" title="IMUComponent" href="imu_component.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> DepthAI SDK Docs
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Home:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">DepthAI SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../oak-camera.html">OakCamera</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../oak-camera.html#interoperability-with-depthai-api">Interoperability with DepthAI API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../oak-camera.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#preview-color-and-mono-cameras">Preview color and mono cameras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#run-mobilenetssd-on-color-camera">Run MobilenetSSD on color camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#run-face-detection-retail-0004-on-left-camera">Run face-detection-retail-0004 on left camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">Deploy models from Roboflow and Roboflow Universe with Depth SDK</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../oak-camera.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Features</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../features/ai_models.html">AI models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/ai_models.html#sdk-supported-models">SDK supported models</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="../features/components.html">Components</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../features/components.html#depthai_sdk.components.Component"><code class="docutils literal notranslate"><span class="pre">Component</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../features/components.html#depthai_sdk.components.Component.forced_openvino_version"><code class="docutils literal notranslate"><span class="pre">Component.forced_openvino_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/components.html#depthai_sdk.components.Component.on_init"><code class="docutils literal notranslate"><span class="pre">Component.on_init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="camera_component.html">CameraComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="camera_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="camera_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="camera_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="camera_component.html#depthai_sdk.components.CameraComponent"><code class="docutils literal notranslate"><span class="pre">CameraComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="imu_component.html">IMUComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="imu_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imu_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imu_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="imu_component.html#depthai_sdk.components.IMUComponent"><code class="docutils literal notranslate"><span class="pre">IMUComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">NNComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#depthai-api-nodes">DepthAI API nodes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#component-outputs">Component outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#decoding-outputs">Decoding outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="stereo_component.html">StereoComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="stereo_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stereo_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="stereo_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="stereo_component.html#depthai_sdk.components.StereoComponent"><code class="docutils literal notranslate"><span class="pre">StereoComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../features/packets.html">Packets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/packets.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/packets.html#reference">Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#framepacket">FramePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/packets.html#depthai_sdk.classes.packets.FramePacket"><code class="docutils literal notranslate"><span class="pre">FramePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#spatialbbmappingpacket">SpatialBbMappingPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/packets.html#depthai_sdk.classes.packets.SpatialBbMappingPacket"><code class="docutils literal notranslate"><span class="pre">SpatialBbMappingPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#detectionpacket">DetectionPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/packets.html#depthai_sdk.classes.packets.DetectionPacket"><code class="docutils literal notranslate"><span class="pre">DetectionPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#depthpacket">DepthPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/packets.html#depthai_sdk.classes.packets.DepthPacket"><code class="docutils literal notranslate"><span class="pre">DepthPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#trackerpacket">TrackerPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/packets.html#depthai_sdk.classes.packets.TrackerPacket"><code class="docutils literal notranslate"><span class="pre">TrackerPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#twostagepacket">TwoStagePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/packets.html#depthai_sdk.classes.packets.TwoStagePacket"><code class="docutils literal notranslate"><span class="pre">TwoStagePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#imupacket">IMUPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/packets.html#depthai_sdk.classes.packets.IMUPacket"><code class="docutils literal notranslate"><span class="pre">IMUPacket</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../features/recording.html">Recording</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/recording.html#supported-recording-types">Supported recording types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../features/recording.html#video">1. Video</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/recording.html#rosbag">2. Rosbag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/recording.html#mcap-recording">3. MCAP recording</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../features/replaying.html">Replaying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/replaying.html#replaying-support">Replaying support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/replaying.html#replaying-a-depthai-recording">Replaying a depthai-recording</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/replaying.html#public-depthai-recordings">Public depthai-recordings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../features/visualizer.html">Visualizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#flow">Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#configs">Configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#create-your-own-object">Create your own object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#example-usage">Example usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#references">References</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../features/visualizer.html#id1">Visualizer</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.visualizer.Visualizer"><code class="docutils literal notranslate"><span class="pre">Visualizer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.visualizer.Platform"><code class="docutils literal notranslate"><span class="pre">Platform</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../features/visualizer.html#id2">Objects</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.objects.GenericObject"><code class="docutils literal notranslate"><span class="pre">GenericObject</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.objects.VisDetections"><code class="docutils literal notranslate"><span class="pre">VisDetections</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.objects.VisText"><code class="docutils literal notranslate"><span class="pre">VisText</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.objects.VisLine"><code class="docutils literal notranslate"><span class="pre">VisLine</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.objects.VisTrail"><code class="docutils literal notranslate"><span class="pre">VisTrail</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../features/visualizer.html#id3">Configs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.TextPosition"><code class="docutils literal notranslate"><span class="pre">TextPosition</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.BboxStyle"><code class="docutils literal notranslate"><span class="pre">BboxStyle</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.StereoColor"><code class="docutils literal notranslate"><span class="pre">StereoColor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.OutputConfig"><code class="docutils literal notranslate"><span class="pre">OutputConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.StereoConfig"><code class="docutils literal notranslate"><span class="pre">StereoConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.DetectionConfig"><code class="docutils literal notranslate"><span class="pre">DetectionConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.TextConfig"><code class="docutils literal notranslate"><span class="pre">TextConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.TrackingConfig"><code class="docutils literal notranslate"><span class="pre">TrackingConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.SegmentationConfig"><code class="docutils literal notranslate"><span class="pre">SegmentationConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.CircleConfig"><code class="docutils literal notranslate"><span class="pre">CircleConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../features/visualizer.html#depthai_sdk.visualize.configs.VisConfig"><code class="docutils literal notranslate"><span class="pre">VisConfig</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code samples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/code_samples.html">Code Samples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html">Auto Exposure on ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html">RGB Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/VideoEncoder/rgb_encoding.html">RGB Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/VideoEncoder/rgb_mono_encoding.html">RGB &amp; Mono Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_mono_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_mono_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_mono_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DepthAI SDK Docs</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../features/components.html">Components</a> &raquo;</li>
+        
+      <li>NNComponent</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/components/nn_component.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="nncomponent">
+<h1>NNComponent<a class="headerlink" href="#nncomponent" title="Permalink to this heading">¶</a></h1>
+<p>NNComponent abstracts sourcing &amp; decoding <a class="reference internal" href="../features/ai_models.html#ai-models"><span class="std std-ref">AI models</span></a>, creating a DepthAI API node for neural inferencing,
+object tracking, and MultiStage pipelines setup. It also supports <a class="reference internal" href="../features/sub-features/integrations.html#roboflow"><span class="std std-ref">Roboflow</span></a> integration.</p>
+<section id="depthai-api-nodes">
+<h2>DepthAI API nodes<a class="headerlink" href="#depthai-api-nodes" title="Permalink to this heading">¶</a></h2>
+<p>For neural inferencing NNComponent will a DepthAI API node:</p>
+<ul class="simple">
+<li><p>If we are using MobileNet-SSD based AI model, this component will create <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/">MobileNetDetectionNetwork</a> or <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_spatial_detection_network/">MobileNetSpatialDetectionNetwork</a> if <code class="docutils literal notranslate"><span class="pre">spatial</span></code> argument is set.</p></li>
+<li><p>If we are using YOLO based AI model, this component will create <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/yolo_detection_network/">YoloDetectionNetwork</a> or <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/yolo_spatial_detection_network/">YoloSpatialDetectionNetwork</a> if <code class="docutils literal notranslate"><span class="pre">spatial</span></code> argument is set.</p></li>
+<li><p>If it’s none of the above, component will create <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/neural_network/">NeuralNetwork</a> node.</p></li>
+</ul>
+<p>If <code class="docutils literal notranslate"><span class="pre">tracker</span></code> argument is set and we have YOLO/MobileNet-SSD based model, this component will also create <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/object_tracker/">ObjectTracker</a> node,
+and connect the two nodes togeter.</p>
+<section id="usage">
+<h3>Usage<a class="headerlink" href="#usage" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">OakCamera</span><span class="p">,</span> <span class="n">ResizeMode</span>
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">(</span><span class="n">recording</span><span class="o">=</span><span class="s1">&#39;cars-tracking-above-01&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+    <span class="n">nn</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_nn</span><span class="p">(</span><span class="s1">&#39;vehicle-detection-0202&#39;</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">tracker</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">config_nn</span><span class="p">(</span><span class="n">ResizeMode</span><span class="o">=</span><span class="n">ResizeMode</span><span class="o">.</span><span class="n">STRETCH</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">([</span><span class="n">nn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">tracker</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">passthrough</span><span class="p">],</span> <span class="n">fps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># oak.show_graph()</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="component-outputs">
+<h3>Component outputs<a class="headerlink" href="#component-outputs" title="Permalink to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">out.main</span></code> - Default output. Streams NN results and high-res frames that were downscaled and used for inferencing. Produces <a class="reference internal" href="../features/packets.html#detectionpacket"><span class="std std-ref">DetectionPacket</span></a> or <a class="reference internal" href="../features/packets.html#twostagepacket"><span class="std std-ref">TwoStagePacket</span></a> (if it’s 2. stage NNComponent).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">out.passthrough</span></code> - Default output. Streams NN results and passthrough frames (frames used for inferencing). Produces <a class="reference internal" href="../features/packets.html#detectionpacket"><span class="std std-ref">DetectionPacket</span></a> or <a class="reference internal" href="../features/packets.html#twostagepacket"><span class="std std-ref">TwoStagePacket</span></a> (if it’s 2. stage NNComponent).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">out.spatials</span></code> - Streams depth and bounding box mappings (<code class="docutils literal notranslate"><span class="pre">SpatialDetectionNework.boundingBoxMapping</span></code>). Produces <a class="reference internal" href="../features/packets.html#spatialbbmappingpacket"><span class="std std-ref">SpatialBbMappingPacket</span></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">out.twostage_crops</span></code> - Streams 2. stage cropped frames to the host. Produces <a class="reference internal" href="../features/packets.html#framepacket"><span class="std std-ref">FramePacket</span></a>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">out.tracker</span></code> - Streams <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/object_tracker/">ObjectTracker’s</a> tracklets and high-res frames that were downscaled and used for inferencing. Produces <a class="reference internal" href="../features/packets.html#trackerpacket"><span class="std std-ref">TrackerPacket</span></a>.</p></li>
+</ul>
+</section>
+<section id="decoding-outputs">
+<h3>Decoding outputs<a class="headerlink" href="#decoding-outputs" title="Permalink to this heading">¶</a></h3>
+<p>NNComponent allows user to define their own decoding functions. There is a set of standardized outputs:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#depthai_sdk.classes.nn_results.Detections" title="depthai_sdk.classes.nn_results.Detections"><code class="xref py py-class docutils literal notranslate"><span class="pre">Detections</span></code></a></p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.classes.nn_results.SemanticSegmentation" title="depthai_sdk.classes.nn_results.SemanticSegmentation"><code class="xref py py-class docutils literal notranslate"><span class="pre">SemanticSegmentation</span></code></a></p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.classes.nn_results.ImgLandmarks" title="depthai_sdk.classes.nn_results.ImgLandmarks"><code class="xref py py-class docutils literal notranslate"><span class="pre">ImgLandmarks</span></code></a></p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.classes.nn_results.InstanceSegmentation" title="depthai_sdk.classes.nn_results.InstanceSegmentation"><code class="xref py py-class docutils literal notranslate"><span class="pre">InstanceSegmentation</span></code></a></p></li>
+</ul>
+<p>Example usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">depthai</span> <span class="kn">import</span> <span class="n">NNData</span>
+
+<span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">OakCamera</span>
+<span class="kn">from</span> <span class="nn">depthai_sdk.classes</span> <span class="kn">import</span> <span class="n">Detections</span>
+
+<span class="k">def</span> <span class="nf">decode</span><span class="p">(</span><span class="n">nn_data</span><span class="p">:</span> <span class="n">NNData</span><span class="p">):</span>
+    <span class="n">layer</span> <span class="o">=</span> <span class="n">nn_data</span><span class="o">.</span><span class="n">getFirstLayerFp16</span><span class="p">()</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">layer</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+    <span class="n">dets</span> <span class="o">=</span> <span class="n">Detections</span><span class="p">(</span><span class="n">nn_data</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">result</span> <span class="ow">in</span> <span class="n">results</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="n">dets</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">result</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">result</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">result</span><span class="p">[</span><span class="mi">3</span><span class="p">:])</span>
+
+    <span class="k">return</span> <span class="n">dets</span>
+
+
+<span class="k">def</span> <span class="nf">callback</span><span class="p">(</span><span class="n">packet</span><span class="p">:</span> <span class="n">DetectionPacket</span><span class="p">,</span> <span class="n">visualizer</span><span class="p">:</span> <span class="n">Visualizer</span><span class="p">):</span>
+    <span class="n">detections</span><span class="p">:</span> <span class="n">Detections</span> <span class="o">=</span> <span class="n">packet</span><span class="o">.</span><span class="n">img_detections</span>
+    <span class="o">...</span>
+
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+
+    <span class="n">nn</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_nn</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">decode_fn</span><span class="o">=</span><span class="n">decode</span><span class="p">)</span>
+
+    <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">callback</span><span class="o">=</span><span class="n">callback</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="reference">
+<h3>Reference<a class="headerlink" href="#reference" title="Permalink to this heading">¶</a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">depthai_sdk.components.</span></span><span class="sig-name descname"><span class="pre">NNComponent</span></span><a class="headerlink" href="#depthai_sdk.components.NNComponent" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nn_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracker</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spatial</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="simple">
+<dt>Neural Network component abstracts:</dt><dd><ul class="simple">
+<li><p>DepthAI API nodes: NeuralNetwork, <a href="#id1"><span class="problematic" id="id2">*</span></a>DetectionNetwork, <a href="#id3"><span class="problematic" id="id4">*</span></a>SpatialDetectionNetwork, ObjectTracker</p></li>
+<li><p>Downloading NN models (supported SDK NNs), parsing NN json configs and setting up the pipeline based on it</p></li>
+<li><p>Decoding NN results</p></li>
+<li><p>MultiStage pipelines - cropping high-res frames based on detections and use them for second NN inferencing</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><em>Path</em><em>, </em><em>Dict</em><em>]</em>) – str for SDK supported model / Path to blob or custom model’s json</p></li>
+<li><p><strong>input</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><em>Union</em></a><em>[</em><a class="reference internal" href="camera_component.html#depthai_sdk.components.CameraComponent" title="depthai_sdk.components.camera_component.CameraComponent"><em>CameraComponent</em></a><em>, </em><a class="reference internal" href="#depthai_sdk.components.NNComponent" title="depthai_sdk.components.nn_component.NNComponent"><em>NNComponent</em></a><em>]</em>) – (Union[Component, dai.Node.Output]): Input to the NN. If nn_component that is object detector, crop HQ frame at detections (Script node + ImageManip node)</p></li>
+<li><p><strong>nn_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><em>optional</em>) – Type of the NN - Either ‘Yolo’ or ‘MobileNet’</p></li>
+<li><p><strong>tracker</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><em>default False</em>) – Enable object tracker - only for Object detection models</p></li>
+<li><p><strong>spatial</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><em>default False</em>) – Enable getting Spatial coordinates (XYZ), only for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)</p></li>
+<li><p><strong>replay</strong> (<em>Replay object</em>) – Replay</p></li>
+<li><p><strong>args</strong> (<em>Any</em><em>, </em><em>optional</em>) – Use user defined arguments when constructing the pipeline</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><em>optional</em>) – Name of the output stream</p></li>
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>decode_fn</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a><em>]</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.forced_openvino_version">
+<span class="sig-name descname"><span class="pre">forced_openvino_version</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.forced_openvino_version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks whether the component forces a specific OpenVINO version. This function is called after
+Camera has been configured and right before we connect to the OAK camera.
+&#64;return: Forced OpenVINO version (optional).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.OpenVINO.Version" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Version</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.on_init">
+<span class="sig-name descname"><span class="pre">on_init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">version</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.on_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function will be called after the app connects to the Device</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Device</em></a>) – </p></li>
+<li><p><strong>version</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.OpenVINO.Version" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Version</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.config_multistage_nn">
+<span class="sig-name descname"><span class="pre">config_multistage_nn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">debug</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale_bb</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.config_multistage_nn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configures the MultiStage NN pipeline. Available if the input to this NNComponent is Detection NNComponent.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>debug</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><em>default False</em>) – Debug script node</p></li>
+<li><p><strong>labels</strong> (<em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><em>optional</em>) – Crop &amp; run inference only on objects with these labels</p></li>
+<li><p><strong>scale_bb</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><em>optional</em>) – Scale detection bounding boxes (x, y) before cropping the frame. In %.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.config_tracker">
+<span class="sig-name descname"><span class="pre">config_tracker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tracker_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">track_labels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assignment_policy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_obj</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.config_tracker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure Object Tracker node (if it’s enabled).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tracker_type</strong> (<em>dai.TrackerType</em><em>, </em><em>optional</em>) – Set object tracker type</p></li>
+<li><p><strong>track_labels</strong> (<em>List</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><em>optional</em>) – Set detection labels to track</p></li>
+<li><p><strong>assignment_policy</strong> (<em>dai.TrackerType</em><em>, </em><em>optional</em>) – Set object tracker ID assignment policy</p></li>
+<li><p><strong>max_obj</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><em>optional</em>) – Set max objects to track. Max 60.</p></li>
+<li><p><strong>threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><em>optional</em>) – Set threshold for object detection confidence. Default: 0.0</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.config_yolo_from_metadata">
+<span class="sig-name descname"><span class="pre">config_yolo_from_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">metadata</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.config_yolo_from_metadata" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configures (Spatial) Yolo Detection Network node with a dictionary. Calls config_yolo().</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.11)"><em>Dict</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.config_yolo">
+<span class="sig-name descname"><span class="pre">config_yolo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">num_classes</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coordinate_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">anchors</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masks</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iou_threshold</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">conf_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.config_yolo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configures (Spatial) Yolo Detection Network node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>num_classes</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – </p></li>
+<li><p><strong>coordinate_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – </p></li>
+<li><p><strong>anchors</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>]</em>) – </p></li>
+<li><p><strong>masks</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Dict" title="(in Python v3.11)"><em>Dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>iou_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a>) – </p></li>
+<li><p><strong>conf_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>]</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.config_nn">
+<span class="sig-name descname"><span class="pre">config_nn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">conf_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resize_mode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.config_nn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configures the Detection Network node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>conf_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>]</em>) – (float, optional): Confidence threshold for the detections (0..1]</p></li>
+<li><p><strong>resize_mode</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><em>Union</em></a><em>[</em><em>ResizeMode</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>]</em><em>]</em>) – (ResizeMode, optional): Change aspect ratio resizing mode - to either STRETCH, CROP, or LETTERBOX.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.config_spatial">
+<span class="sig-name descname"><span class="pre">config_spatial</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bb_scale_factor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper_threshold</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calc_algo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.config_spatial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configures the Spatial Detection Network node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bb_scale_factor</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><em>optional</em>) – Specifies scale factor for detected bounding boxes (0..1]</p></li>
+<li><p><strong>lower_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><em>optional</em>) – Specifies lower threshold in depth units (millimeter by default) for depth values which will used to calculate spatial data</p></li>
+<li><p><strong>upper_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><em>optional</em>) – Specifies upper threshold in depth units (millimeter by default) for depth values which will used to calculate spatial data</p></li>
+<li><p><strong>calc_algo</strong> (<em>dai.SpatialLocationCalculatorAlgorithm</em><em>, </em><em>optional</em>) – Specifies spatial location calculator algorithm: Average/Min/Max</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Out</span></span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nn_component</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>nn_component</strong> (<a class="reference internal" href="#depthai_sdk.components.NNComponent" title="depthai_sdk.components.nn_component.NNComponent"><em>NNComponent</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out.main">
+<span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default output. Streams NN results and high-res frames that were downscaled and used for inferencing.
+Produces DetectionPacket or TwoStagePacket (if it’s 2. stage NNComponent).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Device</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><em>XoutBase</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out.passthrough">
+<span class="sig-name descname"><span class="pre">passthrough</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out.passthrough" title="Permalink to this definition">¶</a></dt>
+<dd><p>Default output. Streams NN results and passthrough frames (frames used for inferencing)
+Produces DetectionPacket or TwoStagePacket (if it’s 2. stage NNComponent).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Device</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><em>XoutBase</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out.image_manip">
+<span class="sig-name descname"><span class="pre">image_manip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out.image_manip" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Device</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><em>XoutBase</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out.input">
+<span class="sig-name descname"><span class="pre">input</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out.input" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Device</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><em>XoutBase</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out.spatials">
+<span class="sig-name descname"><span class="pre">spatials</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out.spatials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Streams depth and bounding box mappings (<code class="docutils literal notranslate"><span class="pre">SpatialDetectionNework.boundingBoxMapping</span></code>). Produces SpatialBbMappingPacket.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Device</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><em>XoutSpatialBbMappings</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out.twostage_crops">
+<span class="sig-name descname"><span class="pre">twostage_crops</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out.twostage_crops" title="Permalink to this definition">¶</a></dt>
+<dd><p>Streams 2. stage cropped frames to the host. Produces FramePacket.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Device</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><em>XoutFrames</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out.tracker">
+<span class="sig-name descname"><span class="pre">tracker</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out.tracker" title="Permalink to this definition">¶</a></dt>
+<dd><p>Streams ObjectTracker tracklets and high-res frames that were downscaled and used for inferencing. Produces TrackerPacket.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Device</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><em>XoutTracker</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.components.NNComponent.Out.encoded">
+<span class="sig-name descname"><span class="pre">encoded</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pipeline</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.components.NNComponent.Out.encoded" title="Permalink to this definition">¶</a></dt>
+<dd><p>Streams NN results and encoded frames (frames used for inferencing)
+Produces DetectionPacket or TwoStagePacket (if it’s 2. stage NNComponent).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pipeline</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a>) – </p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Device</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><em>XoutNnResults</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-depthai_sdk.classes.nn_results"></span><p>General (standarized) NN outputs, to be used for higher-level abstractions (eg. automatic visualization of results).
+“SDK supported NN models” will have to have standard NN output, so either dai.ImgDetections, or one of the outputs
+below. If the latter, model json config will incldue handler.py logic for decoding to the standard NN output.
+These will be integrated into depthai-core, bonus points for on-device decoding of some popular models.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.GenericNNOutput">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">depthai_sdk.classes.nn_results.</span></span><span class="sig-name descname"><span class="pre">GenericNNOutput</span></span><a class="headerlink" href="#depthai_sdk.classes.nn_results.GenericNNOutput" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generic NN output, to be used for higher-level abstractions (eg. automatic visualization of results).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.GenericNNOutput.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nn_data</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.classes.nn_results.GenericNNOutput.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>nn_data</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.NNData" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>NNData</em></a>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.Detections">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">depthai_sdk.classes.nn_results.</span></span><span class="sig-name descname"><span class="pre">Detections</span></span><a class="headerlink" href="#depthai_sdk.classes.nn_results.Detections" title="Permalink to this definition">¶</a></dt>
+<dd><p>Detection results containing bounding boxes, labels and confidences. Optionally can contain rotation angles.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.Detections.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nn_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_rotated</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.classes.nn_results.Detections.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nn_data</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.NNData" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>NNData</em></a>) – </p></li>
+<li><p><strong>is_rotated</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.Detections.add">
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">confidence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bbox</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angle</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.classes.nn_results.Detections.add" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – </p></li>
+<li><p><strong>confidence</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a>) – </p></li>
+<li><p><strong>bbox</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.11)"><em>Tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><em>...</em><em>]</em>) – </p></li>
+<li><p><strong>angle</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.SemanticSegmentation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">depthai_sdk.classes.nn_results.</span></span><span class="sig-name descname"><span class="pre">SemanticSegmentation</span></span><a class="headerlink" href="#depthai_sdk.classes.nn_results.SemanticSegmentation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Semantic segmentation results, with a mask for each class.</p>
+<p>Examples: <cite>DeeplabV3</cite>, <cite>Lanenet</cite>, <cite>road-semgentation-adas-0001</cite>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.SemanticSegmentation.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nn_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.classes.nn_results.SemanticSegmentation.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nn_data</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.NNData" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>NNData</em></a>) – </p></li>
+<li><p><strong>mask</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>ndarray</em></a><em>]</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.SemanticSegmentation.mask">
+<span class="sig-name descname"><span class="pre">mask</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#depthai_sdk.classes.nn_results.SemanticSegmentation.mask" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.ImgLandmarks">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">depthai_sdk.classes.nn_results.</span></span><span class="sig-name descname"><span class="pre">ImgLandmarks</span></span><a class="headerlink" href="#depthai_sdk.classes.nn_results.ImgLandmarks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Landmarks results, with a list of landmarks and pairs of landmarks to draw lines between.</p>
+<p>Examples: <cite>human-pose-estimation-0001</cite>, <cite>openpose2</cite>, <cite>facial-landmarks-68</cite>, <cite>landmarks-regression-retail-0009</cite>.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.ImgLandmarks.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nn_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">landmarks</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">landmarks_indices</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pairs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.classes.nn_results.ImgLandmarks.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nn_data</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.NNData" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>NNData</em></a>) – </p></li>
+<li><p><strong>landmarks</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.11)"><em>Any</em></a><em>]</em><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>landmarks_indices</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>pairs</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.11)"><em>Tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>colors</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Tuple" title="(in Python v3.11)"><em>Tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>]</em><em>]</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.InstanceSegmentation">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">depthai_sdk.classes.nn_results.</span></span><span class="sig-name descname"><span class="pre">InstanceSegmentation</span></span><a class="headerlink" href="#depthai_sdk.classes.nn_results.InstanceSegmentation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Instance segmentation results, with a mask for each instance.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.InstanceSegmentation.masks">
+<span class="sig-name descname"><span class="pre">masks</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><span class="pre">ndarray</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#depthai_sdk.classes.nn_results.InstanceSegmentation.masks" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.InstanceSegmentation.labels">
+<span class="sig-name descname"><span class="pre">labels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><span class="pre">int</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#depthai_sdk.classes.nn_results.InstanceSegmentation.labels" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.classes.nn_results.InstanceSegmentation.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">nn_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">masks</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.classes.nn_results.InstanceSegmentation.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>nn_data</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.NNData" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>NNData</em></a>) – </p></li>
+<li><p><strong>masks</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>ndarray</em></a><em>]</em>) – </p></li>
+<li><p><strong>labels</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="stereo_component.html" class="btn btn-neutral float-right" title="StereoComponent" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="imu_component.html" class="btn btn-neutral float-left" title="IMUComponent" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright @build_year@, Luxonis
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

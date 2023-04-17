@@ -1,0 +1,24 @@
+Code Samples
+============
+
+.. toctree::
+   :hidden:
+   :glob:
+
+   ../samples/ColorCamera/*
+   ../samples/VideoEncoder/*
+   
+
+Code samples are used for automated testing. They are also a great starting point for the DepthAI API, as different node functionalities
+are presented with code.
+
+
+.. rubric:: ColorCamera
+
+- :ref:`Auto Exposure on ROI` - Demonstrates how to use auto exposure based on the selected ROI
+- :ref:`RGB Camera Control` - Demonstrates how to control the RGB camera (crop, focus, exposure, sensitivity) from the host
+
+.. rubric:: VideoEncoder
+
+- :ref:`RGB Encoding` - Encodes RGB (1080P, 30FPS) into :code:`.h265` and saves it on the host
+- :ref:`RGB & Mono Encoding`- Encodes RGB (1080P, 30FPS) and both mono streams (720P, 30FPS) into :code:`.h265`/:code:`.h264` and saves them on the host

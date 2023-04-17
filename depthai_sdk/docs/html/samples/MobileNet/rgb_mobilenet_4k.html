@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RGB &amp; MobileNetSSD @ 4K &mdash; DepthAI SDK Docs 1.9.2 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/index.css" type="text/css" />
+      <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+    <link rel="shortcut icon" href="../../_static/favicon.png"/>
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="Video &amp; MobilenetSSD" href="video_mobilenet.html" />
+    <link rel="prev" title="RGB &amp; MobilenetSSD" href="rgb_mobilenet.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            DepthAI SDK Docs
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Home:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">DepthAI SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../oak-camera.html">OakCamera</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../oak-camera.html#interoperability-with-depthai-api">Interoperability with DepthAI API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../oak-camera.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#preview-color-and-mono-cameras">Preview color and mono cameras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#run-mobilenetssd-on-color-camera">Run MobilenetSSD on color camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#run-face-detection-retail-0004-on-left-camera">Run face-detection-retail-0004 on left camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">Deploy models from Roboflow and Roboflow Universe with Depth SDK</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../oak-camera.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../features/ai_models.html">AI models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/ai_models.html#sdk-supported-models">SDK supported models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/components.html">Components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/components.html#depthai_sdk.components.Component"><code class="docutils literal notranslate"><span class="pre">Component</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/components.html#depthai_sdk.components.Component.forced_openvino_version"><code class="docutils literal notranslate"><span class="pre">Component.forced_openvino_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/components.html#depthai_sdk.components.Component.on_init"><code class="docutils literal notranslate"><span class="pre">Component.on_init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/camera_component.html">CameraComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/camera_component.html#depthai_sdk.components.CameraComponent"><code class="docutils literal notranslate"><span class="pre">CameraComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/imu_component.html">IMUComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/imu_component.html#depthai_sdk.components.IMUComponent"><code class="docutils literal notranslate"><span class="pre">IMUComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/nn_component.html">NNComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/nn_component.html#depthai-api-nodes">DepthAI API nodes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#decoding-outputs">Decoding outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/stereo_component.html">StereoComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/stereo_component.html#depthai_sdk.components.StereoComponent"><code class="docutils literal notranslate"><span class="pre">StereoComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/packets.html">Packets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/packets.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/packets.html#reference">Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#framepacket">FramePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.FramePacket"><code class="docutils literal notranslate"><span class="pre">FramePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#spatialbbmappingpacket">SpatialBbMappingPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.SpatialBbMappingPacket"><code class="docutils literal notranslate"><span class="pre">SpatialBbMappingPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#detectionpacket">DetectionPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.DetectionPacket"><code class="docutils literal notranslate"><span class="pre">DetectionPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#depthpacket">DepthPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.DepthPacket"><code class="docutils literal notranslate"><span class="pre">DepthPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#trackerpacket">TrackerPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.TrackerPacket"><code class="docutils literal notranslate"><span class="pre">TrackerPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#twostagepacket">TwoStagePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.TwoStagePacket"><code class="docutils literal notranslate"><span class="pre">TwoStagePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#imupacket">IMUPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.IMUPacket"><code class="docutils literal notranslate"><span class="pre">IMUPacket</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/recording.html">Recording</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/recording.html#supported-recording-types">Supported recording types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#video">1. Video</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#rosbag">2. Rosbag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#mcap-recording">3. MCAP recording</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/replaying.html">Replaying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#replaying-support">Replaying support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#replaying-a-depthai-recording">Replaying a depthai-recording</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#public-depthai-recordings">Public depthai-recordings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/visualizer.html">Visualizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#flow">Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#configs">Configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#create-your-own-object">Create your own object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#example-usage">Example usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#references">References</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id1">Visualizer</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.visualizer.Visualizer"><code class="docutils literal notranslate"><span class="pre">Visualizer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.visualizer.Platform"><code class="docutils literal notranslate"><span class="pre">Platform</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id2">Objects</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.GenericObject"><code class="docutils literal notranslate"><span class="pre">GenericObject</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.VisDetections"><code class="docutils literal notranslate"><span class="pre">VisDetections</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.VisText"><code class="docutils literal notranslate"><span class="pre">VisText</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.VisLine"><code class="docutils literal notranslate"><span class="pre">VisLine</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.VisTrail"><code class="docutils literal notranslate"><span class="pre">VisTrail</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id3">Configs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.TextPosition"><code class="docutils literal notranslate"><span class="pre">TextPosition</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.BboxStyle"><code class="docutils literal notranslate"><span class="pre">BboxStyle</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.StereoColor"><code class="docutils literal notranslate"><span class="pre">StereoColor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.OutputConfig"><code class="docutils literal notranslate"><span class="pre">OutputConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.StereoConfig"><code class="docutils literal notranslate"><span class="pre">StereoConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.DetectionConfig"><code class="docutils literal notranslate"><span class="pre">DetectionConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.TextConfig"><code class="docutils literal notranslate"><span class="pre">TextConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.TrackingConfig"><code class="docutils literal notranslate"><span class="pre">TrackingConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.SegmentationConfig"><code class="docutils literal notranslate"><span class="pre">SegmentationConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.CircleConfig"><code class="docutils literal notranslate"><span class="pre">CircleConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.VisConfig"><code class="docutils literal notranslate"><span class="pre">VisConfig</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code samples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../tutorials/code_samples.html">Code Samples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../bootloader/bootloader_config.html">Bootloader Config</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/bootloader_config.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/bootloader_config.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/bootloader_config.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../bootloader/bootloader_version.html">Bootloader Version</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/bootloader_version.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/bootloader_version.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/bootloader_version.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../bootloader/flash_bootloader.html">Flash Bootloader</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/flash_bootloader.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/flash_bootloader.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/flash_bootloader.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../bootloader/poe_set_ip.html">POE set IP</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/poe_set_ip.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/poe_set_ip.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../bootloader/poe_set_ip.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../calibration/calibration_flash.html">Calibration Flash</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../calibration/calibration_flash.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../calibration/calibration_flash.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../calibration/calibration_flash.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../calibration/calibration_flash_v5.html">Calibration Flash v5</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../calibration/calibration_flash_v5.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../calibration/calibration_flash_v5.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../calibration/calibration_load.html">Calibration Load</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../calibration/calibration_load.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../calibration/calibration_load.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../calibration/calibration_reader.html">Calibration Reader</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../calibration/calibration_reader.html#camera-intrinsics">Camera intrinsics</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../calibration/calibration_reader.html#setup">Setup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../calibration/calibration_reader.html#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ColorCamera/autoexposure_roi.html">Auto Exposure on ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/autoexposure_roi.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/autoexposure_roi.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/autoexposure_roi.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ColorCamera/rgb_camera_control.html">RGB Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ColorCamera/rgb_preview.html">RGB Preview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_preview.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_preview.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_preview.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ColorCamera/rgb_scene.html">RGB scene</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_scene.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_scene.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_scene.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ColorCamera/rgb_video.html">RGB video</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_video.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_video.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_video.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../EdgeDetector/edge_detector.html">Edge Detector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../EdgeDetector/edge_detector.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../EdgeDetector/edge_detector.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../EdgeDetector/edge_detector.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../FeatureTracker/feature_detector.html">Feature Detector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../FeatureTracker/feature_detector.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../FeatureTracker/feature_detector.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../FeatureTracker/feature_detector.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../FeatureTracker/feature_tracker.html">Feature Tracker</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../FeatureTracker/feature_tracker.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../FeatureTracker/feature_tracker.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../FeatureTracker/feature_tracker.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../host_side/device_information.html">Device information</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/device_information.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/device_information.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/device_information.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../host_side/device_queue_event.html">Device Queue Event</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/device_queue_event.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/device_queue_event.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/device_queue_event.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../host_side/latency_measurement.html">Latency measurement</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/latency_measurement.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/latency_measurement.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/latency_measurement.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../host_side/opencv_support.html">OpenCV support</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/opencv_support.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/opencv_support.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/opencv_support.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../host_side/queue_add_callback.html">Queue add callback</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/queue_add_callback.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/queue_add_callback.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../host_side/queue_add_callback.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ImageManip/image_manip_rotate.html">ImageManip Rotate</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ImageManip/image_manip_rotate.html#demos">Demos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ImageManip/image_manip_rotate.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ImageManip/image_manip_rotate.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ImageManip/image_manip_tiling.html">ImageManip Tiling</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ImageManip/image_manip_tiling.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ImageManip/image_manip_tiling.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ImageManip/image_manip_tiling.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ImageManip/rgb_rotate_warp.html">RGB Rotate Warp</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ImageManip/rgb_rotate_warp.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ImageManip/rgb_rotate_warp.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ImageManip/rgb_rotate_warp.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../IMU/imu_accelerometer_gyroscope.html">IMU Accelerometer &amp; Gyroscope</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../IMU/imu_accelerometer_gyroscope.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../IMU/imu_accelerometer_gyroscope.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../IMU/imu_accelerometer_gyroscope.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../IMU/imu_rotation_vector.html">IMU Rotation Vector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../IMU/imu_rotation_vector.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../IMU/imu_rotation_vector.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../IMU/imu_rotation_vector.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/frame_sync.html">Frame syncing on OAK</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/frame_sync.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/frame_sync.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/frame_sync.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/mono_depth_mobilenetssd.html">Mono &amp; MobilenetSSD &amp; Depth</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/mono_depth_mobilenetssd.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/mono_depth_mobilenetssd.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/mono_depth_mobilenetssd.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/multiple_devices.html">Multiple devices</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/multiple_devices.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/multiple_devices.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/multiple_devices.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html">RGB Encoding &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html">RGB Encoding &amp; Mono &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet_depth.html">RGB Encoding &amp; Mono with MobilenetSSD &amp; Depth</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet_depth.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet_depth.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet_depth.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/rotated_spatial_detections.html">Spatial detections on rotated OAK</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rotated_spatial_detections.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rotated_spatial_detections.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="mono_mobilenet.html">Mono &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="mono_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mono_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mono_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rgb_mobilenet.html">RGB &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rgb_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rgb_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rgb_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">RGB &amp; MobileNetSSD &#64; 4K</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="video_mobilenet.html">Video &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="video_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="video_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="video_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../MonoCamera/mono_camera_control.html">Mono Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../MonoCamera/mono_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../MonoCamera/mono_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../MonoCamera/mono_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../MonoCamera/mono_full_resolution_saver.html">Mono Full Resolution Saver</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../MonoCamera/mono_full_resolution_saver.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../MonoCamera/mono_full_resolution_saver.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../MonoCamera/mono_full_resolution_saver.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../MonoCamera/mono_preview.html">Mono Preview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../MonoCamera/mono_preview.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../MonoCamera/mono_preview.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../MonoCamera/mono_preview.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../NeuralNetwork/concat_multi_input.html">Multi-Input Frame Concationation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../NeuralNetwork/concat_multi_input.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../NeuralNetwork/concat_multi_input.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../NeuralNetwork/concat_multi_input.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../NeuralNetwork/normalization_multi_input.html">Frame Normalization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../NeuralNetwork/normalization_multi_input.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../NeuralNetwork/normalization_multi_input.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ObjectTracker/object_tracker.html">Object tracker on RGB</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ObjectTracker/object_tracker.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ObjectTracker/object_tracker.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ObjectTracker/object_tracker.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ObjectTracker/object_tracker_video.html">Object tracker on video</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ObjectTracker/object_tracker_video.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ObjectTracker/object_tracker_video.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ObjectTracker/object_tracker_video.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ObjectTracker/spatial_object_tracker.html">Spatial object tracker on RGB</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ObjectTracker/spatial_object_tracker.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ObjectTracker/spatial_object_tracker.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ObjectTracker/spatial_object_tracker.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Script/script_camera_control.html">Script camera control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Script/script_change_pipeline_flow.html">Script change pipeline flow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_change_pipeline_flow.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_change_pipeline_flow.html#pipeline-graph">Pipeline Graph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_change_pipeline_flow.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_change_pipeline_flow.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Script/script_forward_frames.html">Script forward frames</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_forward_frames.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_forward_frames.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_forward_frames.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Script/script_get_ip.html">Script get local IP</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_get_ip.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_get_ip.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_get_ip.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Script/script_http_client.html">Script HTTP client</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_http_client.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_http_client.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_http_client.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Script/script_http_server.html">Script HTTP server</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_http_server.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_http_server.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_http_server.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Script/script_json_communication.html">Script JSON communication</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_json_communication.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_json_communication.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_json_communication.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Script/script_mjpeg_server.html">Script MJPEG server</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_mjpeg_server.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_mjpeg_server.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_mjpeg_server.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Script/script_nndata_example.html">Script NNData example</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_nndata_example.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_nndata_example.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Script/script_nndata_example.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../SpatialDetection/spatial_calculator_multi_roi.html">Spatial Calculator Multi-ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_calculator_multi_roi.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_calculator_multi_roi.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_calculator_multi_roi.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../SpatialDetection/spatial_location_calculator.html">Spatial location calculator</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_location_calculator.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_location_calculator.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_location_calculator.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../SpatialDetection/spatial_mobilenet.html">RGB &amp; MobilenetSSD with spatial data</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../SpatialDetection/spatial_mobilenet_mono.html">Mono &amp; MobilenetSSD with spatial data</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_mobilenet_mono.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_mobilenet_mono.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_mobilenet_mono.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../SpatialDetection/spatial_tiny_yolo.html">RGB &amp; TinyYolo with spatial data</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_tiny_yolo.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_tiny_yolo.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SpatialDetection/spatial_tiny_yolo.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../StereoDepth/depth_crop_control.html">Depth Crop Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_crop_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_crop_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_crop_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../StereoDepth/depth_post_processing.html">Depth Post-Processing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_post_processing.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_post_processing.html#depth-filters">Depth filters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_post_processing.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_post_processing.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../StereoDepth/depth_preview.html">Depth Preview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_preview.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_preview.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/depth_preview.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../StereoDepth/rgb_depth_aligned.html">RGB Depth alignment</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/rgb_depth_aligned.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/rgb_depth_aligned.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/rgb_depth_aligned.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../StereoDepth/stereo_depth_from_host.html">Stereo Depth from host</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/stereo_depth_from_host.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/stereo_depth_from_host.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../StereoDepth/stereo_depth_video.html">Stereo Depth Video</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/stereo_depth_video.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../StereoDepth/stereo_depth_video.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../SystemLogger/system_information.html">System information</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../SystemLogger/system_information.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SystemLogger/system_information.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../SystemLogger/system_information.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../VideoEncoder/disparity_encoding.html">Disparity encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/disparity_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/disparity_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/disparity_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../VideoEncoder/encoding_max_limit.html">Encoding Max Limit</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/encoding_max_limit.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/encoding_max_limit.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/encoding_max_limit.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../VideoEncoder/rgb_encoding.html">RGB Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/rgb_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/rgb_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/rgb_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../VideoEncoder/rgb_full_resolution_saver.html">RGB Full Resolution Saver</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/rgb_full_resolution_saver.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/rgb_full_resolution_saver.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/rgb_full_resolution_saver.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../VideoEncoder/rgb_mono_encoding.html">RGB &amp; Mono Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/rgb_mono_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/rgb_mono_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../VideoEncoder/rgb_mono_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Warp/warp_mesh.html">Warp Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Warp/warp_mesh.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Warp/warp_mesh.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Warp/warp_mesh.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Warp/warp_mesh_interactive.html">Interactive Warp Mesh</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Warp/warp_mesh_interactive.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Warp/warp_mesh_interactive.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Warp/warp_mesh_interactive.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../Yolo/tiny_yolo.html">RGB &amp; Tiny YOLO</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../Yolo/tiny_yolo.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Yolo/tiny_yolo.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../Yolo/tiny_yolo.html#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DepthAI SDK Docs</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../tutorials/code_samples.html">Code Samples</a></li>
+      <li class="breadcrumb-item active">RGB &amp; MobileNetSSD &#64; 4K</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/samples/MobileNet/rgb_mobilenet_4k.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="rgb-mobilenetssd-4k">
+<h1>RGB &amp; MobileNetSSD &#64; 4K<a class="headerlink" href="#rgb-mobilenetssd-4k" title="Permalink to this heading"></a></h1>
+<p>This example shows how to run MobileNetv2SSD on the RGB input frame, and how to display both the RGB
+preview and the metadata results from the MobileNetv2SSD on the preview.
+The preview size is set to 4K resolution.</p>
+<p>It’s a variation of <a class="reference internal" href="rgb_mobilenet.html#rgb-mobilenetssd"><span class="std std-ref">RGB &amp; MobilenetSSD</span></a>.</p>
+<p class="rubric">Similar samples:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="rgb_mobilenet.html#rgb-mobilenetssd"><span class="std std-ref">RGB &amp; MobilenetSSD</span></a></p></li>
+<li><p><a class="reference internal" href="mono_mobilenet.html#mono-mobilenetssd"><span class="std std-ref">Mono &amp; MobilenetSSD</span></a></p></li>
+<li><p><a class="reference internal" href="video_mobilenet.html#video-mobilenetssd"><span class="std std-ref">Video &amp; MobilenetSSD</span></a></p></li>
+<li><p><a class="reference internal" href="../mixed/mono_depth_mobilenetssd.html#mono-mobilenetssd-depth"><span class="std std-ref">Mono &amp; MobilenetSSD &amp; Depth</span></a></p></li>
+</ul>
+<section id="demo">
+<h2>Demo<a class="headerlink" href="#demo" title="Permalink to this heading"></a></h2>
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; height: auto;">
+    <iframe src="https://www.youtube.com/embed/4CWPVCeynw8" frameborder="0" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>
+</div></section>
+<section id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this heading"></a></h2>
+</section>
+<section id="source-code">
+<h2>Source code<a class="headerlink" href="#source-code" title="Permalink to this heading"></a></h2>
+<h2>Got questions?</h2><p>We’re always happy to help with development or other questions you might have.</p>
+<div class="cta-row cta-row-short">
+    <div class="cta-box">
+       <a href="https://luxonis.com/discord">
+          <img src="/_images/discord.png" alt="Discord"/>
+          <h5 class="cta-title">Community Discord</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="https://discuss.luxonis.com/">
+          <img src="/_images/forum.png" alt="forum"/>
+          <h5 class="cta-title">Discussion Forum</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="mailto:support@luxonis.com">
+          <img src="/_images/email.png" alt="forum"/>
+          <h5 class="cta-title">Email</h5>
+       </a>
+    </div>
+ </div></section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="rgb_mobilenet.html" class="btn btn-neutral float-left" title="RGB &amp; MobilenetSSD" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="video_mobilenet.html" class="btn btn-neutral float-right" title="Video &amp; MobilenetSSD" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright @build_year@, Luxonis.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

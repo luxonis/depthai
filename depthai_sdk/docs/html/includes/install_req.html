@@ -1,0 +1,346 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>&lt;no title&gt; &mdash; DepthAI SDK Docs 1.9.2 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/sphinx_tabs/semantic-ui-2.4.1/segment.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/sphinx_tabs/semantic-ui-2.4.1/menu.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/sphinx_tabs/semantic-ui-2.4.1/tab.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/sphinx_tabs/tabs.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/index.css" type="text/css" />
+  <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> DepthAI SDK Docs
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Home:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">DepthAI SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../oak-camera.html">OakCamera</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../oak-camera.html#interoperability-with-depthai-api">Interoperability with DepthAI API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../oak-camera.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#preview-color-and-mono-cameras">Preview color and mono cameras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#run-mobilenetssd-on-color-camera">Run MobilenetSSD on color camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#run-face-detection-retail-0004-on-left-camera">Run face-detection-retail-0004 on left camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">Deploy models from Roboflow and Roboflow Universe with Depth SDK</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../oak-camera.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../features/ai_models.html">AI models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/ai_models.html#sdk-supported-models">SDK supported models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../features/components.html">Components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../components/camera_component.html">CameraComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/camera_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/camera_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/camera_component.html#reference">Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/imu_component.html">IMUComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/imu_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/imu_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/imu_component.html#reference">Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/nn_component.html">NNComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/nn_component.html#depthai-api-nodes">DepthAI API nodes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#decoding-outputs">Decoding outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/stereo_component.html">StereoComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/stereo_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/stereo_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/stereo_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../features/packets.html">Packets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/packets.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/packets.html#reference">Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#framepacket">FramePacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#spatialbbmappingpacket">SpatialBbMappingPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#detectionpacket">DetectionPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#depthpacket">DepthPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#trackerpacket">TrackerPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#twostagepacket">TwoStagePacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/packets.html#imupacket">IMUPacket</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../features/recording.html">Recording</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/recording.html#supported-recording-types">Supported recording types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../features/recording.html#video">1. Video</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/recording.html#rosbag">2. Rosbag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/recording.html#mcap-recording">3. MCAP recording</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../features/replaying.html">Replaying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/replaying.html#replaying-support">Replaying support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/replaying.html#replaying-a-depthai-recording">Replaying a depthai-recording</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/replaying.html#public-depthai-recordings">Public depthai-recordings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../features/visualizer.html">Visualizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#flow">Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#configs">Configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#create-your-own-object">Create your own object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#example-usage">Example usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features/visualizer.html#references">References</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../features/visualizer.html#id1">Visualizer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/visualizer.html#id2">Objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../features/visualizer.html#id3">Configs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Code samples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/code_samples.html">Code Samples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html">Auto Exposure on ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html">RGB Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/mixed/rgb_encoding_mobilenet.html">RGB Encoding &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/mixed/rgb_encoding_mono_mobilenet.html">RGB Encoding &amp; Mono &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mono_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mono_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mono_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/EdgeDetector/edge_detector.html">Edge Detector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/EdgeDetector/edge_detector.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/EdgeDetector/edge_detector.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/EdgeDetector/edge_detector.html#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DepthAI SDK Docs</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>&lt;no title&gt;</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/includes/install_req.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <p>This example script <strong>requires external file(s) to run</strong>. If you are using:</p>
+<ul class="simple">
+<li><p>depthai-python, run <code class="code docutils literal notranslate"><span class="pre">python3</span> <span class="pre">examples/install_requirements.py</span></code> to download required file(s)</p></li>
+<li><p>dephtai-core, required file(s) will get downloaded automatically when building the example</p></li>
+</ul>
+
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright @build_year@, Luxonis.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

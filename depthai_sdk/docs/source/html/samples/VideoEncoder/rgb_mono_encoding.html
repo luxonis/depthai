@@ -1,0 +1,467 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>RGB &amp; Mono Encoding &mdash; DepthAI SDK Docs 1.9.2 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/index.css" type="text/css" />
+  <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/favicon.png"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="prev" title="RGB Encoding" href="rgb_encoding.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home" alt="Documentation Home"> DepthAI SDK Docs
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Home:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">DepthAI SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../oak-camera.html">OakCamera</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../oak-camera.html#interoperability-with-depthai-api">Interoperability with DepthAI API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../oak-camera.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#preview-color-and-mono-cameras">Preview color and mono cameras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#run-mobilenetssd-on-color-camera">Run MobilenetSSD on color camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#run-face-detection-retail-0004-on-left-camera">Run face-detection-retail-0004 on left camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">Deploy models from Roboflow and Roboflow Universe with Depth SDK</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../oak-camera.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../features/ai_models.html">AI models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/ai_models.html#sdk-supported-models">SDK supported models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/components.html">Components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/components.html#depthai_sdk.components.Component"><code class="docutils literal notranslate"><span class="pre">Component</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/components.html#depthai_sdk.components.Component.forced_openvino_version"><code class="docutils literal notranslate"><span class="pre">Component.forced_openvino_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/components.html#depthai_sdk.components.Component.on_init"><code class="docutils literal notranslate"><span class="pre">Component.on_init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/camera_component.html">CameraComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/camera_component.html#depthai_sdk.components.CameraComponent"><code class="docutils literal notranslate"><span class="pre">CameraComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/imu_component.html">IMUComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/imu_component.html#depthai_sdk.components.IMUComponent"><code class="docutils literal notranslate"><span class="pre">IMUComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/nn_component.html">NNComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/nn_component.html#depthai-api-nodes">DepthAI API nodes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#decoding-outputs">Decoding outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/stereo_component.html">StereoComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/stereo_component.html#depthai_sdk.components.StereoComponent"><code class="docutils literal notranslate"><span class="pre">StereoComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/packets.html">Packets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/packets.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/packets.html#reference">Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#framepacket">FramePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.FramePacket"><code class="docutils literal notranslate"><span class="pre">FramePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#spatialbbmappingpacket">SpatialBbMappingPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.SpatialBbMappingPacket"><code class="docutils literal notranslate"><span class="pre">SpatialBbMappingPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#detectionpacket">DetectionPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.DetectionPacket"><code class="docutils literal notranslate"><span class="pre">DetectionPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#depthpacket">DepthPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.DepthPacket"><code class="docutils literal notranslate"><span class="pre">DepthPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#trackerpacket">TrackerPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.TrackerPacket"><code class="docutils literal notranslate"><span class="pre">TrackerPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#twostagepacket">TwoStagePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.TwoStagePacket"><code class="docutils literal notranslate"><span class="pre">TwoStagePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#imupacket">IMUPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/packets.html#depthai_sdk.classes.packets.IMUPacket"><code class="docutils literal notranslate"><span class="pre">IMUPacket</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/recording.html">Recording</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/recording.html#supported-recording-types">Supported recording types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#video">1. Video</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#rosbag">2. Rosbag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#mcap-recording">3. MCAP recording</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/replaying.html">Replaying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#replaying-support">Replaying support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#replaying-a-depthai-recording">Replaying a depthai-recording</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#public-depthai-recordings">Public depthai-recordings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/visualizer.html">Visualizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#flow">Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#configs">Configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#create-your-own-object">Create your own object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#example-usage">Example usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#references">References</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id1">Visualizer</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.visualizer.Visualizer"><code class="docutils literal notranslate"><span class="pre">Visualizer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.visualizer.Platform"><code class="docutils literal notranslate"><span class="pre">Platform</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id2">Objects</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.GenericObject"><code class="docutils literal notranslate"><span class="pre">GenericObject</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.VisDetections"><code class="docutils literal notranslate"><span class="pre">VisDetections</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.VisText"><code class="docutils literal notranslate"><span class="pre">VisText</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.VisLine"><code class="docutils literal notranslate"><span class="pre">VisLine</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.objects.VisTrail"><code class="docutils literal notranslate"><span class="pre">VisTrail</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id3">Configs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.TextPosition"><code class="docutils literal notranslate"><span class="pre">TextPosition</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.BboxStyle"><code class="docutils literal notranslate"><span class="pre">BboxStyle</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.StereoColor"><code class="docutils literal notranslate"><span class="pre">StereoColor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.OutputConfig"><code class="docutils literal notranslate"><span class="pre">OutputConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.StereoConfig"><code class="docutils literal notranslate"><span class="pre">StereoConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.DetectionConfig"><code class="docutils literal notranslate"><span class="pre">DetectionConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.TextConfig"><code class="docutils literal notranslate"><span class="pre">TextConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.TrackingConfig"><code class="docutils literal notranslate"><span class="pre">TrackingConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.SegmentationConfig"><code class="docutils literal notranslate"><span class="pre">SegmentationConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.CircleConfig"><code class="docutils literal notranslate"><span class="pre">CircleConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../features/visualizer.html#depthai_sdk.visualize.configs.VisConfig"><code class="docutils literal notranslate"><span class="pre">VisConfig</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code samples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../tutorials/code_samples.html">Code Samples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../ColorCamera/autoexposure_roi.html">Auto Exposure on ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/autoexposure_roi.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/autoexposure_roi.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/autoexposure_roi.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../ColorCamera/rgb_camera_control.html">RGB Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../ColorCamera/rgb_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rgb_encoding.html">RGB Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rgb_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rgb_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rgb_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">RGB &amp; Mono Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DepthAI SDK Docs</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../tutorials/code_samples.html">Code Samples</a> &raquo;</li>
+        
+      <li>RGB &amp; Mono Encoding</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/samples/VideoEncoder/rgb_mono_encoding.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="rgb-mono-encoding">
+<h1>RGB &amp; Mono Encoding<a class="headerlink" href="#rgb-mono-encoding" title="Permalink to this heading">¶</a></h1>
+<p>This example shows how to set up the encoder node to encode the RGB camera and both grayscale cameras
+(of DepthAI/OAK-D) at the same time. The RGB is set to 1920x1080 and the grayscale are set to 1280x720
+each, all at 30FPS. Each encoded video stream is transferred over XLINK and saved to a respective file.</p>
+<p>Pressing Ctrl+C will stop the recording and then convert it using ffmpeg into an mp4 to make it
+playable. Note that ffmpeg will need to be installed and runnable for the conversion to mp4 to succeed.</p>
+<p>Be careful, this example saves encoded video to your host storage. So if you leave it running,
+you could fill up your storage on your host.</p>
+<p class="rubric">Similar samples:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="rgb_encoding.html#rgb-encoding"><span class="std std-ref">RGB Encoding</span></a></p></li>
+<li><p><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/samples/VideoEncoder/encoding_max_limit/#encoding-max-limit" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><span>Encoding Max Limit</span></a></p></li>
+<li><p><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/samples/mixed/rgb_encoding_mobilenet/#rgb-encoding-mobilenetssd" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><span>RGB Encoding &amp; MobilenetSSD</span></a></p></li>
+<li><p><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/samples/mixed/rgb_encoding_mono_mobilenet/#rgb-encoding-mono-mobilenetssd" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><span>RGB Encoding &amp; Mono &amp; MobilenetSSD</span></a></p></li>
+<li><p><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/samples/mixed/rgb_encoding_mono_mobilenet_depth/#rgb-encoding-mono-with-mobilenetssd-depth" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><span>RGB Encoding &amp; Mono with MobilenetSSD &amp; Depth</span></a></p></li>
+</ul>
+<p>Encoded bitstream (either MJPEG, H264, or H265) from the device can also be <strong>saved directly into .mp4 container</strong>
+with no computational overhead on the host computer. See <a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-container-encoding">demo here</a>
+for more information.</p>
+<p><strong>Matroska</strong></p>
+<p>Besides <code class="docutils literal notranslate"><span class="pre">ffmpeg</span></code> and <code class="docutils literal notranslate"><span class="pre">.mp4</span></code> video container (which is patent encumbered), you could also use the <code class="docutils literal notranslate"><span class="pre">mkvmerge</span></code>
+(see <a class="reference external" href="https://mkvtoolnix.download/doc/mkvmerge.html">MKVToolNix</a> for GUI usage) and <code class="docutils literal notranslate"><span class="pre">.mkv</span></code> video container
+to mux encoded stream into video file that is supported by all major video players
+(eg. <a class="reference external" href="https://www.videolan.org/vlc/">VLC</a>)</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mkvmerge</span> <span class="o">-</span><span class="n">o</span> <span class="n">vid</span><span class="o">.</span><span class="n">mkv</span> <span class="n">video</span><span class="o">.</span><span class="n">h265</span>
+</pre></div>
+</div>
+<section id="demo">
+<h2>Demo<a class="headerlink" href="#demo" title="Permalink to this heading">¶</a></h2>
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; height: auto;">
+    <iframe src="https://www.youtube.com/embed/DWlkMjjH68M" frameborder="0" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>
+</div></section>
+<section id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this heading">¶</a></h2>
+<p>Please run the <a class="reference external" href="https://github.com/luxonis/depthai-python/blob/main/examples/install_requirements.py">install script</a>
+to download all required dependencies. Please note that this script must be ran from git context, so you have to download the <a class="reference external" href="https://github.com/luxonis/depthai-python">depthai-python</a> repository first and then run the script</p>
+<p>For additional information, please follow <a class="reference internal" href="../../index.html#installation"><span class="std std-ref">installation guide</span></a></p>
+</section>
+<section id="source-code">
+<h2>Source code<a class="headerlink" href="#source-code" title="Permalink to this heading">¶</a></h2>
+<h2>Got questions?</h2><p>We’re always happy to help with development or other questions you might have.</p>
+<div class="cta-row cta-row-short">
+    <div class="cta-box">
+       <a href="https://luxonis.com/discord">
+          <img src="/_images/discord.png" alt="Discord"/>
+          <h5 class="cta-title">Community Discord</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="https://discuss.luxonis.com/">
+          <img src="/_images/forum.png" alt="forum"/>
+          <h5 class="cta-title">Discussion Forum</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="mailto:support@luxonis.com">
+          <img src="/_images/email.png" alt="forum"/>
+          <h5 class="cta-title">Email</h5>
+       </a>
+    </div>
+ </div></section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="rgb_encoding.html" class="btn btn-neutral float-left" title="RGB Encoding" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright @build_year@, Luxonis
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

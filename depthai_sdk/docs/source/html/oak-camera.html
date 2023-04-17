@@ -1,0 +1,832 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>OakCamera &mdash; DepthAI SDK Docs 1.9.2 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/css/index.css" type="text/css" />
+  <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="_static/favicon.png"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="AI models" href="features/ai_models.html" />
+    <link rel="prev" title="DepthAI SDK" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> DepthAI SDK Docs
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Home:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">DepthAI SDK</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">OakCamera</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#interoperability-with-depthai-api">Interoperability with DepthAI API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#preview-color-and-mono-cameras">Preview color and mono cameras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-mobilenetssd-on-color-camera">Run MobilenetSSD on color camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#run-face-detection-retail-0004-on-left-camera">Run face-detection-retail-0004 on left camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">Deploy models from Roboflow and Roboflow Universe with Depth SDK</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="features/ai_models.html">AI models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/ai_models.html#sdk-supported-models">SDK supported models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/components.html">Components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/components.html#depthai_sdk.components.Component"><code class="docutils literal notranslate"><span class="pre">Component</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="features/components.html#depthai_sdk.components.Component.forced_openvino_version"><code class="docutils literal notranslate"><span class="pre">Component.forced_openvino_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="features/components.html#depthai_sdk.components.Component.on_init"><code class="docutils literal notranslate"><span class="pre">Component.on_init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="components/camera_component.html">CameraComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="components/camera_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="components/camera_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="components/camera_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="components/camera_component.html#depthai_sdk.components.CameraComponent"><code class="docutils literal notranslate"><span class="pre">CameraComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="components/imu_component.html">IMUComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="components/imu_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="components/imu_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="components/imu_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="components/imu_component.html#depthai_sdk.components.IMUComponent"><code class="docutils literal notranslate"><span class="pre">IMUComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="components/nn_component.html">NNComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="components/nn_component.html#depthai-api-nodes">DepthAI API nodes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="components/nn_component.html#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="components/nn_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="components/nn_component.html#decoding-outputs">Decoding outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="components/nn_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="components/stereo_component.html">StereoComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="components/stereo_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="components/stereo_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="components/stereo_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="components/stereo_component.html#depthai_sdk.components.StereoComponent"><code class="docutils literal notranslate"><span class="pre">StereoComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/packets.html">Packets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/packets.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/packets.html#reference">Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="features/packets.html#framepacket">FramePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/packets.html#depthai_sdk.classes.packets.FramePacket"><code class="docutils literal notranslate"><span class="pre">FramePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="features/packets.html#spatialbbmappingpacket">SpatialBbMappingPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/packets.html#depthai_sdk.classes.packets.SpatialBbMappingPacket"><code class="docutils literal notranslate"><span class="pre">SpatialBbMappingPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="features/packets.html#detectionpacket">DetectionPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/packets.html#depthai_sdk.classes.packets.DetectionPacket"><code class="docutils literal notranslate"><span class="pre">DetectionPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="features/packets.html#depthpacket">DepthPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/packets.html#depthai_sdk.classes.packets.DepthPacket"><code class="docutils literal notranslate"><span class="pre">DepthPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="features/packets.html#trackerpacket">TrackerPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/packets.html#depthai_sdk.classes.packets.TrackerPacket"><code class="docutils literal notranslate"><span class="pre">TrackerPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="features/packets.html#twostagepacket">TwoStagePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/packets.html#depthai_sdk.classes.packets.TwoStagePacket"><code class="docutils literal notranslate"><span class="pre">TwoStagePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="features/packets.html#imupacket">IMUPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/packets.html#depthai_sdk.classes.packets.IMUPacket"><code class="docutils literal notranslate"><span class="pre">IMUPacket</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/recording.html">Recording</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/recording.html#supported-recording-types">Supported recording types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="features/recording.html#video">1. Video</a></li>
+<li class="toctree-l3"><a class="reference internal" href="features/recording.html#rosbag">2. Rosbag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="features/recording.html#mcap-recording">3. MCAP recording</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/replaying.html">Replaying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/replaying.html#replaying-support">Replaying support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/replaying.html#replaying-a-depthai-recording">Replaying a depthai-recording</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/replaying.html#public-depthai-recordings">Public depthai-recordings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features/visualizer.html">Visualizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features/visualizer.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/visualizer.html#flow">Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/visualizer.html#configs">Configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/visualizer.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/visualizer.html#create-your-own-object">Create your own object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/visualizer.html#example-usage">Example usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features/visualizer.html#references">References</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="features/visualizer.html#id1">Visualizer</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.visualizer.Visualizer"><code class="docutils literal notranslate"><span class="pre">Visualizer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.visualizer.Platform"><code class="docutils literal notranslate"><span class="pre">Platform</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="features/visualizer.html#id2">Objects</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.objects.GenericObject"><code class="docutils literal notranslate"><span class="pre">GenericObject</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.objects.VisDetections"><code class="docutils literal notranslate"><span class="pre">VisDetections</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.objects.VisText"><code class="docutils literal notranslate"><span class="pre">VisText</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.objects.VisLine"><code class="docutils literal notranslate"><span class="pre">VisLine</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.objects.VisTrail"><code class="docutils literal notranslate"><span class="pre">VisTrail</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="features/visualizer.html#id3">Configs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.TextPosition"><code class="docutils literal notranslate"><span class="pre">TextPosition</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.BboxStyle"><code class="docutils literal notranslate"><span class="pre">BboxStyle</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.StereoColor"><code class="docutils literal notranslate"><span class="pre">StereoColor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.OutputConfig"><code class="docutils literal notranslate"><span class="pre">OutputConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.StereoConfig"><code class="docutils literal notranslate"><span class="pre">StereoConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.DetectionConfig"><code class="docutils literal notranslate"><span class="pre">DetectionConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.TextConfig"><code class="docutils literal notranslate"><span class="pre">TextConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.TrackingConfig"><code class="docutils literal notranslate"><span class="pre">TrackingConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.SegmentationConfig"><code class="docutils literal notranslate"><span class="pre">SegmentationConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.CircleConfig"><code class="docutils literal notranslate"><span class="pre">CircleConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="features/visualizer.html#depthai_sdk.visualize.configs.VisConfig"><code class="docutils literal notranslate"><span class="pre">VisConfig</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code samples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/code_samples.html">Code Samples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="samples/ColorCamera/autoexposure_roi.html">Auto Exposure on ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="samples/ColorCamera/autoexposure_roi.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="samples/ColorCamera/autoexposure_roi.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="samples/ColorCamera/autoexposure_roi.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="samples/ColorCamera/rgb_camera_control.html">RGB Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="samples/ColorCamera/rgb_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="samples/ColorCamera/rgb_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="samples/ColorCamera/rgb_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="samples/VideoEncoder/rgb_encoding.html">RGB Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="samples/VideoEncoder/rgb_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="samples/VideoEncoder/rgb_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="samples/VideoEncoder/rgb_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="samples/VideoEncoder/rgb_mono_encoding.html">RGB &amp; Mono Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="samples/VideoEncoder/rgb_mono_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="samples/VideoEncoder/rgb_mono_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="samples/VideoEncoder/rgb_mono_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">DepthAI SDK Docs</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>OakCamera</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/oak-camera.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="oakcamera">
+<h1>OakCamera<a class="headerlink" href="#oakcamera" title="Permalink to this heading">¶</a></h1>
+<p>The <strong>OakCamera</strong> class abstracts:</p>
+<ul class="simple">
+<li><p>DepthAI API pipeline building with <a class="reference internal" href="features/components.html#components"><span class="std std-ref">Components</span></a>.</p></li>
+<li><p>Stream <a class="reference internal" href="features/recording.html#recording"><span class="std std-ref">recording</span></a> and <a class="reference internal" href="features/replaying.html#replaying"><span class="std std-ref">replaying</span></a>.</p></li>
+<li><p>Debugging features (such as <code class="docutils literal notranslate"><span class="pre">oak.show_graph()</span></code>).</p></li>
+<li><p><a class="reference internal" href="features/ai_models.html#ai-models"><span class="std std-ref">AI model</span></a> sourcing and decoding.</p></li>
+<li><p>Message syncing &amp; visualization, and much more.</p></li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This class will be in <strong>alpha stage</strong> until <strong>depthai-sdk 2.0.0</strong>, so there will likely be some API changes.</p>
+</div>
+<section id="interoperability-with-depthai-api">
+<h2>Interoperability with DepthAI API<a class="headerlink" href="#interoperability-with-depthai-api" title="Permalink to this heading">¶</a></h2>
+<p>DepthAI SDK was developed with <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/">DepthAI API</a> interoperability in mind.
+Users can access all depthai API nodes inside components, and after <code class="docutils literal notranslate"><span class="pre">oak.build()</span></code> also the <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/pipeline/">dai.Pipeline</a>
+and <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/device/">dai.Device</a> objects.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">OakCamera</span>
+<span class="kn">import</span> <span class="nn">depthai</span> <span class="k">as</span> <span class="nn">dai</span>
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+    <span class="n">nn</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_nn</span><span class="p">(</span><span class="s1">&#39;mobilenet-ssd&#39;</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">([</span><span class="n">nn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">passthrough</span><span class="p">,</span> <span class="n">nn</span><span class="p">],</span> <span class="n">fps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Build the pipeline, connect to the oak, update components. Place interop logic AFTER oak.build()</span>
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+
+    <span class="n">nn</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">setNumInferenceThreads</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span> <span class="c1"># Configure components&#39; nodes</span>
+
+    <span class="n">features</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">FeatureTracker</span><span class="p">)</span> <span class="c1"># Create new pipeline nodes</span>
+    <span class="n">color</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="n">features</span><span class="o">.</span><span class="n">inputImage</span><span class="p">)</span>
+
+    <span class="n">out</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">XLinkOut</span><span class="p">)</span>
+    <span class="n">out</span><span class="o">.</span><span class="n">setStreamName</span><span class="p">(</span><span class="s1">&#39;features&#39;</span><span class="p">)</span>
+    <span class="n">features</span><span class="o">.</span><span class="n">outputFeatures</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="n">out</span><span class="o">.</span><span class="n">input</span><span class="p">)</span>
+
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">()</span> <span class="c1"># Start the pipeline (upload it to the OAK)</span>
+
+    <span class="n">q</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">getOutputQueue</span><span class="p">(</span><span class="s1">&#39;features&#39;</span><span class="p">)</span> <span class="c1"># Create output queue after calling start()</span>
+    <span class="k">while</span> <span class="n">oak</span><span class="o">.</span><span class="n">running</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">q</span><span class="o">.</span><span class="n">has</span><span class="p">():</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="n">q</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+        <span class="c1"># Since we are not in blocking mode, we have to poll oak camera to</span>
+        <span class="c1"># visualize frames, call callbacks, process keyboard keys, etc.</span>
+        <span class="n">oak</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this heading">¶</a></h2>
+<p>Below there are a few basic examples. <strong>See</strong> <a class="reference external" href="https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples">all examples here</a>.</p>
+<p>Here are a few demos that have been developed with DepthAI SDK:</p>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-age-gender">age-gender</a>,</p></li>
+<li><p><a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-emotsion-recognition">emotion-recognition</a>,</p></li>
+<li><p><a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-full-fov-nn">full-fov-nn</a>,</p></li>
+<li><p><a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-head-posture-detection">head-posture-detection</a>,</p></li>
+<li><p><a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-pedestrian-reidentification">pedestrian-reidentification</a>,</p></li>
+<li><p><a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter">people-counter</a>,</p></li>
+<li><p><a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-tracker">people-tracker</a>,</p></li>
+<li><p><a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-mask-detection">mask-detection</a>,</p></li>
+<li><p><a class="reference external" href="https://github.com/luxonis/depthai-experiments/tree/master/gen2-yolo">yolo</a>.</p></li>
+<li><p><a class="reference external" href="https://blog.roboflow.com/deploy-roboflow-model-luxonis-depth-sdk">Roboflow</a>.</p></li>
+</ol>
+<section id="preview-color-and-mono-cameras">
+<h3>Preview color and mono cameras<a class="headerlink" href="#preview-color-and-mono-cameras" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">OakCamera</span>
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+    <span class="n">right</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">([</span><span class="n">color</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">right</span><span class="p">],</span> <span class="n">fps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="run-mobilenetssd-on-color-camera">
+<h3>Run MobilenetSSD on color camera<a class="headerlink" href="#run-mobilenetssd-on-color-camera" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">OakCamera</span>
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+    <span class="n">nn</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_nn</span><span class="p">(</span><span class="s1">&#39;mobilenet-ssd&#39;</span><span class="p">,</span> <span class="n">color</span><span class="p">,</span> <span class="n">spatial</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">([</span><span class="n">nn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">main</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">spatials</span><span class="p">],</span> <span class="n">fps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="run-face-detection-retail-0004-on-left-camera">
+<h3>Run face-detection-retail-0004 on left camera<a class="headerlink" href="#run-face-detection-retail-0004-on-left-camera" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">OakCamera</span>
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">left</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+    <span class="n">nn</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_nn</span><span class="p">(</span><span class="s1">&#39;face-detection-retail-0004&#39;</span><span class="p">,</span> <span class="n">left</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">([</span><span class="n">nn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">main</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">passthrough</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="mi">2</span><span class="o">/</span><span class="mi">3</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">
+<h3>Deploy models from Roboflow and Roboflow Universe with Depth SDK<a class="headerlink" href="#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk" title="Permalink to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">OakCamera</span>
+
+<span class="c1"># Download &amp; deploy a model from Roboflow universe:</span>
+<span class="c1"># # https://universe.roboflow.com/david-lee-d0rhs/american-sign-language-letters/dataset/6</span>
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+    <span class="n">model_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;source&#39;</span><span class="p">:</span> <span class="s1">&#39;roboflow&#39;</span><span class="p">,</span> <span class="c1"># Specify that we are downloading the model from Roboflow</span>
+        <span class="s1">&#39;model&#39;</span><span class="p">:</span><span class="s1">&#39;american-sign-language-letters/6&#39;</span><span class="p">,</span>
+        <span class="s1">&#39;key&#39;</span><span class="p">:</span><span class="s1">&#39;181b0f6e43d59ee5ea421cd77f6d9ea2a4b059f8&#39;</span> <span class="c1"># Fake API key, replace with your own!</span>
+    <span class="p">}</span>
+    <span class="n">nn</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_nn</span><span class="p">(</span><span class="n">model_config</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<section id="reference">
+<h4>Reference<a class="headerlink" href="#reference" title="Permalink to this heading">¶</a></h4>
+<dl class="py class">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">depthai_sdk.</span></span><span class="sig-name descname"><span class="pre">OakCamera</span></span><a class="headerlink" href="#depthai_sdk.OakCamera" title="Permalink to this definition">¶</a></dt>
+<dd><p>OakCamera improves ease of use when developing apps for OAK devices.</p>
+<p>It abstracts DepthAI API pipeline building, different camera permutations, stream recording/replaying, it adds
+debugging features, does AI model handling, message syncing &amp; visualization, and much more.</p>
+<p>It was designed with interoperability with depthai API in mind.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">usb_speed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">replay</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">args</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initializes OakCamera</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><em>optional</em>) – OAK device we want to connect to</p></li>
+<li><p><strong>usb_speed</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><em>optional</em>) – USB speed we want to use. Defaults to ‘auto’.</p></li>
+<li><p><strong>replay</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><em>optional</em>) – Replay a depthai-recording - either local path, or from depthai-recordings repo</p></li>
+<li><p><strong>rotation</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><em>optional</em>) – Rotate the camera output by this amount of degrees, 0 by default, 90, 180, 270 are supported.</p></li>
+<li><p><strong>args</strong> (<em>None</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><em>Dict</em>) – Use user defined arguments when constructing the pipeline</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.create_camera">
+<span class="sig-name descname"><span class="pre">create_camera</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.create_camera" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
+recording is passed during OakCamera initialization. Mocking the camera will send frames from the host to the
+OAK device (via XLinkIn node).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – Either ‘color’, ‘left’ or ‘right’ (these 2 will create MonoCamera nodes)</p></li>
+<li><p><strong>resolution</strong> (<em>str/SensorResolution</em>) – Sensor resolution of the camera.</p></li>
+<li><p><strong>fps</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a>) – Sensor FPS</p></li>
+<li><p><strong>encode</strong> (<em>bool/str/Profile</em>) – Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="components/camera_component.html#depthai_sdk.components.CameraComponent" title="depthai_sdk.components.camera_component.CameraComponent"><em>CameraComponent</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.create_nn">
+<span class="sig-name descname"><span class="pre">create_nn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nn_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tracker</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spatial</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">decode_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.create_nn" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates Neural Network component.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>str / Path</em>) – str for SDK supported model or Path to custom model’s json/blob</p></li>
+<li><p><strong>input</strong> (<em>CameraComponent/NNComponent</em>) – Input to the model. If NNComponent (detector), it creates 2-stage NN</p></li>
+<li><p><strong>nn_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – Type of the network (yolo/mobilenet) for on-device NN result decoding (only needed if blob path was specified)</p></li>
+<li><p><strong>tracker</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – Enable object tracker, if model is object detector (yolo/mobilenet)</p></li>
+<li><p><strong>spatial</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><em>Union</em></a><em>[</em><em>None</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><a class="reference internal" href="components/stereo_component.html#depthai_sdk.components.StereoComponent" title="depthai_sdk.components.stereo_component.StereoComponent"><em>StereoComponent</em></a><em>]</em>) – Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available</p></li>
+<li><p><strong>decode_fn</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a><em>]</em>) – Custom decoding function for the model’s output</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="components/nn_component.html#depthai_sdk.components.NNComponent" title="depthai_sdk.components.nn_component.NNComponent"><em>NNComponent</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.create_stereo">
+<span class="sig-name descname"><span class="pre">create_stereo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">left</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">right</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">encode</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.create_stereo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create Stereo camera component. If left/right cameras/component aren’t specified they will get created internally.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>resolution</strong> (<em>str/SensorResolution</em>) – If monochrome cameras aren’t already passed, create them and set specified resolution</p></li>
+<li><p><strong>fps</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a>) – If monochrome cameras aren’t already passed, create them and set specified FPS</p></li>
+<li><p><strong>left</strong> (<em>CameraComponent/dai.node.MonoCamera</em>) – Pass the camera object (component/node) that will be used for stereo camera.</p></li>
+<li><p><strong>right</strong> (<em>CameraComponent/dai.node.MonoCamera</em>) – Pass the camera object (component/node) that will be used for stereo camera.</p></li>
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.</p></li>
+<li><p><strong>encode</strong> (<em>bool/str/Profile</em>) – Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="components/stereo_component.html#depthai_sdk.components.StereoComponent" title="depthai_sdk.components.stereo_component.StereoComponent"><em>StereoComponent</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.create_imu">
+<span class="sig-name descname"><span class="pre">create_imu</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.create_imu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create IMU component</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="components/imu_component.html#depthai_sdk.components.IMUComponent" title="depthai_sdk.components.imu_component.IMUComponent"><em>IMUComponent</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.config_camera">
+<span class="sig-name descname"><span class="pre">config_camera</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rotation</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.config_camera" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configures general camera settings.
+:param rotation: Rotate the camera output by this amount of degrees, 0 by default, 90, 180, 270 are supported.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>rotation</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – </p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.config_pipeline">
+<span class="sig-name descname"><span class="pre">config_pipeline</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xlink_chunk</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">calib</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tuning_blob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">openvino_version</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.config_pipeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configures DepthAI pipeline.
+&#64;param xlink_chunk: Chunk size of XLink messages. 0 can result in lower latency
+&#64;param calib: Calibration data to be uploaded to OAK
+&#64;param tuning_blob: Camera tuning blob
+&#64;param openvino_version: Force specific OpenVINO version</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>xlink_chunk</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – </p></li>
+<li><p><strong>calib</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.CalibrationHandler" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>CalibrationHandler</em></a><em>]</em>) – </p></li>
+<li><p><strong>tuning_blob</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>]</em>) – </p></li>
+<li><p><strong>openvino_version</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><em>Union</em></a><em>[</em><em>None</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.OpenVINO.Version" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Version</em></a><em>]</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.start">
+<span class="sig-name descname"><span class="pre">start</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">blocking</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>Start the application - upload the pipeline to the OAK device.
+:param blocking: Continuously loop and call oak.poll() until program exits
+:type blocking: bool</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.running">
+<span class="sig-name descname"><span class="pre">running</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.running" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if camera is running.
+:returns: True if camera is running, False otherwise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.poll">
+<span class="sig-name descname"><span class="pre">poll</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.poll" title="Permalink to this definition">¶</a></dt>
+<dd><p>Poll events; cv2.waitKey, send controls to OAK (if controls are enabled), update, check syncs.</p>
+<p>Returns: key pressed from cv2.waitKey, or None if</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.build">
+<span class="sig-name descname"><span class="pre">build</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.build" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connect to the device and build the pipeline based on previously provided configuration. Configure XLink queues,
+upload the pipeline to the device. This function must only be called once!  build() is also called by start().
+:returns: Built dai.Pipeline</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Pipeline" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>Pipeline</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.sync">
+<span class="sig-name descname"><span class="pre">sync</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">callback</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">visualize</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.sync" title="Permalink to this definition">¶</a></dt>
+<dd><p>Synchronize multiple components outputs forward them to the callback.
+:param outputs: Component output(s)
+:param callback: Where to send synced streams
+:param visualize: Whether to draw on the frames (like with visualize())</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><em>Union</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>callback</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.record">
+<span class="sig-name descname"><span class="pre">record</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outputs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">record_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">RecordType.VIDEO</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.record" title="Permalink to this definition">¶</a></dt>
+<dd><p>Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
+them to the computer in desired format (raw, mp4, mcap, bag..).
+:param outputs: Component output(s) to be recorded
+:type outputs: Component/Component output
+:param path: Folder path where to save these streams
+:param record_type: Record type</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>outputs</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><em>Union</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – </p></li>
+<li><p><strong>record_type</strong> (<em>RecordType</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.show_graph">
+<span class="sig-name descname"><span class="pre">show_graph</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.show_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Shows DepthAI Pipeline graph, which can be useful when debugging. Builds the pipeline (oak.build()).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.visualize">
+<span class="sig-name descname"><span class="pre">visualize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">record_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">scale</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">callback</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.visualize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visualize component output(s). This handles output streaming (OAK-&gt;host), message syncing, and visualizing.
+:param output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
+:type output: Component/Component output
+:param record_path: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
+:param scale: Scale the output window by this factor
+:param fps: Whether to show FPS on the output window
+:param callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><em>Union</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a><em>, </em><a class="reference internal" href="features/components.html#depthai_sdk.components.Component" title="depthai_sdk.components.component.Component"><em>Component</em></a><em>]</em>) – </p></li>
+<li><p><strong>record_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>]</em>) – </p></li>
+<li><p><strong>scale</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>]</em>) – </p></li>
+<li><p><strong>callback</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.11)"><em>Optional</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a><em>]</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.callback">
+<span class="sig-name descname"><span class="pre">callback</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">callback</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">enable_visualizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.OakCamera.callback" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a callback for the component output(s). This handles output streaming (OAK-&gt;Host) and message syncing.
+:param output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output.
+:param callback: Handler function to which the Packet will be sent.
+:param enable_visualizer: Whether to enable visualizer for this output.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Union" title="(in Python v3.11)"><em>Union</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><em>List</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a><em>, </em><a class="reference internal" href="features/components.html#depthai_sdk.components.Component" title="depthai_sdk.components.component.Component"><em>Component</em></a><em>]</em>) – </p></li>
+<li><p><strong>callback</strong> (<a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.11)"><em>Callable</em></a>) – </p></li>
+<li><p><strong>enable_visualizer</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.device">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">device</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Device" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><span class="pre">Device</span></a></em><a class="headerlink" href="#depthai_sdk.OakCamera.device" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns dai.Device object. oak.built() has to be called before querying this property!</p>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="depthai_sdk.OakCamera.sensors">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sensors</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.List" title="(in Python v3.11)"><span class="pre">List</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.CameraBoardSocket" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><span class="pre">CameraBoardSocket</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#depthai_sdk.OakCamera.sensors" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns list of all sensors added to the pipeline.</p>
+</dd></dl>
+
+</dd></dl>
+
+<h2>Got questions?</h2><p>We’re always happy to help with development or other questions you might have.</p>
+<div class="cta-row cta-row-short">
+    <div class="cta-box">
+       <a href="https://luxonis.com/discord">
+          <img src="/_images/discord.png" alt="Discord"/>
+          <h5 class="cta-title">Community Discord</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="https://discuss.luxonis.com/">
+          <img src="/_images/forum.png" alt="forum"/>
+          <h5 class="cta-title">Discussion Forum</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="mailto:support@luxonis.com">
+          <img src="/_images/email.png" alt="forum"/>
+          <h5 class="cta-title">Email</h5>
+       </a>
+    </div>
+ </div></section>
+</section>
+</section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="features/ai_models.html" class="btn btn-neutral float-right" title="AI models" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="DepthAI SDK" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright @build_year@, Luxonis
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

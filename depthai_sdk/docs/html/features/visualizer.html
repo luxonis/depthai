@@ -1,0 +1,1714 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Visualizer &mdash; DepthAI SDK Docs 1.9.2 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/sphinx_tabs/semantic-ui-2.4.1/segment.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/sphinx_tabs/semantic-ui-2.4.1/menu.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/sphinx_tabs/semantic-ui-2.4.1/tab.min.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/sphinx_tabs/tabs.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/index.css" type="text/css" />
+  <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Code Samples" href="../tutorials/code_samples.html" />
+    <link rel="prev" title="Replaying" href="replaying.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> DepthAI SDK Docs
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Home:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">DepthAI SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../oak-camera.html">OakCamera</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../oak-camera.html#interoperability-with-depthai-api">Interoperability with DepthAI API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../oak-camera.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#preview-color-and-mono-cameras">Preview color and mono cameras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#run-mobilenetssd-on-color-camera">Run MobilenetSSD on color camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#run-face-detection-retail-0004-on-left-camera">Run face-detection-retail-0004 on left camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">Deploy models from Roboflow and Roboflow Universe with Depth SDK</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../oak-camera.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Features</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="ai_models.html">AI models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ai_models.html#sdk-supported-models">SDK supported models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="components.html">Components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../components/camera_component.html">CameraComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/camera_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/camera_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/camera_component.html#reference">Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/imu_component.html">IMUComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/imu_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/imu_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/imu_component.html#reference">Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/nn_component.html">NNComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/nn_component.html#depthai-api-nodes">DepthAI API nodes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#decoding-outputs">Decoding outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/stereo_component.html">StereoComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/stereo_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/stereo_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/stereo_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="packets.html">Packets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="packets.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="packets.html#reference">Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#framepacket">FramePacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#spatialbbmappingpacket">SpatialBbMappingPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#detectionpacket">DetectionPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#depthpacket">DepthPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#trackerpacket">TrackerPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#twostagepacket">TwoStagePacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#imupacket">IMUPacket</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="recording.html">Recording</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="recording.html#supported-recording-types">Supported recording types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="recording.html#video">1. Video</a></li>
+<li class="toctree-l3"><a class="reference internal" href="recording.html#rosbag">2. Rosbag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="recording.html#mcap-recording">3. MCAP recording</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="replaying.html">Replaying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="replaying.html#replaying-support">Replaying support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="replaying.html#replaying-a-depthai-recording">Replaying a depthai-recording</a></li>
+<li class="toctree-l2"><a class="reference internal" href="replaying.html#public-depthai-recordings">Public depthai-recordings</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Visualizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#flow">Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configs">Configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#create-your-own-object">Create your own object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-usage">Example usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#references">References</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Visualizer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Configs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Code samples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/code_samples.html">Code Samples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html">Auto Exposure on ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html">RGB Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/mixed/rgb_encoding_mobilenet.html">RGB Encoding &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/mixed/rgb_encoding_mono_mobilenet.html">RGB Encoding &amp; Mono &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mono_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mono_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/mixed/rgb_encoding_mono_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/EdgeDetector/edge_detector.html">Edge Detector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/EdgeDetector/edge_detector.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/EdgeDetector/edge_detector.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/EdgeDetector/edge_detector.html#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DepthAI SDK Docs</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>Visualizer</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../_sources/features/visualizer.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="visualizer">
+<h1>Visualizer<a class="headerlink" href="#visualizer" title="Permalink to this headline">¶</a></h1>
+<p>Visualizer helps user to visualize the output of AI models in a more intuitive and customizable way.</p>
+<div class="section" id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer"><code class="xref py py-func docutils literal notranslate"><span class="pre">Visualizer</span></code></a> is created upon calling
+<a class="reference internal" href="../oak-camera.html#depthai_sdk.OakCamera.visualize" title="depthai_sdk.OakCamera.visualize"><code class="xref py py-func docutils literal notranslate"><span class="pre">oak.visualize</span></code></a>, which returns <a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer"><code class="xref py py-func docutils literal notranslate"><span class="pre">Visualizer</span></code></a> instance.
+Once it is created, the visualizer configs can be modified using <a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.output" title="depthai_sdk.visualize.visualizer.Visualizer.output"><code class="xref py py-func docutils literal notranslate"><span class="pre">output</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.stereo" title="depthai_sdk.visualize.visualizer.Visualizer.stereo"><code class="xref py py-func docutils literal notranslate"><span class="pre">stereo</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.text" title="depthai_sdk.visualize.visualizer.Visualizer.text"><code class="xref py py-func docutils literal notranslate"><span class="pre">text</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.detections" title="depthai_sdk.visualize.visualizer.Visualizer.detections"><code class="xref py py-func docutils literal notranslate"><span class="pre">detections</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.tracking" title="depthai_sdk.visualize.visualizer.Visualizer.tracking"><code class="xref py py-func docutils literal notranslate"><span class="pre">tracking</span></code></a> methods.</p>
+<p>Example how <a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer"><code class="xref py py-func docutils literal notranslate"><span class="pre">Visualizer</span></code></a> can be created:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">cam</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">visualizer</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">cam</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">main</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer"><code class="xref py py-func docutils literal notranslate"><span class="pre">Visualizer</span></code></a> is primarily used alongside with <a class="reference internal" href="packets.html#packets"><span class="std std-ref">Packets</span></a>
+in <code class="docutils literal notranslate"><span class="pre">oak_outputs.xout</span></code> module.</p>
+</div>
+<div class="section" id="flow">
+<h2>Flow<a class="headerlink" href="#flow" title="Permalink to this headline">¶</a></h2>
+<p>The flow of the <a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer"><code class="xref py py-class docutils literal notranslate"><span class="pre">Visualizer</span></code></a> is as follows:</p>
+<ol class="arabic simple">
+<li><p>Once the stream produces the output, corresponding <code class="docutils literal notranslate"><span class="pre">Packet</span></code> is sent to the <code class="docutils literal notranslate"><span class="pre">Xout</span></code> class.</p></li>
+<li><p>The <code class="docutils literal notranslate"><span class="pre">Xout</span></code> calls <code class="docutils literal notranslate"><span class="pre">visualize</span></code> function and parses <code class="docutils literal notranslate"><span class="pre">Packet</span></code> and add the required objects to the visualizer.</p></li>
+<li><p>After objects are added, <code class="docutils literal notranslate"><span class="pre">Xout</span></code> calls <a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.draw" title="depthai_sdk.visualize.visualizer.Visualizer.draw"><code class="xref py py-func docutils literal notranslate"><span class="pre">draw</span></code></a> method, that draws objects on the frame.</p></li>
+</ol>
+</div>
+<div class="section" id="configs">
+<h2>Configs<a class="headerlink" href="#configs" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer"><code class="xref py py-func docutils literal notranslate"><span class="pre">Visualizer</span></code></a> is configurable via
+<a class="reference internal" href="#depthai_sdk.visualize.configs.VisConfig" title="depthai_sdk.visualize.configs.VisConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisConfig</span></code></a> that consists of five auxiliary configs:
+<a class="reference internal" href="#depthai_sdk.visualize.configs.OutputConfig" title="depthai_sdk.visualize.configs.OutputConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">OutputConfig</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.configs.StereoConfig" title="depthai_sdk.visualize.configs.StereoConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">StereoConfig</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.configs.TextConfig" title="depthai_sdk.visualize.configs.TextConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">TextConfig</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.configs.DetectionConfig" title="depthai_sdk.visualize.configs.DetectionConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">DetectionConfig</span></code></a>,
+and <a class="reference internal" href="#depthai_sdk.visualize.configs.TrackingConfig" title="depthai_sdk.visualize.configs.TrackingConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">TrackingConfig</span></code></a>.
+Each config’s type has its own set of parameters, which effects how the corresponding object will be visualized.</p>
+<p>There are the following methods for modifying the default configuration:
+<a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.output" title="depthai_sdk.visualize.visualizer.Visualizer.output"><code class="xref py py-func docutils literal notranslate"><span class="pre">output</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.stereo" title="depthai_sdk.visualize.visualizer.Visualizer.stereo"><code class="xref py py-func docutils literal notranslate"><span class="pre">stereo</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.text" title="depthai_sdk.visualize.visualizer.Visualizer.text"><code class="xref py py-func docutils literal notranslate"><span class="pre">text</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.detections" title="depthai_sdk.visualize.visualizer.Visualizer.detections"><code class="xref py py-func docutils literal notranslate"><span class="pre">detections</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.tracking" title="depthai_sdk.visualize.visualizer.Visualizer.tracking"><code class="xref py py-func docutils literal notranslate"><span class="pre">tracking</span></code></a>.
+The arguments should be passed as key-value arguments with the same signature as the corresponding config,
+e.g., <code class="docutils literal notranslate"><span class="pre">text(font_size=2,</span> <span class="pre">font_color=(255,123,200))</span></code>.</p>
+<p>The modified configuration will be applied to every created objects. The methods support
+fluent interface and can be chained, e.g., <code class="docutils literal notranslate"><span class="pre">visualizer.text(font_size=2).detections(color=(255,</span> <span class="pre">0,</span> <span class="pre">0))</span></code>.</p>
+<p>Example how to configure the visualizer:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">visualizer</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">camera</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">main</span><span class="p">)</span>
+<span class="n">visualizer</span><span class="o">.</span><span class="n">detections</span><span class="p">(</span>
+    <span class="n">bbox_style</span><span class="o">=</span><span class="n">BboxStyle</span><span class="o">.</span><span class="n">RECTANGLE</span><span class="p">,</span>
+    <span class="n">label_position</span><span class="o">=</span><span class="n">TextPosition</span><span class="o">.</span><span class="n">MID</span><span class="p">,</span>
+<span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+    <span class="n">auto_scale</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="objects">
+<h2>Objects<a class="headerlink" href="#objects" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer"><code class="xref py py-func docutils literal notranslate"><span class="pre">Visualizer</span></code></a> operates with objects. Objects can be seen as a hierarchical structure.
+The root object is <code class="docutils literal notranslate"><span class="pre">self</span></code>, and the children are the list of the created objects.
+<a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject.add_child" title="depthai_sdk.visualize.objects.GenericObject.add_child"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_child</span></code></a> should be used to add the object to the children list.
+The parent object shares the config and frame shape with all children.</p>
+<p>All objects must be derived from <a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject" title="depthai_sdk.visualize.objects.GenericObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">GenericObject</span></code></a>.</p>
+<p>Implemented objects:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#depthai_sdk.visualize.objects.VisDetections" title="depthai_sdk.visualize.objects.VisDetections"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisDetections</span></code></a>,</p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.visualize.objects.VisText" title="depthai_sdk.visualize.objects.VisText"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisText</span></code></a>,</p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.visualize.objects.VisLine" title="depthai_sdk.visualize.objects.VisLine"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisLine</span></code></a>,</p></li>
+<li><p><code class="xref py py-class docutils literal notranslate"><span class="pre">VisCircle</span></code>,</p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.visualize.objects.VisTrail" title="depthai_sdk.visualize.objects.VisTrail"><code class="xref py py-class docutils literal notranslate"><span class="pre">VisTrail</span></code></a>.</p></li>
+</ul>
+<p>Objects can be added to the visualizer using the following methods:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.add_text" title="depthai_sdk.visualize.visualizer.Visualizer.add_text"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_text</span></code></a>,</p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.add_detections" title="depthai_sdk.visualize.visualizer.Visualizer.add_detections"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_detections</span></code></a>,</p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.add_trail" title="depthai_sdk.visualize.visualizer.Visualizer.add_trail"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_trail</span></code></a>,</p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.add_circle" title="depthai_sdk.visualize.visualizer.Visualizer.add_circle"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_circle</span></code></a>,</p></li>
+<li><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer.add_line" title="depthai_sdk.visualize.visualizer.Visualizer.add_line"><code class="xref py py-func docutils literal notranslate"><span class="pre">add_line</span></code></a>.</p></li>
+</ul>
+</div>
+<div class="section" id="create-your-own-object">
+<h2>Create your own object<a class="headerlink" href="#create-your-own-object" title="Permalink to this headline">¶</a></h2>
+<p>If the provided functionality is not enough, you can create your own object. To do so, you need to create a class
+derived from <a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject" title="depthai_sdk.visualize.objects.GenericObject"><code class="xref py py-class docutils literal notranslate"><span class="pre">GenericObject</span></code></a> and implement the
+<a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject.prepare" title="depthai_sdk.visualize.objects.GenericObject.prepare"><code class="xref py py-func docutils literal notranslate"><span class="pre">prepare</span></code></a>,
+<a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject.serialize" title="depthai_sdk.visualize.objects.GenericObject.serialize"><code class="xref py py-func docutils literal notranslate"><span class="pre">serialize</span></code></a>,
+and <a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject.draw" title="depthai_sdk.visualize.objects.GenericObject.draw"><code class="xref py py-func docutils literal notranslate"><span class="pre">draw</span></code></a> methods.
+The <a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject.draw" title="depthai_sdk.visualize.objects.GenericObject.draw"><code class="xref py py-func docutils literal notranslate"><span class="pre">draw</span></code></a> method should draw the object on the passed <code class="docutils literal notranslate"><span class="pre">frame</span></code> argument.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">YourOwnObject</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">...</span><span class="p">):</span>
+        <span class="o">...</span>
+
+    <span class="k">def</span> <span class="nf">prepare</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="o">...</span>
+
+    <span class="k">def</span> <span class="nf">serialize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="o">...</span>
+
+    <span class="k">def</span> <span class="nf">draw</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="o">...</span>
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">cam</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">visualizer</span> <span class="o">=</span> <span class="n">cam</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">cam</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">main</span><span class="p">)</span>
+    <span class="n">visualizer</span><span class="o">.</span><span class="n">add_object</span><span class="p">(</span><span class="n">YourOwnObject</span><span class="p">(</span><span class="o">...</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="example-usage">
+<h2>Example usage<a class="headerlink" href="#example-usage" title="Permalink to this headline">¶</a></h2>
+<p>The following script will visualize the output of face detection model.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">OakCamera</span>
+<span class="kn">from</span> <span class="nn">depthai_sdk.visualize.configs</span> <span class="kn">import</span> <span class="n">BboxStyle</span><span class="p">,</span> <span class="n">TextPosition</span>
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">camera</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+
+    <span class="n">det</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_nn</span><span class="p">(</span><span class="s1">&#39;face-detection-retail-0004&#39;</span><span class="p">,</span> <span class="n">camera</span><span class="p">)</span>
+
+    <span class="n">visualizer</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">(</span><span class="n">det</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">main</span><span class="p">,</span> <span class="n">fps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">visualizer</span><span class="o">.</span><span class="n">detections</span><span class="p">(</span>
+        <span class="n">color</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+        <span class="n">thickness</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+        <span class="n">bbox_style</span><span class="o">=</span><span class="n">BboxStyle</span><span class="o">.</span><span class="n">RECTANGLE</span><span class="p">,</span>
+        <span class="n">label_position</span><span class="o">=</span><span class="n">TextPosition</span><span class="o">.</span><span class="n">MID</span><span class="p">,</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+        <span class="n">font_color</span><span class="o">=</span><span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+        <span class="n">auto_scale</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span><span class="o">.</span><span class="n">tracking</span><span class="p">(</span>
+        <span class="n">line_thickness</span><span class="o">=</span><span class="mi">5</span>
+    <span class="p">)</span>
+
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">(</span><span class="n">blocking</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="references">
+<h2>References<a class="headerlink" href="#references" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id1">
+<h3>Visualizer<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.visualizer.</code><code class="sig-name descname">Visualizer</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">scale</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fps</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py attribute">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.IS_INTERACTIVE">
+<code class="sig-name descname">IS_INTERACTIVE</code><em class="property"> = True</em><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.IS_INTERACTIVE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.add_object">
+<code class="sig-name descname">add_object</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">obj</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.add_object" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call <cite>set_config</cite>, <cite>set_frame_shape</cite> and <cite>prepare</cite> for the object and add it to the list of objects.
+:param obj: The object to add.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>self</p>
+</dd>
+<dt class="field-even">Parameters</dt>
+<dd class="field-even"><p><strong>obj</strong> (<a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject" title="depthai_sdk.visualize.objects.GenericObject"><em>depthai_sdk.visualize.objects.GenericObject</em></a>) – </p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.add_detections">
+<code class="sig-name descname">add_detections</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">detections</span></em>, <em class="sig-param"><span class="n">normalizer</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">label_map</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">spatial_points</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">is_spatial</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.add_detections" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add detections to the visualizer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>detections</strong> (<em>List</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.ImgDetection" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>depthai.ImgDetection</em></a><em>, </em><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Tracklet" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>depthai.Tracklet</em></a><em>]</em><em>]</em>) – List of detections.</p></li>
+<li><p><strong>normalizer</strong> (<em>Optional</em><em>[</em><em>depthai_sdk.oak_outputs.normalize_bb.NormalizeBoundingBox</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Normalizer object.</p></li>
+<li><p><strong>label_map</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><em>Tuple</em><em>]</em><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – List of tuples (label, color).</p></li>
+<li><p><strong>spatial_points</strong> (<em>Optional</em><em>[</em><em>List</em><em>[</em><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Point3f" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>depthai.Point3f</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – List of spatial points. None if not spatial.</p></li>
+<li><p><strong>is_spatial</strong> – Flag that indicates if the detections are spatial.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.add_text">
+<code class="sig-name descname">add_text</code><span class="sig-paren">(</span><em class="sig-param">text</em>, <em class="sig-param">coords=None</em>, <em class="sig-param">size=None</em>, <em class="sig-param">color=None</em>, <em class="sig-param">thickness=None</em>, <em class="sig-param">outline=False</em>, <em class="sig-param">bbox=None</em>, <em class="sig-param">position=&lt;TextPosition.TOP_LEFT: 0&gt;</em>, <em class="sig-param">padding=10</em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.add_text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add text to the visualizer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>text</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – Text.</p></li>
+<li><p><strong>coords</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Coordinates.</p></li>
+<li><p><strong>size</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Size of the text.</p></li>
+<li><p><strong>color</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Color of the text.</p></li>
+<li><p><strong>thickness</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Thickness of the text.</p></li>
+<li><p><strong>outline</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a>) – Flag that indicates if the text should be outlined.</p></li>
+<li><p><strong>bbox</strong> (<em>Optional</em><em>[</em><em>Union</em><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a><em>, </em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>]</em><em>]</em>) – Bounding box.</p></li>
+<li><p><strong>position</strong> (<a class="reference internal" href="#depthai_sdk.visualize.configs.TextPosition" title="depthai_sdk.visualize.configs.TextPosition"><em>depthai_sdk.visualize.configs.TextPosition</em></a>) – Position.</p></li>
+<li><p><strong>padding</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – Padding.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.add_trail">
+<code class="sig-name descname">add_trail</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tracklets</span></em>, <em class="sig-param"><span class="n">label_map</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.add_trail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a trail to the visualizer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>tracklets</strong> (<em>List</em><em>[</em><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Tracklet" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>depthai.Tracklet</em></a><em>]</em>) – List of tracklets.</p></li>
+<li><p><strong>label_map</strong> (<em>List</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a><em>, </em><em>Tuple</em><em>]</em><em>]</em>) – List of tuples (label, color).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.add_circle">
+<code class="sig-name descname">add_circle</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">coords</span></em>, <em class="sig-param"><span class="n">radius</span></em>, <em class="sig-param"><span class="n">color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">thickness</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.add_circle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a circle to the visualizer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>coords</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Center of the circle.</p></li>
+<li><p><strong>radius</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – Radius of the circle.</p></li>
+<li><p><strong>color</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Color of the circle.</p></li>
+<li><p><strong>thickness</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Thickness of the circle.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.add_line">
+<code class="sig-name descname">add_line</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">pt1</span></em>, <em class="sig-param"><span class="n">pt2</span></em>, <em class="sig-param"><span class="n">color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">thickness</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.add_line" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a line to the visualizer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pt1</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Start coordinates.</p></li>
+<li><p><strong>pt2</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – End coordinates.</p></li>
+<li><p><strong>color</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Color of the line.</p></li>
+<li><p><strong>thickness</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Thickness of the line.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.add_mask">
+<code class="sig-name descname">add_mask</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mask</span></em>, <em class="sig-param"><span class="n">alpha</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.add_mask" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a mask to the visualizer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mask</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – Mask represented as uint8 numpy array.</p></li>
+<li><p><strong>alpha</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a>) – Transparency of the mask.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frame</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
+and communicate with the RobotHub application.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>frame</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – The frame to draw on.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>np.ndarray if the platform is PC, None otherwise.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Optional[<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)">numpy.ndarray</a>, <a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.serialize">
+<code class="sig-name descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize all contained objects to JSON.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Stringified JSON.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.reset">
+<code class="sig-name descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.reset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clear all objects.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.output">
+<code class="sig-name descname">output</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">img_scale</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">show_fps</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure the output of the visualizer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>img_scale</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Scale of the output image.</p></li>
+<li><p><strong>show_fps</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Flag that indicates if the FPS should be shown.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.stereo">
+<code class="sig-name descname">stereo</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">colorize</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">colormap</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">wls_filter</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">wls_lambda</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">wls_sigma</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.stereo" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>colorize</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#depthai_sdk.visualize.configs.StereoColor" title="depthai_sdk.visualize.configs.StereoColor"><em>depthai_sdk.visualize.configs.StereoColor</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>colormap</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>wls_filter</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>wls_lambda</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>wls_sigma</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.detections">
+<code class="sig-name descname">detections</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">thickness</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fill_transparency</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bbox_roundness</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bbox_style</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line_width</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line_height</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">hide_label</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">label_position</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">label_padding</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.detections" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure how bounding boxes will look like.
+:param thickness: Thickness of the bounding box.
+:param fill_transparency: Transparency of the bounding box.
+:param bbox_roundness: Roundness of the bounding box.
+:param color: Color of the bounding box.
+:param bbox_style: Style of the bounding box.
+:param line_width: Width of the bbox horizontal lines CORNERS or ROUNDED_CORNERS style is used.
+:param line_height: Height of the bbox vertical lines when CORNERS or ROUNDED_CORNERS style is used.
+:param hide_label: Flag that indicates if the label should be hidden.
+:param label_position: Position of the label.
+:param label_padding: Padding of the label.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>self</p>
+</dd>
+<dt class="field-even">Parameters</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>thickness</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>fill_transparency</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>bbox_roundness</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>color</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>bbox_style</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#depthai_sdk.visualize.configs.BboxStyle" title="depthai_sdk.visualize.configs.BboxStyle"><em>depthai_sdk.visualize.configs.BboxStyle</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>line_width</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>line_height</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>hide_label</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>label_position</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#depthai_sdk.visualize.configs.TextPosition" title="depthai_sdk.visualize.configs.TextPosition"><em>depthai_sdk.visualize.configs.TextPosition</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+<li><p><strong>label_padding</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.text">
+<code class="sig-name descname">text</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">font_face</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">font_color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">font_transparency</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">font_scale</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">font_thickness</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">font_position</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bg_transparency</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bg_color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line_type</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">auto_scale</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure how text will look like.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>font_face</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Font face (from cv2).</p></li>
+<li><p><strong>font_color</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Font color.</p></li>
+<li><p><strong>font_transparency</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Font transparency.</p></li>
+<li><p><strong>font_scale</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Font scale.</p></li>
+<li><p><strong>font_thickness</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Font thickness.</p></li>
+<li><p><strong>font_position</strong> (<em>Optional</em><em>[</em><a class="reference internal" href="#depthai_sdk.visualize.configs.TextPosition" title="depthai_sdk.visualize.configs.TextPosition"><em>depthai_sdk.visualize.configs.TextPosition</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Font position.</p></li>
+<li><p><strong>bg_transparency</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Text background transparency.</p></li>
+<li><p><strong>bg_color</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Text background color.</p></li>
+<li><p><strong>line_type</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Line type (from cv2).</p></li>
+<li><p><strong>auto_scale</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Flag that indicates if the font scale should be automatically adjusted.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.tracking">
+<code class="sig-name descname">tracking</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_length</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">deletion_lost_threshold</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line_thickness</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fading_tails</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line_color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">line_type</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">bg_color</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.tracking" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configure how tracking trails will look like.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>max_length</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Maximum length of the trail (in pixels).</p></li>
+<li><p><strong>deletion_lost_threshold</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Number of consequent LOST statuses after which the trail is deleted.</p></li>
+<li><p><strong>line_thickness</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Thickness of the line.</p></li>
+<li><p><strong>fading_tails</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)"><em>bool</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Flag that indicates if the tails should fade.</p></li>
+<li><p><strong>line_color</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Color of the line.</p></li>
+<li><p><strong>line_type</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Type of the line (from cv2).</p></li>
+<li><p><strong>bg_color</strong> (<em>Optional</em><em>[</em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – Text background color.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.segmentation">
+<code class="sig-name descname">segmentation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mask_alpha</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.segmentation" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>mask_alpha</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)"><em>float</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)"><em>None</em></a><em>]</em>) – </p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#depthai_sdk.visualize.visualizer.Visualizer" title="depthai_sdk.visualize.visualizer.Visualizer">depthai_sdk.visualize.visualizer.Visualizer</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.visualizer.Visualizer.frame_shape">
+<em class="property">property </em><code class="sig-name descname">frame_shape</code><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Visualizer.frame_shape" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.visualizer.Platform">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.visualizer.</code><code class="sig-name descname">Platform</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Platform" title="Permalink to this definition">¶</a></dt>
+<dd><p>Platform on which the visualizer is running.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.visualizer.Platform.ROBOTHUB">
+<code class="sig-name descname">ROBOTHUB</code><em class="property"> = 'robothub'</em><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Platform.ROBOTHUB" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.visualizer.Platform.PC">
+<code class="sig-name descname">PC</code><em class="property"> = 'pc'</em><a class="headerlink" href="#depthai_sdk.visualize.visualizer.Platform.PC" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id2">
+<h3>Objects<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<dl class="py class">
+<dt id="depthai_sdk.visualize.objects.GenericObject">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.objects.</code><code class="sig-name descname">GenericObject</code><span class="sig-paren">(</span><em class="sig-param">config=VisConfig(output=OutputConfig(img_scale=1.0</em>, <em class="sig-param">show_fps=False</em>, <em class="sig-param">clickable=True)</em>, <em class="sig-param">stereo=StereoConfig(colorize=&lt;StereoColor.RGB: 2&gt;</em>, <em class="sig-param">colormap=2</em>, <em class="sig-param">wls_filter=False</em>, <em class="sig-param">wls_lambda=8000</em>, <em class="sig-param">wls_sigma=1.5)</em>, <em class="sig-param">detection=DetectionConfig(thickness=1</em>, <em class="sig-param">fill_transparency=0.15</em>, <em class="sig-param">box_roundness=0</em>, <em class="sig-param">color=(0</em>, <em class="sig-param">255</em>, <em class="sig-param">0)</em>, <em class="sig-param">bbox_style=&lt;BboxStyle.RECTANGLE: 0&gt;</em>, <em class="sig-param">line_width=0.5</em>, <em class="sig-param">line_height=0.5</em>, <em class="sig-param">hide_label=False</em>, <em class="sig-param">label_position=&lt;TextPosition.TOP_LEFT: 0&gt;</em>, <em class="sig-param">label_padding=10)</em>, <em class="sig-param">text=TextConfig(font_face=0</em>, <em class="sig-param">font_color=(255</em>, <em class="sig-param">255</em>, <em class="sig-param">255)</em>, <em class="sig-param">font_transparency=0.5</em>, <em class="sig-param">font_scale=1.0</em>, <em class="sig-param">font_thickness=2</em>, <em class="sig-param">font_position=&lt;TextPosition.TOP_LEFT: 0&gt;</em>, <em class="sig-param">bg_transparency=0.5</em>, <em class="sig-param">bg_color=(0</em>, <em class="sig-param">0</em>, <em class="sig-param">0)</em>, <em class="sig-param">line_type=16</em>, <em class="sig-param">auto_scale=True)</em>, <em class="sig-param">tracking=TrackingConfig(max_length=-1</em>, <em class="sig-param">deletion_lost_threshold=5</em>, <em class="sig-param">line_thickness=1</em>, <em class="sig-param">fading_tails=False</em>, <em class="sig-param">line_color=(255</em>, <em class="sig-param">255</em>, <em class="sig-param">255)</em>, <em class="sig-param">line_type=16</em>, <em class="sig-param">bg_color=(0</em>, <em class="sig-param">0</em>, <em class="sig-param">0))</em>, <em class="sig-param">circle=CircleConfig(thickness=1</em>, <em class="sig-param">color=(255</em>, <em class="sig-param">255</em>, <em class="sig-param">255)</em>, <em class="sig-param">line_type=16))</em>, <em class="sig-param">frame_shape=None</em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generic object used by visualizer.</p>
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.GenericObject.set_config">
+<code class="sig-name descname">set_config</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">config</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject.set_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the configuration for the current object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>config</strong> (<a class="reference internal" href="#depthai_sdk.visualize.configs.VisConfig" title="depthai_sdk.visualize.configs.VisConfig"><em>depthai_sdk.visualize.configs.VisConfig</em></a>) – instance of VisConfig.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject" title="depthai_sdk.visualize.objects.GenericObject">depthai_sdk.visualize.objects.GenericObject</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.GenericObject.set_frame_shape">
+<code class="sig-name descname">set_frame_shape</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frame_shape</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject.set_frame_shape" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the incoming frame shape for the current object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>frame_shape</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><em>..</em><em>]</em>) – frame shape as a tuple of (height, width, channels).</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject" title="depthai_sdk.visualize.objects.GenericObject">depthai_sdk.visualize.objects.GenericObject</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.GenericObject.draw">
+<em class="property">abstract </em><code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frame</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the object on the frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>frame</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – frame to draw on.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.GenericObject.draw_children">
+<code class="sig-name descname">draw_children</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frame</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject.draw_children" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>frame</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – </p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.GenericObject.prepare">
+<em class="property">abstract </em><code class="sig-name descname">prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject.prepare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare necessary data for drawing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>self</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject" title="depthai_sdk.visualize.objects.GenericObject">depthai_sdk.visualize.objects.GenericObject</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.GenericObject.serialize">
+<em class="property">abstract </em><code class="sig-name descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the object to dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.GenericObject.add_child">
+<code class="sig-name descname">add_child</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">child</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject.add_child" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a child object to the current object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>child</strong> (<a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject" title="depthai_sdk.visualize.objects.GenericObject"><em>depthai_sdk.visualize.objects.GenericObject</em></a>) – instance derived from GenericObject.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>self</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="#depthai_sdk.visualize.objects.GenericObject" title="depthai_sdk.visualize.objects.GenericObject">depthai_sdk.visualize.objects.GenericObject</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.GenericObject.children">
+<em class="property">property </em><code class="sig-name descname">children</code><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject.children" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the children of the current object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of children.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.GenericObject.draw_bbox">
+<code class="sig-name descname">draw_bbox</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">img</span></em>, <em class="sig-param"><span class="n">pt1</span></em>, <em class="sig-param"><span class="n">pt2</span></em>, <em class="sig-param"><span class="n">color</span></em>, <em class="sig-param"><span class="n">thickness</span></em>, <em class="sig-param"><span class="n">r</span></em>, <em class="sig-param"><span class="n">line_width</span></em>, <em class="sig-param"><span class="n">line_height</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.GenericObject.draw_bbox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw a rounded rectangle on the image (in-place).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>img</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – Image to draw on.</p></li>
+<li><p><strong>pt1</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Top-left corner of the rectangle.</p></li>
+<li><p><strong>pt2</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Bottom-right corner of the rectangle.</p></li>
+<li><p><strong>color</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Rectangle color.</p></li>
+<li><p><strong>thickness</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – Rectangle line thickness.</p></li>
+<li><p><strong>r</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – Radius of the rounded corners.</p></li>
+<li><p><strong>line_width</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – Width of the rectangle line.</p></li>
+<li><p><strong>line_height</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – Height of the rectangle line.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.objects.VisDetections">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.objects.</code><code class="sig-name descname">VisDetections</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">detections</span></em>, <em class="sig-param"><span class="n">normalizer</span></em>, <em class="sig-param"><span class="n">label_map</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">spatial_points</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">is_spatial</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisDetections" title="Permalink to this definition">¶</a></dt>
+<dd><p>Object that represents detections.</p>
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisDetections.serialize">
+<code class="sig-name descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisDetections.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the object to dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.11)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisDetections.register_detection">
+<code class="sig-name descname">register_detection</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bbox</span></em>, <em class="sig-param"><span class="n">label</span></em>, <em class="sig-param"><span class="n">color</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisDetections.register_detection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Register a detection.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bbox</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Bounding box.</p></li>
+<li><p><strong>label</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – Label.</p></li>
+<li><p><strong>color</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Color.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisDetections.prepare">
+<code class="sig-name descname">prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisDetections.prepare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare necessary data for drawing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>self</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#depthai_sdk.visualize.objects.VisDetections" title="depthai_sdk.visualize.objects.VisDetections">depthai_sdk.visualize.objects.VisDetections</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisDetections.get_detections">
+<code class="sig-name descname">get_detections</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisDetections.get_detections" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get detections.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>List of tuples (bbox, label, color).</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>List[Tuple[<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)">numpy.ndarray</a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a>, Tuple[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a>]]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisDetections.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frame</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisDetections.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the object on the frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>frame</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – frame to draw on.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisDetections.draw_stylized_bbox">
+<code class="sig-name descname">draw_stylized_bbox</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">img</span></em>, <em class="sig-param"><span class="n">pt1</span></em>, <em class="sig-param"><span class="n">pt2</span></em>, <em class="sig-param"><span class="n">color</span></em>, <em class="sig-param"><span class="n">thickness</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisDetections.draw_stylized_bbox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw a stylized bounding box. The style is defined in the config.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>img</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – Image.</p></li>
+<li><p><strong>pt1</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Top left corner.</p></li>
+<li><p><strong>pt2</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Bottom right corner.</p></li>
+<li><p><strong>color</strong> (<em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em>) – Color.</p></li>
+<li><p><strong>thickness</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – Thickness.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.objects.VisText">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.objects.</code><code class="sig-name descname">VisText</code><span class="sig-paren">(</span><em class="sig-param">text</em>, <em class="sig-param">coords=None</em>, <em class="sig-param">size=None</em>, <em class="sig-param">color=None</em>, <em class="sig-param">thickness=None</em>, <em class="sig-param">outline=True</em>, <em class="sig-param">bbox=None</em>, <em class="sig-param">position=&lt;TextPosition.TOP_LEFT: 0&gt;</em>, <em class="sig-param">padding=10</em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisText" title="Permalink to this definition">¶</a></dt>
+<dd><p>Object that represents a text.</p>
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisText.serialize">
+<code class="sig-name descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisText.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the object to dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisText.prepare">
+<code class="sig-name descname">prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisText.prepare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare necessary data for drawing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>self</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#depthai_sdk.visualize.objects.VisText" title="depthai_sdk.visualize.objects.VisText">depthai_sdk.visualize.objects.VisText</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisText.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frame</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisText.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the object on the frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>frame</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – frame to draw on.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisText.get_relative_position">
+<code class="sig-name descname">get_relative_position</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">bbox</span></em>, <em class="sig-param"><span class="n">position</span></em>, <em class="sig-param"><span class="n">padding</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisText.get_relative_position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get relative position of the text w.r.t. the bounding box.
+If bbox is None,the position is relative to the frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bbox</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a><em>, </em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>position</strong> (<a class="reference internal" href="#depthai_sdk.visualize.configs.TextPosition" title="depthai_sdk.visualize.configs.TextPosition"><em>depthai_sdk.visualize.configs.TextPosition</em></a>) – </p></li>
+<li><p><strong>padding</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Tuple[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisText.get_text_scale">
+<code class="sig-name descname">get_text_scale</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frame_shape</span></em>, <em class="sig-param"><span class="n">bbox</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisText.get_text_scale" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>frame_shape</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a><em>, </em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><em>..</em><em>]</em><em>]</em>) – </p></li>
+<li><p><strong>bbox</strong> (<em>Union</em><em>[</em><a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a><em>, </em><em>Tuple</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a><em>, </em><em>..</em><em>]</em><em>]</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.objects.VisLine">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.objects.</code><code class="sig-name descname">VisLine</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">pt1</span></em>, <em class="sig-param"><span class="n">pt2</span></em>, <em class="sig-param"><span class="n">color</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">thickness</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisLine" title="Permalink to this definition">¶</a></dt>
+<dd><p>Object that represents a line.</p>
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisLine.serialize">
+<code class="sig-name descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisLine.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the object to dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisLine.prepare">
+<code class="sig-name descname">prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisLine.prepare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare necessary data for drawing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>self</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#depthai_sdk.visualize.objects.VisLine" title="depthai_sdk.visualize.objects.VisLine">depthai_sdk.visualize.objects.VisLine</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisLine.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frame</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisLine.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the object on the frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>frame</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – frame to draw on.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.objects.VisTrail">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.objects.</code><code class="sig-name descname">VisTrail</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">tracklets</span></em>, <em class="sig-param"><span class="n">label_map</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisTrail" title="Permalink to this definition">¶</a></dt>
+<dd><p>Object that represents a trail.</p>
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisTrail.serialize">
+<code class="sig-name descname">serialize</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisTrail.serialize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialize the object to dict.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisTrail.prepare">
+<code class="sig-name descname">prepare</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisTrail.prepare" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prepare necessary data for drawing.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>self</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p><a class="reference internal" href="#depthai_sdk.visualize.objects.VisTrail" title="depthai_sdk.visualize.objects.VisTrail">depthai_sdk.visualize.objects.VisTrail</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisTrail.groupby_tracklet">
+<code class="sig-name descname">groupby_tracklet</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisTrail.groupby_tracklet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Group tracklets by tracklet id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>Dictionary of tracklets grouped by tracklet id.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisTrail.get_rect_centroid">
+<em class="property">static </em><code class="sig-name descname">get_rect_centroid</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">rect</span></em>, <em class="sig-param"><span class="n">w</span></em>, <em class="sig-param"><span class="n">h</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisTrail.get_rect_centroid" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get centroid of a rectangle.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>rect</strong> (<a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/references/python/#depthai.Rect" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><em>depthai.Rect</em></a>) – </p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Tuple[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="depthai_sdk.visualize.objects.VisTrail.draw">
+<code class="sig-name descname">draw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frame</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.objects.VisTrail.draw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draw the object on the frame.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>frame</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.24)"><em>numpy.ndarray</em></a>) – frame to draw on.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>None</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.11)">None</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="id3">
+<h3>Configs<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<span class="target" id="module-depthai_sdk.visualize.configs"></span><dl class="py class">
+<dt id="depthai_sdk.visualize.configs.TextPosition">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">TextPosition</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Where on frame do we want to print text.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextPosition.TOP_LEFT">
+<code class="sig-name descname">TOP_LEFT</code><em class="property"> = 0</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition.TOP_LEFT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextPosition.MID_LEFT">
+<code class="sig-name descname">MID_LEFT</code><em class="property"> = 1</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition.MID_LEFT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextPosition.BOTTOM_LEFT">
+<code class="sig-name descname">BOTTOM_LEFT</code><em class="property"> = 2</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition.BOTTOM_LEFT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextPosition.TOP_MID">
+<code class="sig-name descname">TOP_MID</code><em class="property"> = 10</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition.TOP_MID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextPosition.MID">
+<code class="sig-name descname">MID</code><em class="property"> = 11</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition.MID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextPosition.BOTTOM_MID">
+<code class="sig-name descname">BOTTOM_MID</code><em class="property"> = 12</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition.BOTTOM_MID" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextPosition.TOP_RIGHT">
+<code class="sig-name descname">TOP_RIGHT</code><em class="property"> = 20</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition.TOP_RIGHT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextPosition.MID_RIGHT">
+<code class="sig-name descname">MID_RIGHT</code><em class="property"> = 21</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition.MID_RIGHT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextPosition.BOTTOM_RIGHT">
+<code class="sig-name descname">BOTTOM_RIGHT</code><em class="property"> = 22</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextPosition.BOTTOM_RIGHT" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.BboxStyle">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">BboxStyle</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.BboxStyle" title="Permalink to this definition">¶</a></dt>
+<dd><p>How do we want to draw bounding box.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.BboxStyle.RECTANGLE">
+<code class="sig-name descname">RECTANGLE</code><em class="property"> = 0</em><a class="headerlink" href="#depthai_sdk.visualize.configs.BboxStyle.RECTANGLE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.BboxStyle.CORNERS">
+<code class="sig-name descname">CORNERS</code><em class="property"> = 1</em><a class="headerlink" href="#depthai_sdk.visualize.configs.BboxStyle.CORNERS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.BboxStyle.ROUNDED_RECTANGLE">
+<code class="sig-name descname">ROUNDED_RECTANGLE</code><em class="property"> = 10</em><a class="headerlink" href="#depthai_sdk.visualize.configs.BboxStyle.ROUNDED_RECTANGLE" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.BboxStyle.ROUNDED_CORNERS">
+<code class="sig-name descname">ROUNDED_CORNERS</code><em class="property"> = 11</em><a class="headerlink" href="#depthai_sdk.visualize.configs.BboxStyle.ROUNDED_CORNERS" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.StereoColor">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">StereoColor</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">value</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoColor" title="Permalink to this definition">¶</a></dt>
+<dd><p>An enumeration.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.StereoColor.GRAY">
+<code class="sig-name descname">GRAY</code><em class="property"> = 1</em><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoColor.GRAY" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.StereoColor.RGB">
+<code class="sig-name descname">RGB</code><em class="property"> = 2</em><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoColor.RGB" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.StereoColor.RGBD">
+<code class="sig-name descname">RGBD</code><em class="property"> = 3</em><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoColor.RGBD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.OutputConfig">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">OutputConfig</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">img_scale</span><span class="o">=</span><span class="default_value">1.0</span></em>, <em class="sig-param"><span class="n">show_fps</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">clickable</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.OutputConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for output of the visualizer.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.OutputConfig.img_scale">
+<code class="sig-name descname">img_scale</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 1.0</em><a class="headerlink" href="#depthai_sdk.visualize.configs.OutputConfig.img_scale" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.OutputConfig.show_fps">
+<code class="sig-name descname">show_fps</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></em><em class="property"> = False</em><a class="headerlink" href="#depthai_sdk.visualize.configs.OutputConfig.show_fps" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.OutputConfig.clickable">
+<code class="sig-name descname">clickable</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></em><em class="property"> = True</em><a class="headerlink" href="#depthai_sdk.visualize.configs.OutputConfig.clickable" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.StereoConfig">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">StereoConfig</code><span class="sig-paren">(</span><em class="sig-param">colorize: depthai_sdk.visualize.configs.StereoColor = &lt;StereoColor.RGB: 2&gt;</em>, <em class="sig-param">colormap: int = 2</em>, <em class="sig-param">wls_filter: bool = False</em>, <em class="sig-param">wls_lambda: float = 8000</em>, <em class="sig-param">wls_sigma: float = 1.5</em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoConfig" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.StereoConfig.colorize">
+<code class="sig-name descname">colorize</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.StereoColor" title="depthai_sdk.visualize.configs.StereoColor">depthai_sdk.visualize.configs.StereoColor</a></em><em class="property"> = 2</em><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoConfig.colorize" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.StereoConfig.colormap">
+<code class="sig-name descname">colormap</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 2</em><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoConfig.colormap" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.StereoConfig.wls_filter">
+<code class="sig-name descname">wls_filter</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></em><em class="property"> = False</em><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoConfig.wls_filter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.StereoConfig.wls_lambda">
+<code class="sig-name descname">wls_lambda</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 8000</em><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoConfig.wls_lambda" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.StereoConfig.wls_sigma">
+<code class="sig-name descname">wls_sigma</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 1.5</em><a class="headerlink" href="#depthai_sdk.visualize.configs.StereoConfig.wls_sigma" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">DetectionConfig</code><span class="sig-paren">(</span><em class="sig-param">thickness=1</em>, <em class="sig-param">fill_transparency=0.15</em>, <em class="sig-param">box_roundness=0</em>, <em class="sig-param">color=(0</em>, <em class="sig-param">255</em>, <em class="sig-param">0)</em>, <em class="sig-param">bbox_style=&lt;BboxStyle.RECTANGLE: 0&gt;</em>, <em class="sig-param">line_width=0.5</em>, <em class="sig-param">line_height=0.5</em>, <em class="sig-param">hide_label=False</em>, <em class="sig-param">label_position=&lt;TextPosition.TOP_LEFT: 0&gt;</em>, <em class="sig-param">label_padding=10</em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for drawing bounding boxes.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.thickness">
+<code class="sig-name descname">thickness</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 1</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.thickness" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.fill_transparency">
+<code class="sig-name descname">fill_transparency</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 0.15</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.fill_transparency" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.box_roundness">
+<code class="sig-name descname">box_roundness</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 0</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.box_roundness" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.color">
+<code class="sig-name descname">color</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">]</span></em><em class="property"> = (0, 255, 0)</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.color" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.bbox_style">
+<code class="sig-name descname">bbox_style</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.BboxStyle" title="depthai_sdk.visualize.configs.BboxStyle">depthai_sdk.visualize.configs.BboxStyle</a></em><em class="property"> = 0</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.bbox_style" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.line_width">
+<code class="sig-name descname">line_width</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 0.5</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.line_width" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.line_height">
+<code class="sig-name descname">line_height</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 0.5</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.line_height" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.hide_label">
+<code class="sig-name descname">hide_label</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></em><em class="property"> = False</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.hide_label" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.label_position">
+<code class="sig-name descname">label_position</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.TextPosition" title="depthai_sdk.visualize.configs.TextPosition">depthai_sdk.visualize.configs.TextPosition</a></em><em class="property"> = 0</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.label_position" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.DetectionConfig.label_padding">
+<code class="sig-name descname">label_padding</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 10</em><a class="headerlink" href="#depthai_sdk.visualize.configs.DetectionConfig.label_padding" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.TextConfig">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">TextConfig</code><span class="sig-paren">(</span><em class="sig-param">font_face=0</em>, <em class="sig-param">font_color=(255</em>, <em class="sig-param">255</em>, <em class="sig-param">255)</em>, <em class="sig-param">font_transparency=0.5</em>, <em class="sig-param">font_scale=1.0</em>, <em class="sig-param">font_thickness=2</em>, <em class="sig-param">font_position=&lt;TextPosition.TOP_LEFT: 0&gt;</em>, <em class="sig-param">bg_transparency=0.5</em>, <em class="sig-param">bg_color=(0</em>, <em class="sig-param">0</em>, <em class="sig-param">0)</em>, <em class="sig-param">line_type=16</em>, <em class="sig-param">auto_scale=True</em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for drawing labels.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.font_face">
+<code class="sig-name descname">font_face</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 0</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.font_face" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.font_color">
+<code class="sig-name descname">font_color</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">]</span></em><em class="property"> = (255, 255, 255)</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.font_color" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.font_transparency">
+<code class="sig-name descname">font_transparency</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 0.5</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.font_transparency" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.font_scale">
+<code class="sig-name descname">font_scale</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 1.0</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.font_scale" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.font_thickness">
+<code class="sig-name descname">font_thickness</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 2</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.font_thickness" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.font_position">
+<code class="sig-name descname">font_position</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.TextPosition" title="depthai_sdk.visualize.configs.TextPosition">depthai_sdk.visualize.configs.TextPosition</a></em><em class="property"> = 0</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.font_position" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.bg_transparency">
+<code class="sig-name descname">bg_transparency</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 0.5</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.bg_transparency" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.bg_color">
+<code class="sig-name descname">bg_color</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">]</span></em><em class="property"> = (0, 0, 0)</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.bg_color" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.line_type">
+<code class="sig-name descname">line_type</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 16</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.line_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TextConfig.auto_scale">
+<code class="sig-name descname">auto_scale</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></em><em class="property"> = True</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TextConfig.auto_scale" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.TrackingConfig">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">TrackingConfig</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">max_length</span><span class="o">=</span><span class="default_value">- 1</span></em>, <em class="sig-param"><span class="n">deletion_lost_threshold</span><span class="o">=</span><span class="default_value">5</span></em>, <em class="sig-param"><span class="n">line_thickness</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">fading_tails</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">line_color</span><span class="o">=</span><span class="default_value">(255, 255, 255)</span></em>, <em class="sig-param"><span class="n">line_type</span><span class="o">=</span><span class="default_value">16</span></em>, <em class="sig-param"><span class="n">bg_color</span><span class="o">=</span><span class="default_value">(0, 0, 0)</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.TrackingConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for drawing tracking bounding boxes.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TrackingConfig.max_length">
+<code class="sig-name descname">max_length</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = -1</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TrackingConfig.max_length" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TrackingConfig.deletion_lost_threshold">
+<code class="sig-name descname">deletion_lost_threshold</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 5</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TrackingConfig.deletion_lost_threshold" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TrackingConfig.line_thickness">
+<code class="sig-name descname">line_thickness</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 1</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TrackingConfig.line_thickness" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TrackingConfig.fading_tails">
+<code class="sig-name descname">fading_tails</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></em><em class="property"> = False</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TrackingConfig.fading_tails" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TrackingConfig.line_color">
+<code class="sig-name descname">line_color</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">]</span></em><em class="property"> = (255, 255, 255)</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TrackingConfig.line_color" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TrackingConfig.line_type">
+<code class="sig-name descname">line_type</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 16</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TrackingConfig.line_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.TrackingConfig.bg_color">
+<code class="sig-name descname">bg_color</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">]</span></em><em class="property"> = (0, 0, 0)</em><a class="headerlink" href="#depthai_sdk.visualize.configs.TrackingConfig.bg_color" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.SegmentationConfig">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">SegmentationConfig</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mask_alpha</span><span class="o">=</span><span class="default_value">0.5</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.SegmentationConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for drawing segmentation masks.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.SegmentationConfig.mask_alpha">
+<code class="sig-name descname">mask_alpha</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.11)">float</a></em><em class="property"> = 0.5</em><a class="headerlink" href="#depthai_sdk.visualize.configs.SegmentationConfig.mask_alpha" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.CircleConfig">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">CircleConfig</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">thickness</span><span class="o">=</span><span class="default_value">1</span></em>, <em class="sig-param"><span class="n">color</span><span class="o">=</span><span class="default_value">(255, 255, 255)</span></em>, <em class="sig-param"><span class="n">line_type</span><span class="o">=</span><span class="default_value">16</span></em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.CircleConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for drawing circles.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.CircleConfig.thickness">
+<code class="sig-name descname">thickness</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 1</em><a class="headerlink" href="#depthai_sdk.visualize.configs.CircleConfig.thickness" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.CircleConfig.color">
+<code class="sig-name descname">color</code><em class="property">: Tuple<span class="p">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">, </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a><span class="p">]</span></em><em class="property"> = (255, 255, 255)</em><a class="headerlink" href="#depthai_sdk.visualize.configs.CircleConfig.color" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.CircleConfig.line_type">
+<code class="sig-name descname">line_type</code><em class="property">: <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)">int</a></em><em class="property"> = 16</em><a class="headerlink" href="#depthai_sdk.visualize.configs.CircleConfig.line_type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="depthai_sdk.visualize.configs.VisConfig">
+<em class="property">class </em><code class="sig-prename descclassname">depthai_sdk.visualize.configs.</code><code class="sig-name descname">VisConfig</code><span class="sig-paren">(</span><em class="sig-param">output=&lt;factory&gt;</em>, <em class="sig-param">stereo=&lt;factory&gt;</em>, <em class="sig-param">detection=&lt;factory&gt;</em>, <em class="sig-param">text=&lt;factory&gt;</em>, <em class="sig-param">tracking=&lt;factory&gt;</em>, <em class="sig-param">circle=&lt;factory&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#depthai_sdk.visualize.configs.VisConfig" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for visualizer.</p>
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.VisConfig.output">
+<code class="sig-name descname">output</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.OutputConfig" title="depthai_sdk.visualize.configs.OutputConfig">depthai_sdk.visualize.configs.OutputConfig</a></em><a class="headerlink" href="#depthai_sdk.visualize.configs.VisConfig.output" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.VisConfig.stereo">
+<code class="sig-name descname">stereo</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.StereoConfig" title="depthai_sdk.visualize.configs.StereoConfig">depthai_sdk.visualize.configs.StereoConfig</a></em><a class="headerlink" href="#depthai_sdk.visualize.configs.VisConfig.stereo" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.VisConfig.detection">
+<code class="sig-name descname">detection</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.DetectionConfig" title="depthai_sdk.visualize.configs.DetectionConfig">depthai_sdk.visualize.configs.DetectionConfig</a></em><a class="headerlink" href="#depthai_sdk.visualize.configs.VisConfig.detection" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.VisConfig.text">
+<code class="sig-name descname">text</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.TextConfig" title="depthai_sdk.visualize.configs.TextConfig">depthai_sdk.visualize.configs.TextConfig</a></em><a class="headerlink" href="#depthai_sdk.visualize.configs.VisConfig.text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.VisConfig.tracking">
+<code class="sig-name descname">tracking</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.TrackingConfig" title="depthai_sdk.visualize.configs.TrackingConfig">depthai_sdk.visualize.configs.TrackingConfig</a></em><a class="headerlink" href="#depthai_sdk.visualize.configs.VisConfig.tracking" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="depthai_sdk.visualize.configs.VisConfig.circle">
+<code class="sig-name descname">circle</code><em class="property">: <a class="reference internal" href="#depthai_sdk.visualize.configs.CircleConfig" title="depthai_sdk.visualize.configs.CircleConfig">depthai_sdk.visualize.configs.CircleConfig</a></em><a class="headerlink" href="#depthai_sdk.visualize.configs.VisConfig.circle" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<h2>Got questions?</h2><p>We’re always happy to help with development or other questions you might have.</p>
+<div class="cta-row cta-row-short">
+    <div class="cta-box">
+       <a href="https://luxonis.com/discord">
+          <img src="/_images/discord.png" alt="Discord"/>
+          <h5 class="cta-title">Community Discord</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="https://discuss.luxonis.com/">
+          <img src="/_images/forum.png" alt="forum"/>
+          <h5 class="cta-title">Discussion Forum</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="mailto:support@luxonis.com">
+          <img src="/_images/email.png" alt="forum"/>
+          <h5 class="cta-title">Email</h5>
+       </a>
+    </div>
+ </div></div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="../tutorials/code_samples.html" class="btn btn-neutral float-right" title="Code Samples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="replaying.html" class="btn btn-neutral float-left" title="Replaying" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright @build_year@, Luxonis.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

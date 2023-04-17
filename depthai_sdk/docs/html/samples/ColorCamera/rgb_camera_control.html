@@ -1,0 +1,1004 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>RGB Camera Control &mdash; DepthAI SDK Docs 1.9.2 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/sphinx_tabs/semantic-ui-2.4.1/segment.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/sphinx_tabs/semantic-ui-2.4.1/menu.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/sphinx_tabs/semantic-ui-2.4.1/tab.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/sphinx_tabs/tabs.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/index.css" type="text/css" />
+  <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/favicon.png"/>
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_tabs/semantic-ui-2.4.1/tab.min.js"></script>
+        <script src="../../_static/sphinx_tabs/tabs.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="RGB Encoding &amp; MobilenetSSD" href="../mixed/rgb_encoding_mobilenet.html" />
+    <link rel="prev" title="Auto Exposure on ROI" href="autoexposure_roi.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> DepthAI SDK Docs
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Home:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">DepthAI SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../oak-camera.html">OakCamera</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../oak-camera.html#interoperability-with-depthai-api">Interoperability with DepthAI API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../oak-camera.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#preview-color-and-mono-cameras">Preview color and mono cameras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#run-mobilenetssd-on-color-camera">Run MobilenetSSD on color camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#run-face-detection-retail-0004-on-left-camera">Run face-detection-retail-0004 on left camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">Deploy models from Roboflow and Roboflow Universe with Depth SDK</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../oak-camera.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../features/ai_models.html">AI models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/ai_models.html#sdk-supported-models">SDK supported models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/components.html">Components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../components/camera_component.html">CameraComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#reference">Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/imu_component.html">IMUComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#reference">Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/nn_component.html">NNComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/nn_component.html#depthai-api-nodes">DepthAI API nodes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#decoding-outputs">Decoding outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/stereo_component.html">StereoComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/packets.html">Packets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/packets.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/packets.html#reference">Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#framepacket">FramePacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#spatialbbmappingpacket">SpatialBbMappingPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#detectionpacket">DetectionPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#depthpacket">DepthPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#trackerpacket">TrackerPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#twostagepacket">TwoStagePacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#imupacket">IMUPacket</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/recording.html">Recording</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/recording.html#supported-recording-types">Supported recording types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#video">1. Video</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#rosbag">2. Rosbag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#mcap-recording">3. MCAP recording</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/replaying.html">Replaying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#replaying-support">Replaying support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#replaying-a-depthai-recording">Replaying a depthai-recording</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#public-depthai-recordings">Public depthai-recordings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/visualizer.html">Visualizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#flow">Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#configs">Configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#create-your-own-object">Create your own object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#example-usage">Example usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#references">References</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id1">Visualizer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id2">Objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id3">Configs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Code samples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../tutorials/code_samples.html">Code Samples</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="autoexposure_roi.html">Auto Exposure on ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="autoexposure_roi.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="autoexposure_roi.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="autoexposure_roi.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">RGB Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html">RGB Encoding &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html">RGB Encoding &amp; Mono &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DepthAI SDK Docs</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../tutorials/code_samples.html">Code Samples</a> &raquo;</li>
+        
+      <li>RGB Camera Control</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/samples/ColorCamera/rgb_camera_control.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="rgb-camera-control">
+<h1>RGB Camera Control<a class="headerlink" href="#rgb-camera-control" title="Permalink to this headline">¶</a></h1>
+<p>This example shows how to control the <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/color_camera/#colorcamera" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><span>ColorCamera</span></a>, such as exposure, sensitivity, white balance, luma/chroma denoise,
+device-side crop, camera triggers, etc.</p>
+<p>An output is a full frame along with cropped frame (<code class="docutils literal notranslate"><span class="pre">video</span></code>) which can be moved with <code class="docutils literal notranslate"><span class="pre">WASD</span></code> keys.</p>
+<p><strong>List of all controls</strong>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">Uses</span> <span class="s1">&#39;WASD&#39;</span> <span class="n">controls</span> <span class="n">to</span> <span class="n">move</span> <span class="n">the</span> <span class="n">crop</span> <span class="n">window</span><span class="p">,</span> <span class="s1">&#39;C&#39;</span> <span class="n">to</span> <span class="n">capture</span> <span class="n">a</span> <span class="n">still</span> <span class="n">image</span><span class="p">,</span> <span class="s1">&#39;T&#39;</span> <span class="n">to</span>
+<span class="n">trigger</span> <span class="n">autofocus</span><span class="p">,</span> <span class="s1">&#39;IOKL,.NM&#39;</span> <span class="k">for</span> <span class="n">manual</span> <span class="n">exposure</span><span class="o">/</span><span class="n">focus</span><span class="o">/</span><span class="n">white</span><span class="o">-</span><span class="n">balance</span><span class="p">:</span>
+  <span class="n">Control</span><span class="p">:</span>      <span class="n">key</span><span class="p">[</span><span class="n">dec</span><span class="o">/</span><span class="n">inc</span><span class="p">]</span>  <span class="nb">min</span><span class="o">..</span><span class="n">max</span>
+  <span class="n">exposure</span> <span class="n">time</span><span class="p">:</span>     <span class="n">I</span>   <span class="n">O</span>      <span class="mf">1..33000</span> <span class="p">[</span><span class="n">us</span><span class="p">]</span>
+  <span class="n">sensitivity</span> <span class="n">iso</span><span class="p">:</span>   <span class="n">K</span>   <span class="n">L</span>    <span class="mf">100..1600</span>
+  <span class="n">focus</span><span class="p">:</span>             <span class="p">,</span>   <span class="o">.</span>      <span class="mf">0..255</span> <span class="p">[</span><span class="n">far</span><span class="o">..</span><span class="n">near</span><span class="p">]</span>
+  <span class="n">white</span> <span class="n">balance</span><span class="p">:</span>     <span class="n">N</span>   <span class="n">M</span>   <span class="mf">1000..12000</span> <span class="p">(</span><span class="n">light</span> <span class="n">color</span> <span class="n">temperature</span> <span class="n">K</span><span class="p">)</span>
+
+<span class="n">To</span> <span class="n">go</span> <span class="n">back</span> <span class="n">to</span> <span class="n">auto</span> <span class="n">controls</span><span class="p">:</span>
+  <span class="s1">&#39;E&#39;</span> <span class="o">-</span> <span class="n">autoexposure</span>
+  <span class="s1">&#39;F&#39;</span> <span class="o">-</span> <span class="n">autofocus</span> <span class="p">(</span><span class="n">continuous</span><span class="p">)</span>
+  <span class="s1">&#39;B&#39;</span> <span class="o">-</span> <span class="n">auto</span> <span class="n">white</span><span class="o">-</span><span class="n">balance</span>
+
+<span class="n">Other</span> <span class="n">controls</span><span class="p">:</span>
+  <span class="s1">&#39;1&#39;</span> <span class="o">-</span> <span class="n">AWB</span> <span class="n">lock</span> <span class="p">(</span><span class="n">true</span> <span class="o">/</span> <span class="n">false</span><span class="p">)</span>
+  <span class="s1">&#39;2&#39;</span> <span class="o">-</span> <span class="n">AE</span> <span class="n">lock</span> <span class="p">(</span><span class="n">true</span> <span class="o">/</span> <span class="n">false</span><span class="p">)</span>
+  <span class="s1">&#39;3&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">AWB</span> <span class="n">mode</span>
+  <span class="s1">&#39;4&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">AE</span> <span class="n">compensation</span>
+  <span class="s1">&#39;5&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">anti</span><span class="o">-</span><span class="n">banding</span><span class="o">/</span><span class="n">flicker</span> <span class="n">mode</span>
+  <span class="s1">&#39;6&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">effect</span> <span class="n">mode</span>
+  <span class="s1">&#39;7&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">brightness</span>
+  <span class="s1">&#39;8&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">contrast</span>
+  <span class="s1">&#39;9&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">saturation</span>
+  <span class="s1">&#39;0&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">sharpness</span>
+  <span class="s1">&#39;[&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">luma</span> <span class="n">denoise</span>
+  <span class="s1">&#39;]&#39;</span> <span class="o">-</span> <span class="n">Select</span> <span class="n">control</span><span class="p">:</span> <span class="n">chroma</span> <span class="n">denoise</span>
+
+<span class="n">For</span> <span class="n">the</span> <span class="s1">&#39;Select control: ...&#39;</span> <span class="n">options</span><span class="p">,</span> <span class="n">use</span> <span class="n">these</span> <span class="n">keys</span> <span class="n">to</span> <span class="n">modify</span> <span class="n">the</span> <span class="n">value</span><span class="p">:</span>
+  <span class="s1">&#39;-&#39;</span> <span class="ow">or</span> <span class="s1">&#39;_&#39;</span> <span class="n">to</span> <span class="n">decrease</span>
+  <span class="s1">&#39;+&#39;</span> <span class="ow">or</span> <span class="s1">&#39;=&#39;</span> <span class="n">to</span> <span class="n">increase</span>
+</pre></div>
+</div>
+<p class="rubric">Similar samples:</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/samples/MonoCamera/mono_camera_control/#mono-camera-control" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><span>Mono Camera Control</span></a></p></li>
+<li><p><a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/samples/StereoDepth/depth_crop_control/#depth-crop-control" title="(in DepthAI API Docs v2.21.0.0.dev+b6b20c971d6f987bac3fffa2e5d8191aa7d10555)"><span>Depth Crop Control</span></a></p></li>
+</ul>
+<div class="section" id="demo">
+<h2>Demo<a class="headerlink" href="#demo" title="Permalink to this headline">¶</a></h2>
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; height: auto;">
+    <iframe src="https://www.youtube.com/embed/httOxe2LAkI" frameborder="0" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>
+</div></div>
+<div class="section" id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
+<p>Please run the <a class="reference external" href="https://github.com/luxonis/depthai-python/blob/main/examples/install_requirements.py">install script</a>
+to download all required dependencies. Please note that this script must be ran from git context, so you have to download the <a class="reference external" href="https://github.com/luxonis/depthai-python">depthai-python</a> repository first and then run the script</p>
+<p>For additional information, please follow <a class="reference internal" href="../../index.html#installation"><span class="std std-ref">installation guide</span></a></p>
+</div>
+<div class="section" id="source-code">
+<h2>Source code<a class="headerlink" href="#source-code" title="Permalink to this headline">¶</a></h2>
+<div class="sphinx-tabs docutils container">
+<div class="ui top attached tabular menu sphinx-menu docutils container">
+<div class="active item sphinx-data-tab-0-0 docutils container">
+<div class="docutils container">
+<p>Python</p>
+</div>
+</div>
+<div class="item sphinx-data-tab-0-1 docutils container">
+<div class="docutils container">
+<p>C++</p>
+</div>
+</div>
+</div>
+<div class="ui bottom attached sphinx-tab tab segment sphinx-data-tab-0-0 active docutils container">
+<p>Also <a class="reference external" href="https://github.com/luxonis/depthai-python/blob/main/examples/ColorCamera/rgb_camera_control.py">available on GitHub</a></p>
+<div class="highlight-python notranslate"><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span class="normal">  1</span>
+<span class="normal">  2</span>
+<span class="normal">  3</span>
+<span class="normal">  4</span>
+<span class="normal">  5</span>
+<span class="normal">  6</span>
+<span class="normal">  7</span>
+<span class="normal">  8</span>
+<span class="normal">  9</span>
+<span class="normal"> 10</span>
+<span class="normal"> 11</span>
+<span class="normal"> 12</span>
+<span class="normal"> 13</span>
+<span class="normal"> 14</span>
+<span class="normal"> 15</span>
+<span class="normal"> 16</span>
+<span class="normal"> 17</span>
+<span class="normal"> 18</span>
+<span class="normal"> 19</span>
+<span class="normal"> 20</span>
+<span class="normal"> 21</span>
+<span class="normal"> 22</span>
+<span class="normal"> 23</span>
+<span class="normal"> 24</span>
+<span class="normal"> 25</span>
+<span class="normal"> 26</span>
+<span class="normal"> 27</span>
+<span class="normal"> 28</span>
+<span class="normal"> 29</span>
+<span class="normal"> 30</span>
+<span class="normal"> 31</span>
+<span class="normal"> 32</span>
+<span class="normal"> 33</span>
+<span class="normal"> 34</span>
+<span class="normal"> 35</span>
+<span class="normal"> 36</span>
+<span class="normal"> 37</span>
+<span class="normal"> 38</span>
+<span class="normal"> 39</span>
+<span class="normal"> 40</span>
+<span class="normal"> 41</span>
+<span class="normal"> 42</span>
+<span class="normal"> 43</span>
+<span class="normal"> 44</span>
+<span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
+<span class="normal"> 53</span>
+<span class="normal"> 54</span>
+<span class="normal"> 55</span>
+<span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span>
+<span class="normal">170</span>
+<span class="normal">171</span>
+<span class="normal">172</span>
+<span class="normal">173</span>
+<span class="normal">174</span>
+<span class="normal">175</span>
+<span class="normal">176</span>
+<span class="normal">177</span>
+<span class="normal">178</span>
+<span class="normal">179</span>
+<span class="normal">180</span>
+<span class="normal">181</span>
+<span class="normal">182</span>
+<span class="normal">183</span>
+<span class="normal">184</span>
+<span class="normal">185</span>
+<span class="normal">186</span>
+<span class="normal">187</span>
+<span class="normal">188</span>
+<span class="normal">189</span>
+<span class="normal">190</span>
+<span class="normal">191</span>
+<span class="normal">192</span>
+<span class="normal">193</span>
+<span class="normal">194</span>
+<span class="normal">195</span>
+<span class="normal">196</span>
+<span class="normal">197</span>
+<span class="normal">198</span>
+<span class="normal">199</span>
+<span class="normal">200</span>
+<span class="normal">201</span>
+<span class="normal">202</span>
+<span class="normal">203</span>
+<span class="normal">204</span>
+<span class="normal">205</span>
+<span class="normal">206</span>
+<span class="normal">207</span>
+<span class="normal">208</span>
+<span class="normal">209</span>
+<span class="normal">210</span>
+<span class="normal">211</span>
+<span class="normal">212</span>
+<span class="normal">213</span>
+<span class="normal">214</span>
+<span class="normal">215</span>
+<span class="normal">216</span>
+<span class="normal">217</span>
+<span class="normal">218</span>
+<span class="normal">219</span>
+<span class="normal">220</span>
+<span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span>
+<span class="normal">224</span>
+<span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span>
+<span class="normal">228</span>
+<span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span>
+<span class="normal">232</span>
+<span class="normal">233</span>
+<span class="normal">234</span>
+<span class="normal">235</span>
+<span class="normal">236</span>
+<span class="normal">237</span>
+<span class="normal">238</span>
+<span class="normal">239</span>
+<span class="normal">240</span>
+<span class="normal">241</span>
+<span class="normal">242</span>
+<span class="normal">243</span>
+<span class="normal">244</span>
+<span class="normal">245</span>
+<span class="normal">246</span>
+<span class="normal">247</span>
+<span class="normal">248</span>
+<span class="normal">249</span>
+<span class="normal">250</span>
+<span class="normal">251</span>
+<span class="normal">252</span>
+<span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
+<span class="normal">260</span>
+<span class="normal">261</span>
+<span class="normal">262</span>
+<span class="normal">263</span>
+<span class="normal">264</span>
+<span class="normal">265</span>
+<span class="normal">266</span>
+<span class="normal">267</span>
+<span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span></pre></div></td><td class="code"><div><pre><span></span><span class="ch">#!/usr/bin/env python3</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">This example shows usage of Camera Control message as well as ColorCamera configInput to change crop x and y</span>
+<span class="sd">Uses &#39;WASD&#39; controls to move the crop window, &#39;C&#39; to capture a still image, &#39;T&#39; to trigger autofocus, &#39;IOKL,.NM&#39;</span>
+<span class="sd">for manual exposure/focus/white-balance:</span>
+<span class="sd">  Control:      key[dec/inc]  min..max</span>
+<span class="sd">  exposure time:     I   O      1..33000 [us]</span>
+<span class="sd">  sensitivity iso:   K   L    100..1600</span>
+<span class="sd">  focus:             ,   .      0..255 [far..near]</span>
+<span class="sd">  white balance:     N   M   1000..12000 (light color temperature K)</span>
+
+<span class="sd">To go back to auto controls:</span>
+<span class="sd">  &#39;E&#39; - autoexposure</span>
+<span class="sd">  &#39;F&#39; - autofocus (continuous)</span>
+<span class="sd">  &#39;B&#39; - auto white-balance</span>
+
+<span class="sd">Other controls:</span>
+<span class="sd">    &#39;1&#39; - AWB lock (true / false)</span>
+<span class="sd">    &#39;2&#39; - AE lock (true / false)</span>
+<span class="sd">    &#39;3&#39; - Select control: AWB mode</span>
+<span class="sd">    &#39;4&#39; - Select control: AE compensation</span>
+<span class="sd">    &#39;5&#39; - Select control: anti-banding/flicker mode</span>
+<span class="sd">    &#39;6&#39; - Select control: effect mode</span>
+<span class="sd">    &#39;7&#39; - Select control: brightness</span>
+<span class="sd">    &#39;8&#39; - Select control: contrast</span>
+<span class="sd">    &#39;9&#39; - Select control: saturation</span>
+<span class="sd">    &#39;0&#39; - Select control: sharpness</span>
+<span class="sd">    &#39;[&#39; - Select control: luma denoise</span>
+<span class="sd">    &#39;]&#39; - Select control: chroma denoise</span>
+
+<span class="sd">For the &#39;Select control: ...&#39; options, use these keys to modify the value:</span>
+<span class="sd">  &#39;-&#39; or &#39;_&#39; to decrease</span>
+<span class="sd">  &#39;+&#39; or &#39;=&#39; to increase</span>
+
+<span class="sd">&#39;/&#39; to toggle showing camera settings: exposure, ISO, lens position, color temperature</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">depthai</span> <span class="k">as</span> <span class="nn">dai</span>
+<span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">OakCamera</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">cycle</span>
+<span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="n">FramePacket</span>
+
+<span class="n">STEP_SIZE</span> <span class="o">=</span> <span class="mi">8</span>
+<span class="c1"># Manual exposure/focus/white-balance set step</span>
+<span class="n">EXP_STEP</span> <span class="o">=</span> <span class="mi">500</span>  <span class="c1"># us</span>
+<span class="n">ISO_STEP</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">LENS_STEP</span> <span class="o">=</span> <span class="mi">3</span>
+<span class="n">WB_STEP</span> <span class="o">=</span> <span class="mi">200</span>
+
+<span class="k">def</span> <span class="nf">clamp</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">v0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">v1</span><span class="p">))</span>
+
+
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;1080p&quot;</span><span class="p">,</span> <span class="n">encode</span><span class="o">=</span><span class="s2">&quot;mjpeg&quot;</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">cb</span><span class="p">(</span><span class="n">packet</span> <span class="p">:</span> <span class="n">FramePacket</span><span class="p">):</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">,</span> <span class="n">packet</span><span class="o">.</span><span class="n">frame</span><span class="p">)</span>
+
+
+    <span class="n">visualizer</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">([</span><span class="n">color</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">encoded</span><span class="p">])</span><span class="c1">#, color.node.still, color.node.isp, color.out.encoded], fps=True)</span>
+    
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+
+    <span class="n">controlIn</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">XLinkIn</span><span class="p">)</span>
+    <span class="n">configIn</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">XLinkIn</span><span class="p">)</span>
+
+    <span class="n">controlIn</span><span class="o">.</span><span class="n">setStreamName</span><span class="p">(</span><span class="s1">&#39;control&#39;</span><span class="p">)</span>
+    <span class="n">configIn</span><span class="o">.</span><span class="n">setStreamName</span><span class="p">(</span><span class="s1">&#39;config&#39;</span><span class="p">)</span>
+
+    <span class="n">controlIn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="n">color</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">inputControl</span><span class="p">)</span>
+    <span class="n">configIn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="n">color</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">inputConfig</span><span class="p">)</span>
+
+    <span class="c1"># Create output</span>
+    <span class="n">xoutisp</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">XLinkOut</span><span class="p">)</span>
+    <span class="n">xoutisp</span><span class="o">.</span><span class="n">setStreamName</span><span class="p">(</span><span class="s1">&#39;isp&#39;</span><span class="p">)</span>
+    <span class="n">color</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">isp</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="n">xoutisp</span><span class="o">.</span><span class="n">input</span><span class="p">)</span>
+    <span class="n">xoutvideo</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">XLinkOut</span><span class="p">)</span>
+    <span class="n">xoutvideo</span><span class="o">.</span><span class="n">setStreamName</span><span class="p">(</span><span class="s1">&#39;video&#39;</span><span class="p">)</span>
+    <span class="n">color</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">video</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="n">xoutvideo</span><span class="o">.</span><span class="n">input</span><span class="p">)</span>
+    <span class="n">xoutstill</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">XLinkOut</span><span class="p">)</span>
+    <span class="n">xoutstill</span><span class="o">.</span><span class="n">setStreamName</span><span class="p">(</span><span class="s1">&#39;still&#39;</span><span class="p">)</span>
+    <span class="n">color</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">still</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="n">xoutstill</span><span class="o">.</span><span class="n">input</span><span class="p">)</span>
+
+
+    <span class="c1"># Default crop</span>
+    <span class="n">cropX</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">cropY</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">sendCamConfig</span> <span class="o">=</span> <span class="kc">True</span>
+
+    <span class="c1"># Defaults and limits for manual focus/exposure controls</span>
+    <span class="n">lensPos</span> <span class="o">=</span> <span class="mi">150</span>
+    <span class="n">expTime</span> <span class="o">=</span> <span class="mi">20000</span>
+    <span class="n">sensIso</span> <span class="o">=</span> <span class="mi">800</span>    
+    <span class="n">wbManual</span> <span class="o">=</span> <span class="mi">4000</span>
+    <span class="n">ae_comp</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">ae_lock</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">awb_lock</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">saturation</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">contrast</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">brightness</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">sharpness</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">luma_denoise</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">chroma_denoise</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>
+    <span class="n">show</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="n">awb_mode</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">([</span><span class="n">item</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="o">.</span><span class="n">AutoWhiteBalanceMode</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">isupper</span><span class="p">()])</span>
+    <span class="n">anti_banding_mode</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">([</span><span class="n">item</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="o">.</span><span class="n">AntiBandingMode</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">isupper</span><span class="p">()])</span>
+    <span class="n">effect_mode</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">([</span><span class="n">item</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="o">.</span><span class="n">EffectMode</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">isupper</span><span class="p">()])</span>
+
+    <span class="c1"># Linking</span>
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+
+    <span class="k">while</span> <span class="n">oak</span><span class="o">.</span><span class="n">running</span><span class="p">():</span>
+        <span class="n">oak</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
+        <span class="n">controlQueue</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">getInputQueue</span><span class="p">(</span><span class="s1">&#39;control&#39;</span><span class="p">)</span>
+        <span class="n">configQueue</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">getInputQueue</span><span class="p">(</span><span class="s1">&#39;config&#39;</span><span class="p">)</span>
+        <span class="n">ispFrames</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">getOutputQueue</span><span class="p">(</span><span class="s1">&#39;isp&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">tryGetAll</span><span class="p">()</span>
+        <span class="n">stillQueue</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">getOutputQueue</span><span class="p">(</span><span class="s1">&#39;still&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">ispFrame</span> <span class="ow">in</span> <span class="n">ispFrames</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">show</span><span class="p">:</span>
+                <span class="n">txt</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;[</span><span class="si">{</span><span class="n">ispFrame</span><span class="o">.</span><span class="n">getSequenceNum</span><span class="p">()</span><span class="si">}</span><span class="s2">] &quot;</span>
+                <span class="n">txt</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Exposure: </span><span class="si">{</span><span class="n">ispFrame</span><span class="o">.</span><span class="n">getExposureTime</span><span class="p">()</span><span class="o">.</span><span class="n">total_seconds</span><span class="p">()</span><span class="o">*</span><span class="mi">1000</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> ms, &quot;</span>
+                <span class="n">txt</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;ISO: </span><span class="si">{</span><span class="n">ispFrame</span><span class="o">.</span><span class="n">getSensitivity</span><span class="p">()</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="n">txt</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Lens position: </span><span class="si">{</span><span class="n">ispFrame</span><span class="o">.</span><span class="n">getLensPosition</span><span class="p">()</span><span class="si">}</span><span class="s2">, &quot;</span>
+                <span class="n">txt</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Color temp: </span><span class="si">{</span><span class="n">ispFrame</span><span class="o">.</span><span class="n">getColorTemperature</span><span class="p">()</span><span class="si">}</span><span class="s2"> K&quot;</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">txt</span><span class="p">)</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;isp&#39;</span><span class="p">,</span> <span class="n">ispFrame</span><span class="o">.</span><span class="n">getCvFrame</span><span class="p">())</span>
+
+            <span class="c1"># Send new cfg to camera</span>
+            <span class="k">if</span> <span class="n">sendCamConfig</span><span class="p">:</span>
+                <span class="n">cfg</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">ImageManipConfig</span><span class="p">()</span>
+                <span class="n">cfg</span><span class="o">.</span><span class="n">setCropRect</span><span class="p">(</span><span class="n">cropX</span><span class="p">,</span> <span class="n">cropY</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">configQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Sending new crop - x: &#39;</span><span class="p">,</span> <span class="n">cropX</span><span class="p">,</span> <span class="s1">&#39; y: &#39;</span><span class="p">,</span> <span class="n">cropY</span><span class="p">)</span>
+                <span class="n">sendCamConfig</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="n">stillFrames</span> <span class="o">=</span> <span class="n">stillQueue</span><span class="o">.</span><span class="n">tryGetAll</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">stillFrame</span> <span class="ow">in</span> <span class="n">stillFrames</span><span class="p">:</span>
+            <span class="c1"># Decode JPEG</span>
+            <span class="n">frame</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">imdecode</span><span class="p">(</span><span class="n">stillFrame</span><span class="o">.</span><span class="n">getData</span><span class="p">(),</span> <span class="n">cv2</span><span class="o">.</span><span class="n">IMREAD_UNCHANGED</span><span class="p">)</span>
+            <span class="c1"># Display</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s1">&#39;still&#39;</span><span class="p">,</span> <span class="n">frame</span><span class="p">)</span>
+
+        <span class="c1"># Update screen (1ms pooling rate)</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;q&#39;</span><span class="p">):</span>
+            <span class="k">break</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
+            <span class="n">show</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">show</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">show</span><span class="p">:</span> <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Printing camera settings: OFF&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">):</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setCaptureStill</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;t&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Autofocus trigger (and disable continuous)&quot;</span><span class="p">)</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setAutoFocusMode</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="o">.</span><span class="n">AutoFocusMode</span><span class="o">.</span><span class="n">AUTO</span><span class="p">)</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setAutoFocusTrigger</span><span class="p">()</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;f&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Autofocus enable, continuous&quot;</span><span class="p">)</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setAutoFocusMode</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="o">.</span><span class="n">AutoFocusMode</span><span class="o">.</span><span class="n">CONTINUOUS_VIDEO</span><span class="p">)</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;e&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Autoexposure enable&quot;</span><span class="p">)</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setAutoExposureEnable</span><span class="p">()</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Auto white-balance enable&quot;</span><span class="p">)</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setAutoWhiteBalanceMode</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="o">.</span><span class="n">AutoWhiteBalanceMode</span><span class="o">.</span><span class="n">AUTO</span><span class="p">)</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)]:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">):</span> <span class="n">lensPos</span> <span class="o">-=</span> <span class="n">LENS_STEP</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">):</span> <span class="n">lensPos</span> <span class="o">+=</span> <span class="n">LENS_STEP</span>
+            <span class="n">lensPos</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">lensPos</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Setting manual focus, lens position: &quot;</span><span class="p">,</span> <span class="n">lensPos</span><span class="p">)</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setManualFocus</span><span class="p">(</span><span class="n">lensPos</span><span class="p">)</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;i&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;o&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;l&#39;</span><span class="p">)]:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;i&#39;</span><span class="p">):</span> <span class="n">expTime</span> <span class="o">-=</span> <span class="n">EXP_STEP</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;o&#39;</span><span class="p">):</span> <span class="n">expTime</span> <span class="o">+=</span> <span class="n">EXP_STEP</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">):</span> <span class="n">sensIso</span> <span class="o">-=</span> <span class="n">ISO_STEP</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;l&#39;</span><span class="p">):</span> <span class="n">sensIso</span> <span class="o">+=</span> <span class="n">ISO_STEP</span>
+            <span class="n">expTime</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">expTime</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">33000</span><span class="p">)</span>
+            <span class="n">sensIso</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">sensIso</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1600</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Setting manual exposure, time: &quot;</span><span class="p">,</span> <span class="n">expTime</span><span class="p">,</span> <span class="s2">&quot;iso: &quot;</span><span class="p">,</span> <span class="n">sensIso</span><span class="p">)</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setManualExposure</span><span class="p">(</span><span class="n">expTime</span><span class="p">,</span> <span class="n">sensIso</span><span class="p">)</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;m&#39;</span><span class="p">)]:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">):</span> <span class="n">wbManual</span> <span class="o">-=</span> <span class="n">WB_STEP</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;m&#39;</span><span class="p">):</span> <span class="n">wbManual</span> <span class="o">+=</span> <span class="n">WB_STEP</span>
+            <span class="n">wbManual</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">wbManual</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">12000</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Setting manual white balance, temperature: &quot;</span><span class="p">,</span> <span class="n">wbManual</span><span class="p">,</span> <span class="s2">&quot;K&quot;</span><span class="p">)</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setManualWhiteBalance</span><span class="p">(</span><span class="n">wbManual</span><span class="p">)</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">):</span>
+            <span class="n">awb_lock</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">awb_lock</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Auto white balance lock:&quot;</span><span class="p">,</span> <span class="n">awb_lock</span><span class="p">)</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setAutoWhiteBalanceLock</span><span class="p">(</span><span class="n">awb_lock</span><span class="p">)</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;2&#39;</span><span class="p">):</span>
+            <span class="n">ae_lock</span> <span class="o">=</span> <span class="ow">not</span> <span class="n">ae_lock</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Auto exposure lock:&quot;</span><span class="p">,</span> <span class="n">ae_lock</span><span class="p">)</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="n">ctrl</span><span class="o">.</span><span class="n">setAutoExposureLock</span><span class="p">(</span><span class="n">ae_lock</span><span class="p">)</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="nb">chr</span><span class="p">(</span><span class="n">key</span><span class="p">)</span> <span class="ow">in</span> <span class="s1">&#39;34567890[]&#39;</span><span class="p">:</span>
+            <span class="k">if</span>   <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;3&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;awb_mode&#39;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;4&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;ae_comp&#39;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;5&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;anti_banding_mode&#39;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;6&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;effect_mode&#39;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;7&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;brightness&#39;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;8&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;contrast&#39;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;9&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;saturation&#39;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;0&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;sharpness&#39;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;[&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;luma_denoise&#39;</span>
+            <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;]&#39;</span><span class="p">):</span> <span class="n">control</span> <span class="o">=</span> <span class="s1">&#39;chroma_denoise&#39;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Selected control:&quot;</span><span class="p">,</span> <span class="n">control</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)]:</span>
+            <span class="n">change</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;_&#39;</span><span class="p">)]:</span> <span class="n">change</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)]:</span> <span class="n">change</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">ctrl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;none&#39;</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Please select a control first using keys 3..9 0 [ ]&quot;</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;ae_comp&#39;</span><span class="p">:</span>
+                <span class="n">ae_comp</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">ae_comp</span> <span class="o">+</span> <span class="n">change</span><span class="p">,</span> <span class="o">-</span><span class="mi">9</span><span class="p">,</span> <span class="mi">9</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Auto exposure compensation:&quot;</span><span class="p">,</span> <span class="n">ae_comp</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setAutoExposureCompensation</span><span class="p">(</span><span class="n">ae_comp</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;anti_banding_mode&#39;</span><span class="p">:</span>
+                <span class="n">abm</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">anti_banding_mode</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Anti-banding mode:&quot;</span><span class="p">,</span> <span class="n">abm</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setAntiBandingMode</span><span class="p">(</span><span class="n">abm</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;awb_mode&#39;</span><span class="p">:</span>
+                <span class="n">awb</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">awb_mode</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Auto white balance mode:&quot;</span><span class="p">,</span> <span class="n">awb</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setAutoWhiteBalanceMode</span><span class="p">(</span><span class="n">awb</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;effect_mode&#39;</span><span class="p">:</span>
+                <span class="n">eff</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">effect_mode</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Effect mode:&quot;</span><span class="p">,</span> <span class="n">eff</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setEffectMode</span><span class="p">(</span><span class="n">eff</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;brightness&#39;</span><span class="p">:</span>
+                <span class="n">brightness</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">brightness</span> <span class="o">+</span> <span class="n">change</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Brightness:&quot;</span><span class="p">,</span> <span class="n">brightness</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setBrightness</span><span class="p">(</span><span class="n">brightness</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;contrast&#39;</span><span class="p">:</span>
+                <span class="n">contrast</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">contrast</span> <span class="o">+</span> <span class="n">change</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Contrast:&quot;</span><span class="p">,</span> <span class="n">contrast</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setContrast</span><span class="p">(</span><span class="n">contrast</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;saturation&#39;</span><span class="p">:</span>
+                <span class="n">saturation</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">saturation</span> <span class="o">+</span> <span class="n">change</span><span class="p">,</span> <span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Saturation:&quot;</span><span class="p">,</span> <span class="n">saturation</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setSaturation</span><span class="p">(</span><span class="n">saturation</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;sharpness&#39;</span><span class="p">:</span>
+                <span class="n">sharpness</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">sharpness</span> <span class="o">+</span> <span class="n">change</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Sharpness:&quot;</span><span class="p">,</span> <span class="n">sharpness</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setSharpness</span><span class="p">(</span><span class="n">sharpness</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;luma_denoise&#39;</span><span class="p">:</span>
+                <span class="n">luma_denoise</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">luma_denoise</span> <span class="o">+</span> <span class="n">change</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Luma denoise:&quot;</span><span class="p">,</span> <span class="n">luma_denoise</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setLumaDenoise</span><span class="p">(</span><span class="n">luma_denoise</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">control</span> <span class="o">==</span> <span class="s1">&#39;chroma_denoise&#39;</span><span class="p">:</span>
+                <span class="n">chroma_denoise</span> <span class="o">=</span> <span class="n">clamp</span><span class="p">(</span><span class="n">chroma_denoise</span> <span class="o">+</span> <span class="n">change</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Chroma denoise:&quot;</span><span class="p">,</span> <span class="n">chroma_denoise</span><span class="p">)</span>
+                <span class="n">ctrl</span><span class="o">.</span><span class="n">setChromaDenoise</span><span class="p">(</span><span class="n">chroma_denoise</span><span class="p">)</span>
+            <span class="n">controlQueue</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ctrl</span><span class="p">)</span>
+</pre></div></td></tr></table></div>
+</div>
+</div>
+<div class="ui bottom attached sphinx-tab tab segment sphinx-data-tab-0-1 docutils container">
+<p>Also <a class="reference external" href="https://github.com/luxonis/depthai-core/blob/main/examples/ColorCamera/rgb_camera_control.cpp">available on GitHub</a></p>
+</div>
+</div>
+<h2>Got questions?</h2><p>We’re always happy to help with development or other questions you might have.</p>
+<div class="cta-row cta-row-short">
+    <div class="cta-box">
+       <a href="https://luxonis.com/discord">
+          <img src="/_images/discord.png" alt="Discord"/>
+          <h5 class="cta-title">Community Discord</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="https://discuss.luxonis.com/">
+          <img src="/_images/forum.png" alt="forum"/>
+          <h5 class="cta-title">Discussion Forum</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="mailto:support@luxonis.com">
+          <img src="/_images/email.png" alt="forum"/>
+          <h5 class="cta-title">Email</h5>
+       </a>
+    </div>
+ </div></div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="../mixed/rgb_encoding_mobilenet.html" class="btn btn-neutral float-right" title="RGB Encoding &amp; MobilenetSSD" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="autoexposure_roi.html" class="btn btn-neutral float-left" title="Auto Exposure on ROI" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright @build_year@, Luxonis.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

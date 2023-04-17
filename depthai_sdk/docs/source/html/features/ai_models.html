@@ -1,0 +1,543 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="Docutils 0.17: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>AI models &mdash; DepthAI SDK Docs 1.9.2 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/css/index.css" type="text/css" />
+  <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../_static/favicon.png"/>
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Components" href="components.html" />
+    <link rel="prev" title="OakCamera" href="../oak-camera.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home" alt="Documentation Home"> DepthAI SDK Docs
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption" role="heading"><span class="caption-text">Home:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../index.html">DepthAI SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../oak-camera.html">OakCamera</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../oak-camera.html#interoperability-with-depthai-api">Interoperability with DepthAI API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../oak-camera.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#preview-color-and-mono-cameras">Preview color and mono cameras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#run-mobilenetssd-on-color-camera">Run MobilenetSSD on color camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#run-face-detection-retail-0004-on-left-camera">Run face-detection-retail-0004 on left camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../oak-camera.html#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">Deploy models from Roboflow and Roboflow Universe with Depth SDK</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../oak-camera.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Features</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">AI models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#sdk-supported-models">SDK supported models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="components.html">Components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="components.html#depthai_sdk.components.Component"><code class="docutils literal notranslate"><span class="pre">Component</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="components.html#depthai_sdk.components.Component.forced_openvino_version"><code class="docutils literal notranslate"><span class="pre">Component.forced_openvino_version()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="components.html#depthai_sdk.components.Component.on_init"><code class="docutils literal notranslate"><span class="pre">Component.on_init()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/camera_component.html">CameraComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/camera_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/camera_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/camera_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../components/camera_component.html#depthai_sdk.components.CameraComponent"><code class="docutils literal notranslate"><span class="pre">CameraComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/imu_component.html">IMUComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/imu_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/imu_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/imu_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../components/imu_component.html#depthai_sdk.components.IMUComponent"><code class="docutils literal notranslate"><span class="pre">IMUComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/nn_component.html">NNComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/nn_component.html#depthai-api-nodes">DepthAI API nodes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#decoding-outputs">Decoding outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../components/nn_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../components/stereo_component.html">StereoComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../components/stereo_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/stereo_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../components/stereo_component.html#reference">Reference</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../components/stereo_component.html#depthai_sdk.components.StereoComponent"><code class="docutils literal notranslate"><span class="pre">StereoComponent</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="packets.html">Packets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="packets.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="packets.html#reference">Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#framepacket">FramePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="packets.html#depthai_sdk.classes.packets.FramePacket"><code class="docutils literal notranslate"><span class="pre">FramePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#spatialbbmappingpacket">SpatialBbMappingPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="packets.html#depthai_sdk.classes.packets.SpatialBbMappingPacket"><code class="docutils literal notranslate"><span class="pre">SpatialBbMappingPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#detectionpacket">DetectionPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="packets.html#depthai_sdk.classes.packets.DetectionPacket"><code class="docutils literal notranslate"><span class="pre">DetectionPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#depthpacket">DepthPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="packets.html#depthai_sdk.classes.packets.DepthPacket"><code class="docutils literal notranslate"><span class="pre">DepthPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#trackerpacket">TrackerPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="packets.html#depthai_sdk.classes.packets.TrackerPacket"><code class="docutils literal notranslate"><span class="pre">TrackerPacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#twostagepacket">TwoStagePacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="packets.html#depthai_sdk.classes.packets.TwoStagePacket"><code class="docutils literal notranslate"><span class="pre">TwoStagePacket</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="packets.html#imupacket">IMUPacket</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="packets.html#depthai_sdk.classes.packets.IMUPacket"><code class="docutils literal notranslate"><span class="pre">IMUPacket</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="recording.html">Recording</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="recording.html#supported-recording-types">Supported recording types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="recording.html#video">1. Video</a></li>
+<li class="toctree-l3"><a class="reference internal" href="recording.html#rosbag">2. Rosbag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="recording.html#mcap-recording">3. MCAP recording</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="replaying.html">Replaying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="replaying.html#replaying-support">Replaying support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="replaying.html#replaying-a-depthai-recording">Replaying a depthai-recording</a></li>
+<li class="toctree-l2"><a class="reference internal" href="replaying.html#public-depthai-recordings">Public depthai-recordings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="visualizer.html">Visualizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="visualizer.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizer.html#flow">Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizer.html#configs">Configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizer.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizer.html#create-your-own-object">Create your own object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizer.html#example-usage">Example usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="visualizer.html#references">References</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="visualizer.html#id1">Visualizer</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.visualizer.Visualizer"><code class="docutils literal notranslate"><span class="pre">Visualizer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.visualizer.Platform"><code class="docutils literal notranslate"><span class="pre">Platform</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="visualizer.html#id2">Objects</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.objects.GenericObject"><code class="docutils literal notranslate"><span class="pre">GenericObject</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.objects.VisDetections"><code class="docutils literal notranslate"><span class="pre">VisDetections</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.objects.VisText"><code class="docutils literal notranslate"><span class="pre">VisText</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.objects.VisLine"><code class="docutils literal notranslate"><span class="pre">VisLine</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.objects.VisTrail"><code class="docutils literal notranslate"><span class="pre">VisTrail</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="visualizer.html#id3">Configs</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.TextPosition"><code class="docutils literal notranslate"><span class="pre">TextPosition</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.BboxStyle"><code class="docutils literal notranslate"><span class="pre">BboxStyle</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.StereoColor"><code class="docutils literal notranslate"><span class="pre">StereoColor</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.OutputConfig"><code class="docutils literal notranslate"><span class="pre">OutputConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.StereoConfig"><code class="docutils literal notranslate"><span class="pre">StereoConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.DetectionConfig"><code class="docutils literal notranslate"><span class="pre">DetectionConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.TextConfig"><code class="docutils literal notranslate"><span class="pre">TextConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.TrackingConfig"><code class="docutils literal notranslate"><span class="pre">TrackingConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.SegmentationConfig"><code class="docutils literal notranslate"><span class="pre">SegmentationConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.CircleConfig"><code class="docutils literal notranslate"><span class="pre">CircleConfig</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="visualizer.html#depthai_sdk.visualize.configs.VisConfig"><code class="docutils literal notranslate"><span class="pre">VisConfig</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Code samples</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/code_samples.html">Code Samples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html">Auto Exposure on ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/autoexposure_roi.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html">RGB Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/ColorCamera/rgb_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/VideoEncoder/rgb_encoding.html">RGB Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../samples/VideoEncoder/rgb_mono_encoding.html">RGB &amp; Mono Encoding</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_mono_encoding.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_mono_encoding.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../samples/VideoEncoder/rgb_mono_encoding.html#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">DepthAI SDK Docs</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>AI models</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/features/ai_models.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <section id="ai-models">
+<h1>AI models<a class="headerlink" href="#ai-models" title="Permalink to this heading">¶</a></h1>
+<p>Through the <a class="reference internal" href="../components/nn_component.html#nncomponent"><span class="std std-ref">NNComponent</span></a>, DepthAI SDK abstracts:</p>
+<ul class="simple">
+<li><p><strong>AI model sourcing</strong> using <a class="reference external" href="https://github.com/luxonis/blobconverter">blobconverter</a> from <a class="reference external" href="https://github.com/openvinotoolkit/open_model_zoo">Open Model Zoo</a> (OMZ) and <a class="reference external" href="https://github.com/luxonis/depthai-model-zoo">DepthAI Model Zoo</a> (DMZ)</p></li>
+<li><p><strong>AI result decoding</strong> - currently SDK supports on-device decoding for YOLO and MobileNet based results using <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/yolo_detection_network/">YoloDetectionNetwork</a> and <a class="reference external" href="https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/">MobileNetDetectionNetwork</a> nodes</p></li>
+<li><p><strong>Decoding</strong> of the <code class="docutils literal notranslate"><span class="pre">config.json</span></code> which <strong>allows an easy deployment of custom AI models</strong> trained <a class="reference external" href="https://github.com/luxonis/depthai-ml-training">using our notebooks</a> and converted using <a class="reference external" href="https://tools.luxonis.com">https://tools.luxonis.com</a></p></li>
+<li><p>Formatting of the AI model input frame - SDK uses <strong>BGR</strong> color order and <strong>Planar / CHW</strong> channel layout conventions</p></li>
+<li><p>Integration with 3rd party tools/services (<a class="reference internal" href="sub-features/integrations.html#roboflow"><span class="std std-ref">Roboflow</span></a>)</p></li>
+</ul>
+<section id="sdk-supported-models">
+<h2>SDK supported models<a class="headerlink" href="#sdk-supported-models" title="Permalink to this heading">¶</a></h2>
+<p>With <a class="reference internal" href="../components/nn_component.html#nncomponent"><span class="std std-ref">NNComponent</span></a> you can <strong>easily try out a variety of different pre-trained models</strong> by simply changing the model name:</p>
+<div class="highlight-diff notranslate"><div class="highlight"><pre><span></span><span class="w"> </span> from depthai_sdk import OakCamera
+
+<span class="w"> </span> with OakCamera() as oak:
+<span class="w"> </span>     color = oak.create_camera(&#39;color&#39;)
+<span class="gd">-     nn = oak.create_nn(&#39;mobilenet-ssd&#39;, color)</span>
+<span class="gi">+     nn = oak.create_nn(&#39;vehicle-detection-0202&#39;, color)</span>
+<span class="w"> </span>     oak.visualize([nn], fps=True)
+<span class="w"> </span>     oak.start(blocking=True)
+</pre></div>
+</div>
+<p>Both of the models above are supported by this SDK, so they will be downloaded and deployed to the OAK device along with the pipeline.</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Name</p></th>
+<th class="head"><p>Model Source</p></th>
+<th class="head"><p>FPS*</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">age-gender-recognition-retail-0013</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/2022.1/omz_models_model_age_gender_recognition_retail_0013.html">OMZ</a></p></td>
+<td><p>33</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">emotions-recognition-retail-0003</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/2022.1/omz_models_model_emotions_recognition_retail_0003.html">OMZ</a></p></td>
+<td><p>33</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">face-detection-adas-0001</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/2022.1/omz_models_model_face_detection_adas_0001.html">OMZ</a></p></td>
+<td><p>18</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">face-detection-retail-0004</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/2022.1/omz_models_model_face_detection_retail_0004.html">OMZ</a></p></td>
+<td><p>33</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mobilenet-ssd</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/2022.1/omz_models_model_mobilenet_ssd.html">OMZ</a></p></td>
+<td><p>31</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pedestrian-detection-adas-0002</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/latest/omz_models_model_pedestrian_detection_adas_0002.html">OMZ</a></p></td>
+<td><p>19</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">person-detection-0200</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/latest/omz_models_model_person_detection_0200.html">OMZ</a></p></td>
+<td><p>14</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">person-detection-retail-0013</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/latest/omz_models_model_person_detection_retail_0013.html">OMZ</a></p></td>
+<td><p>15</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">person-reidentification-retail-0288</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/cn/latest/omz_models_model_person_reidentification_retail_0288.html">OMZ</a></p></td>
+<td><p>33</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">person-vehicle-bike-detection-crossroad-1016</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/latest/omz_models_model_person_vehicle_bike_detection_crossroad_1016.html">OMZ</a></p></td>
+<td><p>12</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle-detection-0202</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/latest/omz_models_model_vehicle_detection_0202.html">OMZ</a></p></td>
+<td><p>14</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle-detection-adas-0002</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/latest/omz_models_model_vehicle_detection_adas_0002.html">OMZ</a></p></td>
+<td><p>14</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">vehicle-license-plate-detection-barrier-0106</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/latest/omz_models_model_vehicle_license_plate_detection_barrier_0106.html">OMZ</a></p></td>
+<td><p>29</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">yolo-v3-tf</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/latest/omz_models_model_yolo_v3_tf.html">OMZ</a></p></td>
+<td><p>3.5</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">yolo-v3-tiny-tf</span></code></p></td>
+<td><p><a class="reference external" href="https://docs.openvino.ai/latest/omz_models_model_yolo_v3_tiny_tf.html">OMZ</a></p></td>
+<td><p>33</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">yolov4_coco_608x608</span></code></p></td>
+<td><p><a class="reference external" href="https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov4_coco_608x608">DMZ</a></p></td>
+<td><p>1.1</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">yolov4_tiny_coco_416x416</span></code></p></td>
+<td><p><a class="reference external" href="https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov4_tiny_coco_416x416">DMZ</a></p></td>
+<td><p>32</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">yolov5n_coco_416x416</span></code></p></td>
+<td><p><a class="reference external" href="https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov5n_coco_416x416">DMZ</a></p></td>
+<td><p>32</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">yolov6n_coco_640x640</span></code></p></td>
+<td><p><a class="reference external" href="https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov6n_coco_640x640">DMZ</a></p></td>
+<td><p>26</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">*</span></code> - FPS was measured using only color camera (1080P) and 1 NN using callbacks (without visualization)</p>
+<h2>Got questions?</h2><p>We’re always happy to help with development or other questions you might have.</p>
+<div class="cta-row cta-row-short">
+    <div class="cta-box">
+       <a href="https://luxonis.com/discord">
+          <img src="/_images/discord.png" alt="Discord"/>
+          <h5 class="cta-title">Community Discord</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="https://discuss.luxonis.com/">
+          <img src="/_images/forum.png" alt="forum"/>
+          <h5 class="cta-title">Discussion Forum</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="mailto:support@luxonis.com">
+          <img src="/_images/email.png" alt="forum"/>
+          <h5 class="cta-title">Email</h5>
+       </a>
+    </div>
+ </div></section>
+</section>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="components.html" class="btn btn-neutral float-right" title="Components" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../oak-camera.html" class="btn btn-neutral float-left" title="OakCamera" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright @build_year@, Luxonis
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

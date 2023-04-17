@@ -1,0 +1,695 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>Auto Exposure on ROI &mdash; DepthAI SDK Docs 1.9.2 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/sphinx_tabs/semantic-ui-2.4.1/segment.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/sphinx_tabs/semantic-ui-2.4.1/menu.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/sphinx_tabs/semantic-ui-2.4.1/tab.min.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/sphinx_tabs/tabs.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/css/index.css" type="text/css" />
+  <link rel="stylesheet" href="https://docs.luxonis.com/en/latest/_static/css/navbar.css" type="text/css" />
+
+  
+  
+    <link rel="shortcut icon" href="../../_static/favicon.png"/>
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_tabs/semantic-ui-2.4.1/tab.min.js"></script>
+        <script src="../../_static/sphinx_tabs/tabs.js"></script>
+        <script src="https://docs.luxonis.com/en/latest/_static/js/navbar.js"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="RGB Camera Control" href="rgb_camera_control.html" />
+    <link rel="prev" title="Code Samples" href="../../tutorials/code_samples.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> DepthAI SDK Docs
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Home:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../index.html">DepthAI SDK</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../oak-camera.html">OakCamera</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../oak-camera.html#interoperability-with-depthai-api">Interoperability with DepthAI API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../oak-camera.html#examples">Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#preview-color-and-mono-cameras">Preview color and mono cameras</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#run-mobilenetssd-on-color-camera">Run MobilenetSSD on color camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#run-face-detection-retail-0004-on-left-camera">Run face-detection-retail-0004 on left camera</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../oak-camera.html#deploy-models-from-roboflow-and-roboflow-universe-with-depth-sdk">Deploy models from Roboflow and Roboflow Universe with Depth SDK</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../oak-camera.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Features</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../features/ai_models.html">AI models</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/ai_models.html#sdk-supported-models">SDK supported models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/components.html">Components</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../components/camera_component.html">CameraComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/camera_component.html#reference">Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/imu_component.html">IMUComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/imu_component.html#reference">Reference</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/nn_component.html">NNComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/nn_component.html#depthai-api-nodes">DepthAI API nodes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#usage">Usage</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#decoding-outputs">Decoding outputs</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../../components/nn_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../components/stereo_component.html">StereoComponent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#usage">Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#component-outputs">Component outputs</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../components/stereo_component.html#reference">Reference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/packets.html">Packets</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/packets.html#example">Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/packets.html#reference">Reference</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#framepacket">FramePacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#spatialbbmappingpacket">SpatialBbMappingPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#detectionpacket">DetectionPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#depthpacket">DepthPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#trackerpacket">TrackerPacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#twostagepacket">TwoStagePacket</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/packets.html#imupacket">IMUPacket</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/recording.html">Recording</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/recording.html#supported-recording-types">Supported recording types</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#video">1. Video</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#rosbag">2. Rosbag</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/recording.html#mcap-recording">3. MCAP recording</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/replaying.html">Replaying</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#replaying-support">Replaying support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#replaying-a-depthai-recording">Replaying a depthai-recording</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/replaying.html#public-depthai-recordings">Public depthai-recordings</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../features/visualizer.html">Visualizer</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#getting-started">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#flow">Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#configs">Configs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#create-your-own-object">Create your own object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#example-usage">Example usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features/visualizer.html#references">References</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id1">Visualizer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id2">Objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../features/visualizer.html#id3">Configs</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Code samples</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../../tutorials/code_samples.html">Code Samples</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Auto Exposure on ROI</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rgb_camera_control.html">RGB Camera Control</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="rgb_camera_control.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rgb_camera_control.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="rgb_camera_control.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html">RGB Encoding &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html">RGB Encoding &amp; Mono &amp; MobilenetSSD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../mixed/rgb_encoding_mono_mobilenet.html#source-code">Source code</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../EdgeDetector/edge_detector.html">Edge Detector</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../EdgeDetector/edge_detector.html#demo">Demo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../EdgeDetector/edge_detector.html#setup">Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../EdgeDetector/edge_detector.html#source-code">Source code</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">DepthAI SDK Docs</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../tutorials/code_samples.html">Code Samples</a> &raquo;</li>
+        
+      <li>Auto Exposure on ROI</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../_sources/samples/ColorCamera/autoexposure_roi.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="auto-exposure-on-roi">
+<h1>Auto Exposure on ROI<a class="headerlink" href="#auto-exposure-on-roi" title="Permalink to this headline">¶</a></h1>
+<p>This example shows how to dynamically set the Auto Exposure (AE) of the RGB camera dynamically, during application runtime,
+based on bounding box position.</p>
+<p>By default, AutoExposure region is adjusted based on neural network output. If desired, the region can be set manually.
+You can do so by pressing one of the following buttons:</p>
+<ul class="simple">
+<li><p><cite>w</cite> - move AE region up</p></li>
+<li><p><cite>s</cite> - move AE region down</p></li>
+<li><p><cite>a</cite> - move AE region left</p></li>
+<li><p><cite>d</cite> - move AE region right</p></li>
+<li><p><cite>n</cite> - deactivate manual region (switch back to nn-based roi)</p></li>
+</ul>
+<div class="section" id="demo">
+<h2>Demo<a class="headerlink" href="#demo" title="Permalink to this headline">¶</a></h2>
+<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; height: auto;">
+    <iframe src="https://www.youtube.com/embed/aTqUwNL_9Bo" frameborder="0" allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe>
+</div></div>
+<div class="section" id="setup">
+<h2>Setup<a class="headerlink" href="#setup" title="Permalink to this headline">¶</a></h2>
+<p>Please run the <a class="reference external" href="https://github.com/luxonis/depthai-python/blob/main/examples/install_requirements.py">install script</a>
+to download all required dependencies. Please note that this script must be ran from git context, so you have to download the <a class="reference external" href="https://github.com/luxonis/depthai-python">depthai-python</a> repository first and then run the script</p>
+<p>For additional information, please follow <a class="reference internal" href="../../index.html#installation"><span class="std std-ref">installation guide</span></a></p>
+<p>This example script <strong>requires external file(s) to run</strong>. If you are using:</p>
+<ul class="simple">
+<li><p>depthai-python, run <code class="code docutils literal notranslate"><span class="pre">python3</span> <span class="pre">examples/install_requirements.py</span></code> to download required file(s)</p></li>
+<li><p>dephtai-core, required file(s) will get downloaded automatically when building the example</p></li>
+</ul>
+</div>
+<div class="section" id="source-code">
+<h2>Source code<a class="headerlink" href="#source-code" title="Permalink to this headline">¶</a></h2>
+<div class="sphinx-tabs docutils container">
+<div class="ui top attached tabular menu sphinx-menu docutils container">
+<div class="active item sphinx-data-tab-0-0 docutils container">
+<div class="docutils container">
+<p>Python</p>
+</div>
+</div>
+</div>
+<div class="ui bottom attached sphinx-tab tab segment sphinx-data-tab-0-0 active docutils container">
+<p>Also <a class="reference external" href="https://github.com/luxonis/depthai-python/blob/main/examples/ColorCamera/autoexposure_roi.py">available on GitHub</a></p>
+<div class="highlight-python notranslate"><div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span class="normal">  1</span>
+<span class="normal">  2</span>
+<span class="normal">  3</span>
+<span class="normal">  4</span>
+<span class="normal">  5</span>
+<span class="normal">  6</span>
+<span class="normal">  7</span>
+<span class="normal">  8</span>
+<span class="normal">  9</span>
+<span class="normal"> 10</span>
+<span class="normal"> 11</span>
+<span class="normal"> 12</span>
+<span class="normal"> 13</span>
+<span class="normal"> 14</span>
+<span class="normal"> 15</span>
+<span class="normal"> 16</span>
+<span class="normal"> 17</span>
+<span class="normal"> 18</span>
+<span class="normal"> 19</span>
+<span class="normal"> 20</span>
+<span class="normal"> 21</span>
+<span class="normal"> 22</span>
+<span class="normal"> 23</span>
+<span class="normal"> 24</span>
+<span class="normal"> 25</span>
+<span class="normal"> 26</span>
+<span class="normal"> 27</span>
+<span class="normal"> 28</span>
+<span class="normal"> 29</span>
+<span class="normal"> 30</span>
+<span class="normal"> 31</span>
+<span class="normal"> 32</span>
+<span class="normal"> 33</span>
+<span class="normal"> 34</span>
+<span class="normal"> 35</span>
+<span class="normal"> 36</span>
+<span class="normal"> 37</span>
+<span class="normal"> 38</span>
+<span class="normal"> 39</span>
+<span class="normal"> 40</span>
+<span class="normal"> 41</span>
+<span class="normal"> 42</span>
+<span class="normal"> 43</span>
+<span class="normal"> 44</span>
+<span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
+<span class="normal"> 53</span>
+<span class="normal"> 54</span>
+<span class="normal"> 55</span>
+<span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span></pre></div></td><td class="code"><div><pre><span></span><span class="kn">from</span> <span class="nn">depthai_sdk</span> <span class="kn">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">depthai_sdk.classes</span> <span class="kn">import</span> <span class="n">DetectionPacket</span>
+<span class="kn">from</span> <span class="nn">depthai_sdk.oak_outputs.normalize_bb</span> <span class="kn">import</span> <span class="n">NormalizeBoundingBox</span>
+<span class="kn">import</span> <span class="nn">depthai</span> <span class="k">as</span> <span class="nn">dai</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">cv2</span>
+
+<span class="n">labelMap</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;background&quot;</span><span class="p">,</span> <span class="s2">&quot;aeroplane&quot;</span><span class="p">,</span> <span class="s2">&quot;bicycle&quot;</span><span class="p">,</span> <span class="s2">&quot;bird&quot;</span><span class="p">,</span> <span class="s2">&quot;boat&quot;</span><span class="p">,</span> <span class="s2">&quot;bottle&quot;</span><span class="p">,</span> <span class="s2">&quot;bus&quot;</span><span class="p">,</span> <span class="s2">&quot;car&quot;</span><span class="p">,</span> <span class="s2">&quot;cat&quot;</span><span class="p">,</span> <span class="s2">&quot;chair&quot;</span><span class="p">,</span> <span class="s2">&quot;cow&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;diningtable&quot;</span><span class="p">,</span> <span class="s2">&quot;dog&quot;</span><span class="p">,</span> <span class="s2">&quot;horse&quot;</span><span class="p">,</span> <span class="s2">&quot;motorbike&quot;</span><span class="p">,</span> <span class="s2">&quot;person&quot;</span><span class="p">,</span> <span class="s2">&quot;pottedplant&quot;</span><span class="p">,</span> <span class="s2">&quot;sheep&quot;</span><span class="p">,</span> <span class="s2">&quot;sofa&quot;</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="s2">&quot;tvmonitor&quot;</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">clamp</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">v0</span><span class="p">,</span> <span class="n">v1</span><span class="p">):</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">v0</span><span class="p">,</span> <span class="nb">min</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="n">v1</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">asControl</span><span class="p">(</span><span class="n">roi</span><span class="p">):</span>
+    <span class="n">camControl</span> <span class="o">=</span> <span class="n">dai</span><span class="o">.</span><span class="n">CameraControl</span><span class="p">()</span>
+    <span class="n">camControl</span><span class="o">.</span><span class="n">setAutoExposureRegion</span><span class="p">(</span><span class="o">*</span><span class="n">roi</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">camControl</span>
+
+<span class="k">class</span> <span class="nc">AutoExposureRegion</span><span class="p">:</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">resolution</span><span class="p">,</span> <span class="n">maxDims</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="mi">10</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">size</span> <span class="o">=</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">=</span> <span class="n">resolution</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">maxDims</span> <span class="o">=</span> <span class="n">maxDims</span>
+        <span class="c1"># print all class attributes</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="nb">vars</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">()))</span>
+
+    <span class="k">def</span> <span class="nf">move</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">position</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">clamp</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxDims</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">clamp</span><span class="p">(</span><span class="n">y</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxDims</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">endPosition</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">clamp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxDims</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+            <span class="n">clamp</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">maxDims</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">toRoi</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">roi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">])</span>
+        <span class="c1"># Convert to absolute camera coordinates</span>
+        <span class="n">roi</span> <span class="o">=</span> <span class="n">roi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">//</span> <span class="mi">300</span>
+        <span class="n">roi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">//</span> <span class="mi">2</span>  <span class="c1"># x offset for device crop</span>
+        <span class="k">return</span> <span class="n">roi</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">bboxToRoi</span><span class="p">(</span><span class="n">bbox</span><span class="p">):</span>
+        <span class="n">startX</span><span class="p">,</span> <span class="n">startY</span> <span class="o">=</span> <span class="n">bbox</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">width</span><span class="p">,</span> <span class="n">height</span> <span class="o">=</span> <span class="n">bbox</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">startX</span><span class="p">,</span> <span class="n">bbox</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">startY</span>
+        <span class="n">roi</span> <span class="o">=</span> <span class="n">bbox</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;NN ROI: </span><span class="si">{</span><span class="n">roi</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">roi</span>
+
+<span class="k">def</span> <span class="nf">frameNorm</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">bbox</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">NormalizeBoundingBox</span><span class="p">((</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="n">ResizeMode</span><span class="o">.</span><span class="n">CROP</span><span class="p">)</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">bbox</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">displayFrame</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">detections</span><span class="p">,</span> <span class="n">nnRegion</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">detection</span> <span class="ow">in</span> <span class="n">detections</span><span class="p">:</span>
+        <span class="n">bbox</span> <span class="o">=</span> <span class="n">frameNorm</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">detection</span><span class="o">.</span><span class="n">get_bbox</span><span class="p">())</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="p">(</span><span class="n">bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">bbox</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">bbox</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span> <span class="p">(</span><span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">putText</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">detection</span><span class="o">.</span><span class="n">label</span><span class="p">,</span> <span class="p">(</span><span class="n">bbox</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mi">10</span><span class="p">,</span> <span class="n">bbox</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="mi">20</span><span class="p">),</span> <span class="n">cv2</span><span class="o">.</span><span class="n">FONT_HERSHEY_TRIPLEX</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">255</span><span class="p">)</span>
+        <span class="c1">##TODO: Add confidence</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">nnRegion</span><span class="p">:</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">rectangle</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">region</span><span class="o">.</span><span class="n">position</span><span class="p">,</span> <span class="n">region</span><span class="o">.</span><span class="n">endPosition</span><span class="p">(),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">detections</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">bbox</span> <span class="o">=</span> <span class="n">frameNorm</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">detections</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">get_bbox</span><span class="p">())</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">product</span><span class="p">(</span><span class="n">bbox</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">qControl</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">asControl</span><span class="p">(</span><span class="n">AutoExposureRegion</span><span class="o">.</span><span class="n">bboxToRoi</span><span class="p">(</span><span class="n">bbox</span><span class="p">)))</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">resizeWindow</span><span class="p">(</span><span class="s2">&quot;video&quot;</span><span class="p">,</span> <span class="mi">600</span><span class="p">,</span> <span class="mi">600</span><span class="p">)</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="s2">&quot;video&quot;</span><span class="p">,</span> <span class="n">frame</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">OakCamera</span><span class="p">()</span> <span class="k">as</span> <span class="n">oak</span><span class="p">:</span>
+    <span class="n">color</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_camera</span><span class="p">(</span><span class="s1">&#39;color&#39;</span><span class="p">)</span>
+    <span class="n">nn</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">create_nn</span><span class="p">(</span><span class="s1">&#39;mobilenet-ssd&#39;</span><span class="p">,</span> <span class="n">color</span><span class="p">)</span>
+    <span class="n">nn</span><span class="o">.</span><span class="n">config_nn</span><span class="p">(</span><span class="n">resize_mode</span><span class="o">=</span><span class="n">ResizeMode</span><span class="o">.</span><span class="n">CROP</span><span class="p">)</span>
+    <span class="c1"># Callback</span>
+    <span class="n">region</span> <span class="o">=</span> <span class="n">AutoExposureRegion</span><span class="p">(</span><span class="n">color</span><span class="o">.</span><span class="n">stream_size</span><span class="p">,</span> <span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="mi">300</span><span class="p">))</span>
+    <span class="n">nnRegion</span> <span class="o">=</span> <span class="kc">True</span>
+
+
+    <span class="k">def</span> <span class="nf">cb</span><span class="p">(</span><span class="n">packet</span><span class="p">:</span> <span class="n">DetectionPacket</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">packet</span><span class="o">.</span><span class="n">frame</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        
+        <span class="n">displayFrame</span><span class="p">(</span><span class="n">packet</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">packet</span><span class="o">.</span><span class="n">frame</span><span class="p">,</span> <span class="n">packet</span><span class="o">.</span><span class="n">detections</span><span class="p">,</span> <span class="n">nnRegion</span><span class="p">)</span>
+        
+
+    <span class="c1"># 1. Callback after visualization:</span>
+    <span class="n">visualizer</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">visualize</span><span class="p">([</span><span class="n">nn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">passthrough</span><span class="p">],</span>
+                  <span class="n">fps</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> 
+                  <span class="n">callback</span><span class="o">=</span><span class="n">cb</span>
+
+    <span class="p">)</span>
+
+    <span class="n">pipeline</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">build</span><span class="p">()</span>
+
+    <span class="c1"># create input for camera control</span>
+    <span class="n">camControlIn</span> <span class="o">=</span> <span class="n">pipeline</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">dai</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">XLinkIn</span><span class="p">)</span>
+    <span class="n">camControlIn</span><span class="o">.</span><span class="n">setStreamName</span><span class="p">(</span><span class="s2">&quot;control&quot;</span><span class="p">)</span>
+    <span class="n">camControlIn</span><span class="o">.</span><span class="n">out</span><span class="o">.</span><span class="n">link</span><span class="p">(</span><span class="n">color</span><span class="o">.</span><span class="n">node</span><span class="o">.</span><span class="n">inputControl</span><span class="p">)</span>
+
+
+    <span class="n">oak</span><span class="o">.</span><span class="n">start</span><span class="p">()</span> <span class="c1"># Start the pipeline (upload it to the OAK)</span>
+    <span class="n">cv2</span><span class="o">.</span><span class="n">namedWindow</span><span class="p">(</span><span class="s2">&quot;video&quot;</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">WINDOW_NORMAL</span><span class="p">)</span>
+    <span class="n">qControl</span> <span class="o">=</span> <span class="n">oak</span><span class="o">.</span><span class="n">device</span><span class="o">.</span><span class="n">getInputQueue</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;control&quot;</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">oak</span><span class="o">.</span><span class="n">running</span><span class="p">():</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">waitKey</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;AE ROI controlled by NN&quot;</span><span class="p">)</span>
+            <span class="n">nnRegion</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">),</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">)]:</span>
+            <span class="n">nnRegion</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">):</span>
+                <span class="n">region</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">x</span><span class="o">=-</span><span class="n">region</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">):</span>
+                <span class="n">region</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">region</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">):</span>
+                <span class="n">region</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">y</span><span class="o">=-</span><span class="n">region</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">):</span>
+                <span class="n">region</span><span class="o">.</span><span class="n">move</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="n">region</span><span class="o">.</span><span class="n">step</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;+&#39;</span><span class="p">):</span>
+                <span class="n">region</span><span class="o">.</span><span class="n">grow</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+                <span class="n">region</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">region</span><span class="o">.</span><span class="n">step</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;-&#39;</span><span class="p">):</span>
+                <span class="n">region</span><span class="o">.</span><span class="n">grow</span><span class="p">(</span><span class="n">x</span><span class="o">=-</span><span class="mi">10</span><span class="p">,</span> <span class="n">y</span><span class="o">=-</span><span class="mi">10</span><span class="p">)</span>
+                <span class="n">region</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">step</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Setting static AE ROI: </span><span class="si">{</span><span class="n">region</span><span class="o">.</span><span class="n">toRoi</span><span class="p">()</span><span class="si">}</span><span class="s2"> (on frame: </span><span class="si">{</span><span class="p">[</span><span class="o">*</span><span class="n">region</span><span class="o">.</span><span class="n">position</span><span class="p">,</span><span class="w"> </span><span class="o">*</span><span class="n">region</span><span class="o">.</span><span class="n">endPosition</span><span class="p">()]</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="n">qControl</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">asControl</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">toRoi</span><span class="p">()))</span>
+        <span class="k">elif</span> <span class="n">key</span> <span class="o">==</span> <span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;q&#39;</span><span class="p">):</span>
+            <span class="k">break</span>
+        <span class="n">asControl</span><span class="p">(</span><span class="n">region</span><span class="o">.</span><span class="n">toRoi</span><span class="p">())</span>
+        <span class="c1"># Since we are not in blocking mode, we have to poll oak camera to</span>
+        <span class="c1"># visualize frames, call callbacks, process keyboard keys, etc.</span>
+        <span class="c1">#time.sleep(1)</span>
+        <span class="n">oak</span><span class="o">.</span><span class="n">poll</span><span class="p">()</span>
+
+</pre></div></td></tr></table></div>
+</div>
+</div>
+</div>
+<h2>Got questions?</h2><p>We’re always happy to help with development or other questions you might have.</p>
+<div class="cta-row cta-row-short">
+    <div class="cta-box">
+       <a href="https://luxonis.com/discord">
+          <img src="/_images/discord.png" alt="Discord"/>
+          <h5 class="cta-title">Community Discord</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="https://discuss.luxonis.com/">
+          <img src="/_images/forum.png" alt="forum"/>
+          <h5 class="cta-title">Discussion Forum</h5>
+       </a>
+    </div>
+    <div class="cta-box">
+       <a href="mailto:support@luxonis.com">
+          <img src="/_images/email.png" alt="forum"/>
+          <h5 class="cta-title">Email</h5>
+       </a>
+    </div>
+ </div></div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="rgb_camera_control.html" class="btn btn-neutral float-right" title="RGB Camera Control" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../../tutorials/code_samples.html" class="btn btn-neutral float-left" title="Code Samples" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright @build_year@, Luxonis.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
