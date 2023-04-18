@@ -289,7 +289,7 @@ class StereoComponent(Component):
             colormap_manip.initialConfig.setColormap(colormap, self.node.initialConfig.getMaxDisparity())
             colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
             h, w = self.left.stream_size
-            colormap_manip.setMaxOutputFrameSize(h * w * 3)
+            colormap_manip.setMaxOutputFrameSize(h * w * 3 * 2)  # x2 is for the case of alignment
             self.node.disparity.link(colormap_manip.inputImage)
 
             if self.encoder:
