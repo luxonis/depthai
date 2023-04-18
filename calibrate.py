@@ -169,6 +169,16 @@ def parse_args():
                         help="FPS to set for all cameras. Default: %(default)s")
     parser.add_argument('-ab', '--antibanding', default='50', choices={'off', '50', '60'},
                         help="Set antibanding/antiflicker algo for lights that flicker at mains frequency. Default: %(default)s [Hz]")
+    parser.add_argument('-scp', '--saveCalibPath', type=str, default="",
+                        help="Save calibration file to this path")
+    parser.add_argument('-dst', '--datasetPath', type=str, default="",
+                        help="Path to dataset used for processing images")
+    parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.5,
+                        help="Minimum percentage of detected markers to consider a frame valid")
+    parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
+                        help="Enable mouse trigger for image capture")
+    parser.add_argument('-nic', '--noInitCalibration', default=False, action="store_true",
+                        help="Don't take the board calibration for initialization but start with an empty one")
 
     options = parser.parse_args()
 
@@ -430,6 +440,10 @@ class Main:
         # if not self.args.disableRgb:
         #     self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
 
+    def mouse_event_callback(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.mouseTrigger = True
+
     def startPipeline(self):
         pipeline = self.create_pipeline()
         self.device.startPipeline(pipeline)
@@ -443,7 +457,8 @@ class Main:
         marker_corners, _, _ = cv2.aruco.detectMarkers(
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
-        return not (len(marker_corners) < self.args.squaresX*self.args.squaresY / 4)
+        num_all_markers = (self.args.squaresX-1)*(self.args.squaresY-1) / 2
+        return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
 
     def test_camera_orientation(self, frame_l, frame_r):
         marker_corners_l, id_l, _ = cv2.aruco.detectMarkers(
@@ -606,6 +621,7 @@ class Main:
 
         self.display_name = "Image Window"
         syncCollector = MessageSync(len(self.camera_queue), 10)
+        self.mouseTrigger = False
         while not finished:
             currImageList = {}
             for key in self.camera_queue.keys():
@@ -715,10 +731,11 @@ class Main:
             if key == 27 or key == ord("q"):
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
-            elif key == ord(" "):
+            elif key == ord(" ") or self.mouseTrigger == True:
                 start_timer = True
                 prev_time = time.time()
                 timer = self.args.captureDelay
+                self.mouseTrigger = False
 
             if start_timer == True:
                 curr_time = time.time()
@@ -735,6 +752,9 @@ class Main:
                         (image_shape[1]//2, image_shape[0]//2), font,
                         7, (0, 255, 255),
                         4, cv2.LINE_AA)
+            cv2.namedWindow(self.display_name)
+            if self.args.mouseTrigger:
+                cv2.setMouseCallback(self.display_name, self.mouse_event_callback)
 
             cv2.imshow(self.display_name, combinedImage)
             tried = {}
@@ -990,8 +1010,10 @@ class Main:
                                         self.args.squaresY,
                                         self.args.cameraMode,
                                         self.args.rectifiedDisp) # Turn off enable disp rectify
-
-            calibration_handler = self.device.readCalibration()
+            if self.args.noInitCalibration:
+                calibration_handler = dai.CalibrationHandler()
+            else:
+                calibration_handler = self.device.readCalibration()
             try:
                 if self.empty_calibration(calibration_handler):
                     calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
@@ -1078,6 +1100,8 @@ class Main:
                 mx_serial_id = self.device.getDeviceInfo().getMxId()
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
+                if self.args.saveCalibPath:
+                    calibration_handler.eepromToJsonFile(self.args.saveCalibPath)
                 # try:
                 self.device.flashCalibration2(calibration_handler)
                 is_write_succesful = True
@@ -1158,6 +1182,9 @@ class Main:
             self.show_info_frame()
             self.capture_images_sync()
         self.dataset_path = str(Path("dataset").absolute())
+        if self.args.datasetPath:
+            print("Using dataset path: {}".format(self.args.datasetPath))
+            self.dataset_path = self.args.datasetPath
         if 'process' in self.args.mode:
             self.calibrate()
         print('py: DONE.')
