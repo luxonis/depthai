@@ -27,7 +27,7 @@ class XoutMjpeg(XoutFrames):
             raise ValueError('Visualizing Lossless MJPEG stream is not supported!')
 
     def decode_frame(self, packet: FramePacket) -> np.ndarray:
-        return cv2.imdecode(packet.imgFrame.getData(), self.flag)
+        return cv2.imdecode(packet.msg.getData(), self.flag)
 
     def visualize(self, packet: FramePacket):
         packet.frame = self.decode_frame(packet)

@@ -162,7 +162,7 @@ class SyncConfig(BaseConfig, SequenceNumSync):
     def new_packet(self, packet):
         # print('new packet', packet, packet.name, 'seq num',packet.imgFrame.getSequenceNum())
         synced = self.sync(
-            packet.imgFrame.getSequenceNum(),
+            packet.msg.getSequenceNum(),
             packet.name,
             packet
         )
@@ -176,7 +176,7 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             xoutbase.setup_base(self.new_packet)
             xouts.append(xoutbase)
 
-            if self.visualizer:
-                xoutbase.setup_visualize(self.visualizer, xoutbase.name)
+            if hasattr(xoutbase, 'setup_visualize'):
+                xoutbase.setup_visualize(Visualizer(), xoutbase.name)
 
         return xouts

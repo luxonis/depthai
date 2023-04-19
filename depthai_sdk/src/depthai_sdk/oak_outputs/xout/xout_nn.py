@@ -7,11 +7,11 @@ from distinctipy import distinctipy
 from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.classes.packets import (
-    _Detection, DetectionPacket, TrackerPacket, SpatialBbMappingPacket, TwoStagePacket
+    _Detection, DetectionPacket, TrackerPacket, SpatialBbMappingPacket, TwoStagePacket, NNDataPacket
 )
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
-from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.visualize.visualizer import Visualizer
@@ -21,6 +21,28 @@ try:
     import cv2
 except ImportError:
     cv2 = None
+
+class XoutNnData(XoutBase):
+    def __init__(self, xout: StreamXout):
+        self.nndata_out = xout
+        super().__init__()
+        self.name = 'NNData'
+
+    def visualize(self, packet: NNDataPacket):
+        print('Visualization of NNData is not supported')
+
+    def xstreams(self) -> List[StreamXout]:
+        return [self.nndata_out]
+
+    def new_msg(self, name: str, msg: dai.NNData) -> None:
+        if name not in self._streams:
+            return
+
+        if self.queue.full():
+            self.queue.get()  # Get one, so queue isn't full
+
+        packet = NNDataPacket(name=self.name, nn_data=msg)
+        self.queue.put(packet, block=False)
 
 
 class XoutNnResults(XoutSeqSync, XoutFrames):
@@ -199,7 +221,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
     def _set_frame_shape(self, packet):
         try:
-            shape = packet.imgFrame.getCvFrame().shape[:2]
+            shape = packet.msg.getCvFrame().shape[:2]
         except RuntimeError as e:
             raise RuntimeError(f'Error getting frame shape - {e}')
         if self._visualizer and self._visualizer.frame_shape is None and len(shape) == 1:
@@ -234,10 +256,10 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
 
     def visualize(self, packet: SpatialBbMappingPacket):
         if not self.factor:
-            size = (packet.imgFrame.getWidth(), packet.imgFrame.getHeight())
+            size = (packet.msg.getWidth(), packet.msg.getHeight())
             self.factor = calc_disp_multiplier(self.device, size)
 
-        depth = np.array(packet.imgFrame.getFrame())
+        depth = np.array(packet.msg.getFrame())
         with np.errstate(all='ignore'):
             disp = (self.factor / depth).astype(np.uint8)
 

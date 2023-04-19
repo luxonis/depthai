@@ -21,7 +21,7 @@ from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_nn import XoutTwoStage, XoutNnResults, XoutSpatialBbMappings
+from depthai_sdk.oak_outputs.xout.xout_nn import XoutTwoStage, XoutNnResults, XoutSpatialBbMappings, XoutNnData
 from depthai_sdk.oak_outputs.xout.xout_nn_encoded import XoutNnMjpeg, XoutNnH26x
 from depthai_sdk.oak_outputs.xout.xout_tracker import XoutTracker
 from depthai_sdk.replay import Replay
@@ -62,12 +62,10 @@ class NNComponent(Component):
 
         self.name = name
         self.out = self.Out(self)
-        self.node: Optional[
-            dai.node.NeuralNetwork,
-            dai.node.MobileNetDetectionNetwork,
-            dai.node.MobileNetSpatialDetectionNetwork,
-            dai.node.YoloDetectionNetwork,
-            dai.node.YoloSpatialDetectionNetwork] = None
+        self.node: Union[None,
+                         dai.node.NeuralNetwork,
+                         dai.node.MobileNetDetectionNetwork, dai.node.MobileNetSpatialDetectionNetwork,
+                         dai.node.YoloDetectionNetwork, dai.node.YoloSpatialDetectionNetwork] = None
 
         # ImageManip used to resize the input to match the expected NN input size
         self.image_manip: Optional[dai.node.ImageManip] = None
@@ -831,6 +829,13 @@ class NNComponent(Component):
                     frame_shape=self._comp._input.stream_size
                 )
 
+            return self._comp._create_xout(pipeline, out)
+
+        def nn_data(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutNnData:
+            if type(self._comp.node) == dai.node.NeuralNetwork:
+                out = XoutNnData(xout=StreamXout(self._comp.node.id, self._comp.node.out))
+            else:
+                out = XoutNnData(xout=StreamXout(self._comp.node.id, self._comp.node.outNetwork))
             return self._comp._create_xout(pipeline, out)
 
     # Checks
