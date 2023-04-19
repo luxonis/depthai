@@ -175,6 +175,7 @@ def parse_args():
                         help="Path to dataset used for processing images")
     parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.5,
                         help="Minimum percentage of detected markers to consider a frame valid")
+    parser.add_argument('-nm', '--numMarkers', type=int, default=None, help="Number of markers in the board")
     parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
                         help="Enable mouse trigger for image capture")
     parser.add_argument('-nic', '--noInitCalibration', default=False, action="store_true",
@@ -459,7 +460,10 @@ class Main:
         marker_corners, _, _ = cv2.aruco.detectMarkers(
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
-        num_all_markers = (self.args.squaresX-1)*(self.args.squaresY-1) / 2
+        if not self.args.numMarkers:
+            num_all_markers = (self.args.squaresX-1)*(self.args.squaresY-1) / 2
+        else:
+            num_all_markers = self.args.numMarkers
         return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
 
     def test_camera_orientation(self, frame_l, frame_r):
