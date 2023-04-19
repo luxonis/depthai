@@ -408,6 +408,8 @@ class Main:
             len(calibUtils.setPolygonCoordinates(1000, 600))
         if debug:
             print("Using Arguments=", self.args)
+        if self.args.datasetPath:
+            Path(self.args.datasetPath).mkdir(parents=True, exist_ok=True)
 
         # if self.args.board.upper() == 'OAK-D-LITE':
         #     raise Exception(
@@ -529,8 +531,10 @@ class Main:
 
         filename = calibUtils.image_filename(
             stream_name, self.current_polygon, self.images_captured)
-        cv2.imwrite("dataset/{}/{}".format(stream_name, filename), frame)
-        print("py: Saved image as: " + str(filename))
+        path = Path(self.args.datasetPath) / stream_name / filename
+        path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(path), frame)
+        print("py: Saved image as: " + str(path))
         return True
 
     def show_info_frame(self):
@@ -1101,6 +1105,7 @@ class Main:
                 calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
                 if self.args.saveCalibPath:
+                    Path(self.args.saveCalibPath).parent.mkdir(parents=True, exist_ok=True)
                     calibration_handler.eepromToJsonFile(self.args.saveCalibPath)
                 # try:
                 self.device.flashCalibration2(calibration_handler)
