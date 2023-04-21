@@ -1,11 +1,14 @@
-from typing import Dict, List
-import requests
-import depthai as dai
-from pathlib import Path
 import json
+import logging
+from pathlib import Path
+from typing import Dict
 from zipfile import ZipFile
 
+import depthai as dai
+import requests
+
 ROBOFLOW_MODELS = Path.home() / Path('.cache/roboflow-models')
+
 
 class RoboflowIntegration:
     def __init__(self, config: Dict):
@@ -27,7 +30,7 @@ class RoboflowIntegration:
         url = f"https://api.roboflow.com/depthai/{self.config['model']}/?api_key={self.config['key']}&device={mxid}"
         response = requests.get(url)
 
-        name = self.config['model'].replace('/', '_') # '/' isn't valid folder name
+        name = self.config['model'].replace('/', '_')  # '/' isn't valid folder name
 
         model_folder = ROBOFLOW_MODELS / name
         jsonFile = self._file_with_ext(model_folder, '.json')
@@ -45,9 +48,9 @@ class RoboflowIntegration:
             raise ValueError("This Roboflow's model is not from YOLO family!")
 
         if not str(ret['modelType']).endswith('n'):
-            print('We recommend using a lighter version of the model to get a better performance!')
+            logging.info('We recommend using a lighter version of the model to get a better performance!')
 
-        print(f"Downloading '{ret['name']}' model from Roboflow server")
+        logging.info(f"Downloading '{ret['name']}' model from Roboflow server")
 
         zipFileReq = requests.get(ret['model'])
         zipFileReq.raise_for_status()
@@ -58,9 +61,9 @@ class RoboflowIntegration:
         with open(zipFilePath, 'wb') as f:
             f.write(zipFileReq.content)
 
-        print(f"Downloaded the model to {zipFilePath}")
+        logging.info(f"Downloaded the model to {zipFilePath}")
 
-        with ZipFile(zipFilePath, 'r') as zObject: # Extract the zip
+        with ZipFile(zipFilePath, 'r') as zObject:  # Extract the zip
             zObject.extractall(str(ROBOFLOW_MODELS / name))
 
         # Rename bin/xml files

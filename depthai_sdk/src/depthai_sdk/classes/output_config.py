@@ -1,7 +1,7 @@
+import subprocess
 from abc import abstractmethod
 from pathlib import Path
 from typing import Optional, Callable, List
-
 import depthai as dai
 
 from depthai_sdk.classes import FramePacket
@@ -12,6 +12,7 @@ from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
 from depthai_sdk.record import Record
 from depthai_sdk.recorders.video_recorder import VideoRecorder
 from depthai_sdk.visualize.visualizer import Visualizer
+import os
 
 
 class BaseConfig:
@@ -25,8 +26,7 @@ class OutputConfig(BaseConfig):
     Saves callbacks/visualizers until the device is fully initialized. I'll admit it's not the cleanest solution.
     """
 
-    def __init__(self,
-                 output: Callable,
+    def __init__(self, output: Callable,
                  callback: Callable,
                  visualizer: Visualizer = None,
                  visualizer_enabled: bool = False,
@@ -96,6 +96,60 @@ class RecordConfig(BaseConfig):
         return [self.rec]
 
 
+class RosStreamConfig(BaseConfig):
+    outputs: List[Callable]
+    ros = None
+
+    def __init__(self, outputs: List[Callable]):
+        self.outputs = outputs
+
+    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
+        xouts: List[XoutFrames] = []
+        for output in self.outputs:
+            xoutbase: XoutFrames = output(pipeline, device)
+            xoutbase.setup_base(None)
+            xouts.append(xoutbase)
+
+        envs = os.environ
+        if 'ROS_VERSION' not in envs:
+            raise Exception('ROS installation not found! Please install or source the ROS you would like to use.')
+
+        version = envs['ROS_VERSION']
+        if version == '1':
+            raise Exception('ROS1 publsihing is not yet supported!')
+            from depthai_sdk.integrations.ros.ros1_streaming import Ros1Streaming
+            self.ros = Ros1Streaming()
+        elif version == '2':
+            from depthai_sdk.integrations.ros.ros2_streaming import Ros2Streaming
+            self.ros = Ros2Streaming()
+        else:
+            raise Exception(f"ROS version '{version}' not recognized! Should be either '1' or '2'")
+
+        self.ros.update(device, xouts)
+        return [self]
+
+    def new_msg(self, name, msg):
+        self.ros.new_msg(name, msg)
+    def check_queue(self, block):
+        pass  # No queues
+    def start_fps(self):
+        pass
+
+    # def is_ros1(self) -> bool:
+    #     try:
+    #         import rospy
+    #         return True
+    #     except:
+    #         return False
+    #
+    # def is_ros2(self):
+    #     try:
+    #         import rclpy
+    #         return True
+    #     except:
+    #         return False
+
+
 class SyncConfig(BaseConfig, SequenceNumSync):
     def __init__(self, outputs: List[Callable], callback: Callable):
         self.outputs = outputs
@@ -105,10 +159,10 @@ class SyncConfig(BaseConfig, SequenceNumSync):
 
         self.packets = dict()
 
-    def new_packet(self, packet: FramePacket, _=None):
+    def new_packet(self, packet):
         # print('new packet', packet, packet.name, 'seq num',packet.imgFrame.getSequenceNum())
         synced = self.sync(
-            packet.imgFrame.getSequenceNum(),
+            packet.msg.getSequenceNum(),
             packet.name,
             packet
         )
@@ -121,7 +175,5 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             xoutbase: XoutBase = output(pipeline, device)
             xoutbase.setup_base(self.new_packet)
             xouts.append(xoutbase)
-
-            xoutbase.setup_visualize(Visualizer(), xoutbase.name)
 
         return xouts

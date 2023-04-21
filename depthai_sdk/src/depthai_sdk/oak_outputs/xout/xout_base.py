@@ -1,3 +1,4 @@
+import traceback
 import warnings
 from abc import ABC, abstractmethod
 from queue import Empty, Queue
@@ -85,21 +86,63 @@ class XoutBase(ABC):
 
                 if self._visualizer_enabled:
                     try:
-                        self._visualizer.frame_shape = packet.frame.shape
-                    except AttributeError:
-                        pass  # Not all packets have frame attribute
-
-                    if self._visualizer:
-                        try:
-                            self.visualize(packet)
-                        except AttributeError:
-                            warnings.warn('OpenCV (or another libraries) may not be installed, cannot visualize frames')
+                        self.visualize(packet)
+                    except Exception as e:
+                        warnings.warn(f'An error occurred while visualizing: {e}')
+                        traceback.print_exc()
                 else:
                     # User defined callback
-                    self.callback(packet)
+                    try:
+                        self.callback(packet)
+                    except Exception as e:
+                        warnings.warn(f'An error occurred while calling callback: {e}')
+                        traceback.print_exc()
 
                 # Record after processing, so that user can modify the frame
                 self.on_record(packet)
 
         except Empty:  # Queue empty
             pass
+
+    def fourcc(self) -> str:
+        if self.is_mjpeg():
+            return 'mjpeg'
+        elif self.is_h264():
+            return 'h264'
+        elif self.is_h265():
+            return 'hevc'
+        elif self.is_depth():
+            return 'y16'
+        # TODO: add for mono, rgb, nv12, yuv...
+        else:
+            return None
+
+    def is_h265(self) -> bool:
+        if type(self).__name__ == 'XoutH26x':
+            # XoutH26x class has profile attribute
+            return self.profile == dai.VideoEncoderProperties.Profile.H265_MAIN
+        return False
+
+    def is_h264(self) -> bool:
+        if type(self).__name__ == 'XoutH26x':
+            # XoutH26x class has profile attribute
+            return self.profile != dai.VideoEncoderProperties.Profile.H265_MAIN
+        return False
+
+    def is_h26x(self) -> bool:
+        return type(self).__name__ == 'XoutH26x'
+
+    def is_mjpeg(self) -> bool:
+        return type(self).__name__ == 'XoutMjpeg'
+
+    def is_raw(self) -> bool:
+        return type(self).__name__ == 'XoutFrames'
+
+    def is_depth(self) -> bool:
+        return type(self).__name__ == 'XoutDepth'
+
+    def is_disparity(self) -> bool:
+        return type(self).__name__ == 'XoutDisparity'
+
+    def is_imu(self):
+        return type(self).__name__ == 'XoutIMU'

@@ -1,3 +1,5 @@
+import logging
+import warnings
 from typing import List
 
 import depthai as dai
@@ -41,7 +43,9 @@ class XoutDisparity(XoutFrames, Clickable):
 
         # Prefer to use WLS level if set, otherwise use lambda and sigma
         if wls_level and use_wls_filter:
-            print(f'Using WLS level: {wls_level.name} (lambda: {wls_level.value[0]}, sigma: {wls_level.value[1]})')
+            logging.debug(
+                f'Using WLS level: {wls_level.name} (lambda: {wls_level.value[0]}, sigma: {wls_level.value[1]})'
+            )
             self.wls_lambda = wls_level.value[0]
             self.wls_sigma = wls_level.value[1]
         else:
@@ -49,7 +53,15 @@ class XoutDisparity(XoutFrames, Clickable):
             self.wls_sigma = wls_sigma
 
         if self.use_wls_filter:
-            self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
+            try:
+                self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
+            except AttributeError:
+                warnings.warn(
+                    'OpenCV version does not support WLS filter. Disabling WLS filter. '
+                    'Make sure you have opencv-contrib-python installed. '
+                    'If not, run "pip uninstall opencv-python && pip install opencv-contrib-python -U"'
+                )
+                self.use_wls_filter = False
 
         self.msgs = dict()
 

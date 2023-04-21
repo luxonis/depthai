@@ -133,7 +133,7 @@ class ArgsParser:
         # parser.add_argument("--cameraSharpness", type=_commaSeparated("all", int), nargs="+",
         #                     help="Specify image sharpness")
 
-        # Depth related arguments
+        # StereoDepth related arguments
         parser.add_argument("-dct", "--disparityConfidenceThreshold", type=_checkRange(0, 255),
                             help="Disparity confidence threshold, used for depth measurement.")
         parser.add_argument("-lrct", "--lrcThreshold", type=_checkRange(0, 10),
@@ -180,7 +180,7 @@ class ArgsParser:
         parser.add_argument("--irFloodBrightness", "-led", "--led", type=_checkRange(0, 1500),
                             help="For OAK-D Pro: specify IR flood illumination brightness, range: 0..1500 [mA], default 0 (turned off)")
 
-        args = parser.parse_args()
+        args = parser.parse_known_args()[0]
         # Parse arguments
         args.rgbResolution = rgb_resolution(args.rgbResolution)
         args.monoResolution = mono_resolution(args.monoResolution)

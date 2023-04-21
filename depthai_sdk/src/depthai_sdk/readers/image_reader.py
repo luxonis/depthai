@@ -42,7 +42,7 @@ class ImageReader(AbstractReader):
             self.frames[stream].append(cv2.imread(str(path), flag))
         else:
             shape = None
-            for fileName in os.listdir(str(path)):
+            for fileName in sorted(os.listdir(str(path))):
                 f_name, ext = os.path.splitext(fileName)
                 if ext not in _imageExt: continue
                 stream, flag = get_name_flag(f_name)
@@ -58,12 +58,16 @@ class ImageReader(AbstractReader):
         for name, arr in self.frames.items():
             self.cntr[name] = 0
 
-        self.cycle = time.time()
+        self.last_cycle_time = time.time()
+        self.cycle_sec = 3.0 # Images get cycled every 3 seconds by default
 
-    def read(self):
+    def set_cycle_fps(self, fps): # Called from replay.py on set_fps()
+        self.cycle_sec = 1.0 / fps
+
+    def read(self) -> Dict[str, np.ndarray]:
         # Increase counters
-        if 3 < time.time() - self.cycle:
-            self.cycle = time.time()
+        if self.cycle_sec < time.time() - self.last_cycle_time:
+            self.last_cycle_time = time.time()
             for name in self.cntr:
                 self.cntr[name] += 1
                 if len(self.frames[name]) <= self.cntr[name]:
@@ -85,6 +89,12 @@ class ImageReader(AbstractReader):
     def getShape(self, name: str) -> Tuple[int, int]:
         shape = self.frames[name][0].shape
         return (shape[1], shape[0])
+
+    def get_message_size(self, name: str) -> int:
+        size = 1
+        for shape in self.frames[name][0].shape:
+            size *= shape
+        return size
 
     def close(self):
         pass
