@@ -141,6 +141,7 @@ class DepthAICamera():
         self.pipeline = dai.Pipeline()
         self.eepromUnionData = {}
         self.start_time = datetime.now()
+        self.device = None
 
         if 'FFC' in test_type:
             imu = self.pipeline.create(dai.node.IMU)
@@ -206,7 +207,7 @@ class DepthAICamera():
             self.imu.out.link(self.xoutIMU.input)
 
         if 'OAK-1' not in test_type:
-            if 'SR' in test_type:
+            if 'SR' in test_type or 'LR' in test_type:
                 self.camLeft = self.pipeline.create(dai.node.ColorCamera)
                 self.xoutLeft = self.pipeline.create(dai.node.XLinkOut)
                 self.xoutLeft.setStreamName("left")
@@ -226,7 +227,7 @@ class DepthAICamera():
                 self.camLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
                 self.camLeft.out.link(self.xoutLeft.input)
                 self.camLeft.setFps(FPS)
-            if 'SR' in test_type:
+            if 'SR' in test_type or 'LR' in test_type:
                 self.camRight = self.pipeline.create(dai.node.ColorCamera)
                 self.xoutRight = self.pipeline.create(dai.node.XLinkOut)
                 self.xoutRight.setStreamName("right")
@@ -400,7 +401,7 @@ class DepthAICamera():
                     in_left = self.qLeft.tryGet()
                     if in_left is not None:
                         image = in_left.getCvFrame()
-                        if 'SR' in test_type:
+                        if 'SR' in test_type or 'LR' in test_type:
                             if colorMode == QtGui.QImage.Format_RGB888:
                                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     if test_result['left_strm_res'] == '':
@@ -417,7 +418,7 @@ class DepthAICamera():
                     in_right = self.qRight.tryGet()
                     if in_right is not None:
                         image = in_right.getCvFrame()
-                        if 'SR' in test_type:
+                        if 'SR' in test_type or 'LR' in test_type:
                             if colorMode == QtGui.QImage.Format_RGB888:
                                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     if test_result['right_strm_res'] == '':
@@ -1307,14 +1308,14 @@ class UiTests(QtWidgets.QMainWindow):
 
             if 'OAK-1' not in test_type:
                 location = WIDTH + prew_width + 20, 0
-                if 'SR' in test_type:
+                if 'SR' in test_type or 'LR' in test_type:
                     self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), colorMode, 'LEFT Preview', location)
                 else:
                     self.left = Camera(lambda: self.depth_camera.get_image('LEFT'), QtGui.QImage.Format_Grayscale8,
                                        'LEFT Preview', location)
                 self.left.show()
                 location = WIDTH + prew_width + 20, prew_height + 80
-                if 'SR' in test_type:
+                if 'SR' in test_type or 'LR' in test_type:
                     self.right = Camera(lambda: self.depth_camera.get_image('RIGHT'), colorMode, 'RIGHT Preview',
                                         location)
                 else:
