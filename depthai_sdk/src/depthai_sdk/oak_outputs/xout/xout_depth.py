@@ -75,7 +75,7 @@ class XoutDepth(XoutFrames, Clickable):
                 self.use_wls_filter = False
 
     def visualize(self, packet: DepthPacket):
-        depth_frame = packet.imgFrame.getFrame()
+        depth_frame = packet.msg.getFrame()
 
         stereo_config = self._visualizer.config.stereo
 

@@ -5,7 +5,7 @@ from depthai_sdk.oak_camera import OakCamera
 import depthai as dai
 
 
-def test_detection_output():
+def test_stereo_output():
     with OakCamera() as oak_camera:
         if dai.CameraBoardSocket.LEFT not in oak_camera.sensors:
             pytest.skip('Looks like camera does not have mono pair, skipping...')
