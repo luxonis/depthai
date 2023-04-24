@@ -195,7 +195,7 @@ class DepthAICamera():
         # """)
 
         # Add IMU to force FW update
-        if imu_upgrade and 'SR' not in test_type:
+        if imu_upgrade and device_options.get('imu', False):
             self.imu = self.pipeline.create(dai.node.IMU)
             self.xoutIMU = self.pipeline.create(dai.node.XLinkOut)
             self.xoutIMU.setStreamName("IMU")
