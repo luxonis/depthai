@@ -347,6 +347,12 @@ class StereoComponent(Component):
         def __init__(self, stereo_component: 'StereoComponent'):
             self._comp = stereo_component
 
+        def _mono_frames(self):
+            mono_frames = None
+            if self._comp.wls_enabled:
+                mono_frames = StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name)
+            return mono_frames
+
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             # By default, we want to show disparity
             return self.depth(pipeline, device)
@@ -355,10 +361,10 @@ class StereoComponent(Component):
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
 
             out = XoutDisparity(
-                disparity_frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
-                mono_frames=StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name),
+                frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
                 max_disp=self._comp.node.getMaxDisparity(),
                 fps=fps,
+                mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
                 use_wls_filter=self._comp.wls_enabled,
@@ -390,8 +396,9 @@ class StereoComponent(Component):
             out = XoutDepth(
                 device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.depth, name=self._comp.name),
-                mono_frames=StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name),
+                stereo=self._comp.node,
                 fps=fps,
+                mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
                 use_wls_filter=self._comp.wls_enabled,

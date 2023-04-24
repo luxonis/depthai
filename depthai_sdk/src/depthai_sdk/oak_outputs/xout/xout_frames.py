@@ -101,5 +101,5 @@ class XoutFrames(XoutBase):
         self.queue.put(packet, block=False)
 
     def __del__(self):
-        if self._video_recorder:
+        if self._video_recorder is not None:
             self._video_recorder.close()

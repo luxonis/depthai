@@ -85,15 +85,19 @@ class DepthPacket(FramePacket):
 
     def __init__(self,
                  name: str,
-                 disparity_frame: dai.ImgFrame,
-                 mono_frame: dai.ImgFrame,
+                 img_frame: dai.ImgFrame,
+                 mono_frame: Optional[dai.ImgFrame],
+                 depth_map: Optional[np.ndarray] = None,
                  visualizer: 'Visualizer' = None):
         super().__init__(name=name,
-                         msg=disparity_frame,
-                         frame=disparity_frame.getCvFrame() if cv2 else None,
+                         msg=img_frame,
+                         frame=img_frame.getCvFrame() if cv2 else None,
                          visualizer=visualizer)
-        self.mono_frame = mono_frame
 
+        if mono_frame is not None:
+            self.mono_frame = mono_frame
+
+        self.depth_map = depth_map
 
 class SpatialBbMappingPacket(FramePacket):
     """
