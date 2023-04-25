@@ -299,6 +299,7 @@ class OakCamera:
         for out in self._out_templates:
             if isinstance(out, RecordConfig):
                 out.rec.close()
+        self._oak.close()
 
     def start(self, blocking=False):
         """
