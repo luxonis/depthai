@@ -70,6 +70,12 @@ class XoutBase(ABC):
         """
         pass
 
+    def close(self) -> None:
+        """
+        Hook that will be called when exiting the context manager.
+        """
+        pass
+
     # This approach is used as some functions (eg. imshow()) need to be called from
     # main thread, and calling them from callback thread wouldn't work.
     def check_queue(self, block=False) -> None:
