@@ -20,6 +20,8 @@ Example how :class:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` ca
 
 .. code-block:: python
 
+    from depthai_sdk import OakCamera
+
     with OakCamera() as oak:
         cam = oak.create_camera('color')
         visualizer = oak.visualize(cam.out.main)
@@ -47,10 +49,10 @@ There are the following methods for modifying the default configuration:
 :meth:`detections() <depthai_sdk.visualize.visualizer.Visualizer.detections>`,
 :meth:`tracking() <depthai_sdk.visualize.visualizer.Visualizer.tracking>`.
 The arguments should be passed as key-value arguments with the same signature as the corresponding config,
-e.g., ``text(font_size=2, font_color=(255,123,200))``.
+e.g., :meth:`Visualizer.text(font_size=2, font_color=(255,123,200)) <depthai_sdk.visualize.visualizer.Visualizer.text>`.
 
 The modified configuration will be applied to every created objects. The methods support
-fluent interface and can be chained, e.g., ``visualizer.text(font_size=2).detections(color=(255, 0, 0))``.
+fluent interface and can be chained, e.g., :meth:`Visualizer.text(font_size=2).detections(color=(255, 0, 0)) <depthai_sdk.visualize.visualizer.Visualizer.text>`.
 
 Example how to configure the visualizer:
 
