@@ -171,7 +171,7 @@ def parse_args():
                         help="Set antibanding/antiflicker algo for lights that flicker at mains frequency. Default: %(default)s [Hz]")
     parser.add_argument('-scp', '--saveCalibPath', type=str, default="",
                         help="Save calibration file to this path")
-    parser.add_argument('-dst', '--datasetPath', type=str, default="",
+    parser.add_argument('-dst', '--datasetPath', type=str, default="dataset",
                         help="Path to dataset used for processing images")
     parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.5,
                         help="Minimum percentage of detected markers to consider a frame valid")
