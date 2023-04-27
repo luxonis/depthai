@@ -44,14 +44,14 @@ class VideoCapReader(AbstractReader):
 
                 # TODO: avoid changing stream names, just use socket
                 stream = str(socket)
-                if socket == dai.CameraBoardSocket.CAM_A:
-                    stream = 'color'
-                elif socket == dai.CameraBoardSocket.CAM_B:
-                    stream = 'left'
-                elif socket == dai.CameraBoardSocket.CAM_C:
-                    stream = 'right'
+                # if socket == dai.CameraBoardSocket.CAM_A:
+                #     stream = 'color'
+                # elif socket == dai.CameraBoardSocket.CAM_B:
+                #     stream = 'left'
+                # elif socket == dai.CameraBoardSocket.CAM_C:
+                #     stream = 'right'
 
-                self.readers[stream] = cv2.VideoCapture(str(path / fileName))
+                self.readers[f_name] = cv2.VideoCapture(str(path / fileName))
 
         for name, reader in self.readers.items():
             ok, f = reader.read()
