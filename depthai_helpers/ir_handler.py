@@ -238,10 +238,10 @@ def start_ir_handler(dev):
             self.idx = 1
         def irWriteReg(self, reg, value):
             print(f'===== Op{self.idx:3}: dev.irWriteReg({hex(reg)}, {hex(value)})')
-            self.dev.irWriteReg(reg, value)
+            self.dev.customRPC('irWriteReg', reg, value)
             self.idx += 1
         def irReadReg(self, reg):
-            value = self.dev.irReadReg(reg)
+            value = self.dev.customRPC('irReadReg', reg)
             print(f'===== Op{self.idx:3}: dev.irReadReg({hex(reg)}) -> {hex(value)}')
             self.idx += 1
             return value

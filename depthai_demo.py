@@ -25,6 +25,7 @@ try:
     import cv2
     import depthai as dai
     import numpy as np
+    from depthai_helpers.ir_handler import start_ir_handler
     from depthai_sdk.managers import ArgsManager, getMonoResolution, getRgbResolution
     from depthai_helpers.app_manager import App
     from depthai_sdk.fps import FPSHandler
@@ -227,6 +228,7 @@ class Demo:
         if irDrivers:
             print('IR drivers found on OAK-D Pro:', [f'{d[0]} on bus {d[1]}' for d in irDrivers])
             if not irSetFromCmdLine: print(' --> Go to the `Depth` tab to enable!')
+            start_ir_handler(self._device)
         elif irSetFromCmdLine:
             print('[ERROR] IR drivers not detected on device!')
 
