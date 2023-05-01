@@ -415,7 +415,7 @@ class _RosbagBaseRecorder(Recorder):
     def close(self):
         if self._closed: return
         self._closed = True
-        logging.info("ROS .bag saved at: ", str(self.path))
+        logging.info(f'ROS .bag saved at: {str(self.path)}')
         self.writer.close()
 
     # def write_streamInfo(self, depth=False, rgb=False):

@@ -102,7 +102,7 @@ class VideoWriter(AbstractWriter):
             snapshot_file.write(el if isinstance(el, np.ndarray) else el.getCvFrame())
 
         snapshot_file.release()
-        logging.info('Snapshot saved to', save_path)
+        logging.info(f'Snapshot saved to {save_path}')
 
     def set_fourcc(self, fourcc: str):
         self._fourcc = fourcc
