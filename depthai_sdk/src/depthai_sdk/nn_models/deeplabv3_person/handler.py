@@ -1,7 +1,7 @@
 import numpy as np
 from depthai import NNData
 
-from depthai_sdk import SemanticSegmentation
+from depthai_sdk.classes import SemanticSegmentation
 
 NN_WIDTH, NN_HEIGHT = 513, 513
 

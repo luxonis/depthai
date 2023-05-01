@@ -1,14 +1,16 @@
-from typing import List, Dict, Any
+from typing import List, Optional
 
 import depthai as dai
 
-from depthai_sdk.oak_outputs.xout_base import XoutBase
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
 
 
 class OakDevice:
-    device: dai.Device = None
-    # fpsHandlers: Dict[str, FPS] = dict()
-    oak_out_streams: List[XoutBase] = []
+    def __init__(self):
+        self.device: Optional[dai.Device] = None
+        # fpsHandlers: Dict[str, FPS] = dict()
+        self.oak_out_streams: List[XoutBase] = []
+        self.max_queue_size = 4
 
     @property
     def image_sensors(self) -> List[dai.CameraBoardSocket]:
@@ -26,7 +28,7 @@ class OakDevice:
             if isinstance(node, dai.node.XLinkOut):
                 stream_name = node.getStreamName()
                 # self.fpsHandlers[name] = FPS()
-                self.device.getOutputQueue(stream_name, maxSize=4, blocking=False).addCallback(
+                self.device.getOutputQueue(stream_name, maxSize=self.max_queue_size, blocking=False).addCallback(
                     lambda name, msg: self.new_msg(name, msg)
                 )
 
@@ -40,3 +42,10 @@ class OakDevice:
         """
         for sync in self.oak_out_streams:
             sync.check_queue(block=False)  # Don't block!
+
+    def set_max_queue_size(self, size: int):
+        self.max_queue_size = size
+
+    def close(self):
+        for stream in self.oak_out_streams:
+            stream.close()

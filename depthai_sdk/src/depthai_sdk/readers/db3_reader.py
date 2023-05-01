@@ -11,13 +11,15 @@ from depthai_sdk.readers.abstract_reader import AbstractReader
 
 
 class Db3Reader(AbstractReader):
-    STREAMS = ['left', 'right', 'depth']
+    STREAMS = ['left', 'right', 'rgb', 'depth']
     generators: Dict[str, Generator] = {}
     frames = None  # For shapes
 
     def __init__(self, folder: Path) -> None:
         self.reader = Reader(str(folder))
         self.reader.open()
+        self.generators: Dict[str, Generator] = {}
+        self.frames = None  # For shapes
 
         for con in self.reader.connections:
             for stream in self.STREAMS:
@@ -32,13 +34,15 @@ class Db3Reader(AbstractReader):
                 if stream.lower() in con.topic.lower():
                     self.generators[stream.lower()] = self.reader.messages([con])
 
-    def read(self):
-        rosMsgs: Dict[str, Any] = dict()
+
+    def read(self) -> Dict[str, np.ndarray]:
+        ros_msgs: Dict[str, np.ndarray] = dict()
+
         try:
             for name, gen in self.generators.items():
                 con, ts, raw = next(gen)
-                rosMsgs[name] = self._getCvFrame(deserialize_cdr(raw, con.msgtype), name)
-            return rosMsgs
+                ros_msgs[name] = self._getCvFrame(deserialize_cdr(raw, con.msgtype), name)
+            return ros_msgs
         except:
             return None
 
@@ -50,14 +54,15 @@ class Db3Reader(AbstractReader):
         """
         Convert ROS message to cv2 frame (numpy array)
         """
-        msgType = str(type(msg))
+        msg_type = str(type(msg))
         data = np.frombuffer(msg.data, dtype=np.int8)
-        if 'CompressedImage' in msgType:
+
+        if 'CompressedImage' in msg_type:
             if name == 'color':
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_COLOR)
             else:  # left, right, disparity
                 return PreviewDecoder.jpegDecode(data, cv2.IMREAD_GRAYSCALE)
-        elif 'Image' in msgType:
+        elif 'Image' in msg_type:
             if msg.encoding == 'mono16':
                 data = data.view(np.int16)
             return data.reshape((msg.height, msg.width))
@@ -72,6 +77,12 @@ class Db3Reader(AbstractReader):
     def getShape(self, name: str) -> Tuple[int, int]:
         frame = self.frames[name]
         return (frame.shape[1], frame.shape[0])
+
+    def get_message_size(self, name: str) -> int:
+        size = 1
+        for shape in self.frames[name].shape:
+            size *= shape
+        return size
 
     def close(self):
         self.reader.close()

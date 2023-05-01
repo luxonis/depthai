@@ -31,6 +31,7 @@ MANIFEST
 *.idea
 # DepthAI-Specific
 dataset/
+dataset*
 .fw_cache/
 depthai.calib
 mesh_left.calib
@@ -59,6 +60,7 @@ resources/*.json
 # Virtual environment
 virtualenv/
 venv/
+.venv/
 
 # DepthAI recordings
 recordings/

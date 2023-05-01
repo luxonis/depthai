@@ -1,13 +1,13 @@
 from pathlib import Path
 
-from depthai_sdk import OakCamera, Visualizer
+from depthai_sdk import OakCamera
 from depthai_sdk.recorders.video_writers.av_writer import AvWriter
 
 rec = AvWriter(Path('./'), 'color', 'mjpeg', fps=30)
 
 
-def save_raw_mjpeg(packet, visualizer: Visualizer):
-    rec.write(packet.imgFrame)
+def save_raw_mjpeg(packet):
+    rec.write(packet.msg)
 
 
 with OakCamera() as oak:

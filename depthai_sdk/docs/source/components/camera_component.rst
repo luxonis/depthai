@@ -10,6 +10,8 @@ Usage
 
 .. code-block:: python
 
+    from depthai_sdk import OakCamera
+
     with OakCamera() as oak:
         # Create color camera
         color = oak.create_camera('color')
@@ -30,6 +32,6 @@ Component outputs
 Reference
 #########
 
-.. autoclass:: depthai_sdk.CameraComponent
+.. autoclass:: depthai_sdk.components.CameraComponent
     :members:
     :undoc-members:

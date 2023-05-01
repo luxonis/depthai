@@ -4,7 +4,11 @@ from dataclasses import replace
 from enum import Enum
 from typing import List, Tuple, Optional, Union, Any, Dict
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
@@ -12,7 +16,7 @@ from depthai import ImgDetection
 from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
 from depthai_sdk.visualize.encoder import JSONEncoder
-from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine
+from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask
 from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
 
 
@@ -28,15 +32,10 @@ class Visualizer(VisualizerHelper):
     # Constants
     IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt'
 
-    # Fields
-    objects: List[GenericObject]
-    config: VisConfig
-    _frame_shape: Optional[Tuple[int, ...]]
-
     def __init__(self, scale: float = None, fps: bool = False):
         self.platform: Platform = self._detect_platform()
         self.objects: List[GenericObject] = []
-        self._frame_shape = None
+        self._frame_shape: Optional[Tuple[int, ...]] = None
 
         self.config = VisConfig()
 
@@ -91,7 +90,7 @@ class Visualizer(VisualizerHelper):
                  size: int = None,
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
-                 outline: bool = False,
+                 outline: bool = True,
                  bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10) -> 'Visualizer':
@@ -190,6 +189,21 @@ class Visualizer(VisualizerHelper):
         self.objects.append(line)
         return self
 
+    def add_mask(self, mask: np.ndarray, alpha: float):
+        """
+        Add a mask to the visualizer.
+
+        Args:
+            mask: Mask represented as uint8 numpy array.
+            alpha: Transparency of the mask.
+
+        Returns:
+            self
+        """
+        mask_overlay = VisMask(mask=mask, alpha=alpha)
+        self.add_object(mask_overlay)
+        return self
+
     def draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
@@ -253,6 +267,7 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.output = replace(self.config.output, **kwargs)
+
         return self
 
     def stereo(self,
@@ -265,12 +280,13 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.stereo = replace(self.config.stereo, **kwargs)
+
         return self
 
     def detections(self,
                    thickness: int = None,
                    fill_transparency: float = None,
-                   box_roundness: float = None,
+                   bbox_roundness: float = None,
                    color: Tuple[int, int, int] = None,
                    bbox_style: BboxStyle = None,
                    line_width: float = None,
@@ -283,7 +299,7 @@ class Visualizer(VisualizerHelper):
         Args:
             thickness: Thickness of the bounding box.
             fill_transparency: Transparency of the bounding box.
-            box_roundness: Roundness of the bounding box.
+            bbox_roundness: Roundness of the bounding box.
             color: Color of the bounding box.
             bbox_style: Style of the bounding box.
             line_width: Width of the bbox horizontal lines CORNERS or ROUNDED_CORNERS style is used.
@@ -343,6 +359,7 @@ class Visualizer(VisualizerHelper):
                  deletion_lost_threshold: int = None,
                  line_thickness: int = None,
                  fading_tails: bool = None,
+                 speed: bool = None,
                  line_color: Tuple[int, int, int] = None,
                  line_type: int = None,
                  bg_color: Tuple[int, int, int] = None) -> 'Visualizer':
@@ -354,6 +371,7 @@ class Visualizer(VisualizerHelper):
             deletion_lost_threshold: Number of consequent LOST statuses after which the trail is deleted.
             line_thickness: Thickness of the line.
             fading_tails: Flag that indicates if the tails should fade.
+            speed: Flag that indicates if the speed should be shown.
             line_color: Color of the line.
             line_type: Type of the line (from cv2).
             bg_color: Text background color.
@@ -365,6 +383,16 @@ class Visualizer(VisualizerHelper):
 
         if len(kwargs) > 0:
             self.config.tracking = replace(self.config.tracking, **kwargs)
+
+        return self
+
+    def segmentation(self,
+                     mask_alpha: float = None,
+                     ) -> 'Visualizer':
+        kwargs = self._process_kwargs(locals())
+
+        if len(kwargs) > 0:
+            self.config.segmentation = replace(self.config.segmentation, **kwargs)
 
         return self
 

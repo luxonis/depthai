@@ -1,61 +1,35 @@
 import math
 import depthai as dai
 from typing import *
+import numpy as np
+import cv2
 
 
-class ImageSensor:
-    name: str
-    resolutions: List[Union[
-        dai.ColorCameraProperties.SensorResolution,
-        dai.MonoCameraProperties.SensorResolution
-    ]]
-    type: dai.node
-
-    def __eq__(self, other):
-        return self.name == other
-
-    def __init__(self,
-                 name: str,
-                 resolutions: List[str],
-                 type: str):
-        from .parser import parse_resolution
-        self.name = name
-        self.type = dai.node.ColorCamera if type == 'color' else dai.node.MonoCamera
-        self.resolutions = [parse_resolution(self.type, resolution) for resolution in resolutions]
-
-    @property
-    def maxRes(self) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
-        return self.resolutions[0]
-
-
-cameraSensors: List[ImageSensor] = [
-    ImageSensor('IMX378', ['12mp', '4k', '1080p'], 'color'),
-    ImageSensor('OV9282', ['800P', '720p', '400p'], 'mono'),
-    ImageSensor('OV9782', ['800P', '720p', '400p'], 'color'),
-    ImageSensor('OV9281', ['800P', '720p', '400p'], 'color'),
-    ImageSensor('IMX214', ['13mp', '12mp', '4k', '1080p'], 'color'),
-    ImageSensor('OV7750', ['480P', '400p'], 'mono'),
-    ImageSensor('OV7251', ['480P', '400p'], 'mono'),
-    ImageSensor('IMX477', ['12mp', '4k', '1080p'], 'color'),
-    ImageSensor('IMX577', ['12mp', '4k', '1080p'], 'color'),
-    ImageSensor('AR0234', ['1200P'], 'color'),
-    ImageSensor('IMX582', ['48mp', '12mp', '4k'], 'color'),
-]
-
-cameraResolutions: Dict[Any, Tuple[int, int]] = {
-    dai.ColorCameraProperties.SensorResolution.THE_13_MP: (4208, 3120),
-    dai.ColorCameraProperties.SensorResolution.THE_12_MP: (4056, 3040),
-    dai.ColorCameraProperties.SensorResolution.THE_4_K: (3840, 2160),
-    dai.ColorCameraProperties.SensorResolution.THE_1080_P: (1920, 1080),
-    dai.ColorCameraProperties.SensorResolution.THE_800_P: (1280, 800),
-    dai.ColorCameraProperties.SensorResolution.THE_720_P: (1280, 720),
-
-    dai.MonoCameraProperties.SensorResolution.THE_800_P: (1280, 800),
+monoResolutions: Dict[dai.MonoCameraProperties.SensorResolution, Tuple[int,int]] = {
+    dai.MonoCameraProperties.SensorResolution.THE_1200_P: (1920, 1200), # Monochrome AR0234
+    dai.MonoCameraProperties.SensorResolution.THE_800_P: (1280, 800), # OV9282
     dai.MonoCameraProperties.SensorResolution.THE_720_P: (1280, 720),
-    dai.MonoCameraProperties.SensorResolution.THE_480_P: (640, 480),
+    dai.MonoCameraProperties.SensorResolution.THE_480_P: (640, 480), # OV7251
     dai.MonoCameraProperties.SensorResolution.THE_400_P: (640, 400),
 }
 
+colorResolutions: Dict[dai.ColorCameraProperties.SensorResolution, Tuple[int,int]] = {
+    dai.ColorCameraProperties.SensorResolution.THE_5312X6000: (5312, 6000),  # IMX582 cropped
+    dai.ColorCameraProperties.SensorResolution.THE_13_MP: (4208, 3120),  # AR214
+    dai.ColorCameraProperties.SensorResolution.THE_12_MP: (4056, 3040),  # IMX378, IMX477, IMX577
+    dai.ColorCameraProperties.SensorResolution.THE_4000X3000: (4000, 3000),  # IMX582 with binning enabled
+    dai.ColorCameraProperties.SensorResolution.THE_4_K: (3840, 2160),
+    dai.ColorCameraProperties.SensorResolution.THE_1200_P: (1920, 1200),  # AR0234
+    dai.ColorCameraProperties.SensorResolution.THE_1080_P: (1920, 1080),
+    dai.ColorCameraProperties.SensorResolution.THE_1440X1080: (1440, 1080),
+    dai.ColorCameraProperties.SensorResolution.THE_5_MP: (2592, 1944),  # OV5645
+    dai.ColorCameraProperties.SensorResolution.THE_800_P: (1280, 800),  # OV9782
+    dai.ColorCameraProperties.SensorResolution.THE_720_P: (1280, 720),
+}
+
+sensorResolutions: Dict[Any, Tuple[int,int]] = []
+sensorResolutions.extend(monoResolutions)
+sensorResolutions.extend(colorResolutions)
 
 def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
     """
@@ -73,18 +47,17 @@ def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
     lst.sort(reverse=True)
     return lst
 
-
 def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tuple[int, int]:
     """
     For colorCamera.video output
     """
     while True:
-        if width % 3 == 0:
-            if not videoEncoder or width % 32 == 0:
+        if width % 2 == 0: # YUV420/NV12 width needs to be an even number to be convertible to BGR on host using cv2
+            if not videoEncoder or width % 32 == 0: # VideoEncoder HW limitation - width must be divisible by 32
                 break
         width -= 1
     while True:
-        if height % 2 == 0:
+        if height % 2 == 0: # YUV420/NV12 height needs to be an even number to be convertible to BGR on host using cv2
             break
         height -= 1
     return (width, height)
@@ -123,8 +96,10 @@ def getClosestIspScale(camResolution: Tuple[int, int],
                  height and newH % 8 != 0)):
             continue  # ISP output size isn't supported by VideoEncoder
 
-        # Currently, new ISP width must be divisible by 2. FW engineers are looking into it.
-        if newW % 2 != 0:
+        # Currently, new ISP width must be divisible by 2.
+        # TODO: Width even number requirement was temporarily added because sometimes images were very zoomed. Engineers
+        # are looking into it, and we will remove this check once this is fixed in firmware.
+        if newW % 2 != 0 or newH % 2 != 0:
             continue
 
         err = abs((newW - width) if width else (newH - height))
@@ -191,36 +166,21 @@ def setCameraControl(control: dai.CameraControl,
     # TODO: Add contrast, exposure compensation, brightness, manual exposure, and saturation
 
 
-def cameraSensor(sensorName: str) -> ImageSensor:
-    return cameraSensors[cameraSensors.index(sensorName.upper())]
+def get_sensor_resolution(type: dai.CameraSensorType, width: int, height: int) -> Tuple[Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution], Tuple[int,int]]:
+    def get_res(resolutions: Dict[Any, Tuple[int,int]]):
+        for res, (w, h) in resolutions.items():
+            if width == w and height == h:
+                return (res, (w,h))
 
+    if type == dai.CameraSensorType.COLOR:
+        return get_res(colorResolutions)
+    elif type == dai.CameraSensorType.MONO:
+        return get_res(monoResolutions)
+    else:
+        raise Exception('Camera sensor type unknown!', type)
 
-def cameraSensorType(sensorName: str) -> dai.node:
-    """
-    Gets camera sensor type from it's name, either MonoCamera or ColorCamera.
-    @param sensorName: Name of the camera sensor
-    @return: dai.node.MonoCamera or dai.node.ColorCamera
-    """
-    return cameraSensor(sensorName).type
-
-
-def cameraSensorResolution(sensorName: str
-                           ) -> Union[
-    dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
-    """
-    Gets camera sensor type from it's name, either MonoCamera or ColorCamera.
-    @param sensorName: Name of the camera sensor
-    @return: dai.node.MonoCamera or dai.node.ColorCamera
-    """
-    return cameraSensor(sensorName).maxRes
-
-
-def cameraSensorResolutionSize(sensorName: str) -> Tuple[int, int]:
-    res = cameraSensorResolution(sensorName)
-    return cameraResolutions[res]
-
-
-def getClosesResolution(sensorName: str,
+def getClosesResolution(sensor: dai.CameraFeatures,
+                        type: dai.CameraSensorType,
                         width: Optional[int] = None,
                         height: Optional[int] = None, ):
     if width and height:
@@ -231,8 +191,10 @@ def getClosesResolution(sensorName: str,
     minError = 99999
     closestRes = None
     desired, i = (width, 0) if width else (height, 1)
-    for res in cameraSensor(sensorName).resolutions:
-        size = cameraResolutions[res]
+
+    resolutions = [get_sensor_resolution(type, conf.width, conf.height) for conf in sensor.configs if conf.type == type]
+
+    for (res, size) in resolutions:
         err = abs(size[i] - desired)
         if err < minError:
             minError = err

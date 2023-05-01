@@ -1,8 +1,13 @@
+import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Tuple, List, Union
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
@@ -293,6 +298,10 @@ class VisDetections(GenericObject):
             bbox = detection.xmin, detection.ymin, detection.xmax, detection.ymax
             mock_frame = np.zeros(self.frame_shape, dtype=np.uint8)
 
+            if mock_frame.ndim < 2:
+                logging.debug('Visualizer: skipping detection because frame shape is invalid: {}'
+                              .format(mock_frame.shape))
+                return self
             # TODO can normalize accept frame shape?
             normalized_bbox = self.normalizer.normalize(mock_frame, bbox) if self.normalizer else bbox
 
@@ -314,7 +323,7 @@ class VisDetections(GenericObject):
                                        bbox=normalized_bbox,
                                        position=TextPosition.BOTTOM_RIGHT))
 
-            if not detection_config.hide_label and len(label) > 0:
+            if cv2 and not detection_config.hide_label and len(label) > 0:
                 # Place label in the bounding box
                 self.add_child(VisText(text=label.capitalize(), bbox=normalized_bbox,
                                        position=detection_config.label_position,
@@ -741,6 +750,33 @@ class VisCircle(GenericObject):
                    self.color or circle_config.color,
                    self.thickness or circle_config.thickness,
                    circle_config.line_type)
+
+
+class VisMask(GenericObject):
+    def __init__(self, mask: np.ndarray, alpha: float = None):
+        super().__init__()
+        self.mask = mask
+        self.alpha = alpha
+
+    def prepare(self) -> 'VisMask':
+        return self
+
+    def serialize(self):
+        parent = {
+            'type': 'mask',
+            'mask': self.mask
+        }
+        if len(self.children) > 0:
+            children = [c.serialize() for c in self.children]
+            parent['children'] = children
+
+        return parent
+
+    def draw(self, frame: np.ndarray) -> None:
+        if self.frame_shape is None:
+            self.frame_shape = frame.shape
+
+        cv2.addWeighted(frame, 1 - self.alpha, self.mask, self.alpha, 0, frame)
 
 
 class VisPolygon(GenericObject):

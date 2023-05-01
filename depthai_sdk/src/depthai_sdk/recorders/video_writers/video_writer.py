@@ -1,9 +1,14 @@
+import logging
 from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import Union
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 
@@ -25,6 +30,9 @@ class VideoWriter(AbstractWriter):
 
         self._buffer = None
         self._is_buffer_enabled = False
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
 
     def init_buffer(self, max_seconds: int):
         if max_seconds > 0:
@@ -94,7 +102,7 @@ class VideoWriter(AbstractWriter):
             snapshot_file.write(el if isinstance(el, np.ndarray) else el.getCvFrame())
 
         snapshot_file.release()
-        print('Snapshot saved to', save_path)
+        logging.info('Snapshot saved to', save_path)
 
     def set_fourcc(self, fourcc: str):
         self._fourcc = fourcc

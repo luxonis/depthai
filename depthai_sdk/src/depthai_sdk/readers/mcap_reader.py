@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 import cv2
 import numpy as np
@@ -16,26 +16,28 @@ class McapReader(AbstractReader):
     Reads all saved streams from .mcap recording.
     Supported ROS messages: Image (depth), CompressedImage (left, right, color, disparity)
     """
-    _readFrames = dict()
 
     def __init__(self, folder: Path) -> None:
         # Get available topics
-        with open(source, "rb") as file:
+        with open(folder, "rb") as file:
             reader = make_reader(file)
             channels = reader.get_summary().channels
             self._topics = [c.topic.split('/')[0] for _, c in channels.items()]
+
+        self._readFrames = dict()
 
         # Init msg array
         for topic in self._topics:
             self._readFrames[topic] = []
 
         # Create MCAP decoder
-        decoder = Decoder(StreamReader(str(source)))
+        decoder = Decoder(StreamReader(str(folder)))
         self.msgs = decoder.messages
         # Prepare initial frames so we can get frame size
+
         self._prepareFrames()
 
-    def read(self):
+    def read(self) -> Dict[str, np.ndarray]:
         """
         Read and return one frame from each available stream.
         """
@@ -79,7 +81,7 @@ class McapReader(AbstractReader):
             if len(arr) < 1: return False
         return True
 
-    def _returnFrames(self):
+    def _returnFrames(self) -> Dict[str, np.ndarray]:
         """
         Return synced frames (one of each available).
         """
@@ -97,6 +99,12 @@ class McapReader(AbstractReader):
     def getShape(self, name: str) -> Tuple[int, int]:
         frame = self._readFrames[name][0]
         return (frame.shape[1], frame.shape[0])
+
+    def get_message_size(self, name: str) -> int:
+        size = 1
+        for shape in self._readFrames[name][0].shape:
+            size *= shape
+        return size
 
     def close(self):
         pass
