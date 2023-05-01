@@ -8,3 +8,4 @@ depthai==2.21.2
 PyTurboJPEG==1.6.4
 marshmallow==3.17.0
 xmltodict
+sentry-sdk==1.21.0
