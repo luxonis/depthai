@@ -18,8 +18,8 @@ setup(
     author='Luxonis',
     author_email='support@luxonis.com',
     license='MIT',
-    packages=['depthai_sdk'],
-    package_dir={"": "src"},  # https://stackoverflow.com/a/67238346/5494277
+    packages=['depthai_sdk', 'depthai_sdk_console_scripts'],
+    package_dir={'': 'src'},  # https://stackoverflow.com/a/67238346/5494277
     install_requires=install_requires,
     include_package_data=True,
     extras_require={
@@ -30,15 +30,7 @@ setup(
         "replay": ['mcap>=0.0.10',
                    'mcap-ros1-support==0.0.8',
                    'rosbags==0.9.11'],
-        "record": ['av'],
-        "minimal": ['numpy',
-                    'blobconverter',
-                    'depthai',
-                    'PyTurboJPEG',
-                    'marshmallow',
-                    'distinctipy',
-                    'xmltodict',
-                    ]
+        "record": ['av']
     },
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
@@ -54,4 +46,9 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],
+    entry_points={
+        'console_scripts': [
+            'depthai_sdk = depthai_sdk_console_scripts.depthai_sdk:main',
+        ]
+    },
 )
