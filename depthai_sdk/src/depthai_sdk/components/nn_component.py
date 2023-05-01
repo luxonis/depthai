@@ -1,10 +1,8 @@
-import asyncio
 import json
 import logging
 import warnings
 from collections import defaultdict
 from pathlib import Path
-from threading import Thread
 from typing import Callable, Union, List, Dict
 
 try:
@@ -68,10 +66,12 @@ class NNComponent(Component):
         self.detections = self.DetectionsTrigger(self)
 
         self.triggers = defaultdict(list)
-        self.node: Union[None,
-                         dai.node.NeuralNetwork,
-                         dai.node.MobileNetDetectionNetwork, dai.node.MobileNetSpatialDetectionNetwork,
-                         dai.node.YoloDetectionNetwork, dai.node.YoloSpatialDetectionNetwork] = None
+        self.node: Optional[
+            dai.node.NeuralNetwork,
+            dai.node.MobileNetDetectionNetwork,
+            dai.node.MobileNetSpatialDetectionNetwork,
+            dai.node.YoloDetectionNetwork,
+            dai.node.YoloSpatialDetectionNetwork] = None
 
         # ImageManip used to resize the input to match the expected NN input size
         self.image_manip: Optional[dai.node.ImageManip] = None
@@ -213,13 +213,14 @@ class NNComponent(Component):
             if self._is_spatial():
                 self._config_spatials_args(self._args)
 
-    def forced_openvino_version(self) -> dai.OpenVINO.Version:
-        """
-        Checks whether the component forces a specific OpenVINO version. This function is called after
-        Camera has been configured and right before we connect to the OAK camera.
-        @return: Forced OpenVINO version (optional).
-        """
-        return self._forced_version
+    def get_name(self):
+        model = self._config.get('model', None)
+        if model is not None:
+            return model.get('model_name', None)
+        return None
+
+    def get_labels(self):
+        return [l.upper() if isinstance(l, str) else l[0].upper() for l in self._labels]
 
     def _parse_model(self, model):
         """
@@ -592,83 +593,6 @@ class NNComponent(Component):
     """
     Available outputs (to the host) of this component
     """
-
-    class Trigger:
-        def __init__(self, nn_component: 'NNComponent'):
-            self._comp = nn_component
-
-    class DetectionTrigger(Trigger):
-        def __init__(self, nn_component: 'NNComponent'):
-            super().__init__(nn_component)
-
-    class DetectionsTrigger(Trigger):
-        def __init__(self, nn_component: 'NNComponent'):
-            super().__init__(nn_component)
-            self.condition_func = None
-            self.dir_path = None
-            self.stream = None
-            self.offset = None
-            self.duration = None
-            self.threads = []
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            for t in self.threads:
-                t.join()
-
-        async def save(self):
-            await asyncio.sleep(self.offset)
-            self.stream._video_recorder.save_snapshot(self.dir_path, self.offset + self.duration)
-
-        def run_async_loop_in_thread(self):
-            asyncio.run(self.save())
-
-        def check_trigger(self, condition_input: Any = None) -> None:
-            if self.condition_func is None:
-                return
-
-            if self.condition_func(condition_input):
-                thread = Thread(target=self.run_async_loop_in_thread)
-                thread.start()
-                self.threads.append(thread)
-
-        def record(self,
-                   condition_func: Callable[[Any], bool],
-                   dir_path: Union[Path, str],
-                   stream: XoutBase,
-                   offset: int = 0,  # From which frame before/after trigger should we start recording frames
-                   duration: int = 10,  # After how many frames after the last trigger should we stop recording
-                   ):
-            """
-            Record frames from a stream to a directory on condition.
-
-            Args:
-                condition_func: Function that takes detections and returns True if we should record.
-                dir_path: Path to the directory where to save the video.
-                stream: Stream to record.
-                offset: From which second before/after trigger should we start recording frames.
-                duration: Duration of the recording in seconds.
-            """
-            assert condition_func is not None, 'Condition function must be provided'
-            self.condition_func = condition_func
-            self.dir_path = dir_path
-            self.stream = stream
-            self.offset = offset
-            self.duration = duration
-
-            self._comp._add_trigger('detections', self)
-
-    detection: DetectionTrigger
-    detections: DetectionsTrigger
-
-    def _add_trigger(self, trigger_name, trigger: Trigger):
-        """
-        Adds a trigger to a directory.
-
-        Args:
-            trigger_name: Name of the trigger.
-            trigger: Trigger object.
-        """
-        self.triggers[trigger_name].append(trigger)
 
     class Out:
         def __init__(self, nn_component: 'NNComponent'):

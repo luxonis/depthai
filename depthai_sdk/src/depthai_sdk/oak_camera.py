@@ -14,8 +14,9 @@ except ImportError:
 
 import depthai as dai
 
+from depthai_sdk.trigger_action.actions.abstract_action import Action
 from depthai_sdk.args_parser import ArgsParser
-from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig, RosStreamConfig
+from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig, RosStreamConfig, TriggerActionConfig
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
@@ -25,6 +26,7 @@ from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
+from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.utils import configPipeline
 
 
@@ -548,6 +550,9 @@ class OakCamera:
 
     def ros_stream(self, output: Union[List, Callable, Component]):
         self._out_templates.append(RosStreamConfig(self._get_component_outputs(output)))
+
+    def trigger_action(self, trigger: Trigger, action: Action):
+        self._out_templates.append(TriggerActionConfig(trigger, action))
 
     def set_max_queue_size(self, size: int):
         """

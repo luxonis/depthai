@@ -1,8 +1,7 @@
 import logging
 from collections import deque
-from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 
 try:
     import cv2
@@ -12,19 +11,15 @@ except ImportError:
 import depthai as dai
 import numpy as np
 
-from depthai_sdk.recorders.video_writers import AbstractWriter
+from depthai_sdk.recorders.video_writers import BaseWriter
 from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 
 
-class VideoWriter(AbstractWriter):
-    _fps: float
-    _path: str
+class VideoWriter(BaseWriter):
+    def __init__(self, path: Path, name: str, fourcc: str, fps: float):  # TODO: fourcc is not used
+        super().__init__(path, name)
 
-    def __init__(self, path: Path, name: str, fourcc: str, fps: float):
-        self.file = None
-        self._path = create_writer_dir(path, name, 'avi')
         self._fourcc = None
-
         self._w, self._h = None, None
         self._fps = fps
 
@@ -39,7 +34,24 @@ class VideoWriter(AbstractWriter):
             self._buffer = deque(maxlen=int(max_seconds * self._fps))
             self._is_buffer_enabled = True
 
-    def _create_file(self, frame: Union[dai.ImgFrame, np.ndarray]):
+    def set_fourcc(self, fourcc: str):
+        self._fourcc = fourcc
+
+    def create_file_for_buffer(self, subfolder: str, buf_name: str):
+        if self._buffers[buf_name] is None:
+            raise RuntimeError(f"Buffer {buf_name} is not enabled")
+
+        if len(self._buffers[buf_name]) == 0:
+            return None
+
+        frame = self._buffers[buf_name][0]
+        self.create_file(subfolder, frame)
+
+    def create_file(self, subfolder: str, frame: Union[dai.ImgFrame, np.ndarray]):
+        path_to_file = create_writer_dir(self.path / subfolder, self.name, 'avi')
+        self._create_file(path_to_file, frame)
+
+    def _create_file(self, path_to_file: str, frame: Union[dai.ImgFrame, np.ndarray]):
         if isinstance(frame, np.ndarray):
             self._h, self._w = frame.shape[:2]
         else:
@@ -59,11 +71,16 @@ class VideoWriter(AbstractWriter):
                 else:
                     self._fourcc = "I420"
 
-        self.file = cv2.VideoWriter(self._path,
-                                    cv2.VideoWriter_fourcc(*self._fourcc),
-                                    self._fps,
-                                    (self._w, self._h),
-                                    isColor=self._fourcc != "GREY")
+        self._file = cv2.VideoWriter(path_to_file,
+                                     cv2.VideoWriter_fourcc(*self._fourcc),
+                                     self._fps,
+                                     (self._w, self._h),
+                                     isColor=self._fourcc != "GREY")
+
+    def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
+        if self._file is None:
+            self.create_file(subfolder='', frame=frame)
+        self._file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
 
     def close(self):
         if self.file:
@@ -104,9 +121,6 @@ class VideoWriter(AbstractWriter):
         snapshot_file.release()
         logging.info('Snapshot saved to', save_path)
 
-    def set_fourcc(self, fourcc: str):
-        self._fourcc = fourcc
-
     def add_to_buffer(self, frame: Union[dai.ImgFrame, np.ndarray]):
         if not self._is_buffer_enabled:
             return
@@ -115,11 +129,3 @@ class VideoWriter(AbstractWriter):
             self._buffer.pop()
 
         self._buffer.append(frame)
-
-    def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
-        if self.file is None:
-            self._create_file(frame)
-
-        self.add_to_buffer(frame)
-
-        self.file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
