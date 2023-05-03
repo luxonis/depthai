@@ -148,19 +148,12 @@ def parse_args():
                         help="set the minimum time enforced between frames to keep synchronization. Default: %(default)s.")
     parser.add_argument("-q", "--minQueueDepth", type=int, default=4,
                         help="set the minimum queue depth for syncing before retrieving synced frames. Default: %(default)s.")
-    # parser.add_argument('-ab', '--antibanding', default='50', choices={'off', '50', '60'},
-    #                     help="Set antibanding/antiflicker algo for lights that flicker at mains frequency. Default: %(default)s [Hz]")
     parser.add_argument('-scp', '--saveCalibPath', type=str, default="",
                         help="Save calibration file to this path")
     parser.add_argument('-dst', '--datasetPath', type=str, default="dataset",
                         help="Path to dataset used for processing images")
-    # parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.5,
-    #                     help="Minimum percentage of detected markers to consider a frame valid")
-    # parser.add_argument('-nm', '--numMarkers', type=int, default=None, help="Number of markers in the board")
     parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
                         help="Enable mouse trigger for image capture")
-    # parser.add_argument('-nic', '--noInitCalibration', default=False, action="store_true",
-    #                     help="Don't take the board calibration for initialization but start with an empty one")
 
     options = parser.parse_args()
 
