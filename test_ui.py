@@ -352,7 +352,8 @@ class DepthAICamera():
         self.eepromUnionData['calibrationFactoryRaw'] = self.device.readFactoryCalibrationRaw()
 
     def __del__(self):
-        self.device.close()
+        if self.device is not None:
+            self.device.close()
 
     def start_queue(self):
         global update_res
@@ -1445,7 +1446,7 @@ class UiTests(QtWidgets.QMainWindow):
             with dai.DeviceBootloader(deviceInfos[0], allowFlashingBootloader=True) as bl:
                 self.print_logs('Starting Update')
                 self.prog_label.setText('Bootloader')
-                if 'POE' in test_type:
+                if device_options.get('bootloader') == OPTION_BOOTLOADER_POE:
                     self.print_logs('Flashing NETWORK bootloader...')
                     self.uploaded_bootloader['type'] = "NETWORK" 
                     return bl.flashBootloader(dai.DeviceBootloader.Memory.FLASH, dai.DeviceBootloader.Type.NETWORK, self.update_prog_bar)
@@ -1494,6 +1495,7 @@ class UiTests(QtWidgets.QMainWindow):
         except Exception as ex:
             errorMsg = f'Calibration Flash Failed: {ex}'
             print(errorMsg)
+            self.print_logs(errorMsg, 'ERROR')
             return (False, errorMsg, eepromDataJson)
 
         print('Calibration Flash Successful')
