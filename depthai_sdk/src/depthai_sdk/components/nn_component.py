@@ -62,8 +62,6 @@ class NNComponent(Component):
 
         self.name = name
         self.out = self.Out(self)
-        self.detection = self.DetectionTrigger(self)
-        self.detections = self.DetectionsTrigger(self)
 
         self.triggers = defaultdict(list)
         self.node: Optional[
@@ -427,7 +425,7 @@ class NNComponent(Component):
             return label
         elif isinstance(label, str):
             if not self._labels:
-                raise ValueError("Incorrect trackLabels type! Make sure to pass NN configuration to"
+                raise ValueError("Incorrect trackLabels type! Make sure to pass NN configuration to "
                                  "the NNComponent so it can deccode string labels!")
             # Label map is Dict of either "name", or ["name", "color"]
             label_strs = [l.upper() if isinstance(l, str) else l[0].upper() for l in self._labels]

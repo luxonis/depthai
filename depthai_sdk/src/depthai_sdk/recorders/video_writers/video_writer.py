@@ -29,9 +29,9 @@ class VideoWriter(BaseWriter):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def init_buffer(self, max_seconds: int):
+    def init_buffer(self, name: str, max_seconds: int):
         if max_seconds > 0:
-            self._buffer = deque(maxlen=int(max_seconds * self._fps))
+            self._buffers[name] = deque(maxlen=int(max_seconds * self._fps))
             self._is_buffer_enabled = True
 
     def set_fourcc(self, fourcc: str):
@@ -83,49 +83,6 @@ class VideoWriter(BaseWriter):
         self._file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
 
     def close(self):
-        if self.file:
-            self.file.release()
-
-    def save_snapshot(self, duration: int, dir_path: Union[Path, str] = None):
-        if self._buffer is None:
-            raise RuntimeError("Buffer is not enabled")
-
-        if len(self._buffer) == 0:
-            return None
-
-        snapshot_name = f'snapshot_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.avi'
-        save_path = Path(dir_path or self._path.partition("/")[0], snapshot_name)
-
-        snapshot_file = cv2.VideoWriter(
-            str(save_path),
-            cv2.VideoWriter_fourcc(*self._fourcc),
-            self._fps,
-            (self._w, self._h),
-            isColor=self._fourcc == "I420"
-        )
-
-        # Copy queue
-        buffer_copy = self._buffer.copy()
-
-        n_skip_frames = int(self._fps * (self._fps * duration))
-        while len(buffer_copy) > 0:
-            # Wait til we reach the desired time
-            if n_skip_frames > 0:
-                n_skip_frames -= 1
-                buffer_copy.popleft()
-                continue
-
-            el = buffer_copy.popleft()
-            snapshot_file.write(el if isinstance(el, np.ndarray) else el.getCvFrame())
-
-        snapshot_file.release()
-        logging.info('Snapshot saved to', save_path)
-
-    def add_to_buffer(self, frame: Union[dai.ImgFrame, np.ndarray]):
-        if not self._is_buffer_enabled:
-            return
-
-        if len(self._buffer) == self._buffer.maxlen:
-            self._buffer.pop()
-
-        self._buffer.append(frame)
+        if self._file is not None:
+            self._file.release()
+            self._file = None

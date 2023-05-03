@@ -4,10 +4,12 @@ from depthai_sdk.trigger_action.triggers.detection_trigger import DetectionTrigg
 
 with OakCamera() as oak:
     color = oak.create_camera('color', encode='jpeg')
+    stereo = oak.create_stereo()
+
     nn = oak.create_nn('mobilenet-ssd', color)
-    oak.trigger_action(trigger=DetectionTrigger(input=nn, min_detections={'PERSON': 1, 'PLANT': 1}, cooldown=30),
-                       action=RecordAction(inputs=[color],
-                                           path='./',
+    oak.trigger_action(trigger=DetectionTrigger(input=nn, min_detections={'person': 1}, cooldown=30),
+                       action=RecordAction(inputs=[color, stereo.out.disparity],
+                                           dir_path='./recordings/',
                                            duration_before_trigger=5,
                                            duration_after_trigger=10))
     oak.visualize(nn)

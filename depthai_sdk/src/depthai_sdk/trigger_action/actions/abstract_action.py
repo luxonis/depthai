@@ -1,17 +1,22 @@
+from abc import ABC
 from typing import Callable, Union, List, Dict, Optional
 
-from depthai_sdk import Component, FramePacket
+from depthai_sdk.classes import FramePacket
+from depthai_sdk.components import Component
+
+__all__ = ['Action']
 
 
-class Action:
+class Action(ABC):
+    """
+    Base action represents a single action that can be activated by a trigger.
+    """
+
     def __init__(self,
                  inputs: Optional[Union[Component, Callable, List[Union[Component, Callable]]]] = None,
                  action: Optional[Callable] = None):
         if inputs:
-            if isinstance(inputs, Component):
-                inputs = inputs.out.main
-
-            if isinstance(inputs, Callable):
+            if not isinstance(inputs, list):
                 inputs = [inputs]
 
             for i in range(len(inputs)):
@@ -22,12 +27,24 @@ class Action:
         self.stream_names: List[str] = []
         self.action = action
 
-    def after_trigger(self):
+    def activate(self) -> None:
+        """
+        Method that gets called when the action is activated by a trigger.
+
+        Returns:
+            None.
+        """
         if self.action:
             self.action()
 
-    def process_packets(self, packets: Dict[str, FramePacket]):
-        pass
+    def on_new_packets(self, packets: Dict[str, FramePacket]) -> None:
+        """
+        Callback method that gets called when all packets are synced.
 
-    def run_thread(self):
+        Args:
+            packets: Dictionary of packets received from the input streams.
+
+        Returns:
+            None.
+        """
         pass

@@ -207,7 +207,5 @@ class TriggerActionConfig(BaseConfig):
         if isinstance(self.action, RecordAction):
             self.action.setup(device, action_xouts)  # creates writers for VideoRecorder()
 
-        self.action.run_thread()  # if specified any
-
         return [trigger_xout] + action_xouts
 

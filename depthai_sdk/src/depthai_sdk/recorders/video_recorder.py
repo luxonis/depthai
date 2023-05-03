@@ -93,9 +93,6 @@ class VideoRecorder(Recorder):
     def write(self, name: str, frame: Union[np.ndarray, dai.ImgFrame]):
         self._writers[name].write(frame)
 
-    def add_to_buffer(self, name: str, frame: Union[np.ndarray, dai.ImgFrame]):
-        self._writers[name].add_to_buffer(frame)
-
     def close_files(self):
         for _, writer in self._writers.items():
             writer.close()

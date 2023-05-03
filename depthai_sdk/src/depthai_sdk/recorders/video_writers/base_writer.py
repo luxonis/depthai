@@ -11,6 +11,7 @@ class BaseWriter(ABC):
 
         self._buffers: Dict[str, deque] = {}
         self._file = None
+        self._fps = None
 
     def create_file_for_buffer(self, subfolder: str, bufname: str):
         raise NotImplementedError()
