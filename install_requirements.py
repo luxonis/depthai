@@ -4,8 +4,8 @@ import subprocess
 import sys
 import os
 
-scriptDirectory = os.path.dirname(os.path.realpath(__file__))
-thisPlatform = platform.machine()
+script_directory = os.path.dirname(os.path.realpath(__file__))
+this_platform = platform.machine()
 
 # https://stackoverflow.com/a/58026969/5494277
 # Check if in virtual environment
@@ -27,13 +27,11 @@ if not pip_installed:
 if sys.version_info[0] != 3:
     raise RuntimeError("Demo script requires Python 3 to run (detected: Python {})".format(sys.version_info[0]))
 
-if platform.machine() == "arm64" and platform.system() == "Darwin":
-    err_str = "There are no prebuilt wheels for M1 processors. Please open the following link for a solution - https://discuss.luxonis.com/d/69-running-depthai-on-apple-m1-based-macs"
-    raise RuntimeError(err_str)
+prebuilt_wheels_python_version = [7, 9]
 
-is_pi = thisPlatform.startswith("arm")
-prebuiltWheelsPythonVersion = [7,9]
-if is_pi and sys.version_info[1] not in prebuiltWheelsPythonVersion:
+# Pi is a common platform using these instruction sets
+is_pi = this_platform == 'armv6l' or this_platform == 'armv7l'
+if is_pi and sys.version_info[1] not in prebuilt_wheels_python_version:
     print("[WARNING] There are no prebuilt wheels for Python 3.{} for OpenCV, building process on this device may be long and unstable".format(sys.version_info[1]))
 
 if not in_venv:
@@ -44,9 +42,9 @@ subprocess.check_call(pip_install + ["pip", "-U"])
 
 subprocess.check_call(pip_call + ["uninstall", "opencv-python", "opencv-contrib-python", "--yes"])
 subprocess.check_call(pip_call + ["uninstall", "depthai", "--yes"])
-subprocess.check_call(pip_package_install + ["-r", "requirements.txt"], cwd=scriptDirectory)
+subprocess.check_call(pip_package_install + ["-r", "requirements.txt"], cwd=script_directory)
 
 try:
-    subprocess.check_call(pip_package_install + ["-r", "requirements-optional.txt"], cwd=scriptDirectory, stderr=subprocess.DEVNULL)
+    subprocess.check_call(pip_package_install + ["-r", "requirements-optional.txt"], cwd=script_directory, stderr=subprocess.DEVNULL)
 except subprocess.CalledProcessError as ex:
     print("Optional dependencies were not installed. This is not an error.")

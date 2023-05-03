@@ -1,0 +1,21 @@
+{
+    "model":{
+        "model_name": "face-detection-adas-0001"
+    },
+    "nn_config":
+    {
+        "output_format" : "detection",
+        "NN_family" : "mobilenet",
+        "confidence_threshold" : 0.5
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "unknown",
+            "face"
+        ]
+    },
+    "version": 1
+}
+
