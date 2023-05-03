@@ -639,7 +639,7 @@ class Main:
 
                 syncCollector.add_msg(key, frameMsg)
                 gray_frame = None
-                if frameMsg.getType() == dai.RawImgFrame.Type.RAW8:
+                if frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8] :
                     gray_frame = frameMsg.getCvFrame()
                 else:
                     gray_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
@@ -725,6 +725,13 @@ class Main:
                 #     "Polygon Position: {}. Captured {} of {} {} images".format(
                 #         self.current_polygon + 1, self.images_captured, self.total_images, name),
                 #     (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0))
+
+
+                height, width = imgFrame.shape
+                # TO-DO: fix the rooquick and dirty fix: if the resized image is higher than the target resolution, crop it
+                if height > resizeHeight:
+                    height_offset = (height - resizeHeight)//2
+                    imgFrame = imgFrame[height_offset:height_offset+resizeHeight, :]
 
                 height, width = imgFrame.shape
                 height_offset = (resizeHeight - height)//2
