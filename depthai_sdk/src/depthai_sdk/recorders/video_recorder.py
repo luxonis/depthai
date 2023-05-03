@@ -101,7 +101,7 @@ class VideoRecorder(Recorder):
         if self._closed:
             return
         self._closed = True
-        logging.info("Video Recorder saved stream(s) to folder:", str(self.path))
+        logging.info(f'Video Recorder saved stream(s) to folder: {str(self.path)}')
         # Close opened files
         for name, writer in self._writers.items():
             writer.close()

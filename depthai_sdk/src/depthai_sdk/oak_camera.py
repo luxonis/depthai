@@ -97,7 +97,7 @@ class OakCamera:
         if replay is not None:
             self.replay = Replay(replay)
             self.replay.initPipeline(self.pipeline)
-            logging.info('Available streams from recording:', self.replay.getStreams())
+            logging.info(f'Available streams from recording: {self.replay.getStreams()}')
 
     def create_camera(self,
                       source: Union[str, dai.CameraBoardSocket],
