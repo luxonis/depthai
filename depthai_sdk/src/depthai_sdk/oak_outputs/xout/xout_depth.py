@@ -36,7 +36,7 @@ class XoutDepth(XoutDisparity):
         self.name = 'Depth'
         super().__init__(
                         frames=frames,
-                        max_disp=95,
+                        stereo=stereo,
                         fps=fps,
                         mono_frames=mono_frames,
                         colorize=colorize,
@@ -66,4 +66,3 @@ class XoutDepth(XoutDisparity):
         disp[disp==np.inf] = 0
         packet.frame = np.round(disp).astype(np.uint8)
         super().visualize(packet)
-

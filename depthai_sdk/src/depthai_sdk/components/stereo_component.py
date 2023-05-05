@@ -369,8 +369,11 @@ class StereoComponent(Component):
             self._comp = stereo_component
 
         def _mono_frames(self):
+            """
+            Create mono frames output if WLS filter is enabled or colorize is set to RGBD
+            """
             mono_frames = None
-            if self._comp.wls_enabled:
+            if self._comp.wls_enabled or self._comp._colorize == StereoColor.RGBD:
                 mono_frames = StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name)
             return mono_frames
 
@@ -383,7 +386,7 @@ class StereoComponent(Component):
 
             out = XoutDisparity(
                 frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
-                max_disp=self._comp.node.getMaxDisparity(),
+                max_disp=self._comp.node,
                 fps=fps,
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
