@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Tuple, List, Union
+from typing import Tuple, List, Union, Optional, Sequence
 
 try:
     import cv2
@@ -12,7 +12,7 @@ import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
-from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
 from depthai_sdk.visualize.visualizer_helper import spatials_text
 
@@ -60,9 +60,6 @@ class GenericObject(ABC):
 
         Args:
             frame: frame to draw on.
-
-        Returns:
-            None
         """
         raise NotImplementedError
 
@@ -84,9 +81,6 @@ class GenericObject(ABC):
     def serialize(self) -> dict:
         """
         Serialize the object to dict.
-
-        Returns:
-            dict
         """
         raise NotImplementedError
 
@@ -134,9 +128,6 @@ class GenericObject(ABC):
             r: Radius of the rounded corners.
             line_width: Width of the rectangle line.
             line_height: Height of the rectangle line.
-
-        Returns:
-            None
         """
         x1, y1 = pt1
         x2, y2 = pt2
@@ -229,10 +220,12 @@ class VisDetections(GenericObject):
 
     def __init__(self,
                  detections: List[Union[ImgDetection, dai.Tracklet]],
-                 normalizer: NormalizeBoundingBox,
+                 normalizer: BoundingBox,
                  label_map: List[Tuple[str, Tuple]] = None,
                  spatial_points: List[dai.Point3f] = None,
-                 is_spatial=False):
+                 is_spatial=False,
+                 bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
+                 ):
         """
         Args:
             detections: List of detections.
@@ -240,6 +233,7 @@ class VisDetections(GenericObject):
             label_map: List of tuples (label, color).
             spatial_points: List of spatial points. None if not spatial.
             is_spatial: Flag that indicates if the detections are spatial.
+            bbox: Bounding box, if there's a detection inside a bounding box.
         """
         super().__init__()
         self.detections = detections
@@ -247,6 +241,7 @@ class VisDetections(GenericObject):
         self.label_map = label_map
         self.spatial_points = spatial_points
         self.is_spatial = is_spatial
+        self.bbox = bbox
 
         self.bboxes = []
         self.labels = []
@@ -272,7 +267,7 @@ class VisDetections(GenericObject):
         return parent
 
     def register_detection(self,
-                           bbox: Union[Tuple[int, int, int, int]],
+                           bbox: Union[Tuple[int, ...], BoundingBox],
                            label: str,
                            color: Tuple[int, int, int]) -> None:
         """
@@ -282,9 +277,6 @@ class VisDetections(GenericObject):
             bbox: Bounding box.
             label: Label.
             color: Color.
-
-        Returns:
-            None
         """
         self.bboxes.append(bbox)
         self.labels.append(label)
@@ -295,15 +287,13 @@ class VisDetections(GenericObject):
 
         for i, detection in enumerate(self.detections):
             # Get normalized bounding box
-            bbox = detection.xmin, detection.ymin, detection.xmax, detection.ymax
-            mock_frame = np.zeros(self.frame_shape, dtype=np.uint8)
-
-            if mock_frame.ndim < 2:
+            normalized_bbox = self.normalizer.get_relative_bbox(BoundingBox(detection))
+            if len(self.frame_shape) < 2:
                 logging.debug('Visualizer: skipping detection because frame shape is invalid: {}'
-                              .format(mock_frame.shape))
+                              .format(self.frame_shape))
                 return self
+
             # TODO can normalize accept frame shape?
-            normalized_bbox = self.normalizer.normalize(mock_frame, bbox) if self.normalizer else bbox
 
             if self.label_map:
                 label, color = self.label_map[detection.label]
@@ -347,11 +337,12 @@ class VisDetections(GenericObject):
             self.frame_shape = frame.shape
 
         for bbox, _, color in self.get_detections():
+            tl, br = bbox.denormalize(frame.shape)
             # Draw bounding box
             self.draw_stylized_bbox(
                 img=frame,
-                pt1=(bbox[0], bbox[1]),
-                pt2=(bbox[2], bbox[3]),
+                pt1=tl,
+                pt2=br,
                 color=color,
                 thickness=self.config.detection.thickness
             )
@@ -374,9 +365,6 @@ class VisDetections(GenericObject):
             pt2: Bottom right corner.
             color: Color.
             thickness: Thickness.
-
-        Returns:
-            None
         """
         box_w = pt2[0] - pt1[0]
         box_h = pt2[1] - pt1[1]
@@ -406,7 +394,7 @@ class VisText(GenericObject):
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
                  outline: bool = True,
-                 bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
+                 bbox: Union[np.ndarray, Tuple[int, int, int, int], BoundingBox] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10):
         """
@@ -447,6 +435,16 @@ class VisText(GenericObject):
         }
 
     def prepare(self) -> 'VisText':
+        # TODO: in the future, we can stop support for passing pixel-space bbox to the 
+        # visualizer.
+        if isinstance(self.bbox, (Sequence, np.ndarray)):
+            # Convert to BoundingBox. Divide by self.frame_shape and load into the BoundingBox
+            self.bbox = list(self.bbox)
+            self.bbox[0] /= self.frame_shape[1]
+            self.bbox[1] /= self.frame_shape[0]
+            self.bbox[2] /= self.frame_shape[1]
+            self.bbox[3] /= self.frame_shape[0]
+            self.bbox = BoundingBox(self.bbox)
         self.coords = self.coords or self.get_relative_position(bbox=self.bbox,
                                                                 position=self.position,
                                                                 padding=self.padding)
@@ -460,7 +458,9 @@ class VisText(GenericObject):
 
         # Extract shape of the bbox if exists
         if self.bbox is not None:
-            shape = self.bbox[2] - self.bbox[0], self.bbox[3] - self.bbox[1]
+            # shape = self.bbox[2] - self.bbox[0], self.bbox[3] - self.bbox[1]
+            tl, br = self.bbox.denormalize(frame.shape)
+            shape = br[0] - tl[0], br[1] - tl[1]
         else:
             shape = frame.shape[:2]
 
@@ -501,29 +501,25 @@ class VisText(GenericObject):
             self.coords = (self.coords[0], y + dy)
 
     def get_relative_position(self,
-                              bbox: Union[np.ndarray, Tuple[int, int, int, int]],
+                              bbox: BoundingBox,
                               position: TextPosition,
                               padding: int) -> Tuple[int, int]:
         """
         Get relative position of the text w.r.t. the bounding box.
         If bbox is None,the position is relative to the frame.
         """
-        frame_h, frame_w = self.frame_shape[:2]
-
         if bbox is None:
-            bbox = (0, 0, frame_w, frame_h)
-
+            bbox = BoundingBox()
         text_config = self.config.text
 
-        # Extract shape of the bbox if exists
-        if self.bbox is not None:
-            shape = self.bbox[2] - self.bbox[0], self.bbox[3] - self.bbox[1]
-        else:
-            shape = self.frame_shape[:2]
+        tl, br = bbox.denormalize(self.frame_shape)
+        shape = br[0] - tl[0], br[1] - tl[1]
+
+        bbox_arr = bbox.to_tuple(self.frame_shape)
 
         font_scale = self.size or text_config.font_scale
         if self.size is None and text_config.auto_scale:
-            font_scale = self.get_text_scale(shape, bbox)
+            font_scale = self.get_text_scale(shape, bbox_arr)
 
         text_width, text_height = 0, 0
         for text in self.text.splitlines():
@@ -534,31 +530,30 @@ class VisText(GenericObject):
             text_width = max(text_width, text_size[0])
             text_height += text_size[1]
 
-        x, y = bbox[0], bbox[1]
+        x, y = bbox_arr[0],bbox_arr[1]
 
         y_pos = position.value % 10
         if y_pos == 0:  # Y top
-            y = bbox[1] + text_height + padding
+            y = bbox_arr[1] + text_height + padding
         elif y_pos == 1:  # Y mid
-            y = (bbox[1] + bbox[3]) // 2 + text_height // 2
+            y = (bbox_arr[1] + bbox_arr[3]) // 2 + text_height // 2
         elif y_pos == 2:  # Y bottom
-            y = bbox[3] - text_height - padding
+            y = bbox_arr[3] - text_height - padding
 
         x_pos = position.value // 10
         if x_pos == 0:  # X Left
-            x = bbox[0] + padding
+            x = bbox_arr[0] + padding
         elif x_pos == 1:  # X mid
-            x = (bbox[0] + bbox[2]) // 2 - text_width // 2
+            x = (bbox_arr[0] + bbox_arr[2]) // 2 - text_width // 2
         elif x_pos == 2:  # X right
-            x = bbox[2] - text_width - padding
+            x = bbox_arr[2] - text_width - padding
 
         return x, y
 
     def get_text_scale(self,
                        frame_shape: Union[np.ndarray, Tuple[int, ...]],
-                       bbox: Union[np.ndarray, Tuple[int, ...]]
-                       ) -> float:
-        return min(1.0, min(frame_shape) / (1000 if self.bbox is None else 200))
+                       bbox: Optional[BoundingBox] = None) -> float:
+        return min(1.0, min(frame_shape) / (1000 if bbox is None else 200))
 
 
 class VisTrail(GenericObject):
@@ -568,7 +563,8 @@ class VisTrail(GenericObject):
 
     def __init__(self,
                  tracklets: List[dai.Tracklet],
-                 label_map: List[Tuple[str, Tuple]]):
+                 label_map: List[Tuple[str, Tuple]],
+                 bbox: BoundingBox):
         """
         Args:
             tracklets: List of tracklets.
@@ -578,6 +574,7 @@ class VisTrail(GenericObject):
 
         self.tracklets = tracklets
         self.label_map = label_map
+        self.bbox = bbox
 
     def serialize(self):
         parent = {
@@ -605,10 +602,11 @@ class VisTrail(GenericObject):
             tracklet_length = 0
             for i in reversed(range(len(tracklets) - 1)):
                 # Get current and next detections' centroids
-                d1 = tracklets[i].srcImgDetection
-                p1 = int(w * (d1.xmin + d1.xmax) // 2), int(h * (d1.ymin + d1.ymax) // 2)
-                d2 = tracklets[i + 1].srcImgDetection
-                p2 = int(w * (d2.xmin + d2.xmax) // 2), int(h * (d2.ymin + d2.ymax) // 2)
+                p1 = self.bbox.get_relative_bbox(BoundingBox(tracklets[i].srcImgDetection)) \
+                    .get_centroid().denormalize(self.frame_shape)
+                p2 = self.bbox.get_relative_bbox(BoundingBox(tracklets[i + 1].srcImgDetection)) \
+                    .get_centroid().denormalize(self.frame_shape)
+
                 if tracking_config.max_length != -1:
                     tracklet_length += np.linalg.norm(np.array(p1) - np.array(p2))
                     if tracklet_length > tracking_config.max_length:

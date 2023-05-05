@@ -45,3 +45,7 @@ class OakDevice:
 
     def set_max_queue_size(self, size: int):
         self.max_queue_size = size
+
+    def close(self):
+        for stream in self.oak_out_streams:
+            stream.close()

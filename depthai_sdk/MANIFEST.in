@@ -1,6 +1,7 @@
 include src/depthai_sdk/classes/*.py
 recursive-include src/depthai_sdk/components *.py
 recursive-include src/depthai_sdk/integrations *.py
+recursive-include src/depthai_sdk/trigger_action *.py
 include src/depthai_sdk/managers/*.py
 
 recursive-include src/depthai_sdk/nn_models handler.py

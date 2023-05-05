@@ -17,10 +17,16 @@ except ImportError:
 
 class XoutFrames(XoutBase):
     """
-    Single message, no syncing required
+    Stream of frames. Single message, no syncing required.
     """
 
     def __init__(self, frames: StreamXout, fps: float = 30, frame_shape: Tuple[int, ...] = None):
+        """
+        Args:
+            frames: StreamXout object.
+            fps: Frames per second for the output stream.
+            frame_shape: Shape of the frame. If not provided, it will be inferred from the first frame.
+        """
         self.frames = frames
         self.name = frames.name
 
@@ -34,22 +40,16 @@ class XoutFrames(XoutBase):
     def setup_visualize(self,
                         visualizer: Visualizer,
                         visualizer_enabled: bool,
-                        name: str = None):
+                        name: str = None
+                        ) -> None:
         self._visualizer = visualizer
         self._visualizer_enabled = visualizer_enabled
         self.name = name or self.name
 
-    def setup_recorder(self,
-                       recorder: VideoRecorder,
-                       encoding: str = 'mp4v'):
+    def setup_recorder(self, recorder: VideoRecorder) -> None:
         self._video_recorder = recorder
-        # Enable encoding for the video recorder
-        self._video_recorder[self.name].set_fourcc(encoding)
 
     def visualize(self, packet: FramePacket) -> None:
-        """
-        Called from main thread if visualizer is not None.
-        """
         # Frame shape may be 1D, that means it's an encoded frame
         if self._visualizer.frame_shape is None or np.array(self._visualizer.frame_shape).ndim == 1:
             if self._frame_shape is not None:
@@ -75,13 +75,10 @@ class XoutFrames(XoutBase):
 
     def on_record(self, packet) -> None:
         if self._video_recorder:
-            # TODO not ideal to check it this way
             if isinstance(self._video_recorder[self.name], AvWriter):
                 self._video_recorder.write(self.name, packet.msg)
             else:
                 self._video_recorder.write(self.name, packet.frame)
-        # else:
-        #     self._video_recorder.add_to_buffer(self.name, packet.frame)
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
@@ -100,6 +97,6 @@ class XoutFrames(XoutBase):
 
         self.queue.put(packet, block=False)
 
-    def __del__(self):
+    def close(self) -> None:
         if self._video_recorder is not None:
             self._video_recorder.close()

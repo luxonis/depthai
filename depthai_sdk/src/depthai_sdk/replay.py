@@ -58,7 +58,7 @@ class Replay:
         streams.
     
         Args:
-            path (str): Path to the recording folder
+            path (str): Path to the recording folder.
         """
         self.path = self._get_path(path)
 
@@ -183,6 +183,19 @@ class Replay:
         else:
             self.fps = fps
 
+    def set_loop(self, flag: bool):
+        """
+        Sets whether to loop the replay.
+
+        Args:
+            flag (bool): Whether to loop the replay.
+        """
+        from .readers.videocap_reader import VideoCapReader
+        if isinstance(self.reader, VideoCapReader):
+            self.reader.set_loop(flag)
+        else:
+            raise RuntimeError('Looping is only supported for video files.')
+
     def get_fps(self) -> float:
         return self.fps
 
@@ -284,9 +297,13 @@ class Replay:
     def run(self, cb):
         delay = 1.0 / self.fps
         while True:
-            if not self.sendFrames(cb): break
+            if not self.sendFrames(cb):
+                break
+
             time.sleep(delay)
-            if self._stop: break
+            if self._stop:
+                break
+
         logging.info('Replay `run` thread stopped')
         self._stop = True
 
@@ -309,7 +326,8 @@ class Replay:
                 cb(stream_name, stream.imgFrame)
 
             # Don't send these frames to the OAK camera
-            if stream.disabled: continue
+            if stream.disabled:
+                continue
 
             # Send an imgFrame to the OAK camera
             stream.queue.send(stream.imgFrame)

@@ -26,7 +26,7 @@ with OakCamera() as oak:
             if len(outputs) <= i:
                 i = 0
 
-        node.io[outputs[i]].send(frame)    
+        node.io[outputs[i]].send(frame)
     """)
     color.stream.link(script.inputs['frames'])
 
@@ -39,6 +39,7 @@ with OakCamera() as oak:
     xin.out.link(script.inputs['switch'])
 
     oak.visualize([nn1, nn2], fps=True, callback=cb)
+    oak.visualize([nn1.out.passthrough, nn2.out.passthrough], fps=True)
 
     # oak.show_graph()
 

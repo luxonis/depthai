@@ -19,10 +19,11 @@ class VideoCapReader(AbstractReader):
     Reads stream from mp4, mjpeg, h264, h265
     """
 
-    def __init__(self, path: Path) -> None:
+    def __init__(self, path: Path, loop: bool = False) -> None:
         self.initialFrames: Dict[str, Any] = dict()
         self.shapes: Dict[str, Tuple[int, int]] = dict()
         self.readers: Dict[str, cv2.VideoCapture] = dict()
+        self._is_looped = loop
 
         if path.is_file():
             stream = path.stem if (path.stem in ['left', 'right']) else 'color'
@@ -30,7 +31,8 @@ class VideoCapReader(AbstractReader):
         else:
             for fileName in os.listdir(str(path)):
                 f_name, ext = os.path.splitext(fileName)
-                if ext not in _videoExt: continue
+                if ext not in _videoExt:
+                    continue
 
                 # Check if name of the file starts with left.. right.., or CameraBoardSocket
                 if f_name.startswith('CameraBoardSocket'):
@@ -68,14 +70,22 @@ class VideoCapReader(AbstractReader):
                 frames[name] = self.initialFrames[name].copy()
                 self.initialFrames[name] = None
 
-            if not self.readers[name].isOpened(): return False
+            if not self.readers[name].isOpened():
+                return False
 
             ok, frame = self.readers[name].read()
-            if not ok: return False
+            if not ok and self._is_looped:
+                self.readers[name].set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ok, frame = self.readers[name].read()
+            elif not ok:
+                return False
 
             frames[name] = frame
 
         return frames
+
+    def set_loop(self, loop: bool):
+        self._is_looped = loop
 
     def getStreams(self) -> List[str]:
         return [name for name in self.readers]

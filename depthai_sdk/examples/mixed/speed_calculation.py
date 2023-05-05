@@ -17,7 +17,6 @@ with OakCamera() as oak:
     stereo.config_stereo(subpixel=False, lr_check=True)
 
     nn = oak.create_nn('face-detection-retail-0004', color, spatial=stereo, tracker=True)
-    nn.config_nn(resize_mode='stretch')
 
     visualizer = oak.visualize(nn.out.tracker, callback=callback, fps=True)
     visualizer.tracking(speed=True).text(auto_scale=True)

@@ -1,8 +1,10 @@
 import importlib
+import json
+import logging
 import sys
 import urllib.request
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional, Union
+from typing import Dict, List, Tuple, Optional, Union, Any
 
 try:
     import cv2
@@ -391,3 +393,77 @@ def createBlankFrame(width, height, rgb_color=(0, 0, 0)):
     image[:] = color
 
     return image
+
+
+def _create_cache_folder() -> bool:
+    """
+    Create config file in user's home directory.
+
+    Returns:
+        True if folder was created, False otherwise.
+    """
+    try:
+        Path.home().joinpath(".depthai_sdk").mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        logging.debug('Failed to create cache folder.')
+        return False
+
+    return True
+
+
+def _create_config() -> None:
+    """
+    Create config file in user's home directory.
+
+    Returns:
+        None.
+    """
+    if not _create_cache_folder():
+        logging.debug('Failed to create config file.')
+        return
+
+    config_file = Path.home().joinpath('.depthai_sdk', 'config.json')
+    default_config = {
+        'sentry': True,
+        'sentry_dsn': 'https://981545d5effd480d883f3ff0b1306e49@o1095304.ingest.sentry.io/4504685274791936'
+    }
+    if not config_file.exists():
+        config_file.write_text(json.dumps(default_config))
+
+
+def set_sentry_status(status: bool = True) -> None:
+    """
+    Set sentry status in config file.
+
+    Args:
+        status (bool): True if sentry should be enabled, False otherwise. Default is True.
+
+    Returns:
+        None.
+    """
+    # check if config exists
+    config_file = Path.home().joinpath('.depthai_sdk', 'config.json')
+    if not config_file.exists():
+        _create_config()
+
+    # read config
+    config = json.loads(config_file.read_text())
+    config['sentry'] = status
+    config_file.write_text(json.dumps(config))
+
+
+def get_config_field(key: str) -> Any:
+    """
+    Get sentry status from config file.
+
+    Returns:
+        bool: True if sentry is enabled, False otherwise.
+    """
+    # check if config exists
+    config_file = Path.home().joinpath('.depthai_sdk', 'config.json')
+    if not config_file.exists():
+        raise FileNotFoundError('Config file not found.')
+
+    # read config
+    config = json.loads(config_file.read_text())
+    return config[key]
