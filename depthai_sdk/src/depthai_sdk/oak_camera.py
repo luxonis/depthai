@@ -530,11 +530,7 @@ class OakCamera:
         self._out_templates.append(OutputConfig(output, callback, visualizer, visualizer_enabled, record_path))
         return visualizer
 
-    def callback(self,
-                 output: Union[List, Callable, Component],
-                 callback: Callable,
-                 enable_visualizer: bool = False,
-                 record_path: Optional[str] = None):
+    def callback(self, output: Union[List, Callable, Component], callback: Callable, enable_visualizer: bool = False):
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
@@ -542,16 +538,12 @@ class OakCamera:
             callback: Handler function to which the Packet will be sent.
             enable_visualizer: Whether to enable visualizer for this output.
         """
-        self._callback(output=output,
-                       callback=callback,
-                       enable_visualizer=Visualizer() if enable_visualizer else None,
-                       record_path=record_path)
-
+        self._callback(output, callback, Visualizer() if enable_visualizer else None)
 
     def ros_stream(self, output: Union[List, Callable, Component]):
         self._out_templates.append(RosStreamConfig(self._get_component_outputs(output)))
 
-    def trigger_action(self, trigger: Trigger, action: Action):
+    def trigger_action(self, trigger: Trigger, action: Union[Action, Callable]):
         self._out_templates.append(TriggerActionConfig(trigger, action))
 
     def set_max_queue_size(self, size: int):
