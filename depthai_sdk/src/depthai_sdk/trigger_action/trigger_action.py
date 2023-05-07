@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Union, Callable
 
 from depthai_sdk.classes import FramePacket
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
@@ -14,7 +15,7 @@ class TriggerAction(SequenceNumSync):
     TriggerAction class represents a single trigger-action pair.
     """
 
-    def __init__(self, trigger: Trigger, action: Action):
+    def __init__(self, trigger: Trigger, action: Union[Action, Callable]):
         """
         Args:
             trigger: Trigger specifying the condition that activates the action.
@@ -23,7 +24,7 @@ class TriggerAction(SequenceNumSync):
         self.last_trigger_time = datetime.min
         self.trigger = trigger
         self.action = action
-        if action.inputs:
+        if isinstance(action, Action) and action.inputs:
             SequenceNumSync.__init__(self, len(action.inputs))
 
     def new_packet_trigger(self,

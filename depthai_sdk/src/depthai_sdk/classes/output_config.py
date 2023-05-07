@@ -1,20 +1,19 @@
 import os
 from abc import abstractmethod
 from pathlib import Path
-from typing import Optional, Callable, List
+from typing import Optional, Callable, List, Union
 
 import depthai as dai
-
-from depthai_sdk.trigger_action.actions.abstract_action import Action
-from depthai_sdk.trigger_action.actions.record_action import RecordAction
-from depthai_sdk.trigger_action.trigger_action import TriggerAction
-from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.record import Record
 from depthai_sdk.recorders.video_recorder import VideoRecorder
+from depthai_sdk.trigger_action.actions.abstract_action import Action
+from depthai_sdk.trigger_action.actions.record_action import RecordAction
+from depthai_sdk.trigger_action.trigger_action import TriggerAction
+from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
 
 
@@ -185,9 +184,9 @@ class SyncConfig(BaseConfig, SequenceNumSync):
 
 
 class TriggerActionConfig(BaseConfig):
-    def __init__(self, trigger: Trigger, action: Action):
+    def __init__(self, trigger: Trigger, action: Union[Callable, Action]):
         self.trigger = trigger
-        self.action = action
+        self.action = Action(None, action) if isinstance(action, Callable) else action
 
     def setup(self, pipeline: dai.Pipeline, device, _) -> List[XoutBase]:
         controller = TriggerAction(self.trigger, self.action)
@@ -196,6 +195,9 @@ class TriggerActionConfig(BaseConfig):
         trigger_xout.setup_base(controller.new_packet_trigger)
         # without setting visualizer up, XoutNnResults.on_callback() won't work
         trigger_xout.setup_visualize(visualizer=Visualizer(), name=trigger_xout.name, visualizer_enabled=False)
+
+        if isinstance(self.action, Callable):
+            return [trigger_xout]
 
         action_xouts = []
         if self.action.inputs:
@@ -208,4 +210,3 @@ class TriggerActionConfig(BaseConfig):
             self.action.setup(device, action_xouts)  # creates writers for VideoRecorder()
 
         return [trigger_xout] + action_xouts
-
