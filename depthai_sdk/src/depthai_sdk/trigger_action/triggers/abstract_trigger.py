@@ -13,6 +13,12 @@ class Trigger(ABC):
     """
 
     def __init__(self, input: Union[Component, Callable], condition: Callable, cooldown: Union[timedelta, int]):
+        """
+        Args:
+            input: Input component or output of a component that will be used as input for the trigger.
+            condition: Condition that will be used to check if the trigger should be activated.
+            cooldown: Cooldown time in seconds. If the trigger is activated, it will be ignored for the next `cooldown` seconds.
+        """
         if isinstance(input, Component):
             input = input.out.main
 

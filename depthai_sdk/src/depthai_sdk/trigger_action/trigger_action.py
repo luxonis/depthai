@@ -36,9 +36,6 @@ class TriggerAction(SequenceNumSync):
 
         Args:
             packet: Packet received from the input stream.
-
-        Returns:
-            None.
         """
         if self.trigger.condition(packet):
             trigger_time = datetime.now()
@@ -53,13 +50,10 @@ class TriggerAction(SequenceNumSync):
                           ) -> None:
         """
         This method is called when a new packet is received from the action input streams.
-        Primary purpose of this method is to provide a way to save the packets.
+        Primary purpose of this method is to provide a way to keep a track of the packets.
 
         Args:
             packet: Packet received from the input stream.
-
-        Returns:
-            None.
         """
         synced = self.sync(
             packet.msg.getSequenceNum(),

@@ -15,6 +15,11 @@ class Action(ABC):
     def __init__(self,
                  inputs: Optional[Union[Component, Callable, List[Union[Component, Callable]]]] = None,
                  action: Optional[Callable] = None):
+        """
+        Args:
+            inputs: Single or multiple input components or outputs of components that will be used as input for the action.
+            action: Action that will be executed when the trigger is activated. Should be a callable object.
+        """
         if inputs:
             if not isinstance(inputs, list):
                 inputs = [inputs]
@@ -30,9 +35,6 @@ class Action(ABC):
     def activate(self) -> None:
         """
         Method that gets called when the action is activated by a trigger.
-
-        Returns:
-            None.
         """
         if self.action:
             self.action()
@@ -43,8 +45,5 @@ class Action(ABC):
 
         Args:
             packets: Dictionary of packets received from the input streams.
-
-        Returns:
-            None.
         """
         pass
