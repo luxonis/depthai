@@ -29,9 +29,11 @@ with OakCamera() as oak:
     stereo = oak.create_stereo('800p')
     stereo.config_stereo(align='color')
 
-    oak.trigger_action(trigger=Trigger(input=stereo.out.depth, condition=my_condition, cooldown=30),
-                       action=RecordAction(inputs=[stereo.out.disparity],
-                                           dir_path='./recordings/',
-                                           duration_before_trigger=5,
-                                           duration_after_trigger=5))
+    trigger = Trigger(input=stereo.out.depth, condition=my_condition, cooldown=30)
+    action = RecordAction(
+        inputs=[stereo.out.disparity], dir_path='./recordings/',
+        duration_before_trigger=5, duration_after_trigger=5
+    )
+
+    oak.trigger_action(trigger=trigger, action=action)
     oak.start(blocking=True)
