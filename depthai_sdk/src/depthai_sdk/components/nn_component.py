@@ -1,6 +1,7 @@
 import json
 import logging
 import warnings
+from collections import defaultdict
 from pathlib import Path
 from typing import Callable, Union, List, Dict
 
@@ -61,10 +62,14 @@ class NNComponent(Component):
 
         self.name = name
         self.out = self.Out(self)
-        self.node: Union[None,
-                         dai.node.NeuralNetwork,
-                         dai.node.MobileNetDetectionNetwork, dai.node.MobileNetSpatialDetectionNetwork,
-                         dai.node.YoloDetectionNetwork, dai.node.YoloSpatialDetectionNetwork] = None
+
+        self.triggers = defaultdict(list)
+        self.node: Optional[
+            dai.node.NeuralNetwork,
+            dai.node.MobileNetDetectionNetwork,
+            dai.node.MobileNetSpatialDetectionNetwork,
+            dai.node.YoloDetectionNetwork,
+            dai.node.YoloSpatialDetectionNetwork] = None
 
         # ImageManip used to resize the input to match the expected NN input size
         self.image_manip: Optional[dai.node.ImageManip] = None
@@ -206,13 +211,14 @@ class NNComponent(Component):
             if self._is_spatial():
                 self._config_spatials_args(self._args)
 
-    def forced_openvino_version(self) -> dai.OpenVINO.Version:
-        """
-        Checks whether the component forces a specific OpenVINO version. This function is called after
-        Camera has been configured and right before we connect to the OAK camera.
-        @return: Forced OpenVINO version (optional).
-        """
-        return self._forced_version
+    def get_name(self):
+        model = self._config.get('model', None)
+        if model is not None:
+            return model.get('model_name', None)
+        return None
+
+    def get_labels(self):
+        return [l.upper() if isinstance(l, str) else l[0].upper() for l in self._labels]
 
     def _parse_model(self, model):
         """
@@ -419,7 +425,7 @@ class NNComponent(Component):
             return label
         elif isinstance(label, str):
             if not self._labels:
-                raise ValueError("Incorrect trackLabels type! Make sure to pass NN configuration to"
+                raise ValueError("Incorrect trackLabels type! Make sure to pass NN configuration to "
                                  "the NNComponent so it can deccode string labels!")
             # Label map is Dict of either "name", or ["name", "color"]
             label_strs = [l.upper() if isinstance(l, str) else l[0].upper() for l in self._labels]

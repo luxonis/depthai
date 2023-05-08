@@ -60,9 +60,6 @@ class GenericObject(ABC):
 
         Args:
             frame: frame to draw on.
-
-        Returns:
-            None
         """
         raise NotImplementedError
 
@@ -84,9 +81,6 @@ class GenericObject(ABC):
     def serialize(self) -> dict:
         """
         Serialize the object to dict.
-
-        Returns:
-            dict
         """
         raise NotImplementedError
 
@@ -134,9 +128,6 @@ class GenericObject(ABC):
             r: Radius of the rounded corners.
             line_width: Width of the rectangle line.
             line_height: Height of the rectangle line.
-
-        Returns:
-            None
         """
         x1, y1 = pt1
         x2, y2 = pt2
@@ -282,9 +273,6 @@ class VisDetections(GenericObject):
             bbox: Bounding box.
             label: Label.
             color: Color.
-
-        Returns:
-            None
         """
         self.bboxes.append(bbox)
         self.labels.append(label)
@@ -374,9 +362,6 @@ class VisDetections(GenericObject):
             pt2: Bottom right corner.
             color: Color.
             thickness: Thickness.
-
-        Returns:
-            None
         """
         box_w = pt2[0] - pt1[0]
         box_h = pt2[1] - pt1[1]

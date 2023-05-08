@@ -1,18 +1,20 @@
-import subprocess
+import os
 from abc import abstractmethod
 from pathlib import Path
-from typing import Optional, Callable, List
-import depthai as dai
+from typing import Optional, Callable, List, Union
 
-from depthai_sdk.classes import FramePacket
+import depthai as dai
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
 from depthai_sdk.record import Record
 from depthai_sdk.recorders.video_recorder import VideoRecorder
+from depthai_sdk.trigger_action.actions.abstract_action import Action
+from depthai_sdk.trigger_action.actions.record_action import RecordAction
+from depthai_sdk.trigger_action.trigger_action import TriggerAction
+from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
-import os
 
 
 class BaseConfig:
@@ -130,8 +132,10 @@ class RosStreamConfig(BaseConfig):
 
     def new_msg(self, name, msg):
         self.ros.new_msg(name, msg)
+
     def check_queue(self, block):
         pass  # No queues
+
     def start_fps(self):
         pass
 
@@ -177,3 +181,32 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             xouts.append(xoutbase)
 
         return xouts
+
+
+class TriggerActionConfig(BaseConfig):
+    def __init__(self, trigger: Trigger, action: Union[Callable, Action]):
+        self.trigger = trigger
+        self.action = Action(None, action) if isinstance(action, Callable) else action
+
+    def setup(self, pipeline: dai.Pipeline, device, _) -> List[XoutBase]:
+        controller = TriggerAction(self.trigger, self.action)
+
+        trigger_xout: XoutBase = self.trigger.input(pipeline, device)
+        trigger_xout.setup_base(controller.new_packet_trigger)
+        # without setting visualizer up, XoutNnResults.on_callback() won't work
+        trigger_xout.setup_visualize(visualizer=Visualizer(), name=trigger_xout.name, visualizer_enabled=False)
+
+        if isinstance(self.action, Callable):
+            return [trigger_xout]
+
+        action_xouts = []
+        if self.action.inputs:
+            for output in self.action.inputs:
+                xout: XoutBase = output(pipeline, device)
+                xout.setup_base(controller.new_packet_action)
+                action_xouts.append(xout)
+
+        if isinstance(self.action, RecordAction):
+            self.action.setup(device, action_xouts)  # creates writers for VideoRecorder()
+
+        return [trigger_xout] + action_xouts
