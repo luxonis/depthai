@@ -1,7 +1,6 @@
-import logging
 from collections import deque
 from pathlib import Path
-from typing import Union, Dict
+from typing import Union
 
 try:
     import cv2
@@ -62,7 +61,11 @@ class VideoWriter(BaseWriter):
         self.create_file(subfolder, frame)
 
     def create_file(self, subfolder: str, frame: Union[dai.ImgFrame, np.ndarray]):
-        path_to_file = create_writer_dir(self.path / subfolder, self.name, 'avi')
+        path_to_file = create_writer_dir(self.path / subfolder, self.name, 'mp4')
+
+        if not path_to_file.endswith('.mp4'):
+            path_to_file = path_to_file[:-4] + '.mp4'
+
         self._create_file(path_to_file, frame)
 
     def _create_file(self, path_to_file: str, frame: Union[dai.ImgFrame, np.ndarray]):
@@ -71,16 +74,17 @@ class VideoWriter(BaseWriter):
         else:
             self._h, self._w = frame.getHeight(), frame.getWidth()
 
-        c = 3  # Default to 3 channels
-        if isinstance(frame, np.ndarray):
-            c = 1 if frame.ndim == 2 else frame.shape[2]
+        if not isinstance(frame, np.ndarray):
+            frame = frame.getCvFrame()
+
+        c = 1 if frame.ndim == 2 else frame.shape[2]
 
         self._fourcc = 'mp4v'
-        self.file = cv2.VideoWriter(self._path,
-                                    cv2.VideoWriter_fourcc(*self._fourcc),
-                                    self._fps,
-                                    (self._w, self._h),
-                                    isColor=c != 1)
+        self._file = cv2.VideoWriter(path_to_file,
+                                     cv2.VideoWriter_fourcc(*self._fourcc),
+                                     self._fps,
+                                     (self._w, self._h),
+                                     isColor=c != 1)
 
     def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
         if self._file is None:
@@ -92,6 +96,6 @@ class VideoWriter(BaseWriter):
         """
         Close the file if it is open.
         """
-        if self.file:
-            self.file.release()
+        if self._file:
+            self._file.release()
             self._file = None
