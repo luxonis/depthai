@@ -503,7 +503,9 @@ class OakCamera:
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
         if record_path and isinstance(output, List):
-            raise ValueError('Recording visualizer is only supported for a single output.')
+            if len(output) > 1:
+                raise ValueError('Recording visualizer is only supported for a single output.')
+            output = output[0]
 
         visualizer = Visualizer(scale, fps)
         return self._callback(output, callback, visualizer, record_path)
