@@ -1,8 +1,7 @@
 import logging
 from collections import deque
-from datetime import datetime
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 
 try:
     import cv2
@@ -12,11 +11,11 @@ except ImportError:
 import depthai as dai
 import numpy as np
 
-from depthai_sdk.recorders.video_writers import AbstractWriter
+from depthai_sdk.recorders.video_writers import BaseWriter
 from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 
 
-class VideoWriter(AbstractWriter):
+class VideoWriter(BaseWriter):
     """
     Writes raw streams to mp4 using cv2.VideoWriter.
     """
@@ -31,13 +30,10 @@ class VideoWriter(AbstractWriter):
             fourcc: FourCC code of the codec used to compress the frames.
             fps: Frames per second.
         """
-        self.file = None
-        self._path = create_writer_dir(path, name, 'mp4')
-        if not self._path.endswith('.mp4'):
-            self._path = self._path[:-4] + '.mp4'
+
+        super().__init__(path, name)
 
         self._fourcc = None
-
         self._w, self._h = None, None
         self._fps = fps
 
@@ -47,24 +43,29 @@ class VideoWriter(AbstractWriter):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def init_buffer(self, max_seconds: int) -> None:
-        """
-        Initialize the buffer to store the frames before writing them to the file.
-
-        Args:
-            max_seconds: Maximum number of seconds to store in the buffer.
-        """
+    def init_buffer(self, name: str, max_seconds: int):
         if max_seconds > 0:
-            self._buffer = deque(maxlen=int(max_seconds * self._fps))
+            self._buffers[name] = deque(maxlen=int(max_seconds * self._fps))
             self._is_buffer_enabled = True
 
-    def _create_file(self, frame: Union[dai.ImgFrame, np.ndarray]) -> None:
-        """
-        Create the file based on the frame size and the codec.
+    def set_fourcc(self, fourcc: str):
+        self._fourcc = fourcc
 
-        Args:
-            frame: Frame to get the size from.
-        """
+    def create_file_for_buffer(self, subfolder: str, buf_name: str):
+        if self._buffers[buf_name] is None:
+            raise RuntimeError(f"Buffer {buf_name} is not enabled")
+
+        if len(self._buffers[buf_name]) == 0:
+            return None
+
+        frame = self._buffers[buf_name][0]
+        self.create_file(subfolder, frame)
+
+    def create_file(self, subfolder: str, frame: Union[dai.ImgFrame, np.ndarray]):
+        path_to_file = create_writer_dir(self.path / subfolder, self.name, 'avi')
+        self._create_file(path_to_file, frame)
+
+    def _create_file(self, path_to_file: str, frame: Union[dai.ImgFrame, np.ndarray]):
         if isinstance(frame, np.ndarray):
             self._h, self._w = frame.shape[:2]
         else:
@@ -81,38 +82,16 @@ class VideoWriter(AbstractWriter):
                                     (self._w, self._h),
                                     isColor=c != 1)
 
+    def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
+        if self._file is None:
+            self.create_file(subfolder='', frame=frame)
+
+        self._file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
+
     def close(self) -> None:
         """
         Close the file if it is open.
         """
         if self.file:
             self.file.release()
-
-    def add_to_buffer(self, frame: Union[dai.ImgFrame, np.ndarray]) -> None:
-        """
-        Add a frame to the buffer if it is enabled.
-
-        Args:
-            frame: Frame to add to the buffer.
-        """
-        if not self._is_buffer_enabled:
-            return
-
-        if len(self._buffer) == self._buffer.maxlen:
-            self._buffer.pop()
-
-        self._buffer.append(frame)
-
-    def write(self, frame: Union[dai.ImgFrame, np.ndarray]) -> None:
-        """
-        Write a frame to the file. If buffer is enabled, it will be added to the buffer.
-
-        Args:
-            frame: Frame to write to the file.
-        """
-        if self.file is None:
-            self._create_file(frame)
-
-        self.add_to_buffer(frame)
-
-        self.file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
+            self._file = None

@@ -2,10 +2,13 @@ from pathlib import Path
 
 import depthai as dai
 
-from depthai_sdk.recorders.video_writers import AbstractWriter
+from depthai_sdk.recorders.video_writers import BaseWriter
 
 
-class FileWriter(AbstractWriter):
+class FileWriter(BaseWriter):
+    def create_file_for_buffer(self, subfolder: str, bufname: str):
+        pass
+
     file = None
 
     def __init__(self, folder: Path, name: str, fourcc: str):
