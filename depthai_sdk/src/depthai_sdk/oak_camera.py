@@ -329,6 +329,11 @@ class OakCamera:
 
         self._oak.init_callbacks(self.pipeline)
 
+        # Call on_pipeline_started() for each component
+        for comp in self._components:
+            comp.on_pipeline_started(self._oak.device)
+
+        # Start FPS counters
         for xout in self._oak.oak_out_streams:  # Start FPS counters
             xout.start_fps()
 
