@@ -131,8 +131,8 @@ def parse_args():
                         help="Invert horizontal axis of the camera for the display")
     # parser.add_argument("-ep", "--maxEpiploarError", default="1.0", type=float, required=False,
     #                     help="Sets the maximum epiploar allowed with rectification")
-    parser.add_argument("-cm", "--cameraMode", default="perspective", choices=["perspective", "fisheye"], type=str,
-                        required=False, help="Choose between perspective and fisheye")
+    parser.add_argument("-cm", "--cameraModel", default="", choices=["perspective", "fisheye"], type=str,
+                        required=False, help="Overwrite the camera model specified in board config file. Choose between perspective and fisheye.")
     parser.add_argument("-rlp", "--rgbLensPosition", default=-1, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
     parser.add_argument("-cd", "--captureDelay", default=5, type=int,
@@ -265,6 +265,7 @@ class Main:
     current_polygon = 0
     images_captured_polygon = 0
     images_captured = 0
+    camera_model = "perspective"
 
     def __init__(self):
         global debug
@@ -923,9 +924,13 @@ class Main:
     def calibrate(self):
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
-        # self.args.cameraMode = 'perspective' # hardcoded for now
-        try:
 
+        self.camera_model = self.board_config.get("camera_model", "perspective")
+
+        if self.args.cameraModel != "": # If camera model is specified in the command line, use that
+            self.camera_model = self.args.cameraModel
+        
+        try:
             # stereo_calib = StereoCalibration()
             print("Starting image processingxxccx")
             print(self.args.squaresX)
@@ -936,7 +941,7 @@ class Main:
                     self.args.markerSizeCm,
                     self.args.squaresX,
                     self.args.squaresY,
-                    self.args.cameraMode,
+                    self.camera_model,
                     self.args.rectifiedDisp) # Turn off enable disp rectify
 
             calibration_handler = dai.CalibrationHandler()
@@ -995,6 +1000,10 @@ class Main:
             calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
             calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
             calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
+            if self.camera_model == "perspective":
+                calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Perspective)
+            elif self.camera_model == "fisheye":
+                calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Fisheye)
 
             if 'hasAutofocus' in cam_info and cam_info['hasAutofocus']:
                 calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
