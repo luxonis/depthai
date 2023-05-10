@@ -14,9 +14,7 @@ from collections import deque
 from depthai_helpers.image_scaler import ImageScaler
 
 # Creates a set of 13 polygon coordinates
-traceLevel = 2
-# trace = 3 -> Undisted image viz
-# trace = 2 -> Print logs
+
 
 
 def setPolygonCoordinates(height, width):
@@ -89,10 +87,10 @@ def polygon_from_image_name(image_name):
 
 
 class StereoCalibration(object):
-    global traceLevel
     """Class to Calculate Calibration and Rectify a Stereo Camera."""
 
-    def __init__(self):
+    def __init__(self, traceLevel: int):
+        self.traceLevel = traceLevel
         """Class to Calculate Calibration and Rectify a Stereo Camera."""
 
     def calibrate(self, board_config, filepath, square_size, mrk_size, squaresX, squaresY, camera_model, enable_disp_rectify):
@@ -212,7 +210,7 @@ class StereoCalibration(object):
         criteria = (cv2.TERM_CRITERIA_EPS +
                     cv2.TERM_CRITERIA_MAX_ITER, 10000, 0.00001)
         for im in images:
-            if traceLevel == 2:
+            if self.traceLevel == 2:
                 print("=> Processing image {0}".format(im))
             img_pth = Path(im)
             frame = cv2.imread(im)
@@ -225,7 +223,7 @@ class StereoCalibration(object):
                 gray, self.aruco_dictionary)
             marker_corners, ids, refusd, recoverd = cv2.aruco.refineDetectedMarkers(gray, self.board,
                                                                                     marker_corners, ids, rejectedCorners=rejectedImgPoints)
-            if traceLevel == 1:
+            if self.traceLevel == 1:
                 print('{0} number of Markers corners detected in the image {1}'.format(
                     len(marker_corners), img_pth.name))
             if len(marker_corners) > 0:
@@ -265,7 +263,7 @@ class StereoCalibration(object):
             ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors = self.calibrate_camera_perspective(
                 allCorners, allIds, imsize, hfov)
             # (Height, width)
-            if traceLevel == 3:
+            if self.traceLevel == 3:
                 self.fisheye_undistort_visualization(
                     image_files, camera_matrix, distortion_coefficients, imsize)
 
@@ -274,7 +272,7 @@ class StereoCalibration(object):
             print('Fisheye--------------------------------------------------')
             ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors = self.calibrate_camera_fisheye(
                 allCorners, allIds, imsize, hfov)
-            if traceLevel == 3:
+            if self.traceLevel == 3:
                 self.fisheye_undistort_visualization(
                     image_files, camera_matrix, distortion_coefficients, imsize)
 
@@ -340,7 +338,7 @@ class StereoCalibration(object):
             undistorted_img = cv2.remap(
                 img, map1, map2, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
             cv2.imshow("undistorted", undistorted_img)
-            if traceLevel == 4:
+            if self.traceLevel == 4:
                 print(f'image path - {im}')
                 print(f'Image Undistorted Size {undistorted_img.shape}')
             k = cv2.waitKey(0)
@@ -359,7 +357,7 @@ class StereoCalibration(object):
                                      [0.0,     f,      imsize[1]/2],
                                      [0.0,   0.0,        1.0]])
         
-        if traceLevel == 1:
+        if self.traceLevel == 1:
             print(
                 f'Camera Matrix initialization with HFOV of {hfov} is.............')
             print(cameraMatrixInit)
@@ -383,7 +381,7 @@ class StereoCalibration(object):
             distCoeffs=distCoeffsInit,
             flags=flags,
             criteria=(cv2.TERM_CRITERIA_EPS & cv2.TERM_CRITERIA_COUNT, 50000, 1e-9))
-        if traceLevel == 2:
+        if self.traceLevel == 2:
             print('Per View Errors...')
             print(perViewErrors)
         return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors
@@ -461,7 +459,7 @@ class StereoCalibration(object):
                 + cv2.CALIB_RATIONAL_MODEL
             )
 
-            if traceLevel == 1:
+            if self.traceLevel == 1:
                 print('Printing Extrinsics guesses...')
                 print(r_in)
                 print(t_in)
@@ -517,7 +515,7 @@ class StereoCalibration(object):
                 + cv2.fisheye.CALIB_FIX_K4
             )
 
-            if traceLevel == 3:
+            if self.traceLevel == 3:
                 print('Fisyeye stereo model..................')
 
             (ret, M1, d1, M2, d2, R, T), E, F = cv2.fisheye.stereoCalibrate(
@@ -667,7 +665,7 @@ class StereoCalibration(object):
 
             image_data_pairs.append((img_l, img_r))
             
-            if traceLevel == 4:
+            if self.traceLevel == 4:
                 cv2.imshow("undistorted-Left", img_l)
                 cv2.imshow("undistorted-right", img_r)
                 # print(f'image path - {im}')
@@ -675,7 +673,7 @@ class StereoCalibration(object):
                 k = cv2.waitKey(0)
                 if k == 27:  # Esc key to stop
                     break
-        if traceLevel == 4:
+        if self.traceLevel == 4:
           cv2.destroyWindow("undistorted-left")
           cv2.destroyWindow("undistorted-right")  
         # compute metrics

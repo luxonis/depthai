@@ -154,7 +154,9 @@ def parse_args():
                         help="Path to dataset used for processing images")
     parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
                         help="Enable mouse trigger for image capture")
-
+    parser.add_argument('-l', '--traceLevel', type=int, default=2,
+                        help="Set the debug trace level. Default: %(default)s.")
+    
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -923,7 +925,7 @@ class Main:
 
     def calibrate(self):
         print("Starting image processing")
-        stereo_calib = calibUtils.StereoCalibration()
+        stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel)
 
         self.camera_model = self.board_config.get("camera_model", "perspective")
 
