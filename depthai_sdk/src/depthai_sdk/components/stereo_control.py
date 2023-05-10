@@ -227,7 +227,7 @@ class StereoControl:
                 self.raw_cfg.postProcessing.median = parse_median_filter(controls["postprocessing"]["median"])
             if controls['postprocessing'].get('bilateral_sigma', None) is not None:
                 bilateral_sigma = clamp(controls["postprocessing"]["bilateral_sigma"], *LIMITS['bilateral_sigma'])
-                self.raw_cfg.postProcessing.bilateralSigma = bilateral_sigma
+                self.raw_cfg.postProcessing.bilateralSigmaValue = bilateral_sigma
 
             if controls['postprocessing'].get('spatial', None) is not None:
                 if controls['postprocessing']['spatial'].get('enable', None) is not None:
