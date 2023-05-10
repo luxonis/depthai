@@ -310,13 +310,8 @@ class XoutTwoStage(XoutNnResults):
         self.second_nn = second_nn
         self.name = 'Two-stage detection'
 
-        self.whitelist_labels: Optional[List[int]] = None
-        self.scale_bb: Optional[Tuple[int, int]] = None
-
-        conf = det_nn._multi_stage_config  # No types due to circular import...
-        if conf is not None:
-            self.labels = conf._labels
-            self.scale_bb = conf.scale_bb
+        self.whitelist_labels: Optional[List[int]] = second_nn._multi_stage_nn.whitelist_labels
+        self.scale_bb: Optional[Tuple[int, int]] = second_nn._multi_stage_nn.scale_bb
 
         self.device = device
         self.input_queue_name = input_queue_name

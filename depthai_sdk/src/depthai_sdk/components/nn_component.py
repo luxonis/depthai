@@ -14,7 +14,7 @@ from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.integrations.roboflow import RoboflowIntegration
-from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
+from depthai_sdk.components.multi_stage_nn import MultiStageNN
 from depthai_sdk.components.nn_helper import *
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.parser import *
@@ -93,7 +93,6 @@ class NNComponent(Component):
 
         # Multi-stage pipeline
         self._multi_stage_nn: Optional[MultiStageNN] = None
-        self._multi_stage_config: Optional[MultiStageConfig] = None
         self._multi_stage_num_frame_pool = 20
 
         self._input_queue = Optional[None]  # Input queue for multi-stage pipeline
@@ -123,7 +122,10 @@ class NNComponent(Component):
             self._update_config()
 
         if self._blob is None:
-            self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model']))
+            self._blob = dai.OpenVINO.Blob(self._blob_from_config(
+                self._config['model'],
+                self._config.get('openvino_version', None)
+            ))
 
         # TODO: update NN input based on camera resolution
         self.node.setBlob(self._blob)
@@ -165,7 +167,6 @@ class NNComponent(Component):
                                                     high_res_frames=self.image_manip.out,
                                                     size=self._size,
                                                     num_frames_pool=self._multi_stage_num_frame_pool)
-                self._multi_stage_nn.configure(self._multi_stage_config)
                 self._multi_stage_nn.out.link(self.node.input)  # Cropped frames
 
                 # For debugging, for integral counter
@@ -334,21 +335,20 @@ class NNComponent(Component):
             if nn_family:
                 self._parse_node_type(nn_family)
 
-    def _blob_from_config(self, model: Dict, version: Optional[dai.OpenVINO.Version] = None) -> str:
+    def _blob_from_config(self, model: Dict, version: Union[None, str, dai.OpenVINO.Version] = None) -> str:
         """
         Gets the blob from the config file.
         """
-        version_str = None
-        if version is not None:
+        if isinstance(version, dai.OpenVINO.Version):
             vals = str(version).split('_')
-            version_str = f"{vals[1]}.{vals[2]}"
+            version = f"{vals[1]}.{vals[2]}"
 
         if 'model_name' in model:  # Use blobconverter to download the model
             zoo_type = model.get("zoo", 'intel')
             return blobconverter.from_zoo(model['model_name'],
                                           zoo_type=zoo_type,
                                           shaves=6,  # TODO: Calculate ideal shave amount
-                                          version=version_str
+                                          version=version
                                           )
 
         if 'xml' in model and 'bin' in model:
@@ -356,7 +356,7 @@ class NNComponent(Component):
                                                bin=model['bin'],
                                                data_type="FP16",  # Myriad X
                                                shaves=6,  # TODO: Calculate ideal shave amount
-                                               version=version_str
+                                               version=version
                                                )
 
         raise ValueError("Specified `model` values in json config files are incorrect!")
@@ -417,8 +417,9 @@ class NNComponent(Component):
                             "This configuration attempt will be ignored.")
             return
 
-        self._multi_stage_num_frame_pool = num_frame_pool
-        self._multi_stage_config = MultiStageConfig(debug, labels, scale_bb)
+        if num_frame_pool is not None:
+            self._multi_stage_nn.manip.setNumFramesPool(num_frame_pool)
+        self._multi_stage_nn.configure(debug, labels, scale_bb)
 
     def _parse_label(self, label: Union[str, int]) -> int:
         if isinstance(label, int):
