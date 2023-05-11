@@ -294,7 +294,9 @@ class StereoComponent(Component):
             colormap_manip.initialConfig.setColormap(colormap, self.node.initialConfig.getMaxDisparity())
             colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
             if self._align_component:
-                h, w = self._align_component.node.getResolutionSize()
+                h, w = self._align_component.node.getVideoSize() \
+                    if isinstance(self._align_component.node, dai.node.ColorCamera) \
+                    else self._align_component.node.getResolutionSize()
             else:
                 h, w = self.left.stream_size
             colormap_manip.setMaxOutputFrameSize(h * w * 3)
