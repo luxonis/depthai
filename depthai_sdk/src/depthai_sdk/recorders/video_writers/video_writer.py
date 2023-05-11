@@ -1,7 +1,6 @@
-import logging
 from collections import deque
 from pathlib import Path
-from typing import Union, Dict
+from typing import Union
 
 try:
     import cv2
@@ -16,7 +15,21 @@ from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 
 
 class VideoWriter(BaseWriter):
-    def __init__(self, path: Path, name: str, fourcc: str, fps: float):  # TODO: fourcc is not used
+    """
+    Writes raw streams to mp4 using cv2.VideoWriter.
+    """
+    _fps: float
+    _path: str
+
+    def __init__(self, path: Path, name: str, fourcc: str, fps: float):
+        """
+        Args:
+            path: Path to save the output. Either a folder or a file.
+            name: Name of the stream.
+            fourcc: FourCC code of the codec used to compress the frames.
+            fps: Frames per second.
+        """
+
         super().__init__(path, name)
 
         self._fourcc = None
@@ -48,7 +61,11 @@ class VideoWriter(BaseWriter):
         self.create_file(subfolder, frame)
 
     def create_file(self, subfolder: str, frame: Union[dai.ImgFrame, np.ndarray]):
-        path_to_file = create_writer_dir(self.path / subfolder, self.name, 'avi')
+        path_to_file = create_writer_dir(self.path / subfolder, self.name, 'mp4')
+
+        if not path_to_file.endswith('.mp4'):
+            path_to_file = path_to_file[:-4] + '.mp4'
+
         self._create_file(path_to_file, frame)
 
     def _create_file(self, path_to_file: str, frame: Union[dai.ImgFrame, np.ndarray]):
@@ -57,32 +74,28 @@ class VideoWriter(BaseWriter):
         else:
             self._h, self._w = frame.getHeight(), frame.getWidth()
 
-        # Disparity - RAW8
-        # Depth - RAW16
-        if self._fourcc is None:
-            if isinstance(frame, np.ndarray):
-                c = 1 if frame.ndim == 2 else frame.shape[2]
-                self._fourcc = "GRAY" if c == 1 else "I420"
-            else:
-                if frame.getType() == dai.ImgFrame.Type.RAW16:  # Depth
-                    self._fourcc = "FFV1"
-                elif frame.getType() == dai.ImgFrame.Type.RAW8:  # Mono Cams
-                    self._fourcc = "GREY"
-                else:
-                    self._fourcc = "I420"
+        if not isinstance(frame, np.ndarray):
+            frame = frame.getCvFrame()
 
+        c = 1 if frame.ndim == 2 else frame.shape[2]
+
+        self._fourcc = 'mp4v'
         self._file = cv2.VideoWriter(path_to_file,
                                      cv2.VideoWriter_fourcc(*self._fourcc),
                                      self._fps,
                                      (self._w, self._h),
-                                     isColor=self._fourcc != "GREY")
+                                     isColor=c != 1)
 
     def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
         if self._file is None:
             self.create_file(subfolder='', frame=frame)
+
         self._file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
 
-    def close(self):
-        if self._file is not None:
+    def close(self) -> None:
+        """
+        Close the file if it is open.
+        """
+        if self._file:
             self._file.release()
             self._file = None

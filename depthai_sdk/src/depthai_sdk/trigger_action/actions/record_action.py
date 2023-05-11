@@ -140,9 +140,9 @@ class RecordAction(Action):
         self.stream_names = [xout.frames.name for xout in xouts]  # e.g., [color_video, color_bitstream]
         logging.debug(f'RecordAction: stream_names = {self.stream_names}')
         self.recorder.update(self.path, device, xouts)
-        self.run_thread()
+        self._run_thread()
 
-    def run_thread(self):
+    def _run_thread(self):
         buffers = {'before_t_1': self.duration_bt, 'after_t_1': self.duration_at}
         self.recorder.init_buffers(buffers)  # does for every stream
         self.buffers_status = {'writing': {'before_t': 1, 'after_t': []},
