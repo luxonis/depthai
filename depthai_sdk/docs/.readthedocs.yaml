@@ -24,3 +24,5 @@ python:
   install:
     - requirements: requirements.txt
     - requirements: depthai_sdk/docs/requirements.txt
+    - method: pip
+      path: depthai_sdk
