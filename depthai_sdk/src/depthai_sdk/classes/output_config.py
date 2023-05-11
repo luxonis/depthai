@@ -180,6 +180,9 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             xoutbase.setup_base(self.new_packet)
             xouts.append(xoutbase)
 
+            if hasattr(xoutbase, 'setup_visualize'):
+                xoutbase.setup_visualize(Visualizer(), xoutbase.name)
+
         return xouts
 
 
