@@ -10,7 +10,7 @@ from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
 from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
 from depthai_sdk.replay import Replay
-from depthai_sdk.components.camera_controls import CameraControl
+from depthai_sdk.components.camera_control import CameraControl
 
 
 class CameraComponent(Component):
@@ -198,18 +198,14 @@ class CameraComponent(Component):
         if self._args:
             self._config_camera_args(self._args)
 
+
+        # Runtime camera control
+        self.control = CameraControl()
         self._control_xlink_in = None
-        self.control = self._init_cam_control(pipeline)
-
-    def _init_cam_control(self, pipeline: dai.Pipeline) -> CameraControl:
-        if self.is_replay():
-            return CameraControl() # Can't (yet) control in replay mode
-
-        self._control_xlink_in = pipeline.create(dai.node.XLinkIn)
-        self._control_xlink_in.setStreamName(f"{self.node.id}_inputControl")
-        self._control_xlink_in.out.link(self.node.inputControl)
-
-        return CameraControl()
+        if not self.is_replay():
+            self._control_xlink_in = pipeline.create(dai.node.XLinkIn)
+            self._control_xlink_in.setStreamName(f"{self.node.id}_inputControl")
+            self._control_xlink_in.out.link(self.node.inputControl)
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:

@@ -18,6 +18,7 @@ from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
 from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
+from depthai_sdk.components.stereo_control import StereoControl
 
 
 class WLSLevel(Enum):
@@ -163,6 +164,16 @@ class StereoComponent(Component):
 
         if self._args:
             self._config_stereo_args(self._args)
+
+        self.control = StereoControl(device=device)
+        self._control_xlink_in = pipeline.create(dai.node.XLinkIn)
+        self._control_xlink_in.setStreamName(f"{self.node.id}_inputControl")
+        self._control_xlink_in.out.link(self.node.inputConfig)
+
+    def on_pipeline_started(self, device: dai.Device):
+        if self._control_xlink_in is not None:
+            queue = device.getInputQueue(self._control_xlink_in.getStreamName())
+            self.control.set_input_queue(queue)
 
     def _get_output_stream(self, input: Union[
         CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output
