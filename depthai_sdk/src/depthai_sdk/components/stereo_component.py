@@ -6,9 +6,10 @@ from typing import Optional, Union, Any, Dict, Tuple
 import cv2
 import depthai as dai
 import numpy as np
+
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
-from depthai_sdk.components.parser import parse_cam_socket, parse_median_filter, parse_encode
+from depthai_sdk.components.parser import parse_median_filter, parse_encode
 from depthai_sdk.components.undistort import _get_mesh
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
@@ -86,6 +87,7 @@ class StereoComponent(Component):
         self.node: dai.node.StereoDepth = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
+        self._align_component: Optional[CameraComponent] = None
         # Encoder
         self.encoder = None
         if encode:
@@ -114,7 +116,8 @@ class StereoComponent(Component):
             if not self.left:
                 self.left = CameraComponent(device, pipeline, 'left', self._resolution, self._fps, replay=self._replay)
             if not self.right:
-                self.right = CameraComponent(device, pipeline, 'right', self._resolution, self._fps, replay=self._replay)
+                self.right = CameraComponent(device, pipeline, 'right', self._resolution, self._fps,
+                                             replay=self._replay)
 
             if 0 < len(device.getIrDrivers()):
                 laser = self._args.get('irDotBrightness', None)
@@ -221,7 +224,7 @@ class StereoComponent(Component):
 
     def config_stereo(self,
                       confidence: Optional[int] = None,
-                      align: Union[None, str, dai.CameraBoardSocket] = None,
+                      align: Optional[CameraComponent] = None,
                       median: Union[None, int, dai.MedianFilter] = None,
                       extended: Optional[bool] = None,
                       subpixel: Optional[bool] = None,
@@ -233,7 +236,9 @@ class StereoComponent(Component):
         Configures StereoDepth modes and options.
         """
         if confidence is not None: self.node.initialConfig.setConfidenceThreshold(confidence)
-        if align is not None: self.node.setDepthAlign(parse_cam_socket(align))
+        if align is not None:
+            self._align_component = align
+            self.node.setDepthAlign(align.node.getBoardSocket())
         if median is not None: self.node.setMedianFilter(parse_median_filter(median))
         if extended is not None: self.node.initialConfig.setExtendedDisparity(extended)
         if subpixel is not None: self.node.initialConfig.setSubpixel(subpixel)
@@ -299,7 +304,12 @@ class StereoComponent(Component):
             colormap_manip = self.node.getParentPipeline().create(dai.node.ImageManip)
             colormap_manip.initialConfig.setColormap(colormap, self.node.initialConfig.getMaxDisparity())
             colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
-            h, w = self.left.stream_size
+            if self._align_component:
+                h, w = self._align_component.node.getIspSize() \
+                    if isinstance(self._align_component.node, dai.node.ColorCamera) \
+                    else self._align_component.node.getResolutionSize()
+            else:
+                h, w = self.left.stream_size
             colormap_manip.setMaxOutputFrameSize(h * w * 3)
             self.node.disparity.link(colormap_manip.inputImage)
 
