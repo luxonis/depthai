@@ -1,7 +1,7 @@
 import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Tuple, List, Union, Optional
+from typing import Tuple, List, Union, Optional, Sequence
 
 try:
     import cv2
@@ -394,7 +394,7 @@ class VisText(GenericObject):
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
                  outline: bool = True,
-                 bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
+                 bbox: Union[np.ndarray, Tuple[int, int, int, int], BoundingBox] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10):
         """
@@ -435,6 +435,16 @@ class VisText(GenericObject):
         }
 
     def prepare(self) -> 'VisText':
+        # TODO: in the future, we can stop support for passing pixel-space bbox to the 
+        # visualizer.
+        if isinstance(self.bbox, (Sequence, np.ndarray)):
+            # Convert to BoundingBox. Divide by self.frame_shape and load into the BoundingBox
+            self.bbox = list(self.bbox)
+            self.bbox[0] /= self.frame_shape[1]
+            self.bbox[1] /= self.frame_shape[0]
+            self.bbox[2] /= self.frame_shape[1]
+            self.bbox[3] /= self.frame_shape[0]
+            self.bbox = BoundingBox(self.bbox)
         self.coords = self.coords or self.get_relative_position(bbox=self.bbox,
                                                                 position=self.position,
                                                                 padding=self.padding)

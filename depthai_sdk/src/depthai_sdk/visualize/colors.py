@@ -20,7 +20,7 @@ def generate_colors(number_of_colors: int, pastel=0.5):
             colors.append((r, g, b))
 
     # Randomize colors
-    np.random.shuffle(colors)
+    # np.random.shuffle(colors)
 
     # Return only the first `number_of_colors` colors
     return colors[:number_of_colors]

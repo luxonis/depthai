@@ -42,7 +42,7 @@ class Visualizer(VisualizerHelper):
         if fps:
             self.output(show_fps=fps)
         if scale:
-            self.output(img_scale=scale)
+            self.output(img_scale=float(scale))
 
     def add_object(self, obj: GenericObject) -> 'Visualizer':
         """
@@ -94,7 +94,7 @@ class Visualizer(VisualizerHelper):
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
                  outline: bool = True,
-                 bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
+                 bbox: Union[np.ndarray, Tuple[int, int, int, int], BoundingBox] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10) -> 'Visualizer':
         """

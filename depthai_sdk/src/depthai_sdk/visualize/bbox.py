@@ -8,8 +8,8 @@ class BoundingBox:
     This class helps with bounding box calculations. It can be used to calculate relative bounding boxes,
     map points from relative to absolute coordinates and vice versa, crop frames, etc.
     """
-    def __init__(self, bbox: Union[None, Tuple[float, float, float, float], dai.ImgDetection] = None):
-        if isinstance(bbox, tuple):
+    def __init__(self, bbox: Union[None, np.ndarray, Tuple[float, float, float, float], dai.ImgDetection] = None):
+        if isinstance(bbox, (Sequence, np.ndarray)):
             self.xmin, self.ymin, self.xmax, self.ymax = bbox
         elif isinstance(bbox, dai.ImgDetection):
             self.xmin, self.ymin, self.xmax, self.ymax = bbox.xmin, bbox.ymin, bbox.xmax, bbox.ymax
