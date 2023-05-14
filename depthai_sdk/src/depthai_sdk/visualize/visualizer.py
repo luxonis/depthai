@@ -13,7 +13,7 @@ import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
-from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
+from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
 from depthai_sdk.visualize.encoder import JSONEncoder
 from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask
@@ -59,10 +59,11 @@ class Visualizer(VisualizerHelper):
 
     def add_detections(self,
                        detections: List[Union[ImgDetection, dai.Tracklet]],
-                       normalizer: NormalizeBoundingBox = None,
+                       normalizer: BoundingBox = None,
                        label_map: List[Tuple[str, Tuple]] = None,
                        spatial_points: List[dai.Point3f] = None,
                        is_spatial=False,
+                       bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
                        ) -> 'Visualizer':
         """
         Add detections to the visualizer.
@@ -73,6 +74,7 @@ class Visualizer(VisualizerHelper):
             label_map: List of tuples (label, color).
             spatial_points: List of spatial points. None if not spatial.
             is_spatial: Flag that indicates if the detections are spatial.
+            bbox: Bounding box, if there's a detection inside a bounding box.
         Returns:
             self
         """
@@ -80,7 +82,8 @@ class Visualizer(VisualizerHelper):
                                           normalizer=normalizer,
                                           label_map=label_map,
                                           spatial_points=spatial_points,
-                                          is_spatial=is_spatial)
+                                          is_spatial=is_spatial,
+                                          bbox=bbox)
         self.add_object(detection_overlay)
         return self
 
