@@ -288,8 +288,6 @@ class VisDetections(GenericObject):
         for i, detection in enumerate(self.detections):
             # Get normalized bounding box
             normalized_bbox = self.normalizer.get_relative_bbox(BoundingBox(detection))
-            print('VisDetections', normalized_bbox)
-
             if len(self.frame_shape) < 2:
                 logging.debug('Visualizer: skipping detection because frame shape is invalid: {}'
                               .format(self.frame_shape))

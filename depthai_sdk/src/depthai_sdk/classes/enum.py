@@ -1,4 +1,5 @@
 from enum import IntEnum
+from typing import Union
 
 class ResizeMode(IntEnum):
     """
@@ -13,7 +14,10 @@ class ResizeMode(IntEnum):
 
     # Parse string to ResizeMode
     @staticmethod
-    def parse(mode: str) -> 'ResizeMode':
+    def parse(mode: Union[str, 'ResizeMode']) -> 'ResizeMode':
+        if isinstance(mode, ResizeMode):
+            return mode
+
         mode = mode.lower()
         if mode == "letterbox":
             return ResizeMode.LETTERBOX
@@ -24,4 +28,6 @@ class ResizeMode(IntEnum):
         elif mode == "full_crop":
             return ResizeMode.FULL_CROP
         else:
-            raise ValueError(f"Unknown resize mode {mode}")
+            raise ValueError(f"Unknown resize mode {mode}! 'Options (case insensitive):" \
+                             "STRETCH, CROP, LETTERBOX. Using default LETTERBOX mode.")
+
