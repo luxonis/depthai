@@ -21,6 +21,6 @@ with OakCamera() as oak:
     # oak.record([color.out.main, stereo.out.disparity], 'records')
 
     # Record depth only
-    oak.visualize(stereo.out.disparity, record_path='disparity.avi')
+    oak.visualize(stereo.out.disparity, record_path='disparity.mp4')
 
     oak.start(blocking=True)

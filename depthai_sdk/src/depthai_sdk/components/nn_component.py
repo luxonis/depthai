@@ -215,7 +215,7 @@ class NNComponent(Component):
                 self._spatial = StereoComponent(device, pipeline, args=self._args, replay=self._replay)
             if isinstance(self._spatial, StereoComponent):
                 self._spatial.depth.link(self.node.inputDepth)
-                self._spatial.config_stereo(align=self._input._source)
+                self._spatial.config_stereo(align=self._input)
             # Configure Spatial Detection Network
 
         if self._args:
