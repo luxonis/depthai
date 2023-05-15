@@ -90,7 +90,7 @@ class XoutFrames(XoutBase):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
 
-        packet = FramePacket(name,
+        packet = FramePacket(self.name or name,
                              msg,
                              msg.getCvFrame() if cv2 else None,
                              self._visualizer)
