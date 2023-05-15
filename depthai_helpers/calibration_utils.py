@@ -13,7 +13,7 @@ from pathlib import Path
 from functools import reduce
 from collections import deque
 # Creates a set of 13 polygon coordinates
-traceLevel = 0
+traceLevel = 1
 rectProjectionMode = 0
 
 colors = [(0, 255 , 0), (0, 0, 255)]
@@ -487,10 +487,11 @@ class StereoCalibration(object):
         print(cameraMatrixInit)
         flags = 0
         # flags |= cv2.fisheye.CALIB_CHECK_COND 
-        # flags |= cv2.fisheye.CALIB_USE_INTRINSIC_GUESS 
-        flags |= cv2.fisheye.CALIB_USE_INTRINSIC_GUESS 
-        # flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC
-        flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_CHECK_COND + cv2.fisheye.CALIB_FIX_SKEW
+        flags |= cv2.fisheye.CALIB_USE_INTRINSIC_GUESS
+        # flags = cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC + cv2.fisheye.CALIB_CHECK_COND + cv2.fisheye.CALIB_FIX_SKEW
+        flags |= cv2.fisheye.CALIB_RECOMPUTE_EXTRINSIC 
+        flags |= cv2.fisheye.CALIB_CHECK_COND
+        flags |= cv2.fisheye.CALIB_FIX_SKEW
 
         distCoeffsInit = np.zeros((4, 1))
         term_criteria = (cv2.TERM_CRITERIA_COUNT +

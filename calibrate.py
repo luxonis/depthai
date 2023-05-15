@@ -409,8 +409,8 @@ class Main:
             len(calibUtils.setPolygonCoordinates(1000, 600))
         if debug:
             print("Using Arguments=", self.args)
-        if self.args.datasetPath:
-            Path(self.args.datasetPath).mkdir(parents=True, exist_ok=True)
+        # if self.args.datasetPath:
+        #     Path(self.args.datasetPath).mkdir(parents=True, exist_ok=True)
 
         # if self.args.board.upper() == 'OAK-D-LITE':
         #     raise Exception(
@@ -530,15 +530,15 @@ class Main:
 
 
     def parse_frame(self, frame, stream_name):
-        if not self.is_markers_found(frame):
-            return False
+        # if not self.is_markers_found(frame):
+        #     return False
 
         filename = calibUtils.image_filename(
             stream_name, self.current_polygon, self.images_captured)
-        path = Path(self.args.datasetPath) / stream_name / filename
+        path = Path(self.dataset_path) / stream_name / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(path), frame)
-        print("py: Saved image as: " + str(path))
+        print("py: Saved image as: " + str(path.resolve()))
         return True
 
     def show_info_frame(self):
@@ -890,7 +890,7 @@ class Main:
                     print(f'Timestamp difference between l & RGB ---> {lrgb_time} in microseconds')
                     print(f'Timestamp difference between l & r ---> {lr_time} in microseconds')
 
-                if capturing and lrgb_time < 50 and lr_time < 30:
+                if capturing :
                     print("Capturing  ------------------------")
                     if packet[0] == 'left' and not tried_left:
                         captured_left = self.parse_frame(frame, packet[0])
@@ -1040,7 +1040,7 @@ class Main:
                 # log_list.append(self.ccm_selected[cam_info['name']])
 
                 color = green
-                reprojection_error_threshold = 1.0
+                reprojection_error_threshold = 3.0
                 if cam_info['size'][1] > 720:
                     print(cam_info['size'][1])
                     reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
@@ -1057,6 +1057,9 @@ class Main:
                 # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
 
                 calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
+                print('type -> {}'.format(cam_info['type']))
+                print(cam_info['intrinsics'])
+                print('Printing intrinsics :\n ', cam_info['intrinsics'])
                 calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
                 calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
                 if self.args.cameraMode != 'perspective':
@@ -1112,7 +1115,7 @@ class Main:
                     Path(self.args.saveCalibPath).parent.mkdir(parents=True, exist_ok=True)
                     calibration_handler.eepromToJsonFile(self.args.saveCalibPath)
                 # try:
-                self.device.flashCalibration2(calibration_handler)
+                # self.device.flashCalibration2(calibration_handler)
                 is_write_succesful = True
                 # except RuntimeError as e:
                 #     is_write_succesful = False
@@ -1122,7 +1125,7 @@ class Main:
 
                 if self.args.factoryCalibration:
                     try:
-                        self.device.flashFactoryCalibration(calibration_handler)
+                        # self.device.flashFactoryCalibration(calibration_handler)
                         is_write_factory_sucessful = True
                     except RuntimeError:
                         print("flashFactoryCalibration Failed...")
@@ -1175,13 +1178,18 @@ class Main:
             raise SystemExit(1)
 
     def run(self):
+        self.dataset_path = "dataset"
+        if self.args.datasetPath:
+            self.dataset_path = self.args.datasetPath
+        print("Using dataset path: {}".format(self.dataset_path))
+
         if 'capture' in self.args.mode:
             try:
-                if Path('dataset').exists():
-                    shutil.rmtree('dataset/')
+                if Path(self.dataset_path).exists():
+                    shutil.rmtree(self.dataset_path)
                 for cam_id in self.board_config['cameras']:
                     name = self.board_config['cameras'][cam_id]['name']
-                    Path("dataset/{}".format(name)).mkdir(parents=True, exist_ok=True)
+                    Path(self.dataset_path + "/{}".format(name)).mkdir(parents=True, exist_ok=True)
                 
             except OSError:
                 traceback.print_exc()
@@ -1190,10 +1198,6 @@ class Main:
             self.startPipeline()
             self.show_info_frame()
             self.capture_images_sync()
-        self.dataset_path = str(Path("dataset").absolute())
-        if self.args.datasetPath:
-            print("Using dataset path: {}".format(self.args.datasetPath))
-            self.dataset_path = self.args.datasetPath
         if 'process' in self.args.mode:
             self.calibrate()
         print('py: DONE.')
