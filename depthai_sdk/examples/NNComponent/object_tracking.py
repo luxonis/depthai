@@ -7,6 +7,7 @@ with OakCamera() as oak:
     # https://docs.luxonis.com/projects/sdk/en/latest/features/ai_models/#sdk-supported-models
     nn = oak.create_nn('yolov6nr3_coco_640x352', color, tracker=True)
 
+    nn.config_nn(resize_mode='stretch')
     nn.config_tracker(
         tracker_type=dai.TrackerType.ZERO_TERM_COLOR_HISTOGRAM,
         track_labels=[0], # Track only 1st object from the object map. If unspecified, track all object types

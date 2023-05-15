@@ -10,6 +10,7 @@ from depthai_sdk.classes.packets import _TrackingDetection
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_nn import XoutNnResults
 from depthai_sdk.tracking import KalmanFilter
+from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import TextPosition
 from depthai_sdk.visualize.visualizer import Visualizer
 
@@ -47,6 +48,13 @@ class XoutTracker(XoutNnResults):
         super().setup_visualize(visualizer, visualizer_enabled, name)
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
+        if len(packet.frame.shape) == 2:
+            packet.frame = np.dstack((packet.frame, packet.frame, packet.frame))
+
+        if self._frame_shape is None:
+            # Lazy-load the frame shape
+            self._frame_shape = np.array([packet.frame.shape[0], packet.frame.shape[1]])
+
         if self._visualizer:
             self._visualizer.frame_shape = self._frame_shape
 
@@ -90,9 +98,11 @@ class XoutTracker(XoutNnResults):
         filtered_tracklets = [tracklet for tracklet in packet.daiTracklets.tracklets if
                               tracklet.id not in self.blacklist]
 
-        self._visualizer.add_detections(filtered_tracklets,
-                                        self.normalizer,
-                                        self.labels,
+        bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
+
+        self._visualizer.add_detections(detections=filtered_tracklets,
+                                        normalizer=bbox,
+                                        label_map=self.labels,
                                         spatial_points=spatial_points)
 
         # Add tracking ids
