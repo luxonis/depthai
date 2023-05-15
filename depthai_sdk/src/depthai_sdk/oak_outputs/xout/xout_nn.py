@@ -110,7 +110,6 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 or isinstance(packet.img_detections, dai.SpatialImgDetections) \
                 or isinstance(packet.img_detections, Detections):
 
-
             for detection in packet.img_detections.detections:
                 d = _Detection()
                 d.img_detection = detection
@@ -137,8 +136,8 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             colors = packet.img_detections.colors
             for landmarks, indices in zip(all_landmarks, all_landmarks_indices):
                 for i, landmark in enumerate(landmarks):
-                    l = bbox.map_point_to_pixels(*landmark, frame_shape=self._frame_shape)
-
+                    # Map normalized coordinates to frame coordinates
+                    l = [(int(point[0] * self._frame_shape[1]), int(point[1] * self._frame_shape[0])) for point in landmark]
                     idx = indices[i]
 
                     self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[idx], thickness=4)
