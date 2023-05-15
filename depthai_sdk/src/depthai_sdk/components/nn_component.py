@@ -14,7 +14,7 @@ from depthai_sdk.classes.nn_config import Config
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.integrations.roboflow import RoboflowIntegration
-from depthai_sdk.components.multi_stage_nn import MultiStageNN, MultiStageConfig
+from depthai_sdk.components.multi_stage_nn import MultiStageNN
 from depthai_sdk.components.nn_helper import *
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.parser import *
@@ -93,8 +93,6 @@ class NNComponent(Component):
 
         # Multi-stage pipeline
         self._multi_stage_nn: Optional[MultiStageNN] = None
-        self._multi_stage_config: Optional[MultiStageConfig] = None
-        self._multi_stage_num_frame_pool = 20
 
         self._input_queue = Optional[None]  # Input queue for multi-stage pipeline
 
@@ -123,7 +121,10 @@ class NNComponent(Component):
             self._update_config()
 
         if self._blob is None:
-            self._blob = dai.OpenVINO.Blob(self._blob_from_config(self._config['model']))
+            self._blob = dai.OpenVINO.Blob(self._blob_from_config(
+                self._config['model'],
+                self._config.get('openvino_version', None)
+            ))
 
         # TODO: update NN input based on camera resolution
         self.node.setBlob(self._blob)
@@ -135,27 +136,41 @@ class NNComponent(Component):
         nn_in: dai.TensorInfo = next(iter(self._blob.networkInputs.values()))
         # TODO: support models that expect mono img
         self._size: Tuple[int, int] = (nn_in.dims[0], nn_in.dims[1])
-        # maxSize = dims
+
+        # Creates ImageManip node that resizes the input to match the expected NN input size.
+        # DepthAI uses CHW (Planar) channel layout and BGR color order convention.
+        self.image_manip = pipeline.createImageManip()
+        self.image_manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
+        self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
+        self.image_manip.inputImage.setBlocking(False)
+        self.image_manip.inputImage.setQueueSize(2)
+        self._ar_resize_mode = ResizeMode.LETTERBOX  # Default
 
         if isinstance(self._input, CameraComponent):
             self._stream_input = self._input.stream
-            self._setup_resize_manip(pipeline).link(self.node.input)
+            self._stream_input.link(self.image_manip.inputImage)
+            # Link ImageManip output to NN node
+            self.image_manip.out.link(self.node.input)
+        elif isinstance(self._input, dai.Node.Output):
+            self._stream_input = self._input
+            self._stream_input.link(self.image_manip.inputImage)
+            # Link ImageManip output to NN node
+            self.image_manip.out.link(self.node.input)
         elif self._is_multi_stage():
-            # Calculate crop shape of the object detector
+            # Calculate crop shape of the object detector.
+            # TODO: in the future also support stretching and letterboxing resize modes
             frame_size = self._input._input.stream_size
             nn_size = self._input._size
             scale = frame_size[0] / nn_size[0], frame_size[1] / nn_size[1]
             i = 0 if scale[0] < scale[1] else 1
             crop = int(scale[i] * nn_size[0]), int(scale[i] * nn_size[1])
-            # Crop the high-resolution frames, so it matches object detection frame aspect ratio
 
-            self.image_manip = pipeline.createImageManip()
-            self.image_manip.setNumFramesPool(self._multi_stage_num_frame_pool)
-            self.image_manip_config = dai.ImageManipConfig()
-            self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
-
+            # Here, ImageManip will only crop the high-res frame to correct aspect ratio
+            # (without resizing!) and it also acts as a buffer (by default, its pool size is set to 20).
+            self.image_manip.setNumFramesPool(20)
             self._input._stream_input.link(self.image_manip.inputImage)
-            if self._input._is_detector() and self._decode_fn is None:
+
+            if self._input._is_detector():
                 self.image_manip.setResize(*crop)
                 self.image_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
 
@@ -164,8 +179,7 @@ class NNComponent(Component):
                                                     detection_node=self._input.node,
                                                     high_res_frames=self.image_manip.out,
                                                     size=self._size,
-                                                    num_frames_pool=self._multi_stage_num_frame_pool)
-                self._multi_stage_nn.configure(self._multi_stage_config)
+                                                    num_frames_pool=20)
                 self._multi_stage_nn.out.link(self.node.input)  # Cropped frames
 
                 # For debugging, for integral counter
@@ -190,9 +204,6 @@ class NNComponent(Component):
 
                 self.image_manip.out.link(self.node.input)
                 self.node.input.setQueueSize(20)
-        elif isinstance(self._input, dai.Node.Output):
-            self._stream_input = self._input
-            self._setup_resize_manip(pipeline).link(self.node.input)
         else:
             raise ValueError(
                 "'input' argument passed on init isn't supported!"
@@ -210,6 +221,11 @@ class NNComponent(Component):
         if self._args:
             if self._is_spatial():
                 self._config_spatials_args(self._args)
+
+    def forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
+        # TODO: remove this once 2.23 is released, and just reset the ImageManip.
+        self._change_resize_mode(self._ar_resize_mode)
+        return None
 
     def get_name(self):
         model = self._config.get('model', None)
@@ -334,21 +350,20 @@ class NNComponent(Component):
             if nn_family:
                 self._parse_node_type(nn_family)
 
-    def _blob_from_config(self, model: Dict, version: Optional[dai.OpenVINO.Version] = None) -> str:
+    def _blob_from_config(self, model: Dict, version: Union[None, str, dai.OpenVINO.Version] = None) -> str:
         """
         Gets the blob from the config file.
         """
-        version_str = None
-        if version is not None:
+        if isinstance(version, dai.OpenVINO.Version):
             vals = str(version).split('_')
-            version_str = f"{vals[1]}.{vals[2]}"
+            version = f"{vals[1]}.{vals[2]}"
 
         if 'model_name' in model:  # Use blobconverter to download the model
             zoo_type = model.get("zoo", 'intel')
             return blobconverter.from_zoo(model['model_name'],
                                           zoo_type=zoo_type,
                                           shaves=6,  # TODO: Calculate ideal shave amount
-                                          version=version_str
+                                          version=version
                                           )
 
         if 'xml' in model and 'bin' in model:
@@ -356,27 +371,10 @@ class NNComponent(Component):
                                                bin=model['bin'],
                                                data_type="FP16",  # Myriad X
                                                shaves=6,  # TODO: Calculate ideal shave amount
-                                               version=version_str
+                                               version=version
                                                )
 
         raise ValueError("Specified `model` values in json config files are incorrect!")
-
-    def _setup_resize_manip(self, pipeline: Optional[dai.Pipeline] = None) -> dai.Node.Output:
-        """
-        Creates ImageManip node that resizes the input to match the expected NN input size.
-        DepthAI uses CHW (Planar) channel layout and BGR color order convention.
-        """
-        if not self.image_manip:
-            self.image_manip = pipeline.create(dai.node.ImageManip)
-            self._stream_input.link(self.image_manip.inputImage)
-            self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
-            self.image_manip.initialConfig.setFrameType(dai.RawImgFrame.Type.BGR888p)
-            # Set to non-blocking
-            self.image_manip.inputImage.setBlocking(False)
-            self.image_manip.inputImage.setQueueSize(2)
-
-        self.image_manip.initialConfig.setResizeThumbnail(*self._size)
-        return self.image_manip.out
 
     def _change_resize_mode(self, mode: ResizeMode) -> None:
         """
@@ -387,15 +385,21 @@ class NNComponent(Component):
         """
         self._ar_resize_mode = mode
 
-        if self.image_manip:
-            if self._ar_resize_mode == ResizeMode.CROP:
-                # Cropping is already the default mode of the ImageManip node
-                self.image_manip.initialConfig.setResize(self._size)
-            elif self._ar_resize_mode == ResizeMode.LETTERBOX:
-                self.image_manip.initialConfig.setResizeThumbnail(*self._size)
-            elif self._ar_resize_mode == ResizeMode.STRETCH:
-                self.image_manip.initialConfig.setResize(self._size)
-                self.image_manip.setKeepAspectRatio(False)  # Not keeping aspect ratio -> stretching the image
+        # TODO: uncomment this when depthai 2.21.3 is released. In some cases (eg.
+        # setting first crop, then letterbox), the last config isn't used.
+        # self.image_manip.initialConfig.set(dai.RawImageManipConfig())
+
+        if self._ar_resize_mode == ResizeMode.CROP:
+            self.image_manip.initialConfig.setResize(self._size)
+            # With .setCenterCrop(1), ImageManip will first crop the frame to the correct aspect ratio,
+            # and then resize it to the NN input size
+            self.image_manip.initialConfig.setCenterCrop(1, self._size[0] / self._size[1])
+        elif self._ar_resize_mode == ResizeMode.LETTERBOX:
+            self.image_manip.initialConfig.setResizeThumbnail(*self._size)
+        elif self._ar_resize_mode == ResizeMode.STRETCH:
+            # Not keeping aspect ratio -> stretching the image
+            self.image_manip.initialConfig.setKeepAspectRatio(False)
+            self.image_manip.initialConfig.setResize(self._size)
 
     def config_multistage_nn(self,
                              debug=False,
@@ -417,8 +421,15 @@ class NNComponent(Component):
                             "This configuration attempt will be ignored.")
             return
 
-        self._multi_stage_num_frame_pool = num_frame_pool
-        self._multi_stage_config = MultiStageConfig(debug, labels, scale_bb)
+        if num_frame_pool is not None:
+            # This ImageManip crops the the saved frame based on the detection.
+            # Script node sends frame + config to it dynamically.
+            self._multi_stage_nn.manip.setNumFramesPool(num_frame_pool)
+            # This ImageManip crops the high-res frames and acts as a before
+            # prior to Script node (which saves these cropped frames in an array)
+            self.image_manip.setNumFramesPool(num_frame_pool)
+
+        self._multi_stage_nn.configure(debug, labels, scale_bb)
 
     def _parse_label(self, label: Union[str, int]) -> int:
         if isinstance(label, int):
@@ -537,15 +548,10 @@ class NNComponent(Component):
             resize_mode: (ResizeMode, optional): Change aspect ratio resizing mode - to either STRETCH, CROP, or LETTERBOX.
         """
         if resize_mode:
-            if isinstance(resize_mode, str):
-                try:
-                    resize_mode = ResizeMode[resize_mode.upper()]
-                except (AttributeError, KeyError):
-                    logging.warning('AR resize mode was not recognizied.'
-                                    'Options (case insensitive): STRETCH, CROP, LETTERBOX.'
-                                    'Using default LETTERBOX mode.')
+            self._ar_resize_mode = ResizeMode.parse(resize_mode)
+            # TODO: After 2.23 is released, uncomment this
+            # self._change_resize_mode(self._ar_resize_mode)
 
-            self._change_resize_mode(resize_mode)
         if conf_threshold is not None and self._is_detector():
             self.node.setConfidenceThreshold(conf_threshold)
 

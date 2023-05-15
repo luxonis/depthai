@@ -36,7 +36,6 @@ setup(
                     'depthai',
                     'PyTurboJPEG',
                     'marshmallow',
-                    'distinctipy',
                     'xmltodict',
                     ]
     },
