@@ -137,7 +137,7 @@ class RecordAction(Action):
                 self.buffers_status['ready']['after_t'].append(buffer_id)
 
     def setup(self, device: dai.Device, xouts: List['XoutFrames']):
-        self.stream_names = [xout.frames.name for xout in xouts]  # e.g., [color_video, color_bitstream]
+        self.stream_names = [xout.name for xout in xouts]  # e.g., [color_video, color_bitstream]
         logging.debug(f'RecordAction: stream_names = {self.stream_names}')
         self.recorder.update(self.path, device, xouts)
         self._run_thread()
