@@ -1,0 +1,11 @@
+{
+  "model": {
+    "blob": "/Users/daniilpastukhov/Documents/luxonis/depthai/depthai_sdk/src/depthai_sdk/nn_models/hand-landmark-lite/hand_landmark_lite_sh4.blob"
+  },
+  "nn_config": {
+    "output_format": "raw"
+  },
+  "handler": "handler.py",
+  "version": 1
+}
+
