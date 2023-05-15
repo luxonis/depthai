@@ -128,19 +128,25 @@ class Visualizer(VisualizerHelper):
 
     def add_trail(self,
                   tracklets: List[dai.Tracklet],
-                  label_map: List[Tuple[str, Tuple]]) -> 'Visualizer':
+                  label_map: List[Tuple[str, Tuple]],
+                  bbox: BoundingBox = None) -> 'Visualizer':
         """
         Add a trail to the visualizer.
 
         Args:
             tracklets: List of tracklets.
             label_map: List of tuples (label, color).
+            bbox: Bounding box.
 
         Returns:
             self
         """
+        if bbox is None:
+            bbox = BoundingBox()
+
         trail = VisTrail(tracklets=tracklets,
-                         label_map=label_map)
+                         label_map=label_map,
+                         bbox=bbox)
         self.add_object(trail)
         return self
 

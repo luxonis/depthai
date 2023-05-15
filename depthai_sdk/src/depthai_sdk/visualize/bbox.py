@@ -3,6 +3,27 @@ import numpy as np
 from depthai_sdk.classes.enum import ResizeMode
 import depthai as dai
 
+class Point:
+    """
+    Used within the BoundingBox class when dealing with points.
+    """
+    def __init__(self, x: float, y:float):
+        self.x = x
+        self.y = y
+
+    def __str__(self):
+        return f"({self.x}, {self.y})"
+
+    def to_tuple(self) -> Tuple[float, float]:
+        return (self.x, self.y)
+
+    def denormalize(self, frame_shape: Sequence) -> Tuple[int, int]:
+        """
+        Denormalize the point to pixel coordinates (0..frame width, 0..frame height)
+        """
+        return int(self.x * frame_shape[1]), int(self.y * frame_shape[0])
+
+
 class BoundingBox:
     """
     This class helps with bounding box calculations. It can be used to calculate relative bounding boxes,
@@ -51,7 +72,7 @@ class BoundingBox:
         ))
         return relative_bbox
 
-    def map_point(self, x: float, y: float) -> Tuple[float, float]:
+    def map_point(self, x: float, y: float) -> Point:
         """
         Useful when you have a point inside the bounding box, and you want to map it to the frame.
         Example: You run face detection, create BoundingBox from the result, and also run
@@ -67,22 +88,11 @@ class BoundingBox:
         mapped_x, mapped_y = self.xmin + self.width * x, self.ymin + self.height * y
         return mapped_x, mapped_y
 
-    def map_point_to_pixels(self, x: float, y: float, frame_shape: Sequence) -> Tuple[int, int]:
+    def get_centroid(self) -> Point:
         """
-        Useful when you have a point inside the bounding box, and you want to map it to the frame.
-        Example: You run face detection, create BoundingBox from the result, and also run
-        facial landmarks detection on the cropped frame of the face. The landmarks are relative
-        to the face bounding box, but you want to draw them on the original frame.
-
-        Args:
-            x: x coordinate of the point inside the bounding box (0..1)
-            y: y coordinate of the point inside the bounding box (0..1)
-            frame: frame to which the point should be mapped
-        Returns:
-            Point in pixel coordinates (0..frame width, 0..frame height)
+        Returns the centroid of the bounding box.
         """
-        mapped_x, mapped_y = self.map_point(x, y)
-        return int(mapped_x * frame_shape[1]), int(mapped_y * frame_shape[0])
+        return Point((self.xmin + self.xmax) / 2, (self.ymin + self.ymax) / 2)
 
     def map_to_frame(self, frame_shape: Sequence) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         """

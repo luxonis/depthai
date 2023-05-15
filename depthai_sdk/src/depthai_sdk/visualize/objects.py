@@ -563,7 +563,8 @@ class VisTrail(GenericObject):
 
     def __init__(self,
                  tracklets: List[dai.Tracklet],
-                 label_map: List[Tuple[str, Tuple]]):
+                 label_map: List[Tuple[str, Tuple]],
+                 bbox: BoundingBox):
         """
         Args:
             tracklets: List of tracklets.
@@ -573,6 +574,7 @@ class VisTrail(GenericObject):
 
         self.tracklets = tracklets
         self.label_map = label_map
+        self.bbox = bbox
 
     def serialize(self):
         parent = {
@@ -600,10 +602,11 @@ class VisTrail(GenericObject):
             tracklet_length = 0
             for i in reversed(range(len(tracklets) - 1)):
                 # Get current and next detections' centroids
-                d1 = tracklets[i].srcImgDetection
-                p1 = int(w * (d1.xmin + d1.xmax) // 2), int(h * (d1.ymin + d1.ymax) // 2)
-                d2 = tracklets[i + 1].srcImgDetection
-                p2 = int(w * (d2.xmin + d2.xmax) // 2), int(h * (d2.ymin + d2.ymax) // 2)
+                p1 = self.bbox.get_relative_bbox(BoundingBox(tracklets[i].srcImgDetection)) \
+                    .get_centroid().denormalize(self.frame_shape)
+                p2 = self.bbox.get_relative_bbox(BoundingBox(tracklets[i + 1].srcImgDetection)) \
+                    .get_centroid().denormalize(self.frame_shape)
+
                 if tracking_config.max_length != -1:
                     tracklet_length += np.linalg.norm(np.array(p1) - np.array(p2))
                     if tracklet_length > tracking_config.max_length:

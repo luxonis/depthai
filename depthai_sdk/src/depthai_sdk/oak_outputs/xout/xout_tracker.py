@@ -98,10 +98,10 @@ class XoutTracker(XoutNnResults):
         filtered_tracklets = [tracklet for tracklet in packet.daiTracklets.tracklets if
                               tracklet.id not in self.blacklist]
 
-        bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
+        norm_bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
 
         self._visualizer.add_detections(detections=filtered_tracklets,
-                                        normalizer=bbox,
+                                        normalizer=norm_bbox,
                                         label_map=self.labels,
                                         spatial_points=spatial_points)
 
@@ -132,7 +132,8 @@ class XoutTracker(XoutNnResults):
         # Add tracking lines
         self._visualizer.add_trail(
             tracklets=[t for p in self.buffer for t in p.daiTracklets.tracklets if t.id not in self.blacklist],
-            label_map=self.labels
+            label_map=self.labels,
+            bbox = norm_bbox,
         )
 
     def _update_lost_counter(self, packet, lost_threshold: int):
