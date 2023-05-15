@@ -146,6 +146,7 @@ class NNComponent(Component):
         self.image_manip.inputImage.setQueueSize(2)
 
         if isinstance(self._input, CameraComponent):
+            self._change_resize_mode(ResizeMode.LETTERBOX)
             self._stream_input = self._input.stream
             self._stream_input.link(self.image_manip.inputImage)
             # Link ImageManip output to NN node
