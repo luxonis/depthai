@@ -158,9 +158,11 @@ class BoundingBox:
         if isinstance(resize_mode, str):
             resize_mode = ResizeMode.parse(resize_mode)
         if isinstance(old_aspect_ratio, (Sequence, np.ndarray)):
+            # width / height. Here, we usually pass frame.shape, which is (height, width, channels)
             old_aspect_ratio = old_aspect_ratio[1] / old_aspect_ratio[0]
         if isinstance(new_aspect_ratio, (Sequence, np.ndarray)):
-            new_aspect_ratio = new_aspect_ratio[1] / new_aspect_ratio[0]
+            # width / height
+            new_aspect_ratio = new_aspect_ratio[0] / new_aspect_ratio[1]
 
         bb = BoundingBox((0, 0, 1, 1))
 

@@ -65,7 +65,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if det_nn._labels:
             self.labels = []
             n_colors = [isinstance(label, str) for label in det_nn._labels].count(True)
-            # np.array of (b,g,r), 0..1
+            # List of colors in BGR format
             colors = generate_colors(n_colors)
 
             for label in det_nn._labels:
@@ -99,8 +99,6 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if self._frame_shape is None:
             # Lazy-load the frame shape
             self._frame_shape = np.array([packet.frame.shape[0], packet.frame.shape[1]])
-
-        if self._visualizer:
             self._visualizer.frame_shape = self._frame_shape
 
         bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
