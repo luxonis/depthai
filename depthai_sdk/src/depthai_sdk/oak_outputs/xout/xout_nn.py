@@ -276,8 +276,12 @@ class XoutTwoStage(XoutNnResults):
         self.second_nn = second_nn
         self.name = 'Two-stage detection'
 
-        self.whitelist_labels: Optional[List[int]] = second_nn._multi_stage_nn.whitelist_labels
-        self.scale_bb: Optional[Tuple[int, int]] = second_nn._multi_stage_nn.scale_bb
+        if second_nn._multi_stage_nn:  # Can be None in case of host-side inference
+            self.whitelist_labels: Optional[List[int]] = second_nn._multi_stage_nn.whitelist_labels
+            self.scale_bb: Optional[Tuple[int, int]] = second_nn._multi_stage_nn.scale_bb
+        else:
+            self.whitelist_labels = None
+            self.scale_bb = None
 
         self.device = device
         self.input_queue_name = input_queue_name
