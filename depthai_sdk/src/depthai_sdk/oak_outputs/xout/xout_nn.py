@@ -116,7 +116,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
                 d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
 
-                d.top_left, d.bottom_right =  bbox.get_relative_bbox(BoundingBox(detection)).map_to_frame(self._frame_shape)
+                d.top_left, d.bottom_right =  bbox.get_relative_bbox(BoundingBox(detection)).denormalize(self._frame_shape)
                 packet.detections.append(d)
 
             if self._visualizer:

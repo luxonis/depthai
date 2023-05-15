@@ -43,12 +43,12 @@ def test_roi():
     roi_2 = og_roi.get_relative_bbox(BoundingBox((0.1, 0.1, 0.8, 0.8)))
     # With pytest check whether it's correct
     assert roi_2.to_tuple() == (0.1, 0.1, 0.8, 0.8)
-    show_result(frame, 'roi2', *roi_2.map_to_frame(frame.shape))
+    show_result(frame, 'roi2', *roi_2.denormalize(frame.shape))
 
     roi_inside_roi = roi_2.get_relative_bbox(BoundingBox((0.05, 0, 0.3, 0.9)))
     assert roi_inside_roi.to_tuple() == pytest.approx((0.135, 0.1, 0.31, 0.73))
 
-    show_result(frame, 'roi_inside_roi', *roi_inside_roi.map_to_frame(frame.shape), color=(255,127,0))
+    show_result(frame, 'roi_inside_roi', *roi_inside_roi.denormalize(frame.shape), color=(255,127,0))
 
     roi_3 = og_roi.get_relative_bbox(BoundingBox((0.0, 0.0, 0.3, 0.3)))
     assert roi_3.to_tuple() == (0.0, 0.0, 0.3, 0.3)

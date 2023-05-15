@@ -280,8 +280,7 @@ def draw_detections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPa
         img_detections = [det for det in packet.img_detections.detections]
 
     for detection in img_detections:
-        tl,br = norm.get_relative_bbox(BoundingBox(detection)).map_to_frame(packet.frame.shape)
-        bbox = [*tl, *br]
+        bbox = norm.get_relative_bbox(BoundingBox(detection)).to_tuple(packet.frame.shape)
 
         if label_map:
             txt, color = label_map[detection.label]

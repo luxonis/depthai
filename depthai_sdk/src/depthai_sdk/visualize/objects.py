@@ -337,7 +337,7 @@ class VisDetections(GenericObject):
             self.frame_shape = frame.shape
 
         for bbox, _, color in self.get_detections():
-            tl, br = bbox.map_to_frame(frame.shape)
+            tl, br = bbox.denormalize(frame.shape)
             # Draw bounding box
             self.draw_stylized_bbox(
                 img=frame,
@@ -459,7 +459,7 @@ class VisText(GenericObject):
         # Extract shape of the bbox if exists
         if self.bbox is not None:
             # shape = self.bbox[2] - self.bbox[0], self.bbox[3] - self.bbox[1]
-            tl, br = self.bbox.map_to_frame(frame.shape)
+            tl, br = self.bbox.denormalize(frame.shape)
             shape = br[0] - tl[0], br[1] - tl[1]
         else:
             shape = frame.shape[:2]
@@ -512,7 +512,7 @@ class VisText(GenericObject):
             bbox = BoundingBox()
         text_config = self.config.text
 
-        tl, br = bbox.map_to_frame(self.frame_shape)
+        tl, br = bbox.denormalize(self.frame_shape)
         shape = br[0] - tl[0], br[1] - tl[1]
 
         bbox_arr = bbox.to_tuple(self.frame_shape)

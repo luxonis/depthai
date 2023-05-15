@@ -47,7 +47,7 @@ class BoundingBox:
         If frame_shape is passed, then it will return the coordinates in pixels (0..frame width, 0..frame height).
         """
         if frame_shape is not None:
-            tl, br = self.map_to_frame(frame_shape)
+            tl, br = self.denormalize(frame_shape)
             return *tl, *br
         return self.xmin, self.ymin, self.xmax, self.ymax
 
@@ -86,7 +86,7 @@ class BoundingBox:
             Point in absolute coordinates (0..1)
         """
         mapped_x, mapped_y = self.xmin + self.width * x, self.ymin + self.height * y
-        return mapped_x, mapped_y
+        return Point(mapped_x, mapped_y)
 
     def get_centroid(self) -> Point:
         """
@@ -94,15 +94,16 @@ class BoundingBox:
         """
         return Point((self.xmin + self.xmax) / 2, (self.ymin + self.ymax) / 2)
 
-    def map_to_frame(self, frame_shape: Sequence) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    def denormalize(self, frame_shape: Sequence) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         """
-        Map the current bounding box to the frame. Useful when you want to draw the bounding box on the frame.
+        Denormalize the bounding box to pixel coordinates (0..frame width, 0..frame height).
+        Useful when you want to draw the bounding box on the frame.
 
         Args:
-            frame: frame to which the bounding box should be mapped
+            frame_shape: Shape of the frame (height, width)
 
         Returns:
-            Tuple of two points (top-left, bottom-right) in pixel coordinates (0..frame width, 0..frame height)
+            Tuple of two points (top-left, bottom-right) in pixel coordinates
         """
         return (
             (int(frame_shape[1] * self.xmin), int(frame_shape[0] * self.ymin)),
@@ -131,7 +132,7 @@ class BoundingBox:
         """
         Crops the frame to the bounding box coordinates.
         """
-        (top, left), (bottom, right) = self.map_to_frame(frame.shape)
+        (top, left), (bottom, right) = self.denormalize(frame.shape)
         return frame[left:right, top:bottom]
 
     def resize_to_aspect_ratio(self,
