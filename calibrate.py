@@ -171,7 +171,7 @@ def parse_args():
                         help="Set antibanding/antiflicker algo for lights that flicker at mains frequency. Default: %(default)s [Hz]")
     parser.add_argument('-scp', '--saveCalibPath', type=str, default="",
                         help="Save calibration file to this path")
-    parser.add_argument('-dst', '--datasetPath', type=str, default="",
+    parser.add_argument('-dst', '--datasetPath', type=str, default="dataset",
                         help="Path to dataset used for processing images")
     parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.5,
                         help="Minimum percentage of detected markers to consider a frame valid")
@@ -628,7 +628,7 @@ class Main:
         curr_time = None
 
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue), 10)
+        syncCollector = MessageSync(len(self.camera_queue), 0.003) # 3ms tolerance
         self.mouseTrigger = False
         while not finished:
             currImageList = {}
@@ -639,7 +639,7 @@ class Main:
 
                 syncCollector.add_msg(key, frameMsg)
                 gray_frame = None
-                if frameMsg.getType() == dai.RawImgFrame.Type.RAW8:
+                if frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8] :
                     gray_frame = frameMsg.getCvFrame()
                 else:
                     gray_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
@@ -725,6 +725,13 @@ class Main:
                 #     "Polygon Position: {}. Captured {} of {} {} images".format(
                 #         self.current_polygon + 1, self.images_captured, self.total_images, name),
                 #     (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0))
+
+
+                height, width = imgFrame.shape
+                # TO-DO: fix the rooquick and dirty fix: if the resized image is higher than the target resolution, crop it
+                if height > resizeHeight:
+                    height_offset = (height - resizeHeight)//2
+                    imgFrame = imgFrame[height_offset:height_offset+resizeHeight, :]
 
                 height, width = imgFrame.shape
                 height_offset = (resizeHeight - height)//2
