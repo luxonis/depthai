@@ -144,6 +144,7 @@ class NNComponent(Component):
         self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
         self.image_manip.inputImage.setBlocking(False)
         self.image_manip.inputImage.setQueueSize(2)
+        self._ar_resize_mode = ResizeMode.LETTERBOX  # Default
 
         if isinstance(self._input, CameraComponent):
             self._stream_input = self._input.stream
@@ -220,6 +221,11 @@ class NNComponent(Component):
         if self._args:
             if self._is_spatial():
                 self._config_spatials_args(self._args)
+
+    def forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
+        # TODO: remove this once 2.23 is released, and just reset the ImageManip.
+        self._change_resize_mode(self._ar_resize_mode)
+        return None
 
     def get_name(self):
         model = self._config.get('model', None)
@@ -387,7 +393,7 @@ class NNComponent(Component):
             self.image_manip.initialConfig.setResize(self._size)
             # With .setCenterCrop(1), ImageManip will first crop the frame to the correct aspect ratio,
             # and then resize it to the NN input size
-            self.image_manip.initialConfig.setCenterCrop(1)
+            self.image_manip.initialConfig.setCenterCrop(1, self._size[0] / self._size[1])
         elif self._ar_resize_mode == ResizeMode.LETTERBOX:
             self.image_manip.initialConfig.setResizeThumbnail(*self._size)
         elif self._ar_resize_mode == ResizeMode.STRETCH:
@@ -542,8 +548,9 @@ class NNComponent(Component):
             resize_mode: (ResizeMode, optional): Change aspect ratio resizing mode - to either STRETCH, CROP, or LETTERBOX.
         """
         if resize_mode:
-            resize_mode = ResizeMode.parse(resize_mode)
-            self._change_resize_mode(resize_mode)
+            self._ar_resize_mode = ResizeMode.parse(resize_mode)
+            # TODO: After 2.23 is released, uncomment this
+            # self._change_resize_mode(self._ar_resize_mode)
 
         if conf_threshold is not None and self._is_detector():
             self.node.setConfidenceThreshold(conf_threshold)
