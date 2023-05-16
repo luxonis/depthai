@@ -8,24 +8,13 @@ import depthai as dai
 from depthai_sdk.types import GenericNeuralNetwork
 
 
-class MultiStageConfig:
-    def __init__(self,
-                 debug: bool,
-                 labels: Optional[List[int]] = None,
-                 scale_bb: Optional[Tuple[int, int]] = None):
-        self.debug = debug
-        self.labels = labels
-        self.scale_bb = scale_bb
-
-
 class MultiStageNN:
     def __init__(self,
                  pipeline: dai.Pipeline,
                  detection_node: GenericNeuralNetwork,  # Object detection node
                  high_res_frames: dai.Node.Output,
                  size: Tuple[int, int],
-                 debug=False,
-                 num_frames_pool: int = 20
+                 num_frames_pool: int = 20,
                  ) -> None:
         """
         Args:
@@ -43,7 +32,7 @@ class MultiStageNN:
         detection_node.out.link(self.script.inputs['detections'])
         high_res_frames.link(self.script.inputs['frames'])
 
-        self.configure(MultiStageConfig(debug))
+        self.configure() # User might later call this again with different parameters
 
         self.manip: dai.node.ImageManip = pipeline.create(dai.node.ImageManip)
         self.manip.initialConfig.setResize(size)
@@ -54,24 +43,28 @@ class MultiStageNN:
         self.script.outputs['manip_img'].link(self.manip.inputImage)
         self.out: dai.Node.Output = self.manip.out
 
-    def configure(self, config: MultiStageConfig = None) -> None:
+    def configure(self,
+                  debug: bool = False,
+                  whitelist_labels: Optional[List[int]] = None,
+                  scale_bb: Optional[Tuple[int, int]] = None) -> None:
         """
         Args:
             config (MultiStageConfig, optional): Configuration object. Defaults to None.
         """
-        if config is None:
-            return
+        # Used later for visualization
+        self.whitelist_labels = whitelist_labels
+        self.scale_bb = scale_bb
 
         with open(Path(os.path.dirname(__file__)) / 'template_multi_stage_script.py', 'r') as file:
             code = Template(file.read()).substitute(
-                DEBUG='' if config.debug else '#',
-                CHECK_LABELS=f"if det.label not in {str(config.labels)}: continue" if config.labels else "",
+                DEBUG='' if debug else '#',
+                CHECK_LABELS=f"if det.label not in {str(whitelist_labels)}: continue" if whitelist_labels else "",
                 WIDTH=str(self._size[0]),
                 HEIGHT=str(self._size[1]),
-                SCALE_BB_XMIN=f"-{config.scale_bb[0] / 100}" if config.scale_bb else "",  # % to float value
-                SCALE_BB_YMIN=f"-{config.scale_bb[1] / 100}" if config.scale_bb else "",
-                SCALE_BB_XMAX=f"+{config.scale_bb[0] / 100}" if config.scale_bb else "",
-                SCALE_BB_YMAX=f"+{config.scale_bb[1] / 100}" if config.scale_bb else "",
+                SCALE_BB_XMIN=f"-{scale_bb[0] / 100}" if scale_bb else "",  # % to float value
+                SCALE_BB_YMIN=f"-{scale_bb[1] / 100}" if scale_bb else "",
+                SCALE_BB_XMAX=f"+{scale_bb[0] / 100}" if scale_bb else "",
+                SCALE_BB_YMAX=f"+{scale_bb[1] / 100}" if scale_bb else "",
             )
             self.script.setScript(code)
             # print(f"\n------------{code}\n---------------")

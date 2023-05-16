@@ -88,4 +88,4 @@ class McapRecorder(Recorder, RosBase):
         self._closed = True
         self.ros_writer.finish()
         self.stream.close()
-        logging.info(".MCAP recording saved at", self.path)
+        logging.info(f'.MCAP recording saved at {self.path}')

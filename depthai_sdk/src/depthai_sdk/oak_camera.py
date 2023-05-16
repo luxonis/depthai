@@ -14,8 +14,9 @@ except ImportError:
 
 import depthai as dai
 
+from depthai_sdk.trigger_action.actions.abstract_action import Action
 from depthai_sdk.args_parser import ArgsParser
-from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig, RosStreamConfig
+from depthai_sdk.classes.output_config import BaseConfig, RecordConfig, OutputConfig, SyncConfig, RosStreamConfig, TriggerActionConfig
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
@@ -25,6 +26,7 @@ from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
+from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.utils import configPipeline
 
 
@@ -47,6 +49,7 @@ class OakCamera:
                  usb_speed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
                  replay: Optional[str] = None,
                  rotation: int = 0,
+                 config: dai.Device.Config = None,
                  args: Union[bool, Dict] = True
                  ):
         """
@@ -80,7 +83,14 @@ class OakCamera:
             else:  # Already parsed
                 self._args = args
 
-        self._init_device(device, parse_usb_speed(usb_speed))
+        if config is None:
+            config = dai.Device.Config()
+            config.version = dai.OpenVINO.VERSION_UNIVERSAL
+            max_speed = parse_usb_speed(usb_speed)
+            if max_speed is not None:
+                config.board.usb.maxSpeed = max_speed
+
+        self._init_device(config, device)
 
         # Whether to stop running the OAK camera. Used by oak.running()
         self._stop = False
@@ -95,7 +105,7 @@ class OakCamera:
         if replay is not None:
             self.replay = Replay(replay)
             self.replay.initPipeline(self.pipeline)
-            logging.info('Available streams from recording:', self.replay.getStreams())
+            logging.info(f'Available streams from recording: {self.replay.getStreams()}')
 
     def create_camera(self,
                       source: Union[str, dai.CameraBoardSocket],
@@ -240,7 +250,10 @@ class OakCamera:
         self._components.append(comp)
         return comp
 
-    def _init_device(self, device_str: Optional[str] = None, usb_speed: Optional[dai.UsbSpeed] = None) -> None:
+    def _init_device(self,
+                     config: dai.Device.Config,
+                     device_str: Optional[str] = None,
+                     ) -> None:
         """
         Connect to the OAK camera
         """
@@ -251,24 +264,16 @@ class OakCamera:
             if not found:
                 raise Exception("No OAK device found to connect to!")
 
-        if usb_speed == dai.UsbSpeed.SUPER:
-            self._oak.device = dai.Device(
-                version=dai.OpenVINO.VERSION_UNIVERSAL,
-                deviceInfo=device_info,
-                usb2Mode=True
-            )
-        else:
-            self._oak.device = dai.Device(
-                version=dai.OpenVINO.VERSION_UNIVERSAL,
-                deviceInfo=device_info,
-                maxUsbSpeed=usb_speed or dai.UsbSpeed.SUPER
-            )
+        self._oak.device = dai.Device(
+            config=config,
+            deviceInfo=device_info,
+        )
 
         # TODO test with usb3 (SUPER speed)
-        if usb_speed != dai.UsbSpeed.HIGH and self._oak.device.getUsbSpeed() == dai.UsbSpeed.HIGH:
+        if config.board.usb.maxSpeed != dai.UsbSpeed.HIGH and self._oak.device.getUsbSpeed() == dai.UsbSpeed.HIGH:
             warnings.warn("Device connected in USB2 mode! This might cause some issues. "
                           "In such case, please try using a (different) USB3 cable, "
-                          "or force USB2 mode 'with OakCamera(usbSpeed=depthai.UsbSpeed.HIGH)'", UsbWarning)
+                          "or force USB2 mode 'with OakCamera(usbSpeed='usb2') as oak:'", UsbWarning)
 
     def config_pipeline(self,
                         xlink_chunk: Optional[int] = None,
@@ -299,6 +304,7 @@ class OakCamera:
         for out in self._out_templates:
             if isinstance(out, RecordConfig):
                 out.rec.close()
+        self._oak.close()
 
     def start(self, blocking=False):
         """
@@ -326,6 +332,11 @@ class OakCamera:
 
         self._oak.init_callbacks(self.pipeline)
 
+        # Call on_pipeline_started() for each component
+        for comp in self._components:
+            comp.on_pipeline_started(self._oak.device)
+
+        # Start FPS counters
         for xout in self._oak.oak_out_streams:  # Start FPS counters
             xout.start_fps()
 
@@ -500,7 +511,9 @@ class OakCamera:
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
         if record_path and isinstance(output, List):
-            raise ValueError('Recording visualizer is only supported for a single output.')
+            if len(output) > 1:
+                raise ValueError('Recording visualizer is only supported for a single output.')
+            output = output[0]
 
         visualizer = Visualizer(scale, fps)
         return self._callback(output, callback, visualizer, record_path)
@@ -539,6 +552,9 @@ class OakCamera:
 
     def ros_stream(self, output: Union[List, Callable, Component]):
         self._out_templates.append(RosStreamConfig(self._get_component_outputs(output)))
+
+    def trigger_action(self, trigger: Trigger, action: Union[Action, Callable]):
+        self._out_templates.append(TriggerActionConfig(trigger, action))
 
     def set_max_queue_size(self, size: int):
         """
