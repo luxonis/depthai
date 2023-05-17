@@ -16,12 +16,13 @@ their initialization, configuration, and linking. This improves ease of use when
 .. autoclass:: depthai_sdk.components.Component
     :members:
     :undoc-members:
+    :noindex:
 
 .. toctree::
    :maxdepth: 1
    :hidden:
    :glob:
-   :caption: Components:
+   :caption: Components
 
    ../components/*
 

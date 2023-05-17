@@ -1,39 +1,34 @@
 Visualizer
 ==========
 
-Visualizer helps user to visualize the output of AI models in a more intuitive and customizable way.
+DepthAI SDK visualizer serves as a tool to visualize the output of the DepthAI pipeline.
+
+It can be used to visualize the output of the camera, neural network, depth and disparity map, the rectified streams, the spatial location of the detected objects, and more.
 
 Getting Started
 ###############
 
-:func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is created upon calling
-:func:`oak.visualize <depthai_sdk.OakCamera.visualize>`, which returns :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` instance.
-Once it is created, the visualizer configs can be modified using :func:`output <depthai_sdk.visualize.visualizer.Visualizer.output>`,
-:func:`stereo <depthai_sdk.visualize.visualizer.Visualizer.stereo>`,
-:func:`text <depthai_sdk.visualize.visualizer.Visualizer.text>`,
-:func:`detections <depthai_sdk.visualize.visualizer.Visualizer.detections>`,
-:func:`tracking <depthai_sdk.visualize.visualizer.Visualizer.tracking>` methods.
+:class:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is created upon calling
+:meth:`OakCamera.visualize() <depthai_sdk.OakCamera.visualize>`, which returns :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` instance.
+Once it is created, the visualizer configs can be modified using :meth:`output() <depthai_sdk.visualize.visualizer.Visualizer.output>`,
+:meth:`stereo() <depthai_sdk.visualize.visualizer.Visualizer.stereo>`,
+:meth:`text() <depthai_sdk.visualize.visualizer.Visualizer.text>`,
+:meth:`detections() <depthai_sdk.visualize.visualizer.Visualizer.detections>`,
+:meth:`tracking() <depthai_sdk.visualize.visualizer.Visualizer.tracking>` methods.
 
-Example how :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` can be created:
+Example how :class:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` can be created:
 
 .. code-block:: python
 
+    from depthai_sdk import OakCamera
+
     with OakCamera() as oak:
-        cam = oak.create_camera(...)
+        cam = oak.create_camera('color')
         visualizer = oak.visualize(cam.out.main)
+        oak.start(blocking=True)
 
 :func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is primarily used alongside with :ref:`Packets`
-in ``oak_outputs.xout`` module.
-
-
-Flow
-####
-
-The flow of the :class:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` is as follows:
-
-1. Once the stream produces the output, corresponding ``Packet`` is sent to the ``Xout`` class.
-2. The ``Xout`` calls ``visualize`` function and parses ``Packet`` and add the required objects to the visualizer.
-3. After objects are added, ``Xout`` calls :func:`draw <depthai_sdk.visualize.visualizer.Visualizer.draw>` method, that draws objects on the frame.
+in :mod:`depthai_sdk.oak_outputs` module.
 
 Configs
 #######
@@ -48,16 +43,16 @@ and :class:`TrackingConfig <depthai_sdk.visualize.configs.TrackingConfig>`.
 Each config's type has its own set of parameters, which effects how the corresponding object will be visualized.
 
 There are the following methods for modifying the default configuration:
-:func:`output <depthai_sdk.visualize.visualizer.Visualizer.output>`,
-:func:`stereo <depthai_sdk.visualize.visualizer.Visualizer.stereo>`,
-:func:`text <depthai_sdk.visualize.visualizer.Visualizer.text>`,
-:func:`detections <depthai_sdk.visualize.visualizer.Visualizer.detections>`,
-:func:`tracking <depthai_sdk.visualize.visualizer.Visualizer.tracking>`.
+:meth:`output() <depthai_sdk.visualize.visualizer.Visualizer.output>`,
+:meth:`stereo() <depthai_sdk.visualize.visualizer.Visualizer.stereo>`,
+:meth:`text() <depthai_sdk.visualize.visualizer.Visualizer.text>`,
+:meth:`detections() <depthai_sdk.visualize.visualizer.Visualizer.detections>`,
+:meth:`tracking() <depthai_sdk.visualize.visualizer.Visualizer.tracking>`.
 The arguments should be passed as key-value arguments with the same signature as the corresponding config,
-e.g., ``text(font_size=2, font_color=(255,123,200))``.
+e.g., :meth:`Visualizer.text(font_size=2, font_color=(255,123,200)) <depthai_sdk.visualize.visualizer.Visualizer.text>`.
 
 The modified configuration will be applied to every created objects. The methods support
-fluent interface and can be chained, e.g., ``visualizer.text(font_size=2).detections(color=(255, 0, 0))``.
+fluent interface and can be chained, e.g., :meth:`Visualizer.text(font_size=2).detections(color=(255, 0, 0)) <depthai_sdk.visualize.visualizer.Visualizer.text>`.
 
 Example how to configure the visualizer:
 
@@ -74,9 +69,9 @@ Example how to configure the visualizer:
 Objects
 #######
 
-:func:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` operates with objects. Objects can be seen as a hierarchical structure.
+:class:`Visualizer <depthai_sdk.visualize.visualizer.Visualizer>` operates with objects. Objects can be seen as a hierarchical structure.
 The root object is ``self``, and the children are the list of the created objects.
-:func:`add_child <depthai_sdk.visualize.objects.GenericObject.add_child>` should be used to add the object to the children list.
+:meth:`add_child <depthai_sdk.visualize.objects.GenericObject.add_child>` should be used to add the object to the children list.
 The parent object shares the config and frame shape with all children.
 
 All objects must be derived from :class:`GenericObject <depthai_sdk.visualize.objects.GenericObject>`.
@@ -91,21 +86,21 @@ Implemented objects:
 
 Objects can be added to the visualizer using the following methods:
 
-* :func:`add_text <depthai_sdk.visualize.visualizer.Visualizer.add_text>`,
-* :func:`add_detections <depthai_sdk.visualize.visualizer.Visualizer.add_detections>`,
-* :func:`add_trail <depthai_sdk.visualize.visualizer.Visualizer.add_trail>`,
-* :func:`add_circle <depthai_sdk.visualize.visualizer.Visualizer.add_circle>`,
-* :func:`add_line <depthai_sdk.visualize.visualizer.Visualizer.add_line>`.
+* :meth:`add_text() <depthai_sdk.visualize.visualizer.Visualizer.add_text>`,
+* :meth:`add_detections() <depthai_sdk.visualize.visualizer.Visualizer.add_detections>`,
+* :meth:`add_trail() <depthai_sdk.visualize.visualizer.Visualizer.add_trail>`,
+* :meth:`add_circle() <depthai_sdk.visualize.visualizer.Visualizer.add_circle>`,
+* :meth:`add_line() <depthai_sdk.visualize.visualizer.Visualizer.add_line>`.
 
 Create your own object
 ######################
 
 If the provided functionality is not enough, you can create your own object. To do so, you need to create a class
 derived from :class:`GenericObject <depthai_sdk.visualize.objects.GenericObject>` and implement the
-:func:`prepare <depthai_sdk.visualize.objects.GenericObject.prepare>`,
-:func:`serialize <depthai_sdk.visualize.objects.GenericObject.serialize>`,
-and :func:`draw <depthai_sdk.visualize.objects.GenericObject.draw>` methods.
-The :func:`draw <depthai_sdk.visualize.objects.GenericObject.draw>` method should draw the object on the passed ``frame`` argument.
+:meth:`prepare <depthai_sdk.visualize.objects.GenericObject.prepare>`,
+:meth:`serialize <depthai_sdk.visualize.objects.GenericObject.serialize>`,
+and :meth:`draw <depthai_sdk.visualize.objects.GenericObject.draw>` methods.
+The :meth:`draw <depthai_sdk.visualize.objects.GenericObject.draw>` method should draw the object on the passed ``frame`` argument.
 
 .. code-block:: python
 
@@ -130,7 +125,7 @@ The :func:`draw <depthai_sdk.visualize.objects.GenericObject.draw>` method shoul
 Example usage
 #############
 
-The following script will visualize the output of face detection model.
+The following script will visualize the output of face detection model:
 
 .. code-block:: python
 
@@ -156,6 +151,44 @@ The following script will visualize the output of face detection model.
         )
 
         oak.start(blocking=True)
+
+Serialization
+#############
+The visualizer provides a way to serialize the output objects to JSON, which can be used for further processing.
+
+JSON schemas
+++++++++++++
+
+General config
+~~~~~~~~~~~~~~
+
+.. literalinclude:: ../visualizer_formats/format.json
+   :language: json
+
+Objects
+~~~~~~~
+
+- Detection:
+
+.. literalinclude:: ../visualizer_formats/detection_format.json
+   :language: json
+
+- Text:
+
+.. literalinclude:: ../visualizer_formats/text_format.json
+   :language: json
+
+- Line:
+
+.. literalinclude:: ../visualizer_formats/line_format.json
+   :language: json
+
+Example JSON output
+~~~~~~~~~~~~~~~~~~~
+
+.. literalinclude:: ../visualizer_formats/example.json
+   :language: json
+
 
 References
 ##########
