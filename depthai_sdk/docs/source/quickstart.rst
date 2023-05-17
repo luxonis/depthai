@@ -15,8 +15,8 @@ Working with camera
 The :class:`OakCamera <depthai_sdk.OakCamera>` class is a fundamental part of the DepthAI SDK, providing a high-level interface for accessing the features of the OAK device.
 This class simplifies the creation of pipelines that capture video from the OAK camera, run neural networks on the video stream, and visualize the results.
 
-With :class:`OakCamera <depthai_sdk.OakCamera>`, you can easily create color and depth streams using the :meth:`OakCamera.create_camera() <depthai_sdk.OakCamera.create_camera>` and :meth:`OakCamera.create_stereo() <depthai_sdk.OakCamera.create_stereo>` methods respectively, and add pre-trained neural networks using the :meth:`OakCamera.create_nn() <depthai_sdk.OakCamera.create_nn>` method.
-Additionally, you can add custom callbacks to the pipeline using the :meth:`OakCamera.callback() <depthai_sdk.OakCamera.callback>` method and record the outputs using the :meth:`OakCamera.record() <depthai_sdk.OakCamera.record>` method.
+With :class:`OakCamera <depthai_sdk.OakCamera>`, you can easily create color and depth streams using the :meth:`create_camera() <depthai_sdk.OakCamera.create_camera>` and :meth:`create_stereo() <depthai_sdk.OakCamera.create_stereo>` methods respectively, and add pre-trained neural networks using the :meth:`create_nn() <depthai_sdk.OakCamera.create_nn>` method.
+Additionally, you can add custom callbacks to the pipeline using the :meth:`callback() <depthai_sdk.OakCamera.callback>` method and record the outputs using the :meth:`record() <depthai_sdk.OakCamera.record>` method.
 
 Creating color and depth streams
 ---------------------
