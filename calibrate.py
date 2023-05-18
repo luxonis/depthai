@@ -418,6 +418,11 @@ class Main:
         
         if self.args.cameraMode != "perspective": 
             self.args.minDetectedMarkersPercent = 1
+        
+        self.coverageImages ={} 
+        for cam_id in self.board_config['cameras']:
+            name = self.board_config['cameras'][cam_id]['name']
+            self.coverageImages[name] = None
 
         self.device = dai.Device()
         cameraProperties = self.device.getConnectedCameraFeatures()
@@ -431,7 +436,12 @@ class Main:
                     # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
                     break
 
-        
+        self.charuco_board = cv2.aruco.CharucoBoard_create(
+                self.args.squaresX, self.args.squaresY,
+                self.args.squareSizeCm,
+                self.args.markerSizeCm,
+                self.aruco_dictionary)
+            
         
 
         """ cameraProperties = self.device.getConnectedCameraProperties()
@@ -468,6 +478,14 @@ class Main:
         else:
             num_all_markers = self.args.numMarkers
         return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
+
+    def draw_corners(self, frame, displayframe):
+        marker_corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, self.aruco_dictionary)
+        marker_corners, ids, refusd, recoverd = cv2.aruco.refineDetectedMarkers(frame, self.charuco_board,
+                                                                                marker_corners, ids, 
+                                                                                rejectedCorners=rejectedImgPoints)
+        ret, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, ids, frame, self.charuco_board)
+        cv2.aruco.drawDetectedCornersCharuco(displayframe, charuco_corners)
 
     def test_camera_orientation(self, frame_l, frame_r):
         marker_corners_l, id_l, _ = cv2.aruco.detectMarkers(
@@ -686,6 +704,7 @@ class Main:
             # print(f'Scale Shape  is {resizeWidth}x{resizeHeight}' )
             
             combinedImage = None
+            combinedCoverageImage = None
             for name, imgFrame in currImageList.items():
                 height, width = imgFrame.shape
                 if width > resizeWidth and height > resizeHeight:
@@ -745,6 +764,14 @@ class Main:
                 height_offset = (resizeHeight - height)//2
                 width_offset = (resizeWidth - width)//2
                 subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset,width_offset)), 'constant', constant_values=0)
+                if self.coverageImages[name] is not None:
+                    subCoverageImage = np.pad(self.coverageImages[name], ((height_offset, height_offset), (width_offset,width_offset)), 'constant', constant_values=0)
+                    if combinedCoverageImage is None:
+                        combinedCoverageImage = subCoverageImage
+                    else:
+                        combinedCoverageImage = np.hstack((combinedCoverageImage, subImage))
+
+
                 if combinedImage is None:
                     combinedImage = subImage
                 else:
@@ -780,6 +807,9 @@ class Main:
                 cv2.setMouseCallback(self.display_name, self.mouse_event_callback)
 
             cv2.imshow(self.display_name, combinedImage)
+            if combinedCoverageImage is not None:
+                cv2.imshow("Coverage-Image", combinedImage)
+
             tried = {}
             allPassed = True
 
@@ -788,13 +818,19 @@ class Main:
                 if syncedMsgs == False or syncedMsgs == None:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
-                    continue 
+                    continue
                 for name, frameMsg in syncedMsgs.items():
                     print(f"Time stamp of {name} is {frameMsg.getTimestamp()}")
+                    if self.coverageImages[name] is None:
+                        self.coverageImages[name] = np.ones(frameMsg.getCvFrame().shape, np.uint8) * 255
+
                     tried[name] = self.parse_frame(frameMsg.getCvFrame(), name)
                     allPassed = allPassed and tried[name]
                 
                 if allPassed:
+                    for name, frameMsg in syncedMsgs.items():
+                        self.draw_corners(frameMsg.getCvFrame(), self.coverageImages[name])
+
                     if not self.images_captured:
                         leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
                         rightStereo = self.board_config['cameras'][self.board_config['stereo_config']['right_cam']]['name']
