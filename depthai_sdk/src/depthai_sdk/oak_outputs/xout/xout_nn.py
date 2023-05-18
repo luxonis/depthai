@@ -99,7 +99,8 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if self._frame_shape is None:
             # Lazy-load the frame shape
             self._frame_shape = np.array([packet.frame.shape[0], packet.frame.shape[1]])
-            self._visualizer.frame_shape = self._frame_shape
+            if self._visualizer:
+                self._visualizer.frame_shape = self._frame_shape
 
         bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
 
