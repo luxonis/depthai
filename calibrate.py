@@ -85,6 +85,7 @@ camToMonoRes = {
 
 camToRgbRes = {
                 'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+                'S5K33D' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'OV9*82' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'OV9282' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
@@ -420,7 +421,7 @@ class Main:
 
                 xout.setStreamName(cam_info['name'])
                 cam_node.out.link(xout.input)
-            else:
+            elif cam_info['type'] == 'color':
                 cam_node = pipeline.createColorCamera()
                 xout = pipeline.createXLinkOut()
 
@@ -429,8 +430,9 @@ class Main:
                 cam_node.setFps(fps)
 
                 # If AR0234 bring down resolution to 800p
-                if cam_info['sensorName'] == 'AR0234':
-                    cam_node.setIspScale(2,3)
+                #if cam_info['sensorName'] == 'AR0234':
+                #    cam_node.setIspScale(640, 1920, 480, 1200)
+                #    cam_node.setIspScale(2, 3)
 
                 xout.setStreamName(cam_info['name'])
                 # xout.input.setBlocking(False)
@@ -448,6 +450,26 @@ class Main:
                     controlIn = pipeline.createXLinkIn()
                     controlIn.setStreamName(cam_info['name'] + '-control')
                     controlIn.out.link(cam_node.inputControl)
+            elif cam_info['type'] == 'tof':
+                cam_node = pipeline.createColorCamera()
+                tof_node = pipeline.create(dai.node.ToF)
+                xout = pipeline.createXLinkOut()
+
+                print("Camera type ToF")
+                cam_node.setBoardSocket(stringToCam[cam_id])
+                cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
+                cam_node.setFps(fps)
+
+                xout.setStreamName(cam_info['name'])
+                # xout.input.setBlocking(False)
+                # xout.input.setQueueSize(4)
+
+                cam_node.raw.link(tof_node.input)
+                tof_node.amplitude.link(xout.input)
+
+            else :
+                print("Error: Camera type is not supported. Exiting...")
+                raise SystemExit(1)
             xout.input.setBlocking(False)
             xout.input.setQueueSize(1)
 

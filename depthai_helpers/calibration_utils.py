@@ -364,8 +364,8 @@ class StereoCalibration(object):
 
         print(f'Image size of right side (w, h):{imsize_r}')
         print(f'Image size of left side (w, h):{imsize_l}')
-
-        assert imsize_r == imsize_l, "Left and right resolution scaling is wrong"
+	    #
+        #assert imsize_r == imsize_l, "Left and right resolution scaling is wrong"
 
         return self.calibrate_stereo(
             allCorners_l, allIds_l, allCorners_r, allIds_r, imsize_r, M_lp, d_l, M_rp, d_r, guess_translation, guess_rotation)
@@ -687,9 +687,10 @@ class StereoCalibration(object):
                     int(img.shape[1] * scale_width), int(img.shape[0] * scale_width))
                 img = cv2.resize(
                     img, dest_res, interpolation=cv2.INTER_CUBIC)
-                if img.shape[0] < scaled_res[0]:
-                    raise RuntimeError("resizeed height of rgb is smaller than required. {0} < {1}".format(
-                        img.shape[0], scaled_res[0]))
+
+                #if img.shape[0] < scaled_res[0]:
+                #    raise RuntimeError("resizeed height of rgb is smaller than required. {0} < {1}".format(
+                #        img.shape[0], scaled_res[0]))
                 # print(gray.shape[0] - req_resolution[0])
                 del_height = (img.shape[0] - scaled_res[0]) // 2
                 # gray = gray[: req_resolution[0], :]
