@@ -416,6 +416,9 @@ class Main:
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         
+        if self.args.cameraMode != "perspective": 
+            self.args.minDetectedMarkersPercent = 1
+
         self.device = dai.Device()
         cameraProperties = self.device.getConnectedCameraFeatures()
         for properties in cameraProperties:
@@ -574,7 +577,12 @@ class Main:
         width, height = int(
             self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
         info_frame = np.zeros((self.height, self.width, 3), np.uint8)
-        print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
+        if self.args.cameraMode != "perspective": 
+            print("py: Capture failed, unable to find full board! Fix position and press spacebar again")
+        else:
+            print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
+
+
 
         def show(position, text):
             cv2.putText(info_frame, text, position,
