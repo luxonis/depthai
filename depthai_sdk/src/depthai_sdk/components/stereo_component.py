@@ -20,7 +20,7 @@ from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
 from depthai_sdk.components.stereo_control import StereoControl
-
+from depthai_sdk.visualize.visualizer_helper import depth_to_disp_factor
 
 class WLSLevel(Enum):
     """WLS filter level"""
@@ -323,19 +323,6 @@ class StereoComponent(Component):
 
         self.colormap = colormap
 
-    def _get_disparity_factor(self, device: dai.Device) -> float:
-        """
-        Calculates the disparity factor used to calculate depth from disparity.
-        `depth = disparity_factor / disparity`
-        @param device: OAK device
-        """
-        calib = device.readCalibration()
-        baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
-        intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, self.right.getResolutionSize())
-        focalLength = intrinsics[0][0]
-        disp_levels = self.node.getMaxDisparity() / 95
-        return baseline * focalLength * disp_levels
-
     def _get_maps(self, width: int, height: int, calib: dai.CalibrationHandler):
         imageSize = (width, height)
         M1 = np.array(calib.getCameraIntrinsics(calib.getStereoLeftCameraId(), width, height))
@@ -386,7 +373,7 @@ class StereoComponent(Component):
 
             out = XoutDisparity(
                 frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
-                max_disp=self._comp.node,
+                disp_factor=255.0 / self._comp.node.getMaxDisparity(),
                 fps=fps,
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
@@ -417,10 +404,10 @@ class StereoComponent(Component):
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
+
             out = XoutDepth(
-                device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.depth, name=self._comp.name),
-                stereo=self._comp.node,
+                dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
                 fps=fps,
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,

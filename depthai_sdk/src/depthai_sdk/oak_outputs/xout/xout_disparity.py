@@ -20,7 +20,7 @@ except ImportError:
 class XoutDisparity(XoutFrames, Clickable):
     def __init__(self,
                  frames: StreamXout,
-                 stereo: dai.node.StereoDepth,
+                 disp_factor: float,
                  fps: float,
                  mono_frames: Optional[StreamXout],
                  colorize: StereoColor = None,
@@ -30,7 +30,7 @@ class XoutDisparity(XoutFrames, Clickable):
                  wls_lambda: float = None,
                  wls_sigma: float = None):
         self.mono_frames = mono_frames
-        self.multiplier = 255.0 / stereo.getMaxDisparity()
+        self.multiplier = disp_factor
         self.fps = fps
         self.name = 'Disparity'
 
