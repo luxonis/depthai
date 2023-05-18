@@ -628,7 +628,7 @@ class Main:
         curr_time = None
 
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue), 0.003) # 3ms tolerance
+        syncCollector = MessageSync(len(self.camera_queue), 0.4) # 3ms tolerance
         self.mouseTrigger = False
         while not finished:
             currImageList = {}
