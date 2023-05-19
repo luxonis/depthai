@@ -20,7 +20,7 @@ class MessageSync:
         """
 
     #FIXME Get these parameters from somewhere, using these defaults, especially for min_diff_timestamp is not a good idea
-    def __init__(self, stream_num: int, type: str = 'ts', min_diff_timestamp=10, max_num_messages=10, min_queue_depth=2):
+    def __init__(self, stream_num: int, type: str = 'ts', min_diff_timestamp=0.003, max_num_messages=10, min_queue_depth=2):
         self.type = type
         self.msgs: Dict[str, Dict[str, Any]] = dict()
         self.num_queues = stream_num
