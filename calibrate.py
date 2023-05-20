@@ -27,72 +27,39 @@ debug = False
 red = (255, 0, 0)
 green = (0, 255, 0)
 
-if hasattr(dai.CameraBoardSocket, 'CAM_A'):
-    stringToCam = {
-                    'RGB'   : dai.CameraBoardSocket.CAM_A,
-                    'LEFT'  : dai.CameraBoardSocket.CAM_B,
-                    'RIGHT' : dai.CameraBoardSocket.CAM_C,
-                    'CAM_A' : dai.CameraBoardSocket.CAM_A,
-                    'CAM_B' : dai.CameraBoardSocket.CAM_B,
-                    'CAM_C' : dai.CameraBoardSocket.CAM_C,
-                    'CAM_D' : dai.CameraBoardSocket.CAM_D,
-                    'CAM_E' : dai.CameraBoardSocket.CAM_E,
-                    'CAM_F' : dai.CameraBoardSocket.CAM_F,
-                    'CAM_G' : dai.CameraBoardSocket.CAM_G,
-                    'CAM_H' : dai.CameraBoardSocket.CAM_H
-                    }
-    camToString = {
-                    dai.CameraBoardSocket.CAM_A : 'RGB'  ,
-                    dai.CameraBoardSocket.CAM_B : 'LEFT' ,
-                    dai.CameraBoardSocket.CAM_C : 'RIGHT',
-                    dai.CameraBoardSocket.CAM_A : 'CAM_A',
-                    dai.CameraBoardSocket.CAM_B : 'CAM_B',
-                    dai.CameraBoardSocket.CAM_C : 'CAM_C',
-                    dai.CameraBoardSocket.CAM_D : 'CAM_D',
-                    dai.CameraBoardSocket.CAM_E : 'CAM_E',
-                    dai.CameraBoardSocket.CAM_F : 'CAM_F',
-                    dai.CameraBoardSocket.CAM_G : 'CAM_G',
-                    dai.CameraBoardSocket.CAM_H : 'CAM_H'
-                    }
-else:
-    stringToCam = {
-                    'RGB': dai.CameraBoardSocket.RGB,
-                    'LEFT': dai.CameraBoardSocket.LEFT,
-                    'RIGHT': dai.CameraBoardSocket.RIGHT,
-                    'AUTO': dai.CameraBoardSocket.AUTO,
-                    'CAM_A' : dai.CameraBoardSocket.RGB,
-                    'CAM_B' : dai.CameraBoardSocket.LEFT,
-                    'CAM_C' : dai.CameraBoardSocket.RIGHT
-                   }
 
-    camToString = {
-                    # dai.CameraBoardSocket.RGB : 'RGB'  ,
-                    # dai.CameraBoardSocket.LEFT : 'LEFT' ,
-                    # dai.CameraBoardSocket.RIGHT : 'RIGHT',
-                    # dai.CameraBoardSocket.AUTO : 'AUTO',
-                    dai.CameraBoardSocket.RGB : 'CAM_A',
-                    dai.CameraBoardSocket.LEFT : 'CAM_B',
-                    dai.CameraBoardSocket.RIGHT : 'CAM_C',
-                    }
+stringToCam = {
+    'RGB'   : dai.CameraBoardSocket.CAM_A,
+    'LEFT'  : dai.CameraBoardSocket.CAM_B,
+    'RIGHT' : dai.CameraBoardSocket.CAM_C,
+    'CAM_A' : dai.CameraBoardSocket.CAM_A,
+    'CAM_B' : dai.CameraBoardSocket.CAM_B,
+    'CAM_C' : dai.CameraBoardSocket.CAM_C,
+    'CAM_D' : dai.CameraBoardSocket.CAM_D,
+    'CAM_E' : dai.CameraBoardSocket.CAM_E,
+    'CAM_F' : dai.CameraBoardSocket.CAM_F,
+    'CAM_G' : dai.CameraBoardSocket.CAM_G,
+    'CAM_H' : dai.CameraBoardSocket.CAM_H
+}
 
 
 camToMonoRes = {
-                'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
-                'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
-                'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
-                'AR0234' : dai.MonoCameraProperties.SensorResolution.THE_1200_P,
-                }
+    'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
+    'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
+    'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
+    'AR0234' : dai.MonoCameraProperties.SensorResolution.THE_1200_P,
+}
 
 camToRgbRes = {
-                'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
-                'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
-                'OV9*82' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
-                'OV9282' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
-                'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
-                'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
-                'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
-                'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
-                }
+    'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+    'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+    'OV9*82' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
+    'OV9282' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
+    'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
+    'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
+    'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
+    'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
+}
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
@@ -164,12 +131,10 @@ def parse_args():
                         help="Invert horizontal axis of the camera for the display")
     # parser.add_argument("-ep", "--maxEpiploarError", default="1.0", type=float, required=False,
     #                     help="Sets the maximum epiploar allowed with rectification")
-    parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
-                        required=False, help="Choose between perspective and Fisheye")
+    parser.add_argument("-cm", "--cameraModel", default="", choices=["perspective", "fisheye"], type=str,
+                        required=False, help="Overwrite the camera model specified in board config file. Choose between perspective and fisheye.")
     parser.add_argument("-rlp", "--rgbLensPosition", default=-1, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
-    parser.add_argument("-fps", "--fps", default=10, type=int,
-                        required=False, help="Set capture FPS for all cameras. Default: %(default)s")
     parser.add_argument("-cd", "--captureDelay", default=5, type=int,
                         required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
     parser.add_argument("-d", "--debug", default=False, action="store_true", help="Enable debug logs.")
@@ -177,12 +142,21 @@ def parse_args():
                         help="Enable writing to Factory Calibration.")
     parser.add_argument("-osf", "--outputScaleFactor", type=float, default=0.5,
                         help="set the scaling factor for output visualization. Default: 0.5.")
+    parser.add_argument('-fps', '--framerate', type=float, default=10,
+                        help="FPS to set for all cameras. Default: %(default)s")
     parser.add_argument("-sync", "--minSyncTime", type=float, default=0.2,
-                        help="set the minimum time enforced between frames to keep synchronization. Default: 0.2.")
+                        help="set the minimum time enforced between frames to keep synchronization. Default: %(default)s.")
     parser.add_argument("-q", "--minQueueDepth", type=int, default=4,
-                        help="set the minimum queue depth for syncing before retrieving synced frames. Default: 1.")
-
-
+                        help="set the minimum queue depth for syncing before retrieving synced frames. Default: %(default)s.")
+    parser.add_argument('-scp', '--saveCalibPath', type=str, default="",
+                        help="Save calibration file to this path")
+    parser.add_argument('-dst', '--datasetPath', type=str, default="dataset",
+                        help="Path to dataset used for processing images")
+    parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
+                        help="Enable mouse trigger for image capture")
+    parser.add_argument('-l', '--traceLevel', type=int, default=2,
+                        help="Set the debug trace level. Default: %(default)s.")
+    
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -201,7 +175,6 @@ def parse_args():
             options.rgbLensPosition = 135
             
     return options
-
 class MessageSync:
     def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10, min_queue_depth=3):
         self.num_queues = num_queues
@@ -294,6 +267,7 @@ class Main:
     current_polygon = 0
     images_captured_polygon = 0
     images_captured = 0
+    camera_model = "perspective"
 
     def __init__(self):
         global debug
@@ -379,6 +353,10 @@ class Main:
         if self.device:
             self.device.close()
 
+    def mouse_event_callback(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.mouseTrigger = True
+
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
             frame, self.aruco_dictionary)
@@ -404,7 +382,7 @@ class Main:
     def create_pipeline(self):
         pipeline = dai.Pipeline()
 
-        fps = self.args.fps
+        fps = self.args.framerate
         cams = {}
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
@@ -460,7 +438,7 @@ class Main:
 
         filename = calibUtils.image_filename(
             stream_name, self.current_polygon, self.images_captured)
-        cv2.imwrite("dataset/{}/{}".format(stream_name, filename), frame)
+        cv2.imwrite(f"{str(self.dataset_path)}/{stream_name}/{filename}", frame)
         print("py: Saved image as: " + str(filename))
         return True
 
@@ -552,6 +530,7 @@ class Main:
 
         self.display_name = "Image Window"
         syncCollector = MessageSync(len(self.camera_queue.keys()), min_diff_timestamp=self.args.minSyncTime, min_queue_depth=self.args.minQueueDepth)
+        self.mouseTrigger = False
 
         # Clear events
         streams = self.device.getQueueEvents(list(self.camera_queue.keys()))
@@ -675,10 +654,11 @@ class Main:
             if key == 27 or key == ord("q"):
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
-            elif key == ord(" "):
+            elif key == ord(" ") or self.mouseTrigger:
                 start_timer = True
                 prev_time = time.time()
                 timer = self.args.captureDelay
+                self.mouseTrigger = False
 
             if start_timer == True:
                 curr_time = time.time()
@@ -695,6 +675,10 @@ class Main:
                         (image_shape[1]//2, image_shape[0]//2), font,
                         7, (0, 255, 255),
                         4, cv2.LINE_AA)
+
+            cv2.namedWindow(self.display_name)
+            if self.args.mouseTrigger:
+                cv2.setMouseCallback(self.display_name, self.mouse_event_callback)
 
             cv2.imshow(self.display_name, combinedImage)
             tried = {}
@@ -941,21 +925,25 @@ class Main:
 
     def calibrate(self):
         print("Starting image processing")
-        stereo_calib = calibUtils.StereoCalibration()
-        # self.args.cameraMode = 'perspective' # hardcoded for now
-        try:
+        stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel)
 
+        self.camera_model = self.board_config.get("camera_model", "perspective")
+
+        if self.args.cameraModel != "": # If camera model is specified in the command line, use that
+            self.camera_model = self.args.cameraModel
+        
+        try:
             # stereo_calib = StereoCalibration()
             print("Starting image processingxxccx")
             print(self.args.squaresX)
             status, result_config = stereo_calib.calibrate(
                     self.board_config,
-                    self.dataset_path,
+                    str(self.dataset_path),
                     self.args.squareSizeCm,
                     self.args.markerSizeCm,
                     self.args.squaresX,
                     self.args.squaresY,
-                    self.args.cameraMode,
+                    self.camera_model,
                     self.args.rectifiedDisp) # Turn off enable disp rectify
 
             calibration_handler = dai.CalibrationHandler()
@@ -1014,6 +1002,10 @@ class Main:
             calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
             calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
             calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
+            if self.camera_model == "perspective":
+                calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Perspective)
+            elif self.camera_model == "fisheye":
+                calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Fisheye)
 
             if 'hasAutofocus' in cam_info and cam_info['hasAutofocus']:
                 calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
@@ -1088,7 +1080,14 @@ class Main:
         eeepromData.version = 7
         print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
         mx_serial_id = self.device.getDeviceInfo().getMxId()
-        calib_dest_path = self.dest_path / f"{mx_serial_id}.json"
+
+        calib_dest_folder = self.dest_path
+        if self.args.saveCalibPath:
+            calib_dest_folder = Path(self.args.saveCalibPath)
+            calib_dest_folder.mkdir(parents=True, exist_ok=True)
+
+        calib_dest_path = calib_dest_folder / f"{mx_serial_id}.json"
+
         calibration_handler.eepromToJsonFile(calib_dest_path)
         # try:
         self.device.flashCalibration2(calibration_handler)
@@ -1144,13 +1143,21 @@ class Main:
 
 
     def run(self):
+
+        if self.args.datasetPath:
+            self.dataset_path = Path(self.args.datasetPath)
+        else:
+            self.dataset_path = Path("dataset").absolute()
+
+        self.dataset_path.mkdir(parents=True, exist_ok=True)
+
         if 'capture' in self.args.mode:
             try:
-                if Path('dataset').exists():
-                    shutil.rmtree('dataset/')
+                if self.dataset_path.exists():
+                    shutil.rmtree(str(self.dataset_path))
                 for cam_id in self.board_config['cameras']:
                     name = self.board_config['cameras'][cam_id]['name']
-                    Path("dataset/{}".format(name)).mkdir(parents=True, exist_ok=True)
+                    (self.dataset_path / name).mkdir(parents=True, exist_ok=True)
 
             except OSError:
                 traceback.print_exc()
@@ -1158,7 +1165,7 @@ class Main:
                 raise SystemExit(1)
             self.show_info_frame()
             self.capture_images_sync()
-        self.dataset_path = str(Path("dataset").absolute())
+
         if 'process' in self.args.mode:
             status, err_text, result_config = self.calibrate()
             if 'flash' in self.args.mode:
