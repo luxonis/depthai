@@ -28,8 +28,10 @@ class VideoCapReader(AbstractReader):
         self._is_looped = loop
 
         if path.is_file():
-            stream = path.stem if (path.stem in ['left', 'right']) else 'color'
-            self.videos[stream] = { 'reader': cv2.VideoCapture(str(path)) }
+            self.videos[path.stem.lower()] = {
+                'reader': cv2.VideoCapture(str(path)),
+                'socket': dai.CameraBoardSocket.CAM_A
+            }
         else:
             for fileName in os.listdir(str(path)):
                 f_name, ext = os.path.splitext(fileName)
@@ -54,7 +56,7 @@ class VideoCapReader(AbstractReader):
                 #     stream = 'left'
                 # elif socket == dai.CameraBoardSocket.CAM_C:
                 #     stream = 'right'
-                self.videos[f_name] = {
+                self.videos[f_name.lower()] = {
                     'reader': cv2.VideoCapture(str(path / fileName)),
                     'socket': socket
                 }
@@ -96,18 +98,18 @@ class VideoCapReader(AbstractReader):
         return [name for name in self.videos]
 
     def getShape(self, name: str) -> Tuple[int, int]:
-        shape = self.videos[name]['shape']
+        shape = self.videos[name.lower()]['shape']
         return shape
     def get_socket(self, name: str):
-        return self.videos[name]['socket']
+        return self.videos[name.lower()]['socket']
 
     def close(self):
         [r['reader'].release() for _, r in self.videos.items()]
 
     def disableStream(self, name: str):
-        if name in self.videos:
-            self.videos.pop(name)
+        if name.lower() in self.videos:
+            self.videos.pop(name.lower())
 
     def get_message_size(self, name: str) -> int:
-        video = self.videos[name]
+        video = self.videos[name.lower()]
         return video['shape'][0] * video['shape'][1] * (3 if video['is_color'] else 1)
