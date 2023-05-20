@@ -20,14 +20,16 @@ class VideoCapReader(AbstractReader):
     """
 
     def __init__(self, path: Path, loop: bool = False) -> None:
-        self.initialFrames: Dict[str, Any] = dict()
-        self.shapes: Dict[str, Tuple[int, int]] = dict()
-        self.readers: Dict[str, cv2.VideoCapture] = dict()
+        self.videos: Dict[str, Any] = {}
+
+        # self.initialFrames: Dict[str, Any] = dict()
+        # self.shapes: Dict[str, Tuple[int, int]] = dict()
+        # self.readers: Dict[str, cv2.VideoCapture] = dict()
         self._is_looped = loop
 
         if path.is_file():
             stream = path.stem if (path.stem in ['left', 'right']) else 'color'
-            self.readers[stream] = cv2.VideoCapture(str(path))
+            self.videos[stream] = { 'reader': cv2.VideoCapture(str(path)) }
         else:
             for fileName in os.listdir(str(path)):
                 f_name, ext = os.path.splitext(fileName)
@@ -35,7 +37,7 @@ class VideoCapReader(AbstractReader):
                     continue
 
                 # Check if name of the file starts with left.. right.., or CameraBoardSocket
-                if f_name.startswith('CameraBoardSocket'):
+                if f_name.startswith('CameraBoardSocket.'):
                     f_name = f_name.split('CameraBoardSocket.')[1]
 
                 try:
@@ -45,38 +47,41 @@ class VideoCapReader(AbstractReader):
                     continue
 
                 # TODO: avoid changing stream names, just use socket
-                stream = str(socket)
+                # stream = str(socket)
                 # if socket == dai.CameraBoardSocket.CAM_A:
                 #     stream = 'color'
                 # elif socket == dai.CameraBoardSocket.CAM_B:
                 #     stream = 'left'
                 # elif socket == dai.CameraBoardSocket.CAM_C:
                 #     stream = 'right'
+                self.videos[f_name] = {
+                    'reader': cv2.VideoCapture(str(path / fileName)),
+                    'socket': socket
+                }
 
-                self.readers[f_name] = cv2.VideoCapture(str(path / fileName))
-
-        for name, reader in self.readers.items():
-            ok, f = reader.read()
-            self.shapes[name] = (
+        for name, video in self.videos.items():
+            ok, f = video['reader'].read()
+            video['shape'] = (
                 f.shape[1],
                 f.shape[0]
             )
-            self.initialFrames[name] = f
+            video['is_color'] = len(f.shape) == 3
+            video['initialFrame'] = f
 
     def read(self):
         frames = dict()
-        for name, reader in self.readers.items():
-            if self.initialFrames[name] is not None:
-                frames[name] = self.initialFrames[name].copy()
-                self.initialFrames[name] = None
+        for name, video in self.videos.items():
+            if video['initialFrame'] is not None:
+                frames[name] = video['initialFrame'].copy()
+                video['initialFrame'] = None
 
-            if not self.readers[name].isOpened():
+            if not video['reader'].isOpened():
                 return False
 
-            ok, frame = self.readers[name].read()
+            ok, frame = video['reader'].read()
             if not ok and self._is_looped:
-                self.readers[name].set(cv2.CAP_PROP_POS_FRAMES, 0)
-                ok, frame = self.readers[name].read()
+                video['reader'].set(cv2.CAP_PROP_POS_FRAMES, 0)
+                ok, frame = video['reader'].read()
             elif not ok:
                 return False
 
@@ -88,17 +93,21 @@ class VideoCapReader(AbstractReader):
         self._is_looped = loop
 
     def getStreams(self) -> List[str]:
-        return [name for name in self.readers]
+        return [name for name in self.videos]
 
-    def getShape(self, name: str) -> Tuple[int, int]:  # Doesn't work as expected!!
-        return self.shapes[name]
+    def getShape(self, name: str) -> Tuple[int, int]:
+        shape = self.videos[name]['shape']
+        return shape
+    def get_socket(self, name: str):
+        return self.videos[name]['socket']
 
     def close(self):
-        [r.release() for _, r in self.readers.items()]
+        [r['reader'].release() for _, r in self.videos.items()]
 
     def disableStream(self, name: str):
-        if name in self.readers:
-            self.readers.pop(name)
+        if name in self.videos:
+            self.videos.pop(name)
 
     def get_message_size(self, name: str) -> int:
-        return self.shapes[name][0] * self.shapes[name][1] * 3
+        video = self.videos[name]
+        return video['shape'][0] * video['shape'][1] * (3 if video['is_color'] else 1)

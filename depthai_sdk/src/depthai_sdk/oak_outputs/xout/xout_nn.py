@@ -13,7 +13,7 @@ from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.visualize.visualizer import Visualizer
-from depthai_sdk.visualize.visualizer_helper import hex_to_bgr, calc_disp_multiplier, colorize_disparity, draw_mappings
+from depthai_sdk.visualize.visualizer_helper import hex_to_bgr, colorize_disparity, draw_mappings, depth_to_disp_factor
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.colors import generate_colors
 try:
@@ -205,7 +205,12 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         self.queue.put(packet, block=False)
 
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
-    def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
+    def __init__(self,
+                 device: dai.Device,
+                 stereo: dai.node.StereoDepth,
+                 frames: StreamXout,
+                 configs: StreamXout):
+        self._stereo = stereo
         self.frames = frames
         self.configs = configs
 
@@ -223,13 +228,14 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
     def visualize(self, packet: SpatialBbMappingPacket):
         if not self.factor:
             size = (packet.msg.getWidth(), packet.msg.getHeight())
-            self.factor = calc_disp_multiplier(self.device, size)
+            self.factor = depth_to_disp_factor(self.device, self._stereo)
 
         depth = np.array(packet.msg.getFrame())
         with np.errstate(all='ignore'):
             disp = (self.factor / depth).astype(np.uint8)
 
-        packet.frame = colorize_disparity(disp, multiplier=self.multiplier)
+        print('disp max', np.max(disp), 'disp min', np.min(disp))
+        packet.frame = colorize_disparity(disp, multiplier=1)
         draw_mappings(packet)
 
         super().visualize(packet)

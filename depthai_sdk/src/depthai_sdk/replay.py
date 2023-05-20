@@ -56,7 +56,7 @@ class Replay:
         Helper file to replay recorded depthai stream. It reads from recorded files (mjpeg/avi/mp4/h265/h264/bag)
         and sends frames back to OAK camera to replay the scene, including depth reconstruction from 2 synced mono
         streams.
-    
+
         Args:
             path (str): Path to the recording folder.
         """
@@ -133,6 +133,7 @@ class Replay:
             stream = ReplayStream()
             stream._shape = self.reader.getShape(stream_name)
             stream.size_bytes = self.reader.get_message_size(stream_name)
+            stream.camera_socket = self.reader.get_socket(stream_name)
             self.streams[stream_name] = stream
 
     def _get_path(self, path: str) -> Path:

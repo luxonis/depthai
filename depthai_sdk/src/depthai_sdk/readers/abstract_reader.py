@@ -24,6 +24,12 @@ class AbstractReader(ABC):
         """
         pass
 
+    def get_socket(self, name: str):
+        """
+        Returns socket
+        """
+        return None
+
     @abstractmethod
     def get_message_size(self, name: str) -> int:
         """

@@ -21,9 +21,8 @@ except ImportError:
 
 class XoutDepth(XoutDisparity):
     def __init__(self,
-                 device: dai.Device,
                  frames: StreamXout,
-                 stereo: dai.node.StereoDepth,
+                 dispScaleFactor: float,
                  fps: float,
                  mono_frames: Optional[StreamXout],
                  colorize: StereoColor = None,
@@ -36,7 +35,7 @@ class XoutDepth(XoutDisparity):
         self.name = 'Depth'
         super().__init__(
                         frames=frames,
-                        stereo=stereo,
+                        disp_factor=255/95,
                         fps=fps,
                         mono_frames=mono_frames,
                         colorize=colorize,
@@ -46,16 +45,7 @@ class XoutDepth(XoutDisparity):
                         wls_lambda=wls_lambda,
                         wls_sigma=wls_sigma)
 
-        calib = device.readCalibration()
-        baseline = calib.getBaselineDistance() * 10 # cm to mm
-
-        align: dai.CameraBoardSocket = stereo.properties.depthAlignCamera
-        if align == dai.CameraBoardSocket.AUTO:
-            align = dai.CameraBoardSocket.RIGHT
-
-        intrinsics = calib.getCameraIntrinsics(align)
-        focal = intrinsics[0][0] # focal length in pixels
-        self.dispScaleFactor = baseline * focal
+        self.dispScaleFactor = dispScaleFactor
 
     def visualize(self, packet: DepthPacket):
         # Convert depth to disparity for nicer visualization
@@ -64,5 +54,8 @@ class XoutDepth(XoutDisparity):
             disp = self.dispScaleFactor / packet.frame
 
         disp[disp==np.inf] = 0
+
+        print('max disp: ', np.max(disp), 'min disp: ', np.min(disp))
+
         packet.frame = np.round(disp).astype(np.uint8)
         super().visualize(packet)

@@ -214,6 +214,7 @@ class NNComponent(Component):
             if isinstance(self._spatial, bool):  # Create new StereoComponent
                 self._spatial = StereoComponent(device, pipeline, args=self._args, replay=self._replay)
             if isinstance(self._spatial, StereoComponent):
+                self._stereo_node: dai.node.StereoDepth = self._spatial.node
                 self._spatial.depth.link(self.node.inputDepth)
                 self._spatial.config_stereo(align=self._input)
             # Configure Spatial Detection Network
@@ -685,6 +686,7 @@ class NNComponent(Component):
 
             out = XoutSpatialBbMappings(
                 device=device,
+                stereo=self._comp._stereo_node,
                 frames=StreamXout(id=self._comp.node.id, out=self._comp.node.passthroughDepth, name=self._comp.name),
                 configs=StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
             )
