@@ -451,7 +451,7 @@ class StereoCalibration(object):
                 return -1, "Stereo Calib failed due to less common features"
 
         stereocalib_criteria = (cv2.TERM_CRITERIA_COUNT +
-                                cv2.TERM_CRITERIA_EPS, 1000, 1e-9)
+                                cv2.TERM_CRITERIA_EPS, 20000, 1e-9)
 
         if self.cameraModel == 'perspective':
             flags = (
@@ -564,23 +564,6 @@ class StereoCalibration(object):
                     cv2.line(img_concat,
                              (int(left_pt[0][0]), int(left_pt[0][1])), (int(right_pt[0][0]), int(right_pt[0][1])  + image_data_pair[0].shape[0]),
                              colors[colorMode], 1)
-            # img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
-
-            # draw epipolar lines for debug purposes
-
-            # line_row = 0
-            # while isHorizontal and line_row < img_concat.shape[0]                
-                # cv2.line(img_concat,
-                #          (0, line_row), (img_concat.shape[1], line_row),
-                #          (0, 255, 0), 1)
-                # line_row += 30
-
-            # line_col = 0
-            # while not isHorizontal and line_col < img_concat.shape[1]:
-            #     cv2.line(img_concat,
-            #              (line_col, 0), (line_col, img_concat.shape[0]),
-            #              (0, 255, 0), 1)
-            #     line_col += 40
 
             img_concat = cv2.resize(
                 img_concat, (0, 0), fx=0.8, fy=0.8)
