@@ -75,6 +75,7 @@ class StereoComponent(Component):
 
         self.colormap = None  # for on-device colorization
 
+        self._device = device
         self._replay: Optional[Replay] = replay
         self._resolution: Optional[Union[str, dai.MonoCameraProperties.SensorResolution]] = resolution
         self._fps: Optional[float] = fps
@@ -88,6 +89,8 @@ class StereoComponent(Component):
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
         self._align_component: Optional[CameraComponent] = None
+        self.auto_ir = False
+
         # Encoder
         self.encoder = None
         if encode:
@@ -324,6 +327,32 @@ class StereoComponent(Component):
 
         self.colormap = colormap
 
+    def set_auto_ir(self, status: bool):
+        """
+        Enables/disables auto IR brightness. Selects the best IR brightness level automatically.
+        """
+        self.auto_ir = status
+
+    def set_ir(self, dot_projector_brightness: int, flood_brightness: int):
+        """
+        Sets IR brightness and flood.
+        """
+        self._device.setIrLaserDotProjectorBrightness(dot_projector_brightness)
+        self._device.setIrFloodLightBrightness(flood_brightness)
+
+    def _get_disparity_factor(self, device: dai.Device) -> float:
+        """
+        Calculates the disparity factor used to calculate depth from disparity.
+        `depth = disparity_factor / disparity`
+        @param device: OAK device
+        """
+        calib = device.readCalibration()
+        baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
+        intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, self.right.getResolutionSize())
+        focalLength = intrinsics[0][0]
+        disp_levels = self.node.getMaxDisparity() / 95
+        return baseline * focalLength * disp_levels
+
     def _get_maps(self, width: int, height: int, calib: dai.CalibrationHandler):
         imageSize = (width, height)
         M1 = np.array(calib.getCameraIntrinsics(calib.getStereoLeftCameraId(), width, height))
@@ -373,6 +402,7 @@ class StereoComponent(Component):
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
 
             out = XoutDisparity(
+                device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
                 disp_factor=255.0 / self._comp.node.getMaxDisparity(),
                 fps=fps,
@@ -382,7 +412,8 @@ class StereoComponent(Component):
                 use_wls_filter=self._comp.wls_enabled,
                 wls_level=self._comp._wls_level,
                 wls_lambda=self._comp._wls_lambda,
-                wls_sigma=self._comp._wls_sigma
+                wls_sigma=self._comp._wls_sigma,
+                auto_ir=self._comp.auto_ir
             )
 
             return self._comp._create_xout(pipeline, out)
@@ -407,6 +438,7 @@ class StereoComponent(Component):
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
 
             out = XoutDepth(
+                device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.depth, name=self._comp.name),
                 dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
                 fps=fps,
@@ -416,7 +448,8 @@ class StereoComponent(Component):
                 use_wls_filter=self._comp.wls_enabled,
                 wls_level=self._comp._wls_level,
                 wls_lambda=self._comp._wls_lambda,
-                wls_sigma=self._comp._wls_sigma
+                wls_sigma=self._comp._wls_sigma,
+                auto_ir=self._comp.auto_ir
             )
             return self._comp._create_xout(pipeline, out)
 

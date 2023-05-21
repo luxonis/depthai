@@ -6,6 +6,7 @@ import depthai as dai
 import numpy as np
 
 from depthai_sdk.classes.packets import DepthPacket
+from depthai_sdk.evaluate import get_sharpness
 from depthai_sdk.oak_outputs.xout import Clickable
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
@@ -19,6 +20,7 @@ except ImportError:
 
 class XoutDisparity(XoutFrames, Clickable):
     def __init__(self,
+                 device: dai.Device,
                  frames: StreamXout,
                  disp_factor: float,
                  fps: float,
@@ -28,16 +30,25 @@ class XoutDisparity(XoutFrames, Clickable):
                  use_wls_filter: bool = None,
                  wls_level: 'WLSLevel' = None,
                  wls_lambda: float = None,
-                 wls_sigma: float = None):
+                 wls_sigma: float = None,
+                 auto_ir: bool = None):
         self.mono_frames = mono_frames
         self.multiplier = disp_factor
         self.fps = fps
         self.name = 'Disparity'
+        self.device = device
 
         self.colorize = colorize
         self.colormap = colormap
-
         self.use_wls_filter = use_wls_filter
+
+        self.auto_ir = auto_ir
+        self._dot_projector_brightness = 0  # [0, 1200]
+        self._flood_brightness = 0  # [0, 1500]
+        self._buffer = []
+        self._ir_history = {}
+        self._prev_metric = None
+        self._auto_ir_converged = False
 
         # Prefer to use WLS level if set, otherwise use lambda and sigma
         if wls_level and use_wls_filter:
@@ -65,6 +76,43 @@ class XoutDisparity(XoutFrames, Clickable):
 
         XoutFrames.__init__(self, frames=frames, fps=fps)
         Clickable.__init__(self, decay_step=int(self.fps))
+
+    def on_callback(self, packet) -> None:
+        if self._auto_ir_converged:
+            return
+
+        STEP = 10
+        if self.auto_ir:
+            self._buffer.append(packet.frame)
+
+            if len(self._buffer) < 5:
+                return
+
+            frames = np.array(self._buffer) / 255.0  # Normalize to 0-1
+            self._buffer.clear()
+
+            # Diff between n-window frames
+            diff = np.abs(np.diff(frames, axis=0))
+            diff = np.mean(diff, axis=(1, 2)).sum()
+
+            # Average sharpness
+            sharpness = 0
+            for frame in frames:
+                sharpness += get_sharpness(frame)
+            sharpness /= len(frames)
+
+            if self._dot_projector_brightness >= 1200:
+                self._auto_ir_converged = True
+
+            # if self._prev_metric and diff < self._prev_metric:
+                # self._flood_brightness = min(self._flood_brightness + STEP, 1500)
+            self._dot_projector_brightness = min(self._dot_projector_brightness + STEP, 1200)
+
+            self.device.setIrFloodLightBrightness(self._flood_brightness)
+            self.device.setIrLaserDotProjectorBrightness(self._dot_projector_brightness)
+
+            # self._prev_metric = diff
+            print(f'{self._dot_projector_brightness} - {diff:.02f}, {sharpness:.03f}, {0:.03f}')
 
     def visualize(self, packet: DepthPacket):
         frame = packet.frame
