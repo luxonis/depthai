@@ -21,6 +21,7 @@ except ImportError:
 
 class XoutDepth(XoutDisparity):
     def __init__(self,
+                 device: dai.Device,
                  frames: StreamXout,
                  dispScaleFactor: float,
                  fps: float,
@@ -30,10 +31,12 @@ class XoutDepth(XoutDisparity):
                  use_wls_filter: bool = None,
                  wls_level: 'WLSLevel' = None,
                  wls_lambda: float = None,
-                 wls_sigma: float = None):
+                 wls_sigma: float = None,
+                 auto_ir: bool = None):
 
         self.name = 'Depth'
         super().__init__(
+                        device=device,
                         frames=frames,
                         disp_factor=255/95,
                         fps=fps,
