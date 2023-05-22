@@ -24,13 +24,16 @@ class RecordAction(Action):
                  inputs: Union[Component, Callable, List[Union[Component, Callable]]],
                  dir_path: str,
                  duration_before_trigger: Union[int, timedelta],
-                 duration_after_trigger: Union[timedelta, int]):
+                 duration_after_trigger: Union[timedelta, int],
+                 on_finish_callback: Callable[[Union[Path, str]], None] = None,
+                 ):
         """
         Args:
             inputs: Inputs to record video from. Can be a single component or a list of components.
             dir_path: Path to directory where video files will be saved. Directory will be created if it doesn't exist.
             duration_before_trigger: Duration of video to record before trigger event.
             duration_after_trigger: Duration of video to record after trigger event.
+            on_finish_callback: Callback function that will be called when recording is finished. Should accept a single argument - path to the folder with recorded video files.
         """
         super().__init__(inputs)
         self.path = Path(dir_path).resolve()
@@ -47,6 +50,7 @@ class RecordAction(Action):
         self.recorder = VideoRecorder()
         self.stream_names = []  # will be assigned during recorder setup
         self.buffers_status: Dict[str, Dict[str, Union[int, List[int]]]] = {}
+        self.on_finish_callback = on_finish_callback
 
     def _run(self):
         """
@@ -89,6 +93,10 @@ class RecordAction(Action):
             # Close files
             logging.debug(f'Saved to {str(self.path / subfolder)}')
             self.recorder.close_files()
+
+            # Call on_finish_callback if it is specified
+            if self.on_finish_callback is not None:
+                self.on_finish_callback(self.path)
 
     def activate(self):
         # Setup for the current recording
