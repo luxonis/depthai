@@ -77,6 +77,7 @@ class NNComponent(Component):
         self.tracker = pipeline.createObjectTracker() if tracker else None
         self.apply_tracking_filter = False
         self.forget_after_n_frames = None
+        self.calculate_speed = False
 
         # Private properties
         self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
@@ -455,6 +456,7 @@ class NNComponent(Component):
                        threshold: Optional[float] = None,
                        apply_tracking_filter: Optional[bool] = None,
                        forget_after_n_frames: Optional[int] = None,
+                       calculate_speed: Optional[bool] = None
                        ):
         """
         Configure Object Tracker node (if it's enabled).
@@ -467,6 +469,7 @@ class NNComponent(Component):
             threshold (float, optional): Specify tracker threshold. Default: 0.0
             apply_tracking_filter (bool, optional): Set whether to apply Kalman filter to the tracked objects. Done on the host.
             forget_after_n_frames (int, optional): Set how many frames to track an object before forgetting it.
+            calculate_speed (bool, optional): Set whether to calculate object speed. Done on the host.
         """
 
         if self.tracker is None:
@@ -497,6 +500,9 @@ class NNComponent(Component):
 
         if forget_after_n_frames is not None:
             self.forget_after_n_frames = forget_after_n_frames
+
+        if calculate_speed is not None:
+            self.calculate_speed = calculate_speed
 
     def config_yolo_from_metadata(self, metadata: Dict):
         """
@@ -724,7 +730,8 @@ class NNComponent(Component):
                               device=device,
                               tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out),
                               apply_kalman=self._comp.apply_tracking_filter,
-                              forget_after_n_frames=self._comp.forget_after_n_frames)
+                              forget_after_n_frames=self._comp.forget_after_n_frames,
+                              calculate_speed=self._comp.calculate_speed)
 
             return self._comp._create_xout(pipeline, out)
 
