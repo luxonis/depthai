@@ -97,6 +97,7 @@ class TrackingConfig:
     fading_tails: bool = False
     line_color: Tuple[int, int, int] = (255, 255, 255)
     line_type: int = 16  # cv2.LINE_AA
+    show_speed: bool = False
 
 
 @dataclass
