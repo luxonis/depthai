@@ -314,8 +314,7 @@ class StereoCalibration(object):
 
         print(f'Image size of right side (w, h):{imsize_r}')
         print(f'Image size of left side (w, h):{imsize_l}')
-	    #
-        #assert imsize_r == imsize_l, "Left and right resolution scaling is wrong"
+        assert imsize_r == imsize_l, "Left and right resolution scaling is wrong"
 
         return self.calibrate_stereo(
             allCorners_l, allIds_l, allCorners_r, allIds_r, imsize_r, M_lp, d_l, M_rp, d_r, guess_translation, guess_rotation)

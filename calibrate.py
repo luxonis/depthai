@@ -409,8 +409,8 @@ class Main:
 
                 # If AR0234 bring down resolution to 800p
                 #if cam_info['sensorName'] == 'AR0234':
+                #    cam_node.setIspScale(2,3)
                 #    cam_node.setIspScale(640, 1920, 480, 1200)
-                #    cam_node.setIspScale(2, 3)
 
                 xout.setStreamName(cam_info['name'])
                 # xout.input.setBlocking(False)
