@@ -977,6 +977,11 @@ class StereoCalibration(object):
         # kScaledL, _ = cv2.getOptimalNewCameraMatrix(M_r, d_l, scaled_res[::-1], 0)
         # kScaledR, _ = cv2.getOptimalNewCameraMatrix(M_r, d_r, scaled_res[::-1], 0)
         kScaledR = kScaledL = M_r
+
+        if self.cameraModel != 'perspective':
+            kScaledR = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(M_r, d_r, scaled_res[::-1], np.eye(3), fov_scale=1.1)
+            kScaledL = kScaledR
+
         if rectProjectionMode:
             kScaledL = p_lp
             kScaledR = p_rp
@@ -1104,8 +1109,8 @@ class StereoCalibration(object):
             marker_corners_r, ids_r, _, _ = cv2.aruco.refineDetectedMarkers(image_data_pair[1], self.board,
                                                                             marker_corners_r, ids_r,
                                                                             rejectedCorners=rejectedImgPoints)
-            print(f'Marekrs length r is {len(marker_corners_r)}')
-            print(f'Marekrs length l is {len(marker_corners_l)}')
+            # print(f'Marekrs length r is {len(marker_corners_r)}')
+            # print(f'Marekrs length l is {len(marker_corners_l)}')
             res2_l = cv2.aruco.interpolateCornersCharuco(
                 marker_corners_l, ids_l, image_data_pair[0], self.board)
             res2_r = cv2.aruco.interpolateCornersCharuco(

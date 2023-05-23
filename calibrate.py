@@ -1112,7 +1112,7 @@ class Main:
                 calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
                 if self.args.cameraMode != 'perspective':
                     calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Fisheye)
-                if cam_info['hasAutofocus']:
+                if 'hasAutofocus' in cam_info and cam_info['hasAutofocus']:
                     calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
 
                 # log_list.append(self.focusSigma[cam_info['name']])
@@ -1157,7 +1157,9 @@ class Main:
                 eeepromData.version = 7
                 print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
                 mx_serial_id = self.device.getDeviceInfo().getMxId()
-                calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
+                date_time_string = datetime.now().strftime("_%m_%d_%y_%H_%M")
+                file_name = mx_serial_id + date_time_string
+                calib_dest_path = dest_path + '/' + file_name + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
                 if self.args.saveCalibPath:
                     Path(self.args.saveCalibPath).parent.mkdir(parents=True, exist_ok=True)
