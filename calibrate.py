@@ -460,6 +460,13 @@ class Main:
                 cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
 
+                # Configure ToF node output FPS:
+                # - `ALL` for full FPS, both modulation frequencies, may flicker a little
+                # - `MIN` for half the FPS
+                tof_config = tof_node.initialConfig.get()
+                tof_config.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MIN
+                tof_node.initialConfig.set(tof_config)
+
                 xout.setStreamName(cam_info['name'])
                 # xout.input.setBlocking(False)
                 # xout.input.setQueueSize(4)
