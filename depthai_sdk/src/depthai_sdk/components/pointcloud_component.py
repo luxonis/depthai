@@ -19,7 +19,7 @@ class PointcloudComponent(Component):
                  device: dai.Device,
                  pipeline: dai.Pipeline,
                  stereo: Union[None, StereoComponent, dai.node.StereoDepth, dai.Node.Output] = None,
-                 colorize: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output] = None,
+                 colorize: Optional[CameraComponent] = None,
                  replay: Optional[Replay] = None,
                  args: Any = None,
                  name: Optional[str] = None):
@@ -36,8 +36,7 @@ class PointcloudComponent(Component):
         self.stereo_depth_node: dai.node.StereoDepth
         self.depth: dai.Node.Output # Depth node output
 
-        self.colorize_node: Union[dai.node.ColorCamera, dai.node.MonoCamera] = None
-        self.colorize: dai.Node.Output
+        self.colorize_comp: Optional[CameraComponent] = colorize
 
         self.name = name
 
@@ -45,31 +44,19 @@ class PointcloudComponent(Component):
 
         # Colorization aspect
         if colorize is None:
-            colorize = CameraComponent(device, pipeline, source='color', replay=replay, args=args)
+            self.colorize_comp = CameraComponent(device, pipeline, source='color', replay=replay, args=args)
 
-        if isinstance(colorize, CameraComponent):
-            colorize.config_color_camera(isp_scale=(2,5))
-            colorize = colorize.node
-
-
-        if isinstance(colorize, dai.node.MonoCamera):
-            self.colorize_node = colorize
-            self.colorize = colorize.out
-        elif isinstance(colorize, dai.node.ColorCamera):
-            self.colorize_node = colorize
-            self.colorize = colorize.video
-        elif isinstance(colorize, dai.Node.Output):
-            self.colorize_node = colorize.getParent()
-            self.colorize = colorize
+        if isinstance(self.colorize_comp, CameraComponent):
+            self.colorize_comp.config_color_camera(isp_scale=(2,5))
 
         # Depth aspect
         if stereo is None:
             stereo = StereoComponent(device, pipeline, replay=replay, args=args)
-            stereo.config_stereo(lr_check=True, subpixel=True, subpixel_bits=5, confidence=230)
+            stereo.config_stereo(lr_check=True, subpixel=True, subpixel_bits=3, confidence=230)
             stereo.node.initialConfig.setNumInvalidateEdgePixels(20)
 
             config = stereo.node.initialConfig.get()
-            config.postProcessing.speckleFilter.enable = False
+            config.postProcessing.speckleFilter.enable = True
             config.postProcessing.speckleFilter.speckleRange = 50
             config.postProcessing.temporalFilter.enable = True
             config.postProcessing.spatialFilter.enable = True
@@ -81,9 +68,9 @@ class PointcloudComponent(Component):
             config.postProcessing.decimationFilter.decimationMode = dai.RawStereoDepthConfig.PostProcessing.DecimationFilter.DecimationMode.NON_ZERO_MEDIAN
             stereo.node.initialConfig.set(config)
 
-            if self.colorize_node is not None:
+            if self.colorize_comp is not None:
                 # Align to colorize node
-                stereo.config_stereo(align=self.colorize_node.getBoardSocket())
+                stereo.config_stereo(align=self.colorize_comp)
 
         if isinstance(stereo, StereoComponent):
             stereo = stereo.node
@@ -114,8 +101,8 @@ class PointcloudComponent(Component):
 
         def pointcloud(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             colorize = None
-            if self._comp.colorize_node is not None:
-                colorize = StreamXout(self._comp.colorize_node.id, self._comp.colorize, name="Color")
+            if self._comp.colorize_comp is not None:
+                colorize = StreamXout(self._comp.colorize_comp.node.id, self._comp.colorize_comp.stream, name="Color")
 
             out = XoutPointcloud(device,
                                  StreamXout(self._comp.stereo_depth_node.id, self._comp.depth, name=self._comp.name),
