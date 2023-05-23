@@ -95,10 +95,8 @@ class TrackingConfig:
     deletion_lost_threshold: int = 5
     line_thickness: int = 1
     fading_tails: bool = False
-    speed: bool = False
     line_color: Tuple[int, int, int] = (255, 255, 255)
     line_type: int = 16  # cv2.LINE_AA
-    bg_color: Tuple[int, int, int] = (0, 0, 0)
 
 
 @dataclass

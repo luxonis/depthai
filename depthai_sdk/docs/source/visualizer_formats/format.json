@@ -1,0 +1,244 @@
+{
+  "platform": {
+    "type": "string",
+    "enum": [
+      "pc",
+      "robothub"
+    ]
+  },
+  "frame_shape": {
+    "type": "array",
+    "items": {
+      "type": "integer"
+    },
+    "description": "Frame shape in (height, width) format."
+  },
+  "config": {
+    "type": "object",
+    "output": {
+      "img_scale": {
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "default": 1.0,
+        "description": "Scale of output image."
+      },
+      "show_fps": {
+        "type": "boolean",
+        "default": false,
+        "description": "Show FPS on output image."
+      },
+      "clickable": {
+        "type": "boolean",
+        "default": false,
+        "description": "Show disparity or depth value on mouse hover."
+      }
+    },
+    "stereo": {
+      "type": "object",
+      "colorize": {
+        "type": "integer",
+        "default": 2,
+        "description": "cv2 colormap."
+      },
+      "colormap": {
+        "type": "integer",
+        "default": 2,
+        "description": "0 - gray, 1 - color, 2 - blended color and depth."
+      },
+      "wls_filter": {
+        "type": "boolean",
+        "default": false
+      },
+      "wls_lambda": {
+        "type": "number",
+        "default": 8000.0
+      },
+      "wls_sigma": {
+        "type": "number",
+        "default": 1.5
+      }
+    },
+    "detection": {
+      "type": "object",
+      "thickness": {
+        "type": "integer",
+        "default": 1
+      },
+      "fill_transparency": {
+        "type": "number",
+        "default": 0.15,
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "description": "Transparency of bbox fill."
+      },
+      "box_roundness": {
+        "type": "integer",
+        "default": 0,
+        "description": "Roundness of bbox corners, used only when bbox_style is set to BboxStyle.ROUNDED_*."
+      },
+      "color": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        },
+        "default": [0, 255, 0],
+        "description": "Default bbox color in RGB format."
+      },
+      "bbox_style": {
+        "type": "integer",
+        "default": 0,
+        "description": "``depthai_sdk.visualize.configs.BBoxStyle`` enum value."
+      },
+      "line_width": {
+        "type": "number",
+        "default": 0.5,
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "description": "Horizontal line width of bbox."
+      },
+      "line_height": {
+        "type": "number",
+        "default": 0.5,
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "description": "Vertical line height of bbox."
+      },
+      "hide_label": {
+        "type": "boolean",
+        "default": false,
+        "description": "Hide class label on output image."
+      },
+      "label_position": {
+        "type": "integer",
+        "default": 0,
+        "description": "``depthai_sdk.visualize.configs.TextPosition`` enum value."
+      },
+      "label_padding": {
+        "type": "integer",
+        "default": 10,
+        "description": "Padding between label and bbox."
+      }
+    },
+    "text": {
+      "font_face": {
+        "type": "integer",
+        "default": 0,
+        "description": "cv2 font face."
+      },
+      "font_color": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        },
+        "default": [255, 255, 255],
+        "description": "Font color in RGB format."
+      },
+      "font_transparency": {
+        "type": "number",
+        "default": 0.5,
+        "minimum": 0.0,
+        "maximum": 1.0
+      },
+      "font_scale": {
+        "type": "number",
+        "default": 1.0
+      },
+      "font_thickness": {
+        "type": "integer",
+        "default": 2
+      },
+      "font_position": {
+        "type": "integer",
+        "default": 0,
+        "description": "``depthai_sdk.visualize.configs.TextPosition`` enum value."
+      },
+      "bg_transparency": {
+        "type": "number",
+        "default": 0.5,
+        "minimum": 0.0,
+        "maximum": 1.0,
+        "description": "Text outline transparency."
+      },
+      "bg_color": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        },
+        "default": [0, 0, 0],
+        "description": "Text outline color in RGB format."
+      },
+      "line_type": {
+        "type": "integer",
+        "default": 16,
+        "description": "cv2 line type."
+      },
+      "auto_scale": {
+        "type": "boolean",
+        "default": true,
+        "description": "Automatically scale font size based on bbox size."
+      }
+    },
+    "tracking": {
+      "max_length": {
+        "type": "integer",
+        "default": -1,
+        "description": "Maximum length of tracking line, -1 for infinite."
+      },
+      "deletion_lost_threshold": {
+        "type": "integer",
+        "default": 5,
+        "description": "Number of frames after which lost track is deleted."
+      },
+      "line_thickness": {
+        "type": "integer",
+        "default": 1
+      },
+      "fading_tails": {
+        "type": "boolean",
+        "default": false,
+        "description": "Enable fading tails - reduces line thickness over time."
+      },
+      "line_color": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        },
+        "default": [255, 255, 255],
+        "description": "Tracking line color in RGB format."
+      },
+      "line_type": {
+        "type": "integer",
+        "default": 16,
+        "description": "cv2 line type."
+      }
+    },
+    "circle": {
+      "thickness": {
+        "type": "integer",
+        "default": 1
+      },
+      "color": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        },
+        "default": [0, 255, 0],
+        "description": "Circle color in RGB format."
+      },
+      "line_type": {
+        "type": "integer",
+        "default": 16,
+        "description": "cv2 line type."
+      }
+    }
+  },
+  "objects": {
+    "type": "array",
+    "items": {
+      "type": "object"
+    },
+    "description": "Array of objects (e.g. detection, text, line).",
+    "default": []
+  }
+}

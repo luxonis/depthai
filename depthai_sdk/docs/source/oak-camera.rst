@@ -62,7 +62,7 @@ Run face-detection-retail-0004 on left camera
    :language: python
 
 Deploy models from Roboflow and Roboflow Universe with Depth SDK
-*********************************************
+****************************************************************
 
 .. literalinclude:: ../../examples/NNComponent/roboflow_integration.py
    :language: python
