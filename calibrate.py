@@ -12,6 +12,7 @@ from collections import deque
 from scipy.spatial.transform import Rotation
 import traceback
 import itertools
+import math
 
 import cv2
 from cv2 import resize
@@ -437,11 +438,12 @@ class Main:
                     break
 
         self.charuco_board = cv2.aruco.CharucoBoard_create(
-                self.args.squaresX, self.args.squaresY,
-                self.args.squareSizeCm,
-                self.args.markerSizeCm,
-                self.aruco_dictionary)
-            
+                            self.args.squaresX, self.args.squaresY,
+                            self.args.squareSizeCm,
+                            self.args.markerSizeCm,
+                            self.aruco_dictionary)
+
+
         
 
         """ cameraProperties = self.device.getConnectedCameraProperties()
@@ -474,18 +476,33 @@ class Main:
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
         if not self.args.numMarkers:
-            num_all_markers = (self.args.squaresX-1)*(self.args.squaresY-1) / 2
+            num_all_markers = math.floor(self.args.squaresX * self.args.squaresY / 2)
         else:
             num_all_markers = self.args.numMarkers
+        print(f'Total mariers needed -> {(num_all_markers * self.args.minDetectedMarkersPercent)}')
         return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
 
-    def draw_corners(self, frame, displayframe):
+    def draw_corners(self, frame, displayframe, color):
         marker_corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, self.aruco_dictionary)
         marker_corners, ids, refusd, recoverd = cv2.aruco.refineDetectedMarkers(frame, self.charuco_board,
                                                                                 marker_corners, ids, 
                                                                                 rejectedCorners=rejectedImgPoints)
         ret, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, ids, frame, self.charuco_board)
-        cv2.aruco.drawDetectedCornersCharuco(displayframe, charuco_corners)
+
+        for corner in charuco_corners:
+            corner_int = (int(corner[0][0]), int(corner[0][1]))
+            cv2.circle(displayframe, corner_int, 8, color, -1)
+        height, width = displayframe.shape[:2]
+        start_point = (0, 0)  # top of the image
+        end_point = (0, height)
+
+        color = (0, 0, 0)  # blue in BGR
+        thickness = 4
+
+        # Draw the line on the image
+        cv2.line(displayframe, start_point, end_point, color, thickness)
+        return displayframe
+        # return cv2.aruco.drawDetectedCornersCharuco(displayframe, charuco_corners)
 
     def test_camera_orientation(self, frame_l, frame_r):
         marker_corners_l, id_l, _ = cv2.aruco.detectMarkers(
@@ -740,8 +757,6 @@ class Main:
                     localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))    
                     localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())    
 
-                # print(localPolygon)
-                # print(localPolygon.shape)
                 cv2.polylines(
                     imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
@@ -765,11 +780,13 @@ class Main:
                 width_offset = (resizeWidth - width)//2
                 subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset,width_offset)), 'constant', constant_values=0)
                 if self.coverageImages[name] is not None:
-                    subCoverageImage = np.pad(self.coverageImages[name], ((height_offset, height_offset), (width_offset,width_offset)), 'constant', constant_values=0)
+                    currCoverImage = cv2.resize(self.coverageImages[name], (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
+                    padding = ((height_offset, height_offset), (width_offset,width_offset), (0, 0))
+                    subCoverageImage = np.pad(currCoverImage, padding, 'constant', constant_values=0)
                     if combinedCoverageImage is None:
                         combinedCoverageImage = subCoverageImage
                     else:
-                        combinedCoverageImage = np.hstack((combinedCoverageImage, subImage))
+                        combinedCoverageImage = np.hstack((combinedCoverageImage, subCoverageImage))
 
 
                 if combinedImage is None:
@@ -787,6 +804,7 @@ class Main:
                 timer = self.args.captureDelay
                 self.mouseTrigger = False
 
+            display_image = cv2.cvtColor(combinedImage, cv2.COLOR_GRAY2BGR)
             if start_timer == True:
                 curr_time = time.time()
                 if curr_time - prev_time >= 1:
@@ -798,17 +816,18 @@ class Main:
                     print('Start capturing...')
                 
                 image_shape = combinedImage.shape
-                cv2.putText(combinedImage, str(timer),
+
+                cv2.putText(display_image, str(timer),
                         (image_shape[1]//2, image_shape[0]//2), font,
-                        7, (0, 255, 255),
+                        7, (0, 0, 255),
                         4, cv2.LINE_AA)
             cv2.namedWindow(self.display_name)
             if self.args.mouseTrigger:
                 cv2.setMouseCallback(self.display_name, self.mouse_event_callback)
 
-            cv2.imshow(self.display_name, combinedImage)
+            cv2.imshow(self.display_name, display_image)
             if combinedCoverageImage is not None:
-                cv2.imshow("Coverage-Image", combinedImage)
+                cv2.imshow("Coverage-Image", combinedCoverageImage)
 
             tried = {}
             allPassed = True
@@ -822,15 +841,17 @@ class Main:
                 for name, frameMsg in syncedMsgs.items():
                     print(f"Time stamp of {name} is {frameMsg.getTimestamp()}")
                     if self.coverageImages[name] is None:
-                        self.coverageImages[name] = np.ones(frameMsg.getCvFrame().shape, np.uint8) * 255
+                        coverageShape = frameMsg.getCvFrame().shape
+                        self.coverageImages[name] = np.ones(coverageShape, np.uint8) * 255
 
                     tried[name] = self.parse_frame(frameMsg.getCvFrame(), name)
+                    print(f'Status of {name} is {tried[name]}')
                     allPassed = allPassed and tried[name]
                 
                 if allPassed:
+                    color = (int(np.random.randint(0, 255)), int(np.random.randint(0, 255)), int(np.random.randint(0, 255)))
                     for name, frameMsg in syncedMsgs.items():
-                        self.draw_corners(frameMsg.getCvFrame(), self.coverageImages[name])
-
+                        self.coverageImages[name] = self.draw_corners(frameMsg.getCvFrame(), self.coverageImages[name], color)
                     if not self.images_captured:
                         leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
                         rightStereo = self.board_config['cameras'][self.board_config['stereo_config']['right_cam']]['name']
