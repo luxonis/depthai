@@ -6,9 +6,11 @@ Through the :ref:`NNComponent`, DepthAI SDK abstracts:
 1. **AI model sourcing** using `blobconverter <https://github.com/luxonis/blobconverter>`__ from `Open Model Zoo <https://github.com/openvinotoolkit/open_model_zoo>`__ (OMZ) and `DepthAI Model Zoo <https://github.com/luxonis/depthai-model-zoo>`__ (DMZ).
 2. **AI result decoding** - currently SDK supports on-device decoding for YOLO and MobileNet based results using `YoloDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/yolo_detection_network/>`__ and `MobileNetDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/>`__ nodes.
 3. **Decoding** of the ``config.json`` which **allows an easy deployment of custom AI models** trained `using our notebooks <https://github.com/luxonis/depthai-ml-training>`__ and converted using https://tools.luxonis.com.
-4. Formatting of the AI model input frame - SDK uses **BGR** color order and **Planar / CHW** channel layout conventions.
+4. Formatting of the AI model input frame - SDK uses **BGR** color order and **Planar / CHW** (Channel, Height, Width) layout conventions. If model accepts color images, it should accept 3 channels (B,G,R), and if it accepts grayscale images, it should accept 1 channel.
 
-.. image:: 
+.. figure:: https://github.com/luxonis/depthai/assets/18037362/3d2422ca-6ed4-46fe-948e-7860f2ff066f
+
+  Netron app allows you to check model's input layout
 
 5. Integration with 3rd party tools/services (:ref:`Roboflow`).
 
