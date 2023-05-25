@@ -482,13 +482,24 @@ class Main:
         print(f'Total mariers needed -> {(num_all_markers * self.args.minDetectedMarkersPercent)}')
         return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
 
-    def draw_corners(self, frame, displayframe, color):
+    def detect_markers_corners(self, frame):
         marker_corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, self.aruco_dictionary)
         marker_corners, ids, refusd, recoverd = cv2.aruco.refineDetectedMarkers(frame, self.charuco_board,
                                                                                 marker_corners, ids, 
                                                                                 rejectedCorners=rejectedImgPoints)
+        if len(marker_corners) <= 0:
+            return marker_corners, ids, None, None
         ret, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, ids, frame, self.charuco_board)
+        return marker_corners, ids, charuco_corners, charuco_ids
 
+    def draw_markers(self, frame):
+        marker_corners, ids, charuco_corners, charuco_ids = self.detect_markers_corners(frame)
+        if charuco_ids is not None and len(charuco_ids) > 0:
+            return cv2.aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids, (0, 255, 0));
+        return frame
+
+    def draw_corners(self, frame, displayframe, color):
+        marker_corners, ids, charuco_corners, charuco_ids = self.detect_markers_corners(frame)
         for corner in charuco_corners:
             corner_int = (int(corner[0][0]), int(corner[0][1]))
             cv2.circle(displayframe, corner_int, 8, color, -1)
@@ -681,12 +692,12 @@ class Main:
                 # print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
 
                 syncCollector.add_msg(key, frameMsg)
-                gray_frame = None
+                color_frame = None
                 if frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8] :
-                    gray_frame = frameMsg.getCvFrame()
+                    color_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_GRAY2BGR)
                 else:
-                    gray_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
-                currImageList[key] = gray_frame
+                    color_frame = frameMsg.getCvFrame()
+                currImageList[key] = color_frame
                 # print(gray_frame.shape)
 
             resizeHeight = 0
@@ -694,18 +705,17 @@ class Main:
             for name, imgFrame in currImageList.items():
                 
                 # print(f'original Shape of {name} is {imgFrame.shape}' )
-                currImageList[name] = cv2.resize(
-                    imgFrame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
+               
+                currImageList[name] = cv2.resize(self.draw_markers(imgFrame),
+                                                 (0, 0), 
+                                                 fx=self.output_scale_factor, 
+                                                 fy=self.output_scale_factor)
                 
-                height, width = currImageList[name].shape
+                height, width, _ = currImageList[name].shape
 
                 widthRatio = resizeWidth / width
                 heightRatio = resizeHeight / height
 
-
-                # if widthRatio > 1.0 and heightRatio > 1.0 and widthRatio < 1.2 and heightRatio < 1.2:
-                #     continue
-                
 
                 if (widthRatio > 0.8 and heightRatio > 0.8 and widthRatio <= 1.0 and heightRatio <= 1.0) or (widthRatio > 1.2 and heightRatio > 1.2) or (resizeHeight == 0):
                     resizeWidth = width
@@ -723,14 +733,14 @@ class Main:
             combinedImage = None
             combinedCoverageImage = None
             for name, imgFrame in currImageList.items():
-                height, width = imgFrame.shape
+                height, width, _ = imgFrame.shape
                 if width > resizeWidth and height > resizeHeight:
                     imgFrame = cv2.resize(
                     imgFrame, (0, 0), fx= resizeWidth / width, fy= resizeWidth / width)
                 
                 # print(f'final_scaledImageSize is {imgFrame.shape}')
                 if self.polygons is None:
-                    self.height, self.width = imgFrame.shape
+                    self.height, self.width, _ = imgFrame.shape
                     # print(self.height, self.width)
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
@@ -761,24 +771,16 @@ class Main:
                     imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
                 
-                # TODO(Sachin): Add this back with proper alignment
-                # cv2.putText(
-                #     imgFrame,
-                #     "Polygon Position: {}. Captured {} of {} {} images".format(
-                #         self.current_polygon + 1, self.images_captured, self.total_images, name),
-                #     (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0))
-
-
-                height, width = imgFrame.shape
+                height, width, _ = imgFrame.shape
                 # TO-DO: fix the rooquick and dirty fix: if the resized image is higher than the target resolution, crop it
                 if height > resizeHeight:
                     height_offset = (height - resizeHeight)//2
                     imgFrame = imgFrame[height_offset:height_offset+resizeHeight, :]
 
-                height, width = imgFrame.shape
+                height, width, _ = imgFrame.shape
                 height_offset = (resizeHeight - height)//2
                 width_offset = (resizeWidth - width)//2
-                subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset,width_offset)), 'constant', constant_values=0)
+                subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset, width_offset), (0, 0)), 'constant', constant_values=0)
                 if self.coverageImages[name] is not None:
                     currCoverImage = cv2.resize(self.coverageImages[name], (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
                     padding = ((height_offset, height_offset), (width_offset,width_offset), (0, 0))
@@ -793,7 +795,6 @@ class Main:
                     combinedImage = subImage
                 else:
                     combinedImage = np.hstack((combinedImage, subImage))
-            
             key = cv2.waitKey(1)
             if key == 27 or key == ord("q"):
                 print("py: Calibration has been interrupted!")
@@ -804,7 +805,7 @@ class Main:
                 timer = self.args.captureDelay
                 self.mouseTrigger = False
 
-            display_image = cv2.cvtColor(combinedImage, cv2.COLOR_GRAY2BGR)
+            display_image = combinedImage
             if start_timer == True:
                 curr_time = time.time()
                 if curr_time - prev_time >= 1:
@@ -880,7 +881,7 @@ class Main:
                     break
 
 
-    def capture_images(self):
+    """ def capture_images(self):
         finished = False
         capturing = False
         captured_left = False
@@ -1069,7 +1070,7 @@ class Main:
                         7, (0, 255, 255),
                         4, cv2.LINE_AA)
             cv2.imshow(self.display_name, combine_img)
-            frame_list.clear()
+            frame_list.clear() """
 
     def calibrate(self):
         print("Starting image processing")
