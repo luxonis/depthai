@@ -3,11 +3,14 @@ AI models
 
 Through the :ref:`NNComponent`, DepthAI SDK abstracts:
 
-- **AI model sourcing** using `blobconverter <https://github.com/luxonis/blobconverter>`__ from `Open Model Zoo <https://github.com/openvinotoolkit/open_model_zoo>`__ (OMZ) and `DepthAI Model Zoo <https://github.com/luxonis/depthai-model-zoo>`__ (DMZ).
-- **AI result decoding** - currently SDK supports on-device decoding for YOLO and MobileNet based results using `YoloDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/yolo_detection_network/>`__ and `MobileNetDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/>`__ nodes.
-- **Decoding** of the ``config.json`` which **allows an easy deployment of custom AI models** trained `using our notebooks <https://github.com/luxonis/depthai-ml-training>`__ and converted using https://tools.luxonis.com.
-- Formatting of the AI model input frame - SDK uses **BGR** color order and **Planar / CHW** channel layout conventions.
-- Integration with 3rd party tools/services (:ref:`Roboflow`).
+1. **AI model sourcing** using `blobconverter <https://github.com/luxonis/blobconverter>`__ from `Open Model Zoo <https://github.com/openvinotoolkit/open_model_zoo>`__ (OMZ) and `DepthAI Model Zoo <https://github.com/luxonis/depthai-model-zoo>`__ (DMZ).
+2. **AI result decoding** - currently SDK supports on-device decoding for YOLO and MobileNet based results using `YoloDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/yolo_detection_network/>`__ and `MobileNetDetectionNetwork <https://docs.luxonis.com/projects/api/en/latest/components/nodes/mobilenet_detection_network/>`__ nodes.
+3. **Decoding** of the ``config.json`` which **allows an easy deployment of custom AI models** trained `using our notebooks <https://github.com/luxonis/depthai-ml-training>`__ and converted using https://tools.luxonis.com.
+4. Formatting of the AI model input frame - SDK uses **BGR** color order and **Planar / CHW** channel layout conventions.
+
+.. image:: 
+
+5. Integration with 3rd party tools/services (:ref:`Roboflow`).
 
 
 SDK supported models
