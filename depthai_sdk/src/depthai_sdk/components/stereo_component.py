@@ -173,7 +173,8 @@ class StereoComponent(Component):
         self._control_xlink_in.setStreamName(f"{self.node.id}_inputControl")
         self._control_xlink_in.out.link(self.node.inputConfig)
         self._control_xlink_in.setMaxDataSize(1) # CameraControl message doesn't use any additional data (only metadata)
-
+        self.node.setRuntimeModeSwitch(True)
+        
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
             queue = device.getInputQueue(self._control_xlink_in.getStreamName())
