@@ -109,16 +109,7 @@ class CameraComponent(Component):
             socket = parse_camera_socket(source)
             sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == socket][0]
 
-            if node_type is not None:  # User specified camera type
-                if node_type == dai.node.ColorCamera and dai.CameraSensorType.COLOR not in sensor.supportedTypes:
-                    raise Exception(
-                        f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support COLOR mode!"
-                    )
-                if node_type == dai.node.MonoCamera and dai.CameraSensorType.MONO not in sensor.supportedTypes:
-                    raise Exception(
-                        f"User specified {node_type} node, but {sensor.sensorName} sensor doesn't support MONO mode!"
-                    )
-            else:
+            if node_type is None:  # User specified camera type
                 type = sensor.supportedTypes[0]
                 if type == dai.CameraSensorType.COLOR:
                     node_type = dai.node.ColorCamera
@@ -332,6 +323,12 @@ class CameraComponent(Component):
         if isp_scale:
             self._resolution_forced = True
             self.node.setIspScale(*isp_scale)
+
+            self.node.setPreviewSize(*self.node.getIspSize())
+            self.node.setVideoSize(*self.node.getIspSize())
+            self.stream_size = self.node.getIspSize()
+            self.stream = self.node.preview
+
         if sharpness is not None: self.node.initialControl.setSharpness(sharpness)
         if luma_denoise is not None: self.node.initialControl.setLumaDenoise(luma_denoise)
         if chroma_denoise is not None: self.node.initialControl.setChromaDenoise(chroma_denoise)

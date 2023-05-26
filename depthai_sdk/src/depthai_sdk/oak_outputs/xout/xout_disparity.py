@@ -1,6 +1,6 @@
 import logging
 import warnings
-from typing import List
+from typing import List, Optional
 
 import depthai as dai
 import numpy as np
@@ -18,13 +18,11 @@ except ImportError:
 
 
 class XoutDisparity(XoutFrames, Clickable):
-    name: str = "Disparity"
-
     def __init__(self,
-                 disparity_frames: StreamXout,
-                 mono_frames: StreamXout,
-                 max_disp: float,
+                 frames: StreamXout,
+                 disp_factor: float,
                  fps: float,
+                 mono_frames: Optional[StreamXout],
                  colorize: StereoColor = None,
                  colormap: int = None,
                  use_wls_filter: bool = None,
@@ -32,9 +30,9 @@ class XoutDisparity(XoutFrames, Clickable):
                  wls_lambda: float = None,
                  wls_sigma: float = None):
         self.mono_frames = mono_frames
-
-        self.multiplier = 255.0 / max_disp
+        self.multiplier = disp_factor
         self.fps = fps
+        self.name = 'Disparity'
 
         self.colorize = colorize
         self.colormap = colormap
@@ -65,7 +63,7 @@ class XoutDisparity(XoutFrames, Clickable):
 
         self.msgs = dict()
 
-        XoutFrames.__init__(self, frames=disparity_frames, fps=fps)
+        XoutFrames.__init__(self, frames=frames, fps=fps)
         Clickable.__init__(self, decay_step=int(self.fps))
 
     def visualize(self, packet: DepthPacket):
@@ -80,7 +78,12 @@ class XoutDisparity(XoutFrames, Clickable):
             disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
 
         colorize = self.colorize or stereo_config.colorize
-        colormap = self.colormap or stereo_config.colormap
+        if self.colormap is not None:
+            colormap = self.colormap
+        else:
+            colormap = stereo_config.colormap
+            colormap[0] = [0, 0, 0] # Invalidate pixels 0 to be black
+
         if colorize == StereoColor.GRAY:
             packet.frame = disparity_frame
         elif colorize == StereoColor.RGB:
@@ -96,15 +99,18 @@ class XoutDisparity(XoutFrames, Clickable):
 
             if self.buffer:
                 x, y = self.buffer[2]
+                text = f'{self.buffer[1]}' # Disparity value
+                if packet.depth_map is not None:
+                    text = f"{packet.depth_map[y, x] / 1000 :.2f} m"
+
                 self._visualizer.add_circle(coords=(x, y), radius=3, color=(255, 255, 255), thickness=-1)
-                self._visualizer.add_text(
-                    text=f'{self.buffer[1]}',
-                    coords=(x, y - 10)
-                )
+                self._visualizer.add_text(text=text, coords=(x, y - 10))
 
         super().visualize(packet)
 
     def xstreams(self) -> List[StreamXout]:
+        if self.mono_frames is None:
+            return [self.frames]
         return [self.frames, self.mono_frames]
 
     def new_msg(self, name: str, msg: dai.Buffer) -> None:
@@ -129,16 +135,20 @@ class XoutDisparity(XoutFrames, Clickable):
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
 
+            mono_frame = None
+            if self.mono_frames is not None:
+                mono_frame = self.msgs[seq][self.mono_frames.name]
+
             packet = DepthPacket(
                 self.get_packet_name(),
-                self.msgs[seq][self.frames.name],
-                self.msgs[seq][self.mono_frames.name],
-                self._visualizer
+                img_frame=self.msgs[seq][self.frames.name],
+                mono_frame=mono_frame,
+                visualizer=self._visualizer
             )
             self.queue.put(packet, block=False)
 
-            newMsgs = {}
+            new_msgs = {}
             for name, msg in self.msgs.items():
                 if int(name) > int(seq):
-                    newMsgs[name] = msg
-            self.msgs = newMsgs
+                    new_msgs[name] = msg
+            self.msgs = new_msgs
