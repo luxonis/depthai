@@ -5,6 +5,7 @@ import depthai as dai
 from depthai_sdk.components.component import Component, XoutBase
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
 from depthai_sdk.components.parser import parse_camera_socket
 
 class ToFComponent(Component):
@@ -33,7 +34,8 @@ class ToFComponent(Component):
         self.camera_node.raw.link(self.node.input)
 
         tofConfig = self.node.initialConfig.get()
-        tofConfig.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MIN
+        # tofConfig.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MIN
+        tofConfig.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MAX
         tofConfig.depthParams.avgPhaseShuffle = False
         tofConfig.depthParams.minimumAmplitude = 3.0
         self.node.initialConfig.set(tofConfig)
@@ -57,8 +59,12 @@ class ToFComponent(Component):
             return self.depth(pipeline, device)
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = StreamXout(self._comp.node.id, self._comp.node.depth)
-            tof_out = XoutFrames(out)
+            tof_out = XoutDepth(
+                frames=StreamXout(self._comp.node.id, self._comp.node.depth),
+                dispScaleFactor=9500,
+                fps=30,
+                mono_frames=None
+                )
             return self._comp._create_xout(pipeline, tof_out)
 
         def amplitude(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:

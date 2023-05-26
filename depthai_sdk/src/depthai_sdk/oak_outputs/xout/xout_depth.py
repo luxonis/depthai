@@ -20,7 +20,7 @@ class XoutDepth(XoutDisparity):
                  frames: StreamXout,
                  dispScaleFactor: float,
                  fps: float,
-                 mono_frames: Optional[StreamXout],
+                 mono_frames: Optional[StreamXout] = None,
                  colorize: StereoColor = None,
                  colormap: int = None,
                  wls_config: dict = None,
