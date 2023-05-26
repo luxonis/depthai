@@ -167,6 +167,7 @@ class NNComponent(Component):
 
             # Here, ImageManip will only crop the high-res frame to correct aspect ratio
             # (without resizing!) and it also acts as a buffer (by default, its pool size is set to 20).
+            self.image_manip = pipeline.createImageManip()
             self.image_manip.setNumFramesPool(20)
             self._input._stream_input.link(self.image_manip.inputImage)
 
@@ -384,6 +385,9 @@ class NNComponent(Component):
         Args:
             mode (ResizeMode): Resize mode to use
         """
+        if self._is_multi_stage():
+            return # We need high-res frames for multi-stage NN, so we can crop them later
+
         self._ar_resize_mode = mode
 
         # TODO: uncomment this when depthai 2.21.3 is released. In some cases (eg.
