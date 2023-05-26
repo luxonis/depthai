@@ -517,7 +517,7 @@ class OakCamera:
         Shows DepthAI Pipeline graph, which can be useful when debugging. Builds the pipeline (oak.build()).
         """
         self.build()
-        from depthai_sdk.integrations.depthai_pipeline_graph.depthai_pipeline_graph.pipeline_graph import \
+        from depthai_pipeline_graph.pipeline_graph import \
             PipelineGraph
 
         p = PipelineGraph()
