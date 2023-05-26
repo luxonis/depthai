@@ -1,11 +1,7 @@
 import numpy as np
 import depthai as dai
 
-def create_xyz(device: dai.Device, width: int, height: int):
-    calibData = device.readCalibration()
-    M_right = calibData.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, dai.Size2f(width, height))
-    camera_matrix = np.array(M_right).reshape(3, 3)
-
+def create_xyz(camera_matrix: np.ndarray, width: int, height: int):
     xs = np.linspace(0, width - 1, width, dtype=np.float32)
     ys = np.linspace(0, height - 1, height, dtype=np.float32)
 

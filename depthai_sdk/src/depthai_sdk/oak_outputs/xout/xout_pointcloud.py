@@ -19,6 +19,7 @@ except ImportError:
 class XoutPointcloud(XoutFrames):
     def __init__(self,
                  device: dai.Device,
+                 socket: dai.CameraBoardSocket,
                  depth_frames: StreamXout,
                  fps: int,
                  color_frames: Optional[StreamXout] = None):
@@ -26,6 +27,7 @@ class XoutPointcloud(XoutFrames):
         self.color_frames = color_frames
         XoutFrames.__init__(self, frames=depth_frames, fps=fps)
         self.name = 'Pointcloud'
+        self.socket = socket
         self.fps = fps
         self.device = device
         self.xyz = None
@@ -69,7 +71,12 @@ class XoutPointcloud(XoutFrames):
                 color_frame: dai.ImgFrame = self.msgs[seq][self.color_frames.name]
 
             if self.xyz is None:
-                self.xyz = create_xyz(self.device, depth_frame.getWidth(), depth_frame.getHeight())
+                calibData = self.device.readCalibration()
+                width, height = depth_frame.getWidth(), depth_frame.getHeight()
+                print(calibData, self.socket, width, height)
+                intrinsics = calibData.getCameraIntrinsics(self.socket, dai.Size2f(width, height))
+                camera_matrix = np.array(intrinsics).reshape(3, 3)
+                self.xyz = create_xyz(camera_matrix, width, height)
 
             pcl = self.xyz * np.expand_dims(np.array(depth_frame.getFrame()), axis = -1)
 

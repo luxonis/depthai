@@ -23,6 +23,7 @@ from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.nn_component import NNComponent
 from depthai_sdk.components.parser import parse_usb_speed
 from depthai_sdk.components.stereo_component import StereoComponent
+from depthai_sdk.components.tof_component import ToFComponent
 from depthai_sdk.components.pointcloud_component import PointcloudComponent
 from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
@@ -243,6 +244,17 @@ class OakCamera:
                                encode=encode)
         self._components.append(comp)
         return comp
+    
+    def create_tof(self, source: Union[str, dai.CameraBoardSocket, None] = None) -> ToFComponent:
+        """
+        Create ToF component.
+
+        Args:
+            source (str / dai.CameraBoardSocket): ToF camera source
+        """
+        comp = ToFComponent(self._oak.device, self.pipeline, source)
+        self._components.append(comp)
+        return comp
 
     def create_imu(self) -> IMUComponent:
         """
@@ -253,25 +265,24 @@ class OakCamera:
         return comp
 
     def create_pointcloud(self,
-                          stereo: Union[None, StereoComponent, dai.node.StereoDepth, dai.Node.Output] = None,
+                          input: Union[None, StereoComponent, ToFComponent] = None,
                           colorize: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output, bool] = None,
                           name: Optional[str] = None,
                           ) -> PointcloudComponent:
 
-        if colorize is None:
-            for component in self._components:
-                if isinstance(component, CameraComponent):
-                    if component.is_color():
-                        colorize = component
-                        break
-                    else:
-                        # ColorCamera has priority
-                        colorize = component
-
+        # if colorize is None:
+        #     for component in self._components:
+        #         if isinstance(component, CameraComponent):
+        #             if component.is_color():
+        #                 colorize = component
+        #                 break
+        #             else:
+        #                 # ColorCamera has priority
+        #                 colorize = component
         comp = PointcloudComponent(
             self._oak.device,
             self.pipeline,
-            stereo=stereo,
+            input=input,
             colorize=colorize,
             replay=self.replay,
             args=self._args,

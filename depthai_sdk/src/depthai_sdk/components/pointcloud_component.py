@@ -6,8 +6,9 @@ import cv2
 import depthai as dai
 import numpy as np
 from depthai_sdk.components.camera_component import CameraComponent
-from depthai_sdk.components.component import Component
 from depthai_sdk.components.stereo_component import StereoComponent
+from depthai_sdk.components.tof_component import ToFComponent
+from depthai_sdk.components.component import Component
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_pointcloud import XoutPointcloud
 from depthai_sdk.replay import Replay
@@ -18,7 +19,11 @@ class PointcloudComponent(Component):
     def __init__(self,
                  device: dai.Device,
                  pipeline: dai.Pipeline,
-                 stereo: Union[None, StereoComponent, dai.node.StereoDepth, dai.Node.Output] = None,
+                 input: Union[None,
+                              StereoComponent, ToFComponent,
+                            #   dai.node.StereoDepth, dai.node.ToF,
+                            #   dai.Node.Output
+                              ] = None,
                  colorize: Optional[CameraComponent] = None,
                  replay: Optional[Replay] = None,
                  args: Any = None,
@@ -33,7 +38,8 @@ class PointcloudComponent(Component):
         super().__init__()
         self.out = self.Out(self)
 
-        self.stereo_depth_node: dai.node.StereoDepth
+        self.component = input
+        self.depth_node: Union[dai.node.StereoDepth, dai.node.ToF]
         self.depth: dai.Node.Output # Depth node output
 
         self.colorize_comp: Optional[CameraComponent] = colorize
@@ -42,20 +48,16 @@ class PointcloudComponent(Component):
 
         self._replay: Optional[Replay] = replay
 
-        # Colorization aspect
-        if colorize is None:
-            self.colorize_comp = CameraComponent(device, pipeline, source='color', replay=replay, args=args)
-
         if isinstance(self.colorize_comp, CameraComponent):
             self.colorize_comp.config_color_camera(isp_scale=(2,5))
 
         # Depth aspect
-        if stereo is None:
-            stereo = StereoComponent(device, pipeline, replay=replay, args=args)
-            stereo.config_stereo(lr_check=True, subpixel=True, subpixel_bits=3, confidence=230)
-            stereo.node.initialConfig.setNumInvalidateEdgePixels(20)
+        if input is None:
+            input = StereoComponent(device, pipeline, replay=replay, args=args)
+            input.config_stereo(lr_check=True, subpixel=True, subpixel_bits=3, confidence=230)
+            input.node.initialConfig.setNumInvalidateEdgePixels(20)
 
-            config = stereo.node.initialConfig.get()
+            config = input.node.initialConfig.get()
             config.postProcessing.speckleFilter.enable = True
             config.postProcessing.speckleFilter.speckleRange = 50
             config.postProcessing.temporalFilter.enable = True
@@ -66,21 +68,24 @@ class PointcloudComponent(Component):
             config.postProcessing.thresholdFilter.maxRange = 20000 # 20m
             config.postProcessing.decimationFilter.decimationFactor = 2
             config.postProcessing.decimationFilter.decimationMode = dai.RawStereoDepthConfig.PostProcessing.DecimationFilter.DecimationMode.NON_ZERO_MEDIAN
-            stereo.node.initialConfig.set(config)
+            input.node.initialConfig.set(config)
+            self.component = input
 
             if self.colorize_comp is not None:
                 # Align to colorize node
-                stereo.config_stereo(align=self.colorize_comp)
+                input.config_stereo(align=self.colorize_comp)
 
-        if isinstance(stereo, StereoComponent):
-            stereo = stereo.node
+        if isinstance(input, (StereoComponent, ToFComponent)):
+            input = input.node
+            self.depth_node = input
+            self.depth = input.depth
 
-        if isinstance(stereo, dai.node.StereoDepth):
-            self.stereo_depth_node = stereo
-            self.depth = stereo.depth
-        elif isinstance(stereo, dai.Node.Output):
-            self.stereo_depth_node = stereo.getParent()
-            self.depth = stereo
+        # if isinstance(input, (dai.node.StereoDepth, dai.node.ToF)):
+        #     self.depth_node = input
+        #     self.depth = input.depth
+        # elif isinstance(input, dai.Node.Output):
+        #     self.depth_node = input.getParent()
+        #     self.depth = input
 
 
     def config_postprocessing(self,
@@ -100,13 +105,21 @@ class PointcloudComponent(Component):
             return self.pointcloud(pipeline, device)
 
         def pointcloud(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            colorize = None
-            if self._comp.colorize_comp is not None:
-                colorize = StreamXout(self._comp.colorize_comp.node.id, self._comp.colorize_comp.stream, name="Color")
+            if isinstance(self._comp.component, StereoComponent):
+                colorize = None
+                if self._comp.colorize_comp is not None:
+                    colorize = StreamXout(self._comp.colorize_comp.node.id, self._comp.colorize_comp.stream, name="Color")
 
-            out = XoutPointcloud(device,
-                                 StreamXout(self._comp.stereo_depth_node.id, self._comp.depth, name=self._comp.name),
-                                 color_frames=colorize,
-                                 fps=30
-                                 )
+                out = XoutPointcloud(device,
+                                    dai.CameraBoardSocket.RIGHT,
+                                    StreamXout(self._comp.depth_node.id, self._comp.depth, name=self._comp.name),
+                                    color_frames=colorize,
+                                    fps=30
+                                    )
+            elif isinstance(self._comp.component, ToFComponent):
+                out = XoutPointcloud(device,
+                    self._comp.component.camera_socket,
+                    StreamXout(self._comp.depth_node.id, self._comp.depth, name=self._comp.name),
+                    fps=30
+                )
             return self._comp._create_xout(pipeline, out)
