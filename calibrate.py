@@ -1104,15 +1104,19 @@ class Main:
                 print(e)
                 print(traceback.format_exc())
                 raise SystemExit(1)
-
+            
+            target_file = open('./dataset/target_info.txt', 'w')
             # calibration_handler.set
             error_text = []
+            
+            target_file.write(f'Marker Size: {self.args.markerSizeCm} cm\n')
+            target_file.write(f'Square Size: {self.args.squareSizeCm} cm\n')
+            target_file.write(f'Number of squaresX: {self.args.squaresX}\n')
+            target_file.write(f'Number of squaresY: {self.args.squaresY}\n')
 
             for camera in result_config['cameras'].keys():
                 cam_info = result_config['cameras'][camera]
                 # log_list.append(self.ccm_selected[cam_info['name']])
-
-                color = green
                 reprojection_error_threshold = 1.0
                 if cam_info['size'][1] > 720:
                     print(cam_info['size'][1])
@@ -1127,6 +1131,9 @@ class Main:
                     error_text.append("high Reprojection Error")
                 text = cam_info['name'] + ' Reprojection Error: ' + format(cam_info['reprojection_error'], '.6f')
                 print(text)
+                text = cam_info['name'] + '-reprojection: {}\n'.format(cam_info['reprojection_error'], '.6f')
+                target_file.write(text)
+
                 # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
 
                 calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
@@ -1156,6 +1163,9 @@ class Main:
                             color = red
                             error_text.append("Epiploar validation failed between " + left_cam + " and " + right_cam)
 
+                        text = cam_info['name'] + " and " + right_cam + ' epipolar_error: {}\n'.format(cam_info['extrinsics']['epipolar_error'], '.6f')
+                        target_file.write(text)
+
                         # log_list.append(cam_info['extrinsics']['epipolar_error'])
                         # text = left_cam + "-" + right_cam + ' Avg Epipolar error: ' + format(cam_info['extrinsics']['epipolar_error'], '.6f')
                         # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
@@ -1169,6 +1179,7 @@ class Main:
                         elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:                           
                             calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
                             calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
+            target_file.close()
 
             if len(error_text) == 0:
                 print('Flashing Calibration data into ')

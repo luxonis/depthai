@@ -112,14 +112,16 @@ class StereoCalibration(object):
 
         # parameters = aruco.DetectorParameters_create()
         assert mrk_size != None,  "ERROR: marker size not set"
-
+        coverageImages = {}
+        combinedCoverageImage = None
         for camera in board_config['cameras'].keys():
             cam_info = board_config['cameras'][camera]
             print(
                 '<------------Calibrating {} ------------>'.format(cam_info['name']))
             images_path = filepath + '/' + cam_info['name']
-            ret, intrinsics, dist_coeff, _, _, size = self.calibrate_intrinsics(
+            ret, intrinsics, dist_coeff, _, _, size, coverageImage = self.calibrate_intrinsics(
                 images_path, cam_info['hfov'])
+            # coverageImages[cam_info['name']] = coverageImage
             cam_info['intrinsics'] = intrinsics
             cam_info['dist_coeff'] = dist_coeff
             cam_info['size'] = size # (Width, height)
@@ -130,6 +132,21 @@ class StereoCalibration(object):
                 cam_info['name'], ret))
             print("Estimated intrinsics of {0}: \n {1}".format(
                 cam_info['name'], intrinsics))
+            
+            coverage_name = cam_info['name']
+            print_text = f'Coverage Image of {coverage_name} with reprojection error of {ret}'
+            cv2.putText(coverageImage, print_text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2)
+            # coverageImages[coverage_name] = coverageImage
+
+            if combinedCoverageImage is None:
+                combinedCoverageImage = coverageImage
+            else:
+                combinedCoverageImage = np.hstack((combinedCoverageImage, coverageImage))            
+
+        combinedCoverageImage = cv2.resize(combinedCoverageImage, (0, 0), fx=0.7, fy=0.7)
+        cv2.imshow('coverage image', combinedCoverageImage)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
         
         for camera in board_config['cameras'].keys():
             left_cam_info = board_config['cameras'][camera]
@@ -194,6 +211,23 @@ class StereoCalibration(object):
                     left_cam_info['extrinsics']['stereo_error'] = extrinsics[0]
 
         return 1, board_config
+
+    def draw_corners(self, charuco_corners, displayframe):
+        for corners in charuco_corners:
+            color = (int(np.random.randint(0, 255)), int(np.random.randint(0, 255)), int(np.random.randint(0, 255)))
+            for corner in corners:
+                corner_int = (int(corner[0][0]), int(corner[0][1]))
+                cv2.circle(displayframe, corner_int, 4, color, -1)
+        height, width = displayframe.shape[:2]
+        start_point = (0, 0)  # top of the image
+        end_point = (0, height)
+
+        color = (0, 0, 0)  # blue in BGR
+        thickness = 4
+
+        # Draw the line on the image
+        cv2.line(displayframe, start_point, end_point, color, thickness)
+        return displayframe
 
     def analyze_charuco(self, images, scale_req=False, req_resolution=(800, 1280)):
         """
@@ -280,6 +314,15 @@ class StereoCalibration(object):
             image_files) != 0, "ERROR: Images not read correctly, check directory"
 
         allCorners, allIds, _, _, imsize, _ = self.analyze_charuco(image_files)
+        # print(imsize)
+        # coverageShape = (imsize[0], imsize[1], 3)
+        print(imsize)
+        print(imsize[-1])
+        print(imsize[::-1])
+        coverageImage = np.ones(imsize[::-1], np.uint8) * 255
+        coverageImage = cv2.cvtColor(coverageImage, cv2.COLOR_GRAY2BGR)
+        coverageImage = self.draw_corners(allCorners, coverageImage)
+
         if self.cameraModel == 'perspective':
             ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors = self.calibrate_camera_charuco(
                 allCorners, allIds, imsize, hfov)
@@ -288,7 +331,7 @@ class StereoCalibration(object):
                 self.fisheye_undistort_visualizaation(
                     image_files, camera_matrix, distortion_coefficients, imsize)
 
-            return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors, imsize
+            return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors, imsize, coverageImage
         else:
             print('Fisheye--------------------------------------------------')
             ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors = self.calibrate_fisheye(
@@ -296,10 +339,11 @@ class StereoCalibration(object):
             if traceLevel == 3:
                 self.fisheye_undistort_visualizaation(
                     image_files, camera_matrix, distortion_coefficients, imsize)
-
+            print('Fisheye rotation vector', rotation_vectors[0])
+            print('Fisheye translation vector', translation_vectors[0])
 
             # (Height, width)
-            return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors, imsize
+            return ret, camera_matrix, distortion_coefficients, rotation_vectors, translation_vectors, imsize, coverageImage
 
     def calibrate_extrinsics(self, images_left, images_right, M_l, d_l, M_r, d_r, guess_translation, guess_rotation):
         self.objpoints = []  # 3d point in real world space
