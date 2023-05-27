@@ -12,6 +12,7 @@ from collections import deque
 from scipy.spatial.transform import Rotation
 import traceback
 import itertools
+import math
 
 import cv2
 from cv2 import resize
@@ -416,6 +417,14 @@ class Main:
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         
+        if self.args.cameraMode != "perspective": 
+            self.args.minDetectedMarkersPercent = 1
+        
+        self.coverageImages ={} 
+        for cam_id in self.board_config['cameras']:
+            name = self.board_config['cameras'][cam_id]['name']
+            self.coverageImages[name] = None
+
         self.device = dai.Device()
         cameraProperties = self.device.getConnectedCameraFeatures()
         for properties in cameraProperties:
@@ -428,7 +437,13 @@ class Main:
                     # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
                     break
 
-        
+        self.charuco_board = cv2.aruco.CharucoBoard_create(
+                            self.args.squaresX, self.args.squaresY,
+                            self.args.squareSizeCm,
+                            self.args.markerSizeCm,
+                            self.aruco_dictionary)
+
+
         
 
         """ cameraProperties = self.device.getConnectedCameraProperties()
@@ -461,10 +476,44 @@ class Main:
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
         if not self.args.numMarkers:
-            num_all_markers = (self.args.squaresX-1)*(self.args.squaresY-1) / 2
+            num_all_markers = math.floor(self.args.squaresX * self.args.squaresY / 2)
         else:
             num_all_markers = self.args.numMarkers
+        print(f'Total mariers needed -> {(num_all_markers * self.args.minDetectedMarkersPercent)}')
         return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
+
+    def detect_markers_corners(self, frame):
+        marker_corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, self.aruco_dictionary)
+        marker_corners, ids, refusd, recoverd = cv2.aruco.refineDetectedMarkers(frame, self.charuco_board,
+                                                                                marker_corners, ids, 
+                                                                                rejectedCorners=rejectedImgPoints)
+        if len(marker_corners) <= 0:
+            return marker_corners, ids, None, None
+        ret, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, ids, frame, self.charuco_board)
+        return marker_corners, ids, charuco_corners, charuco_ids
+
+    def draw_markers(self, frame):
+        marker_corners, ids, charuco_corners, charuco_ids = self.detect_markers_corners(frame)
+        if charuco_ids is not None and len(charuco_ids) > 0:
+            return cv2.aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids, (0, 255, 0));
+        return frame
+
+    def draw_corners(self, frame, displayframe, color):
+        marker_corners, ids, charuco_corners, charuco_ids = self.detect_markers_corners(frame)
+        for corner in charuco_corners:
+            corner_int = (int(corner[0][0]), int(corner[0][1]))
+            cv2.circle(displayframe, corner_int, 8, color, -1)
+        height, width = displayframe.shape[:2]
+        start_point = (0, 0)  # top of the image
+        end_point = (0, height)
+
+        color = (0, 0, 0)  # blue in BGR
+        thickness = 4
+
+        # Draw the line on the image
+        cv2.line(displayframe, start_point, end_point, color, thickness)
+        return displayframe
+        # return cv2.aruco.drawDetectedCornersCharuco(displayframe, charuco_corners)
 
     def test_camera_orientation(self, frame_l, frame_r):
         marker_corners_l, id_l, _ = cv2.aruco.detectMarkers(
@@ -574,7 +623,12 @@ class Main:
         width, height = int(
             self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
         info_frame = np.zeros((self.height, self.width, 3), np.uint8)
-        print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
+        if self.args.cameraMode != "perspective": 
+            print("py: Capture failed, unable to find full board! Fix position and press spacebar again")
+        else:
+            print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
+
+
 
         def show(position, text):
             cv2.putText(info_frame, text, position,
@@ -638,12 +692,12 @@ class Main:
                 # print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
 
                 syncCollector.add_msg(key, frameMsg)
-                gray_frame = None
+                color_frame = None
                 if frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8] :
-                    gray_frame = frameMsg.getCvFrame()
+                    color_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_GRAY2BGR)
                 else:
-                    gray_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
-                currImageList[key] = gray_frame
+                    color_frame = frameMsg.getCvFrame()
+                currImageList[key] = color_frame
                 # print(gray_frame.shape)
 
             resizeHeight = 0
@@ -651,18 +705,17 @@ class Main:
             for name, imgFrame in currImageList.items():
                 
                 # print(f'original Shape of {name} is {imgFrame.shape}' )
-                currImageList[name] = cv2.resize(
-                    imgFrame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
+               
+                currImageList[name] = cv2.resize(self.draw_markers(imgFrame),
+                                                 (0, 0), 
+                                                 fx=self.output_scale_factor, 
+                                                 fy=self.output_scale_factor)
                 
-                height, width = currImageList[name].shape
+                height, width, _ = currImageList[name].shape
 
                 widthRatio = resizeWidth / width
                 heightRatio = resizeHeight / height
 
-
-                # if widthRatio > 1.0 and heightRatio > 1.0 and widthRatio < 1.2 and heightRatio < 1.2:
-                #     continue
-                
 
                 if (widthRatio > 0.8 and heightRatio > 0.8 and widthRatio <= 1.0 and heightRatio <= 1.0) or (widthRatio > 1.2 and heightRatio > 1.2) or (resizeHeight == 0):
                     resizeWidth = width
@@ -678,15 +731,16 @@ class Main:
             # print(f'Scale Shape  is {resizeWidth}x{resizeHeight}' )
             
             combinedImage = None
+            combinedCoverageImage = None
             for name, imgFrame in currImageList.items():
-                height, width = imgFrame.shape
+                height, width, _ = imgFrame.shape
                 if width > resizeWidth and height > resizeHeight:
                     imgFrame = cv2.resize(
                     imgFrame, (0, 0), fx= resizeWidth / width, fy= resizeWidth / width)
                 
                 # print(f'final_scaledImageSize is {imgFrame.shape}')
                 if self.polygons is None:
-                    self.height, self.width = imgFrame.shape
+                    self.height, self.width, _ = imgFrame.shape
                     # print(self.height, self.width)
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
@@ -713,35 +767,34 @@ class Main:
                     localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))    
                     localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())    
 
-                # print(localPolygon)
-                # print(localPolygon.shape)
                 cv2.polylines(
                     imgFrame, localPolygon,
                     True, (0, 0, 255), 4)
                 
-                # TODO(Sachin): Add this back with proper alignment
-                # cv2.putText(
-                #     imgFrame,
-                #     "Polygon Position: {}. Captured {} of {} {} images".format(
-                #         self.current_polygon + 1, self.images_captured, self.total_images, name),
-                #     (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0))
-
-
-                height, width = imgFrame.shape
+                height, width, _ = imgFrame.shape
                 # TO-DO: fix the rooquick and dirty fix: if the resized image is higher than the target resolution, crop it
                 if height > resizeHeight:
                     height_offset = (height - resizeHeight)//2
                     imgFrame = imgFrame[height_offset:height_offset+resizeHeight, :]
 
-                height, width = imgFrame.shape
+                height, width, _ = imgFrame.shape
                 height_offset = (resizeHeight - height)//2
                 width_offset = (resizeWidth - width)//2
-                subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset,width_offset)), 'constant', constant_values=0)
+                subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset, width_offset), (0, 0)), 'constant', constant_values=0)
+                if self.coverageImages[name] is not None:
+                    currCoverImage = cv2.resize(self.coverageImages[name], (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
+                    padding = ((height_offset, height_offset), (width_offset,width_offset), (0, 0))
+                    subCoverageImage = np.pad(currCoverImage, padding, 'constant', constant_values=0)
+                    if combinedCoverageImage is None:
+                        combinedCoverageImage = subCoverageImage
+                    else:
+                        combinedCoverageImage = np.hstack((combinedCoverageImage, subCoverageImage))
+
+
                 if combinedImage is None:
                     combinedImage = subImage
                 else:
                     combinedImage = np.hstack((combinedImage, subImage))
-            
             key = cv2.waitKey(1)
             if key == 27 or key == ord("q"):
                 print("py: Calibration has been interrupted!")
@@ -752,6 +805,7 @@ class Main:
                 timer = self.args.captureDelay
                 self.mouseTrigger = False
 
+            display_image = combinedImage
             if start_timer == True:
                 curr_time = time.time()
                 if curr_time - prev_time >= 1:
@@ -763,15 +817,19 @@ class Main:
                     print('Start capturing...')
                 
                 image_shape = combinedImage.shape
-                cv2.putText(combinedImage, str(timer),
+
+                cv2.putText(display_image, str(timer),
                         (image_shape[1]//2, image_shape[0]//2), font,
-                        7, (0, 255, 255),
+                        7, (0, 0, 255),
                         4, cv2.LINE_AA)
             cv2.namedWindow(self.display_name)
             if self.args.mouseTrigger:
                 cv2.setMouseCallback(self.display_name, self.mouse_event_callback)
 
-            cv2.imshow(self.display_name, combinedImage)
+            cv2.imshow(self.display_name, display_image)
+            if combinedCoverageImage is not None:
+                cv2.imshow("Coverage-Image", combinedCoverageImage)
+
             tried = {}
             allPassed = True
 
@@ -780,13 +838,21 @@ class Main:
                 if syncedMsgs == False or syncedMsgs == None:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
-                    continue 
+                    continue
                 for name, frameMsg in syncedMsgs.items():
                     print(f"Time stamp of {name} is {frameMsg.getTimestamp()}")
+                    if self.coverageImages[name] is None:
+                        coverageShape = frameMsg.getCvFrame().shape
+                        self.coverageImages[name] = np.ones(coverageShape, np.uint8) * 255
+
                     tried[name] = self.parse_frame(frameMsg.getCvFrame(), name)
+                    print(f'Status of {name} is {tried[name]}')
                     allPassed = allPassed and tried[name]
                 
                 if allPassed:
+                    color = (int(np.random.randint(0, 255)), int(np.random.randint(0, 255)), int(np.random.randint(0, 255)))
+                    for name, frameMsg in syncedMsgs.items():
+                        self.coverageImages[name] = self.draw_corners(frameMsg.getCvFrame(), self.coverageImages[name], color)
                     if not self.images_captured:
                         leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
                         rightStereo = self.board_config['cameras'][self.board_config['stereo_config']['right_cam']]['name']
@@ -815,7 +881,7 @@ class Main:
                     break
 
 
-    def capture_images(self):
+    """ def capture_images(self):
         finished = False
         capturing = False
         captured_left = False
@@ -1004,7 +1070,7 @@ class Main:
                         7, (0, 255, 255),
                         4, cv2.LINE_AA)
             cv2.imshow(self.display_name, combine_img)
-            frame_list.clear()
+            frame_list.clear() """
 
     def calibrate(self):
         print("Starting image processing")
@@ -1038,15 +1104,19 @@ class Main:
                 print(e)
                 print(traceback.format_exc())
                 raise SystemExit(1)
-
+            
+            target_file = open('./dataset/target_info.txt', 'w')
             # calibration_handler.set
             error_text = []
+            
+            target_file.write(f'Marker Size: {self.args.markerSizeCm} cm\n')
+            target_file.write(f'Square Size: {self.args.squareSizeCm} cm\n')
+            target_file.write(f'Number of squaresX: {self.args.squaresX}\n')
+            target_file.write(f'Number of squaresY: {self.args.squaresY}\n')
 
             for camera in result_config['cameras'].keys():
                 cam_info = result_config['cameras'][camera]
                 # log_list.append(self.ccm_selected[cam_info['name']])
-
-                color = green
                 reprojection_error_threshold = 1.0
                 if cam_info['size'][1] > 720:
                     print(cam_info['size'][1])
@@ -1061,6 +1131,9 @@ class Main:
                     error_text.append("high Reprojection Error")
                 text = cam_info['name'] + ' Reprojection Error: ' + format(cam_info['reprojection_error'], '.6f')
                 print(text)
+                text = cam_info['name'] + '-reprojection: {}\n'.format(cam_info['reprojection_error'], '.6f')
+                target_file.write(text)
+
                 # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
 
                 calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
@@ -1068,7 +1141,7 @@ class Main:
                 calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
                 if self.args.cameraMode != 'perspective':
                     calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Fisheye)
-                if cam_info['hasAutofocus']:
+                if 'hasAutofocus' in cam_info and cam_info['hasAutofocus']:
                     calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
 
                 # log_list.append(self.focusSigma[cam_info['name']])
@@ -1090,6 +1163,9 @@ class Main:
                             color = red
                             error_text.append("Epiploar validation failed between " + left_cam + " and " + right_cam)
 
+                        text = cam_info['name'] + " and " + right_cam + ' epipolar_error: {}\n'.format(cam_info['extrinsics']['epipolar_error'], '.6f')
+                        target_file.write(text)
+
                         # log_list.append(cam_info['extrinsics']['epipolar_error'])
                         # text = left_cam + "-" + right_cam + ' Avg Epipolar error: ' + format(cam_info['extrinsics']['epipolar_error'], '.6f')
                         # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
@@ -1103,6 +1179,7 @@ class Main:
                         elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:                           
                             calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
                             calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
+            target_file.close()
 
             if len(error_text) == 0:
                 print('Flashing Calibration data into ')
@@ -1113,7 +1190,9 @@ class Main:
                 eeepromData.version = 7
                 print(f'EEPROM VERSION being flashed is  -> {eeepromData.version}')
                 mx_serial_id = self.device.getDeviceInfo().getMxId()
-                calib_dest_path = dest_path + '/' + mx_serial_id + '.json'
+                date_time_string = datetime.now().strftime("_%m_%d_%y_%H_%M")
+                file_name = mx_serial_id + date_time_string
+                calib_dest_path = dest_path + '/' + file_name + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
                 if self.args.saveCalibPath:
                     Path(self.args.saveCalibPath).parent.mkdir(parents=True, exist_ok=True)
