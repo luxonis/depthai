@@ -614,10 +614,9 @@ class NNComponent(Component):
             """
 
             if self._comp._is_multi_stage():
-                det_nn_out = StreamXout(id=self._comp._input.node.id,
-                                        out=self._comp._input.node.out,
+                det_nn_out = StreamXout(out=self._comp._input.node.out,
                                         name=self._comp._input.name)
-                second_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+                second_nn_out = StreamXout(out=self._comp.node.out, name=self._comp.name)
 
                 out = XoutTwoStage(det_nn=self._comp._input,
                                    second_nn=self._comp,
@@ -627,11 +626,10 @@ class NNComponent(Component):
                                    device=device,
                                    input_queue_name="input_queue" if self._comp.x_in else None)
             else:
-                det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+                det_nn_out = StreamXout(out=self._comp.node.out, name=self._comp.name)
                 input_stream = self._comp._stream_input
                 out = XoutNnResults(det_nn=self._comp,
-                                    frames=StreamXout(id=input_stream.getParent().id,
-                                                      out=input_stream,
+                                    frames=StreamXout(out=input_stream,
                                                       name=self._comp.name),
                                     nn_results=det_nn_out)
 
@@ -643,13 +641,11 @@ class NNComponent(Component):
             Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
             if self._comp._is_multi_stage():
-                det_nn_out = StreamXout(id=self._comp._input.node.id,
-                                        out=self._comp._input.node.out,
+                det_nn_out = StreamXout(out=self._comp._input.node.out,
                                         name=self._comp._input.name)
-                frames = StreamXout(id=self._comp._input.node.id,
-                                    out=self._comp._input.node.passthrough,
+                frames = StreamXout(out=self._comp._input.node.passthrough,
                                     name=self._comp.name)
-                second_nn_out = StreamXout(self._comp.node.id, self._comp.node.out, name=self._comp.name)
+                second_nn_out = StreamXout(out=self._comp.node.out, name=self._comp.name)
 
                 out = XoutTwoStage(det_nn=self._comp._input,
                                    second_nn=self._comp,
@@ -659,8 +655,8 @@ class NNComponent(Component):
                                    device=device,
                                    input_queue_name="input_queue" if self._comp.x_in else None)
             else:
-                det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
-                frames = StreamXout(id=self._comp.node.id, out=self._comp.node.passthrough, name=self._comp.name)
+                det_nn_out = StreamXout(out=self._comp.node.out, name=self._comp.name)
+                frames = StreamXout(out=self._comp.node.passthrough, name=self._comp.name)
 
                 out = XoutNnResults(det_nn=self._comp,
                                     frames=frames,
@@ -669,14 +665,12 @@ class NNComponent(Component):
             return self._comp._create_xout(pipeline, out)
 
         def image_manip(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = XoutFrames(frames=StreamXout(id=self._comp.image_manip.id,
-                                               out=self._comp.image_manip.out,
+            out = XoutFrames(frames=StreamXout(out=self._comp.image_manip.out,
                                                name=self._comp.name))
             return self._comp._create_xout(pipeline, out)
 
         def input(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = XoutFrames(frames=StreamXout(id=self._comp._input.node.id,
-                                               out=self._comp._stream_input,
+            out = XoutFrames(frames=StreamXout(out=self._comp._stream_input,
                                                name=self._comp.name))
             return self._comp._create_xout(pipeline, out)
 
@@ -691,8 +685,8 @@ class NNComponent(Component):
             out = XoutSpatialBbMappings(
                 device=device,
                 stereo=self._comp._stereo_node,
-                frames=StreamXout(id=self._comp.node.id, out=self._comp.node.passthroughDepth, name=self._comp.name),
-                configs=StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+                frames=StreamXout(out=self._comp.node.passthroughDepth, name=self._comp.name),
+                configs=StreamXout(out=self._comp.node.out, name=self._comp.name)
             )
 
             return self._comp._create_xout(pipeline, out)
@@ -704,8 +698,7 @@ class NNComponent(Component):
             if not self._comp._is_multi_stage():
                 raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
-            out = XoutFrames(frames=StreamXout(id=self._comp._multi_stage_nn.manip.id,
-                                               out=self._comp._multi_stage_nn.manip.out,
+            out = XoutFrames(frames=StreamXout(out=self._comp._multi_stage_nn.manip.out,
                                                name=self._comp.name))
 
             return self._comp._create_xout(pipeline, out)
@@ -726,7 +719,7 @@ class NNComponent(Component):
             out = XoutTracker(det_nn=self._comp,
                               frames=self._comp._input.get_stream_xout(),  # CameraComponent
                               device=device,
-                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out),
+                              tracklets=StreamXout(out=self._comp.tracker.out),
                               apply_kalman=self._comp.apply_tracking_filter,
                               forget_after_n_frames=self._comp.forget_after_n_frames)
 
@@ -746,8 +739,8 @@ class NNComponent(Component):
             if self._comp._input._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
                 out = XoutNnMjpeg(
                     det_nn=self._comp,
-                    frames=StreamXout(self._comp._input.encoder.id, self._comp._input.encoder.bitstream),
-                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
+                    frames=StreamXout(out=self._comp._input.encoder.bitstream),
+                    nn_results=StreamXout(out=self._comp.node.out),
                     color=self._comp._input.is_color(),
                     lossless=self._comp._input.encoder.getLossless(),
                     fps=self._comp._input.encoder.getFrameRate(),
@@ -756,8 +749,8 @@ class NNComponent(Component):
             else:
                 out = XoutNnH26x(
                     det_nn=self._comp,
-                    frames=StreamXout(self._comp._input.node.id, self._comp._input.encoder.bitstream),
-                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
+                    frames=StreamXout(out=self._comp._input.encoder.bitstream),
+                    nn_results=StreamXout(out=self._comp.node.out),
                     color=self._comp._input.is_color(),
                     profile=self._comp._input._encoder_profile,
                     fps=self._comp._input.encoder.getFrameRate(),
@@ -768,9 +761,9 @@ class NNComponent(Component):
 
         def nn_data(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutNnData:
             if type(self._comp.node) == dai.node.NeuralNetwork:
-                out = XoutNnData(xout=StreamXout(self._comp.node.id, self._comp.node.out))
+                out = XoutNnData(xout=StreamXout(out=self._comp.node.out))
             else:
-                out = XoutNnData(xout=StreamXout(self._comp.node.id, self._comp.node.outNetwork))
+                out = XoutNnData(xout=StreamXout(out=self._comp.node.outNetwork))
             return self._comp._create_xout(pipeline, out)
 
     # Checks

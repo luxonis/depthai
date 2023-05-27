@@ -399,12 +399,12 @@ class CameraComponent(Component):
         if self.is_replay():
             return ReplayStream(self._source)
         elif self.is_mono():
-            return StreamXout(self.node.id, self.stream, name=self.name)
+            return StreamXout(out=self.stream, name=self.name)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(self._num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
-            return StreamXout(self.node.id, self.node.video, name=self.name)
+            return StreamXout(out=self.node.video, name=self.name)
 
     def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
         """
@@ -460,7 +460,7 @@ class CameraComponent(Component):
             """
             if self._comp._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
                 out = XoutMjpeg(
-                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream, name=self._comp.name),
+                    frames=StreamXout(out=self._comp.encoder.bitstream, name=self._comp.name),
                     color=self._comp.is_color(),
                     lossless=self._comp.encoder.getLossless(),
                     fps=self._comp.encoder.getFrameRate(),
@@ -468,7 +468,7 @@ class CameraComponent(Component):
                 )
             else:
                 out = XoutH26x(
-                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream, name=self._comp.name),
+                    frames=StreamXout(out=self._comp.encoder.bitstream, name=self._comp.name),
                     color=self._comp.is_color(),
                     profile=self._comp._encoder_profile,
                     fps=self._comp.encoder.getFrameRate(),
