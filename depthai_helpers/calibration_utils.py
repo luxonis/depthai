@@ -112,7 +112,6 @@ class StereoCalibration(object):
 
         # parameters = aruco.DetectorParameters_create()
         assert mrk_size != None,  "ERROR: marker size not set"
-        coverageImages = {}
         combinedCoverageImage = None
         for camera in board_config['cameras'].keys():
             cam_info = board_config['cameras'][camera]
