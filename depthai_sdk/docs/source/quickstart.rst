@@ -112,7 +112,7 @@ There are several formats supported by the SDK for recording the outputs:
 #. :attr:`depthai_sdk.record.RecordType.MCAP` - record `MCAP <https://mcap.dev/>`__ files.
 #. :attr:`depthai_sdk.record.RecordType.BAG` - record `ROS bag <http://wiki.ros.org/Bags/Format/2.0>`__ files.
 
-You can find more information about recording in the :ref:`record` section.
+You can find more information about recording in the :ref:`Recording` section.
 
 Output syncing
 --------------
