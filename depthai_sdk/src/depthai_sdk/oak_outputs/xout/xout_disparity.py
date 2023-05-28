@@ -177,7 +177,6 @@ class XoutDisparity(XoutFrames, Clickable):
     def _auto_ir_search(self, frame: np.ndarray):
         # Perform neighbourhood search if we got worse metric values
         if self._checking_neighbourhood:
-            print('checking neighbourhood', self._neighbour_idx)
             # Increment the neighbourhood index if we have finished checking the current neighbour pair
             if self._ir_grid_search_iteration(frame, self._neighbourhood_pairs, self._neighbour_idx):
                 self._neighbour_idx += 1
@@ -238,7 +237,6 @@ class XoutDisparity(XoutFrames, Clickable):
         self._metrics_buffer['fill_rate'].clear()
 
         if fill_rate_avg < self._converged_metric_value * 0.9:
-            print('Checking neighbourhood', fill_rate_avg, self._converged_metric_value)
             self._auto_ir_converged = False
             self._checking_neighbourhood = True
             self._neighbourhood_pairs = np.unique([
