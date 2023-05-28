@@ -1,12 +1,13 @@
 import logging
 import warnings
 from typing import List, Optional
+from collections import defaultdict
 
 import depthai as dai
 import numpy as np
 
 from depthai_sdk.classes.packets import DepthPacket
-from depthai_sdk.evaluate import get_sharpness
+from depthai_sdk.evaluate import sharpness
 from depthai_sdk.oak_outputs.xout import Clickable
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
@@ -45,10 +46,12 @@ class XoutDisparity(XoutFrames, Clickable):
         self.auto_ir = auto_ir
         self._dot_projector_brightness = 0  # [0, 1200]
         self._flood_brightness = 0  # [0, 1500]
-        self._buffer = []
         self._ir_history = {}
-        self._prev_metric = None
+        self._ir_metrics = defaultdict(list)
         self._auto_ir_converged = False
+        self._samples = np.arange(0, 1201, 1200 / 10)  # values that will be tested for function approximation
+        self._current_sample_idx = 0
+        self._X, self._y = [], []
 
         # Prefer to use WLS level if set, otherwise use lambda and sigma
         if wls_level and use_wls_filter:
@@ -81,38 +84,48 @@ class XoutDisparity(XoutFrames, Clickable):
         if self._auto_ir_converged:
             return
 
-        STEP = 10
         if self.auto_ir:
-            self._buffer.append(packet.frame)
+            frame = packet.frame
 
-            if len(self._buffer) < 5:
+            fill_rate = np.count_nonzero(frame) / frame.size
+            img_sharpness = sharpness(frame)
+
+            self._ir_metrics['sharpness'].append(img_sharpness)
+            self._ir_metrics['fill_rate'].append(fill_rate)
+
+            if len(self._ir_metrics['sharpness']) < self.fps:
                 return
 
-            frames = np.array(self._buffer) / 255.0  # Normalize to 0-1
-            self._buffer.clear()
+            self._dot_projector_brightness = self._samples[self._current_sample_idx]
+            self.device.setIrLaserDotProjectorBrightness(self._dot_projector_brightness)
+            self._current_sample_idx += 1
 
-            # Diff between n-window frames
-            diff = np.abs(np.diff(frames, axis=0))
-            diff = np.mean(diff, axis=(1, 2)).sum()
+            img_sharpness = np.mean(self._ir_metrics['sharpness'])
+            fill_rate = np.mean(self._ir_metrics['fill_rate'])
 
-            # Average sharpness
-            sharpness = 0
-            for frame in frames:
-                sharpness += get_sharpness(frame)
-            sharpness /= len(frames)
+            self._X.append(self._dot_projector_brightness)
+            self._y.append([img_sharpness, fill_rate])
 
-            if self._dot_projector_brightness >= 1200:
+            self._ir_metrics['sharpness'].clear()
+            self._ir_metrics['fill_rate'].clear()
+
+            print(f'{self._dot_projector_brightness}, {img_sharpness:.03f}, {fill_rate:.03f}')
+
+            if len(self._X) == len(self._samples):
+                coefs = np.polyfit(self._X, self._y, 3)
+                fill_rate_coefs = coefs[:, 1]
+
+                poly = np.polynomial.Polynomial(fill_rate_coefs)
+                from matplotlib import pyplot as plt
+                plt.plot(np.arange(0, 1200),
+                         np.polynomial.Polynomial(fill_rate_coefs)(np.arange(0, 1200)))
+                roots = poly.roots()
+                # find value from range 0-1200 that maximizes fill rate
+                print(roots)
+                self._flood_brightness = np.max(roots[np.logical_and(roots >= 0, roots <= 1200)])
+                print(self._flood_brightness)
                 self._auto_ir_converged = True
 
-            # if self._prev_metric and diff < self._prev_metric:
-                # self._flood_brightness = min(self._flood_brightness + STEP, 1500)
-            self._dot_projector_brightness = min(self._dot_projector_brightness + STEP, 1200)
-
-            self.device.setIrFloodLightBrightness(self._flood_brightness)
-            self.device.setIrLaserDotProjectorBrightness(self._dot_projector_brightness)
-
-            # self._prev_metric = diff
-            print(f'{self._dot_projector_brightness} - {diff:.02f}, {sharpness:.03f}, {0:.03f}')
 
     def visualize(self, packet: DepthPacket):
         frame = packet.frame
