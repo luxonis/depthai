@@ -402,6 +402,7 @@ class CameraComponent(Component):
             return StreamXout(self.node.id, self.stream, name=self.name)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(self._num_frames_pool)
+            self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
             return StreamXout(self.node.id, self.node.video, name=self.name)
