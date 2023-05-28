@@ -1,13 +1,13 @@
+import itertools
 import logging
 import warnings
-from typing import List, Optional
 from collections import defaultdict
+from typing import List, Optional
 
 import depthai as dai
 import numpy as np
 
 from depthai_sdk.classes.packets import DepthPacket
-from depthai_sdk.evaluate import sharpness
 from depthai_sdk.oak_outputs.xout import Clickable
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
@@ -28,11 +28,8 @@ class XoutDisparity(XoutFrames, Clickable):
                  mono_frames: Optional[StreamXout],
                  colorize: StereoColor = None,
                  colormap: int = None,
-                 use_wls_filter: bool = None,
-                 wls_level: 'WLSLevel' = None,
-                 wls_lambda: float = None,
-                 wls_sigma: float = None,
-                 auto_ir: bool = None):
+                 wls_config: dict = None,
+                 ir_settings: dict = None):
         self.mono_frames = mono_frames
         self.multiplier = disp_factor
         self.fps = fps
@@ -41,28 +38,34 @@ class XoutDisparity(XoutFrames, Clickable):
 
         self.colorize = colorize
         self.colormap = colormap
-        self.use_wls_filter = use_wls_filter
+        self.use_wls_filter = wls_config['enabled']
 
-        self.auto_ir = auto_ir
+        self.ir_settings = ir_settings
         self._dot_projector_brightness = 0  # [0, 1200]
         self._flood_brightness = 0  # [0, 1500]
-        self._ir_history = {}
-        self._ir_metrics = defaultdict(list)
+
+        self._metrics_buffer = defaultdict(list)
         self._auto_ir_converged = False
-        self._samples = np.arange(0, 1201, 1200 / 10)  # values that will be tested for function approximation
-        self._current_sample_idx = 0
+        self._checking_neighbourhood = False
+        self._converged_metric_value = None
+
+        # Values that will be tested for function approximation
+        self._candidate_pairs = list(itertools.product(np.arange(0, 1201, 1200 / 4), np.arange(0, 1501, 1500 / 4)))
+        self._neighbourhood_pairs = []
+        self._candidate_idx, self._neighbour_idx = 0, 0
         self._X, self._y = [], []
 
         # Prefer to use WLS level if set, otherwise use lambda and sigma
-        if wls_level and use_wls_filter:
+        wls_level = wls_config['level']
+        if wls_level and self.use_wls_filter:
             logging.debug(
                 f'Using WLS level: {wls_level.name} (lambda: {wls_level.value[0]}, sigma: {wls_level.value[1]})'
             )
             self.wls_lambda = wls_level.value[0]
             self.wls_sigma = wls_level.value[1]
         else:
-            self.wls_lambda = wls_lambda
-            self.wls_sigma = wls_sigma
+            self.wls_lambda = wls_config['lambda']
+            self.wls_sigma = wls_config['sigma']
 
         if self.use_wls_filter:
             try:
@@ -81,51 +84,8 @@ class XoutDisparity(XoutFrames, Clickable):
         Clickable.__init__(self, decay_step=int(self.fps))
 
     def on_callback(self, packet) -> None:
-        if self._auto_ir_converged:
-            return
-
-        if self.auto_ir:
-            frame = packet.frame
-
-            fill_rate = np.count_nonzero(frame) / frame.size
-            img_sharpness = sharpness(frame)
-
-            self._ir_metrics['sharpness'].append(img_sharpness)
-            self._ir_metrics['fill_rate'].append(fill_rate)
-
-            if len(self._ir_metrics['sharpness']) < self.fps:
-                return
-
-            self._dot_projector_brightness = self._samples[self._current_sample_idx]
-            self.device.setIrLaserDotProjectorBrightness(self._dot_projector_brightness)
-            self._current_sample_idx += 1
-
-            img_sharpness = np.mean(self._ir_metrics['sharpness'])
-            fill_rate = np.mean(self._ir_metrics['fill_rate'])
-
-            self._X.append(self._dot_projector_brightness)
-            self._y.append([img_sharpness, fill_rate])
-
-            self._ir_metrics['sharpness'].clear()
-            self._ir_metrics['fill_rate'].clear()
-
-            print(f'{self._dot_projector_brightness}, {img_sharpness:.03f}, {fill_rate:.03f}')
-
-            if len(self._X) == len(self._samples):
-                coefs = np.polyfit(self._X, self._y, 3)
-                fill_rate_coefs = coefs[:, 1]
-
-                poly = np.polynomial.Polynomial(fill_rate_coefs)
-                from matplotlib import pyplot as plt
-                plt.plot(np.arange(0, 1200),
-                         np.polynomial.Polynomial(fill_rate_coefs)(np.arange(0, 1200)))
-                roots = poly.roots()
-                # find value from range 0-1200 that maximizes fill rate
-                print(roots)
-                self._flood_brightness = np.max(roots[np.logical_and(roots >= 0, roots <= 1200)])
-                print(self._flood_brightness)
-                self._auto_ir_converged = True
-
+        if self.ir_settings['auto_mode']:
+            self._auto_ir_search(packet.frame)
 
     def visualize(self, packet: DepthPacket):
         frame = packet.frame
@@ -143,7 +103,7 @@ class XoutDisparity(XoutFrames, Clickable):
             colormap = self.colormap
         else:
             colormap = stereo_config.colormap
-            colormap[0] = [0, 0, 0] # Invalidate pixels 0 to be black
+            colormap[0] = [0, 0, 0]  # Invalidate pixels 0 to be black
 
         if colorize == StereoColor.GRAY:
             packet.frame = disparity_frame
@@ -160,7 +120,7 @@ class XoutDisparity(XoutFrames, Clickable):
 
             if self.buffer:
                 x, y = self.buffer[2]
-                text = f'{self.buffer[1]}' # Disparity value
+                text = f'{self.buffer[1]}'  # Disparity value
                 if packet.depth_map is not None:
                     text = f"{packet.depth_map[y, x] / 1000 :.2f} m"
 
@@ -213,3 +173,84 @@ class XoutDisparity(XoutFrames, Clickable):
                 if int(name) > int(seq):
                     new_msgs[name] = msg
             self.msgs = new_msgs
+
+    def _auto_ir_search(self, frame: np.ndarray):
+        # Perform neighbourhood search if we got worse metric values
+        if self._checking_neighbourhood:
+            print('checking neighbourhood', self._neighbour_idx)
+            # Increment the neighbourhood index if we have finished checking the current neighbour pair
+            if self._ir_grid_search_iteration(frame, self._neighbourhood_pairs, self._neighbour_idx):
+                self._neighbour_idx += 1
+
+        # Check if we have finished checking all candidates, done once on the start up
+        elif not self._auto_ir_converged:
+            # Increment the candidate index if we have finished checking the current candidate pair
+            if self._ir_grid_search_iteration(frame, self._candidate_pairs, self._candidate_idx):
+                self._candidate_idx += 1
+
+        # Continuously check the consistency of the metric values, if we are in continuous mode
+        elif self._auto_ir_converged and self.ir_settings['continuous_mode']:
+            self._check_consistency(frame)
+
+    def _ir_grid_search_iteration(self, frame: np.array, candidate_pairs: list = None, candidate_idx: int = 0):
+        fill_rate = np.count_nonzero(frame) / frame.size
+        self._metrics_buffer['fill_rate'].append(fill_rate)
+
+        if len(self._metrics_buffer['fill_rate']) < max(self.fps, 30):
+            return False
+
+        if candidate_idx >= len(candidate_pairs):
+            # We have exhausted all candidates
+            best_idx = np.argmax(self._y)
+            self._converged_metric_value = self._y[best_idx]
+            self._dot_projector_brightness, self._flood_brightness = self._X[best_idx]
+            self._reset_buffers()
+            self._auto_ir_converged = True
+            self._checking_neighbourhood = False
+
+            logging.debug(f'Auto IR converged: dot projector - {self._dot_projector_brightness}mA, '
+                          f'flood - {self._flood_brightness}mA')
+        else:
+            self._dot_projector_brightness, self._flood_brightness = candidate_pairs[candidate_idx]
+
+        self._update_ir()
+
+        if self._auto_ir_converged:
+            return False
+
+        # Skip first half second of frames to allow for auto exposure to settle down
+        fill_rate_avg = np.mean(self._metrics_buffer['fill_rate'][int(self.fps // 2):])
+
+        self._X.append([self._dot_projector_brightness, self._flood_brightness])
+        self._y.append(fill_rate_avg)
+
+        self._metrics_buffer['fill_rate'].clear()
+        return True
+
+    def _check_consistency(self, frame):
+        fill_rate = np.count_nonzero(frame) / frame.size
+        self._metrics_buffer['fill_rate'].append(fill_rate)
+
+        if len(self._metrics_buffer['fill_rate']) < max(self.fps, 30):
+            return
+
+        fill_rate_avg = np.mean(self._metrics_buffer['fill_rate'])
+        self._metrics_buffer['fill_rate'].clear()
+
+        if fill_rate_avg < self._converged_metric_value * 0.9:
+            print('Checking neighbourhood', fill_rate_avg, self._converged_metric_value)
+            self._auto_ir_converged = False
+            self._checking_neighbourhood = True
+            self._neighbourhood_pairs = np.unique([
+                [np.clip(self._dot_projector_brightness + i, 0, 1200), np.clip(self._flood_brightness + j, 0, 1500)]
+                for i, j in itertools.product([-250, 250], [-375, 375])
+            ], axis=0)
+            self._neighbour_idx = 0
+
+    def _update_ir(self):
+        self.device.setIrLaserDotProjectorBrightness(self._dot_projector_brightness)
+        self.device.setIrFloodLightBrightness(self._flood_brightness)
+
+    def _reset_buffers(self):
+        self._X, self._y = [], []
+        del self._metrics_buffer['fill_rate']

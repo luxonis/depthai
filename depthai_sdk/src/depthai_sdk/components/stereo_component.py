@@ -10,6 +10,7 @@ import numpy as np
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_median_filter, parse_encode
+from depthai_sdk.components.stereo_control import StereoControl
 from depthai_sdk.components.undistort import _get_mesh
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
@@ -19,8 +20,8 @@ from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
 from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
-from depthai_sdk.components.stereo_control import StereoControl
 from depthai_sdk.visualize.visualizer_helper import depth_to_disp_factor
+
 
 class WLSLevel(Enum):
     """WLS filter level"""
@@ -89,7 +90,10 @@ class StereoComponent(Component):
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
         self._align_component: Optional[CameraComponent] = None
-        self.auto_ir = False
+        self.ir_settings = {
+            'auto_mode': False,
+            'continuous_mode': False,
+        }
 
         # Encoder
         self.encoder = None
@@ -101,10 +105,13 @@ class StereoComponent(Component):
         # Postprocessing options
         self._colorize = None
         self._postprocess_colormap = None
-        self.wls_enabled = None
-        self._wls_level = None
-        self._wls_lambda = None
-        self._wls_sigma = None
+
+        self.wls_config = {
+            'enabled': None,
+            'level': None,
+            'lambda': None,
+            'sigma': None
+        }
 
         self._undistortion_offset: Optional[int] = None
 
@@ -175,7 +182,8 @@ class StereoComponent(Component):
         self._control_xlink_in = pipeline.create(dai.node.XLinkIn)
         self._control_xlink_in.setStreamName(f"{self.node.id}_inputControl")
         self._control_xlink_in.out.link(self.node.inputConfig)
-        self._control_xlink_in.setMaxDataSize(1) # CameraControl message doesn't use any additional data (only metadata)
+        self._control_xlink_in.setMaxDataSize(
+            1)  # CameraControl message doesn't use any additional data (only metadata)
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
@@ -287,15 +295,17 @@ class StereoComponent(Component):
             wls_lambda: WLS filter lambda.
             wls_sigma: WLS filter sigma.
         """
-        self.wls_enabled = True if wls_level else False
-
         if isinstance(wls_level, WLSLevel):
-            self._wls_level = wls_level
+            wls_level = wls_level
         elif isinstance(wls_level, str):
-            self._wls_level = WLSLevel[wls_level.upper()]
+            wls_level = WLSLevel[wls_level.upper()]
 
-        self._wls_lambda = wls_lambda
-        self._wls_sigma = wls_sigma
+        self.wls_config = {
+            'enabled': True if wls_level else False,
+            'level': wls_level,
+            'lambda': wls_lambda,
+            'sigma': wls_sigma,
+        }
 
     def set_colormap(self, colormap: dai.Colormap):
         """
@@ -327,11 +337,22 @@ class StereoComponent(Component):
 
         self.colormap = colormap
 
-    def set_auto_ir(self, status: bool):
+    def set_auto_ir(self, auto_mode: bool, continious_mode: bool = False) -> None:
         """
-        Enables/disables auto IR brightness. Selects the best IR brightness level automatically.
+        Enables/disables auto IR dot projector and flood brightness. Selects the best IR brightness level automatically.
+        Can be set to continious mode, which will continuously adjust the IR brightness. Otherwise, it will adjust
+        the brightness only once when the device is started.
+
+        Args:
+            auto_mode: Enable/disable auto IR.
+            continious_mode: Enable/disable continious mode.
         """
-        self.auto_ir = status
+        warnings.warn('Auto IR is an experimental feature, which may not work as expected. '
+                      'Please report any issues at https://discuss.luxonis.com/t/support/.')
+        self.ir_settings = {
+            'auto_mode': auto_mode,
+            'continuous_mode': continious_mode
+        }
 
     def set_ir(self, dot_projector_brightness: int, flood_brightness: int):
         """
@@ -390,7 +411,7 @@ class StereoComponent(Component):
             Create mono frames output if WLS filter is enabled or colorize is set to RGBD
             """
             mono_frames = None
-            if self._comp.wls_enabled or self._comp._colorize == StereoColor.RGBD:
+            if self._comp.wls_config['enabled'] or self._comp._colorize == StereoColor.RGBD:
                 mono_frames = StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name)
             return mono_frames
 
@@ -409,11 +430,8 @@ class StereoComponent(Component):
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
-                use_wls_filter=self._comp.wls_enabled,
-                wls_level=self._comp._wls_level,
-                wls_lambda=self._comp._wls_lambda,
-                wls_sigma=self._comp._wls_sigma,
-                auto_ir=self._comp.auto_ir
+                wls_config=self._comp.wls_config,
+                ir_settings=self._comp.ir_settings,
             )
 
             return self._comp._create_xout(pipeline, out)
@@ -445,11 +463,8 @@ class StereoComponent(Component):
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
-                use_wls_filter=self._comp.wls_enabled,
-                wls_level=self._comp._wls_level,
-                wls_lambda=self._comp._wls_lambda,
-                wls_sigma=self._comp._wls_sigma,
-                auto_ir=self._comp.auto_ir
+                wls_config=self._comp.wls_config,
+                ir_settings=self._comp.ir_settings
             )
             return self._comp._create_xout(pipeline, out)
 
@@ -457,7 +472,7 @@ class StereoComponent(Component):
             if not self._comp.encoder:
                 raise RuntimeError('Encoder not enabled, cannot output encoded frames')
 
-            if self._comp.wls_enabled:
+            if self._comp.wls_config['enabled']:
                 warnings.warn('WLS filter is enabled, but cannot be applied to encoded frames.')
 
             if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
