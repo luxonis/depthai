@@ -96,9 +96,11 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if len(packet.frame.shape) == 2:
             packet.frame = np.dstack((packet.frame, packet.frame, packet.frame))
 
+        frame_shape = self.det_nn._input.stream_size[::-1]
+
         if self._frame_shape is None:
             # Lazy-load the frame shape
-            self._frame_shape = np.array([packet.frame.shape[0], packet.frame.shape[1]])
+            self._frame_shape = np.array([*frame_shape])
             if self._visualizer:
                 self._visualizer.frame_shape = self._frame_shape
 
