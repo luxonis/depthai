@@ -5,5 +5,5 @@ scipy
 # -e ./depthai_sdk
 # --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-depthai-data-local/wheels/
 # pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" and platform_machine != "aarch64"
-# --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
-# depthai===2.19.1.0.dev0+399fffe13be71aeadf3385200ffa3bba9b71490d
+--extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
+depthai===2.19.1.0.dev0+399fffe13be71aeadf3385200ffa3bba9b71490d
