@@ -104,7 +104,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             if self._visualizer:
                 self._visualizer.frame_shape = self._frame_shape
 
-        bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
+        bbox = BoundingBox().resize_to_aspect_ratio(self._frame_shape, self._nn_size, self._resize_mode)
 
         # Add detections to packet
         if isinstance(packet.img_detections, dai.ImgDetections) \
