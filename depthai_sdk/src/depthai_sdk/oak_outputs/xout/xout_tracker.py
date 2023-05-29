@@ -83,8 +83,6 @@ class XoutTracker(XoutNnResults):
         super().visualize(packet)
 
     def package(self, msgs: Dict):
-        if self.queue.full():
-            self.queue.get()  # Get one, so queue isn't full
         packet = TrackerPacket(
             self.get_packet_name(),
             msgs[self.frames.name],

@@ -26,4 +26,6 @@ class XoutSeqSync(XoutBase, SequenceNumSync):
 
         synced = self.sync(msg.getSequenceNum(), name, msg)
         if synced:
+            if self.queue.full():
+                self.queue.get()  # Get one, so queue isn't full
             self.package(synced)

@@ -25,6 +25,7 @@ from depthai_sdk.components.parser import parse_usb_speed
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.components.pointcloud_component import PointcloudComponent
 from depthai_sdk.components.hand_tracker.component import HandTrackerComponent
+from depthai_sdk.components.pose_estimation.blazepose import BlazeposeComponent
 from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
@@ -282,12 +283,29 @@ class OakCamera:
 
     def create_hand_tracker(self,
                             input: CameraComponent,
+                            spatial: Optional[StereoComponent] = None,
                             name: Optional[str] = None,
                             ):
         comp = HandTrackerComponent(
             self._oak.device,
             self.pipeline,
             input=input,
+            spatial=spatial,
+            name=name
+        )
+        self._components.append(comp)
+        return comp
+
+    def create_bodypose_estimation(self,
+                                   input: CameraComponent,
+                                   spatial: Optional[StereoComponent] = None,
+                                   name: Optional[str] = None,
+                                   ):
+        comp = BlazeposeComponent(
+            self._oak.device,
+            self.pipeline,
+            input=input,
+            spatial=spatial,
             name=name
         )
         self._components.append(comp)

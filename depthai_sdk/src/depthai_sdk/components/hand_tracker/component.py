@@ -19,7 +19,7 @@ class HandTrackerComponent(Component):
                  pipeline: dai.Pipeline,
                  input: CameraComponent,
                 #  model: str = 'lite',  # "lite", "full", or "sparse"
-                 spatial: Union[None, bool, StereoComponent] = None,
+                 spatial: Union[None, StereoComponent] = None, # If passed, enable XYZ
                  args: Dict = None,  # User defined args
                  name: Optional[str] = None
                  ) -> None:
@@ -40,10 +40,11 @@ class HandTrackerComponent(Component):
 
         self._spatial: Optional[Union[bool, StereoComponent]] = spatial
 
+
         self.use_lm = True
         self.trace = 0
         self.lm_nb_threads = 2 # Number of inference threads for the landmark model
-        self.xyz = False
+        self.xyz = False if spatial is None else True
         self.crop = False
         self.use_world_landmarks = False
         self.use_gesture = False
@@ -55,26 +56,25 @@ class HandTrackerComponent(Component):
         self.pd_resize_mode = ResizeMode.LETTERBOX
 
         self.img_w, self.img_h = self._input.stream_size
-        print(self._input.node.getPreviewSize(), self._input.node.getVideoSize(), self._input.node.getIspSize())
-        print(self._input.stream_size)
 
         self.crop_w = 0
         self.frame_size = self.img_w
         self.pad_w = 0
         self.pad_h = (self.img_w - self.img_h) // 2
-        """
-        Internal camera FPS set to: 36
-        Internal camera image size: 1152 x 648 - pad_h: 252
-        VALS: 252 648 1152 1152 0
-
-        MY vals: VALS: 0 720 1280 1280 0
-        """
-
-        # _crop_w = self.crop_w,
 
         self.script = pipeline.create(dai.node.Script)
         self.script.setScript(self.build_manager_script())
         self.script.setProcessor(dai.ProcessorType.LEON_CSS)  # More stable
+
+        if spatial is not None:
+            slc = pipeline.create(dai.node.SpatialLocationCalculator)
+            slc.setWaitForConfigInput(True)
+            slc.inputDepth.setBlocking(False)
+            slc.inputDepth.setQueueSize(1)
+
+            spatial.node.depth.link(slc.inputDepth)
+            self.script.outputs['spatial_location_config'].link(slc.inputConfig)
+            slc.out.link(self.script.inputs['spatial_data'])
 
         # Palm detection ---------
         self.pd_size = (128, 128)
@@ -147,9 +147,6 @@ class HandTrackerComponent(Component):
         with open(path, 'r', encoding='utf-8') as file:
             template = Template(file.read())
 
-        # self.trace = 3
-        print('VALS:', self.pad_h, self.img_h, self.img_w, self.frame_size, self.crop_w)
-
         # Perform the substitution
         code = template.substitute(
                     _TRACE1 = "node.warn" if self.trace & 1 else "#",
@@ -175,36 +172,10 @@ class HandTrackerComponent(Component):
         # For debugging
         return code
 
-    # def _change_resize_mode(self, mode: ResizeMode) -> None:
-    #     """
-    #     Changes the resize mode of the ImageManip node.
-
-    #     Args:
-    #         mode (ResizeMode): Resize mode to use
-    #     """
-    #     self._ar_resize_mode = mode
-
-    #     # TODO: uncomment this when depthai 2.21.3 is released. In some cases (eg.
-    #     # setting first crop, then letterbox), the last config isn't used.
-    #     # self.image_manip.initialConfig.set(dai.RawImageManipConfig())
-
-    #     if self._ar_resize_mode == ResizeMode.CROP:
-    #         self.image_manip.initialConfig.setResize(self._size)
-    #         # With .setCenterCrop(1), ImageManip will first crop the frame to the correct aspect ratio,
-    #         # and then resize it to the NN input size
-    #         self.image_manip.initialConfig.setCenterCrop(1, self._size[0] / self._size[1])
-    #     elif self._ar_resize_mode == ResizeMode.LETTERBOX:
-    #         self.image_manip.initialConfig.setResizeThumbnail(*self._size)
-    #     elif self._ar_resize_mode == ResizeMode.STRETCH:
-    #         # Not keeping aspect ratio -> stretching the image
-    #         self.image_manip.initialConfig.setKeepAspectRatio(False)
-    #         self.image_manip.initialConfig.setResize(self._size)
-
-    """
-    Available outputs (to the host) of this component
-    """
-
     class Out:
+        """
+        Available outputs (to the host) of this component
+        """
         def __init__(self, nn_component: 'HandTrackerComponent'):
             self._comp = nn_component
 

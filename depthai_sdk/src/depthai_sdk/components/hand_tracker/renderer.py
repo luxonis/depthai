@@ -38,7 +38,7 @@ class HandTrackerRenderer:
             self.output = None
         else:
             fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-            self.output = cv2.VideoWriter(output,fourcc,self.tracker.video_fps,(self.tracker.img_w, self.tracker.img_h)) 
+            self.output = cv2.VideoWriter(output,fourcc,self.tracker.video_fps,(self.tracker.img_w, self.tracker.img_h))
 
     def norm2abs(self, x_y):
         x = int(x_y[0] * self.tracker.frame_size - self.tracker.pad_w)
@@ -48,7 +48,7 @@ class HandTrackerRenderer:
     def draw_hand(self, hand):
 
         if self.tracker.use_lm:
-            # (info_ref_x, info_ref_y): coords in the image of a reference point 
+            # (info_ref_x, info_ref_y): coords in the image of a reference point
             # relatively to which hands information (score, handedness, xyz,...) are drawn
             info_ref_x = hand.landmarks[0,0]
             info_ref_y = np.max(hand.landmarks[:,1])
@@ -85,21 +85,21 @@ class HandTrackerRenderer:
                             color = (0,255,0) if hand.handedness > 0.5 else (0,0,255)
                         elif self.show_handedness == 3:
                             color = (255, 0, 0)
-                        else: 
+                        else:
                             color = (0,128,255)
                         for x,y in hand.landmarks[:,:2]:
                             cv2.circle(self.frame, (int(x), int(y)), radius, color, -1)
 
                 if self.show_handedness == 1:
-                    cv2.putText(self.frame, f"{hand.label.upper()} {hand.handedness:.2f}", 
-                            (info_ref_x-90, info_ref_y+40), 
+                    cv2.putText(self.frame, f"{hand.label.upper()} {hand.handedness:.2f}",
+                            (info_ref_x-90, info_ref_y+40),
                             cv2.FONT_HERSHEY_PLAIN, 2, (0,255,0) if hand.handedness > 0.5 else (0,0,255), 2)
                 if self.show_scores:
-                    cv2.putText(self.frame, f"Landmark score: {hand.lm_score:.2f}", 
-                            (info_ref_x-90, info_ref_y+110), 
+                    cv2.putText(self.frame, f"Landmark score: {hand.lm_score:.2f}",
+                            (info_ref_x-90, info_ref_y+110),
                             cv2.FONT_HERSHEY_PLAIN, 2, (255,255,0), 2)
                 if self.tracker.use_gesture and self.show_gesture:
-                    cv2.putText(self.frame, hand.gesture, (info_ref_x-20, info_ref_y-50), 
+                    cv2.putText(self.frame, hand.gesture, (info_ref_x-20, info_ref_y-50),
                             cv2.FONT_HERSHEY_PLAIN, 3, (255,255,255), 3)
 
         if hand.pd_box is not None:
@@ -118,10 +118,9 @@ class HandTrackerRenderer:
                     x, y = info_ref_x - 90, info_ref_y + 80
                 else:
                     x, y = box_tl[0], box_br[1]+60
-                cv2.putText(self.frame, f"Palm score: {hand.pd_score:.2f}", 
-                        (x, y), 
+                cv2.putText(self.frame, f"Palm score: {hand.pd_score:.2f}",
+                        (x, y),
                         cv2.FONT_HERSHEY_PLAIN, 2, (255,255,0), 2)
-            
         if self.show_xyz:
             if self.tracker.use_lm:
                 x0, y0 = info_ref_x - 40, info_ref_y + 40
@@ -131,7 +130,7 @@ class HandTrackerRenderer:
             cv2.putText(self.frame, f"X:{hand.xyz[0]/10:3.0f} cm", (x0+10, y0+20), cv2.FONT_HERSHEY_PLAIN, 1, (20,180,0), 2)
             cv2.putText(self.frame, f"Y:{hand.xyz[1]/10:3.0f} cm", (x0+10, y0+45), cv2.FONT_HERSHEY_PLAIN, 1, (255,0,0), 2)
             cv2.putText(self.frame, f"Z:{hand.xyz[2]/10:3.0f} cm", (x0+10, y0+70), cv2.FONT_HERSHEY_PLAIN, 1, (0,0,255), 2)
-        if self.show_xyz_zone:
+        if self.show_xyz_zone and False:
             # Show zone on which the spatial data were calculated
             cv2.rectangle(self.frame, tuple(hand.xyz_zone[0:2]), tuple(hand.xyz_zone[2:4]), (180,0,180), 2)
 
@@ -140,7 +139,7 @@ class HandTrackerRenderer:
         cv2.polylines(self.frame, lines, False, (255, 144, 30), 2, cv2.LINE_AA)
 
     def draw_bag(self, bag):
-        
+
         if self.show_inferences_status:
             # Draw inferences status
             h = self.frame.shape[0]

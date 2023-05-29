@@ -5,7 +5,6 @@ import numpy as np
 
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.classes.packets import HandTrackerPacket, RotatedDetectionPacket
-from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
@@ -115,7 +114,7 @@ class XoutPalmDetection(XoutSeqSync, XoutFrames):
     def xstreams(self) -> List[StreamXout]:
         return [self.nn_results, self.frames]
 
-    def normalize_radians(self, angle):
+    def normalize_radians(wself, angle):
         return angle - 2 * pi * floor((angle + pi) / (2 * pi))
 
     def visualize(self, packet: RotatedDetectionPacket):

@@ -1,5 +1,5 @@
 from typing import Tuple, List, Union, Optional
-from depthai_sdk.components.hand_tracker.mediapipe_utils import HandRegion
+from depthai_sdk.components.hand_tracker.mediapipe_utils import HandRegion, Body
 import depthai as dai
 import numpy as np
 import math
@@ -88,6 +88,17 @@ class HandTrackerPacket:
                  visualizer: 'Visualizer' = None):
         self.name = name
         self.hands = hands
+        self.color_frame = color_frame
+        self.visualizer = visualizer
+
+class BodyPosePacket:
+    def __init__(self,
+                 name: str,
+                 body: Body,
+                 color_frame: Optional[np.ndarray] = None,
+                 visualizer: 'Visualizer' = None):
+        self.name = name
+        self.body = body
         self.color_frame = color_frame
         self.visualizer = visualizer
 
