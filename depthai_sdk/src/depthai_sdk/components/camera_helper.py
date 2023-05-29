@@ -1,8 +1,6 @@
 import math
 import depthai as dai
 from typing import *
-import numpy as np
-import cv2
 
 
 monoResolutions: Dict[dai.MonoCameraProperties.SensorResolution, Tuple[int,int]] = {

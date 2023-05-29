@@ -3,7 +3,11 @@ import warnings
 from enum import Enum
 from typing import Optional, Union, Any, Dict, Tuple
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 

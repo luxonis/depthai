@@ -2,7 +2,11 @@ import logging
 import warnings
 from typing import Optional, Union, Any, Dict, Tuple
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
+
 import depthai as dai
 import numpy as np
 from depthai_sdk.components.camera_component import CameraComponent
