@@ -96,13 +96,15 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if len(packet.frame.shape) == 2:
             packet.frame = np.dstack((packet.frame, packet.frame, packet.frame))
 
+        frame_shape = self.det_nn._input.stream_size[::-1]
+
         if self._frame_shape is None:
             # Lazy-load the frame shape
-            self._frame_shape = np.array([packet.frame.shape[0], packet.frame.shape[1]])
+            self._frame_shape = np.array([*frame_shape])
             if self._visualizer:
                 self._visualizer.frame_shape = self._frame_shape
 
-        bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
+        bbox = BoundingBox().resize_to_aspect_ratio(self._frame_shape, self._nn_size, self._resize_mode)
 
         # Add detections to packet
         if isinstance(packet.img_detections, dai.ImgDetections) \
@@ -115,7 +117,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
                 d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
 
-                d.top_left, d.bottom_right =  bbox.get_relative_bbox(BoundingBox(detection)).denormalize(self._frame_shape)
+                d.top_left, d.bottom_right = bbox.get_relative_bbox(BoundingBox(detection)).denormalize(self._frame_shape)
                 packet.detections.append(d)
 
             if self._visualizer:
