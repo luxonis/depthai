@@ -74,6 +74,7 @@ class StereoComponent(Component):
         self._right_stream: dai.Node.Output
 
         self.colormap = None  # for on-device colorization
+        self._colormap_xin = None
 
         self._replay: Optional[Replay] = replay
         self._resolution: Optional[Union[str, dai.MonoCameraProperties.SensorResolution]] = resolution
@@ -178,6 +179,8 @@ class StereoComponent(Component):
         if self._control_xlink_in is not None:
             queue = device.getInputQueue(self._control_xlink_in.getStreamName())
             self.control.set_input_queue(queue)
+            colormapQueue = device.getInputQueue(self._colormap_xin.getStreamName())
+            self.control.set_colormap_input_queue(colormapQueue)
 
     def _get_output_stream(self, input: Union[
         CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output
@@ -319,6 +322,11 @@ class StereoComponent(Component):
             if self.encoder:
                 self.node.disparity.unlink(self.encoder.input)
                 colormap_manip.out.link(self.encoder.input)
+            
+            self._colormap_xin = self.node.getParentPipeline().createXLinkIn()
+            self._colormap_xin.setStreamName("colormap_config")
+            self._colormap_xin.out.link(colormap_manip.inputConfig)
+            self._colormap_xin.setMaxDataSize(1)
         elif not self.encoder:
             warnings.warn('At the moment, colormap can be used only if encoder is enabled.')
 

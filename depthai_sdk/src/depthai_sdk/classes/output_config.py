@@ -210,3 +210,26 @@ class TriggerActionConfig(BaseConfig):
             self.action.setup(device, action_xouts)  # creates writers for VideoRecorder()
 
         return [trigger_xout] + action_xouts
+
+
+class SpatialLocationCalculatorConfig(BaseConfig):
+    def __init__(self, name, callback):
+        self.callback = callback
+        self.name = name
+        pass
+
+    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
+        return [self]
+    
+    def new_msg(self, name, msg):
+        if name != self.name:  # Not relevant
+            return
+
+        self.callback(msg)
+        pass
+
+    def check_queue(self, block):
+        pass  # No queues
+
+    def start_fps(self):
+        pass

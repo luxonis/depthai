@@ -24,6 +24,7 @@ from depthai_sdk.components.nn_component import NNComponent
 from depthai_sdk.components.parser import parse_usb_speed
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.components.pointcloud_component import PointcloudComponent
+from depthai_sdk.components.spatial_location_calculator_component import SpatialLocationCalculatorComponent
 from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
@@ -276,6 +277,13 @@ class OakCamera:
             args=self._args,
             name=name
         )
+        self._components.append(comp)
+        return comp
+
+    def create_spatial_location_calculator(self,
+                  stereo: Union[None, StereoComponent] = None,
+                  ) -> SpatialLocationCalculatorComponent:
+        comp = SpatialLocationCalculatorComponent(self.pipeline, stereo.stereo_component)
         self._components.append(comp)
         return comp
 

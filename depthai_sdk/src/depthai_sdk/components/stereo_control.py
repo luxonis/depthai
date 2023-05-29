@@ -20,6 +20,7 @@ def clamp(value, min_value, max_value):
 class StereoControl:
     def __init__(self, device: dai.Device):
         self.queue = None
+        self.colormap_queue = None
 
         self._cycle_median_filter = cycle([item for name, item in vars(dai.StereoDepthConfig.MedianFilter).items() if name[0].isupper()])
         self.device = device
@@ -33,8 +34,14 @@ class StereoControl:
         ctrl = dai.StereoDepthConfig()
         self.raw_cfg = ctrl.get()
 
+        colormap_ctrl = dai.ImageManipConfig()
+        self.raw_colormap_cfg: dai.RawImageManipConfig = colormap_ctrl.getRaw()
+
     def set_input_queue(self, queue: dai.DataInputQueue):
         self.queue = queue
+    
+    def set_colormap_input_queue(self, queue: dai.DataInputQueue):
+        self.colormap_queue = queue
 
     def switch_median_filter(self):
         """
@@ -325,3 +332,38 @@ class StereoControl:
 
         ctrl.set(self.raw_cfg)
         self.queue.send(ctrl)
+
+    def send_colormap_controls(self, controls: dict):
+        """
+        Send controls to the StereoDepth node. Dict structure and available options:
+
+        ctrl = {
+            'colormap': 'NONE', # 'NONE', 'TURBO', 'STEREO_TURBO', 'JET', 'STEREO_JET'
+            'max_disparity': 10,
+            'reset': False # Reset all controls to default
+        }
+        """
+        if self.colormap_queue is None:
+            logger.error('Cannot send controls when replaying.')
+            return
+
+        logger.info(f'Sending controls to StereoDepth node: {controls}')
+
+        ctrl = dai.ImageManipConfig()
+
+        
+        ctrl.setFrameType(dai.ImgFrame.Type.NV12)
+
+        if controls.get('reset', None) and controls['reset']:
+            logger.info('Resetting colormap settings.')
+            self.raw_colormap_cfg = ctrl.get()
+            ctrl.set(self.raw_colormap_cfg)
+            self.colormap_queue.send(ctrl)
+            return
+
+        if controls.get('colormap', None) is not None:
+            ctrl.setColormap(dai.Colormap.NONE, 10)
+        
+
+        # ctrl.set(self.raw_colormap_cfg)
+        self.colormap_queue.send(ctrl)
