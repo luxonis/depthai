@@ -168,6 +168,7 @@ class NNComponent(Component):
 
             # Here, ImageManip will only crop the high-res frame to correct aspect ratio
             # (without resizing!) and it also acts as a buffer (by default, its pool size is set to 20).
+            self.image_manip = pipeline.createImageManip()
             self.image_manip.setNumFramesPool(20)
             self._input._stream_input.link(self.image_manip.inputImage)
 
@@ -215,6 +216,7 @@ class NNComponent(Component):
             if isinstance(self._spatial, bool):  # Create new StereoComponent
                 self._spatial = StereoComponent(device, pipeline, args=self._args, replay=self._replay)
             if isinstance(self._spatial, StereoComponent):
+                self._stereo_node: dai.node.StereoDepth = self._spatial.node
                 self._spatial.depth.link(self.node.inputDepth)
                 self._spatial.config_stereo(align=self._input)
             # Configure Spatial Detection Network
@@ -384,6 +386,9 @@ class NNComponent(Component):
         Args:
             mode (ResizeMode): Resize mode to use
         """
+        if self._is_multi_stage():
+            return # We need high-res frames for multi-stage NN, so we can crop them later
+
         self._ar_resize_mode = mode
 
         # TODO: uncomment this when depthai 2.21.3 is released. In some cases (eg.
@@ -691,6 +696,7 @@ class NNComponent(Component):
 
             out = XoutSpatialBbMappings(
                 device=device,
+                stereo=self._comp._stereo_node,
                 frames=StreamXout(id=self._comp.node.id, out=self._comp.node.passthroughDepth, name=self._comp.name),
                 configs=StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
             )

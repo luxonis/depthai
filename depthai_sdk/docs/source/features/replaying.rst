@@ -110,6 +110,11 @@ The following table lists all available recordings:
      - ``color.mp4``
      - 5.3 MB
      - Top-down view at an angle, source video `here <https://pixabay.com/videos/people-commerce-shop-busy-mall-6387/>`__
+   * - ``people-tracking-above-05``
+     - ``CAM_A.mp4``, ``CAM_A.mp4``, ``calib.json``
+     - 12 MB (35sec)
+     - Top-down view, left+right stereo cameras, `demo usage at replay.py <https://github.com/luxonis/depthai-experiments/tree/master/gen2-record-replay>`__
+
 
 
 ..
