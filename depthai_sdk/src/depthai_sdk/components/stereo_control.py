@@ -36,6 +36,7 @@ class StereoControl:
 
         colormap_ctrl = dai.ImageManipConfig()
         self.raw_colormap_cfg: dai.RawImageManipConfig = colormap_ctrl.getRaw()
+        self._max_disparity = 0
 
     def set_input_queue(self, queue: dai.DataInputQueue):
         self.queue = queue
@@ -362,7 +363,16 @@ class StereoControl:
             return
 
         if controls.get('colormap', None) is not None:
-            ctrl.setColormap(dai.Colormap.NONE, 10)
+            if controls['colormap'] == 'NONE':
+                ctrl.setColormap(dai.Colormap.NONE, self._max_disparity)
+            elif controls['colormap'] == 'TURBO':
+                ctrl.setColormap(dai.Colormap.TURBO, self._max_disparity)
+            elif controls['colormap'] == 'STEREO_TURBO':
+                ctrl.setColormap(dai.Colormap.STEREO_TURBO, self._max_disparity)
+            elif controls['colormap'] == 'JET':
+                ctrl.setColormap(dai.Colormap.JET, self._max_disparity)
+            elif controls['colormap'] == 'STEREO_JET':
+                ctrl.setColormap(dai.Colormap.STEREO_JET, self._max_disparity)
         
 
         # ctrl.set(self.raw_colormap_cfg)

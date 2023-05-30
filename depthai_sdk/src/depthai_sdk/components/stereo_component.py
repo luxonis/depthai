@@ -181,6 +181,7 @@ class StereoComponent(Component):
             self.control.set_input_queue(queue)
             colormapQueue = device.getInputQueue(self._colormap_xin.getStreamName())
             self.control.set_colormap_input_queue(colormapQueue)
+            self.control._max_disparity = self.node.getMaxDisparity()
 
     def _get_output_stream(self, input: Union[
         CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output
