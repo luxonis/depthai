@@ -1,0 +1,35 @@
+{
+  "type": "detections",
+  "detections": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "bbox": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "description": "bbox absolute coordinates in format [x1, y1, x2, y2]"
+      },
+      "label": {
+        "type": "string",
+        "description": "class label"
+      },
+      "color": {
+        "type": "array",
+        "items": {
+          "type": "integer"
+        },
+        "description": "bbox color in RGB format"
+      }
+    }
+  },
+  "children": {
+    "type": "array",
+    "items": {
+      "type": "object"
+    },
+    "description": "array of child objects (e.g. detection, text, line)",
+    "default": []
+  }
+}

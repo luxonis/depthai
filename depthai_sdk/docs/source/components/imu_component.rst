@@ -24,7 +24,7 @@ Usage
 Component outputs
 #################
 
-- ``out.main`` - Main output, produces :ref:`IMUPacket`
+- :attr:`main <depthai_sdk.components.IMUComponent.Out.main>` - Main output, produces :ref:`IMUPacket`.
 
 Reference
 #########

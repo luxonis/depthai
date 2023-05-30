@@ -1,0 +1,13 @@
+{
+  "type": "text",
+  "text": {
+    "type": "plain_text"
+  },
+  "coords": {
+    "type": "array",
+    "items": {
+      "type": "number"
+    },
+    "description": "The absolute coordinates of the text in the format (x1, y1)."
+  }
+}
