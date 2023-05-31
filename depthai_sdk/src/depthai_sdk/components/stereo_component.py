@@ -337,7 +337,7 @@ class StereoComponent(Component):
 
         self.colormap = colormap
 
-    def set_auto_ir(self, auto_mode: bool, continious_mode: bool = False) -> None:
+    def set_auto_ir(self, auto_mode: bool, continuous_mode: bool = False) -> None:
         """
         Enables/disables auto IR dot projector and flood brightness. Selects the best IR brightness level automatically.
         Can be set to continious mode, which will continuously adjust the IR brightness. Otherwise, it will adjust
@@ -345,13 +345,13 @@ class StereoComponent(Component):
 
         Args:
             auto_mode: Enable/disable auto IR.
-            continious_mode: Enable/disable continious mode.
+            continuous_mode: Enable/disable continious mode.
         """
         warnings.warn('Auto IR is an experimental feature, which may not work as expected. '
                       'Please report any issues at https://discuss.luxonis.com/t/support/.')
         self.ir_settings = {
             'auto_mode': auto_mode,
-            'continuous_mode': continious_mode
+            'continuous_mode': continuous_mode
         }
 
     def set_ir(self, dot_projector_brightness: int, flood_brightness: int):
