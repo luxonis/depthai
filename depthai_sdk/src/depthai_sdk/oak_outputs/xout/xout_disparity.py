@@ -241,7 +241,7 @@ class XoutDisparity(XoutFrames, Clickable):
             self._checking_neighbourhood = True
             self._neighbourhood_pairs = np.unique([
                 [np.clip(self._dot_projector_brightness + i, 0, 1200), np.clip(self._flood_brightness + j, 0, 1500)]
-                for i, j in itertools.product([-250, 250], [-375, 375])
+                for i, j in itertools.product([-300, 300], [-375, 375])
             ], axis=0)
             self._neighbour_idx = 0
 
