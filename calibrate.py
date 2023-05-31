@@ -1105,7 +1105,7 @@ class Main:
                 print(traceback.format_exc())
                 raise SystemExit(1)
             
-            target_file = open('./dataset/target_info.txt', 'w')
+            target_file = open(self.dataset_path + '/target_info.txt', 'w')
             # calibration_handler.set
             error_text = []
             

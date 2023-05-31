@@ -136,7 +136,8 @@ class StereoCalibration(object):
             print_text = f'Coverage Image of {coverage_name} with reprojection error of {ret}'
             cv2.putText(coverageImage, print_text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2)
             # coverageImages[coverage_name] = coverageImage
-
+            coverage_file_path = filepath + '/' + coverage_name + '_coverage.png'
+            cv2.imwrite(coverage_file_path, coverageImage)
             if combinedCoverageImage is None:
                 combinedCoverageImage = coverageImage
             else:
