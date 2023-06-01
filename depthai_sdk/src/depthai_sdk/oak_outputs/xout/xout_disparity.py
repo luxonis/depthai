@@ -236,7 +236,7 @@ class XoutDisparity(XoutFrames, Clickable):
         fill_rate_avg = np.mean(self._metrics_buffer['fill_rate'])
         self._metrics_buffer['fill_rate'].clear()
 
-        if fill_rate_avg < self._converged_metric_value * 0.9:
+        if fill_rate_avg < self._converged_metric_value * 0.85:
             self._auto_ir_converged = False
             self._checking_neighbourhood = True
             self._neighbourhood_pairs = np.unique([
