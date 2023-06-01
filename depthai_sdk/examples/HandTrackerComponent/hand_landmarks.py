@@ -11,6 +11,7 @@ TARGET = [-300, 80, 690]
 semaphore_ok = None
 
 def set_relay_state(relay_number, state, ip='192.168.103.106'):
+    return
     url = f'http://{ip}:5000/relay/{relay_number}'
     data = {'state': state}
     response = requests.post(url, data=data)
