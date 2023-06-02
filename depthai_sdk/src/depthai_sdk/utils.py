@@ -20,6 +20,10 @@ DEPTHAI_RECORDINGS_PATH = Path.home() / Path('.cache/depthai-recordings')
 DEPTHAI_RECORDINGS_URL = 'https://depthai-recordings.fra1.digitaloceanspaces.com/'
 
 
+class CrashDumpException(Exception):
+    pass
+
+
 def cosDist(a, b):
     """
     Calculates cosine distance - https://en.wikipedia.org/wiki/Cosine_similarity
@@ -467,3 +471,27 @@ def get_config_field(key: str) -> Any:
     # read config
     config = json.loads(config_file.read_text())
     return config[key]
+
+
+def report_crash_dump(device: dai.Device) -> None:
+    """
+    Report crash dump to Sentry if sentry is enabled and crash dump is available.
+
+    Args:
+        device: DepthAI device object that will be used to get crash dump.
+    """
+    sentry_status = get_config_field('sentry')
+    if sentry_status and device.hasCrashDump():
+        crash_dump = device.getCrashDump()
+        commit_hash = crash_dump.depthaiCommitHash
+        device_id = crash_dump.deviceId
+
+        crash_dump_json = crash_dump.serializeToJson()
+        path = f'/tmp/crash_{commit_hash}_{device_id}.json'
+        with open(path, 'w') as f:
+            json.dump(crash_dump_json, f)
+
+        from sentry_sdk import capture_exception, configure_scope
+        with configure_scope() as scope:
+            scope.add_attachment(content_type='application/json', path=path)
+            capture_exception(CrashDumpException())
