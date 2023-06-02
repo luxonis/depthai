@@ -10,4 +10,3 @@ marshmallow==3.17.0
 xmltodict
 sentry-sdk==1.21.0
 depthai-pipeline-graph==0.0.5
-PySide2
