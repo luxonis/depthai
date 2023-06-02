@@ -329,7 +329,7 @@ class VisDetections(GenericObject):
         parent = {
             'type': 'detections',
             'detections': [{
-                'bbox': bbox.to_tuple() if isinstance(bbox, BoundingBox) else bbox,
+                'bbox': bbox.to_tuple(frame_shape=self.frame_shape) if isinstance(bbox, BoundingBox) else bbox,
                 'label': label,
                 'color': color
             } for bbox, label, color in list(self.get_detections())]
