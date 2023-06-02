@@ -20,7 +20,7 @@ def __import_sentry(sentry_dsn: str) -> None:
         sentry_sdk.init(
             dsn=sentry_dsn,
             traces_sample_rate=1.0,
-            release='depthai_sdk@1.9.5',
+            release='depthai_sdk@1.11.0',
             with_locals=False,
         )
     except:
