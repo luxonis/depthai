@@ -28,7 +28,7 @@ from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
-from depthai_sdk.utils import configPipeline
+from depthai_sdk.utils import configPipeline, report_crash_dump
 
 
 class UsbWarning(UserWarning):
@@ -92,6 +92,7 @@ class OakCamera:
                 config.board.usb.maxSpeed = max_speed
 
         self._init_device(config, device)
+        report_crash_dump(self.device)
 
         # Whether to stop running the OAK camera. Used by oak.running()
         self._stop = False
