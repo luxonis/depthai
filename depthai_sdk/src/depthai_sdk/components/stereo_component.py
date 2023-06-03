@@ -362,7 +362,7 @@ class StereoComponent(Component):
             """
             mono_frames = None
             if self._comp.wls_enabled or self._comp._colorize == StereoColor.RGBD:
-                mono_frames = StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name)
+                mono_frames = StreamXout(out=self._comp._right_stream, name=self._comp.name)
             return mono_frames
 
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -373,7 +373,7 @@ class StereoComponent(Component):
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
 
             out = XoutDisparity(
-                frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
+                frames=StreamXout(out=self._comp.disparity, name=self._comp.name),
                 disp_factor=255.0 / self._comp.node.getMaxDisparity(),
                 fps=fps,
                 mono_frames=self._mono_frames(),
@@ -390,7 +390,7 @@ class StereoComponent(Component):
         def rectified_left(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
             out = XoutFrames(
-                frames=StreamXout(self._comp.node.id, self._comp.node.rectifiedLeft),
+                frames=StreamXout(out=self._comp.node.rectifiedLeft),
                 fps=fps)
             out.name = 'Rectified left'
             return self._comp._create_xout(pipeline, out)
@@ -398,7 +398,7 @@ class StereoComponent(Component):
         def rectified_right(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
             out = XoutFrames(
-                frames=StreamXout(self._comp.node.id, self._comp.node.rectifiedRight),
+                frames=StreamXout(out=self._comp.node.rectifiedRight),
                 fps=fps)
             out.name = 'Rectified right'
             return self._comp._create_xout(pipeline, out)
@@ -407,7 +407,7 @@ class StereoComponent(Component):
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
 
             out = XoutDepth(
-                frames=StreamXout(self._comp.node.id, self._comp.depth, name=self._comp.name),
+                frames=StreamXout(out=self._comp.depth, name=self._comp.name),
                 dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
                 fps=fps,
                 mono_frames=self._mono_frames(),
@@ -428,13 +428,13 @@ class StereoComponent(Component):
                 warnings.warn('WLS filter is enabled, but cannot be applied to encoded frames.')
 
             if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
-                out = XoutMjpeg(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                out = XoutMjpeg(frames=StreamXout(out=self._comp.encoder.bitstream),
                                 color=self._comp.colormap is not None,
                                 lossless=self._comp.encoder.getLossless(),
                                 fps=self._comp.encoder.getFrameRate(),
                                 frame_shape=(1200, 800))
             else:
-                out = XoutH26x(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
+                out = XoutH26x(frames=StreamXout(out=self._comp.encoder.bitstream),
                                color=self._comp.colormap is not None,
                                profile=self._comp._encoderProfile,
                                fps=self._comp.encoder.getFrameRate(),

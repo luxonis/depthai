@@ -1,8 +1,8 @@
 from typing import Tuple, List, Union, Optional
-
+from depthai_sdk.components.hand_tracker.mediapipe_utils import HandRegion
 import depthai as dai
 import numpy as np
-
+import math
 try:
     import cv2
 except ImportError:
@@ -72,11 +72,22 @@ class PointcloudPacket:
                  name: str,
                  points: np.ndarray,
                  depth_map: dai.ImgFrame,
-                 color_frame: Optional[np.ndarray],
+                 color_frame: Optional[np.ndarray] = None,
                  visualizer: 'Visualizer' = None):
         self.name = name
         self.points = points
-        self.depth_imgFrame = dai.ImgFrame
+        self.depth_imgFrame = depth_map
+        self.color_frame = color_frame
+        self.visualizer = visualizer
+
+class HandTrackerPacket:
+    def __init__(self,
+                 name: str,
+                 hands: List[HandRegion],
+                 color_frame: Optional[np.ndarray] = None,
+                 visualizer: 'Visualizer' = None):
+        self.name = name
+        self.hands = hands
         self.color_frame = color_frame
         self.visualizer = visualizer
 
@@ -116,6 +127,41 @@ class SpatialBbMappingPacket(FramePacket):
                          visualizer=visualizer)
         self.spatials = spatials
 
+
+class RotatedDetectionPacket(FramePacket):
+    def __init__(self,
+                 name: str,
+                 msg: dai.ImgFrame,
+                 rotated_rects: List[dai.RotatedRect],
+                 visualizer: 'Visualizer' = None):
+        super().__init__(name=name,
+                         msg=msg,
+                         frame=msg.getCvFrame() if cv2 else None,
+                         visualizer=visualizer)
+        self.rotated_rects = rotated_rects
+        self.bb_corners = [self.rotated_rect_to_points(rr) for rr in self.rotated_rects]
+
+    def rotated_rect_to_points(self, rr: dai.RotatedRect) -> List[Tuple]:
+        cx = rr.center.x
+        cy = rr.center.y
+        w = rr.size.width / 2  # half-width
+        h = rr.size.height / 2  # half-height
+        rotation = math.radians(rr.angle)  # convert angle to radians
+
+        b = math.cos(rotation)
+        a = math.sin(rotation)
+
+        # calculate corners
+        p0x = cx - a*h - b*w
+        p0y = cy + b*h - a*w
+        p1x = cx + a*h - b*w
+        p1y = cy - b*h - a*w
+        p2x = 2*cx - p0x
+        p2y = 2*cy - p0y
+        p3x = 2*cx - p1x
+        p3y = 2*cy - p1y
+
+        return [(p0x,p0y), (p1x,p1y), (p2x,p2y), (p3x,p3y)]
 
 class DetectionPacket(FramePacket):
     """
