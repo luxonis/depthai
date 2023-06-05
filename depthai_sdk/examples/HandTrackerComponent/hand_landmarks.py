@@ -1,10 +1,16 @@
 from depthai_sdk import OakCamera
 from depthai_sdk.components.hand_tracker.renderer import HandTrackerRenderer
-from depthai_sdk.classes.packets import HandTrackerPacket
+from depthai_sdk.classes.packets import HandTrackerPacket, DepthPacket, FramePacket
 import cv2
 import math
 import requests
-from collections import deque
+import depthai as dai
+from depthai_sdk.visualize.configs import StereoColor
+import time
+import depthai_viewer as viewer
+viewer.init("Depthai Viewer")
+viewer.connect()
+
 q = []
 TARGET = [-300, 80, 690]
 
@@ -55,20 +61,33 @@ def new_hand(hand):
 
 with OakCamera() as oak:
     color = oak.create_camera('color')
+    color.config_color_camera(isp_scale=(1,2))
     stereo = oak.create_stereo(resolution='400p')
     stereo.config_stereo(align=color)
+
+    calibHandler = oak.device.readCalibration()
+    intrs = calibHandler.getCameraIntrinsics(dai.CameraBoardSocket.RGB, (480, 270))
+
+    viewer.log_rigid3(f"world", child_from_parent=([0, 0, 0], [1,0,0,0]), xyz="RDF")
 
     handtracker = oak.create_hand_tracker(color, spatial=stereo)
 
     render = HandTrackerRenderer(handtracker)
+
     def cb(packet: HandTrackerPacket):
         [new_hand(hand) for hand in packet.hands]
         render.draw(packet.color_frame, packet.hands)
-        cv2.imshow("Hand tracking", render.frame)
+        # cv2.imshow("Hand tracking", )
+        f = cv2.resize(render.frame, (480, 270))
+        viewer.log_image("world/camera/color", f[...,::-1])
 
+    def cb_depth(packet: DepthPacket):
+        viewer.log_pinhole("world/camera", child_from_parent = intrs,
+                    width=480, height=270)
+        frame = packet.msg.getFrame()
+        viewer.log_depth_image("world/camera/depth", cv2.pyrDown(frame))
     oak.callback(handtracker, cb)
-    oak.visualize(handtracker.out.palm_detection)
-    oak.visualize(handtracker.out.palm_crop)
+    oak.callback(stereo, cb_depth)
 
     # oak.show_graph()
     oak.start(blocking=True)

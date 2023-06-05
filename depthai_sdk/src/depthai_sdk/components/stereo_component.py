@@ -356,14 +356,13 @@ class StereoComponent(Component):
         def __init__(self, stereo_component: 'StereoComponent'):
             self._comp = stereo_component
 
-        def _mono_frames(self):
+        def _frames(self):
             """
             Create mono frames output if WLS filter is enabled or colorize is set to RGBD
             """
-            mono_frames = None
-            if self._comp.wls_enabled or self._comp._colorize == StereoColor.RGBD:
-                mono_frames = StreamXout(out=self._comp._right_stream, name=self._comp.name)
-            return mono_frames
+            if self._comp.wls_enabled or self._comp._colorize is not None:
+                return StreamXout(out=self._comp._align_component.stream, name=self._comp.name)
+            return None
 
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             # By default, we want to show disparity
@@ -376,7 +375,7 @@ class StereoComponent(Component):
                 frames=StreamXout(out=self._comp.disparity, name=self._comp.name),
                 disp_factor=255.0 / self._comp.node.getMaxDisparity(),
                 fps=fps,
-                mono_frames=self._mono_frames(),
+                mono_frames=self._frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
                 use_wls_filter=self._comp.wls_enabled,
@@ -410,7 +409,7 @@ class StereoComponent(Component):
                 frames=StreamXout(out=self._comp.depth, name=self._comp.name),
                 dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
                 fps=fps,
-                mono_frames=self._mono_frames(),
+                mono_frames=self._frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
                 use_wls_filter=self._comp.wls_enabled,
