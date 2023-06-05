@@ -197,6 +197,7 @@ class CameraComponent(Component):
             self._control_xlink_in = pipeline.create(dai.node.XLinkIn)
             self._control_xlink_in.setStreamName(f"{self.node.id}_inputControl")
             self._control_xlink_in.out.link(self.node.inputControl)
+            self._control_xlink_in.setMaxDataSize(1) # CameraControl message doesn't use any additional data (only metadata)
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
@@ -401,6 +402,7 @@ class CameraComponent(Component):
             return StreamXout(self.node.id, self.stream, name=self.name)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(self._num_frames_pool)
+            self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
             return StreamXout(self.node.id, self.node.video, name=self.name)

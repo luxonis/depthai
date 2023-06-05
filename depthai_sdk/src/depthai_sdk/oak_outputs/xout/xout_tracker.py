@@ -24,7 +24,8 @@ class XoutTracker(XoutNnResults):
                  device: dai.Device,
                  tracklets: StreamXout,
                  apply_kalman: bool = False,
-                 forget_after_n_frames: Optional[int] = None):
+                 forget_after_n_frames: Optional[int] = None,
+                 calculate_speed: bool = False):
         super().__init__(det_nn, frames, tracklets)
         self.name = 'Object Tracker'
         self.device = device
@@ -40,6 +41,7 @@ class XoutTracker(XoutNnResults):
         self.apply_kalman = apply_kalman
         self.forget_after_n_frames = forget_after_n_frames
         self.kalman_filters: Dict[int, Dict[str, KalmanFilter]] = {}
+        self.calculate_speed = calculate_speed
 
     def setup_visualize(self,
                         visualizer: Visualizer,
@@ -51,15 +53,15 @@ class XoutTracker(XoutNnResults):
         if len(packet.frame.shape) == 2:
             packet.frame = np.dstack((packet.frame, packet.frame, packet.frame))
 
+        frame_shape = self.det_nn._input.stream_size[::-1]
+
         if self._frame_shape is None:
             # Lazy-load the frame shape
-            self._frame_shape = np.array([packet.frame.shape[0], packet.frame.shape[1]])
-
-        if self._visualizer:
-            self._visualizer.frame_shape = self._frame_shape
+            self._frame_shape = np.array([*frame_shape])
+            if self._visualizer:
+                self._visualizer.frame_shape = self._frame_shape
 
         spatial_points = self._get_spatial_points(packet)
-
         threshold = self.forget_after_n_frames
 
         if threshold:
@@ -116,7 +118,7 @@ class XoutTracker(XoutNnResults):
                 position=TextPosition.MID
             )
 
-            if self._visualizer.config.tracking.speed and tracklet.id in tracklet2speed:
+            if self._visualizer.config.tracking.show_speed and tracklet.id in tracklet2speed:
                 speed = tracklet2speed[tracklet.id]
                 speed = f'{speed:.1f} m/s\n{speed * 3.6:.1f} km/h'
                 bbox = tracklet.srcImgDetection
@@ -133,7 +135,7 @@ class XoutTracker(XoutNnResults):
         self._visualizer.add_trail(
             tracklets=[t for p in self.buffer for t in p.daiTracklets.tracklets if t.id not in self.blacklist],
             label_map=self.labels,
-            bbox = norm_bbox,
+            bbox=norm_bbox,
         )
 
     def _update_lost_counter(self, packet, lost_threshold: int):
@@ -252,7 +254,7 @@ class XoutTracker(XoutNnResults):
             packet.detections.append(d)
 
     def _calculate_speed(self, spatial_points) -> dict:
-        if spatial_points is None:
+        if spatial_points is None or self.calculate_speed is False:
             return {}
 
         tracklet2speed = {}

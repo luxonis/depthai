@@ -115,7 +115,8 @@ class GenericObject(ABC):
                   thickness: int,
                   r: int,
                   line_width: int,
-                  line_height: int) -> None:
+                  line_height: int
+                  ) -> None:
         """
         Draw a rounded rectangle on the image (in-place).
 
@@ -197,6 +198,41 @@ class GenericObject(ABC):
 
             cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
 
+    def draw_stylized_bbox(self,
+                           img: np.ndarray,
+                           pt1: Tuple[int, int],
+                           pt2: Tuple[int, int],
+                           color: Tuple[int, int, int],
+                           thickness: int,
+                           bbox_style: BboxStyle = None
+                           ) -> None:
+        """
+        Draw a stylized bounding box. The style is either passed as an argument or defined in the config.
+
+        Args:
+            img: Image to draw on.
+            pt1: Top left corner.
+            pt2: Bottom right corner.
+            color: Boundary color.
+            thickness: Border thickness.
+            bbox_style: Bounding box style.
+        """
+        box_w = pt2[0] - pt1[0]
+        box_h = pt2[1] - pt1[1]
+        line_width = int(box_w * self.config.detection.line_width) // 2
+        line_height = int(box_h * self.config.detection.line_height) // 2
+        roundness = int(self.config.detection.box_roundness)
+        bbox_style = bbox_style or self.config.detection.bbox_style
+
+        if bbox_style == BboxStyle.RECTANGLE:
+            self.draw_bbox(img, pt1, pt2, color, thickness, 0, line_width=0, line_height=0)
+        elif bbox_style == BboxStyle.CORNERS:
+            self.draw_bbox(img, pt1, pt2, color, thickness, 0, line_width=line_width, line_height=line_height)
+        elif bbox_style == BboxStyle.ROUNDED_RECTANGLE:
+            self.draw_bbox(img, pt1, pt2, color, thickness, roundness, line_width=0, line_height=0)
+        elif bbox_style == BboxStyle.ROUNDED_CORNERS:
+            self.draw_bbox(img, pt1, pt2, color, thickness, roundness, line_width=line_width, line_height=line_height)
+
 
 class VisImage(GenericObject):
     def __init__(self, image: np.ndarray, frame_shape: Tuple[int, ...]):
@@ -213,6 +249,44 @@ class VisImage(GenericObject):
         pass
 
 
+class VisBoundingBox(GenericObject):
+    """
+    Object that represents a single bounding box.
+    """
+
+    def __init__(self,
+                 bbox: Union[np.ndarray, Tuple[int, ...]],
+                 label: str,
+                 color: Tuple[int, int, int],
+                 thickness: int,
+                 bbox_style: BboxStyle):
+        super().__init__()
+        self.bbox = bbox
+        self.label = label
+        self.color = color
+        self.thickness = thickness
+        self.bbox_style = bbox_style
+
+    def draw(self, frame: np.ndarray) -> None:
+        self.draw_stylized_bbox(frame, self.bbox[0:2], self.bbox[2:4], self.color, self.thickness, self.bbox_style)
+
+    def prepare(self) -> 'GenericObject':
+        return self
+
+    def serialize(self) -> dict:
+        parent = {
+            'type': 'bbox',
+            'bbox': self.bbox,
+            'label': self.label,
+            'bbox_color': self.color,
+        }
+        if len(self._children) > 0:
+            children = [child.serialize() for child in self._children]
+            parent['children'] = children
+
+        return parent
+
+
 class VisDetections(GenericObject):
     """
     Object that represents detections.
@@ -224,8 +298,7 @@ class VisDetections(GenericObject):
                  label_map: List[Tuple[str, Tuple]] = None,
                  spatial_points: List[dai.Point3f] = None,
                  is_spatial=False,
-                 bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
-                 ):
+                 parent_bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None):
         """
         Args:
             detections: List of detections.
@@ -233,7 +306,7 @@ class VisDetections(GenericObject):
             label_map: List of tuples (label, color).
             spatial_points: List of spatial points. None if not spatial.
             is_spatial: Flag that indicates if the detections are spatial.
-            bbox: Bounding box, if there's a detection inside a bounding box.
+            parent_bbox: Bounding box, if there's a detection inside a bounding box.
         """
         super().__init__()
         self.detections = detections
@@ -241,7 +314,7 @@ class VisDetections(GenericObject):
         self.label_map = label_map
         self.spatial_points = spatial_points
         self.is_spatial = is_spatial
-        self.bbox = bbox
+        self.parent_bbox = parent_bbox
 
         self.bboxes = []
         self.labels = []
@@ -255,10 +328,11 @@ class VisDetections(GenericObject):
     def serialize(self) -> dict:
         parent = {
             'type': 'detections',
-            'detections': [
-                {'bbox': bbox, 'label': label, 'color': color}
-                for bbox, label, color in list(self.get_detections())
-            ]
+            'detections': [{
+                'bbox': bbox.to_tuple(frame_shape=self.frame_shape) if isinstance(bbox, BoundingBox) else bbox,
+                'label': label,
+                'color': color
+            } for bbox, label, color in list(self.get_detections())]
         }
         if len(self._children) > 0:
             children = [child.serialize() for child in self._children]
@@ -269,7 +343,8 @@ class VisDetections(GenericObject):
     def register_detection(self,
                            bbox: Union[Tuple[int, ...], BoundingBox],
                            label: str,
-                           color: Tuple[int, int, int]) -> None:
+                           color: Tuple[int, int, int]
+                           ) -> None:
         """
         Register a detection.
 
@@ -350,37 +425,6 @@ class VisDetections(GenericObject):
         for child in self.children:
             child.draw(frame)
 
-    def draw_stylized_bbox(self,
-                           img: np.ndarray,
-                           pt1: Tuple[int, int],
-                           pt2: Tuple[int, int],
-                           color: Tuple[int, int, int],
-                           thickness: int) -> None:
-        """
-        Draw a stylized bounding box. The style is defined in the config.
-
-        Args:
-            img: Image.
-            pt1: Top left corner.
-            pt2: Bottom right corner.
-            color: Color.
-            thickness: Thickness.
-        """
-        box_w = pt2[0] - pt1[0]
-        box_h = pt2[1] - pt1[1]
-        line_width = int(box_w * self.config.detection.line_width) // 2
-        line_height = int(box_h * self.config.detection.line_height) // 2
-        roundness = int(self.config.detection.box_roundness)
-
-        if self.config.detection.bbox_style == BboxStyle.RECTANGLE:
-            self.draw_bbox(img, pt1, pt2, color, thickness, 0, line_width=0, line_height=0)
-        elif self.config.detection.bbox_style == BboxStyle.CORNERS:
-            self.draw_bbox(img, pt1, pt2, color, thickness, 0, line_width=line_width, line_height=line_height)
-        elif self.config.detection.bbox_style == BboxStyle.ROUNDED_RECTANGLE:
-            self.draw_bbox(img, pt1, pt2, color, thickness, roundness, line_width=0, line_height=0)
-        elif self.config.detection.bbox_style == BboxStyle.ROUNDED_CORNERS:
-            self.draw_bbox(img, pt1, pt2, color, thickness, roundness, line_width=line_width, line_height=line_height)
-
 
 class VisText(GenericObject):
     """
@@ -432,6 +476,9 @@ class VisText(GenericObject):
             'type': 'text',
             'text': self.text,
             'coords': self.coords,
+            'color': self.color,
+            'thickness': self.thickness,
+            'outline': self.outline,
         }
 
     def prepare(self) -> 'VisText':
@@ -503,7 +550,8 @@ class VisText(GenericObject):
     def get_relative_position(self,
                               bbox: BoundingBox,
                               position: TextPosition,
-                              padding: int) -> Tuple[int, int]:
+                              padding: int
+                              ) -> Tuple[int, int]:
         """
         Get relative position of the text w.r.t. the bounding box.
         If bbox is None,the position is relative to the frame.
@@ -530,7 +578,7 @@ class VisText(GenericObject):
             text_width = max(text_width, text_size[0])
             text_height += text_size[1]
 
-        x, y = bbox_arr[0],bbox_arr[1]
+        x, y = bbox_arr[0], bbox_arr[1]
 
         y_pos = position.value % 10
         if y_pos == 0:  # Y top
@@ -552,7 +600,8 @@ class VisText(GenericObject):
 
     def get_text_scale(self,
                        frame_shape: Union[np.ndarray, Tuple[int, ...]],
-                       bbox: Optional[BoundingBox] = None) -> float:
+                       bbox: Optional[BoundingBox] = None
+                       ) -> float:
         return min(1.0, min(frame_shape) / (1000 if bbox is None else 200))
 
 
