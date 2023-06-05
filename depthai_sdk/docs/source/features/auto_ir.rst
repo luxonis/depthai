@@ -20,7 +20,7 @@ that accepts two parameters:
 When **automatic mode** is enabled, the device will automatically adjust the IR power after the startup.
 The disparity map will be analyzed with different dot projector and illumination settings,
 and once the best settings are found, the device will use them for the rest of the session.
-The whole process takes around **10 seconds**.
+The whole process takes around **25 seconds**.
 
 If **continuous mode** is enabled, the device will continue to search for better settings.
 In case the scene changes and disparity map quality drops below a certain threshold,
