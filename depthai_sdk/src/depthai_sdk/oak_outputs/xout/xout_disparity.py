@@ -11,6 +11,7 @@ from depthai_sdk.classes.packets import DepthPacket
 from depthai_sdk.oak_outputs.xout import Clickable
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.visualize.configs import StereoColor
 
 try:
@@ -19,7 +20,7 @@ except ImportError:
     cv2 = None
 
 
-class XoutDisparity(XoutFrames, Clickable):
+class XoutDisparity(XoutSeqSync, XoutFrames, Clickable):
     def __init__(self,
                  device: dai.Device,
                  frames: StreamXout,
@@ -78,14 +79,19 @@ class XoutDisparity(XoutFrames, Clickable):
                 )
                 self.use_wls_filter = False
 
-        self.msgs = dict()
-
         XoutFrames.__init__(self, frames=frames, fps=fps)
+        XoutSeqSync.__init__(self, [frames, mono_frames])
         Clickable.__init__(self, decay_step=int(self.fps))
+
 
     def on_callback(self, packet) -> None:
         if self.ir_settings['auto_mode']:
             self._auto_ir_search(packet.frame)
+
+    def xstreams(self) -> List[StreamXout]:
+        if self.mono_frames is None:
+            return [self.frames]
+        return [self.frames, self.mono_frames]
 
     def visualize(self, packet: DepthPacket):
         frame = packet.frame
@@ -136,34 +142,18 @@ class XoutDisparity(XoutFrames, Clickable):
 
         super().visualize(packet)
 
-    def xstreams(self) -> List[StreamXout]:
+    def package(self, msgs: Dict) -> DepthPacket:
         if self.mono_frames is None:
-            return [self.frames]
-        return [self.frames, self.mono_frames]
-
-    def new_msg(self, name: str, msg: dai.Buffer) -> None:
-        if name not in self._streams:
-            return  # From Replay modules. TODO: better handling?
-
-        # TODO: what if msg doesn't have sequence num?
-        seq = str(msg.getSequenceNum())
-
-        if seq not in self.msgs:
-            self.msgs[seq] = dict()
-
-        if name == self.frames.name:
-            self.msgs[seq][name] = msg
-        elif name == self.mono_frames.name:
-            self.msgs[seq][name] = msg
-        else:
-            raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
-
-        if len(self.msgs[seq]) == len(self.xstreams()):
-            # Frames synced!
-            if self.queue.full():
-                self.queue.get()  # Get one, so queue isn't full
-
             mono_frame = None
+        else:
+            mono_frame = msgs[self.mono_frames.name]
+        return DepthPacket(
+            self.get_packet_name(),
+            img_frame=msgs[self.frames.name],
+            mono_frame=mono_frame,
+            visualizer=self._visualizer
+        )
+
             if self.mono_frames is not None:
                 mono_frame = self.msgs[seq][self.mono_frames.name]
 
@@ -259,3 +249,4 @@ class XoutDisparity(XoutFrames, Clickable):
     def _reset_buffers(self):
         self._X, self._y = [], []
         del self._metrics_buffer['fill_rate']
+
