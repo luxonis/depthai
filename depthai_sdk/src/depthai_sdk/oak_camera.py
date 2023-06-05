@@ -486,7 +486,6 @@ class OakCamera:
         if blocking:
             # Constant loop: get messages, call callbacks
             while self.running():
-                time.sleep(0.001)
                 self.poll()
 
             cv2.destroyAllWindows()
@@ -511,6 +510,7 @@ class OakCamera:
                 self._stop = True
                 return key
         else:
+            time.sleep(0.001)
             key = -1
 
         # TODO: check if components have controls enabled and check whether key == `control`

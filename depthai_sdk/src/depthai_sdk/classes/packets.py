@@ -135,7 +135,7 @@ class DetectionPacket(FramePacket):
                          frame=msg.getCvFrame() if cv2 else None,
                          visualizer=visualizer)
         self.img_detections = img_detections
-        self.detections = []
+        self.detections: List[_Detection] = []
 
     def _is_spatial_detection(self) -> bool:
         return isinstance(self.img_detections, dai.SpatialImgDetections)
