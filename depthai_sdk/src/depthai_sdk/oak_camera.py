@@ -685,13 +685,14 @@ class OakCamera:
         self._out_templates.append(OutputConfig(output, callback, visualizer, visualizer_enabled, record_path))
         return visualizer
 
-    def callback(self, output: Union[List, Callable, Component], callback: Callable, enable_visualizer: bool = False):
+    def callback(self, output: Union[List, Callable, Component], callback: Callable, enable_visualizer: bool = False, main_thread=True):
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
             output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output.
             callback: Handler function to which the Packet will be sent.
             enable_visualizer: Whether to enable visualizer for this output.
+            main_thread: Whether to run the callback in the main thread. If False, it will call the callback in a separate thread, so some functions (eg. cv2.imshow) won't work.
         """
         self._callback(output, callback, Visualizer() if enable_visualizer else None)
 
