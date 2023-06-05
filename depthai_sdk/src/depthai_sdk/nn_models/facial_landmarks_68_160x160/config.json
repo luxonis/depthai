@@ -7,5 +7,6 @@
         "output_format" : "raw"
     },
     "handler": "handler.py",
+    "openvino_version": "2021.4",
     "version": 1
 }
