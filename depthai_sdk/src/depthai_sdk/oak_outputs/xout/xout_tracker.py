@@ -84,16 +84,13 @@ class XoutTracker(XoutNnResults):
     def visualize(self, packet):
         super().visualize(packet)
 
-    def package(self, msgs: Dict):
-        if self.queue.full():
-            self.queue.get()  # Get one, so queue isn't full
-        packet = TrackerPacket(
+    def package(self, msgs: Dict) -> TrackerPacket:
+        return TrackerPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.nn_results.name],
             self._visualizer
         )
-        self.queue.put(packet, block=False)
 
     def _add_tracklet_visualization(self, packet, spatial_points, tracklet2speed):
         h, w = self._frame_shape[:2]

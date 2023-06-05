@@ -194,20 +194,14 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
             # self._visualizer.add_mask(colorized_mask, alpha=0.5)
 
-    def package(self, msgs: Dict):
-        if self.queue.full():
-            self.queue.get()  # Get one, so queue isn't full
-
+    def package(self, msgs: Dict) -> DetectionPacket:
         decode_fn = self.det_nn._decode_fn
-        packet = DetectionPacket(
+        return DetectionPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.nn_results.name] if decode_fn is None else decode_fn(msgs[self.nn_results.name]),
             self._visualizer
         )
-
-        self.queue.put(packet, block=False)
-
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
     def __init__(self,
                  device: dai.Device,
@@ -244,17 +238,13 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
 
         super().visualize(packet)
 
-    def package(self, msgs: Dict):
-        if self.queue.full():
-            self.queue.get()  # Get one, so queue isn't full
-        packet = SpatialBbMappingPacket(
+    def package(self, msgs: Dict) -> SpatialBbMappingPacket:
+        return SpatialBbMappingPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.configs.name],
             self._visualizer
         )
-        self.queue.put(packet, block=False)
-
 
 class XoutTwoStage(XoutNnResults):
     """

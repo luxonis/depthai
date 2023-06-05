@@ -10,10 +10,12 @@ class XoutSeqSync(XoutBase, SequenceNumSync):
         return self.streams
 
     def __init__(self, streams: List[StreamXout]):
-        self.streams = streams
+        # Filter out None streams
+        self.streams = [s for s in streams if s is not None]
+
         # Save StreamXout before initializing super()!
         XoutBase.__init__(self)
-        SequenceNumSync.__init__(self, len(streams))
+        SequenceNumSync.__init__(self, len(self.streams))
         self.msgs = dict()
 
     @abstractmethod
@@ -26,4 +28,9 @@ class XoutSeqSync(XoutBase, SequenceNumSync):
 
         synced = self.sync(msg.getSequenceNum(), name, msg)
         if synced:
-            self.package(synced)
+            packet = self.package(synced)
+            if packet is None:
+                return
+            if self.queue.full():
+                self.queue.get()  # Get one, so queue isn't full
+            self.queue.put(packet, block=False)
