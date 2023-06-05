@@ -13,7 +13,7 @@ from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.visualize.visualizer import Visualizer
-from depthai_sdk.visualize.visualizer_helper import hex_to_bgr, calc_disp_multiplier, colorize_disparity, draw_mappings
+from depthai_sdk.visualize.visualizer_helper import hex_to_bgr, colorize_disparity, draw_mappings, depth_to_disp_factor
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.colors import generate_colors
 try:
@@ -96,13 +96,15 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         if len(packet.frame.shape) == 2:
             packet.frame = np.dstack((packet.frame, packet.frame, packet.frame))
 
+        frame_shape = self.det_nn._input.stream_size[::-1]
+
         if self._frame_shape is None:
             # Lazy-load the frame shape
-            self._frame_shape = np.array([packet.frame.shape[0], packet.frame.shape[1]])
+            self._frame_shape = np.array([*frame_shape])
             if self._visualizer:
                 self._visualizer.frame_shape = self._frame_shape
 
-        bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
+        bbox = BoundingBox().resize_to_aspect_ratio(self._frame_shape, self._nn_size, self._resize_mode)
 
         # Add detections to packet
         if isinstance(packet.img_detections, dai.ImgDetections) \
@@ -115,7 +117,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
                 d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
 
-                d.top_left, d.bottom_right =  bbox.get_relative_bbox(BoundingBox(detection)).denormalize(self._frame_shape)
+                d.top_left, d.bottom_right = bbox.get_relative_bbox(BoundingBox(detection)).denormalize(self._frame_shape)
                 packet.detections.append(d)
 
             if self._visualizer:
@@ -206,7 +208,12 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         self.queue.put(packet, block=False)
 
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
-    def __init__(self, device: dai.Device, frames: StreamXout, configs: StreamXout):
+    def __init__(self,
+                 device: dai.Device,
+                 stereo: dai.node.StereoDepth,
+                 frames: StreamXout,
+                 configs: StreamXout):
+        self._stereo = stereo
         self.frames = frames
         self.configs = configs
 
@@ -224,13 +231,14 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
     def visualize(self, packet: SpatialBbMappingPacket):
         if not self.factor:
             size = (packet.msg.getWidth(), packet.msg.getHeight())
-            self.factor = calc_disp_multiplier(self.device, size)
+            self.factor = depth_to_disp_factor(self.device, self._stereo)
 
         depth = np.array(packet.msg.getFrame())
         with np.errstate(all='ignore'):
             disp = (self.factor / depth).astype(np.uint8)
 
-        packet.frame = colorize_disparity(disp, multiplier=self.multiplier)
+        print('disp max', np.max(disp), 'disp min', np.min(disp))
+        packet.frame = colorize_disparity(disp, multiplier=1)
         draw_mappings(packet)
 
         super().visualize(packet)

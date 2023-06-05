@@ -1,0 +1,12 @@
+{
+    "model": {
+        "model_name":"facial_landmarks_68_160x160",
+        "zoo": "depthai"
+    },
+    "nn_config": {
+        "output_format" : "raw"
+    },
+    "handler": "handler.py",
+    "openvino_version": "2021.4",
+    "version": 1
+}

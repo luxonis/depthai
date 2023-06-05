@@ -16,7 +16,8 @@ from depthai import ImgDetection
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
 from depthai_sdk.visualize.encoder import JSONEncoder
-from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask
+from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask, \
+    VisBoundingBox
 from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
 
 
@@ -57,6 +58,33 @@ class Visualizer(VisualizerHelper):
         self.objects.append(obj)
         return self
 
+    def add_bbox(self,
+                 bbox: Union[np.ndarray, Tuple[int, ...]],
+                 color: Tuple[int, int, int] = None,
+                 thickness: int = None,
+                 bbox_style: BboxStyle = None,
+                 label: str = None,
+                 ) -> 'Visualizer':
+        """
+        Add a bounding box to the visualizer.
+
+        Args:
+            bbox: Bounding box.
+            label: Label for the detection.
+            color: Bounding box color (RGB).
+            bbox_style: Bounding box style (one of depthai_sdk.visualize.configs.BboxStyle).
+
+        Returns:
+            self
+        """
+        bbox_overlay = VisBoundingBox(bbox=bbox,
+                                      color=color,
+                                      thickness=thickness,
+                                      bbox_style=bbox_style,
+                                      label=label)
+        self.add_object(bbox_overlay)
+        return self
+
     def add_detections(self,
                        detections: List[Union[ImgDetection, dai.Tracklet]],
                        normalizer: BoundingBox = None,
@@ -83,7 +111,7 @@ class Visualizer(VisualizerHelper):
                                           label_map=label_map,
                                           spatial_points=spatial_points,
                                           is_spatial=is_spatial,
-                                          bbox=bbox)
+                                          parent_bbox=bbox)
         self.add_object(detection_overlay)
         return self
 
@@ -239,9 +267,12 @@ class Visualizer(VisualizerHelper):
         self.reset()
         return frame
 
-    def serialize(self) -> str:
+    def serialize(self, force_reset: bool = True) -> str:
         """
         Serialize all contained objects to JSON.
+
+        Args:
+            force_reset: Flag that indicates if the objects should be cleared after serialization.
 
         Returns:
             Stringified JSON.
@@ -252,6 +283,9 @@ class Visualizer(VisualizerHelper):
             'config': self.config,
             'objects': [obj.serialize() for obj in self.objects]
         }
+
+        if force_reset:
+            self.reset()
 
         return json.dumps(parent, cls=JSONEncoder)
 
@@ -368,7 +402,7 @@ class Visualizer(VisualizerHelper):
                  deletion_lost_threshold: int = None,
                  line_thickness: int = None,
                  fading_tails: bool = None,
-                 speed: bool = None,
+                 show_speed: bool = None,
                  line_color: Tuple[int, int, int] = None,
                  line_type: int = None,
                  bg_color: Tuple[int, int, int] = None) -> 'Visualizer':
@@ -380,7 +414,7 @@ class Visualizer(VisualizerHelper):
             deletion_lost_threshold: Number of consequent LOST statuses after which the trail is deleted.
             line_thickness: Thickness of the line.
             fading_tails: Flag that indicates if the tails should fade.
-            speed: Flag that indicates if the speed should be shown.
+            show_speed: Flag that indicates if the speed should be shown.
             line_color: Color of the line.
             line_type: Type of the line (from cv2).
             bg_color: Text background color.

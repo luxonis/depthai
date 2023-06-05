@@ -362,13 +362,30 @@ def draw_bb_mappings(depth_frame: Union[dai.ImgFrame, Any], bb_mappings: dai.Spa
         rectangle(depth_frame_color, (xmin, ymin, xmax, ymax), (255, 255, 255), 1)
 
 
-def calc_disp_multiplier(device: dai.Device, size: Tuple[int, int]) -> float:
+def depth_to_disp_factor(device: dai.Device, stereo: dai.node.StereoDepth) -> float:
+    """
+    Calculates the disparity factor used to calculate disparity from depth, which is used for visualization.
+    `disparity[0..95] = disparity_factor / depth`. We can then multiply disparity by 255/95 to get 0..255 range.
+    @param device: OAK device
+    """
     calib = device.readCalibration()
-    baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
-    intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, size)
-    focal_length = intrinsics[0][0]
-    return baseline * focal_length
+    cam1=calib.getStereoLeftCameraId()
+    cam2=calib.getStereoRightCameraId()
+    baseline = calib.getBaselineDistance(cam1=cam1, cam2=cam2, useSpecTranslation=True) * 10  # cm to mm
+    rawConf = stereo.initialConfig.get()
 
+    align: dai.CameraBoardSocket = stereo.properties.depthAlignCamera
+    if align == dai.CameraBoardSocket.AUTO:
+        align = cam2
+
+    intrinsics = calib.getCameraIntrinsics(align)
+    focalLength = intrinsics[0][0]
+
+    factor = baseline * focalLength
+    if rawConf.algorithmControl.enableExtended:
+        factor /= 2
+
+    return factor
 
 def hex_to_bgr(hex: str) -> Tuple[int, ...]:
     """

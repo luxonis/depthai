@@ -10,7 +10,7 @@ from depthai_sdk.utils import *
 from depthai_sdk.utils import _create_config, get_config_field
 from depthai_sdk.visualize import *
 
-__version__ = '1.10.1'
+__version__ = '1.11.0'
 
 
 def __import_sentry(sentry_dsn: str) -> None:
@@ -20,7 +20,7 @@ def __import_sentry(sentry_dsn: str) -> None:
         sentry_sdk.init(
             dsn=sentry_dsn,
             traces_sample_rate=1.0,
-            release='depthai_sdk@1.9.5',
+            release=f'depthai_sdk@{__version__}',
             with_locals=False,
         )
     except:

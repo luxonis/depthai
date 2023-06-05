@@ -23,11 +23,12 @@ from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.nn_component import NNComponent
 from depthai_sdk.components.parser import parse_usb_speed
 from depthai_sdk.components.stereo_component import StereoComponent
+from depthai_sdk.components.pointcloud_component import PointcloudComponent
 from depthai_sdk.oak_device import OakDevice
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
-from depthai_sdk.utils import configPipeline
+from depthai_sdk.utils import configPipeline, report_crash_dump
 
 
 class UsbWarning(UserWarning):
@@ -91,6 +92,7 @@ class OakCamera:
                 config.board.usb.maxSpeed = max_speed
 
         self._init_device(config, device)
+        report_crash_dump(self.device)
 
         # Whether to stop running the OAK camera. Used by oak.running()
         self._stop = False
@@ -250,10 +252,39 @@ class OakCamera:
         self._components.append(comp)
         return comp
 
+    def create_pointcloud(self,
+                          stereo: Union[None, StereoComponent, dai.node.StereoDepth, dai.Node.Output] = None,
+                          colorize: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output, bool] = None,
+                          name: Optional[str] = None,
+                          ) -> PointcloudComponent:
+
+        if colorize is None:
+            for component in self._components:
+                if isinstance(component, CameraComponent):
+                    if component.is_color():
+                        colorize = component
+                        break
+                    else:
+                        # ColorCamera has priority
+                        colorize = component
+
+        comp = PointcloudComponent(
+            self._oak.device,
+            self.pipeline,
+            stereo=stereo,
+            colorize=colorize,
+            replay=self.replay,
+            args=self._args,
+            name=name
+        )
+        self._components.append(comp)
+        return comp
+
     def _init_device(self,
                      config: dai.Device.Config,
                      device_str: Optional[str] = None,
                      ) -> None:
+
         """
         Connect to the OAK camera
         """
@@ -487,7 +518,7 @@ class OakCamera:
         Shows DepthAI Pipeline graph, which can be useful when debugging. Builds the pipeline (oak.build()).
         """
         self.build()
-        from depthai_sdk.integrations.depthai_pipeline_graph.depthai_pipeline_graph.pipeline_graph import \
+        from depthai_pipeline_graph.pipeline_graph import \
             PipelineGraph
 
         p = PipelineGraph()
