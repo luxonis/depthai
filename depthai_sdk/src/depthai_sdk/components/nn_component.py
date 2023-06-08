@@ -618,6 +618,12 @@ class NNComponent(Component):
             Default output. Streams NN results and high-res frames that were downscaled and used for inferencing.
             Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
+            if self._comp._is_multi_stage():
+                input_nn = self._comp._input
+                if input_nn._input.encoder:
+                    return self.encoded(pipeline=pipeline, device=device)
+            elif self._comp._input.encoder:
+                return self.encoded(pipeline=pipeline, device=device)
 
             if self._comp._is_multi_stage():
                 det_nn_out = StreamXout(id=self._comp._input.node.id,
