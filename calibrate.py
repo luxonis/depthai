@@ -59,6 +59,7 @@ camToRgbRes = {
     'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
     'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
     'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
+    'S5K33D' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
 }
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
@@ -156,7 +157,7 @@ def parse_args():
                         help="Enable mouse trigger for image capture")
     parser.add_argument('-l', '--traceLevel', type=int, default=2,
                         help="Set the debug trace level. Default: %(default)s.")
-    
+
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -173,7 +174,7 @@ def parse_args():
             options.rgbLensPosition = 25
         else:
             options.rgbLensPosition = 135
-            
+
     return options
 class MessageSync:
     def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10, min_queue_depth=3):
@@ -398,7 +399,7 @@ class Main:
 
                 xout.setStreamName(cam_info['name'])
                 cam_node.out.link(xout.input)
-            else:
+            elif cam_info['type'] == 'color':
                 cam_node = pipeline.createColorCamera()
                 xout = pipeline.createXLinkOut()
 
@@ -407,8 +408,9 @@ class Main:
                 cam_node.setFps(fps)
 
                 # If AR0234 bring down resolution to 800p
-                if cam_info['sensorName'] == 'AR0234':
-                    cam_node.setIspScale(2,3)
+                #if cam_info['sensorName'] == 'AR0234':
+                #    cam_node.setIspScale(2,3)
+                #    cam_node.setIspScale(640, 1920, 480, 1200)
 
                 xout.setStreamName(cam_info['name'])
                 # xout.input.setBlocking(False)
@@ -426,6 +428,33 @@ class Main:
                     controlIn = pipeline.createXLinkIn()
                     controlIn.setStreamName(cam_info['name'] + '-control')
                     controlIn.out.link(cam_node.inputControl)
+            elif cam_info['type'] == 'tof':
+                cam_node = pipeline.createColorCamera()
+                tof_node = pipeline.create(dai.node.ToF)
+                xout = pipeline.createXLinkOut()
+
+                print("Camera type ToF")
+                cam_node.setBoardSocket(stringToCam[cam_id])
+                cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
+                cam_node.setFps(fps)
+
+                # Configure ToF node output FPS:
+                # - `ALL` for full FPS, both modulation frequencies, may flicker a little
+                # - `MIN` for half the FPS
+                tof_config = tof_node.initialConfig.get()
+                tof_config.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MIN
+                tof_node.initialConfig.set(tof_config)
+
+                xout.setStreamName(cam_info['name'])
+                # xout.input.setBlocking(False)
+                # xout.input.setQueueSize(4)
+
+                cam_node.raw.link(tof_node.input)
+                tof_node.amplitude.link(xout.input)
+
+            else :
+                print("Error: Camera type is not supported. Exiting...")
+                raise SystemExit(1)
             xout.input.setBlocking(False)
             xout.input.setQueueSize(1)
 
@@ -931,7 +960,7 @@ class Main:
 
         if self.args.cameraModel != "": # If camera model is specified in the command line, use that
             self.camera_model = self.args.cameraModel
-        
+
         try:
             # stereo_calib = StereoCalibration()
             print("Starting image processingxxccx")
