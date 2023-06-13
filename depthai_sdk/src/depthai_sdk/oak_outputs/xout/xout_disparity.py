@@ -2,7 +2,7 @@ import itertools
 import logging
 import warnings
 from collections import defaultdict
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import depthai as dai
 import numpy as np
@@ -153,23 +153,6 @@ class XoutDisparity(XoutSeqSync, XoutFrames, Clickable):
             mono_frame=mono_frame,
             visualizer=self._visualizer
         )
-
-            if self.mono_frames is not None:
-                mono_frame = self.msgs[seq][self.mono_frames.name]
-
-            packet = DepthPacket(
-                self.get_packet_name(),
-                img_frame=self.msgs[seq][self.frames.name],
-                mono_frame=mono_frame,
-                visualizer=self._visualizer
-            )
-            self.queue.put(packet, block=False)
-
-            new_msgs = {}
-            for name, msg in self.msgs.items():
-                if int(name) > int(seq):
-                    new_msgs[name] = msg
-            self.msgs = new_msgs
 
     def _auto_ir_search(self, frame: np.ndarray):
         # Perform neighbourhood search if we got worse metric values
