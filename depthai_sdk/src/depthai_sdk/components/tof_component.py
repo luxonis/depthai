@@ -60,6 +60,7 @@ class ToFComponent(Component):
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             tof_out = XoutDepth(
+                device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.node.depth),
                 dispScaleFactor=9500,
                 fps=30,
