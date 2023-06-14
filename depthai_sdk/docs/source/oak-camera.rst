@@ -49,10 +49,10 @@ Preview color and mono cameras
    :language: python
 
 
-Run MobilenetSSD on color camera
-********************************
+Run a NN on color camera
+************************
 
-.. literalinclude:: ../../examples/NNComponent/mobilenet.py
+.. literalinclude:: ../../examples/NNComponent/nn_component.py
    :language: python
 
 Run face-detection-retail-0004 on left camera

@@ -19,7 +19,7 @@ With :class:`OakCamera <depthai_sdk.OakCamera>`, you can easily create color and
 Additionally, you can add custom callbacks to the pipeline using the :meth:`callback() <depthai_sdk.OakCamera.callback>` method and record the outputs using the :meth:`record() <depthai_sdk.OakCamera.record>` method.
 
 Creating color and depth streams
----------------------
+--------------------------------
 
 To create a color stream we can use the :meth:`OakCamera.create_camera() <depthai_sdk.OakCamera.create_camera>` method.
 This method takes the name of the sensor as an argument and returns a :class:`CameraComponent <depthai_sdk.components.CameraComponent>` object.
