@@ -479,7 +479,7 @@ class Main:
             num_all_markers = math.floor(self.args.squaresX * self.args.squaresY / 2)
         else:
             num_all_markers = self.args.numMarkers
-        print(f'Total mariers needed -> {(num_all_markers * self.args.minDetectedMarkersPercent)}')
+        print(f'Total markers needed -> {(num_all_markers * self.args.minDetectedMarkersPercent)}')
         return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
 
     def detect_markers_corners(self, frame):
@@ -641,7 +641,7 @@ class Main:
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
         cv2.imshow(self.display_name, info_frame)
-        cv2.waitKey(2000)
+        cv2.waitKey(1000)
 
     def show_failed_orientation(self):
         width, height = int(
