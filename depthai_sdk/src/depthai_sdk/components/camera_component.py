@@ -46,6 +46,7 @@ class CameraComponent(Component):
         """
         super().__init__()
         self.out = self.Out(self)
+        self._pipeline = pipeline
 
         self.node: Optional[Union[dai.node.ColorCamera, dai.node.MonoCamera, dai.node.XLinkIn]] = None
         self.encoder: Optional[dai.node.VideoEncoder] = None
@@ -278,6 +279,40 @@ class CameraComponent(Component):
             )
         else:  # Replay
             self.config_camera(fps=args.get('fps', None))
+
+    def control_with_nn(self, detection_component: 'NNComponent', auto_focus=True, auto_exposure=True, debug=False):
+        """
+        Control the camera AF/AE/AWB based on the object detection results.
+
+        :param detection_component: NNComponent that will be used to control the camera
+        :param auto_focus: Enable auto focus to the object
+        :param auto_exposure: Enable auto exposure to the object
+        :param auto_white_balance: auto white balance to the object
+        """
+
+        if not auto_focus and not auto_exposure:
+            logging.error(
+                'Attempted to control camera with NN, but both Auto-Focus and Auto-Exposure were disabled! Attempt ignored.'
+            )
+            return
+        if 'NNComponent' not in str(type(detection_component)):
+            raise ValueError('nn_component must be an instance of NNComponent!')
+        if not detection_component._is_detector():
+            raise ValueError('nn_component must be a object detection model (YOLO/MobileNetSSD based)!')
+
+        from depthai_sdk.components.control_camera_with_nn import control_camera_with_nn
+
+        control_camera_with_nn(
+            pipeline=self._pipeline,
+            camera_control=self.node.inputControl,
+            nn_output=detection_component.node.out,
+            resize_mode=detection_component._ar_resize_mode,
+            resolution=self.node.getResolution(),
+            nn_size = detection_component._size,
+            af=auto_focus,
+            ae=auto_exposure,
+            debug=debug
+        )
 
     def config_color_camera(self,
                             interleaved: Optional[bool] = None,
