@@ -56,6 +56,9 @@ The following table lists all the models supported by the SDK. The model name is
    * - ``mobilenet-ssd``
      - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_mobilenet_ssd.html>`__
      - 31
+   * - ``mobilenetv2_imagenet_embedder_224x224``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/mobilenetv2_imagenet_embedder_224x224>`__
+     - /
    * - ``pedestrian-detection-adas-0002``
      - `OMZ <https://docs.openvino.ai/latest/omz_models_model_pedestrian_detection_adas_0002.html>`__
      - 19
