@@ -158,29 +158,24 @@ class NNComponent(Component):
             # Link ImageManip output to NN node
             self.image_manip.out.link(self.node.input)
         elif self._is_multi_stage():
-            # Calculate crop shape of the object detector.
-            # TODO: in the future also support stretching and letterboxing resize modes
-            frame_size = self._input._input.stream_size
-            nn_size = self._input._size
-            scale = frame_size[0] / nn_size[0], frame_size[1] / nn_size[1]
-            i = 0 if scale[0] < scale[1] else 1
-            crop = int(scale[i] * nn_size[0]), int(scale[i] * nn_size[1])
-
             # Here, ImageManip will only crop the high-res frame to correct aspect ratio
             # (without resizing!) and it also acts as a buffer (by default, its pool size is set to 20).
             self.image_manip = pipeline.createImageManip()
             self.image_manip.setNumFramesPool(20)
             self._input._stream_input.link(self.image_manip.inputImage)
+            frame_full_size = self._input._input.stream_size
 
             if self._input._is_detector():
-                self.image_manip.setResize(*crop)
-                self.image_manip.setMaxOutputFrameSize(crop[0] * crop[1] * 3)
+                self.image_manip.setMaxOutputFrameSize(frame_full_size[0] * frame_full_size[1] * 3)
 
                 # Create script node, get HQ frames from input.
                 self._multi_stage_nn = MultiStageNN(pipeline=pipeline,
                                                     detection_node=self._input.node,
                                                     high_res_frames=self.image_manip.out,
                                                     size=self._size,
+                                                    frame_size=frame_full_size,
+                                                    det_nn_size=self._input._size,
+                                                    resize_mode=self._input._ar_resize_mode,
                                                     num_frames_pool=20)
                 self._multi_stage_nn.out.link(self.node.input)  # Cropped frames
 
@@ -197,7 +192,7 @@ class NNComponent(Component):
                 # TODO pass frame on device, and just send config from host
                 self.x_in = pipeline.createXLinkIn()
                 self.x_in.setStreamName("input_queue")
-                self.x_in.setMaxDataSize(frame_size[0] * frame_size[1] * 3)
+                self.x_in.setMaxDataSize(frame_full_size[0] * frame_full_size[1] * 3)
                 self.x_in.out.link(self.image_manip.inputImage)
 
                 self.x_in_cfg = pipeline.createXLinkIn()
