@@ -387,7 +387,7 @@ class NNComponent(Component):
             mode (ResizeMode): Resize mode to use
         """
         if self._is_multi_stage():
-            return # We need high-res frames for multi-stage NN, so we can crop them later
+            return  # We need high-res frames for multi-stage NN, so we can crop them later
 
         self._ar_resize_mode = mode
 
@@ -454,7 +454,7 @@ class NNComponent(Component):
 
     def config_tracker(self,
                        tracker_type: Optional[dai.TrackerType] = None,
-                       track_labels: Optional[List[int]] = None,
+                       track_labels: Optional[List[Union[int, str]]] = None,
                        assignment_policy: Optional[dai.TrackerIdAssignmentPolicy] = None,
                        max_obj: Optional[int] = None,
                        threshold: Optional[float] = None,
