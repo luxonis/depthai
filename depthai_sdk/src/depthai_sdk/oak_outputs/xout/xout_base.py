@@ -42,9 +42,9 @@ class XoutBase(ABC):
     def xstreams(self) -> List[StreamXout]:
         raise NotImplementedError()
 
-    def setup_base(self, callback: Callable):
+    def setup_base(self, callback: Callable, queue: Queue):
         # Gets called when initializing
-        self.queue = Queue(maxsize=10)
+        self.queue = queue
         self.callback = callback
 
     def start_fps(self):

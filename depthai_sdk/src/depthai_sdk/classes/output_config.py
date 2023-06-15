@@ -15,22 +15,11 @@ from depthai_sdk.trigger_action.actions.record_action import RecordAction
 from depthai_sdk.trigger_action.trigger_action import TriggerAction
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
-
-def find_new_name(name: str, names: List[str]):
-    while True:
-        arr = name.split(' ')
-        num = arr[-1]
-        if num.isnumeric():
-            arr[-1] = str(int(num) + 1)
-            name = " ".join(arr)
-        else:
-            name = f"{name} 2"
-        if name not in names:
-            return name
+from queue import Queue
 
 class BaseConfig:
     @abstractmethod
-    def setup(self, pipeline: dai.Pipeline, device: dai.Device, names: List[str]) -> List[XoutBase]:
+    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
         raise NotImplementedError()
 
 
@@ -44,20 +33,36 @@ class OutputConfig(BaseConfig):
                  visualizer: Visualizer = None,
                  visualizer_enabled: bool = False,
                  record_path: Optional[str] = None,
-                 main_thread: bool = True):
+                 main_thread: bool = True,
+                 queue: Queue = None
+                 ):
         self.output = output  # Output of the component (a callback)
         self.callback = callback  # Callback that gets called after syncing
         self.visualizer = visualizer
         self.visualizer_enabled = visualizer_enabled
         self.record_path = record_path
         self.main_thread = main_thread
+        self.queue = queue
+
+    def find_new_name(self, name: str, names: List[str]):
+        while True:
+            arr = name.split(' ')
+            num = arr[-1]
+            if num.isnumeric():
+                arr[-1] = str(int(num) + 1)
+                name = " ".join(arr)
+            else:
+                name = f"{name} 2"
+            if name not in names:
+                return name
 
     def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
         xoutbase: XoutBase = self.output(pipeline, device)
-        xoutbase.setup_base(self.callback)
+
+        xoutbase.setup_base(self.callback, self.queue if self.queue is not None else Queue(10))
 
         if xoutbase.name in names:  # Stream name already exist, append a number to it
-            xoutbase.name = find_new_name(xoutbase.name, names)
+            xoutbase.name = self.find_new_name(xoutbase.name, names)
         names.append(xoutbase.name)
 
         recorder = None
@@ -78,6 +83,10 @@ class OutputConfig(BaseConfig):
         if self.record_path:
             xoutbase.setup_recorder(recorder=recorder)
 
+        # if self.queue is None:
+            # If queue is passed, oak.create_queue() was called. So we don't want
+            # to read frames from queue on oak.poll()
+            # return []
         return [xoutbase]
 
 

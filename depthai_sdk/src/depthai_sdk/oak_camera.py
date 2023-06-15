@@ -30,7 +30,7 @@ from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.utils import configPipeline, report_crash_dump
-
+from queue import Queue
 
 class UsbWarning(UserWarning):
     pass
@@ -599,17 +599,7 @@ class OakCamera:
             logging.warn("No calibration data found on the device or in replay")
 
     def sync(self, outputs: Union[Callable, List[Callable]], callback: Callable, visualize=False):
-        """
-        Synchronize multiple components outputs forward them to the callback.
-        Args:
-            outputs: Component output(s)
-            callback: Where to send synced streams
-            visualize: Whether to draw on the frames (like with visualize())
-        """
-        if isinstance(outputs, Callable):
-            outputs = [outputs]  # to list
-
-        self._out_templates.append(SyncConfig(outputs, callback))
+        raise DeprecationWarning('sync() is deprecated. Use callback() instead.')
 
     def record(self,
                outputs: Union[Callable, List[Callable]],
@@ -662,6 +652,22 @@ class OakCamera:
 
         visualizer = Visualizer(scale, fps)
         return self._callback(output, callback, visualizer, record_path)
+    
+    def create_queue(self, output: Union[Callable, Component], max_size: int = 30) -> Queue:
+        """
+        Create a queue for the component output(s). This handles output streaming (OAK->Host) and message syncing.
+        Args:
+            output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output.
+            max_size: Maximum queue size for this output.
+        """
+        q = Queue(max_size)
+
+        if isinstance(output, Component):
+            output = output.out.main
+
+        self._out_templates.append(OutputConfig(output, None, None, True, queue=q))
+        return q
+
 
     def _callback(self,
                   output: Union[List, Callable, Component],
@@ -685,7 +691,7 @@ class OakCamera:
         self._out_templates.append(OutputConfig(output, callback, visualizer, visualizer_enabled, record_path))
         return visualizer
 
-    def callback(self, output: Union[List, Callable, Component], callback: Callable, enable_visualizer: bool = False, main_thread=True):
+    def callback(self, output: Union[List, Callable, Component], callback: Callable, main_thread=True):
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
@@ -694,7 +700,11 @@ class OakCamera:
             enable_visualizer: Whether to enable visualizer for this output.
             main_thread: Whether to run the callback in the main thread. If False, it will call the callback in a separate thread, so some functions (eg. cv2.imshow) won't work.
         """
-        self._callback(output, callback, Visualizer() if enable_visualizer else None)
+        if not isinstance(output, List):
+            output = [output] # Create array
+
+        outputs = [out.out.main if isinstance(out, Component) else out for out in output]
+        self._out_templates.append(SyncConfig(outputs, callback))
 
     def ros_stream(self, output: Union[List, Callable, Component]):
         self._out_templates.append(RosStreamConfig(self._get_component_outputs(output)))
