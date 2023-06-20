@@ -24,7 +24,8 @@ class XoutDepth(XoutDisparity):
                  colorize: StereoColor = None,
                  colormap: int = None,
                  wls_config: dict = None,
-                 ir_settings: dict = None):
+                 ir_settings: dict = None,
+                 confidence_map: StreamXout = None):
         self.name = 'Depth'
         super().__init__(device=device,
                          frames=frames,
@@ -34,7 +35,8 @@ class XoutDepth(XoutDisparity):
                          colorize=colorize,
                          colormap=colormap,
                          wls_config=wls_config,
-                         ir_settings=ir_settings)
+                         ir_settings=ir_settings,
+                         confidence_map=confidence_map)
 
         self.disp_scale_factor = dispScaleFactor
 

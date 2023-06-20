@@ -39,6 +39,7 @@ class _TrackingDetection(_Detection):
 class _TwoStageDetection(_Detection):
     nn_data: dai.NNData
 
+
 class NNDataPacket:
     """
     Contains only dai.NNData message
@@ -49,6 +50,7 @@ class NNDataPacket:
     def __init__(self, name: str, nn_data: dai.NNData):
         self.name = name
         self.msg = nn_data
+
 
 class FramePacket:
     """
@@ -80,6 +82,7 @@ class PointcloudPacket:
         self.color_frame = color_frame
         self.visualizer = visualizer
 
+
 class DepthPacket(FramePacket):
     mono_frame: dai.ImgFrame
 
@@ -88,6 +91,7 @@ class DepthPacket(FramePacket):
                  img_frame: dai.ImgFrame,
                  mono_frame: Optional[dai.ImgFrame],
                  depth_map: Optional[np.ndarray] = None,
+                 confidence_map: Optional[np.ndarray] = None,
                  visualizer: 'Visualizer' = None):
         super().__init__(name=name,
                          msg=img_frame,
@@ -98,6 +102,13 @@ class DepthPacket(FramePacket):
             self.mono_frame = mono_frame
 
         self.depth_map = depth_map
+        self.confidence_map = confidence_map
+        self.depth_score = None
+        if self.confidence_map:
+            values = 1 - (self.confidence_map.getData() / 255)
+            values_no_outliers = values[np.logical_and(values > 0.0, values < 1.0)]
+            self.depth_score = np.sqrt(np.mean(values_no_outliers))
+
 
 class SpatialBbMappingPacket(FramePacket):
     """

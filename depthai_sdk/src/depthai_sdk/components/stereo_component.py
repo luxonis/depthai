@@ -113,6 +113,10 @@ class StereoComponent(Component):
             'sigma': None
         }
 
+        # Output config
+        self.enable_depth_score = False
+        self.validate_calibration = False
+
         self._undistortion_offset: Optional[int] = None
 
         if not self._replay:
@@ -307,6 +311,23 @@ class StereoComponent(Component):
             'sigma': wls_sigma,
         }
 
+    def config_output(self,
+                      depth_score: bool = None,
+                      validate_calibration: bool = None
+                      ) -> None:
+        """
+        Configures output streams.
+
+        Args:
+            depth_score: True to include depth score in the output packets.
+            validate_calibration: Check if the calibration is valid during the runtime (done on-host) and warn
+            the user if it's not. This can be used to detect if the calibration is invalid (e.g. due to temperature drift).
+        """
+        if depth_score is not None:
+            self.enable_depth_score = depth_score
+        if validate_calibration is not None:
+            self.validate_calibration = validate_calibration
+
     def set_colormap(self, colormap: dai.Colormap):
         """
         Sets the colormap to use for colorizing the disparity map. Used for on-device postprocessing.
@@ -432,6 +453,7 @@ class StereoComponent(Component):
                 colormap=self._comp._postprocess_colormap,
                 wls_config=self._comp.wls_config,
                 ir_settings=self._comp.ir_settings,
+                confidence_map=self._try_get_confidence_map()
             )
 
             return self._comp._create_xout(pipeline, out)
@@ -464,7 +486,8 @@ class StereoComponent(Component):
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
                 wls_config=self._comp.wls_config,
-                ir_settings=self._comp.ir_settings
+                ir_settings=self._comp.ir_settings,
+                confidence_map=self._try_get_confidence_map()
             )
             return self._comp._create_xout(pipeline, out)
 
@@ -489,3 +512,11 @@ class StereoComponent(Component):
                                frame_shape=(1200, 800))
 
             return self._comp._create_xout(pipeline, out)
+
+        def _try_get_confidence_map(self):
+            confidence_map = None
+            if self._comp.enable_depth_score:
+                confidence_map = StreamXout(self._comp.node.id,
+                                            self._comp.node.confidenceMap,
+                                            name='depth_score')
+            return confidence_map

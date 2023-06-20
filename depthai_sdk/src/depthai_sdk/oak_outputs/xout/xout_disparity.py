@@ -2,6 +2,7 @@ import itertools
 import logging
 import warnings
 from collections import defaultdict
+from functools import cached_property
 from typing import List, Optional
 
 import depthai as dai
@@ -29,12 +30,16 @@ class XoutDisparity(XoutFrames, Clickable):
                  colorize: StereoColor = None,
                  colormap: int = None,
                  wls_config: dict = None,
-                 ir_settings: dict = None):
+                 ir_settings: dict = None,
+                 confidence_map: StreamXout = None):
         self.mono_frames = mono_frames
         self.multiplier = disp_factor
         self.fps = fps
         self.name = 'Disparity'
         self.device = device
+
+        self.confidence_map = confidence_map
+        self.fig, self.axes = None, None  # for depth score visualization
 
         self.colorize = colorize
         self.colormap = colormap
@@ -127,12 +132,47 @@ class XoutDisparity(XoutFrames, Clickable):
                 self._visualizer.add_circle(coords=(x, y), radius=3, color=(255, 255, 255), thickness=-1)
                 self._visualizer.add_text(text=text, coords=(x, y - 10))
 
+        if self._visualizer.config.stereo.depth_score and packet.confidence_map:
+            self.fig.canvas.draw()
+            self.axes.clear()
+            self.axes.hist(255 - packet.confidence_map.getData(), bins=3, color='blue', alpha=0.5)
+            self.axes.set_title(f'Depth score: {packet.depth_score:.2f}')
+            self.axes.set_xlabel('Depth score')
+            self.axes.set_ylabel('Frequency')
+
+            # self.axes.text(0.5, 0.9, f'Overall depth score: {packet.depth_score:.2f}', ha='center', va='center',
+            #                transform=self.axes.transAxes, fontsize=20)
+            # Convert plot to numpy array
+            img = np.fromstring(self.fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+            img = img.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            cv2.imshow(f'Depth score ({self.name})', img)
+
         super().visualize(packet)
 
     def xstreams(self) -> List[StreamXout]:
-        if self.mono_frames is None:
-            return [self.frames]
-        return [self.frames, self.mono_frames]
+        streams = [self.frames]
+        if self.mono_frames is not None:
+            streams.append(self.mono_frames)
+        if self.confidence_map is not None:
+            streams.append(self.confidence_map)
+
+        return streams
+
+    def setup_visualize(self,
+                        visualizer: 'Visualizer',
+                        visualizer_enabled: bool,
+                        name: str = None
+                        ) -> None:
+        super().setup_visualize(visualizer, visualizer_enabled, name)
+
+        if self.confidence_map:
+            from matplotlib import pyplot as plt
+            self.fig, self.axes = plt.subplots(1, 1, figsize=(8, 4), constrained_layout=False)
+
+    @cached_property
+    def stream_names(self) -> List[str]:
+        return [s.name for s in self.xstreams()]
 
     def new_msg(self, name: str, msg: dai.Buffer) -> None:
         if name not in self._streams:
@@ -144,9 +184,7 @@ class XoutDisparity(XoutFrames, Clickable):
         if seq not in self.msgs:
             self.msgs[seq] = dict()
 
-        if name == self.frames.name:
-            self.msgs[seq][name] = msg
-        elif name == self.mono_frames.name:
+        if name in self.stream_names:
             self.msgs[seq][name] = msg
         else:
             raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
@@ -156,13 +194,16 @@ class XoutDisparity(XoutFrames, Clickable):
             if self.queue.full():
                 self.queue.get()  # Get one, so queue isn't full
 
-            mono_frame = None
+            mono_frame, confidence_map = None, None
             if self.mono_frames is not None:
                 mono_frame = self.msgs[seq][self.mono_frames.name]
+            if self.confidence_map is not None:
+                confidence_map = self.msgs[seq][self.confidence_map.name]
 
             packet = DepthPacket(
                 self.get_packet_name(),
                 img_frame=self.msgs[seq][self.frames.name],
+                confidence_map=confidence_map,
                 mono_frame=mono_frame,
                 visualizer=self._visualizer
             )
