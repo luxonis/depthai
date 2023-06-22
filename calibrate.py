@@ -387,6 +387,7 @@ class Main:
         cams = {}
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
+            print(cam_info['type'])
             if cam_info['type'] == 'mono':
                 cam_node = pipeline.createMonoCamera()
                 xout = pipeline.createXLinkOut()
@@ -415,6 +416,8 @@ class Main:
                 xout.setStreamName(cam_info['name'])
                 # xout.input.setBlocking(False)
                 # xout.input.setQueueSize(4)
+                if cam_info['flip']:
+                    cam_node.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 
                 cam_node.isp.link(xout.input)
                 if cam_info['sensorName'] == "OV9*82":
@@ -453,7 +456,8 @@ class Main:
                 tof_node.amplitude.link(xout.input)
 
             else :
-                print("Error: Camera type is not supported. Exiting...")
+                type_ret = cam_info['type']
+                print(f'Error: Camera type -> {type_ret} is not supported / wrong . Exiting...')
                 raise SystemExit(1)
             xout.input.setBlocking(False)
             xout.input.setQueueSize(1)
