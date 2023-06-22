@@ -1,0 +1,14 @@
+{
+    "board_config":
+    {
+        "name": "OAK-1",
+        "revision": "R3M1E2",
+        "cameras":{
+            "CAM_A": {
+                "name": "rgb",
+                "hfov": 68.7938,
+                "type": "color"
+            }
+        }
+    }
+}
