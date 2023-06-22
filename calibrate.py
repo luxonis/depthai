@@ -1084,10 +1084,7 @@ class Main:
         dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
-
             # stereo_calib = StereoCalibration()
-            print("Starting image processingxxccx")
-            print(self.args.squaresX)
             status, result_config = stereo_calib.calibrate(
                                         self.board_config,
                                         self.dataset_path,

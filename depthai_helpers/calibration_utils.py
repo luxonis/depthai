@@ -1015,8 +1015,8 @@ class StereoCalibration(object):
         # TODO(Sachin): Observe Images by adding visualization 
         # TODO(Sachin): Check if the stetch is only in calibration Images
         print('Original intrinsics ....')
-        print(M_lp)
-        print(M_rp)
+        print(f"L {M_lp}")
+        print(f"R: {M_rp}")
         if display_all:
             print(f'Width and height is {scaled_res[::-1]}')
         # print(d_r)
@@ -1034,8 +1034,8 @@ class StereoCalibration(object):
             kScaledR = p_rp
             
         print('Intrinsics from the getOptimalNewCameraMatrix/Original ....')
-        print(kScaledL)
-        print(kScaledR)
+        print(f"L: {kScaledL}")
+        print(f"R: {kScaledR}")
         oldEpipolarError = None
         epQueue = deque()
         movePos = True
@@ -1156,8 +1156,8 @@ class StereoCalibration(object):
             marker_corners_r, ids_r, _, _ = cv2.aruco.refineDetectedMarkers(image_data_pair[1], self.board,
                                                                             marker_corners_r, ids_r,
                                                                             rejectedCorners=rejectedImgPoints)
-            print(f'Marekrs length r is {len(marker_corners_r)}')
-            print(f'Marekrs length l is {len(marker_corners_l)}')
+            print(f'Marekrs length for pair {i} is: L {len(marker_corners_l)} | R {len(marker_corners_r)} ')
+            #print(f'Marekrs length l is {len(marker_corners_l)}')
             res2_l = cv2.aruco.interpolateCornersCharuco(
                 marker_corners_l, ids_l, image_data_pair[0], self.board)
             res2_r = cv2.aruco.interpolateCornersCharuco(
