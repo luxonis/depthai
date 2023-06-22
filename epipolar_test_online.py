@@ -9,6 +9,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('-r', '--reprojection_threshold', type=float, default=3.0, help='Reprojection threshold for RANSAC')
 parser.add_argument('-m', '--matching_threshold', type=float, default=0.6, help='Matching threshold for Lowe\'s ratio test')
+parser.add_argument('-videoDir', type=str, default=None, help='Path to video directory')
+
 args = parser.parse_args()
 
 def filter_matches(kp_left, kp_right, des_left, des_right, matches, ratio = 0.75, reprojection_threshold = 5.0):
@@ -142,9 +144,22 @@ def getDevice(calib):
     device.startPipeline(pipeline)
     return device, calibHandler
 
-def evaluateDevice(device, calibHandler, reprojection_threshold, matching_threshold):
-    left_queue = device.getOutputQueue(name="left", maxSize=4, blocking=False)
-    right_queue = device.getOutputQueue(name="right", maxSize=4, blocking=False)
+def evaluateDevice(device, videoPath, calibHandler, reprojection_threshold, matching_threshold):
+    if videoPath is None:
+        left_queue = device.getOutputQueue(name="left", maxSize=4, blocking=False)
+        right_queue = device.getOutputQueue(name="right", maxSize=4, blocking=False)
+        isRunning = not device.isClosed()
+    else:
+        reader_streams = {}
+        left_file = videoPath  / 'left.avi'
+        right_file = videoPath / 'right.avi'
+        reader_streams["left"] = cv2.VideoCapture(str(left_file))
+        reader_streams["right"] = cv2.VideoCapture(str(right_file))
+        left_size = (reader_streams["left"].get(cv2.CAP_PROP_FRAME_WIDTH), reader_streams["left"].get(cv2.CAP_PROP_FRAME_HEIGHT))
+        right_size = (reader_streams["right"].get(cv2.CAP_PROP_FRAME_WIDTH), reader_streams["right"].get(cv2.CAP_PROP_FRAME_HEIGHT))
+        isRunning = reader_streams["left"].isOpened() and reader_streams["right"].isOpened()
+
+
     left_k, w, h = calibHandler.getDefaultIntrinsics(dai.CameraBoardSocket.LEFT)
     right_k, _, _ = calibHandler.getDefaultIntrinsics(dai.CameraBoardSocket.RIGHT)
     left_k = np.array(left_k)
@@ -162,9 +177,16 @@ def evaluateDevice(device, calibHandler, reprojection_threshold, matching_thresh
     right_image = None
 
     hor_epipolar_list = []
-    while not device.isClosed():
-        left_image = left_queue.get().getCvFrame()
-        right_image = right_queue.get().getCvFrame()
+    isRunning = True
+    while isRunning:
+        if videoPath is None:
+            left_image = left_queue.get().getCvFrame()
+            right_image = right_queue.get().getCvFrame()
+        else:
+            isRunning, left_image = reader_streams["left"].read()
+            isRunning, right_image = reader_streams["right"].read()
+            if not isRunning:
+                break
 
         left_hor_undistorted = cv2.remap(left_image, left_mapx, left_mapy, cv2.INTER_LINEAR)
         right_hor_undistorted = cv2.remap(right_image, right_mapx, right_mapy, cv2.INTER_LINEAR)
@@ -192,7 +214,13 @@ def evaluateDevice(device, calibHandler, reprojection_threshold, matching_thresh
 
 if __name__ == '__main__':
     calib = None
-    device, calib = getDevice(calib)
-    evaluateDevice(device, calib, args.reprojection_threshold, args.matching_threshold)
+    device = None
+    if args.videoDir is None:
+        device, calib = getDevice(calib)
+    else:
+        calibPath = Path(args.videoDir) / "calib.json"
+        calib = dai.CalibrationHandler(str(calibPath))
+
+    evaluateDevice(device, Path(args.videoDir), calib, args.reprojection_threshold, args.matching_threshold)
 
 
