@@ -3,7 +3,13 @@ import numpy as np
 import cv2
 from pathlib import Path
 import depthai as dai
+import argparse 
 
+# Define arguments for reproejection error and matching threshold whic is floating number
+parser = argparse.ArgumentParser()
+parser.add_argument('-r', '--reprojection_threshold', type=float, default=3.0, help='Reprojection threshold for RANSAC')
+parser.add_argument('-m', '--matching_threshold', type=float, default=0.6, help='Matching threshold for Lowe\'s ratio test')
+args = parser.parse_args()
 
 def filter_matches(kp_left, kp_right, des_left, des_right, matches, ratio = 0.75, reprojection_threshold = 5.0):
     # store all the good matches as per Lowe's ratio test.
@@ -48,7 +54,7 @@ index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
 search_params = dict(checks=50)
 flann = cv2.FlannBasedMatcher(index_params, search_params)
 
-def detect_features(left_image, right_image):
+def detect_features(left_image, right_image, filter_val, reprojection_threshold):
     kp_left, des_left = sift.detectAndCompute(left_image, None)
     kp_right, des_right = sift.detectAndCompute(right_image, None)
 
@@ -58,7 +64,7 @@ def detect_features(left_image, right_image):
     print(f'length of keypoints: {len(kp_left)}, {len(kp_right)}')
     matches = flann.knnMatch(des_left, des_right, k=2)
 
-    filter_val = 0.6
+    # filter_val = 0.6
     reprojection_threshold = 3.0
     kp_left_filtered, kp_right_filtered, des_left_filtered, des_right_filtered = filter_matches( kp_left, 
                     kp_right, 
@@ -136,7 +142,7 @@ def getDevice(calib):
     device.startPipeline(pipeline)
     return device, calibHandler
 
-def evaluateDevice(device, calibHandler):
+def evaluateDevice(device, calibHandler, reprojection_threshold, matching_threshold):
     left_queue = device.getOutputQueue(name="left", maxSize=4, blocking=False)
     right_queue = device.getOutputQueue(name="right", maxSize=4, blocking=False)
     left_k, w, h = calibHandler.getDefaultIntrinsics(dai.CameraBoardSocket.LEFT)
@@ -170,7 +176,7 @@ def evaluateDevice(device, calibHandler):
         if k == ord('q'):
             break
 
-        kp_left, kp_right, _, _ = detect_features(left_hor_undistorted, right_hor_undistorted)
+        kp_left, kp_right, _, _ = detect_features(left_hor_undistorted, right_hor_undistorted, matching_threshold, reprojection_threshold)
         if kp_left is None or kp_right is None:
             print('Getting keypoints failed for horizontal stereo')
             continue
@@ -187,6 +193,6 @@ def evaluateDevice(device, calibHandler):
 if __name__ == '__main__':
     calib = None
     device, calib = getDevice(calib)
-    evaluateDevice(device, calib)
+    evaluateDevice(device, calib, args.reprojection_threshold, args.matching_threshold)
 
 

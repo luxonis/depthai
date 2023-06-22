@@ -31,7 +31,7 @@ MANIFEST
 *.idea
 # DepthAI-Specific
 dataset/
-dataset*
+*dataset*
 .fw_cache/
 depthai.calib
 mesh_left.calib
