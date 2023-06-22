@@ -181,6 +181,8 @@ def parse_args():
                         help="Enable mouse trigger for image capture")
     parser.add_argument('-nic', '--noInitCalibration', default=False, action="store_true",
                         help="Don't take the board calibration for initialization but start with an empty one")
+    parser.add_argument('-dismin', '--displayMinimum', default=False, action="store_true",
+                        help="Display the new minimum every second while taking pictures")
 
     options = parser.parse_args()
 
@@ -315,7 +317,7 @@ class MessageSync:
         #     print()
         # print()
 
-    def get_synced(self):
+    def get_synced(self, displayMinimum):
 
         # Atleast 3 messages should be buffered
         min_len = min([len(queue) for queue in self.queues.values()])
@@ -353,7 +355,8 @@ class MessageSync:
             # Mark minimum
             if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.0001):
                 min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
-                print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
+                if displayMinimum:
+                    print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
             if min_ts_diff['ts'] < self.min_diff_timestamp:
                 # Check if atleast 5 messages deep
@@ -388,6 +391,7 @@ class Main:
         global debug
         self.args = parse_args()
         debug = self.args.debug
+        displayMinimum=self.args.displayMinimum
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
@@ -680,7 +684,7 @@ class Main:
         timer = self.args.captureDelay
         prev_time = None
         curr_time = None
-
+        displayMinimum= self.args.displayMinimum
         self.display_name = "Image Window"
         syncCollector = MessageSync(len(self.camera_queue), 0.003) # 3ms tolerance
         self.mouseTrigger = False
@@ -689,7 +693,7 @@ class Main:
             for key in self.camera_queue.keys():
                 frameMsg = self.camera_queue[key].get()
 
-                # print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
+                #print(f'Timestamp of  {key} is {frameMsg.getTimestamp()}')
 
                 syncCollector.add_msg(key, frameMsg)
                 color_frame = None
@@ -703,6 +707,7 @@ class Main:
             resizeHeight = 0
             resizeWidth = 0
             for name, imgFrame in currImageList.items():
+                self.coverageImages[name]=None
                 
                 # print(f'original Shape of {name} is {imgFrame.shape}' )
                
@@ -832,9 +837,8 @@ class Main:
 
             tried = {}
             allPassed = True
-
             if capturing:
-                syncedMsgs = syncCollector.get_synced()
+                syncedMsgs = syncCollector.get_synced(displayMinimum)
                 if syncedMsgs == False or syncedMsgs == None:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
@@ -1095,9 +1099,13 @@ class Main:
                 calibration_handler = dai.CalibrationHandler()
             else:
                 calibration_handler = self.device.readCalibration()
+            board_keys = self.board_config.keys()
             try:
                 if self.empty_calibration(calibration_handler):
-                    calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
+                    if "name" in board_keys and "revision" in board_keys:
+                        calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
+                    else:
+                        calibration_handler.setBoardInfo(str(self.device.getDeviceName()), str(self.args.revision))
             except Exception as e:
                 print('Device closed in exception..' )
                 self.device.close()

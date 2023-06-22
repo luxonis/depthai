@@ -112,8 +112,8 @@ class StereoCalibration(object):
 
         # parameters = aruco.DetectorParameters_create()
         assert mrk_size != None,  "ERROR: marker size not set"
-        combinedCoverageImage = None
         for camera in board_config['cameras'].keys():
+            combinedCoverageImage = None
             cam_info = board_config['cameras'][camera]
             print(
                 '<------------Calibrating {} ------------>'.format(cam_info['name']))
@@ -792,7 +792,7 @@ class StereoCalibration(object):
 
     def scale_image(self, img, scaled_res):
         expected_height = img.shape[0]*(scaled_res[1]/img.shape[1])
-        # print("Expected Height: {}".format(expected_height))
+        print("Expected Height: {}".format(expected_height))
 
         if not (img.shape[0] == scaled_res[0] and img.shape[1] == scaled_res[1]):
             if int(expected_height) == scaled_res[0]:
@@ -1137,27 +1137,32 @@ class StereoCalibration(object):
         imgpoints_r = []
         imgpoints_l = []
         image_epipolar_color = []
-        # new_imagePairs = []
+        # new_imagePairs = [])
         for i, image_data_pair in enumerate(image_data_pairs):
+            cv2.imshow("Image", image_data_pair[1])
+            cv2.imshow("Image", image_data_pair[1])
+            cv2.waitKey(0)
             #             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             marker_corners_l, ids_l, rejectedImgPoints = cv2.aruco.detectMarkers(
                 image_data_pair[0], self.aruco_dictionary)
+            print(marker_corners_l)
             marker_corners_l, ids_l, _, _ = cv2.aruco.refineDetectedMarkers(image_data_pair[0], self.board,
                                                                             marker_corners_l, ids_l,
                                                                             rejectedCorners=rejectedImgPoints)
 
             marker_corners_r, ids_r, rejectedImgPoints = cv2.aruco.detectMarkers(
                 image_data_pair[1], self.aruco_dictionary)
+            print(marker_corners_r)
             marker_corners_r, ids_r, _, _ = cv2.aruco.refineDetectedMarkers(image_data_pair[1], self.board,
                                                                             marker_corners_r, ids_r,
                                                                             rejectedCorners=rejectedImgPoints)
-            # print(f'Marekrs length r is {len(marker_corners_r)}')
-            # print(f'Marekrs length l is {len(marker_corners_l)}')
+            print(f'Marekrs length r is {len(marker_corners_r)}')
+            print(f'Marekrs length l is {len(marker_corners_l)}')
             res2_l = cv2.aruco.interpolateCornersCharuco(
                 marker_corners_l, ids_l, image_data_pair[0], self.board)
             res2_r = cv2.aruco.interpolateCornersCharuco(
                 marker_corners_r, ids_r, image_data_pair[1], self.board)
-
+            print("Done")
             img_concat = cv2.hconcat([image_data_pair[0], image_data_pair[1]])
             img_concat = cv2.cvtColor(img_concat, cv2.COLOR_GRAY2RGB)
             line_row = 0
