@@ -183,6 +183,8 @@ def parse_args():
                         help="Don't take the board calibration for initialization but start with an empty one")
     parser.add_argument('-dismin', '--displayMinimum', default=False, action="store_true",
                         help="Display the new minimum every second while taking pictures")
+    parser.add_argument('-disall', '--printer', default=False, action="store_true",
+                        help="Display all the information in calibration.")
 
     options = parser.parse_args()
 
@@ -1094,7 +1096,8 @@ class Main:
                                         self.args.squaresX,
                                         self.args.squaresY,
                                         self.args.cameraMode,
-                                        self.args.rectifiedDisp) # Turn off enable disp rectify
+                                        self.args.rectifiedDisp, # Turn off enable disp rectify
+                                        self.args.printer)
             if self.args.noInitCalibration:
                 calibration_handler = dai.CalibrationHandler()
             else:
@@ -1127,7 +1130,7 @@ class Main:
                 # log_list.append(self.ccm_selected[cam_info['name']])
                 reprojection_error_threshold = 1.0
                 if cam_info['size'][1] > 720:
-                    print(cam_info['size'][1])
+                    #print(cam_info['size'][1])
                     reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
 
                 if cam_info['name'] == 'rgb':
