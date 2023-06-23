@@ -27,7 +27,7 @@ if not pip_installed:
 if sys.version_info[0] != 3:
     raise RuntimeError("Demo script requires Python 3 to run (detected: Python {})".format(sys.version_info[0]))
 
-is_pi = thisPlatform.startswith("arm")
+is_pi = this_platform.startswith("arm")
 prebuiltWheelsPythonVersion = [7,9]
 if is_pi and sys.version_info[1] not in prebuiltWheelsPythonVersion:
 
