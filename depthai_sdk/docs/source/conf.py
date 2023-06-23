@@ -18,11 +18,11 @@
 # -- Project information -----------------------------------------------------
 
 project = 'DepthAI SDK Docs'
-copyright = '2021, Luxonis'
+copyright = u"@build_year@, Luxonis"
 author = 'Luxonis'
 
 # The full version, including alpha/beta/rc tags
-release = '1.0.0'
+release = '1.11.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -36,6 +36,7 @@ extensions = [
     "sphinx_rtd_theme",
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'autodocsumm'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -25,7 +25,7 @@ $ python3 -m pip install depthai-sdk
 
 ## Usage
 
-Please visit [Getting started with DepthAI SDK](https://docs.luxonis.com/projects/sdk/en/latest/getting_started/) for basic usage examples
+Please visit [DepthAI SDK documentation page](https://docs.luxonis.com/projects/sdk/en/latest/).
 
 
 ## API

@@ -1,0 +1,74 @@
+{
+  "platform": "pc",
+  "frame_shape": [720, 1280],
+  "config": {
+    "output": {
+      "img_scale": 1.0,
+      "show_fps": false,
+      "clickable": true
+    },
+    "stereo": {
+      "colorize": 2,
+      "colormap": 2,
+      "wls_filter": false,
+      "wls_lambda": 8000,
+      "wls_sigma": 1.5
+    },
+    "detection": {
+      "thickness": 1,
+      "fill_transparency": 0.15,
+      "box_roundness": 0,
+      "color": [0, 255, 0],
+      "bbox_style": 0,
+      "line_width": 0.5,
+      "line_height": 0.5,
+      "hide_label": false,
+      "label_position": 0,
+      "label_padding": 10
+    },
+    "text": {
+      "font_face": 0,
+      "font_color": [255, 255, 255],
+      "font_transparency": 0.5,
+      "font_scale": 1.0,
+      "font_thickness": 2,
+      "font_position": 0,
+      "bg_transparency": 0.5,
+      "bg_color": [0, 0, 0],
+      "line_type": 16,
+      "auto_scale": true
+    },
+    "tracking": {
+      "max_length": -1,
+      "deletion_lost_threshold": 5,
+      "line_thickness": 1,
+      "fading_tails": false,
+      "line_color": [255, 255, 255],
+      "line_type": 16
+    },
+    "circle": {
+      "thickness": 1,
+      "color": [255, 255, 255],
+      "line_type": 16
+    }
+  },
+  "objects": [
+    {
+      "type": "detections",
+      "detections": [
+        {
+          "bbox": [101, 437, 661, 712],
+          "label": "laptop",
+          "color": [210, 167, 218]
+        }
+      ],
+      "children": [
+        {
+          "type": "text",
+          "text": "Laptop",
+          "coords": [111, 469]
+        }
+      ]
+    }
+  ]
+}

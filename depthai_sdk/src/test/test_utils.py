@@ -15,6 +15,14 @@ class TestUtils(unittest.TestCase):
     # Test if cosDis is correct #
     #############################
 
+    def test_blob_download(self):
+        blob_path = utils.getBlob('https://model-blobs.fra1.digitaloceanspaces.com/cars_yolo_v4_tiny_openvino_2021.3_6shave.blob')
+        model = dai.OpenVINO.Blob(str(blob_path))
+
+        # Get first input layer (only one)
+        nn_input: dai.TensorInfo = next(iter(model.networkInputs.values()))
+        self.assertEqual(nn_input.dims, [512, 320, 3, 1])
+
     def test_cos1(self):
         """2D vector test"""
         self.assertEqual(utils.cosDist((3, 4), (4, 3)), 0.96)

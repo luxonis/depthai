@@ -12,7 +12,6 @@ import time
 import traceback
 from functools import cmp_to_key
 from itertools import cycle
-from pathlib import Path
 import platform
 from pathlib import Path
 
@@ -28,6 +27,8 @@ try:
     import numpy as np
     from depthai_sdk.managers import ArgsManager, getMonoResolution, getRgbResolution
     from depthai_helpers.app_manager import App
+    from depthai_sdk.fps import FPSHandler
+    from depthai_sdk.previews import Previews
 except Exception as ex:
     print("Third party libraries failed to import: {}".format(ex))
     print("Run \"python3 install_requirements.py\" to install dependencies")
@@ -51,7 +52,7 @@ from log_system_information import make_sys_report
 from depthai_helpers.supervisor import Supervisor
 from depthai_helpers.config_manager import ConfigManager, DEPTHAI_ZOO, DEPTHAI_VIDEOS
 from depthai_helpers.version_check import checkRequirementsVersion
-from depthai_sdk import FPSHandler, loadModule, getDeviceInfo, downloadYTVideo, Previews, createBlankFrame
+from depthai_sdk import loadModule, getDeviceInfo, downloadYTVideo, createBlankFrame
 from depthai_sdk.managers import NNetManager, SyncedPreviewManager, PreviewManager, PipelineManager, EncodingManager, BlobManager
 
 
@@ -296,7 +297,7 @@ class Demo:
                 "saturation": self._conf.args.cameraSaturation,
                 "contrast": self._conf.args.cameraContrast,
                 "brightness": self._conf.args.cameraBrightness,
-                "sharpness": self._conf.args.cameraSharpness
+                "sharpness": self._conf.args.cameraSharpness,
             })
 
             self._pv.createQueues(self._device, self._createQueueCallback)
@@ -870,7 +871,7 @@ def runQt():
                 else:
                     self.updateArg("monoFps", fps)
             if resolution is not None:
-                if name == "color": 
+                if name == "color":
                     res = getRgbResolution(resolution)
                     self.updateArg("rgbResolution", res)
                     # Not ideal, we need to refactor this (throw the whole SDK away)

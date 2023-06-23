@@ -1,0 +1,22 @@
+{
+    "model":
+    {
+        "model_name": "vehicle-detection-adas-0002"
+    },
+    "nn_config":
+    {
+        "output_format" : "detection",
+        "NN_family" : "mobilenet",
+        "confidence_threshold" : 0.5
+    },
+    "mappings":
+    {
+        "labels":
+        [
+            "",
+            "vehicle"
+        ]
+    },
+    "version": 1
+}
+

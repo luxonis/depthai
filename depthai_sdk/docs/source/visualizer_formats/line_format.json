@@ -1,0 +1,25 @@
+{
+  "type": "line",
+  "pt1": {
+    "type": "array",
+    "items": {
+      "type": "number"
+    },
+    "description": "Absolute (x, y) coordinates of the first point."
+  },
+  "pt2": {
+    "type": "array",
+    "items": {
+      "type": "number"
+    },
+    "description": "Absolute (x, y) coordinates of the second point."
+  },
+  "children": {
+    "type": "array",
+    "items": {
+      "type": "object"
+    },
+    "description": "array of child objects (e.g. detection, text, line).",
+    "default": []
+  }
+}
