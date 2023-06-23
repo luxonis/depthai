@@ -1,5 +1,6 @@
 requests==2.26.0
 --extra-index-url https://www.piwheels.org/simple
+numpy>=1.21.4
 opencv-contrib-python==4.5.4.58 
 scipy
 # -e ./depthai_sdk
