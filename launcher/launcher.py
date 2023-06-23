@@ -14,6 +14,8 @@ from packaging import version
 # PyQt5
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from choose_app_dialog import ChooseAppDialog
+
 # Constants
 SCRIPT_DIRECTORY=Path(os.path.abspath(os.path.dirname(__file__)))
 DEPTHAI_DEMO_SCRIPT='depthai_demo.py'
@@ -89,7 +91,17 @@ class Worker(QtCore.QThread):
         else:
             self.shouldUpdate = False
             return False
-
+        
+    @QtCore.pyqtSlot()
+    def chooseApp(self) -> None:
+        """
+        Until Depthai Viewer is in beta, allow the user to choose between running the demo or the viewer.
+        
+        Sets `self.viewerChosen` to True if the viewer is chosen, False if the demo is chosen.
+        """
+        dialog = ChooseAppDialog(splashScreen)
+        self.viewerChosen = dialog.exec_() == QtWidgets.QDialog.Accepted
+                
     @QtCore.pyqtSlot(str,str)
     def showInformation(self, title, message):
         QtWidgets.QMessageBox.information(splashScreen, title, message)
@@ -314,9 +326,54 @@ class Worker(QtCore.QThread):
                         closeSplash()
                 quitThread = threading.Thread(target=removeSplash)
                 quitThread.start()
+                
+                self.signalChooseApp.emit()
+                if self.viewerChosen:
+                    print("Depthai Viewer chosen, checking if depthai-viewer is installed.")
+                    # Check if depthai-viewer is installed
+                    is_viewer_installed_cmd = [sys.executable, "-m", "pip", "show", "depthai-viewer"]
+                    viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    if viewer_available_ret.returncode != 0:
+                        print("Depthai Viewer not installed, installing...")
+                        # Depthai Viewer isn't installed, install it
+                        # First upgrade pip
+                        subprocess.run([sys.executable, "-m", "pip", "install", "-U", "pip"], check=True)
+                        # Install depthai-viewer - Don't check, it can error out because of dependency conflicts but still install successfully
+                        subprocess.run([sys.executable, "-m", "pip", "install", "depthai-viewer"]) 
+                        # Check again if depthai-viewer is installed
+                        viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        if viewer_available_ret.returncode != 0:
+                            raise RuntimeError("Depthai Viewer failed to install.")
 
-                # All ready, run the depthai_demo.py as a separate process
-                ret = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                    viewer_version = version.parse(viewer_available_ret.stdout.decode().splitlines()[1].split(" ")[1].strip())
+                    print(f"Installed Depthai Viewer version: {viewer_version}")
+                    # Get latest depthai-viewer version
+                    latest_ret = subprocess.run([sys.executable, "-m", "pip", "index", "versions", "depthai-viewer"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    if latest_ret.returncode != 0:
+                        raise RuntimeError("Couldn't get latest depthai-viewer version.")
+                    latest_viewer_version = version.parse(latest_ret.stdout.decode().split("LATEST:")[1].strip())
+                    print(f"Latest Depthai Viewer version: {latest_viewer_version}")
+                    if latest_viewer_version > viewer_version:
+                        # Update is available, ask user if they want to update
+                        title = 'DepthAI Viewer update available'
+                        message = f'Version {str(latest_viewer_version)} of depthai-viewer is available, current version {str(viewer_version)}. Would you like to update?'
+                        self.signalUpdateQuestion.emit(title, message)
+                        if self.shouldUpdate:
+                            # Update depthai-viewer
+                            subprocess.run([sys.executable, "-m", "pip", "install", "-U", "depthai-viewer"])
+                            # Test again to see if viewer is installed and updated
+                            viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                            if viewer_available_ret.returncode != 0:
+                                raise RuntimeError(f"Installing version {latest_viewer_version} failed.")
+                            viewer_version = version.parse(viewer_available_ret.stdout.decode().splitlines()[1].split(" ")[1].strip())
+                            if latest_viewer_version > viewer_version:
+                                raise RuntimeError("Depthai Viewer failed to update.")
+
+                    # All ready, run the depthai-viewer as a seperate process
+                    ret = subprocess.run([sys.executable, "-m", "depthai_viewer"])
+                else:    
+                    # All ready, run the depthai_demo.py as a separate process
+                    ret = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
 
                 # Print out stderr first
                 sys.stderr.write(ret.stderr.decode())
