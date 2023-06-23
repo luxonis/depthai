@@ -76,6 +76,7 @@ def closeSplash():
 
 class Worker(QtCore.QThread):
     signalUpdateQuestion = QtCore.pyqtSignal(str, str)
+    signalChooseApp = QtCore.pyqtSignal()
     sigInfo = QtCore.pyqtSignal(str, str)
     sigCritical = QtCore.pyqtSignal(str, str)
     sigWarning = QtCore.pyqtSignal(str, str)
@@ -117,6 +118,7 @@ class Worker(QtCore.QThread):
     def __init__(self, parent = None):
         QtCore.QThread.__init__(self, parent)
         self.signalUpdateQuestion[str, str].connect(self.updateQuestion, QtCore.Qt.BlockingQueuedConnection)
+        self.signalChooseApp.connect(self.chooseApp, QtCore.Qt.BlockingQueuedConnection)
         self.sigInfo[str, str].connect(self.showInformation, QtCore.Qt.BlockingQueuedConnection)
         self.sigCritical[str, str].connect(self.showCritical, QtCore.Qt.BlockingQueuedConnection)
         self.sigWarning[str, str].connect(self.showWarning, QtCore.Qt.BlockingQueuedConnection)
