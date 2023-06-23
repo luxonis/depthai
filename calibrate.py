@@ -147,14 +147,14 @@ def parse_args():
     parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
-                        help="BW1097, BW1098OBC - Board type from resources/boards/ (not case-sensitive). "
+                        help="BW1097, BW1098OBC - Board type from resources/depthai_boards/boards (not case-sensitive). "
                         "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
     parser.add_argument("-iv", "--invertVertical", dest="invert_v", default=False, action="store_true",
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
                         help="Invert horizontal axis of the camera for the display")
-    # parser.add_argument("-ep", "--maxEpiploarError", default="1.0", type=float, required=False,
-    #                     help="Sets the maximum epiploar allowed with rectification")
+    parser.add_argument("-ep", "--maxEpiploarError", default="0.7", type=float, required=False,
+                         help="Sets the maximum epiploar allowed with rectification")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
@@ -181,9 +181,7 @@ def parse_args():
                         help="Enable mouse trigger for image capture")
     parser.add_argument('-nic', '--noInitCalibration', default=False, action="store_true",
                         help="Don't take the board calibration for initialization but start with an empty one")
-    parser.add_argument('-dismin', '--displayMinimum', default=False, action="store_true",
-                        help="Display the new minimum every second while taking pictures")
-    parser.add_argument('-disall', '--printer', default=False, action="store_true",
+    parser.add_argument('-disall', '--enableDebugMessageSync', default=False, action="store_true",
                         help="Display all the information in calibration.")
 
     options = parser.parse_args()
@@ -319,7 +317,7 @@ class MessageSync:
         #     print()
         # print()
 
-    def get_synced(self, displayMinimum):
+    def get_synced(self, enableDebugMessageSync):
 
         # Atleast 3 messages should be buffered
         min_len = min([len(queue) for queue in self.queues.values()])
@@ -357,7 +355,7 @@ class MessageSync:
             # Mark minimum
             if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.0001):
                 min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
-                if displayMinimum:
+                if enableDebugMessageSync:
                     print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
             if min_ts_diff['ts'] < self.min_diff_timestamp:
@@ -374,8 +372,8 @@ class MessageSync:
                         # pop out the older messages
                         for i in range(0, min_ts_diff['indicies'][name]+1):
                             self.queues[name].popleft()
-
-                    print('Returning synced messages with error:', min_ts_diff['ts'], min_ts_diff['indicies'])
+                    if enableDebugMessageSync:
+                        print('Returning synced messages with error:', min_ts_diff['ts'], min_ts_diff['indicies'])
                     return synced
 
         # print('
@@ -393,7 +391,7 @@ class Main:
         global debug
         self.args = parse_args()
         debug = self.args.debug
-        displayMinimum=self.args.displayMinimum
+        enableDebugMessageSync=self.args.enableDebugMessageSync
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
@@ -401,7 +399,7 @@ class Main:
         if self.args.board:
             board_path = Path(self.args.board)
             if not board_path.exists():
-                board_path = (Path(__file__).parent / 'resources/boards' / self.args.board.upper()).with_suffix('.json').resolve()
+                board_path = (Path(__file__).parent / 'resources/depthai_boards/boards' / self.args.board.upper()).with_suffix('.json').resolve()
                 if not board_path.exists():
                     raise ValueError(
                         'Board config not found: {}'.format(board_path))
@@ -686,7 +684,7 @@ class Main:
         timer = self.args.captureDelay
         prev_time = None
         curr_time = None
-        displayMinimum= self.args.displayMinimum
+        enableDebugMessageSync= self.args.enableDebugMessageSync
         self.display_name = "Image Window"
         syncCollector = MessageSync(len(self.camera_queue), 0.003) # 3ms tolerance
         self.mouseTrigger = False
@@ -840,7 +838,7 @@ class Main:
             tried = {}
             allPassed = True
             if capturing:
-                syncedMsgs = syncCollector.get_synced(displayMinimum)
+                syncedMsgs = syncCollector.get_synced(enableDebugMessageSync)
                 if syncedMsgs == False or syncedMsgs == None:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()

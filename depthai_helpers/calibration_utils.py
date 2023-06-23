@@ -314,11 +314,7 @@ class StereoCalibration(object):
             image_files) != 0, "ERROR: Images not read correctly, check directory"
 
         allCorners, allIds, _, _, imsize, _ = self.analyze_charuco(image_files)
-        # print(imsize)
-        # coverageShape = (imsize[0], imsize[1], 3)
-        #print(imsize)
-        #print(imsize[-1])
-        #print(imsize[::-1])
+
         coverageImage = np.ones(imsize[::-1], np.uint8) * 255
         coverageImage = cv2.cvtColor(coverageImage, cv2.COLOR_GRAY2BGR)
         coverageImage = self.draw_corners(allCorners, coverageImage)
@@ -360,9 +356,6 @@ class StereoCalibration(object):
             images_left) != 0, "ERROR: Images not found, check directory"
         assert len(
             images_right) != 0, "ERROR: Images not found, check directory"
-        # print('Images from left and right')
-        # print(images_left[0])
-        # print(images_right[0])
 
         scale = None
         scale_req = False
@@ -545,13 +538,16 @@ class StereoCalibration(object):
         right_corners_sampled = []
         obj_pts = []
         one_pts = self.board.chessboardCorners
-        # print('allIds_l')
-        # print(len(allIds_l))
-        # print('allIds_r')
-        # print(len(allIds_r))
-        # print('allIds_l')
-        # print(allIds_l)
-        # print(allIds_r)
+        
+        if display_all:
+            print('Length of allIds_l')
+            print(len(allIds_l))
+            print('Length of allIds_r')
+            print(len(allIds_r))
+            print('allIds_l')
+            print(allIds_l)
+            print('allIds_r')
+            print(allIds_r)
 
         for i in range(len(allIds_l)):
             left_sub_corners = []
@@ -604,12 +600,6 @@ class StereoCalibration(object):
                 print(T)
                 print(f'Euler angles in XYZ {r_euler} degs')
 
-
-            # ret, M1, d1, M2, d2, R, T, E, F = cv2.stereoCalibrate(
-            #     obj_pts, left_corners_sampled, right_corners_sampled,
-            #     cameraMatrix_l, distCoeff_l, cameraMatrix_r, distCoeff_r, imsize,
-            #     criteria=stereocalib_criteria, flags=flags)
-            # if np.absolute(T[1])  > 0.2:
 
             R_l, R_r, P_l, P_r, Q, validPixROI1, validPixROI2 = cv2.stereoRectify(
                 cameraMatrix_l,
