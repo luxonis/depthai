@@ -22,7 +22,7 @@ from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.nn_component import NNComponent
-from depthai_sdk.components.parser import parse_usb_speed
+from depthai_sdk.components.parser import parse_usb_speed, parse_camera_socket
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.components.pointcloud_component import PointcloudComponent
 from depthai_sdk.oak_device import OakDevice
@@ -131,6 +131,13 @@ class OakCamera:
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
+        socket = source
+        if isinstance(source, str):
+            socket = parse_camera_socket(source.split(",")[0])
+        for comp in self._components:
+            if isinstance(comp, CameraComponent) and comp.node.getBoardSocket() == socket:
+                return comp
+
         comp = CameraComponent(self._oak.device,
                                self.pipeline,
                                source=source,
