@@ -106,6 +106,13 @@ class CameraComponent(Component):
                             "Please specify sensor type with c/color or m/mono after the ','"
                             " - eg. `cam = oak.create_camera('cama,c')`"
                         )
+                elif source in ["COLOR", "RGB"]:
+                    for features in device.getConnectedCameraFeatures():
+                        if dai.CameraSensorType.COLOR in features.supportedTypes:
+                            source = features.socket
+                            break
+                    if not isinstance(source, dai.CameraBoardSocket):
+                        raise ValueError("Couldn't find a color camera!")
 
             socket = parse_camera_socket(source)
             sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == socket][0]
