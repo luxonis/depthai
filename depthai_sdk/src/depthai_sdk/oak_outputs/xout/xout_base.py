@@ -1,12 +1,6 @@
-import traceback
-import warnings
 from abc import ABC, abstractmethod
-from queue import Empty, Queue
-from typing import List, Callable, Optional
-
+from typing import List, Optional, Callable
 import depthai as dai
-
-from depthai_sdk.oak_outputs.fps import FPS
 
 
 class StreamXout:
@@ -26,12 +20,14 @@ class ReplayStream(StreamXout):
 class XoutBase(ABC):
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
-        self._visualizer = None
-        self._visualizer_enabled = False
         self._packet_name = None
-        self._fps = None
-        self.queue = None
-        self.callback = None
+
+        # self._fps_counter = dict()
+        # for name in self._streams:
+        #     self._fps_counter[name] = FPS()
+
+        # It will get assigned later inside the BasePacketHandler class
+        self.new_packet_callback: Callable
 
     def get_packet_name(self) -> str:
         if self._packet_name is None:
@@ -42,20 +38,20 @@ class XoutBase(ABC):
     def xstreams(self) -> List[StreamXout]:
         raise NotImplementedError()
 
-    def setup_base(self, callback: Callable, queue: Queue):
-        # Gets called when initializing
-        self.queue = queue
-        self.callback = callback
+    def device_msg_callback(self, name, dai_message) -> None:
+        """
+        This is the (first) callback that gets called on a device message. Don't override it.
+        It will call `new_msg` and `on_callback` methods. If `new_msg` returns a packet, it will call
+        `new_packet` method.
+        """
+        # self._fps_counter[name].next_iter()
 
-    def start_fps(self):
-        self._fps = FPS()
+        ret = self.new_msg(name, dai_message)
+        if ret is not None:
+            self.new_packet_callback(ret)
 
     @abstractmethod
     def new_msg(self, name: str, msg) -> None:
-        raise NotImplementedError()
-
-    @abstractmethod
-    def visualize(self, packet) -> None:
         raise NotImplementedError()
 
     def on_callback(self, packet) -> None:
@@ -75,40 +71,6 @@ class XoutBase(ABC):
         Hook that will be called when exiting the context manager.
         """
         pass
-
-    # This approach is used as some functions (eg. imshow()) need to be called from
-    # main thread, and calling them from callback thread wouldn't work.
-    def check_queue(self, block=False) -> None:
-        """
-        Checks queue for any available messages. If available, call callback. Non-blocking by default.
-        """
-        try:
-            packet = self.queue.get(block=block)
-
-            if packet is not None:
-                self._fps.next_iter()
-
-                self.on_callback(packet)
-
-                if self._visualizer_enabled:
-                    try:
-                        self.visualize(packet)
-                    except Exception as e:
-                        warnings.warn(f'An error occurred while visualizing: {e}')
-                        traceback.print_exc()
-                else:
-                    # User defined callback
-                    try:
-                        self.callback(packet)
-                    except Exception as e:
-                        warnings.warn(f'An error occurred while calling callback: {e}')
-                        traceback.print_exc()
-
-                # Record after processing, so that user can modify the frame
-                self.on_record(packet)
-
-        except Empty:  # Queue empty
-            pass
 
     def fourcc(self) -> str:
         if self.is_mjpeg():

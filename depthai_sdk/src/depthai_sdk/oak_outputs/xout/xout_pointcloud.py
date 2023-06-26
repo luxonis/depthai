@@ -59,9 +59,6 @@ class XoutPointcloud(XoutFrames):
 
         if len(self.msgs[seq]) == len(self.xstreams()):
             # Frames synced!
-            if self.queue.full():
-                self.queue.get()  # Get one, so queue isn't full
-
             depth_frame: dai.ImgFrame = self.msgs[seq][self.frames.name]
 
             color_frame = None
@@ -75,17 +72,17 @@ class XoutPointcloud(XoutFrames):
 
             # TODO: postprocessing
 
-            packet = PointcloudPacket(
+            # Cleanup
+            new_msgs = {}
+            for name, msg in self.msgs.items():
+                if int(name) > int(seq):
+                    new_msgs[name] = msg
+            self.msgs = new_msgs
+
+            return PointcloudPacket(
                 self.get_packet_name(),
                 pcl,
                 depth_map=depth_frame,
                 color_frame=color_frame,
                 visualizer=self._visualizer
             )
-            self.queue.put(packet, block=False)
-
-            new_msgs = {}
-            for name, msg in self.msgs.items():
-                if int(name) > int(seq):
-                    new_msgs[name] = msg
-            self.msgs = new_msgs

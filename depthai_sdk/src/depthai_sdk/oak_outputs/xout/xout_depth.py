@@ -8,12 +8,6 @@ from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_disparity import XoutDisparity
 from depthai_sdk.visualize.configs import StereoColor
 
-try:
-    import cv2
-except ImportError:
-    cv2 = None
-
-
 class XoutDepth(XoutDisparity):
     def __init__(self,
                  device: dai.Device,

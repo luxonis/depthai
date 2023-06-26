@@ -56,8 +56,6 @@ with OakCamera() as oak:
 
     oak.visualize([stereo], fps=True, callback=cb)
 
-    oak.build()
-
     slc = oak.pipeline.create(dai.node.SpatialLocationCalculator)
     for x in range(15):
         for y in range(9):

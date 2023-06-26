@@ -4,11 +4,6 @@ from dataclasses import replace
 from enum import Enum
 from typing import List, Tuple, Optional, Union, Any, Dict
 
-try:
-    import cv2
-except ImportError:
-    cv2 = None
-
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
@@ -18,23 +13,12 @@ from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, St
 from depthai_sdk.visualize.encoder import JSONEncoder
 from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask, \
     VisBoundingBox
-from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
 
 
-class Platform(Enum):
-    """
-    Platform on which the visualizer is running.
-    """
-    ROBOTHUB = 'robothub'
-    PC = 'pc'
 
-
-class Visualizer(VisualizerHelper):
+class Visualizer:
     # Constants
-    IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt'
-
     def __init__(self, scale: float = None, fps: bool = False):
-        self.platform: Platform = self._detect_platform()
         self.objects: List[GenericObject] = []
         self._frame_shape: Optional[Tuple[int, ...]] = None
 
@@ -269,20 +253,7 @@ class Visualizer(VisualizerHelper):
         Returns:
             np.ndarray if the platform is PC, None otherwise.
         """
-        # Draw overlays
-        for obj in self.objects:
-            obj.draw(frame)
-
-        # Resize frame if needed
-        img_scale = self.config.output.img_scale
-        if img_scale:
-            if isinstance(img_scale, Tuple):
-                frame = cv2.resize(frame, img_scale)
-            elif isinstance(img_scale, float) and img_scale != 1.0:
-                frame = cv2.resize(frame, dsize=None, fx=img_scale, fy=img_scale)
-
-        self.reset()
-        return frame
+        raise NotImplementedError('Visualizers that inherit from Visualizer must implement draw() method!')
 
     def serialize(self, force_reset: bool = True) -> str:
         """
@@ -295,7 +266,6 @@ class Visualizer(VisualizerHelper):
             Stringified JSON.
         """
         parent = {
-            'platform': self.platform.value,
             'frame_shape': self.frame_shape,
             'config': self.config,
             'objects': [obj.serialize() for obj in self.objects]
@@ -457,15 +427,6 @@ class Visualizer(VisualizerHelper):
             self.config.segmentation = replace(self.config.segmentation, **kwargs)
 
         return self
-
-    def _detect_platform(self) -> Platform:
-        """
-        Detect the platform on which the visualizer is running.
-
-        Returns:
-            Platform
-        """
-        return Platform.PC if self.IS_INTERACTIVE else Platform.ROBOTHUB
 
     @property
     def frame_shape(self) -> Tuple[int, ...]:

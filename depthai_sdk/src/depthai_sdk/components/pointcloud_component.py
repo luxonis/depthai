@@ -100,9 +100,8 @@ class PointcloudComponent(Component):
             if self._comp.colorize_comp is not None:
                 colorize = StreamXout(self._comp.colorize_comp.node.id, self._comp.colorize_comp.stream, name="Color")
 
-            out = XoutPointcloud(device,
+            return XoutPointcloud(device,
                                  StreamXout(self._comp.stereo_depth_node.id, self._comp.depth, name=self._comp.name),
                                  color_frames=colorize,
                                  fps=30
                                  )
-            return self._comp._create_xout(pipeline, out)

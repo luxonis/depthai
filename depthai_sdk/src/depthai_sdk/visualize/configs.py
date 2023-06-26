@@ -3,11 +3,6 @@ from enum import IntEnum
 from typing import Tuple, Optional
 import numpy as np
 
-try:
-    import cv2
-except ImportError:
-    cv2 = None
-
 
 class TextPosition(IntEnum):
     """Where on frame do we want to print text."""

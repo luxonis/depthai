@@ -41,3 +41,10 @@ def get_text_color(background_color: Tuple[int,int,int], threshold=0.6):
         return (0, 0, 0)  # BGR for black
     else:
         return (255, 255, 255)  # BGR for white
+
+def hex_to_bgr(hex: str) -> Tuple[int, ...]:
+    """
+    "#ff1f00" (red) => (0, 31, 255)
+    """
+    value = hex.lstrip('#')
+    return tuple(int(value[i:i + 2], 16) for i in (4, 2, 0))

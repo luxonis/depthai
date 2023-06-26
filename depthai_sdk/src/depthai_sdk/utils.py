@@ -37,24 +37,6 @@ def getLocalRecording(recording: str) -> Optional[Path]:
         return p
     return None
 
-
-def configPipeline(pipeline: dai.Pipeline,
-                   xlinkChunk: Optional[int] = None,
-                   calib: Optional[dai.CalibrationHandler] = None,
-                   tuningBlob: Optional[str] = None,
-                   openvinoVersion: Union[None, str, dai.OpenVINO.Version] = None
-                   ) -> None:
-    if xlinkChunk:
-        pipeline.setXLinkChunkSize(xlinkChunk)
-    if calib:
-        pipeline.setCalibrationData(calib)
-    if tuningBlob:
-        pipeline.setCameraTuningBlobPath(tuningBlob)
-    if openvinoVersion:
-        # pipeline.setOpenVINOVersion(parseOpenVinoVersion(openvinoVersion))
-        pass
-
-
 def getAvailableRecordings() -> Dict[str, Tuple[List[str], int]]:
     """
     Get available (online) depthai-recordings. Returns list of available recordings and it's size

@@ -14,9 +14,9 @@ from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.visualize.visualizer import Visualizer
-from depthai_sdk.visualize.visualizer_helper import hex_to_bgr, colorize_disparity, draw_mappings, depth_to_disp_factor
+from depthai_sdk.visualize.visualizer_helper import colorize_disparity, draw_mappings, depth_to_disp_factor
 from depthai_sdk.visualize.bbox import BoundingBox
-from depthai_sdk.visualize.colors import generate_colors
+from depthai_sdk.visualize.colors import generate_colors, hex_to_bgr
 try:
     import cv2
 except ImportError:

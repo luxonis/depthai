@@ -2,19 +2,20 @@ import logging
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Tuple, List, Union, Optional, Sequence
-
-try:
-    import cv2
-except ImportError:
-    cv2 = None
-
+from types import SimpleNamespace
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
-from depthai_sdk.visualize.visualizer_helper import spatials_text
+
+def spatials_text(spatials: dai.Point3f):
+    return SimpleNamespace(
+        x="X: " + ("{:.1f}m".format(spatials.x / 1000) if not math.isnan(spatials.x) else "--"),
+        y="Y: " + ("{:.1f}m".format(spatials.y / 1000) if not math.isnan(spatials.y) else "--"),
+        z="Z: " + ("{:.1f}m".format(spatials.z / 1000) if not math.isnan(spatials.z) else "--"),
+    )
 
 
 class GenericObject(ABC):
@@ -107,133 +108,6 @@ class GenericObject(ABC):
         """
         return self._children
 
-    def draw_bbox(self,
-                  img: np.ndarray,
-                  pt1: Tuple[int, int],
-                  pt2: Tuple[int, int],
-                  color: Tuple[int, int, int],
-                  thickness: int,
-                  r: int,
-                  line_width: int,
-                  line_height: int
-                  ) -> None:
-        """
-        Draw a rounded rectangle on the image (in-place).
-
-        Args:
-            img: Image to draw on.
-            pt1: Top-left corner of the rectangle.
-            pt2: Bottom-right corner of the rectangle.
-            color: Rectangle color.
-            thickness: Rectangle line thickness.
-            r: Radius of the rounded corners.
-            line_width: Width of the rectangle line.
-            line_height: Height of the rectangle line.
-        """
-        x1, y1 = pt1
-        x2, y2 = pt2
-
-        if line_width == 0:
-            line_width = np.abs(x2 - x1)
-            line_width -= 2 * r if r > 0 else 0  # Adjust for rounded corners
-
-        if line_height == 0:
-            line_height = np.abs(y2 - y1)
-            line_height -= 2 * r if r > 0 else 0  # Adjust for rounded corners
-
-        # Top left
-        cv2.line(img, (x1 + r, y1), (x1 + r + line_width, y1), color, thickness)
-        cv2.line(img, (x1, y1 + r), (x1, y1 + r + line_height), color, thickness)
-        cv2.ellipse(img, (x1 + r, y1 + r), (r, r), 180, 0, 90, color, thickness)
-
-        # Top right
-        cv2.line(img, (x2 - r, y1), (x2 - r - line_width, y1), color, thickness)
-        cv2.line(img, (x2, y1 + r), (x2, y1 + r + line_height), color, thickness)
-        cv2.ellipse(img, (x2 - r, y1 + r), (r, r), 270, 0, 90, color, thickness)
-
-        # Bottom left
-        cv2.line(img, (x1 + r, y2), (x1 + r + line_width, y2), color, thickness)
-        cv2.line(img, (x1, y2 - r), (x1, y2 - r - line_height), color, thickness)
-        cv2.ellipse(img, (x1 + r, y2 - r), (r, r), 90, 0, 90, color, thickness)
-
-        # Bottom right
-        cv2.line(img, (x2 - r, y2), (x2 - r - line_width, y2), color, thickness)
-        cv2.line(img, (x2, y2 - r), (x2, y2 - r - line_height), color, thickness)
-        cv2.ellipse(img, (x2 - r, y2 - r), (r, r), 0, 0, 90, color, thickness)
-
-        # Fill the area
-        alpha = self.config.detection.fill_transparency
-        if alpha > 0:
-            overlay = img.copy()
-
-            thickness = -1
-            bbox = (pt1[0], pt1[1], pt2[0], pt2[1])
-
-            top_left = (bbox[0], bbox[1])
-            bottom_right = (bbox[2], bbox[3])
-            top_right = (bottom_right[0], top_left[1])
-            bottom_left = (top_left[0], bottom_right[1])
-
-            top_left_main_rect = (int(top_left[0] + r), int(top_left[1]))
-            bottom_right_main_rect = (int(bottom_right[0] - r), int(bottom_right[1]))
-
-            top_left_rect_left = (top_left[0], top_left[1] + r)
-            bottom_right_rect_left = (bottom_left[0] + r, bottom_left[1] - r)
-
-            top_left_rect_right = (top_right[0] - r, top_right[1] + r)
-            bottom_right_rect_right = (bottom_right[0], bottom_right[1] - r)
-
-            all_rects = [
-                [top_left_main_rect, bottom_right_main_rect],
-                [top_left_rect_left, bottom_right_rect_left],
-                [top_left_rect_right, bottom_right_rect_right]
-            ]
-
-            [cv2.rectangle(overlay, pt1=rect[0], pt2=rect[1], color=color, thickness=thickness) for rect in all_rects]
-
-            cv2.ellipse(overlay, (top_left[0] + r, top_left[1] + r), (r, r), 180.0, 0, 90, color, thickness)
-            cv2.ellipse(overlay, (top_right[0] - r, top_right[1] + r), (r, r), 270.0, 0, 90, color, thickness)
-            cv2.ellipse(overlay, (bottom_right[0] - r, bottom_right[1] - r), (r, r), 0.0, 0, 90, color, thickness)
-            cv2.ellipse(overlay, (bottom_left[0] + r, bottom_left[1] - r), (r, r), 90.0, 0, 90, color, thickness)
-
-            cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
-
-    def draw_stylized_bbox(self,
-                           img: np.ndarray,
-                           pt1: Tuple[int, int],
-                           pt2: Tuple[int, int],
-                           color: Tuple[int, int, int],
-                           thickness: int,
-                           bbox_style: BboxStyle = None
-                           ) -> None:
-        """
-        Draw a stylized bounding box. The style is either passed as an argument or defined in the config.
-
-        Args:
-            img: Image to draw on.
-            pt1: Top left corner.
-            pt2: Bottom right corner.
-            color: Boundary color.
-            thickness: Border thickness.
-            bbox_style: Bounding box style.
-        """
-        box_w = pt2[0] - pt1[0]
-        box_h = pt2[1] - pt1[1]
-        line_width = int(box_w * self.config.detection.line_width) // 2
-        line_height = int(box_h * self.config.detection.line_height) // 2
-        roundness = int(self.config.detection.box_roundness)
-        bbox_style = bbox_style or self.config.detection.bbox_style
-
-        if bbox_style == BboxStyle.RECTANGLE:
-            self.draw_bbox(img, pt1, pt2, color, thickness, 0, line_width=0, line_height=0)
-        elif bbox_style == BboxStyle.CORNERS:
-            self.draw_bbox(img, pt1, pt2, color, thickness, 0, line_width=line_width, line_height=line_height)
-        elif bbox_style == BboxStyle.ROUNDED_RECTANGLE:
-            self.draw_bbox(img, pt1, pt2, color, thickness, roundness, line_width=0, line_height=0)
-        elif bbox_style == BboxStyle.ROUNDED_CORNERS:
-            self.draw_bbox(img, pt1, pt2, color, thickness, roundness, line_width=line_width, line_height=line_height)
-
-
 class VisImage(GenericObject):
     def __init__(self, image: np.ndarray, frame_shape: Tuple[int, ...]):
         super().__init__(frame_shape=frame_shape)
@@ -266,9 +140,6 @@ class VisBoundingBox(GenericObject):
         self.color = color
         self.thickness = thickness
         self.bbox_style = bbox_style
-
-    def draw(self, frame: np.ndarray) -> None:
-        self.draw_stylized_bbox(frame, self.bbox[0:2], self.bbox[2:4], self.color, self.thickness, self.bbox_style)
 
     def prepare(self) -> 'GenericObject':
         return self
@@ -420,24 +291,6 @@ class VisDetections(GenericObject):
             List of tuples (bbox, label, color).
         """
         return list(zip(self.bboxes, self.labels, self.colors))
-
-    def draw(self, frame: np.ndarray) -> None:
-        if self.frame_shape is None:
-            self.frame_shape = frame.shape
-
-        for bbox, _, color in self.get_detections():
-            tl, br = bbox.denormalize(frame.shape)
-            # Draw bounding box
-            self.draw_stylized_bbox(
-                img=frame,
-                pt1=tl,
-                pt2=br,
-                color=color,
-                thickness=self.config.detection.thickness
-            )
-
-        for child in self.children:
-            child.draw(frame)
 
 
 class VisText(GenericObject):

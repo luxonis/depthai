@@ -436,13 +436,13 @@ class CameraComponent(Component):
         if self.is_replay():
             return ReplayStream(self._source)
         elif self.is_mono():
-            return StreamXout(self.node.id, self.stream, name=self.name)
+            return StreamXout(self.node.id, self.stream, name=self._source)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(self._num_frames_pool)
             self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
-            return StreamXout(self.node.id, self.node.video, name=self.name)
+            return StreamXout(self.node.id, self.node.video, name=self._source)
 
     def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
         """
@@ -479,17 +479,14 @@ class CameraComponent(Component):
             """
             Streams camera output to the OAK camera. Produces FramePacket.
             """
-            out = XoutFrames(self._comp.get_stream_xout(), self._comp.get_fps())
-            out.name = self._comp._source
-            return self._comp._create_xout(pipeline, out)
+            return XoutFrames(self._comp.get_stream_xout(), self._comp.get_fps())
 
         def replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
             If depthai-recording was used, it won't stream anything, but it will instead use frames that were sent to the OAK.
             Produces FramePacket.
             """
-            out = XoutFrames(ReplayStream(self._comp._source), self._comp.get_fps())
-            return self._comp._create_xout(pipeline, out)
+            return XoutFrames(ReplayStream(self._comp._source), self._comp.get_fps())
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
@@ -497,7 +494,7 @@ class CameraComponent(Component):
             Produces FramePacket.
             """
             if self._comp._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
-                out = XoutMjpeg(
+                return XoutMjpeg(
                     frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream, name=self._comp.name),
                     color=self._comp.is_color(),
                     lossless=self._comp.encoder.getLossless(),
@@ -505,12 +502,10 @@ class CameraComponent(Component):
                     frame_shape=self._comp.stream_size
                 )
             else:
-                out = XoutH26x(
+                return XoutH26x(
                     frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream, name=self._comp.name),
                     color=self._comp.is_color(),
                     profile=self._comp._encoder_profile,
                     fps=self._comp.encoder.getFrameRate(),
                     frame_shape=self._comp.stream_size
                 )
-            out.name = self._comp._source
-            return self._comp._create_xout(pipeline, out)

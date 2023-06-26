@@ -121,9 +121,4 @@ class XoutIMU(XoutBase):
         if name not in self._streams:
             return
 
-        if self.queue.full():
-            self.queue.get()  # Get one, so queue isn't full
-
-        packet = IMUPacket(msg.packets)
-
-        self.queue.put(packet, block=False)
+        return IMUPacket(msg.packets)

@@ -25,7 +25,6 @@ class XoutDisparity(XoutSeqSync, XoutFrames, Clickable):
                  device: dai.Device,
                  frames: StreamXout,
                  disp_factor: float,
-                 fps: float,
                  mono_frames: Optional[StreamXout],
                  colorize: StereoColor = None,
                  colormap: int = None,
@@ -33,7 +32,6 @@ class XoutDisparity(XoutSeqSync, XoutFrames, Clickable):
                  ir_settings: dict = None):
         self.mono_frames = mono_frames
         self.multiplier = disp_factor
-        self.fps = fps
         self.name = 'Disparity'
         self.device = device
 
@@ -79,9 +77,9 @@ class XoutDisparity(XoutSeqSync, XoutFrames, Clickable):
                 )
                 self.use_wls_filter = False
 
-        XoutFrames.__init__(self, frames=frames, fps=fps)
+        XoutFrames.__init__(self, frames=frames)
         XoutSeqSync.__init__(self, [frames, mono_frames])
-        Clickable.__init__(self, decay_step=int(self.fps))
+        Clickable.__init__(self, decay_step=int(30))
 
 
     def on_callback(self, packet) -> None:
