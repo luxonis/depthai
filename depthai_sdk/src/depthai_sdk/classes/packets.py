@@ -107,7 +107,7 @@ class DepthPacket(FramePacket):
         if self.confidence_map:
             values = 1 - (self.confidence_map.getData() / 255)
             values_no_outliers = values[np.logical_and(values > 0.0, values < 1.0)]
-            self.depth_score = np.sqrt(np.mean(values_no_outliers))
+            self.depth_score = np.mean(values_no_outliers)
 
 
 class SpatialBbMappingPacket(FramePacket):
