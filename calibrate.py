@@ -8,13 +8,11 @@ from argparse import ArgumentParser
 from pathlib import Path
 import time
 from datetime import datetime, timedelta
-
 from collections import deque 
 from scipy.spatial.transform import Rotation
 import traceback
 import itertools
 import math
-
 
 import cv2
 from cv2 import resize
@@ -87,39 +85,6 @@ antibandingOpts = {
     '60':  dai.CameraControl.AntiBandingMode.MAINS_60_HZ,
 }
 
-stringToCam = {
-    'RGB'   : dai.CameraBoardSocket.CAM_A,
-    'LEFT'  : dai.CameraBoardSocket.CAM_B,
-    'RIGHT' : dai.CameraBoardSocket.CAM_C,
-    'CAM_A' : dai.CameraBoardSocket.CAM_A,
-    'CAM_B' : dai.CameraBoardSocket.CAM_B,
-    'CAM_C' : dai.CameraBoardSocket.CAM_C,
-    'CAM_D' : dai.CameraBoardSocket.CAM_D,
-    'CAM_E' : dai.CameraBoardSocket.CAM_E,
-    'CAM_F' : dai.CameraBoardSocket.CAM_F,
-    'CAM_G' : dai.CameraBoardSocket.CAM_G,
-    'CAM_H' : dai.CameraBoardSocket.CAM_H
-}
-
-
-camToMonoRes = {
-    'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
-    'OV9*82' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
-    'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
-    'AR0234' : dai.MonoCameraProperties.SensorResolution.THE_1200_P,
-}
-
-camToRgbRes = {
-    'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
-    'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
-    'OV9*82' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
-    'OV9282' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
-    'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
-    'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
-    'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
-    'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
-}
-
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
     # Create black blank image
@@ -140,13 +105,13 @@ def parse_args():
 
     Image capture requires the use of a printed OpenCV charuco calibration target applied to a flat surface(ex: sturdy cardboard).
     Default board size used in this script is 22x16. However you can send a customized one too.
-    When taking photos, ensure enough amount of markers are visible and images are crisp.
+    When taking photos, ensure enough amount of markers are visible and images are crisp. 
     The board does not need to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
 
     If the calibration checkerboard corners cannot be found, the user will be prompted to try that calibration pose again.
 
     The script requires a RMS error < 1.0 to generate a calibration file. If RMS exceeds this threshold, an error is displayed.
-    An average epipolar error of <1.5 is considered to be good, but not required.
+    An average epipolar error of <1.5 is considered to be good, but not required. 
 
     Example usage:
 
@@ -155,7 +120,7 @@ def parse_args():
 
     Only run image processing only with same board setup. Requires a set of saved capture images:
     python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM -m process
-
+    
     Delete all existing images before starting image capture:
     python3 calibrate.py -i delete
     '''
@@ -179,7 +144,7 @@ def parse_args():
                         help="Disable rgb camera Calibration")
     parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
                         help="Interchange Left and right camera port.")
-    parser.add_argument("-m", "--mode", default=['capture', 'process', 'flash'], nargs='*', type=str, required=False,
+    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/depthai_boards/boards (not case-sensitive). "
@@ -188,13 +153,11 @@ def parse_args():
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
                         help="Invert horizontal axis of the camera for the display")
-    
     parser.add_argument("-ep", "--maxEpiploarError", default="0.7", type=float, required=False,
                          help="Sets the maximum epiploar allowed with rectification")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
-
                         required=False, help="Set the manual lens position of the camera for calibration")
     parser.add_argument("-cd", "--captureDelay", default=5, type=int,
                         required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
@@ -205,18 +168,12 @@ def parse_args():
                         help="set the scaling factor for output visualization. Default: 0.5.")
     parser.add_argument('-fps', '--framerate', type=float, default=10,
                         help="FPS to set for all cameras. Default: %(default)s")
-    
     parser.add_argument('-ab', '--antibanding', default='50', choices={'off', '50', '60'},
                         help="Set antibanding/antiflicker algo for lights that flicker at mains frequency. Default: %(default)s [Hz]")
-    parser.add_argument("-sync", "--minSyncTime", type=float, default=0.2,
-                        help="set the minimum time enforced between frames to keep synchronization. Default: %(default)s.")
-    parser.add_argument("-q", "--minQueueDepth", type=int, default=4,
-                        help="set the minimum queue depth for syncing before retrieving synced frames. Default: %(default)s.")
     parser.add_argument('-scp', '--saveCalibPath', type=str, default="",
                         help="Save calibration file to this path")
     parser.add_argument('-dst', '--datasetPath', type=str, default="dataset",
                         help="Path to dataset used for processing images")
-    
     parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.5,
                         help="Minimum percentage of detected markers to consider a frame valid")
     parser.add_argument('-nm', '--numMarkers', type=int, default=None, help="Number of markers in the board")
@@ -237,6 +194,8 @@ def parse_args():
             raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
+        
+    return options
 
 class HostSync:
     def __init__(self, deltaMilliSec):
@@ -336,7 +295,6 @@ class HostSync:
 
 class MessageSync:
     def __init__(self, num_queues, min_diff_timestamp, max_num_messages=4, min_queue_depth=3):
-
         self.num_queues = num_queues
         self.min_diff_timestamp = min_diff_timestamp
         self.max_num_messages = max_num_messages
@@ -360,7 +318,6 @@ class MessageSync:
         # print()
 
     def get_synced(self, enableDebugMessageSync):
-
 
         # Atleast 3 messages should be buffered
         min_len = min([len(queue) for queue in self.queues.values()])
@@ -396,9 +353,8 @@ class MessageSync:
                 acc_diff = acc_diff + abs(min_ts - msg.getTimestampDevice().total_seconds())
 
             # Mark minimum
-            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.0001):
+            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.3):
                 min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
-                
                 if enableDebugMessageSync:
                     print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
@@ -430,37 +386,20 @@ class Main:
     current_polygon = 0
     images_captured_polygon = 0
     images_captured = 0
-    camera_model = "perspective"
 
     def __init__(self):
         global debug
         self.args = parse_args()
-        self.device = None
         debug = self.args.debug
-        
         enableDebugMessageSync=self.args.enableDebugMessageSync
-
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
-        depthai_boards_path = Path(__file__).parent / 'resources/depthai_boards/boards'
-
-        if not depthai_boards_path.exists():
-            # try to update submodules
-            try:
-                print("DepthAI boards directory not found! Trying to update submodules...")
-                subprocess.run(['git', 'submodule', 'update', '--init', '--recursive'], check=True)
-                if not depthai_boards_path.exists():
-                    raise Exception("depthai_boards submodule not found after updating submodules.")
-            except Exception:
-                raise ValueError(f"Could not download depthai_boards submodule. Please make sure you have cloned the depthai-boards submodule. Run the following command to clone it: git submodule update --init --recursive")
-
         if self.args.board:
             board_path = Path(self.args.board)
             if not board_path.exists():
                 board_path = (Path(__file__).parent / 'resources/depthai_boards/boards' / self.args.board.upper()).with_suffix('.json').resolve()
-
                 if not board_path.exists():
                     raise ValueError(
                         'Board config not found: {}'.format(board_path))
@@ -515,7 +454,7 @@ class Main:
         for properties in cameraProperties:
             if properties.sensorName == 'OV7251':
                 raise Exception(
-            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
+            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!") 
 
         self.device.startPipeline(pipeline)"""
         # self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
@@ -535,7 +474,6 @@ class Main:
         for config_cam in self.board_config['cameras']:
             cam = self.board_config['cameras'][config_cam]
             self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
-
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
@@ -601,13 +539,11 @@ class Main:
         pipeline = dai.Pipeline()
 
         fps = self.args.framerate
-
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
             if cam_info['type'] == 'mono':
                 cam_node = pipeline.createMonoCamera()
                 xout = pipeline.createXLinkOut()
-
 
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
@@ -626,7 +562,6 @@ class Main:
                 cam_node.setFps(fps)
 
                 xout.setStreamName(cam_info['name'])
-
                 cam_node.isp.link(xout.input)
                 if cam_info['sensorName'] == "OV9*82":
                     cam_node.initialControl.setSharpness(0)
@@ -640,6 +575,7 @@ class Main:
                     controlIn.setStreamName(cam_info['name'] + '-control')
                     controlIn.out.link(cam_node.inputControl)
 
+            # cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
             xout.input.setBlocking(False)
             xout.input.setQueueSize(1)
 
@@ -652,12 +588,10 @@ class Main:
 
         filename = calibUtils.image_filename(
             stream_name, self.current_polygon, self.images_captured)
-
         path = Path(self.args.datasetPath) / stream_name / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(path), frame)
         print("py: Saved image as: " + str(path))
-
         return True
 
     def show_info_frame(self):
@@ -693,12 +627,10 @@ class Main:
         width, height = int(
             self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
         info_frame = np.zeros((self.height, self.width, 3), np.uint8)
-
         if self.args.cameraMode != "perspective": 
             print("py: Capture failed, unable to find full board! Fix position and press spacebar again")
         else:
             print("py: Capture failed, unable to find chessboard! Fix position and press spacebar again")
-
 
 
 
@@ -754,7 +686,7 @@ class Main:
         curr_time = None
         enableDebugMessageSync= self.args.enableDebugMessageSync
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue), 0.003) # 3ms tolerance
+        syncCollector = MessageSync(len(self.camera_queue), 0.3) # 3ms tolerance
         self.mouseTrigger = False
         while not finished:
             currImageList = {}
@@ -943,7 +875,6 @@ class Main:
             # print(f'self.current_polygon  {self.current_polygon}')
             # print(f'len(self.polygons)  {len(self.polygons)}')
 
-
             if self.images_captured_polygon == self.args.count:
                 self.images_captured_polygon = 0
                 self.current_polygon += 1
@@ -955,7 +886,6 @@ class Main:
 
 
     """ def capture_images(self):
-
         finished = False
         capturing = False
         captured_left = False
@@ -973,7 +903,6 @@ class Main:
         prev_time = None
         curr_time = None
         self.display_name = "left + right + rgb"
-        last_frame_time = time.time()
         # with self.get_pipeline() as pipeline:
         while not finished:
             current_left  = self.left_camera_queue.tryGet()
@@ -992,16 +921,8 @@ class Main:
                 recent_color = current_color
 
             if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
-                if time.time() - last_frame_time > 5:
-                    if self.args.disableRgb:
-                        print("Error: Couldn't retrieve left and right frames for more than 5 seconds. Exiting...")
-                    else:
-                        print("Error: Couldn't retrieve left, rigth and color frames for more than 5 seconds. Exiting...")
-                    raise SystemExit(1)
-                cv2.waitKey(1)
+                print("Continuing...")
                 continue
-
-            last_frame_time = time.time()
 
             recent_frames = [('left', recent_left), ('right', recent_right)]
             if not self.args.disableRgb:
@@ -1039,8 +960,8 @@ class Main:
                 #     print("Timestamp difference ---> l & rgb")
                 lrgb_time = 0
                 if not self.args.disableRgb:
-                    lrgb_time = min([abs((recent_left.getTimestampDevice() - recent_color.getTimestampDevice()).microseconds), abs((recent_color.getTimestampDevice() - recent_left.getTimestampDevice()).microseconds)]) / 1000
-                lr_time = min([abs((recent_left.getTimestampDevice() - recent_right.getTimestampDevice()).microseconds), abs((recent_right.getTimestampDevice() - recent_left.getTimestampDevice()).microseconds)]) / 1000
+                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
+                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
 
                 if debug:
                     print(f'Timestamp difference between l & RGB ---> {lrgb_time} in microseconds')
@@ -1129,7 +1050,7 @@ class Main:
                         finished = True
                         cv2.destroyAllWindows()
                         break
-
+            
             if not self.args.disableRgb:
                 frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
                 combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
@@ -1146,7 +1067,7 @@ class Main:
                     start_timer = False
                     capturing = True
                     print('Statrt capturing...')
-
+                
                 image_shape = combine_img.shape
                 cv2.putText(combine_img, str(timer),
                         (image_shape[1]//2, image_shape[0]//2), font,
@@ -1171,7 +1092,7 @@ class Main:
                                         self.args.squaresY,
                                         self.args.cameraMode,
                                         self.args.rectifiedDisp, # Turn off enable disp rectify
-                                        self.args.printer)
+                                        self.args.enableDebugMessageSync)
             if self.args.noInitCalibration:
                 calibration_handler = dai.CalibrationHandler()
             else:
@@ -1334,12 +1255,10 @@ class Main:
                 print(error_text)
                 for text in error_text: 
                 # text = error_text[0]                
-
                     resImage = create_blank(900, 512, rgb_color=red)
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
-                    
         except Exception as e:
             self.device.close()
             print('Device closed in exception..' )
@@ -1348,14 +1267,6 @@ class Main:
             raise SystemExit(1)
 
     def run(self):
-
-        if self.args.datasetPath:
-            self.dataset_path = Path(self.args.datasetPath)
-        else:
-            self.dataset_path = Path("dataset").absolute()
-
-        self.dataset_path.mkdir(parents=True, exist_ok=True)
-
         if 'capture' in self.args.mode:
             try:
                 if Path('dataset').exists():
@@ -1364,7 +1275,6 @@ class Main:
                     name = self.board_config['cameras'][cam_id]['name']
                     Path("dataset/{}".format(name)).mkdir(parents=True, exist_ok=True)
                 
-
             except OSError:
                 traceback.print_exc()
                 print("An error occurred trying to create image dataset directories!")
@@ -1376,12 +1286,8 @@ class Main:
         if self.args.datasetPath:
             print("Using dataset path: {}".format(self.args.datasetPath))
             self.dataset_path = self.args.datasetPath
-
         if 'process' in self.args.mode:
-            status, err_text, result_config = self.calibrate()
-            if 'flash' in self.args.mode:
-                self.flash(result_config)
-
+            self.calibrate()
         print('py: DONE.')
 
 
