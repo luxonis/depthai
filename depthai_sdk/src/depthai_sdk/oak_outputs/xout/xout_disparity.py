@@ -100,6 +100,7 @@ class XoutDisparity(XoutFrames, Clickable):
 
     def visualize(self, packet: DepthPacket):
         frame = packet.frame
+        mono_frame = packet.mono_frame.getCvFrame()
         disparity_frame = (frame * self.multiplier).astype(np.uint8)
 
         stereo_config = self._visualizer.config.stereo
@@ -107,7 +108,7 @@ class XoutDisparity(XoutFrames, Clickable):
         if self.use_wls_filter or stereo_config.wls_filter:
             self.wls_filter.setLambda(self.wls_lambda or stereo_config.wls_lambda)
             self.wls_filter.setSigmaColor(self.wls_sigma or stereo_config.wls_sigma)
-            disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
+            disparity_frame = self.wls_filter.filter(disparity_frame, mono_frame)
 
         colorize = self.colorize or stereo_config.colorize
         if self.colormap is not None:
@@ -116,13 +117,16 @@ class XoutDisparity(XoutFrames, Clickable):
             colormap = stereo_config.colormap
             colormap[0] = [0, 0, 0]  # Invalidate pixels 0 to be black
 
+        if disparity_frame.ndim == 2 and mono_frame.ndim == 3:
+            disparity_frame = disparity_frame[..., np.newaxis]
+
         if colorize == StereoColor.GRAY:
             packet.frame = disparity_frame
         elif colorize == StereoColor.RGB:
             packet.frame = cv2.applyColorMap(disparity_frame, colormap)
         elif colorize == StereoColor.RGBD:
             packet.frame = cv2.applyColorMap(
-                (disparity_frame * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8), colormap
+                (disparity_frame * 1.0 + mono_frame * 0.5).astype(np.uint8), colormap
             )
 
         if self._visualizer.config.output.clickable:

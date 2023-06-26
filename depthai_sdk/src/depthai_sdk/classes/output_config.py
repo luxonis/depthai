@@ -16,10 +16,21 @@ from depthai_sdk.trigger_action.trigger_action import TriggerAction
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
 
+def find_new_name(name: str, names: List[str]):
+    while True:
+        arr = name.split(' ')
+        num = arr[-1]
+        if num.isnumeric():
+            arr[-1] = str(int(num) + 1)
+            name = " ".join(arr)
+        else:
+            name = f"{name} 2"
+        if name not in names:
+            return name
 
 class BaseConfig:
     @abstractmethod
-    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
+    def setup(self, pipeline: dai.Pipeline, device: dai.Device, names: List[str]) -> List[XoutBase]:
         raise NotImplementedError()
 
 
@@ -39,24 +50,12 @@ class OutputConfig(BaseConfig):
         self.visualizer_enabled = visualizer_enabled
         self.record_path = record_path
 
-    def find_new_name(self, name: str, names: List[str]):
-        while True:
-            arr = name.split(' ')
-            num = arr[-1]
-            if num.isnumeric():
-                arr[-1] = str(int(num) + 1)
-                name = " ".join(arr)
-            else:
-                name = f"{name} 2"
-            if name not in names:
-                return name
-
     def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
         xoutbase: XoutBase = self.output(pipeline, device)
         xoutbase.setup_base(self.callback)
 
         if xoutbase.name in names:  # Stream name already exist, append a number to it
-            xoutbase.name = self.find_new_name(xoutbase.name, names)
+            xoutbase.name = find_new_name(xoutbase.name, names)
         names.append(xoutbase.name)
 
         recorder = None
