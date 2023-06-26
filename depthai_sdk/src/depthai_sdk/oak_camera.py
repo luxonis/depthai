@@ -400,7 +400,7 @@ class OakCamera:
 
         Returns: key pressed from cv2.waitKey, or None if
         """
-        if cv2 and CV2_HAS_GUI_SUPPORT:
+        if CV2_HAS_GUI_SUPPORT:
             key = cv2.waitKey(1)
             if key == ord('q'):
                 self._stop = True
