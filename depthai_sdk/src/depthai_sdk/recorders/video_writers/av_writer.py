@@ -1,7 +1,7 @@
 import os
 from fractions import Fraction
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union
 
 import depthai as dai
 import numpy as np
@@ -103,7 +103,7 @@ class AvWriter(BaseWriter):
             path_to_file: Path to the file.
         """
         global av
-        import av as av
+        import av
         self._file = av.open(str(Path(path_to_file).with_suffix('.h264')), 'w')
         self._create_stream(self._fourcc, self._fps)
 
@@ -145,15 +145,15 @@ class AvWriter(BaseWriter):
         # Remux the stream to finalize the output file
         self.remux_video(str(self._file.name))
 
-    def remux_video(self, input_file) -> None:
+    def remux_video(self, input_file: Union[Path, str]) -> None:
         """
         Remuxes h264 file to mp4.
 
         Args:
             input_file: path to h264 file.
         """
-        *path_without_extension, _ = input_file.split('.')
-        mp4_file = f"{'.'.join(path_without_extension)}.mp4"
+
+        mp4_file = str(Path(input_file).with_suffix('.mp4'))
 
         with av.open(mp4_file, "w", format="mp4") as output_container, \
                 av.open(input_file, "r", format="h264") as input_container:
