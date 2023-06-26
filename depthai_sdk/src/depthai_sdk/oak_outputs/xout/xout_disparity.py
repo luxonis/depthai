@@ -19,6 +19,11 @@ try:
 except ImportError:
     cv2 = None
 
+IR_FLOOD_LIMIT = 765
+IR_FLOOD_STEP = IR_FLOOD_LIMIT / 4
+IR_DOT_LIMIT = 1200
+IR_DOT_STEP = IR_DOT_LIMIT / 4
+
 
 class XoutDisparity(XoutFrames, Clickable):
     def __init__(self,
@@ -55,7 +60,8 @@ class XoutDisparity(XoutFrames, Clickable):
         self._converged_metric_value = None
 
         # Values that will be tested for function approximation
-        self._candidate_pairs = list(itertools.product(np.arange(0, 1201, 1200 / 4), np.arange(0, 1501, 1500 / 4)))
+        self._candidate_pairs = list(itertools.product(np.arange(0, IR_DOT_LIMIT + 1, IR_DOT_STEP),
+                                                       np.arange(0, IR_FLOOD_LIMIT + 1, IR_FLOOD_STEP)))
         self._neighbourhood_pairs = []
         self._candidate_idx, self._neighbour_idx = 0, 0
         self._X, self._y = [], []
@@ -168,7 +174,7 @@ class XoutDisparity(XoutFrames, Clickable):
 
         if self.confidence_map:
             from matplotlib import pyplot as plt
-            self.fig, self.axes = plt.subplots(1, 1, figsize=(8, 4), constrained_layout=False)
+            self.fig, self.axes = plt.subplots(1, 1, figsize=(5, 2), constrained_layout=False)
 
     @cached_property
     def stream_names(self) -> List[str]:
@@ -281,8 +287,10 @@ class XoutDisparity(XoutFrames, Clickable):
             self._auto_ir_converged = False
             self._checking_neighbourhood = True
             self._neighbourhood_pairs = np.unique([
-                [np.clip(self._dot_projector_brightness + i, 0, 1200), np.clip(self._flood_brightness + j, 0, 1500)]
-                for i, j in itertools.product([-300, 300], [-375, 375])
+                [np.clip(self._dot_projector_brightness + i, 0, IR_DOT_LIMIT),
+                 np.clip(self._flood_brightness + j, 0, IR_FLOOD_LIMIT)]
+                for i, j in itertools.product([-IR_DOT_STEP / 2, IR_DOT_STEP / 2],
+                                              [-IR_FLOOD_STEP / 2, IR_FLOOD_STEP / 2])
             ], axis=0)
             self._neighbour_idx = 0
 
