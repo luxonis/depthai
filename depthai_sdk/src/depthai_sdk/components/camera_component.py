@@ -454,6 +454,12 @@ class CameraComponent(Component):
             if preview_num_frames is not None:
                 self._preview_num_frames_pool = preview_num_frames
 
+    def get_board_socket(self) -> dai.CameraBoardSocket:
+        if self.is_replay():
+            return self._replay.streams[self._source].get_socket()
+        else:
+            return self.node.getBoardSocket()
+
     """
     Available outputs (to the host) of this component
     """

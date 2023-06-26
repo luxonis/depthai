@@ -78,8 +78,6 @@ class StereoComponent(Component):
 
         self._device = device
         self._replay: Optional[Replay] = replay
-        self._resolution: Optional[Union[str, dai.MonoCameraProperties.SensorResolution]] = resolution
-        self._fps: Optional[float] = fps
         self._args: Dict = args
         self.name = name
 
@@ -115,19 +113,18 @@ class StereoComponent(Component):
 
         self._undistortion_offset: Optional[int] = None
 
+        # If not specified, default to 400P resolution for faster processing
+
+        resolution = resolution or dai.MonoCameraProperties.SensorResolution.THE_400_P
+        if not self.left:
+            self.left = CameraComponent(device, pipeline, 'left', resolution, fps, replay=self._replay)
+        if not self.right:
+            self.right = CameraComponent(device, pipeline, 'right', resolution, fps, replay=self._replay)
+
         if not self._replay:
             # Live stream, check whether we have correct cameras
             if len(device.getCameraSensorNames()) == 1:
                 raise Exception('OAK-1 camera does not have Stereo camera pair!')
-
-            # If not specified, default to 400P resolution for faster processing
-            self._resolution = self._resolution or dai.MonoCameraProperties.SensorResolution.THE_400_P
-
-            if not self.left:
-                self.left = CameraComponent(device, pipeline, 'left', self._resolution, self._fps, replay=self._replay)
-            if not self.right:
-                self.right = CameraComponent(device, pipeline, 'right', self._resolution, self._fps,
-                                             replay=self._replay)
 
             if 0 < len(device.getIrDrivers()):
                 laser = self._args.get('irDotBrightness', None)
@@ -251,7 +248,7 @@ class StereoComponent(Component):
         if confidence is not None: self.node.initialConfig.setConfidenceThreshold(confidence)
         if align is not None:
             self._align_component = align
-            self.node.setDepthAlign(align.node.getBoardSocket())
+            self.node.setDepthAlign(align.get_board_socket())
         if median is not None: self.node.setMedianFilter(parse_median_filter(median))
         if extended is not None: self.node.initialConfig.setExtendedDisparity(extended)
         if subpixel is not None: self.node.initialConfig.setSubpixel(subpixel)
