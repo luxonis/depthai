@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Tuple
 
 import depthai as dai
+import numpy as np
 
 from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 from .base_writer import BaseWriter
@@ -13,7 +14,15 @@ KEYFRAME_NAL_TYPE = 5
 NAL_TYPE_BITS = 5  # nal unit type is encoded in lower 5 bits
 
 
-def is_keyframe(encoded_frame):
+def is_keyframe(encoded_frame: np.array) -> bool:
+    """
+    Check if encoded frame is a keyframe.
+    Args:
+        encoded_frame: Encoded frame.
+
+    Returns:
+        True if encoded frame is a keyframe, False otherwise.
+    """
     byte_stream = bytearray(encoded_frame)
     size = len(byte_stream)
 
@@ -23,7 +32,7 @@ def is_keyframe(encoded_frame):
         if retpos == -1:
             return False
 
-        # skip start code
+        # Skip start code
         pos = retpos + 3
 
         # Extract the first 5 bits
@@ -37,6 +46,14 @@ def is_keyframe(encoded_frame):
 
 class AvWriter(BaseWriter):
     def __init__(self, path: Path, name: str, fourcc: str, fps: float, frame_shape: Tuple[int, int]):
+        """
+        Args:
+            path: Path to the folder where the file will be created.
+            name: Name of the file without extension.
+            fourcc: Stream codec.
+            fps: Frames per second of the stream.
+            frame_shape: Width and height of the frames.
+        """
         super().__init__(path, name)
 
         self.start_ts = None
@@ -47,7 +64,13 @@ class AvWriter(BaseWriter):
         self._stream = None
 
     def _create_stream(self, fourcc: str, fps: float) -> None:
-        """Create stream in file with given fourcc and fps, works in-place."""
+        """
+        Create stream in file with given fourcc and fps, works in-place.
+
+        Args:
+            fourcc: Stream codec.
+            fps: Frames per second of the stream.
+        """
         self._stream = self._file.add_stream(fourcc, rate=int(fps))
         self._stream.time_base = Fraction(1, 1000 * 1000)  # Microseconds
 
@@ -59,22 +82,40 @@ class AvWriter(BaseWriter):
             self._stream.width = self.frame_shape[0]
             self._stream.height = self.frame_shape[1]
 
-    def create_file_for_buffer(self, subfolder: str, buf_name: str):  # independent of type of frames
+    def create_file_for_buffer(self, subfolder: str, buf_name: str) -> None:  # independent of type of frames
         self.create_file(subfolder)
 
-    def create_file(self, subfolder: str):
+    def create_file(self, subfolder: str) -> None:
+        """
+        Create file for writing frames.
+
+        Args:
+            subfolder: Subfolder relative to the main folder where the file will be created.
+        """
         path_to_file = create_writer_dir(self.path / subfolder, self.name, 'mp4')
         self._create_file(path_to_file)
 
-    def _create_file(self, path_to_file: str):
+    def _create_file(self, path_to_file: str) -> None:
+        """
+        Create av container for writing frames.
+
+        Args:
+            path_to_file: Path to the file.
+        """
         global av
         import av as av
         self._file = av.open(str(Path(path_to_file).with_suffix('.h264')), 'w')
         self._create_stream(self._fourcc, self._fps)
 
     def write(self, frame: dai.ImgFrame) -> None:
+        """
+        Write packet bytes to h264 file.
+
+        Args:
+            frame: ImgFrame from depthai pipeline.
+        """
         if self._file is None:
-            self.create_file(subfolder='')  # , frame_shape=(frame.getWidth(), frame.getHeight()))
+            self.create_file(subfolder='')
 
         frame_data = frame.getData()
 
@@ -92,7 +133,10 @@ class AvWriter(BaseWriter):
         packet.pts = ts
         self._file.mux_one(packet)  # Mux the Packet into container
 
-    def close(self):
+    def close(self) -> None:
+        """
+        Close the file and remux it to mp4.
+        """
         if self._file is not None:
             p = self._stream.encode(None)
             self._file.mux(p)
@@ -101,7 +145,13 @@ class AvWriter(BaseWriter):
         # Remux the stream to finalize the output file
         self.remux_video(str(self._file.name))
 
-    def remux_video(self, input_file):
+    def remux_video(self, input_file) -> None:
+        """
+        Remuxes h264 file to mp4.
+
+        Args:
+            input_file: path to h264 file.
+        """
         *path_without_extension, _ = input_file.split('.')
         mp4_file = f"{'.'.join(path_without_extension)}.mp4"
 
@@ -122,4 +172,3 @@ class AvWriter(BaseWriter):
                 output_container.mux_one(packet)
 
         os.remove(input_file)
-        return mp4_file
