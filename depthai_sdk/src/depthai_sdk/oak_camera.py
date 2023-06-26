@@ -5,6 +5,7 @@ import warnings
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, Callable
 
+from depthai_sdk import CV2_HAS_GUI_SUPPORT
 from depthai_sdk.visualize.visualizer import Visualizer
 
 try:
@@ -399,7 +400,7 @@ class OakCamera:
 
         Returns: key pressed from cv2.waitKey, or None if
         """
-        if cv2:
+        if CV2_HAS_GUI_SUPPORT:
             key = cv2.waitKey(1)
             if key == ord('q'):
                 self._stop = True

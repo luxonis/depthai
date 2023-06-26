@@ -739,11 +739,32 @@ class NNComponent(Component):
             Streams NN results and encoded frames (frames used for inferencing)
             Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
+            if self._comp._is_multi_stage():
+                input_nn = self._comp._input
+
+                if input_nn._input.encoder is None:
+                    raise Exception('Encoder not enabled for the input')
+
+                det_nn_out = StreamXout(id=self._comp._input.node.id,
+                                        out=self._comp._input.node.out,
+                                        name=self._comp._input.name)
+                frames = StreamXout(id=input_nn._input.encoder.id,
+                                    out=input_nn._input.encoder.bitstream,
+                                    name=self._comp.name)
+                second_nn_out = StreamXout(self._comp.node.id, self._comp.node.out, name=self._comp.name)
+
+                out = XoutTwoStage(det_nn=self._comp._input,
+                                   second_nn=self._comp,
+                                   frames=frames,
+                                   det_out=det_nn_out,
+                                   second_nn_out=second_nn_out,
+                                   device=device,
+                                   input_queue_name="input_queue" if self._comp.x_in else None)
+
+                return self._comp._create_xout(pipeline, out)
+
             if self._comp._input.encoder is None:
                 raise Exception('Encoder not enabled for the input')
-
-            if self._comp._is_multi_stage():
-                raise NotImplementedError('Encoded output not supported for 2-stage NNs at the moment.')
 
             if self._comp._input._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
                 out = XoutNnMjpeg(
