@@ -89,8 +89,11 @@ class XoutDisparity(XoutFrames, Clickable):
 
     def visualize(self, packet: DepthPacket):
         frame = packet.frame
-        mono_frame = packet.mono_frame.getCvFrame()
         disparity_frame = (frame * self.multiplier).astype(np.uint8)
+        try:
+            mono_frame = packet.mono_frame.getCvFrame()
+        except AttributeError:
+            mono_frame = None
 
         stereo_config = self._visualizer.config.stereo
 
@@ -106,7 +109,7 @@ class XoutDisparity(XoutFrames, Clickable):
             colormap = stereo_config.colormap
             colormap[0] = [0, 0, 0]  # Invalidate pixels 0 to be black
 
-        if disparity_frame.ndim == 2 and mono_frame.ndim == 3:
+        if mono_frame is not None and disparity_frame.ndim == 2 and mono_frame.ndim == 3:
             disparity_frame = disparity_frame[..., np.newaxis]
 
         if colorize == StereoColor.GRAY:

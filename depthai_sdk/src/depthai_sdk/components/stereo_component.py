@@ -124,7 +124,7 @@ class StereoComponent(Component):
             self._resolution = self._resolution or dai.MonoCameraProperties.SensorResolution.THE_400_P
 
             # Always use 1200p for OAK-D-LR and OAK-D-SR
-            if self._device.getDeviceName() in ['OAK-D-LR', 'OAK-D-SR']:
+            if self._device.getDeviceName() == 'OAK-D-LR':
                 self._resolution = dai.MonoCameraProperties.SensorResolution.THE_1200_P
 
             if not self.left:
@@ -134,7 +134,7 @@ class StereoComponent(Component):
                                              replay=self._replay)
 
             # AR0234 outputs 1200p, so we need to resize it to 800p on RVC2
-            if self._device.getDeviceName() in ['OAK-D-LR', 'OAK-D-SR']:
+            if self._device.getDeviceName() == 'OAK-D-LR':
                 if isinstance(self.left, CameraComponent) and isinstance(self.right, CameraComponent):
                     self.left.config_color_camera(isp_scale=(2, 3))
                     self.right.config_color_camera(isp_scale=(2, 3))
