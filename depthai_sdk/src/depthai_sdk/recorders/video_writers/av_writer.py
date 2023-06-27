@@ -104,7 +104,7 @@ class AvWriter(BaseWriter):
         """
         global av
         import av
-        self._file = av.open(str(Path(path_to_file).with_suffix('.h264')), 'w')
+        self._file = av.open(str(Path(path_to_file).with_suffix(f'.{self._fourcc}')), 'w')
         self._create_stream(self._fourcc, self._fps)
 
     def write(self, frame: dai.ImgFrame) -> None:
@@ -155,8 +155,11 @@ class AvWriter(BaseWriter):
 
         mp4_file = str(Path(input_file).with_suffix('.mp4'))
 
+        if input_file == mp4_file:
+            mp4_file = str(Path(input_file).with_suffix('.remuxed.mp4'))
+
         with av.open(mp4_file, "w", format="mp4") as output_container, \
-                av.open(input_file, "r", format="h264") as input_container:
+                av.open(input_file, "r", format=self._fourcc) as input_container:
             input_stream = input_container.streams[0]
             output_stream = output_container.add_stream(template=input_stream, rate=self._fps)
 
@@ -172,3 +175,6 @@ class AvWriter(BaseWriter):
                 output_container.mux_one(packet)
 
         os.remove(input_file)
+
+        if Path(mp4_file).suffix == '.remuxed.mp4':
+            os.rename(mp4_file, input_file)
