@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Tuple
+from typing import Tuple, Optional
 import numpy as np
 
 try:
@@ -81,8 +81,10 @@ class TextConfig:
     font_thickness: int = 2
     font_position: TextPosition = TextPosition.TOP_LEFT
 
-    bg_transparency: float = 0.5
-    bg_color: Tuple[int, int, int] = (0, 0, 0)
+    background_color: Optional[Tuple[int, int, int]] = None
+    background_transparency: float = 0.5
+
+    outline_color: Tuple[int, int, int] = (0, 0, 0)
 
     line_type: int = 16  # cv2.LINE_AA
 
