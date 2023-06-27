@@ -16,6 +16,7 @@ os.chdir('/tmp/depthai_sdk_tests')
 
 @pytest.mark.parametrize('example', list(EXAMPLES_DIR.rglob("**/*.py")))
 def test_examples(example):
+    print(f"Running {example}")
     python_executable = Path(sys.executable)
     result = subprocess.Popen(f"{python_executable} {example}",
                               stdout=subprocess.PIPE,
@@ -31,7 +32,7 @@ def test_examples(example):
     time.sleep(5)
     print('Stderr: ', result.stderr.read().decode())
 
-    # if result.returncode and result.returncode != 0:
-    #     assert False, f"{example} raised an exception: {result.stderr}"
+    if result.returncode and result.returncode != 0:
+        assert False, f"{example} raised an exception: {result.stderr}"
 
     cv2.destroyAllWindows()
