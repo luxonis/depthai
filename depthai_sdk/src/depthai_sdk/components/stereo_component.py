@@ -123,13 +123,23 @@ class StereoComponent(Component):
             # If not specified, default to 400P resolution for faster processing
             self._resolution = self._resolution or dai.MonoCameraProperties.SensorResolution.THE_400_P
 
+            # Always use 1200p for OAK-D-LR and OAK-D-SR
+            if self._device.getDeviceName() == 'OAK-D-LR':
+                self._resolution = dai.MonoCameraProperties.SensorResolution.THE_1200_P
+
             if not self.left:
                 self.left = CameraComponent(device, pipeline, 'left', self._resolution, self._fps, replay=self._replay)
             if not self.right:
                 self.right = CameraComponent(device, pipeline, 'right', self._resolution, self._fps,
                                              replay=self._replay)
 
-            if 0 < len(device.getIrDrivers()):
+            # AR0234 outputs 1200p, so we need to resize it to 800p on RVC2
+            if self._device.getDeviceName() == 'OAK-D-LR':
+                if isinstance(self.left, CameraComponent) and isinstance(self.right, CameraComponent):
+                    self.left.config_color_camera(isp_scale=(2, 3))
+                    self.right.config_color_camera(isp_scale=(2, 3))
+
+            if len(device.getIrDrivers()) > 0:
                 laser = self._args.get('irDotBrightness', None)
                 laser = laser if laser is not None else 800
                 if 0 < laser:
