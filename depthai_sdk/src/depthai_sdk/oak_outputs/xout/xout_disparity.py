@@ -100,8 +100,11 @@ class XoutDisparity(XoutFrames, Clickable):
 
     def visualize(self, packet: DepthPacket):
         frame = packet.frame
-        mono_frame = packet.mono_frame.getCvFrame()
         disparity_frame = (frame * self.multiplier).astype(np.uint8)
+        try:
+            mono_frame = packet.mono_frame.getCvFrame()
+        except AttributeError:
+            mono_frame = None
 
         stereo_config = self._visualizer.config.stereo
 
@@ -117,7 +120,7 @@ class XoutDisparity(XoutFrames, Clickable):
             colormap = stereo_config.colormap
             colormap[0] = [0, 0, 0]  # Invalidate pixels 0 to be black
 
-        if disparity_frame.ndim == 2 and mono_frame.ndim == 3:
+        if mono_frame and disparity_frame.ndim == 2 and mono_frame.ndim == 3:
             disparity_frame = disparity_frame[..., np.newaxis]
 
         if colorize == StereoColor.GRAY:
@@ -150,8 +153,6 @@ class XoutDisparity(XoutFrames, Clickable):
             self.axes.set_xlabel('Depth score')
             self.axes.set_ylabel('Frequency')
 
-            # self.axes.text(0.5, 0.9, f'Overall depth score: {packet.depth_score:.2f}', ha='center', va='center',
-            #                transform=self.axes.transAxes, fontsize=20)
             # Convert plot to numpy array
             img = np.fromstring(self.fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
             img = img.reshape(self.fig.canvas.get_width_height()[::-1] + (3,))
