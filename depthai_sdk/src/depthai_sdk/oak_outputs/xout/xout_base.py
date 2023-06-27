@@ -46,9 +46,10 @@ class XoutBase(ABC):
         """
         # self._fps_counter[name].next_iter()
 
-        ret = self.new_msg(name, dai_message)
-        if ret is not None:
-            self.new_packet_callback(ret)
+        packet = self.new_msg(name, dai_message)
+        if packet is not None:
+            self.on_callback(packet)
+            self.new_packet_callback(packet)
 
     @abstractmethod
     def new_msg(self, name: str, msg) -> None:
@@ -57,18 +58,6 @@ class XoutBase(ABC):
     def on_callback(self, packet) -> None:
         """
         Hook called when `callback` or `self.visualize` are used.
-        """
-        pass
-
-    def on_record(self, packet) -> None:
-        """
-        Hook called when `record_path` is used.
-        """
-        pass
-
-    def close(self) -> None:
-        """
-        Hook that will be called when exiting the context manager.
         """
         pass
 

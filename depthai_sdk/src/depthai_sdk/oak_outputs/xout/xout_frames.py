@@ -35,7 +35,7 @@ class XoutFrames(XoutBase):
     def xstreams(self) -> List[StreamXout]:
         return [self.frames]
 
-    def new_msg(self, name: str, msg) -> None:
+    def new_msg(self, name: str, msg):
         if name not in self._streams:
             return
 

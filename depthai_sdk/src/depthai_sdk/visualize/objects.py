@@ -55,20 +55,6 @@ class GenericObject(ABC):
         return self
 
     @abstractmethod
-    def draw(self, frame: np.ndarray) -> None:
-        """
-        Draw the object on the frame.
-
-        Args:
-            frame: frame to draw on.
-        """
-        raise NotImplementedError
-
-    def draw_children(self, frame: np.ndarray) -> None:
-        for child in self.children:
-            child.draw(frame)
-
-    @abstractmethod
     def prepare(self) -> 'GenericObject':
         """
         Prepare necessary data for drawing.
@@ -76,7 +62,7 @@ class GenericObject(ABC):
         Returns:
             self
         """
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     def serialize(self) -> dict:
@@ -356,144 +342,7 @@ class VisText(GenericObject):
             'background_transparency': self.background_transparency
         }
 
-    def prepare(self) -> 'VisText':
-        # TODO: in the future, we can stop support for passing pixel-space bbox to the 
-        # visualizer.
-        if isinstance(self.bbox, (Sequence, np.ndarray)):
-            # Convert to BoundingBox. Divide by self.frame_shape and load into the BoundingBox
-            self.bbox = list(self.bbox)
-            self.bbox[0] /= self.frame_shape[1]
-            self.bbox[1] /= self.frame_shape[0]
-            self.bbox[2] /= self.frame_shape[1]
-            self.bbox[3] /= self.frame_shape[0]
-            self.bbox = BoundingBox(self.bbox)
-        self.coords = self.coords or self.get_relative_position(bbox=self.bbox,
-                                                                position=self.position,
-                                                                padding=self.padding)
-        return self
-
-    def draw(self, frame: np.ndarray) -> None:
-        if self.frame_shape is None:
-            self.frame_shape = frame.shape
-
-        text_config = self.config.text
-
-        # Extract shape of the bbox if exists
-        if self.bbox is not None:
-            tl, br = self.bbox.denormalize(frame.shape)
-            shape = br[0] - tl[0], br[1] - tl[1]
-        else:
-            shape = frame.shape[:2]
-
-        font_scale = self.size or text_config.font_scale
-        if self.size is None and text_config.auto_scale:
-            font_scale = self.get_text_scale(shape, self.bbox)
-
-        # Calculate font thickness
-        font_thickness = max(1, int(font_scale * 2)) \
-            if text_config.auto_scale else self.thickness or text_config.font_thickness
-
-        dx, dy = cv2.getTextSize(self.text, text_config.font_face, font_scale, font_thickness)[0]
-        dy += 10
-
-        for line in self.text.splitlines():
-            y = self.coords[1]
-
-            background_color = self.background_color or text_config.background_color
-            background_transparency = self.background_transparency or text_config.background_transparency
-            if background_color is not None:
-                img_with_background = cv2.rectangle(img=frame.copy(),
-                                                    pt1=(self.coords[0], y - dy),
-                                                    pt2=(self.coords[0] + dx, y + 10),
-                                                    color=background_color,
-                                                    thickness=-1)
-                # take transparency into account
-                cv2.addWeighted(src1=img_with_background,
-                                alpha=background_transparency,
-                                src2=frame,
-                                beta=1 - background_transparency,
-                                gamma=0,
-                                dst=frame)
-
-            if self.outline:
-                # Background
-                cv2.putText(img=frame,
-                            text=line,
-                            org=self.coords,
-                            fontFace=text_config.font_face,
-                            fontScale=font_scale,
-                            color=text_config.outline_color,
-                            thickness=font_thickness + 1,
-                            lineType=text_config.line_type)
-
-            # Front text
-            cv2.putText(img=frame,
-                        text=line,
-                        org=self.coords,
-                        fontFace=text_config.font_face,
-                        fontScale=font_scale,
-                        color=self.color or text_config.font_color,
-                        thickness=font_thickness,
-                        lineType=text_config.line_type)
-
-            self.coords = (self.coords[0], y + dy)
-
-    def get_relative_position(self,
-                              bbox: BoundingBox,
-                              position: TextPosition,
-                              padding: int
-                              ) -> Tuple[int, int]:
-        """
-        Get relative position of the text w.r.t. the bounding box.
-        If bbox is None,the position is relative to the frame.
-        """
-        if bbox is None:
-            bbox = BoundingBox()
-        text_config = self.config.text
-
-        tl, br = bbox.denormalize(self.frame_shape)
-        shape = br[0] - tl[0], br[1] - tl[1]
-
-        bbox_arr = bbox.to_tuple(self.frame_shape)
-
-        font_scale = self.size or text_config.font_scale
-        if self.size is None and text_config.auto_scale:
-            font_scale = self.get_text_scale(shape, bbox_arr)
-
-        text_width, text_height = 0, 0
-        for text in self.text.splitlines():
-            text_size = cv2.getTextSize(text=text,
-                                        fontFace=text_config.font_face,
-                                        fontScale=font_scale,
-                                        thickness=text_config.font_thickness)[0]
-            text_width = max(text_width, text_size[0])
-            text_height += text_size[1]
-
-        x, y = bbox_arr[0], bbox_arr[1]
-
-        y_pos = position.value % 10
-        if y_pos == 0:  # Y top
-            y = bbox_arr[1] + text_height + padding
-        elif y_pos == 1:  # Y mid
-            y = (bbox_arr[1] + bbox_arr[3]) // 2 + text_height // 2
-        elif y_pos == 2:  # Y bottom
-            y = bbox_arr[3] - text_height - padding
-
-        x_pos = position.value // 10
-        if x_pos == 0:  # X Left
-            x = bbox_arr[0] + padding
-        elif x_pos == 1:  # X mid
-            x = (bbox_arr[0] + bbox_arr[2]) // 2 - text_width // 2
-        elif x_pos == 2:  # X right
-            x = bbox_arr[2] - text_width - padding
-
-        return x, y
-
-    def get_text_scale(self,
-                       frame_shape: Union[np.ndarray, Tuple[int, ...]],
-                       bbox: Optional[BoundingBox] = None
-                       ) -> float:
-        return min(1.0, min(frame_shape) / (1000 if bbox is None else 200))
+        }
 
 
 class VisTrail(GenericObject):
@@ -583,12 +432,6 @@ class VisTrail(GenericObject):
         """
         return int(w * (rect.x + rect.width) // 2), int(h * (rect.y + rect.height) // 2)
 
-    def draw(self, frame: np.ndarray) -> None:
-        if self.frame_shape is None:
-            self.frame_shape = frame.shape
-
-        self.draw_children(frame)
-
 
 class VisLine(GenericObject):
     """
@@ -630,17 +473,6 @@ class VisLine(GenericObject):
     def prepare(self) -> 'VisLine':
         return self
 
-    def draw(self, frame: np.ndarray) -> None:
-        if self.frame_shape is None:
-            self.frame_shape = frame.shape
-
-        tracking_config = self.config.tracking
-        cv2.line(frame,
-                 self.pt1, self.pt2,
-                 self.color or tracking_config.line_color,
-                 self.thickness or tracking_config.line_thickness,
-                 tracking_config.line_type)
-
 
 class VisCircle(GenericObject):
     def __init__(self,
@@ -677,18 +509,6 @@ class VisCircle(GenericObject):
 
         return parent
 
-    def draw(self, frame: np.ndarray) -> None:
-        if self.frame_shape is None:
-            self.frame_shape = frame.shape
-
-        circle_config = self.config.circle
-        cv2.circle(frame,
-                   self.coords,
-                   self.radius,
-                   self.color or circle_config.color,
-                   self.thickness or circle_config.thickness,
-                   circle_config.line_type)
-
 
 class VisMask(GenericObject):
     def __init__(self, mask: np.ndarray, alpha: float = None):
@@ -709,12 +529,6 @@ class VisMask(GenericObject):
             parent['children'] = children
 
         return parent
-
-    def draw(self, frame: np.ndarray) -> None:
-        if self.frame_shape is None:
-            self.frame_shape = frame.shape
-
-        cv2.addWeighted(frame, 1 - self.alpha, self.mask, self.alpha, 0, frame)
 
 
 class VisPolygon(GenericObject):

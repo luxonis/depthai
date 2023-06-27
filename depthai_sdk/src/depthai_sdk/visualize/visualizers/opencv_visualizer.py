@@ -1,10 +1,19 @@
-from depthai_sdk.visualize.objects import VisBoundingBox, VisDetections
+from depthai_sdk.visualize.objects import (
+    VisBoundingBox,
+    VisCircle,
+    VisDetections,
+    VisLine,
+    VisMask,
+    VisText,
+    VisTrail,
+    )
 from depthai_sdk.visualize.visualizer import Visualizer
 from typing import Tuple, List, Union, Optional, Sequence
 from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
 from depthai_sdk.visualize.bbox import BoundingBox
-from depthai_sdk.visualize.visualizer_helper import spatials_text, draw_stylized_bbox
+from depthai_sdk.visualize.visualizer_helper import spatials_text, draw_stylized_bbox, draw_bbox
 import numpy as np
+from depthai_sdk.visualize.visualizers.opencv_text import OpenCvTextVis
 import cv2
 
 class OpenCvVisualizer(Visualizer):
@@ -26,23 +35,45 @@ class OpenCvVisualizer(Visualizer):
             elif type(obj) == VisDetections:
                 for bbox, _, color in obj.get_detections():
                     tl, br = bbox.denormalize(frame.shape)
-                    # Draw bounding box
-                    draw_stylized_bbox(
+                    draw_bbox(
                         img=frame,
                         pt1=tl,
                         pt2=br,
                         color=color,
-                        thickness=self.config.detection.thickness
-                    )
-
-                for child in self.children:
-                    child.draw(frame)
-            obj.draw(frame)
+                        thickness=self.config.detection.thickness,
+                        r=self.config.detection.radius,
+                        line_width=self.config.detection.line_width,
+                        line_height=self.config.detection.line_height,
+                        alpha=self.config.detection.alpha,
+                        )
+            elif type(obj) == VisText:
+                OpenCvTextVis(obj, self.config).draw_text(frame)
+            elif type(obj) == VisTrail:
+                obj = obj.prepare()
+                # Children: VisLine
+                self.objects.extend(obj.children)
+            elif type(obj) == VisLine:
+                cv2.line(frame,
+                        obj.pt1, obj.pt2,
+                        obj.color or self.config.tracking.line_color,
+                        obj.thickness or self.config.tracking.line_thickness,
+                        self.config.tracking.line_type)
+            elif type(obj) == VisCircle:
+                circle_config = self.config.circle
+                cv2.circle(frame,
+                        obj.coords,
+                        obj.radius,
+                        obj.color or circle_config.color,
+                        obj.thickness or circle_config.thickness,
+                        circle_config.line_type)
+            elif type(obj) == VisMask:
+                cv2.addWeighted(frame, 1 - obj.alpha, obj.mask, obj.alpha, 0, frame)
 
         self.reset()
         return frame
-    
+
     # Moved from XoutFrames
+
         # def setup_visualize(self,
     #                     visualizer: Visualizer,
     #                     visualizer_enabled: bool,

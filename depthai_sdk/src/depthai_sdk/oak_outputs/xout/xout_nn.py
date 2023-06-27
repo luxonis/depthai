@@ -86,122 +86,14 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         self.segmentation_colormap = None
 
-    def setup_visualize(self,
-                        visualizer: Visualizer,
-                        visualizer_enabled: bool,
-                        name: str = None):
-        super().setup_visualize(visualizer, visualizer_enabled, name)
-
-    def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
-        # Convert Grayscale to BGR
-        if len(packet.frame.shape) == 2:
-            packet.frame = np.dstack((packet.frame, packet.frame, packet.frame))
-
-        frame_shape = self.det_nn._input.stream_size[::-1]
-
-        if self._frame_shape is None:
-            # Lazy-load the frame shape
-            self._frame_shape = np.array([*frame_shape])
-            if self._visualizer:
-                self._visualizer.frame_shape = self._frame_shape
-
-        bbox = BoundingBox().resize_to_aspect_ratio(self._frame_shape, self._nn_size, self._resize_mode)
-
-        # Add detections to packet
-        if isinstance(packet.img_detections, dai.ImgDetections) \
-                or isinstance(packet.img_detections, dai.SpatialImgDetections) \
-                or isinstance(packet.img_detections, Detections):
-
-            for detection in packet.img_detections.detections:
-                d = _Detection()
-                d.img_detection = detection
-                d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
-                d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
-
-                d.top_left, d.bottom_right = bbox.get_relative_bbox(BoundingBox(detection)).denormalize(self._frame_shape)
-                packet.detections.append(d)
-
-            if self._visualizer:
-                # Add detections to visualizer
-                self._visualizer.add_detections(
-                    packet.img_detections.detections,
-                    bbox,
-                    self.labels,
-                    is_spatial=packet._is_spatial_detection()
-                )
-        elif isinstance(packet.img_detections, ImgLandmarks):
-            if not self._visualizer:
-                return
-
-            all_landmarks = packet.img_detections.landmarks
-            all_landmarks_indices = packet.img_detections.landmarks_indices
-            colors = packet.img_detections.colors
-            for landmarks, indices in zip(all_landmarks, all_landmarks_indices):
-                for i, landmark in enumerate(landmarks):
-                    # Map normalized coordinates to frame coordinates
-                    l = [(int(point[0] * self._frame_shape[1]), int(point[1] * self._frame_shape[0])) for point in landmark]
-                    idx = indices[i]
-
-                    self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[idx], thickness=4)
-                    self._visualizer.add_circle(coords=tuple(l[0]), radius=8, color=colors[idx], thickness=-1)
-                    self._visualizer.add_circle(coords=tuple(l[1]), radius=8, color=colors[idx], thickness=-1)
-        elif isinstance(packet.img_detections, SemanticSegmentation):
-            raise NotImplementedError('Semantic segmentation visualization is not implemented yet!')
-            if not self._visualizer:
-                return
-
-            # Generate colormap if not already generated
-            if self.segmentation_colormap is None:
-                n_classes = len(self.labels) if self.labels else 8
-                self.segmentation_colormap = generate_colors(n_classes)
-
-            mask = np.array(packet.img_detections.mask).astype(np.uint8)
-
-            if mask.ndim == 3:
-                mask = np.argmax(mask, axis=0)
-
-            try:
-                colorized_mask = np.array(self.segmentation_colormap)[mask]
-            except IndexError:
-                unique_classes = np.unique(mask)
-                max_class = np.max(unique_classes)
-                new_colors = generate_colors(max_class - len(self.segmentation_colormap) + 1)
-                self.segmentation_colormap.extend(new_colors)
-                colorized_mask = np.array(self.segmentation_colormap)[mask]
-
-            # bbox = None
-            # if self.normalizer.resize_mode == ResizeMode.LETTERBOX:
-            #     bbox = self.normalizer.get_letterbox_bbox(packet.frame, normalize=True)
-            #     input_h, input_w = self.normalizer.aspect_ratio
-            #     resize_bbox = bbox[0] * input_w, bbox[1] * input_h, bbox[2] * input_w, bbox[3] * input_h
-            #     resize_bbox = np.int0(resize_bbox)
-            # else:
-            #     resize_bbox = self.normalizer.normalize(frame=np.zeros(self._frame_shape, dtype=bool),
-            #                                             bbox=bbox or (0., 0., 1., 1.))
-
-            # x1, y1, x2, y2 = resize_bbox
-            # h, w = packet.frame.shape[:2]
-            # # Stretch mode
-            # if self.normalizer.resize_mode == ResizeMode.STRETCH:
-            #     colorized_mask = cv2.resize(colorized_mask, (w, h))
-            # elif self.normalizer.resize_mode == ResizeMode.LETTERBOX:
-            #     colorized_mask = cv2.resize(colorized_mask[y1:y2, x1:x2], (w, h))
-            # else:
-            #     padded_mask = np.zeros((h, w, 3), dtype=np.uint8)
-            #     resized_mask = cv2.resize(colorized_mask, (x2 - x1, y2 - y1))
-            #     padded_mask[y1:y2, x1:x2] = resized_mask
-            #     colorized_mask = padded_mask
-
-            # self._visualizer.add_mask(colorized_mask, alpha=0.5)
-
     def package(self, msgs: Dict) -> DetectionPacket:
         decode_fn = self.det_nn._decode_fn
         return DetectionPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
             msgs[self.nn_results.name] if decode_fn is None else decode_fn(msgs[self.nn_results.name]),
-            self._visualizer
         )
+
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
     def __init__(self,
                  device: dai.Device,

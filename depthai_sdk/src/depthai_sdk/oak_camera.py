@@ -23,7 +23,8 @@ from depthai_sdk.classes.packet_handlers import (
     RosPacketHandler,
     TriggerActionPacketHandler,
     RecordPacketHandler,
-    CallbackPacketHandler
+    CallbackPacketHandler,
+    VisualizePacketHandler
 )
 #RecordConfig, OutputConfig, SyncConfig, RosStreamConfig, TriggerActionConfig
 from depthai_sdk.components.camera_component import CameraComponent
@@ -517,7 +518,6 @@ class OakCamera:
             while self.running():
                 self.poll()
 
-
     def running(self) -> bool:
         """
         Check if camera is running.
@@ -591,7 +591,9 @@ class OakCamera:
                   record_path: Optional[str] = None,
                   scale: float = None,
                   fps=False,
-                  callback: Callable = None):
+                  callback: Callable = None,
+                  visualizer: str = 'opencv'
+                  ):
         """
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
         Args:
@@ -601,13 +603,26 @@ class OakCamera:
             fps: Whether to show FPS on the output window
             callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
         """
-        if record_path and isinstance(output, List):
-            if len(output) > 1:
-                raise ValueError('Recording visualizer is only supported for a single output.')
-            output = output[0]
+        main_thread = False
+        visualizer = visualizer.lower()
+        if visualizer in ['opencv', 'cv2']:
+            from depthai_sdk.visualize.visualizers.opencv_visualizer import OpenCvVisualizer
+            vis = OpenCvVisualizer(scale, fps)
+            main_thread=True # OpenCV's imshow() requires to be called from the main thread
+        elif visualizer in ['depthai-viewer', 'viewer']:
+            raise NotImplementedError('Depthai Viewer visualizer is not implemented yet')
+        elif visualizer in ['robothub', 'rh']:
+            raise NotImplementedError('Robothub visualizer is not implemented yet')
+        else:
+            raise ValueError(f"Unknown visualizer: {visualizer}. Options: 'opencv'")
 
-        visualizer = Visualizer(scale, fps)
-        return self._callback(output, callback, visualizer, record_path)
+        handler = VisualizePacketHandler(output, vis, callback=callback, record_path=record_path, main_thread=main_thread)
+        self._packet_handlers.append(handler)
+
+        if main_thread:
+            self.poll.append(handler._poll)
+
+        return visualizer
 
     def create_queue(self, output: Union[Callable, Component, List], max_size: int = 30) -> Queue:
         """
@@ -620,30 +635,7 @@ class OakCamera:
         self._packet_handlers.append(QueuePacketHandler(output, q))
         return q
 
-
-    def _callback(self,
-                  output: Union[List, Callable, Component],
-                  callback: Callable,
-                  visualizer: Visualizer = None,
-                  record_path: Optional[str] = None):
-        if isinstance(output, List):
-            for element in output:
-                self._callback(element, callback, visualizer, record_path)
-            return visualizer
-
-        if isinstance(output, Component):
-            output = output.out.main
-
-        visualizer_enabled = visualizer is not None
-        if visualizer_enabled:
-            config = visualizer.config
-            visualizer = copy.deepcopy(visualizer) or Visualizer()
-            visualizer.config = config if config else visualizer.config
-
-        # self._out_templates.append(OutputConfig(output, callback, visualizer, visualizer_enabled, record_path))
-        return visualizer
-
-    def callback(self, output: Union[List, Callable, Component], callback: Callable, main_thread=True) -> None:
+    def callback(self, output: Union[List, Callable, Component], callback: Callable, main_thread=False) -> None:
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
@@ -652,9 +644,10 @@ class OakCamera:
             enable_visualizer: Whether to enable visualizer for this output.
             main_thread: Whether to run the callback in the main thread. If False, it will call the callback in a separate thread, so some functions (eg. cv2.imshow) won't work.
         """
-        ph = CallbackPacketHandler(output, q)
-        self._packet_handlers.append(ph)
-        return ph
+        handler = CallbackPacketHandler(output, callback=callback, main_thread=main_thread)
+        if main_thread:
+            self._polling.append(handler._poll)
+        self._packet_handlers.append(handler)
 
     def ros_stream(self, output: Union[List, Callable, Component]) -> None:
         """

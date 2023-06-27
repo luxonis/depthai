@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional, Callable, List, Union, Dict
 
 import depthai as dai
+from depthai_sdk.classes.packets import DetectionPacket, TrackerPacket
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
@@ -18,10 +19,12 @@ from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
 from queue import Queue
 from depthai_sdk.oak_outputs.fps import FPS
+import numpy as np
 
 class BasePacketHandler:
-    def __init__(self):
+    def __init__(self, main_thread=False):
         self.fps = FPS()
+        self.queue = Queue(30) if main_thread else None
 
     @abstractmethod
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
@@ -35,7 +38,19 @@ class BasePacketHandler:
         Callback from XoutBase. Don't override it. Does FPS counting and calls new_packet().
         """
         self.fps.next_iter()
-        self.new_packet(packet)
+        if self.queue:
+            self.queue.put(packet)
+        else:
+            self.new_packet(packet)
+
+    def _poll(self):
+        """
+        Called from main thread.
+        """
+        if self.queue:
+            while not self.queue.empty():
+                packet = self.queue.get()
+                self.new_packet(packet)
 
     @abstractmethod
     def new_packet(self, packet):
@@ -47,7 +62,7 @@ class BasePacketHandler:
         """
         pass
 
-    def _get_outputs(self, output: Union[List, Callable, Component]) -> List[Callable]:
+    def _save_outputs(self, output: Union[List, Callable, Component]):
         if not isinstance(output, List):
             output = [output]
 
@@ -55,7 +70,8 @@ class BasePacketHandler:
             if isinstance(output[i], Component):
                 # Select default (main) output of the component
                 output[i] = output[i].out.main
-        return output
+
+        self.outputs: List[Callable] = output
 
     def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase, xout_streams: Dict):
         # Assign which callback to call when packet is prepared
@@ -71,76 +87,41 @@ class BasePacketHandler:
             xout_streams[xstream.name].append(xout.device_msg_callback)
 
 
-# class OutputConfig(BaseConfig):
-#     """
-#     Saves callbacks/visualizers until the device is fully initialized. I'll admit it's not the cleanest solution.
-#     """
+class VisualizePacketHandler(BasePacketHandler):
+    def __init__(self,
+                 outputs,
+                 visualizer: Visualizer,
+                 callback: Callable = None,
+                 record_path: Optional[str] = None,
+                 main_thread: bool = True,
+                 ):
+        self._save_outputs(outputs)
 
-#     def __init__(self, output: Callable,
-#                  callback: Callable,
-#                  visualizer: Visualizer = None,
-#                  visualizer_enabled: bool = False,
-#                  record_path: Optional[str] = None,
-#                  main_thread: bool = True,
-#                  queue: Queue = None
-#                  ):
-#         self.output = output  # Output of the component (a callback)
-#         self.callback = callback  # Callback that gets called after syncing
-#         self.visualizer = visualizer
-#         self.visualizer_enabled = visualizer_enabled
-#         self.record_path = record_path
-#         self.main_thread = main_thread
-#         self.queue = queue
+        if 1 < len(self.outputs) and record_path is not None:
+            raise Exception('Recording multiple streams is not supported! Call oak.visualize(out, record_path="vid.mp4") for each stream separately')
 
-#     def find_new_name(self, name: str, names: List[str]):
-#         while True:
-#             arr = name.split(' ')
-#             num = arr[-1]
-#             if num.isnumeric():
-#                 arr[-1] = str(int(num) + 1)
-#                 name = " ".join(arr)
-#             else:
-#                 name = f"{name} 2"
-#             if name not in names:
-#                 return name
+        self.callback = callback  # Callback that gets called after syncing
+        self.visualizer = visualizer
+        self.record_path = record_path
+        self.recorder = None
+        # Main thread: if opencv visualizer, then we need to poll it
+        super().__init__(main_thread)
 
-#     def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
-#         xoutbase: XoutBase = self.output(pipeline, device)
+    def new_packet(self, packet):
+        self.visualizer.visualize(packet)
 
+        if self.callback:
+            self.callback(packet)
 
-#         if xoutbase.name in names:  # Stream name already exist, append a number to it
-#             xoutbase.name = self.find_new_name(xoutbase.name, names)
-#         names.append(xoutbase.name)
-
-#         recorder = None
-#         if self.record_path:
-#             recorder = VideoRecorder()
-
-#             if isinstance(xoutbase, XoutDepth):
-#                 raise NotImplementedError('Depth recording is not implemented yet.'
-#                                           'Please use OakCamera.record() instead.')
-
-#             recorder.update(Path(self.record_path), device, [xoutbase])
-
-#         if self.visualizer:
-#             xoutbase.setup_visualize(visualizer=self.visualizer,
-#                                      visualizer_enabled=self.visualizer_enabled,
-#                                      name=xoutbase.name)
-
-#         if self.record_path:
-#             xoutbase.setup_recorder(recorder=recorder)
-
-#         # if self.queue is None:
-#             # If queue is passed, oak.create_queue() was called. So we don't want
-#             # to read frames from queue on oak.poll()
-#             # return []
-#         return [xoutbase]
+        if self.recorder:
+            self.recorder.write(packet)
 
 
 class RecordPacketHandler(BasePacketHandler):
     def __init__(self, outputs, rec: Record):
-        self.outputs = self._get_outputs(outputs)
+        self._save_outputs(outputs)
         self.rec = rec
+        super().__init__()
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         xouts: List[XoutBase] = []
@@ -157,9 +138,10 @@ class RecordPacketHandler(BasePacketHandler):
             xout.close()
 
 class CallbackPacketHandler(BasePacketHandler):
-    def __init__(self, outputs, callback: Callable):
-        self.outputs = self._get_outputs(outputs)
+    def __init__(self, outputs, callback: Callable, main_thread=False):
+        self._save_outputs(outputs)
         self.callback = callback
+        super().__init__(main_thread)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         for output in self.outputs:
@@ -171,7 +153,8 @@ class CallbackPacketHandler(BasePacketHandler):
 
 class QueuePacketHandler(BasePacketHandler):
     def __init__(self, outputs, queue: Queue):
-        self.outputs = self._get_outputs(outputs)
+        super().__init__()
+        self._save_outputs(outputs)
         self.queue = queue
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
@@ -180,20 +163,13 @@ class QueuePacketHandler(BasePacketHandler):
             self._create_xout(pipeline, xout, xout_streams)
 
     def new_packet(self, packet):
-        self.queue.put(packet)
+        # It won't be called, we just added this function to satisfy the abstract class
+        pass
 
 
 class RosPacketHandler(BasePacketHandler):
-    outputs: List[Callable]
-    ros = None
-
-    def __init__(self, outputs: List[Callable]):
-        self.outputs = outputs
-
-    def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
-        xouts = []
-        for output in self.outputs:
-            xouts.append(output(pipeline, device))
+    def __init__(self, outputs):
+        self._save_outputs(outputs)
 
         envs = os.environ
         if 'ROS_VERSION' not in envs:
@@ -209,6 +185,13 @@ class RosPacketHandler(BasePacketHandler):
             self.ros = Ros2Streaming()
         else:
             raise Exception(f"ROS version '{version}' not recognized! Should be either '1' or '2'")
+
+    def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
+        xouts = []
+        for output in self.outputs:
+            xout = output(pipeline, device)
+            self._create_xout(pipeline, xout, xout_streams)
+            xouts.append(xout)
 
         self.ros.update(device, xouts)
 
@@ -256,3 +239,15 @@ class TriggerActionPacketHandler(BasePacketHandler):
             self.action.setup(device, action_xouts)  # creates writers for VideoRecorder()
 
         return [trigger_xout] + action_xouts
+
+class StreamPacketHandler(BasePacketHandler):
+    """
+    TODO. API:
+    oak.stream_rtsp([color, left, right], port=8888)
+    oak.stream_webrtc(color, port=8881)
+
+    Creates a server and just sends forward
+    the frames. Doesn't use any queues.
+
+    """
+    pass

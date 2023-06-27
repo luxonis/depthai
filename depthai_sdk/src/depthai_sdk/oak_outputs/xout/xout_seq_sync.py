@@ -22,7 +22,7 @@ class XoutSeqSync(XoutBase, SequenceNumSync):
     def package(self, msgs: List):
         raise NotImplementedError('XoutSeqSync is an abstract class, you need to override package() method!')
 
-    def new_msg(self, name: str, msg) -> None:
+    def new_msg(self, name: str, msg):
         # Ignore frames that we aren't listening for
         if name not in self._streams: return
 

@@ -30,31 +30,31 @@ class XoutIMU(XoutBase):
         super().__init__()
         self.name = 'IMU'
 
-    def setup_visualize(self,
-                        visualizer: Visualizer,
-                        visualizer_enabled: bool,
-                        name: str = None, _=None):
-        from matplotlib import pyplot as plt
+    # def setup_visualize(self,
+    #                     visualizer: Visualizer,
+    #                     visualizer_enabled: bool,
+    #                     name: str = None, _=None):
+    #     from matplotlib import pyplot as plt
 
-        self._visualizer = visualizer
-        self._visualizer_enabled = visualizer_enabled
-        self.name = name or self.name
+    #     self._visualizer = visualizer
+    #     self._visualizer_enabled = visualizer_enabled
+    #     self.name = name or self.name
 
-        self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
-        labels = ['x', 'y', 'z']
-        colors = ['r', 'g', 'b']
+    #     self.fig, self.axes = plt.subplots(2, 1, figsize=(10, 10), constrained_layout=True)
+    #     labels = ['x', 'y', 'z']
+    #     colors = ['r', 'g', 'b']
 
-        for i in range(3):
-            self.acceleration_lines.append(self.axes[0].plot([], [], label=f'Acceleration {labels[i]}', color=colors[i])[0])
-            self.axes[0].set_ylabel('Acceleration (m/s^2)')
-            self.axes[0].set_xlabel('Time (s)')
-            self.axes[0].legend()
+    #     for i in range(3):
+    #         self.acceleration_lines.append(self.axes[0].plot([], [], label=f'Acceleration {labels[i]}', color=colors[i])[0])
+    #         self.axes[0].set_ylabel('Acceleration (m/s^2)')
+    #         self.axes[0].set_xlabel('Time (s)')
+    #         self.axes[0].legend()
 
-        for i in range(3):
-            self.gyroscope_lines.append(self.axes[1].plot([], [], label=f'Gyroscope {labels[i]}', color=colors[i])[0])
-            self.axes[1].set_ylabel('Gyroscope (rad/s)')
-            self.axes[1].set_xlabel('Time (s)')
-            self.axes[1].legend()
+    #     for i in range(3):
+    #         self.gyroscope_lines.append(self.axes[1].plot([], [], label=f'Gyroscope {labels[i]}', color=colors[i])[0])
+    #         self.axes[1].set_ylabel('Gyroscope (rad/s)')
+    #         self.axes[1].set_xlabel('Time (s)')
+    #         self.axes[1].legend()
 
     def visualize(self, packet: IMUPacket):
         if self.start_time == 0.0:

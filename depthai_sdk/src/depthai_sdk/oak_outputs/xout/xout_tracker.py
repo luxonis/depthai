@@ -43,24 +43,7 @@ class XoutTracker(XoutNnResults):
         self.kalman_filters: Dict[int, Dict[str, KalmanFilter]] = {}
         self.calculate_speed = calculate_speed
 
-    def setup_visualize(self,
-                        visualizer: Visualizer,
-                        visualizer_enabled: bool,
-                        name: str = None):
-        super().setup_visualize(visualizer, visualizer_enabled, name)
-
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
-        if len(packet.frame.shape) == 2:
-            packet.frame = np.dstack((packet.frame, packet.frame, packet.frame))
-
-        frame_shape = self.det_nn._input.stream_size[::-1]
-
-        if self._frame_shape is None:
-            # Lazy-load the frame shape
-            self._frame_shape = np.array([*frame_shape])
-            if self._visualizer:
-                self._visualizer.frame_shape = self._frame_shape
-
         spatial_points = self._get_spatial_points(packet)
         threshold = self.forget_after_n_frames
 
@@ -81,15 +64,11 @@ class XoutTracker(XoutNnResults):
 
         self._add_detections(packet, tracklet2speed)
 
-    def visualize(self, packet):
-        super().visualize(packet)
-
     def package(self, msgs: Dict) -> TrackerPacket:
         return TrackerPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
-            msgs[self.nn_results.name],
-            self._visualizer
+            msgs[self.nn_results.name]
         )
 
     def _add_tracklet_visualization(self, packet, spatial_points, tracklet2speed):

@@ -479,14 +479,14 @@ class CameraComponent(Component):
             """
             Streams camera output to the OAK camera. Produces FramePacket.
             """
-            return XoutFrames(self._comp.get_stream_xout(), self._comp.get_fps())
+            return XoutFrames(self._comp.get_stream_xout())
 
         def replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
             If depthai-recording was used, it won't stream anything, but it will instead use frames that were sent to the OAK.
             Produces FramePacket.
             """
-            return XoutFrames(ReplayStream(self._comp._source), self._comp.get_fps())
+            return XoutFrames(ReplayStream(self._comp._source))
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """

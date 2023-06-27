@@ -463,16 +463,10 @@ class StereoComponent(Component):
             )
 
         def rectified_left(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
-            return XoutFrames(
-                frames=StreamXout(self._comp.node.id, self._comp.node.rectifiedLeft, 'Rectified left'),
-                fps=fps)
+            return XoutFrames(StreamXout(self._comp.node.id, self._comp.node.rectifiedLeft, 'Rectified left'))
 
         def rectified_right(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
-            return XoutFrames(
-                frames=StreamXout(self._comp.node.id, self._comp.node.rectifiedRight, 'Rectified right'),
-                fps=fps)
+            return XoutFrames(StreamXout(self._comp.node.id, self._comp.node.rectifiedRight, 'Rectified right'))
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
