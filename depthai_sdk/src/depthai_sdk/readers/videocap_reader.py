@@ -28,7 +28,8 @@ class VideoCapReader(AbstractReader):
         self._is_looped = loop
 
         if path.is_file():
-            self.videos[path.stem.lower()] = {
+            stream_name = path.stem if (path.stem in ['left', 'right']) else 'color'
+            self.videos[stream_name] = {
                 'reader': cv2.VideoCapture(str(path)),
                 'socket': dai.CameraBoardSocket.CAM_A
             }

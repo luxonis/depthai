@@ -296,6 +296,9 @@ class VisDetections(GenericObject):
                  detections: List[Union[ImgDetection, dai.Tracklet]],
                  normalizer: BoundingBox,
                  label_map: List[Tuple[str, Tuple]] = None,
+                 label_color: Tuple[int, int, int] = None,
+                 label_background_color: Tuple[int, int, int] = None,
+                 label_background_transparency: float = None,
                  spatial_points: List[dai.Point3f] = None,
                  is_spatial=False,
                  parent_bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None):
@@ -312,6 +315,9 @@ class VisDetections(GenericObject):
         self.detections = detections
         self.normalizer = normalizer
         self.label_map = label_map
+        self.label_color = label_color
+        self.label_background_color = label_background_color
+        self.label_background_transparency = label_background_transparency
         self.spatial_points = spatial_points
         self.is_spatial = is_spatial
         self.parent_bbox = parent_bbox
@@ -331,7 +337,10 @@ class VisDetections(GenericObject):
             'detections': [{
                 'bbox': bbox.to_tuple(frame_shape=self.frame_shape) if isinstance(bbox, BoundingBox) else bbox,
                 'label': label,
-                'color': color
+                'color': color,
+                'label_color': self.label_color,
+                'label_background_color': self.label_background_color,
+                'label_background_transparency': self.label_background_transparency
             } for bbox, label, color in list(self.get_detections())]
         }
         if len(self._children) > 0:
@@ -385,12 +394,17 @@ class VisDetections(GenericObject):
 
                 # Add spatial coordinates
                 self.add_child(VisText(f'{spatial_coords.x}\n{spatial_coords.y}\n{spatial_coords.z}',
+                                       color=self.label_color or color,
                                        bbox=normalized_bbox,
-                                       position=TextPosition.BOTTOM_RIGHT))
+                                       position=TextPosition.BOTTOM_RIGHT,
+                                       background_color=self.label_background_color,
+                                       background_transparency=self.label_background_transparency))
 
             if cv2 and not detection_config.hide_label and len(label) > 0:
                 # Place label in the bounding box
-                self.add_child(VisText(text=label.capitalize(), bbox=normalized_bbox,
+                self.add_child(VisText(text=label.capitalize(),
+                                       color=self.label_color or color,
+                                       bbox=normalized_bbox,
                                        position=detection_config.label_position,
                                        padding=detection_config.label_padding))
 
@@ -438,6 +452,8 @@ class VisText(GenericObject):
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
                  outline: bool = True,
+                 background_color: Tuple[int, int, int] = None,
+                 background_transparency: float = 0.5,
                  bbox: Union[np.ndarray, Tuple[int, int, int, int], BoundingBox] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10):
@@ -456,6 +472,8 @@ class VisText(GenericObject):
             color: Text color.
             thickness: Font thickness.
             outline: Enable outline if set to True, disable otherwise.
+            background_color: Background color.
+            background_transparency: Background transparency.
             bbox: Bounding box where to place text.
             position: Position w.r.t. to frame (or bbox if is set).
             padding: Padding.
@@ -467,6 +485,8 @@ class VisText(GenericObject):
         self.color = color
         self.thickness = thickness
         self.outline = outline
+        self.background_color = background_color
+        self.background_transparency = background_transparency
         self.bbox = bbox
         self.position = position
         self.padding = padding
@@ -479,6 +499,8 @@ class VisText(GenericObject):
             'color': self.color,
             'thickness': self.thickness,
             'outline': self.outline,
+            'background_color': self.background_color,
+            'background_transparency': self.background_transparency
         }
 
     def prepare(self) -> 'VisText':
@@ -505,7 +527,6 @@ class VisText(GenericObject):
 
         # Extract shape of the bbox if exists
         if self.bbox is not None:
-            # shape = self.bbox[2] - self.bbox[0], self.bbox[3] - self.bbox[1]
             tl, br = self.bbox.denormalize(frame.shape)
             shape = br[0] - tl[0], br[1] - tl[1]
         else:
@@ -519,10 +540,27 @@ class VisText(GenericObject):
         font_thickness = max(1, int(font_scale * 2)) \
             if text_config.auto_scale else self.thickness or text_config.font_thickness
 
-        dy = cv2.getTextSize(self.text, text_config.font_face, font_scale, font_thickness)[0][1] + 10
+        dx, dy = cv2.getTextSize(self.text, text_config.font_face, font_scale, font_thickness)[0]
+        dy += 10
 
         for line in self.text.splitlines():
             y = self.coords[1]
+
+            background_color = self.background_color or text_config.background_color
+            background_transparency = self.background_transparency or text_config.background_transparency
+            if background_color is not None:
+                img_with_background = cv2.rectangle(img=frame.copy(),
+                                                    pt1=(self.coords[0], y - dy),
+                                                    pt2=(self.coords[0] + dx, y + 10),
+                                                    color=background_color,
+                                                    thickness=-1)
+                # take transparency into account
+                cv2.addWeighted(src1=img_with_background,
+                                alpha=background_transparency,
+                                src2=frame,
+                                beta=1 - background_transparency,
+                                gamma=0,
+                                dst=frame)
 
             if self.outline:
                 # Background
@@ -531,7 +569,7 @@ class VisText(GenericObject):
                             org=self.coords,
                             fontFace=text_config.font_face,
                             fontScale=font_scale,
-                            color=text_config.bg_color,
+                            color=text_config.outline_color,
                             thickness=font_thickness + 1,
                             lineType=text_config.line_type)
 

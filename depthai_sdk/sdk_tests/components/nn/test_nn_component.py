@@ -91,3 +91,15 @@ def test_two_stage_output():
             if not oak_camera.poll():
                 raise RuntimeError('Polling failed')
             time.sleep(0.1)
+
+
+def test_encoded_output():
+    with OakCamera() as oak_camera:
+        camera = oak_camera.create_camera('color', '1080p', encode='h264')
+
+        oak_camera.callback(camera.out.encoded, lambda x: print(x))
+        oak_camera.start(blocking=False)
+
+        for i in range(10):
+            oak_camera.poll()
+            time.sleep(0.1)
