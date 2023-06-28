@@ -97,12 +97,14 @@ class Worker(QtCore.QThread):
     def chooseApp(self) -> None:
         """
         Until Depthai Viewer is in beta, allow the user to choose between running the demo or the viewer.
-        
-        Sets `self.viewerChosen` to True if the viewer is chosen, False if the demo is chosen.
         """
+        # If the dialog is rejected, the user has clicked exit - so we exit
         dialog = ChooseAppDialog(splashScreen)
-        self.viewerChosen = dialog.exec_() == QtWidgets.QDialog.Accepted
-                
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            self.viewerChosen = dialog.viewerChosen
+        else:
+            raise RuntimeError("User cancelled app choice dialog")
+
     @QtCore.pyqtSlot(str,str)
     def showInformation(self, title, message):
         QtWidgets.QMessageBox.information(splashScreen, title, message)
@@ -328,7 +330,7 @@ class Worker(QtCore.QThread):
                         closeSplash()
                 quitThread = threading.Thread(target=removeSplash)
                 quitThread.start()
-                
+
                 self.signalChooseApp.emit()
                 if self.viewerChosen:
                     print("Depthai Viewer chosen, checking if depthai-viewer is installed.")

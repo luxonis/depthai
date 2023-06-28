@@ -24,15 +24,17 @@ class CardWidget(QtWidgets.QWidget):
 
     def __init__(self, title, image_path: Path, parent=None):
         super(CardWidget, self).__init__(parent)
-        # creating a push button
+
+        # Create an image button with the given card image
         path = os.path.normpath(image_path)
-        print(path)
         button = ImageButton(path, self)
-        # Set button size policy
+
+        # Make the button fill all available space
         button.setSizePolicy(
             QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
         )
-        # Set layout for CardWidget
+
+        # Add the widget to the UI
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(button)
 
@@ -47,6 +49,8 @@ class CardWidget(QtWidgets.QWidget):
 
 
 class ChooseAppDialog(QtWidgets.QDialog):
+    viewerChosen: bool = False
+
     def __init__(self, parent: QtWidgets.QWidget=None):
         super(ChooseAppDialog, self).__init__(parent)
         self.setWindowTitle("Choose an application")
@@ -71,8 +75,9 @@ class ChooseAppDialog(QtWidgets.QDialog):
 
     @QtCore.pyqtSlot()
     def runDemo(self):
-        self.reject()
+        self.accept()
 
     @QtCore.pyqtSlot()
     def runViewer(self):
+        self.viewerChosen = True
         self.accept()
