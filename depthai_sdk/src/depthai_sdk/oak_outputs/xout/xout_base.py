@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import timedelta
 from typing import List, Optional, Callable
 import depthai as dai
 
@@ -45,11 +46,16 @@ class XoutBase(ABC):
         `new_packet` method.
         """
         # self._fps_counter[name].next_iter()
-
         packet = self.new_msg(name, dai_message)
         if packet is not None:
-            self.on_callback(packet)
-            self.new_packet_callback(packet)
+            # If not list, convert to list.
+            # Some Xouts create multiple packets from a single message (example: IMU)
+            if not isinstance(packet, list):
+                packet = [packet]
+
+            for p in packet:
+                self.on_callback(p)
+                self.new_packet_callback(p)
 
     @abstractmethod
     def new_msg(self, name: str, msg) -> None:

@@ -23,7 +23,6 @@ class XoutDepth(XoutDisparity):
         super().__init__(device=device,
                          frames=frames,
                          disp_factor=255 / 95,
-                         fps=fps,
                          mono_frames=mono_frames,
                          colorize=colorize,
                          colormap=colormap,

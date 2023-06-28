@@ -26,7 +26,6 @@ class XoutNnData(XoutBase):
     def __init__(self, xout: StreamXout):
         self.nndata_out = xout
         super().__init__()
-        self.name = 'NNData'
 
     def visualize(self, packet: NNDataPacket):
         print('Visualization of NNData is not supported')
@@ -38,11 +37,7 @@ class XoutNnData(XoutBase):
         if name not in self._streams:
             return
 
-        if self.queue.full():
-            self.queue.get()  # Get one, so queue isn't full
-
-        packet = NNDataPacket(name=self.name, nn_data=msg)
-        self.queue.put(packet, block=False)
+        return NNDataPacket(name=self.get_packet_name(), nn_data=msg)
 
 
 class XoutNnResults(XoutSeqSync, XoutFrames):
@@ -134,8 +129,7 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
         return SpatialBbMappingPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
-            msgs[self.configs.name],
-            self._visualizer
+            msgs[self.configs.name]
         )
 
 class XoutTwoStage(XoutNnResults):
@@ -273,10 +267,8 @@ class XoutTwoStage(XoutNnResults):
                 self.msgs[seq][self.frames.name],
                 self.msgs[seq][self.nn_results.name],
                 self.msgs[seq][self.second_nn_out.name],
-                self.whitelist_labels,
-                self._visualizer
+                self.whitelist_labels
             )
-            self.queue.put(packet, block=False)
 
             # Throws RuntimeError: dictionary changed size during iteration
             # for s in self.msgs:
@@ -289,6 +281,8 @@ class XoutTwoStage(XoutNnResults):
                     if int(name) > int(seq):
                         new_msgs[name] = msg
                 self.msgs = new_msgs
+
+            return packet
 
     def add_detections(self, seq: str, dets: dai.ImgDetections):
         # Used to match the scaled bounding boxes by the 2-stage NN script node

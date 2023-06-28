@@ -71,7 +71,6 @@ class XoutPointcloud(XoutFrames):
             pcl = self.xyz * np.expand_dims(np.array(depth_frame.getFrame()), axis = -1)
 
             # TODO: postprocessing
-
             # Cleanup
             new_msgs = {}
             for name, msg in self.msgs.items():
@@ -83,6 +82,5 @@ class XoutPointcloud(XoutFrames):
                 self.get_packet_name(),
                 pcl,
                 depth_map=depth_frame,
-                color_frame=color_frame,
-                visualizer=self._visualizer
+                colorize_frame=color_frame
             )

@@ -487,15 +487,10 @@ class OakCamera:
         # Upload the pipeline to the device and start it
         self.device.startPipeline(self.pipeline)
 
-        for node in self.pipeline.getAllNodes():
-            if isinstance(node, dai.node.XLinkOut):
-                stream_name = node.getStreamName()
-                if stream_name not in self._new_msg_callbacks:
-                    raise Exception(f'Stream name {stream_name} not found in new_msg_callbacks!')
-                q = self.device.getOutputQueue(stream_name, maxSize=4, blocking=False)
-                q.addCallback(
-                    lambda name, msg: [cb(name, msg) for cb in self._new_msg_callbacks[stream_name]]
-                )
+        for name, callbacks in self._new_msg_callbacks.items():
+            q = self.device.getOutputQueue(name, maxSize=4, blocking=False)
+            for cb in callbacks:
+                q.addCallback(cb)
 
         # Append callbacks to be called from main thread
         # self._polling.append()
@@ -624,18 +619,18 @@ class OakCamera:
 
         return visualizer
 
-    def create_queue(self, output: Union[Callable, Component, List], max_size: int = 30) -> Queue:
+    def queue(self, output: Union[Callable, Component, List], max_size: int = 30) -> QueuePacketHandler:
         """
         Create a queue for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
             output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output.
             max_size: Maximum queue size for this output.
         """
-        q = Queue(max_size)
-        self._packet_handlers.append(QueuePacketHandler(output, q))
-        return q
+        handler = QueuePacketHandler(output, max_size)
+        self._packet_handlers.append(handler)
+        return handler
 
-    def callback(self, output: Union[List, Callable, Component], callback: Callable, main_thread=False) -> None:
+    def callback(self, output: Union[List, Callable, Component], callback: Callable, main_thread=False) -> CallbackPacketHandler:
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
@@ -648,12 +643,15 @@ class OakCamera:
         if main_thread:
             self._polling.append(handler._poll)
         self._packet_handlers.append(handler)
+        return handler
 
-    def ros_stream(self, output: Union[List, Callable, Component]) -> None:
+    def ros_stream(self, output: Union[List, Callable, Component]) -> RosPacketHandler:
         """
         Publish component output(s) to ROS streams.
         """
-        self._packet_handlers.append(RosPacketHandler(output))
+        handler = RosPacketHandler(output)
+        self._packet_handlers.append(handler)
+        return handler
 
     def trigger_action(self, trigger: Trigger, action: Union[Action, Callable]):
         self._packet_handlers.append(TriggerActionPacketHandler(trigger, action))

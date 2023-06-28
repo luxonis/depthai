@@ -48,10 +48,3 @@ class XoutH26x(XoutFrames):
 
         return frame
 
-    def visualize(self, packet: FramePacket):
-        decoded_frame = self.decode_frame(packet)
-        if decoded_frame is None:
-            return
-
-        packet.frame = decoded_frame
-        super().visualize(packet)

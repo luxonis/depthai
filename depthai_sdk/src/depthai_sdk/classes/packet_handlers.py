@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Optional, Callable, List, Union, Dict
 
 import depthai as dai
-from depthai_sdk.classes.packets import DetectionPacket, TrackerPacket
-from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.classes.packets import BasePacket, DetectionPacket, TrackerPacket
+from depthai_sdk.oak_outputs.syncing import SequenceNumSync, TimestampSync
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
@@ -25,6 +25,8 @@ class BasePacketHandler:
     def __init__(self, main_thread=False):
         self.fps = FPS()
         self.queue = Queue(30) if main_thread else None
+        self.outputs: List[Callable]
+        self.sync = None
 
     @abstractmethod
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
@@ -33,15 +35,35 @@ class BasePacketHandler:
     def get_fps(self) -> float:
         return self.fps.fps()
 
-    def _new_packet_callback(self, packet):
+    def _new_packet_callback(self, packet: BasePacket):
         """
         Callback from XoutBase. Don't override it. Does FPS counting and calls new_packet().
         """
+        if self.sync is not None:
+            packet = self.sync.sync(packet.get_timestamp(), packet.name, packet)
+            if packet is None:
+                return
+
         self.fps.next_iter()
         if self.queue:
             self.queue.put(packet)
         else:
             self.new_packet(packet)
+
+    def configure_syncing(self,
+                        enable_sync: bool = True,
+                        threshold_ms: int = 17):
+        """
+        If multiple outputs are used, then PacketHandler can do timestamp syncing of multiple packets
+        before calling new_packet().
+        Args:
+            enable_sync: If True, then syncing is enabled.
+            threshold_ms: Maximum time difference between packets in milliseconds.
+        """
+        if enable_sync:
+            if len(self.outputs) < 2:
+                raise Exception('Syncing requires at least 2 outputs!')
+            self.sync = TimestampSync(len(self.outputs), threshold_ms)
 
     def _poll(self):
         """
@@ -71,7 +93,7 @@ class BasePacketHandler:
                 # Select default (main) output of the component
                 output[i] = output[i].out.main
 
-        self.outputs: List[Callable] = output
+        self.outputs = output
 
     def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase, xout_streams: Dict):
         # Assign which callback to call when packet is prepared
@@ -81,6 +103,7 @@ class BasePacketHandler:
             if xstream.name not in xout_streams:
                 xout_streams[xstream.name] = []
                 if not isinstance(xstream, ReplayStream):
+                    print(f'Creating XLinkOut for {xout}, stream {xstream.name}')
                     xlink = pipeline.createXLinkOut()
                     xlink.setStreamName(xstream.name)
                     xstream.stream.link(xlink.input)
@@ -152,15 +175,31 @@ class CallbackPacketHandler(BasePacketHandler):
         self.callback(packet)
 
 class QueuePacketHandler(BasePacketHandler):
-    def __init__(self, outputs, queue: Queue):
+    def __init__(self, outputs, max_size: int):
         super().__init__()
         self._save_outputs(outputs)
-        self.queue = queue
+        self.queue = Queue(max_size)
+
+    def get_queue(self) -> Queue:
+        return self.queue
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         for output in self.outputs:
             xout = output(pipeline, device)
             self._create_xout(pipeline, xout, xout_streams)
+
+    def configure_syncing(self,
+                        enable_sync: bool = True,
+                        threshold_ms: int = 17) -> 'QueuePacketHandler':
+        """
+        If multiple outputs are used, then PacketHandler can do timestamp syncing of multiple packets
+        before calling new_packet().
+        Args:
+            enable_sync: If True, then syncing is enabled.
+            threshold_ms: Maximum time difference between packets in milliseconds.
+        """
+        super().configure_syncing(enable_sync, threshold_ms)
+        return self
 
     def new_packet(self, packet):
         # It won't be called, we just added this function to satisfy the abstract class

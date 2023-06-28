@@ -11,7 +11,7 @@ rr.init("Rerun ", spawn=False)
 rr.connect()
 
 def callback(packet: PointcloudPacket):
-    colors = packet.color_frame.getCvFrame()[..., ::-1] # BGR to RGB
+    colors = packet.colorize_frame.getCvFrame()[..., ::-1] # BGR to RGB
     rr.log_image('Color Image', colors)
     points = packet.points.reshape(-1, 3)
     rr.log_points("Pointcloud", points, colors=colors.reshape(-1, 3))

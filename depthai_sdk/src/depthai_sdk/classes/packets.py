@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+from datetime import timedelta
 from typing import Tuple, List, Union, Optional
 
 import depthai as dai
@@ -40,10 +42,14 @@ class _TwoStageDetection(_Detection):
     nn_data: dai.NNData
 
 
-class BasePacket:
+class BasePacket(ABC):
     """
     Base class for all packets.
     """
+
+    def __init__(self, name: str):
+        self.name = name
+
     def prepare_visualizer_objects(self, visualizer: 'Visualizer') -> None:
         """
         Prepare visualizer objects (boxes, lines, text, etc.), so visualizer can draw them on the frame.
@@ -53,16 +59,21 @@ class BasePacket:
         """
         pass
 
+    @abstractmethod
+    def get_timestamp(self) -> timedelta:
+        raise NotImplementedError()
+
+    @abstractmethod
+    def get_sequence_num(self) -> int:
+        raise NotImplementedError()
+
 class NNDataPacket(BasePacket):
     """
     Contains only dai.NNData message
     """
-    name: str  # NNData stream name
-    msg: dai.NNData  # Original depthai message
-
     def __init__(self, name: str, nn_data: dai.NNData):
-        self.name = name
         self.msg = nn_data
+        super().__init__(name)
 
 class FramePacket(BasePacket):
     """
@@ -73,26 +84,18 @@ class FramePacket(BasePacket):
                  name: str,
                  msg: dai.ImgFrame,
                  frame: Optional[np.ndarray]):
-        self.name = name
         self.msg = msg
         self.frame = frame
+        super().__init__(name)
 
+    def get_timestamp(self) -> timedelta:
+        return self.msg.getTimestampDevice(dai.CameraExposureOffset.MIDDLE)
 
-class PointcloudPacket:
-    def __init__(self,
-                 name: str,
-                 points: np.ndarray,
-                 depth_map: dai.ImgFrame,
-                 color_frame: Optional[np.ndarray]):
-        self.name = name
-        self.points = points
-        self.depth_imgFrame = depth_map
-        self.color_frame = color_frame
+    def get_sequence_num(self) -> int:
+        return self.msg.getSequenceNum()
 
 
 class DepthPacket(FramePacket):
-    mono_frame: dai.ImgFrame
-
     def __init__(self,
                  name: str,
                  img_frame: dai.ImgFrame,
@@ -101,11 +104,21 @@ class DepthPacket(FramePacket):
         super().__init__(name=name,
                          msg=img_frame,
                          frame=img_frame.getCvFrame() if cv2 else None)
-
-        if mono_frame is not None:
-            self.mono_frame = mono_frame
-
+        self.mono_frame = mono_frame
         self.depth_map = depth_map
+
+class PointcloudPacket(DepthPacket):
+    def __init__(self,
+                 name: str,
+                 points: np.ndarray,
+                 depth_map: dai.ImgFrame,
+                 colorize_frame: Optional[np.ndarray]):
+        self.points = points
+        super().__init__(name=name,
+                        img_frame=depth_map,
+                        mono_frame=colorize_frame,
+                        depth_map=depth_map.getFrame())
+
 
 class SpatialBbMappingPacket(FramePacket):
     """
@@ -151,8 +164,7 @@ class DetectionPacket(FramePacket):
         self.detections.append(det)
 
     def prepare_visualizer_objects(self, visualizer: 'Visualizer') -> None:
-
-    # Convert Grayscale to BGR
+        # Convert Grayscale to BGR
         if len(self.frame.shape) == 2:
             self.frame = np.dstack((self.frame, self.frame, self.frame))
 
@@ -262,12 +274,10 @@ class TrackerPacket(FramePacket):
     def __init__(self,
                  name: str,
                  msg: dai.ImgFrame,
-                 tracklets: dai.Tracklets,
-                 visualizer: 'Visualizer' = None):
+                 tracklets: dai.Tracklets):
         super().__init__(name=name,
                          msg=msg,
-                         frame=msg.getCvFrame() if cv2 else None,
-                         visualizer=visualizer)
+                         frame=msg.getCvFrame() if cv2 else None)
         self.detections: List[_TrackingDetection] = []
         self.daiTracklets = tracklets
 
@@ -300,12 +310,10 @@ class TwoStagePacket(DetectionPacket):
                  msg: dai.ImgFrame,
                  img_detections: dai.ImgDetections,
                  nn_data: List[dai.NNData],
-                 labels: List[int],
-                 visualizer: 'Visualizer' = None):
+                 labels: List[int]):
         super().__init__(name=name,
                          msg=msg,
-                         img_detections=img_detections,
-                         visualizer=visualizer)
+                         img_detections=img_detections)
         self.frame = self.msg.getCvFrame() if cv2 else None
         self.nnData = nn_data
         self.labels = labels
@@ -326,27 +334,39 @@ class TwoStagePacket(DetectionPacket):
         self.detections.append(det)
 
 
-class IMUPacket:
-    def __init__(self, data: List[dai.IMUData]):
-        self.data = data
+class IMUPacket(BasePacket):
+    def __init__(self, name, packet: dai.IMUPacket):
+        self.packet = packet
+        super().__init__(name)
 
     def __str__(self):
-        packet_details = []
+        accelerometer_str = 'Accelerometer [m/s^2]: (x: %.2f, y: %.2f, z: %.2f)' % (
+            self.packet.acceleroMeter.x,
+            self.packet.acceleroMeter.y,
+            self.packet.acceleroMeter.z
+        )
 
-        for imu_data in self.data:
-            # TODO print more details if needed
-            accelerometer_str = 'Accelerometer [m/s^2]: (x: %.2f, y: %.2f, z: %.2f)' % (
-                imu_data.acceleroMeter.x,
-                imu_data.acceleroMeter.y,
-                imu_data.acceleroMeter.z
-            )
+        gyroscope_str = 'Gyroscope [rad/s]: (x: %.2f, y: %.2f, z: %.2f)' % (
+            self.packet.gyroscope.x,
+            self.packet.gyroscope.y,
+            self.packet.gyroscope.z
+        )
 
-            gyroscope_str = 'Gyroscope [rad/s]: (x: %.2f, y: %.2f, z: %.2f)' % (
-                imu_data.gyroscope.x,
-                imu_data.gyroscope.y,
-                imu_data.gyroscope.z
-            )
+        return f'IMU Packet: {accelerometer_str} {gyroscope_str}'
 
-            packet_details.append(f'{accelerometer_str}, {gyroscope_str})')
+    def _get_imu_report(self) -> dai.IMUReport:
+        if self.packet.acceleroMeter is not None:
+            return self.packet.acceleroMeter
+        elif self.packet.gyroscope is not None:
+            return self.packet.gyroscope
+        elif self.packet.magneticField is not None:
+            return self.packet.magneticField
+        elif self.packet.rotationVector is not None:
+            return self.packet.rotationVector
+        raise RuntimeError('Unknown IMU packet type')
 
-        return f'IMU Packet: {packet_details}'
+    def get_timestamp(self) -> timedelta:
+        return self._get_imu_report().getTimestampDevice()
+
+    def get_sequence_num(self) -> int:
+        return self._get_imu_report().getSequenceNum()

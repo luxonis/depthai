@@ -120,5 +120,4 @@ class XoutIMU(XoutBase):
     def new_msg(self, name: str, msg: dai.IMUData) -> None:
         if name not in self._streams:
             return
-
-        return IMUPacket(msg.packets)
+        return [IMUPacket(self.get_packet_name(), packet) for packet in msg.packets]

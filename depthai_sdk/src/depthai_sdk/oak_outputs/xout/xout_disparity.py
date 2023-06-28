@@ -149,7 +149,6 @@ class XoutDisparity(XoutSeqSync, XoutFrames, Clickable):
             self.get_packet_name(),
             img_frame=msgs[self.frames.name],
             mono_frame=mono_frame,
-            visualizer=self._visualizer
         )
 
     def _auto_ir_search(self, frame: np.ndarray):
