@@ -56,6 +56,7 @@ class ChooseAppDialog(QtWidgets.QDialog):
         self.setWindowTitle("Choose an application")
 
         hbox = QtWidgets.QHBoxLayout()
+        hbox.setContentsMargins(0, 0, 0, 0)
         file_path = Path(os.path.abspath(os.path.dirname(__file__)))
         demo_image_path = file_path / "demo_card.png"
         viewer_image_path = file_path / "viewer_card.png"
@@ -71,7 +72,9 @@ class ChooseAppDialog(QtWidgets.QDialog):
         # Get screen dimensions
         screen = QtWidgets.QApplication.instance().primaryScreen()
         screen_size = screen.size()
-        self.resize(screen_size.width() // 2, screen_size.height() // 4)
+        width = screen_size.width() // 2
+        height = width // 2 * 64 // 177
+        self.resize(width, height)
 
     @QtCore.pyqtSlot()
     def runDemo(self):
