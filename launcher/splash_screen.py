@@ -74,7 +74,7 @@ class SplashScreen(QtWidgets.QSplashScreen):
 
     @QtCore.pyqtSlot()
     def close(self):
-        super().close()
+        super().deleteLater()
         self.running = False
 
 if __name__ == "__main__":
