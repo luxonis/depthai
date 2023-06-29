@@ -71,6 +71,7 @@ class Visualizer(VisualizerHelper):
         Args:
             bbox: Bounding box.
             label: Label for the detection.
+            thickness: Bounding box thickness.
             color: Bounding box color (RGB).
             bbox_style: Bounding box style (one of depthai_sdk.visualize.configs.BboxStyle).
 
@@ -90,6 +91,9 @@ class Visualizer(VisualizerHelper):
                        normalizer: BoundingBox = None,
                        label_map: List[Tuple[str, Tuple]] = None,
                        spatial_points: List[dai.Point3f] = None,
+                       label_color: Tuple[int, int, int] = None,
+                       label_background_color: Tuple[int, int, int] = None,
+                       label_background_transparency: float = None,
                        is_spatial=False,
                        bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
                        ) -> 'Visualizer':
@@ -101,8 +105,12 @@ class Visualizer(VisualizerHelper):
             normalizer: Normalizer object.
             label_map: List of tuples (label, color).
             spatial_points: List of spatial points. None if not spatial.
+            label_color: Color for the label.
+            label_background_color: Color for the label background.
+            label_background_transparency: Transparency for the label background.
             is_spatial: Flag that indicates if the detections are spatial.
             bbox: Bounding box, if there's a detection inside a bounding box.
+
         Returns:
             self
         """
@@ -110,6 +118,9 @@ class Visualizer(VisualizerHelper):
                                           normalizer=normalizer,
                                           label_map=label_map,
                                           spatial_points=spatial_points,
+                                          label_color=label_color,
+                                          label_background_color=label_background_color,
+                                          label_background_transparency=label_background_transparency,
                                           is_spatial=is_spatial,
                                           parent_bbox=bbox)
         self.add_object(detection_overlay)
@@ -122,6 +133,8 @@ class Visualizer(VisualizerHelper):
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
                  outline: bool = True,
+                 background_color: Tuple[int, int, int] = None,
+                 background_transparency: float = 0.5,
                  bbox: Union[np.ndarray, Tuple[int, ...], BoundingBox] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10) -> 'Visualizer':
@@ -135,6 +148,8 @@ class Visualizer(VisualizerHelper):
             color: Color of the text.
             thickness: Thickness of the text.
             outline: Flag that indicates if the text should be outlined.
+            background_color: Background color.
+            background_transparency: Background transparency.
             bbox: Bounding box.
             position: Position.
             padding: Padding.
@@ -148,6 +163,8 @@ class Visualizer(VisualizerHelper):
                                color=color,
                                thickness=thickness,
                                outline=outline,
+                               background_color=background_color,
+                               background_transparency=background_transparency,
                                bbox=bbox,
                                position=position,
                                padding=padding)
@@ -369,8 +386,9 @@ class Visualizer(VisualizerHelper):
              font_scale: float = None,
              font_thickness: int = None,
              font_position: TextPosition = None,
-             bg_transparency: float = None,
-             bg_color: Tuple[int, int, int] = None,
+             background_transparency: float = None,
+             background_color: Tuple[int, int, int] = None,
+             outline_color: Tuple[int, int, int] = None,
              line_type: int = None,
              auto_scale: bool = None) -> 'Visualizer':
         """
@@ -383,8 +401,9 @@ class Visualizer(VisualizerHelper):
             font_scale: Font scale.
             font_thickness: Font thickness.
             font_position: Font position.
-            bg_transparency: Text background transparency.
-            bg_color: Text background color.
+            background_transparency: Text background transparency.
+            background_color: Text background color.
+            outline_color: Outline color.
             line_type: Line type (from cv2).
             auto_scale: Flag that indicates if the font scale should be automatically adjusted.
 
