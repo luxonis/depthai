@@ -71,12 +71,11 @@ qApp.setWindowIcon(QtGui.QIcon(str(SCRIPT_DIRECTORY/'splash2.png')))
 # Create splash screen
 splashScreen = SplashScreen(str(SCRIPT_DIRECTORY/'splash2.png'))
 
-def closeSplash():
-    splashScreen.close()
 
 class Worker(QtCore.QThread):
     signalUpdateQuestion = QtCore.pyqtSignal(str, str)
     signalChooseApp = QtCore.pyqtSignal()
+    signalCloseSplash = QtCore.pyqtSignal()
     sigInfo = QtCore.pyqtSignal(str, str)
     sigCritical = QtCore.pyqtSignal(str, str)
     sigWarning = QtCore.pyqtSignal(str, str)
@@ -104,6 +103,10 @@ class Worker(QtCore.QThread):
             self.viewerChosen = dialog.viewerChosen
         else:
             raise RuntimeError("User cancelled app choice dialog")
+        
+    @QtCore.pyqtSlot()
+    def closeSplash(self):
+        splashScreen.close()
 
     @QtCore.pyqtSlot(str,str)
     def showInformation(self, title, message):
@@ -121,6 +124,7 @@ class Worker(QtCore.QThread):
         QtCore.QThread.__init__(self, parent)
         self.signalUpdateQuestion[str, str].connect(self.updateQuestion, QtCore.Qt.BlockingQueuedConnection)
         self.signalChooseApp.connect(self.chooseApp, QtCore.Qt.BlockingQueuedConnection)
+        self.signalCloseSplash.connect(self.closeSplash, QtCore.Qt.BlockingQueuedConnection)
         self.sigInfo[str, str].connect(self.showInformation, QtCore.Qt.BlockingQueuedConnection)
         self.sigCritical[str, str].connect(self.showCritical, QtCore.Qt.BlockingQueuedConnection)
         self.sigWarning[str, str].connect(self.showWarning, QtCore.Qt.BlockingQueuedConnection)
@@ -328,7 +332,7 @@ class Worker(QtCore.QThread):
                 def removeSplash():
                     time.sleep(2.5)
                     if not skipSplashQuitFirstTime:
-                        closeSplash()
+                        self.signalCloseSplash.emit()
                 quitThread = threading.Thread(target=removeSplash)
                 quitThread.start()
                 if self.viewerChosen:
@@ -337,6 +341,8 @@ class Worker(QtCore.QThread):
                     is_viewer_installed_cmd = [sys.executable, "-m", "pip", "show", "depthai-viewer"]
                     viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     if viewer_available_ret.returncode != 0:
+                        splashScreen.updateSplashMessage('Installing Depthai Viewer ...')
+                        splashScreen.enableHeartbeat(True)
                         print("Depthai Viewer not installed, installing...")
                         # Depthai Viewer isn't installed, install it
                         # First upgrade pip
@@ -347,6 +353,8 @@ class Worker(QtCore.QThread):
                         viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                         if viewer_available_ret.returncode != 0:
                             raise RuntimeError("Depthai Viewer failed to install.")
+                    splashScreen.updateSplashMessage('')
+                    splashScreen.enableHeartbeat(False)
 
                     viewer_version = version.parse(viewer_available_ret.stdout.decode().splitlines()[1].split(" ")[1].strip())
                     print(f"Installed Depthai Viewer version: {viewer_version}")
@@ -362,6 +370,8 @@ class Worker(QtCore.QThread):
                         message = f'Version {str(latest_viewer_version)} of depthai-viewer is available, current version {str(viewer_version)}. Would you like to update?'
                         self.signalUpdateQuestion.emit(title, message)
                         if self.shouldUpdate:
+                            splashScreen.updateSplashMessage(f'Updating Depthai Viewer to version {latest_viewer_version} ...')
+                            splashScreen.enableHeartbeat(True)
                             # Update depthai-viewer
                             subprocess.run([sys.executable, "-m", "pip", "install", "-U", "depthai-viewer"])
                             # Test again to see if viewer is installed and updated
@@ -371,6 +381,8 @@ class Worker(QtCore.QThread):
                             viewer_version = version.parse(viewer_available_ret.stdout.decode().splitlines()[1].split(" ")[1].strip())
                             if latest_viewer_version > viewer_version:
                                 raise RuntimeError("Depthai Viewer failed to update.")
+                            splashScreen.updateSplashMessage('')
+                            splashScreen.enableHeartbeat(False)
 
                     # All ready, run the depthai-viewer as a seperate process
                     ret = subprocess.run([sys.executable, "-m", "depthai_viewer"])
@@ -428,8 +440,7 @@ class Worker(QtCore.QThread):
             print(f'Unknown error occured ({ex}), exiting...')
         finally:
             # At the end quit anyway
-            closeSplash()
-            splashScreen.close()
+            self.signalCloseSplash.emit()
             qApp.exit()
 
 qApp.worker = Worker()
