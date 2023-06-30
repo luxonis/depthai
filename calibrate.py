@@ -58,7 +58,8 @@ camToRgbRes = {
     'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
     'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
     'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
-    'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
+    # 'IMX296' : dai.ColorCameraProperties.SensorResolution.THE_1440X1080,
+    'IMX412' : dai.ColorCameraProperties.SensorResolution.THE_1080_P,
 }
 
 def create_blank(width, height, rgb_color=(0, 0, 0)):
