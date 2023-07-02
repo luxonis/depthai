@@ -16,7 +16,8 @@ from depthai import ImgDetection
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
 from depthai_sdk.visualize.encoder import JSONEncoder
-from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask
+from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask, \
+    VisBoundingBox
 from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
 
 
@@ -57,11 +58,42 @@ class Visualizer(VisualizerHelper):
         self.objects.append(obj)
         return self
 
+    def add_bbox(self,
+                 bbox: Union[np.ndarray, Tuple[int, ...]],
+                 color: Tuple[int, int, int] = None,
+                 thickness: int = None,
+                 bbox_style: BboxStyle = None,
+                 label: str = None,
+                 ) -> 'Visualizer':
+        """
+        Add a bounding box to the visualizer.
+
+        Args:
+            bbox: Bounding box.
+            label: Label for the detection.
+            thickness: Bounding box thickness.
+            color: Bounding box color (RGB).
+            bbox_style: Bounding box style (one of depthai_sdk.visualize.configs.BboxStyle).
+
+        Returns:
+            self
+        """
+        bbox_overlay = VisBoundingBox(bbox=bbox,
+                                      color=color,
+                                      thickness=thickness,
+                                      bbox_style=bbox_style,
+                                      label=label)
+        self.add_object(bbox_overlay)
+        return self
+
     def add_detections(self,
                        detections: List[Union[ImgDetection, dai.Tracklet]],
                        normalizer: BoundingBox = None,
                        label_map: List[Tuple[str, Tuple]] = None,
                        spatial_points: List[dai.Point3f] = None,
+                       label_color: Tuple[int, int, int] = None,
+                       label_background_color: Tuple[int, int, int] = None,
+                       label_background_transparency: float = None,
                        is_spatial=False,
                        bbox: Union[np.ndarray, Tuple[int, int, int, int]] = None,
                        ) -> 'Visualizer':
@@ -73,8 +105,12 @@ class Visualizer(VisualizerHelper):
             normalizer: Normalizer object.
             label_map: List of tuples (label, color).
             spatial_points: List of spatial points. None if not spatial.
+            label_color: Color for the label.
+            label_background_color: Color for the label background.
+            label_background_transparency: Transparency for the label background.
             is_spatial: Flag that indicates if the detections are spatial.
             bbox: Bounding box, if there's a detection inside a bounding box.
+
         Returns:
             self
         """
@@ -82,8 +118,11 @@ class Visualizer(VisualizerHelper):
                                           normalizer=normalizer,
                                           label_map=label_map,
                                           spatial_points=spatial_points,
+                                          label_color=label_color,
+                                          label_background_color=label_background_color,
+                                          label_background_transparency=label_background_transparency,
                                           is_spatial=is_spatial,
-                                          bbox=bbox)
+                                          parent_bbox=bbox)
         self.add_object(detection_overlay)
         return self
 
@@ -94,6 +133,8 @@ class Visualizer(VisualizerHelper):
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
                  outline: bool = True,
+                 background_color: Tuple[int, int, int] = None,
+                 background_transparency: float = 0.5,
                  bbox: Union[np.ndarray, Tuple[int, ...], BoundingBox] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10) -> 'Visualizer':
@@ -107,6 +148,8 @@ class Visualizer(VisualizerHelper):
             color: Color of the text.
             thickness: Thickness of the text.
             outline: Flag that indicates if the text should be outlined.
+            background_color: Background color.
+            background_transparency: Background transparency.
             bbox: Bounding box.
             position: Position.
             padding: Padding.
@@ -120,6 +163,8 @@ class Visualizer(VisualizerHelper):
                                color=color,
                                thickness=thickness,
                                outline=outline,
+                               background_color=background_color,
+                               background_transparency=background_transparency,
                                bbox=bbox,
                                position=position,
                                padding=padding)
@@ -239,9 +284,12 @@ class Visualizer(VisualizerHelper):
         self.reset()
         return frame
 
-    def serialize(self) -> str:
+    def serialize(self, force_reset: bool = True) -> str:
         """
         Serialize all contained objects to JSON.
+
+        Args:
+            force_reset: Flag that indicates if the objects should be cleared after serialization.
 
         Returns:
             Stringified JSON.
@@ -252,6 +300,9 @@ class Visualizer(VisualizerHelper):
             'config': self.config,
             'objects': [obj.serialize() for obj in self.objects]
         }
+
+        if force_reset:
+            self.reset()
 
         return json.dumps(parent, cls=JSONEncoder)
 
@@ -334,8 +385,9 @@ class Visualizer(VisualizerHelper):
              font_scale: float = None,
              font_thickness: int = None,
              font_position: TextPosition = None,
-             bg_transparency: float = None,
-             bg_color: Tuple[int, int, int] = None,
+             background_transparency: float = None,
+             background_color: Tuple[int, int, int] = None,
+             outline_color: Tuple[int, int, int] = None,
              line_type: int = None,
              auto_scale: bool = None) -> 'Visualizer':
         """
@@ -348,8 +400,9 @@ class Visualizer(VisualizerHelper):
             font_scale: Font scale.
             font_thickness: Font thickness.
             font_position: Font position.
-            bg_transparency: Text background transparency.
-            bg_color: Text background color.
+            background_transparency: Text background transparency.
+            background_color: Text background color.
+            outline_color: Outline color.
             line_type: Line type (from cv2).
             auto_scale: Flag that indicates if the font scale should be automatically adjusted.
 
@@ -368,7 +421,7 @@ class Visualizer(VisualizerHelper):
                  deletion_lost_threshold: int = None,
                  line_thickness: int = None,
                  fading_tails: bool = None,
-                 speed: bool = None,
+                 show_speed: bool = None,
                  line_color: Tuple[int, int, int] = None,
                  line_type: int = None,
                  bg_color: Tuple[int, int, int] = None) -> 'Visualizer':
@@ -380,7 +433,7 @@ class Visualizer(VisualizerHelper):
             deletion_lost_threshold: Number of consequent LOST statuses after which the trail is deleted.
             line_thickness: Thickness of the line.
             fading_tails: Flag that indicates if the tails should fade.
-            speed: Flag that indicates if the speed should be shown.
+            show_speed: Flag that indicates if the speed should be shown.
             line_color: Color of the line.
             line_type: Type of the line (from cv2).
             bg_color: Text background color.

@@ -41,9 +41,9 @@ class ReplayStream:
     def get_socket(self) -> dai.CameraBoardSocket:
         if self.camera_socket:
             return self.camera_socket
-        if 'left' in self.stream_name:
+        if 'left' in self.stream_name.lower():
             return dai.CameraBoardSocket.LEFT
-        elif 'right' in self.stream_name:
+        elif 'right' in self.stream_name.lower():
             return dai.CameraBoardSocket.RIGHT
         else:
             return dai.CameraBoardSocket.RGB
@@ -56,7 +56,7 @@ class Replay:
         Helper file to replay recorded depthai stream. It reads from recorded files (mjpeg/avi/mp4/h265/h264/bag)
         and sends frames back to OAK camera to replay the scene, including depth reconstruction from 2 synced mono
         streams.
-    
+
         Args:
             path (str): Path to the recording folder.
         """
@@ -133,7 +133,8 @@ class Replay:
             stream = ReplayStream()
             stream._shape = self.reader.getShape(stream_name)
             stream.size_bytes = self.reader.get_message_size(stream_name)
-            self.streams[stream_name] = stream
+            stream.camera_socket = self.reader.get_socket(stream_name)
+            self.streams[stream_name.lower()] = stream
 
     def _get_path(self, path: str) -> Path:
         """
@@ -208,8 +209,8 @@ class Replay:
             size (Tuple(width, heigth)): Size of color frames that are sent to the camera
             mode (ResizeMode): How to actually resize the stream
         """
-        self.streams[stream_name].resize = size
-        self.streams[stream_name].resize_mode = mode
+        self.streams[stream_name.lower()].resize = size
+        self.streams[stream_name.lower()].resize_mode = mode
 
     def keepAspectRatio(self, keepAspectRatio: bool):
         raise Exception('keepAspectRatio() has been deprecated, use resize(mode=ResizeMode) to set whether to keep AR!')
@@ -225,17 +226,17 @@ class Replay:
         if disableReading:
             self.reader.disableStream(stream_name)
 
-        if stream_name not in self.streams:
+        if stream_name.lower() not in self.streams:
             logging.info(f"There's no stream '{stream_name}' available!")
             return
 
-        self.streams[stream_name].disabled = True
+        self.streams[stream_name.lower()].disabled = True
 
     def specify_socket(self, stream_name: str, socket: dai.CameraBoardSocket):
-        if stream_name not in self.streams:
+        if stream_name.lower() not in self.streams:
             logging.info(f"There's no stream '{stream_name}' available!")
             return
-        self.streams[stream_name].camera_socket = socket
+        self.streams[stream_name.lower()].camera_socket = socket
 
     def initPipeline(self, pipeline: dai.Pipeline = None):
         """
@@ -267,11 +268,11 @@ class Replay:
                         left_name: str = 'left',
                         right_name: str = 'right',
                         align_to: str = ''):
-        if left_name not in self.streams or right_name not in self.streams:
+        if left_name.lower() not in self.streams or right_name.lower() not in self.streams:
             raise Exception("Tried to init StereoDepth, but left/right streams aren't available!")
 
-        left = self.streams[left_name]
-        right = self.streams[right_name]
+        left = self.streams[left_name.lower()]
+        right = self.streams[right_name.lower()]
 
         stereo.setInputResolution(left.shape)
 
@@ -282,7 +283,7 @@ class Replay:
 
         if align_to:  # Enable RGB-depth alignment
             stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-            stereo.setOutputSize(*self.streams[align_to].shape)
+            stereo.setOutputSize(*self.streams[align_to.lower()].shape)
 
         left.node.out.link(stereo.left)
         right.node.out.link(stereo.right)
@@ -323,7 +324,7 @@ class Replay:
             stream.imgFrame = self._createImgFrame(stream)
             # Save the imgFrame
             if cb:  # callback
-                cb(stream_name, stream.imgFrame)
+                cb(stream_name.lower(), stream.imgFrame)
 
             # Don't send these frames to the OAK camera
             if stream.disabled:
@@ -343,12 +344,12 @@ class Replay:
             device (dai.Device): Device to which we will stream frames
         """
 
-        for name, stream in self.streams.items():
+        for _, stream in self.streams.items():
             if stream.stream_name:
                 stream.queue = device.getInputQueue(stream.stream_name)
 
     def getStreams(self) -> List[str]:
-        return [name for name, stream in self.streams.items()]
+        return [name.lower() for name, _ in self.streams.items()]
 
     def _resize_frame(self, frame: np.ndarray, size: Tuple[int, int], mode: ResizeMode) -> np.ndarray:
         if mode == ResizeMode.STRETCH:
@@ -410,7 +411,7 @@ class Replay:
             return False  # No more frames!
 
         for name, frame in frames.items():
-            self.streams[name].frame = frame
+            self.streams[name.lower()].frame = frame
 
         # Compress 3-plane frame to a single plane
         # for name, frame in self.frames.items():
@@ -422,7 +423,7 @@ class Replay:
         """
         Get shape of a stream
         """
-        return self.streams[name].shape
+        return self.streams[name.lower()].shape
 
     def close(self):
         """

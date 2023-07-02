@@ -39,6 +39,7 @@ class _TrackingDetection(_Detection):
 class _TwoStageDetection(_Detection):
     nn_data: dai.NNData
 
+
 class NNDataPacket:
     """
     Contains only dai.NNData message
@@ -50,14 +51,11 @@ class NNDataPacket:
         self.name = name
         self.msg = nn_data
 
+
 class FramePacket:
     """
     Contains only dai.ImgFrame message and cv2 frame, which is used by visualization logic.
     """
-
-    name: str  # ImgFrame stream name
-    msg: dai.ImgFrame  # Original depthai message
-    frame: Optional[np.ndarray]  # cv2 frame for visualization
 
     def __init__(self,
                  name: str,
@@ -67,6 +65,21 @@ class FramePacket:
         self.name = name
         self.msg = msg
         self.frame = frame
+
+        self.visualizer = visualizer
+
+
+class PointcloudPacket:
+    def __init__(self,
+                 name: str,
+                 points: np.ndarray,
+                 depth_map: dai.ImgFrame,
+                 color_frame: Optional[np.ndarray],
+                 visualizer: 'Visualizer' = None):
+        self.name = name
+        self.points = points
+        self.depth_imgFrame = dai.ImgFrame
+        self.color_frame = color_frame
         self.visualizer = visualizer
 
 
@@ -75,15 +88,19 @@ class DepthPacket(FramePacket):
 
     def __init__(self,
                  name: str,
-                 disparity_frame: dai.ImgFrame,
-                 mono_frame: dai.ImgFrame,
+                 img_frame: dai.ImgFrame,
+                 mono_frame: Optional[dai.ImgFrame],
+                 depth_map: Optional[np.ndarray] = None,
                  visualizer: 'Visualizer' = None):
         super().__init__(name=name,
-                         msg=disparity_frame,
-                         frame=disparity_frame.getCvFrame() if cv2 else None,
+                         msg=img_frame,
+                         frame=img_frame.getCvFrame() if cv2 else None,
                          visualizer=visualizer)
-        self.mono_frame = mono_frame
 
+        if mono_frame is not None:
+            self.mono_frame = mono_frame
+
+        self.depth_map = depth_map
 
 class SpatialBbMappingPacket(FramePacket):
     """

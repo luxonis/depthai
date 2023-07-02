@@ -43,3 +43,11 @@ jobs:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
         packages_dir: depthai_sdk/dist/
+
+    - name: Repository Dispatch
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        event-type: robothub-oak-release
+        repository: luxonis/robothub-images
+        client-payload: '{"ref": "${{ github.ref }}"}'

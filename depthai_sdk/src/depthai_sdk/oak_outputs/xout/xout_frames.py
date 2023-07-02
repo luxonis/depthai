@@ -90,7 +90,7 @@ class XoutFrames(XoutBase):
         if self.queue.full():
             self.queue.get()  # Get one, so queue isn't full
 
-        packet = FramePacket(name,
+        packet = FramePacket(self.name or name,
                              msg,
                              msg.getCvFrame() if cv2 else None,
                              self._visualizer)
@@ -98,5 +98,5 @@ class XoutFrames(XoutBase):
         self.queue.put(packet, block=False)
 
     def close(self) -> None:
-        if self._video_recorder:
+        if self._video_recorder is not None:
             self._video_recorder.close()
