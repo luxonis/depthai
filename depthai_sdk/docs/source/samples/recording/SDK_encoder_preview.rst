@@ -3,7 +3,7 @@ Preview Encoder
 
 This example shows how to use the callback function to write MJPEG encoded frames from color camera to a file.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

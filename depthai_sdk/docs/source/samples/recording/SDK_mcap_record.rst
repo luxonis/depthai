@@ -3,7 +3,7 @@ MCAP Recording
 
 This example showcases the use of SDK to save to MCAP file format. The MCAP file contains color as well as both left and right mono cameras and their inferred depth map.  
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 
@@ -11,14 +11,6 @@ Setup
 #####
 
 .. include::  /includes/install_from_pypi.rst
-
-
-Pipeline
-########
-
-.. image:: /_static/images/pipelines/mcap_record.png
-      :alt: Pipeline graph
-
 
 
 Source Code

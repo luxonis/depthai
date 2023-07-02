@@ -3,9 +3,12 @@ Camera Rotated Preview
 
 This example showcases how to rotate the preview frames by a desired angle (currently only 90, 180 and 270 degrees are supported).
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_rotated.png
+      :alt: Rotated preview
 
 Setup
 #####

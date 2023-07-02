@@ -3,7 +3,7 @@ Stereo Recording
 
 This example shows how to record disparity map to a file.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

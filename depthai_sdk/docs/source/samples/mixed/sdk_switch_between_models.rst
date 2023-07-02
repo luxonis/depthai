@@ -1,8 +1,7 @@
 Switch Between Models
 =====================
 
-This example shows how to switch between models on the fly. It uses script node to alter pipeline flow (either use the yolo model or the mobilenet model).
-Program is set in non-blocking mode, which means we have to poll the device every time we want to display the results.
+This example shows how to switch between models on the fly. It uses script node to alter pipeline flow (either to use the yolo model or the mobilenet model).
 
 
 

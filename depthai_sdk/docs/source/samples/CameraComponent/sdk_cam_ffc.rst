@@ -6,11 +6,7 @@ This example shows how to use the `Camera` component to display the camera feed 
 For FFC, the camera board socket must be specified. In our case the cameras are connected to socket A, B and C. After setting the resolution to 1200p
 and downscaling using ISP to 800p, the camera feed is displayed in a window.
 
-.. include::  /includes/blocking_behaviour.rst
-
-Demo
-####
-
+.. include::  /includes/blocking_behavior.rst
 
 
 Setup

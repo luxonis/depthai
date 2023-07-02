@@ -3,9 +3,7 @@ MobileNet Encoded
 
 This example shows how to run an encoded RGB stream through a neural network and display the encoded results.
 
-For running the same face detection on mono camera, see :ref:`sdk_face_detection_left`.
-
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

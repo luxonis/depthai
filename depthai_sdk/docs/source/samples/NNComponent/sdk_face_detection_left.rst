@@ -3,11 +3,14 @@ Face Detection Mono
 
 This example shows how to run face detection on Mono camera input using SDK. 
 
-For running the same face detection on RGB camera, see :ref:`sdk_face_detection_color`.
+For running the same face detection on RGB camera, see :ref:`Face Detection RGB`.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_face_detection_left.png
+      :alt: Mono camera face detection demo
 
 Setup
 #####

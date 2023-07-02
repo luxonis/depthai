@@ -3,8 +3,13 @@ Visualizer Callback Function
 
 This example demonstrates the use of a callback function to customize the visualization of detection results.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
+Demo
+####
+.. image:: /_static/images/demos/sdk_visualizer_callback.png
+      :alt: Visualizer Callback Demo
+
 
 Setup
 #####

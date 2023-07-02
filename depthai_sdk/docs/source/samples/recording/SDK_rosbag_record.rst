@@ -3,7 +3,7 @@ ROSBAG Recording
 
 This example showcases the use of SDK to save color, mono, depth and IMU data to a ROSBAG file. This can be useful for recording data for later use, or for testing purposes.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

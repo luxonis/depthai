@@ -1,9 +1,9 @@
 Stereo Encoding 
-================
+===============
 
 This example shows how to encode disparity map and display it using OpenCV.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

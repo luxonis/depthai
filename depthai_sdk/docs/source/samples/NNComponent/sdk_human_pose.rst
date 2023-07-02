@@ -3,9 +3,12 @@ Human Pose Estimation
 
 This example showcases the implementation of a human pose estimation network using the DepthAI SDK.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_human_pose.gif
+      :alt: Human Pose Estimation Demo
 
 Setup
 #####

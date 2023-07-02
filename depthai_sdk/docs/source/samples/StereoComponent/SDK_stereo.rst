@@ -3,7 +3,7 @@ Stereo Preview
 
 This example shows how to display WLS filtered disparity map using OpenCV.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

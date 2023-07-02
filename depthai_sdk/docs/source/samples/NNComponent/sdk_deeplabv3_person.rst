@@ -1,9 +1,9 @@
 Deeplabv3 Person Segmentation 
 =============================
 
-This example showcases the implementation of deppLabv3 person segmentation model with DepthAI SDK. 
+This example showcases the implementation of deepLabv3 person segmentation model with DepthAI SDK. 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

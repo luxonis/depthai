@@ -3,9 +3,12 @@ RGB and Mono Preview
 
 This example shows how to use the `Camera` component to get RGB and Mono previews. It is similar to the ref:`sdk_camera_preview` example, but lacks the stereo depth visualization.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
 
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_preview_all_cameras.png
+      :alt: RGB and Mono Preview
 
 Setup
 #####

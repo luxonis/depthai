@@ -7,9 +7,12 @@ For more information about spatial configuration (thresholds, averaging), please
 
 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_spatial_detection.png
+      :alt: Spatial Detection Demo
 
 Setup
 #####

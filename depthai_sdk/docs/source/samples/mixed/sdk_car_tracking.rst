@@ -3,9 +3,12 @@ Car Tracking Example
 
 This example shows how to use SDK to run inference on a pre-saved video file and display the results.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_car_tracking.gif
+      :alt: Car Tracking Demo
 
 Setup
 #####

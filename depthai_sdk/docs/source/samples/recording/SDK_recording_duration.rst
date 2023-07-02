@@ -3,7 +3,7 @@ Hardcode Recording Duration
 
 This example shows how to record a video for a fixed duration of time.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

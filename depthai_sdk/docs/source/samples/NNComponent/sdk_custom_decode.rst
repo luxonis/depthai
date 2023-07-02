@@ -3,7 +3,7 @@ Custom Decode Function
 
 This example showcases the usage of custom decoding functions for the neural network component. More info is available inside the function itself.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

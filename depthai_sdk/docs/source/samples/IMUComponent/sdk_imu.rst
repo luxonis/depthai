@@ -4,17 +4,13 @@ IMU Demonstration
 This example showcases how to use the integrated `IMU sensor <https://docs.luxonis.com/projects/api/en/latest/components/nodes/imu/>`__ on the OAK-D board with the Depthai sdk. In our example 
 we set the IMU to output data at 400Hz, and batch size to 5. This means we get 5 IMU readings every 12.5ms (2.5ms per reading * 5). We then print out the IMU data to the console. 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
 
 Demo
 ####
 
-Example script output
-
-.. code-block::
-
-    ~/depthai-python/examples$ python3 imu.py
-    #### ADD DATA ####
+.. image:: /_static/images/demos/sdk_imu_demo.png
+      :alt: IMU Demo
 
 
 Setup

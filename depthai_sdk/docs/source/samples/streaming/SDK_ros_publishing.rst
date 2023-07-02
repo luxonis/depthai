@@ -3,7 +3,7 @@ ROS Publishing
 
 This example shows how to use DepthAI SDK to create a ROS Publisher for left, right, color and IMU streams. 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 
@@ -11,12 +11,6 @@ Setup
 #####
 
 .. include::  /includes/install_from_pypi.rst
-
-Pipeline
-########
-
-.. image:: /_static/images/pipelines/ros_publishing.png
-      :alt: Pipeline graph
 
 
 

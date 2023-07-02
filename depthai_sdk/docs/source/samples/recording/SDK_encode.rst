@@ -1,9 +1,9 @@
-Stereo Encoding 
-==============
+Encode Multiple Streams 
+=======================
 
 This example showcases how to encode video from the camera and save it to a file. Possible encodings are: ``H264``, ``H265`` and ``MJPEG``. 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

@@ -6,7 +6,7 @@ This example shows how to run run a color camera stream through a YoloV7 model a
 For additional models, check: `models supported by SDK <https://docs.luxonis.com/projects/sdk/en/latest/features/ai_models/#sdk-supported-models>`__
 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

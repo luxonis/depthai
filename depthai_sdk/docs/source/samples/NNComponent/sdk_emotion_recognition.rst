@@ -3,9 +3,12 @@ Emotion Recognition
 
 This example showcases the implementation of two stage neural network pipeline, where the first stage is a face detection network, and the second stage is an emotion recognition model.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_emotion_recognition.gif
+      :alt: Emotion Recognition Demo
 
 Setup
 #####

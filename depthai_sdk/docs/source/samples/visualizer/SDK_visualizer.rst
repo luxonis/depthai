@@ -3,7 +3,7 @@ Visualizer Demo
 
 This example shows how to use the visualizer component to display the detection results and configure the style of text and tracker.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

@@ -3,7 +3,7 @@ MCAP IMU Recording
 
 This example showcases how to record IMU data along with depth and save both in an MCAP file. 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 
@@ -11,12 +11,6 @@ Setup
 #####
 
 .. include::  /includes/install_from_pypi.rst
-
-Pipeline
-########
-
-.. image:: /_static/images/pipelines/mcap_record_imu.png
-      :alt: Pipeline graph
 
 
 Source Code

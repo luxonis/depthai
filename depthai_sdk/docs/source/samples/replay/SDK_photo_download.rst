@@ -3,9 +3,12 @@ Face Detection Inference on Downloaded Image
 
 This example shows how to run the face detection neural network model on a downloaded image from a specified url.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_photo_download.png
+      :alt: Photo Download Demo
 
 Setup
 #####

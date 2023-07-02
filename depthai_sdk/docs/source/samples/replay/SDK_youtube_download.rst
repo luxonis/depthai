@@ -3,7 +3,7 @@ Vehicle Detection on a Youtube Video
 
 This example shows how to run the vehicle detection neural network model on a downloaded Youtube video.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

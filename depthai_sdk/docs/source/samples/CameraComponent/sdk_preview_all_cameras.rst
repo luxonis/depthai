@@ -1,14 +1,16 @@
-Camera Preview
-==============
+Preview All Cameras
+===================
 
-This example shows how to set up a pipeline that outputs a a preview for each camera currently connected to the device. The preview is displayed in a window on the host machine.
+This example shows how to set up a pipeline that outputs a a preview for each camera currently connected (and available) to the device. The preview is displayed in a window on the host machine.
 If run on OAK-D devices, this example does the same thing as the ``sdk_camera_preview`` example.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
 
 Demo
 ####
 
+.. image:: /_static/images/demos/sdk_preview_all_cameras.png
+      :alt: Camera Preview Demo
 
 
 Setup

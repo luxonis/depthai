@@ -3,7 +3,7 @@ People Tracker on Video Replay
 
 This example shows how to run the people tracker pipeline on a video file.
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

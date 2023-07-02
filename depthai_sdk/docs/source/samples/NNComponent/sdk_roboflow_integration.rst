@@ -1,10 +1,10 @@
-SDK - ROBOFLOW Integration
-==========================
+Roboflow Integration
+====================
 
 This example showcases the usage of the `ROBOFLOW <https://roboflow.com/>`__ platform to train a custom object detection model and use it with DepthAI SDK.
 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
 
 

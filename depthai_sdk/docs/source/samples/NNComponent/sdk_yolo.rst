@@ -7,9 +7,12 @@ For more information about tracker configuration, please refer to `config tracke
 
 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_api_interop.png
+      :alt: YOLO demo
 
 Setup
 #####

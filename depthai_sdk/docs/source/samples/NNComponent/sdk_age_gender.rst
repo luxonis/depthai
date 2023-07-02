@@ -3,9 +3,12 @@ Age-Gender Inference
 
 This example showcases the usage of multi-stage neural network pipeline to make age and gender inference on a video frame. 
 
-.. include::  /includes/blocking_behaviour.rst
+.. include::  /includes/blocking_behavior.rst
     
-
+Demo
+####
+.. image:: /_static/images/demos/sdk_age_gender.png
+      :alt: Age/gender demo
 
 Setup
 #####
