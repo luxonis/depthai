@@ -127,7 +127,7 @@ class StereoComponent(Component):
             if self._device.getDeviceName() == 'OAK-D-LR':
                 self._resolution = dai.MonoCameraProperties.SensorResolution.THE_1200_P
 
-            if not self.left:
+            if not self.left: # Should never happen
                 self.left = CameraComponent(device, pipeline, 'left', self._resolution, self._fps, replay=self._replay)
             if not self.right:
                 self.right = CameraComponent(device, pipeline, 'right', self._resolution, self._fps,
