@@ -37,8 +37,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'autodocsumm',
-    'sphinx_tabs.tabs',
-    'sphinxcontrib.video'
+    'sphinx_tabs.tabs'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
