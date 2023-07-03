@@ -434,6 +434,7 @@ class Main:
         for properties in cameraProperties:
             for in_cam in self.board_config['cameras'].keys():
                 cam_info = self.board_config['cameras'][in_cam]
+                print(cameraProperties)
                 if properties.socket == stringToCam[in_cam]:
                     self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
                     print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
@@ -544,7 +545,6 @@ class Main:
             if cam_info['type'] == 'mono':
                 cam_node = pipeline.createMonoCamera()
                 xout = pipeline.createXLinkOut()
-
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
