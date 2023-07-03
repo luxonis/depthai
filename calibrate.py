@@ -77,6 +77,7 @@ camToRgbRes = {
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
+                'IMX412' : dai.ColorCameraProperties.SensorResolution.THE_1080_P,
                 }
 
 antibandingOpts = {
@@ -542,7 +543,7 @@ class Main:
                 xout = pipeline.createXLinkOut()
 
                 cam_node.setBoardSocket(stringToCam[cam_id])
-                cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
+                cam_node.setResolution(camToMonoRes[cam_info['sensorName']].upper())
                 cam_node.setFps(fps)
 
                 xout.setStreamName(cam_info['name'])
@@ -693,7 +694,7 @@ class Main:
 
                 syncCollector.add_msg(key, frameMsg)
                 color_frame = None
-                if frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8] :
+                if frameMsg.getType() in [dai.RawImgFrame.Type.RAW8, dai.RawImgFrame.Type.GRAY8, dai.RawImgFrame.Type.RAW10] :
                     color_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_GRAY2BGR)
                 else:
                     color_frame = frameMsg.getCvFrame()
