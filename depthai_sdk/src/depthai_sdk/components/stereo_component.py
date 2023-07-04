@@ -123,7 +123,7 @@ class StereoComponent(Component):
             # If not specified, default to 400P resolution for faster processing
             self._resolution = self._resolution or dai.MonoCameraProperties.SensorResolution.THE_400_P
 
-            # Always use 1200p for OAK-D-LR and OAK-D-SR
+            # Always use 1200p for OAK-D-LR
             if self._device.getDeviceName() == 'OAK-D-LR':
                 self._resolution = dai.MonoCameraProperties.SensorResolution.THE_1200_P
 
