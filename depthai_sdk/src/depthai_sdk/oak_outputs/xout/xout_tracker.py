@@ -100,7 +100,7 @@ class XoutTracker(XoutNnResults):
         filtered_tracklets = [tracklet for tracklet in packet.daiTracklets.tracklets if
                               tracklet.id not in self.blacklist]
 
-        norm_bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
+        norm_bbox = BoundingBox().resize_to_aspect_ratio((h, w), self._nn_size, self._resize_mode)
 
         self._visualizer.add_detections(detections=filtered_tracklets,
                                         normalizer=norm_bbox,
