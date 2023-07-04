@@ -721,24 +721,32 @@ class NNComponent(Component):
             """
             Streams ObjectTracker tracklets and high-res frames that were downscaled and used for inferencing. Produces TrackerPacket.
             """
-            if not self._comp._is_tracker():
+            component = self._comp
+            if not component._is_tracker():
                 raise Exception('Tracker was not enabled! Enable with cam.create_nn("[model]", tracker=True)!')
 
-            self._comp.node.passthrough.link(self._comp.tracker.inputDetectionFrame)
-            self._comp.node.out.link(self._comp.tracker.inputDetections)
+            component.node.passthrough.link(component.tracker.inputDetectionFrame)
+            component.node.out.link(component.tracker.inputDetections)
 
             # TODO: add support for full frame tracking
-            self._comp.node.passthrough.link(self._comp.tracker.inputTrackerFrame)
+            component.node.passthrough.link(component.tracker.inputTrackerFrame)
 
-            out = XoutTracker(det_nn=self._comp,
-                              frames=self._comp._input.get_stream_xout(),  # CameraComponent
+            if component._input.encoder:
+                frames = StreamXout(id=component._input.encoder.id,
+                                    out=component._input.encoder.bitstream,
+                                    name=component.name)
+            else:
+                frames = component._input.get_stream_xout()
+
+            out = XoutTracker(det_nn=component,
+                              frames=frames,  # CameraComponent
                               device=device,
-                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out),
-                              apply_kalman=self._comp.apply_tracking_filter,
-                              forget_after_n_frames=self._comp.forget_after_n_frames,
-                              calculate_speed=self._comp.calculate_speed)
+                              tracklets=StreamXout(component.tracker.id, component.tracker.out),
+                              apply_kalman=component.apply_tracking_filter,
+                              forget_after_n_frames=component.forget_after_n_frames,
+                              calculate_speed=component.calculate_speed)
 
-            return self._comp._create_xout(pipeline, out)
+            return component._create_xout(pipeline, out)
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutNnResults:
             """
