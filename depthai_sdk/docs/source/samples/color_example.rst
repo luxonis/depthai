@@ -1,0 +1,2 @@
+Color camera example
+=====================
