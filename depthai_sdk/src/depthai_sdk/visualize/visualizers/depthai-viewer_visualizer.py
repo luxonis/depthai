@@ -1,3 +1,4 @@
+from depthai_sdk.classes.packets import IMUPacket
 from depthai_sdk.visualize.objects import (
     VisBoundingBox,
     VisCircle,
@@ -12,12 +13,65 @@ from typing import Tuple, List, Union, Optional, Sequence
 from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.visualizer_helper import draw_stylized_bbox, draw_bbox
-import numpy as np
 from depthai_sdk.visualize.visualizers.opencv_text import OpenCvTextVis
+import numpy as np
 import cv2
+import subprocess
+import logging
+import sys
+import depthai as dai
 
-class OpenCvVisualizer(Visualizer):
-    def _draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
+
+class DepthaiViewerVisualizer(Visualizer):
+    """
+    Visualizer for Depthai Viewer (https://github.com/luxonis/depthai-viewer)
+    """
+    def __init__(self, scale, fps):
+        super().__init__(scale, fps)
+
+        try:
+            # timeout is optional, but it might be good to prevent the script from hanging if the module is large.
+            process = subprocess.Popen([sys.executable, "-m", "depthai_viewer"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = process.communicate(timeout=3)
+
+            if process.returncode != 0:
+                err_msg = stderr.decode("utf-8")
+                if 'Failed to bind TCP address' in err_msg:
+                    # Already running
+                    pass
+                elif 'No module named depthai_viewer' in err_msg:
+                    raise Exception((f"DepthAI Viewer is not installed. Please run '{sys.executable} -m pip install depthai_viewer' to install it."))
+                else:
+                    logging.exception(f"Error occurred while trying to run depthai_viewer: {err_msg}")
+            else:
+                print("depthai_viewer ran successfully.")
+        except subprocess.TimeoutExpired:
+            # Installed and running depthai_viewer successfully
+            pass
+        except subprocess.CalledProcessError as e:
+            print(f"An error occurred while trying to run 'depthai_viewer': {str(e)}")
+
+
+    def show(self, packet) -> None:
+
+        if type(packet) == IMUPacket:
+            for data in packet.data:
+                gyro: dai.IMUReportGyroscope = packet.packet.gyroscope
+                accel: dai.IMUReportAccelerometer = packet.packet.acceleroMeter
+                mag: dai.IMUReportMagneticField = packet.packet.magneticField
+                # TODO(filip): Move coordinate mapping to sdk
+                self._ahrs.Q = self._ahrs.updateIMU(
+                    self._ahrs.Q, np.array([gyro.z, gyro.x, gyro.y]), np.array([accel.z, accel.x, accel.y])
+                )
+            if Topic.ImuData not in self.store.subscriptions:
+                return
+            viewer.log_imu([accel.z, accel.x, accel.y], [gyro.z, gyro.x, gyro.y], self._ahrs.Q, [mag.x, mag.y, mag.z])
+        
+        frame = packet.decode()
+        if frame is not None:
+            cv2.imshow(packet.name, self._draw(frame))
+
+    def draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
         and communicate with the RobotHub application.
@@ -75,53 +129,6 @@ class OpenCvVisualizer(Visualizer):
     def show(self, packet: 'FramePacket') -> None:
         frame = packet.decode()
         if frame is not None:
-            cv2.imshow(packet.name, self._draw(frame))
-
-    # Moved from XoutFrames
-
-        # def setup_visualize(self,
-    #                     visualizer: Visualizer,
-    #                     visualizer_enabled: bool,
-    #                     name: str = None
-    #                     ) -> None:
-    #     self._visualizer = visualizer
-    #     self._visualizer_enabled = visualizer_enabled
-    #     self.name = name or self.name
-
-    # def setup_recorder(self, recorder: VideoRecorder) -> None:
-    #     self._video_recorder = recorder
-
-    # def visualize(self, packet: FramePacket) -> None:
-    #     # Frame shape may be 1D, that means it's an encoded frame
-    #     if self._visualizer.frame_shape is None or np.array(self._visualizer.frame_shape).ndim == 1:
-    #         if self._frame_shape is not None:
-    #             self._visualizer.frame_shape = self._frame_shape
-    #         else:
-    #             self._visualizer.frame_shape = packet.frame.shape
-
-    #     if self._visualizer.config.output.show_fps:
-    #         self._visualizer.add_text(
-    #             text=f'FPS: {self._fps.fps():.1f}',
-    #             position=TextPosition.TOP_LEFT
-    #         )
-
-    #     if self.callback:  # Don't display frame, call the callback
-    #         self.callback(packet)
-    #     else:
-    #         packet.frame = self._visualizer.draw(packet.frame)
-            # Draw on the frame
-            # if self._visualizer.platform == Platform.PC:
-            #     cv2.imshow(self.name, packet.frame)
-            # else:
-            #     pass
-
-    # def on_record(self, packet) -> None:
-    #     if self._video_recorder:
-    #         if isinstance(self._video_recorder[self.name], AvWriter):
-    #             self._video_recorder.write(self.name, packet.msg)
-    #         else:
-    #             self._video_recorder.write(self.name, packet.frame)
-
+            cv2.imshow(packet.name, self.draw(frame))
     def close(self):
-        cv2.destroyAllWindows()
-
+        self.viewer.close()

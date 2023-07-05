@@ -13,7 +13,6 @@ class XoutDepth(XoutDisparity):
                  device: dai.Device,
                  frames: StreamXout,
                  dispScaleFactor: float,
-                 fps: float,
                  mono_frames: Optional[StreamXout],
                  colorize: StereoColor = None,
                  colormap: int = None,

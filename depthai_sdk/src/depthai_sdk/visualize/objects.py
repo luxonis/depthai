@@ -54,7 +54,6 @@ class GenericObject(ABC):
         self.frame_shape = frame_shape
         return self
 
-    @abstractmethod
     def prepare(self) -> 'GenericObject':
         """
         Prepare necessary data for drawing.
@@ -115,7 +114,7 @@ class VisBoundingBox(GenericObject):
     """
 
     def __init__(self,
-                 bbox: Union[np.ndarray, Tuple[int, ...]],
+                 bbox: BoundingBox,
                  label: str,
                  color: Tuple[int, int, int],
                  thickness: int,
@@ -183,7 +182,7 @@ class VisDetections(GenericObject):
         self.labels = []
         self.colors = []
 
-        try:  # Check if the detections are of type _TrackingDetection
+        try:  # Check if the detections are of type TrackingDetection
             self.detections = [t.srcImgDetection for t in self.detections]
         except AttributeError:
             pass
@@ -340,8 +339,6 @@ class VisText(GenericObject):
             'outline': self.outline,
             'background_color': self.background_color,
             'background_transparency': self.background_transparency
-        }
-
         }
 
 

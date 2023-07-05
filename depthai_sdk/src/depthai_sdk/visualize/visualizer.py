@@ -43,7 +43,7 @@ class Visualizer:
         return self
 
     def add_bbox(self,
-                 bbox: Union[np.ndarray, Tuple[int, ...]],
+                 bbox: BoundingBox,
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
                  bbox_style: BboxStyle = None,
@@ -242,7 +242,7 @@ class Visualizer:
         self.add_object(mask_overlay)
         return self
 
-    def draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
+    def drawn(self, frame: np.ndarray) -> Optional[np.ndarray]:
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
         and communicate with the RobotHub application.
@@ -254,6 +254,12 @@ class Visualizer:
             np.ndarray if the platform is PC, None otherwise.
         """
         raise NotImplementedError('Visualizers that inherit from Visualizer must implement draw() method!')
+
+    def show(self, packet):
+        """
+        Show the packet on the screen.
+        """
+        pass
 
     def serialize(self, force_reset: bool = True) -> str:
         """

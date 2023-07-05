@@ -5,6 +5,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Callable, Union, List, Dict
 
+from depthai_sdk.visualize.bbox import BoundingBox
+
 try:
     import blobconverter
 except ImportError:
@@ -145,7 +147,8 @@ class NNComponent(Component):
         self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
         self.image_manip.inputImage.setBlocking(False)
         self.image_manip.inputImage.setQueueSize(2)
-        self._ar_resize_mode = ResizeMode.LETTERBOX  # Default
+        # Configures ImageManip node. Letterbox by default
+        self._change_resize_mode(ResizeMode.LETTERBOX)
 
         if isinstance(self._input, CameraComponent):
             self._stream_input = self._input.stream
@@ -163,7 +166,7 @@ class NNComponent(Component):
             self.image_manip = pipeline.createImageManip()
             self.image_manip.setNumFramesPool(20)
             self._input._stream_input.link(self.image_manip.inputImage)
-            frame_full_size = self._input._input.stream_size
+            frame_full_size = self._get_input_frame_size()
 
             if self._input._is_detector():
                 self.image_manip.setMaxOutputFrameSize(frame_full_size[0] * frame_full_size[1] * 3)
@@ -378,9 +381,8 @@ class NNComponent(Component):
 
         self._ar_resize_mode = mode
 
-        # TODO: uncomment this when depthai 2.21.3 is released. In some cases (eg.
-        # setting first crop, then letterbox), the last config isn't used.
-        # self.image_manip.initialConfig.set(dai.RawImageManipConfig())
+        # Reset ImageManip node config
+        self.image_manip.initialConfig.set(dai.RawImageManipConfig())
 
         if self._ar_resize_mode == ResizeMode.CROP:
             self.image_manip.initialConfig.setResize(self._size)
@@ -591,10 +593,21 @@ class NNComponent(Component):
 
         self.config_nn(conf_threshold=nn_config.get('conf_threshold', None))
 
+    # def _get_input_frame_size(self) -> Tuple[int, int]:
+    #     return self._input.stream_size
+    #
+    def get_bbox(self) -> BoundingBox:
+        bbox = BoundingBox()
+        if self._is_multi_stage():
+            bbox = self._input.get_bbox()
+
+        old_ar = self._input.stream_size[0] / self._input.stream_size[1]
+        new_ar = self._size[0] / self._size[1]
+        return bbox.resize_to_aspect_ratio(old_ar, new_ar, self._ar_resize_mode)
+
     """
     Available outputs (to the host) of this component
     """
-
     class Out:
         def __init__(self, nn_component: 'NNComponent'):
             self._comp = nn_component
@@ -623,7 +636,8 @@ class NNComponent(Component):
                                    det_out=det_nn_out,
                                    second_nn_out=second_nn_out,
                                    device=device,
-                                   input_queue_name="input_queue" if self._comp.x_in else None)
+                                   input_queue_name="input_queue" if self._comp.x_in else None,
+                                   bbox=self._comp.get_bbox())
             else:
                 det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
                 input_stream = self._comp._stream_input
@@ -631,7 +645,8 @@ class NNComponent(Component):
                                     frames=StreamXout(id=input_stream.getParent().id,
                                                       out=input_stream,
                                                       name=self._comp.name),
-                                    nn_results=det_nn_out)
+                                    nn_results=det_nn_out,
+                                    bbox=self._comp.get_bbox())
 
         def passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
@@ -653,14 +668,17 @@ class NNComponent(Component):
                                    det_out=det_nn_out,
                                    second_nn_out=second_nn_out,
                                    device=device,
-                                   input_queue_name="input_queue" if self._comp.x_in else None)
+                                   input_queue_name="input_queue" if self._comp.x_in else None,
+                                   bbox=self._comp.get_bbox())
             else:
                 det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
                 frames = StreamXout(id=self._comp.node.id, out=self._comp.node.passthrough, name=self._comp.name)
 
                 return XoutNnResults(det_nn=self._comp,
                                     frames=frames,
-                                    nn_results=det_nn_out)
+                                    nn_results=det_nn_out,
+                                    bbox=BoundingBox()
+                                    )
 
         def image_manip(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             return XoutFrames(frames=StreamXout(id=self._comp.image_manip.id,
@@ -684,7 +702,8 @@ class NNComponent(Component):
                 device=device,
                 stereo=self._comp._stereo_node,
                 frames=StreamXout(id=self._comp.node.id, out=self._comp.node.passthroughDepth, name=self._comp.name),
-                configs=StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+                configs=StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name),
+                bbox=self._comp.get_bbox()
             )
 
         def twostage_crops(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutFrames:
@@ -715,9 +734,11 @@ class NNComponent(Component):
                               frames=self._comp._input.get_stream_xout(),  # CameraComponent
                               device=device,
                               tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out),
+                              bbox=self._comp.get_bbox(),
                               apply_kalman=self._comp.apply_tracking_filter,
                               forget_after_n_frames=self._comp.forget_after_n_frames,
-                              calculate_speed=self._comp.calculate_speed)
+                              calculate_speed=self._comp.calculate_speed,
+                              )
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutNnResults:
             """
@@ -744,7 +765,9 @@ class NNComponent(Component):
                                    det_out=det_nn_out,
                                    second_nn_out=second_nn_out,
                                    device=device,
-                                   input_queue_name="input_queue" if self._comp.x_in else None)
+                                   input_queue_name="input_queue" if self._comp.x_in else None,
+                                   bbox=self._comp.get_bbox()
+                                   )
 
                 return self._comp._create_xout(pipeline, out)
 
@@ -759,7 +782,8 @@ class NNComponent(Component):
                     color=self._comp._input.is_color(),
                     lossless=self._comp._input.encoder.getLossless(),
                     fps=self._comp._input.encoder.getFrameRate(),
-                    frame_shape=self._comp._input.stream_size
+                    frame_shape=self._comp._input.stream_size,
+                    bbox=self._comp.get_bbox()
                 )
             else:
                 return XoutNnH26x(
@@ -769,7 +793,8 @@ class NNComponent(Component):
                     color=self._comp._input.is_color(),
                     profile=self._comp._input._encoder_profile,
                     fps=self._comp._input.encoder.getFrameRate(),
-                    frame_shape=self._comp._input.stream_size
+                    frame_shape=self._comp._input.stream_size,
+                    bbox=self._comp.get_bbox()
                 )
 
         def nn_data(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutNnData:

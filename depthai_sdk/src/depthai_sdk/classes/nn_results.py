@@ -5,19 +5,46 @@ below. If the latter, model json config will incldue handler.py logic for decodi
 These will be integrated into depthai-core, bonus points for on-device decoding of some popular models.
 """
 from dataclasses import dataclass
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Union, Optional
 
 import numpy as np
-from depthai import NNData, ImgDetection
+import depthai as dai
+
+from depthai_sdk.visualize.bbox import BoundingBox
+
+@dataclass
+class Detection:
+    # Original ImgDetection
+    img_detection: Union[None, dai.ImgDetection, dai.SpatialImgDetection]
+    label_str: str
+    confidence: float
+    color: Tuple[int, int, int]
+    bbox: BoundingBox
+    angle: Optional[int]
+
+@dataclass
+class TrackingDetection(Detection):
+    tracklet: dai.Tracklet
+    speed: float = 0.0  # m/s
+    speed_kmph: float = 0.0  # km/h
+    speed_mph: float = 0.0  # mph
+
+@dataclass
+class TwoStageDetection(Detection):
+    nn_data: dai.NNData
 
 
 class GenericNNOutput:
     """
     Generic NN output, to be used for higher-level abstractions (eg. automatic visualization of results).
     """
-
-    def __init__(self, nn_data: NNData):
+    def __init__(self, nn_data: Union[dai.NNData, dai.ImgDetections, dai.SpatialImgDetections]):
         self.nn_data = nn_data
+
+
+@dataclass
+class ExtendedImgDetection(dai.ImgDetection):
+    angle: int
 
 
 # First we have Object detection results, which are already standarized with dai.ImgDetections
@@ -27,26 +54,12 @@ class Detections(GenericNNOutput):
     """
     Detection results containing bounding boxes, labels and confidences. Optionally can contain rotation angles.
     """
-
-    def __init__(self, nn_data: NNData, is_rotated: bool = False):
+    def __init__(self,
+                 nn_data: Union[dai.NNData, dai.ImgDetections, dai.SpatialImgDetections],
+                 is_rotated: bool = False):
         GenericNNOutput.__init__(self, nn_data)
-
-        self.detections = []
+        self.detections: List[ExtendedImgDetection] = []
         self.is_rotated = is_rotated
-        if is_rotated:
-            self.angles = []
-
-    def add(self, label: int, confidence: float, bbox: Tuple[float, ...], angle: int = 0) -> None:
-        det = ImgDetection()
-        det.label = label
-        det.confidence = confidence
-        det.xmin = bbox[0]
-        det.ymin = bbox[1]
-        det.xmax = bbox[2]
-        det.ymax = bbox[3]
-        self.detections.append(det)
-        if self.is_rotated:
-            self.angles.append(angle)
 
 
 @dataclass
@@ -58,7 +71,7 @@ class SemanticSegmentation(GenericNNOutput):  # In core, extend from NNData
     """
     mask: List[np.ndarray]  # 2D np.array for each class
 
-    def __init__(self, nn_data: NNData, mask: List[np.ndarray]):
+    def __init__(self, nn_data: dai.NNData, mask: List[np.ndarray]):
         super().__init__(nn_data)
         self.mask = mask
 
@@ -72,7 +85,7 @@ class ImgLandmarks(GenericNNOutput):  # In core, extend from NNData
     """
 
     def __init__(self,
-                 nn_data: NNData,
+                 nn_data: dai.NNData,
                  landmarks: List[List[Any]] = None,
                  landmarks_indices: List[List[int]] = None,
                  pairs: List[Tuple[int, int]] = None,
@@ -93,6 +106,6 @@ class InstanceSegmentation(GenericNNOutput):
     masks: List[np.ndarray]  # 2D np.array for each instance
     labels: List[int]  # Class label for each instance
 
-    def __init__(self, nn_data: NNData, masks: List[np.ndarray], labels: List[int]):
+    def __init__(self, nn_data: dai.NNData, masks: List[np.ndarray], labels: List[int]):
         raise NotImplementedError('Instance segmentation not yet implemented')
         super().__init__(nn_data)

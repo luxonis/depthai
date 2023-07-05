@@ -1,14 +1,11 @@
 import os
 from abc import abstractmethod
-from pathlib import Path
 from typing import Optional, Callable, List, Union, Dict
+from queue import Queue
 
-import depthai as dai
-from depthai_sdk.classes.packets import BasePacket, DetectionPacket, TrackerPacket
+from depthai_sdk.classes.packets import BasePacket, FramePacket
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync, TimestampSync
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
-from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
-from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.components.component import Component
 from depthai_sdk.record import Record
 from depthai_sdk.recorders.video_recorder import VideoRecorder
@@ -17,9 +14,8 @@ from depthai_sdk.trigger_action.actions.record_action import RecordAction
 from depthai_sdk.trigger_action.trigger_action import TriggerAction
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
-from queue import Queue
 from depthai_sdk.oak_outputs.fps import FPS
-import numpy as np
+import depthai as dai
 
 class BasePacketHandler:
     def __init__(self, main_thread=False):
@@ -103,7 +99,6 @@ class BasePacketHandler:
             if xstream.name not in xout_streams:
                 xout_streams[xstream.name] = []
                 if not isinstance(xstream, ReplayStream):
-                    print(f'Creating XLinkOut for {xout}, stream {xstream.name}')
                     xlink = pipeline.createXLinkOut()
                     xlink.setStreamName(xstream.name)
                     xstream.stream.link(xlink.input)
@@ -130,11 +125,20 @@ class VisualizePacketHandler(BasePacketHandler):
         # Main thread: if opencv visualizer, then we need to poll it
         super().__init__(main_thread)
 
-    def new_packet(self, packet):
-        self.visualizer.visualize(packet)
+    def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
+        for output in self.outputs:
+            xout = output(pipeline, device)
+            self._create_xout(pipeline, xout, xout_streams)
+
+    def new_packet(self, packet: BasePacket):
+        # Create visualizer objects for the visualizer. These objects will then be visualized
+        # by the selected visualizer
+        packet.prepare_visualizer_objects(self.visualizer)
 
         if self.callback:
             self.callback(packet)
+        else:
+            self.visualizer.show(packet)
 
         if self.recorder:
             self.recorder.write(packet)

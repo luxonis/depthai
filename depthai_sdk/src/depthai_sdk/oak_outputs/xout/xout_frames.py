@@ -1,14 +1,7 @@
-from typing import Tuple, List
-
-import numpy as np
-
+from typing import List
 from depthai_sdk.classes.packets import FramePacket
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
-from depthai_sdk.recorders.video_recorder import VideoRecorder
-from depthai_sdk.recorders.video_writers import AvWriter
-from depthai_sdk.visualize.configs import TextPosition
-from depthai_sdk.visualize.visualizer import Visualizer
-import depthai as dai
+
 try:
     import cv2
 except ImportError:
@@ -38,7 +31,4 @@ class XoutFrames(XoutBase):
     def new_msg(self, name: str, msg):
         if name not in self._streams:
             return
-        return FramePacket(self.get_packet_name(),
-                             msg,
-                             msg.getCvFrame() if cv2 else None)
-
+        return FramePacket(self.get_packet_name(), msg)

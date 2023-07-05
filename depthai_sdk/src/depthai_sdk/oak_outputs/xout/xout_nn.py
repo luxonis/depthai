@@ -7,36 +7,35 @@ import numpy as np
 from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.classes.packets import (
-    _Detection, DetectionPacket, TrackerPacket, SpatialBbMappingPacket, TwoStagePacket, NNDataPacket
+    Detection,
+    DetectionPacket,
+    ImgLandmarksPacket,
+    NnOutputPacket,
+    SemanticSegmentationPacket,
+    TrackerPacket,
+    SpatialBbMappingPacket,
+    TwoStagePacket,
+    NNDataPacket
 )
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
-from depthai_sdk.visualize.visualizer import Visualizer
 from depthai_sdk.visualize.visualizer_helper import colorize_disparity, draw_mappings, depth_to_disp_factor
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.colors import generate_colors, hex_to_bgr
-try:
-    import cv2
-except ImportError:
-    cv2 = None
 
 class XoutNnData(XoutBase):
     def __init__(self, xout: StreamXout):
         self.nndata_out = xout
         super().__init__()
 
-    def visualize(self, packet: NNDataPacket):
-        print('Visualization of NNData is not supported')
-
     def xstreams(self) -> List[StreamXout]:
         return [self.nndata_out]
 
-    def new_msg(self, name: str, msg: dai.NNData) -> None:
+    def new_msg(self, name: str, msg: dai.NNData) -> NNDataPacket:
         if name not in self._streams:
             return
-
         return NNDataPacket(name=self.get_packet_name(), nn_data=msg)
 
 
@@ -47,7 +46,8 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
     def __init__(self,
                  det_nn: 'NNComponent',
                  frames: StreamXout,
-                 nn_results: StreamXout):
+                 nn_results: StreamXout,
+                 bbox: BoundingBox):
         self.det_nn = det_nn
         self.nn_results = nn_results
 
@@ -56,6 +56,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
         self.name = 'NN results'
         self.labels = None
+        self.bbox = bbox
 
         # TODO: add support for colors, generate new colors for each label that doesn't have colors
         if det_nn._labels:
@@ -79,25 +80,59 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         self._resize_mode: ResizeMode = det_nn._ar_resize_mode
         self._nn_size: Tuple[int, int] = det_nn._size
 
-        self.segmentation_colormap = None
-
     def package(self, msgs: Dict) -> DetectionPacket:
-        decode_fn = self.det_nn._decode_fn
-        return DetectionPacket(
-            self.get_packet_name(),
-            msgs[self.frames.name],
-            msgs[self.nn_results.name] if decode_fn is None else decode_fn(msgs[self.nn_results.name]),
-        )
+        nn_result = msgs[self.nn_results.name]
+        img = msgs[self.frames.name]
+        if type(nn_result) == dai.NNData:
+            decode_fn = self.det_nn._decode_fn
+
+            if decode_fn is None:
+                return NnOutputPacket(self.get_packet_name(), img, nn_result, self.bbox)
+
+            decoded_nn_result = decode_fn(nn_result)
+            if type(decoded_nn_result) == Detections:
+                packet = DetectionPacket(self.get_packet_name(), img, nn_result, decoded_nn_result, self.bbox)
+                return self._add_detections_to_packet(packet, decoded_nn_result)
+                # packet.detections = 
+                # return packet
+            elif type(decoded_nn_result) == ImgLandmarks:
+                return ImgLandmarksPacket(self.get_packet_name(), img, nn_result, decoded_nn_result, self.bbox)
+            elif type(decoded_nn_result) == SemanticSegmentation:
+                return SemanticSegmentationPacket(self.get_packet_name(), img, nn_result, decoded_nn_result, self.bbox)
+            raise ValueError(f'NN result decoding failed! decode() returned type {type(nn_result)}')
+
+        elif type(nn_result) in [dai.ImgDetections, dai.SpatialImgDetections]:
+            packet = DetectionPacket(self.get_packet_name(), img, nn_result, self.bbox)
+            return self._add_detections_to_packet(packet, nn_result)
+        else:
+            raise ValueError(f'Unknown NN result type: {type(nn_result)}')
+
+    def _add_detections_to_packet(self,
+                                  packet: DetectionPacket,
+                                  dets: Union[dai.ImgDetections, dai.SpatialImgDetections, Detections]
+                                  )-> DetectionPacket:
+        for detection in dets.detections:
+            packet.detections.append(Detection(
+                detection if isinstance(detection, dai.ImgDetection)  else None,
+                self.labels[detection.label][0] if self.labels else str(detection.label),
+                detection.confidence,
+                self.labels[detection.label][1] if self.labels else (255, 255, 255),
+                BoundingBox(detection),
+                detection.angle if hasattr(detection, 'angle') else None
+            ))
+        return packet
 
 class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
     def __init__(self,
                  device: dai.Device,
                  stereo: dai.node.StereoDepth,
                  frames: StreamXout,
-                 configs: StreamXout):
+                 configs: StreamXout,
+                 bbox: BoundingBox):
         self._stereo = stereo
         self.frames = frames
         self.configs = configs
+        self.bbox = bbox
 
         XoutFrames.__init__(self, frames)
         XoutSeqSync.__init__(self, [frames, configs])
@@ -137,11 +172,10 @@ class XoutTwoStage(XoutNnResults):
     Two stage syncing based on sequence number. Each frame produces ImgDetections msg that contains X detections.
     Each detection (if not on blacklist) will crop the original frame and forward it to the second (stage) NN for
     inferencing.
-    """
-    """
+
     msgs = {
         '1': TwoStageSyncPacket(),
-        '2': TwoStageSyncPacket(), 
+        '2': TwoStageSyncPacket(),
     }
     """
 
@@ -152,10 +186,11 @@ class XoutTwoStage(XoutNnResults):
                  det_out: StreamXout,
                  second_nn_out: StreamXout,
                  device: dai.Device,
-                 input_queue_name: str):
+                 input_queue_name: str,
+                 bbox: BoundingBox):
         self.second_nn_out = second_nn_out
         # Save StreamXout before initializing super()!
-        super().__init__(det_nn, frames, det_out)
+        super().__init__(det_nn, frames, det_out, bbox)
 
         self.msgs: Dict[str, Dict[str, Any]] = dict()
         self.det_nn = det_nn

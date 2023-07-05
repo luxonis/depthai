@@ -4,6 +4,7 @@ from enum import IntEnum
 from typing import Tuple, Union, List, Any, Dict
 from depthai_sdk.visualize.objects import VisBoundingBox
 from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
+from depthai_sdk.classes.nn_results import Detection, TrackingDetection, TwoStageDetection
 try:
     import cv2
 except ImportError:
@@ -14,10 +15,8 @@ import numpy as np
 
 from depthai_sdk.classes.packets import (
     DetectionPacket,
-    _TwoStageDetection,
     SpatialBbMappingPacket,
     TrackerPacket,
-    _TrackingDetection
 )
 from depthai_sdk.visualize.bbox import BoundingBox
 
@@ -255,7 +254,7 @@ def draw_mappings(packet: SpatialBbMappingPacket):
         cv2.rectangle(packet.frame, (x_min, y_min), (x_max, y_max), VisualizerHelper.front_color, 1)
 
 
-def draw_detections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPacket],
+def draw_detections(packet: Union[DetectionPacket, TwoStageDetection, TrackerPacket],
                     norm: BoundingBox,
                     label_map: List[Tuple[str, Tuple]] = None):
     """
@@ -305,7 +304,7 @@ def draw_tracklet_id(packet: TrackerPacket):
 def draw_breadcrumb_trail(packets: List[TrackerPacket]):
     packet = packets[-1]  # Current packet
 
-    dict_: Dict[str, List[_TrackingDetection]] = {}
+    dict_: Dict[str, List[TrackingDetection]] = {}
     valid_ids = [t.id for t in packet.daiTracklets.tracklets]
     for idx in valid_ids:
         dict_[str(idx)] = []
@@ -482,11 +481,11 @@ def draw_stylized_bbox(img: np.ndarray, obj: VisBoundingBox) -> None:
         thickness: Border thickness.
         bbox_style: Bounding box style.
     """
-    pt1 = obj.bbox[0:2]
-    pt2 = obj.bbox[2:4]
+    pt1, pt2 = obj.bbox.denormalize(img.shape)
 
     box_w = pt2[0] - pt1[0]
     box_h = pt2[1] - pt1[1]
+
     line_width = int(box_w * obj.config.detection.line_width) // 2
     line_height = int(box_h * obj.config.detection.line_height) // 2
     roundness = int(obj.config.detection.box_roundness)

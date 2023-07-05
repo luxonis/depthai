@@ -605,6 +605,8 @@ class OakCamera:
             vis = OpenCvVisualizer(scale, fps)
             main_thread=True # OpenCV's imshow() requires to be called from the main thread
         elif visualizer in ['depthai-viewer', 'viewer']:
+            from depthai_sdk.visualize.visualizers.depthai_viewer_visualizer import DepthaiViewerVisualizer
+            vis = DepthaiViewerVisualizer(scale, fps)
             raise NotImplementedError('Depthai Viewer visualizer is not implemented yet')
         elif visualizer in ['robothub', 'rh']:
             raise NotImplementedError('Robothub visualizer is not implemented yet')
@@ -615,7 +617,7 @@ class OakCamera:
         self._packet_handlers.append(handler)
 
         if main_thread:
-            self.poll.append(handler._poll)
+            self._polling.append(handler._poll)
 
         return visualizer
 

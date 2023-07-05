@@ -1,45 +1,18 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from typing import Tuple, List, Union, Optional
-
+from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
 import depthai as dai
 import numpy as np
 from depthai_sdk.visualize.bbox import BoundingBox
+from depthai_sdk.visualize.configs import TextPosition
+from depthai_sdk.visualize.visualizer import Visualizer
+from depthai_sdk.classes.nn_results import Detection, TrackingDetection, TwoStageDetection
+
 try:
     import cv2
 except ImportError:
     cv2 = None
-
-
-class _Detection:
-    # Original ImgDetection
-    img_detection: dai.ImgDetection
-    label_str: str
-    color: Tuple[int, int, int]
-
-    # Normalized bounding box
-    top_left: Tuple[int, int]
-    bottom_right: Tuple[int, int]
-
-    def centroid(self) -> Tuple[int, int]:
-        return (
-            int((self.bottom_right[0] + self.top_left[0]) / 2),
-            int((self.bottom_right[1] + self.top_left[1]) / 2),
-        )
-
-    def get_bbox(self) -> Tuple[float, float, float, float]:
-        return self.img_detection.xmin, self.img_detection.ymin, self.img_detection.xmax, self.img_detection.ymax
-
-
-class _TrackingDetection(_Detection):
-    tracklet: dai.Tracklet
-    speed: float = 0.0  # m/s
-    speed_kmph: float = 0.0  # km/h
-    speed_mph: float = 0.0  # mph
-
-
-class _TwoStageDetection(_Detection):
-    nn_data: dai.NNData
 
 
 class BasePacket(ABC):
@@ -74,6 +47,10 @@ class NNDataPacket(BasePacket):
     def __init__(self, name: str, nn_data: dai.NNData):
         self.msg = nn_data
         super().__init__(name)
+    def get_timestamp(self) -> timedelta:
+        return self.msg.getTimestamp()
+    def get_sequence_num(self) -> int:
+        return self.msg.getTimestampDevice()
 
 class FramePacket(BasePacket):
     """
@@ -82,10 +59,8 @@ class FramePacket(BasePacket):
 
     def __init__(self,
                  name: str,
-                 msg: dai.ImgFrame,
-                 frame: Optional[np.ndarray]):
+                 msg: dai.ImgFrame):
         self.msg = msg
-        self.frame = frame
         super().__init__(name)
 
     def get_timestamp(self) -> timedelta:
@@ -94,6 +69,61 @@ class FramePacket(BasePacket):
     def get_sequence_num(self) -> int:
         return self.msg.getSequenceNum()
 
+    def decode(self) -> Optional[np.ndarray]:
+        return self.msg.getCvFrame() if cv2 else None
+
+    def get_size(self) -> Tuple[int, int]:
+        return self.msg.getWidth(), self.msg.getHeight()
+
+class H26xPacket(FramePacket):
+    def __init__(self,
+                name: str,
+                msg: dai.ImgFrame,
+                codec,
+                is_color: bool
+                ):
+        super().__init__(name=name, msg=msg)
+        self.codec = codec
+        self.is_color = is_color
+
+    def decode(self) -> Optional[np.ndarray]:
+        if self.codec is None:
+            raise ImportError('av is not installed. Please install it with `pip install av`')
+
+        enc_packets = self.codec.parse(self.msg.getData())
+        if len(enc_packets) == 0:
+            return None
+
+        frames = self.codec.decode(enc_packets[-1])
+        if not frames:
+            return None
+
+        frame = frames[0].to_ndarray(format='bgr24')
+
+        if not self.is_color:
+            # Convert to grayscale
+            frame = frame[:, :, 0]
+        return frame
+
+class MjpegPacket(FramePacket):
+    def __init__(self,
+                name: str,
+                msg: dai.ImgFrame,
+                is_color: bool,
+                is_lossless: bool,
+                ):
+        self.is_lossless = is_lossless
+        self.is_color = is_color
+        super().__init__(name=name, msg=msg)
+
+    def decode(self) -> np.ndarray:
+        if self.is_lossless:
+            raise NotImplementedError('Lossless MJPEG decoding is not supported!')
+        if cv2 is None:
+            raise ImportError('cv2 is not installed. Please install it with `pip install opencv-python`')
+        flag = cv2.IMREAD_COLOR if self.is_color else cv2.IMREAD_GRAYSCALE
+        return cv2.imdecode(self.msg.getData(), flag)
+
 
 class DepthPacket(FramePacket):
     def __init__(self,
@@ -101,9 +131,7 @@ class DepthPacket(FramePacket):
                  img_frame: dai.ImgFrame,
                  mono_frame: Optional[dai.ImgFrame],
                  depth_map: Optional[np.ndarray] = None):
-        super().__init__(name=name,
-                         msg=img_frame,
-                         frame=img_frame.getCvFrame() if cv2 else None)
+        super().__init__(name=name, msg=img_frame)
         self.mono_frame = mono_frame
         self.depth_map = depth_map
 
@@ -124,17 +152,98 @@ class SpatialBbMappingPacket(FramePacket):
     """
     Output from Spatial Detection nodes - depth frame + bounding box mappings. Inherits FramePacket.
     """
-    spatials: dai.SpatialImgDetections
-
     def __init__(self,
                  name: str,
                  msg: dai.ImgFrame,
                  spatials: dai.SpatialImgDetections):
         super().__init__(name=name,
-                         msg=msg,
-                         frame=msg.getFrame() if cv2 else None)
+                         msg=msg)
         self.spatials = spatials
 
+
+class NnOutputPacket(FramePacket):
+    """
+    NN result + image frame. Inherits FramePacket.
+    """
+    def __init__(self,
+                 name: str,
+                 msg: dai.ImgFrame,
+                 nn_data: dai.NNData,
+                 bbox: BoundingBox
+                 ):
+        super().__init__(name=name,
+                         msg=msg)
+        self.nn_data = nn_data
+        self.bbox = bbox
+
+class ImgLandmarksPacket(NnOutputPacket):
+    """
+    Output from Landmarks Estimation nodes - image frame + landmarks. Inherits NnOutputPacket.
+    """
+    def __init__(self,
+                 name: str,
+                 msg: dai.ImgFrame,
+                 nn_data: dai.NNData,
+                 landmarks: ImgLandmarks,
+                 bbox: BoundingBox):
+        super().__init__(name=name,
+                         msg=msg,
+                         nn_data=nn_data,
+                         bbox=bbox)
+        self.landmarks = landmarks
+
+    def prepare_visualizer_objects(self, vis: Visualizer) -> None:
+        all_landmarks = self.landmarks.landmarks
+        all_landmarks_indices = self.landmarks.landmarks_indices
+        colors = self.landmarks.colors
+        w, h = self.get_size()
+        for landmarks, indices in zip(all_landmarks, all_landmarks_indices):
+            for i, landmark in enumerate(landmarks):
+                # Map normalized coordinates to frame coordinates
+                l = [(int(point[0] * w), int(point[1] * h)) for point in landmark]
+                idx = indices[i]
+
+                vis.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[idx], thickness=4)
+                vis.add_circle(coords=tuple(l[0]), radius=8, color=colors[idx], thickness=-1)
+                vis.add_circle(coords=tuple(l[1]), radius=8, color=colors[idx], thickness=-1)
+
+class SemanticSegmentationPacket(NnOutputPacket):
+    """
+    Output from Semantic Segmentation nodes - image frame + segmentation mask. Inherits NnOutputPacket.
+    """
+    def __init__(self,
+                 name: str,
+                 msg: dai.ImgFrame,
+                 nn_data: dai.NNData,
+                 segmentation: SemanticSegmentation,
+                 bbox: BoundingBox):
+        super().__init__(name=name,
+                         msg=msg,
+                         nn_data=nn_data,
+                         bbox=bbox)
+        self.segmentation = segmentation
+
+    def prepare_visualizer_objects(self, vis: Visualizer) -> None:
+        raise NotImplementedError('Semantic segmentation visualization is not implemented yet!')
+
+        # Generate colormap if not already generated
+        if self.segmentation_colormap is None:
+            n_classes = len(self.labels) if self.labels else 8
+            self.segmentation_colormap = generate_colors(n_classes)
+
+        mask = np.array(packet.img_detections.mask).astype(np.uint8)
+
+        if mask.ndim == 3:
+            mask = np.argmax(mask, axis=0)
+
+        try:
+            colorized_mask = np.array(self.segmentation_colormap)[mask]
+        except IndexError:
+            unique_classes = np.unique(mask)
+            max_class = np.max(unique_classes)
+            new_colors = generate_colors(max_class - len(self.segmentation_colormap) + 1)
+            self.segmentation_colormap.extend(new_colors)
+            colorized_mask = np.array(self.segmentation_colormap)[mask]
 
 class DetectionPacket(FramePacket):
     """
@@ -144,101 +253,34 @@ class DetectionPacket(FramePacket):
     def __init__(self,
                  name: str,
                  msg: dai.ImgFrame,
-                 img_detections: Union[dai.ImgDetections, dai.SpatialImgDetections]):
+                 dai_msg: Union[dai.ImgDetections, dai.SpatialImgDetections, dai.NNData],
+                 bbox: BoundingBox,
+                ):
+
         super().__init__(name=name,
-                         msg=msg,
-                         frame=msg.getCvFrame() if cv2 else None)
-        self.img_detections = img_detections
-        self.detections: List[_Detection] = []
+                         msg=msg)
+
+        self.img_detections = dai_msg
+        self.bbox = bbox
+        self.detections: List[Detection] = []
 
     def _is_spatial_detection(self) -> bool:
         return isinstance(self.img_detections, dai.SpatialImgDetections)
 
-    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color) -> None:
-        det = _Detection()
-        det.img_detection = img_det
-        det.label_str = txt
-        det.color = color
-        det.top_left = (bbox[0], bbox[1])
-        det.bottom_right = (bbox[2], bbox[3])
-        self.detections.append(det)
-
-    def prepare_visualizer_objects(self, visualizer: 'Visualizer') -> None:
-        # Convert Grayscale to BGR
-        if len(self.frame.shape) == 2:
-            self.frame = np.dstack((self.frame, self.frame, self.frame))
-
-        frame_shape = self.det_nn._input.stream_size[::-1]
-
-        if self._frame_shape is None:
-            # Lazy-load the frame shape
-            self._frame_shape = np.array([*frame_shape])
-            if self._visualizer:
-                self._visualizer.frame_shape = self._frame_shape
-
-        bbox = BoundingBox().resize_to_aspect_ratio(self._frame_shape, self._nn_size, self._resize_mode)
-
+    def prepare_visualizer_objects(self, vis: Visualizer) -> None:
         # Add detections to packet
-        if isinstance(packet.img_detections, dai.ImgDetections) \
-                or isinstance(packet.img_detections, dai.SpatialImgDetections) \
-                or isinstance(packet.img_detections, Detections):
+        if isinstance(self.img_detections, dai.ImgDetections) \
+                or isinstance(self.img_detections, dai.SpatialImgDetections) \
+                or isinstance(self.img_detections, Detections):
 
-            for detection in packet.img_detections.detections:
-                d = _Detection()
-                d.img_detection = detection
-                d.label = self.labels[detection.label][0] if self.labels else str(detection.label)
-                d.color = self.labels[detection.label][1] if self.labels else (255, 255, 255)
-
-                d.top_left, d.bottom_right = bbox.get_relative_bbox(BoundingBox(detection)).denormalize(self._frame_shape)
-                packet.detections.append(d)
-
-            if self._visualizer:
+            for detection in self.detections:
                 # Add detections to visualizer
-                self._visualizer.add_detections(
-                    packet.img_detections.detections,
-                    bbox,
-                    self.labels,
-                    is_spatial=packet._is_spatial_detection()
+                vis.add_bbox(
+                    bbox=self.bbox.get_relative_bbox(detection.bbox),
+                    label=detection.label_str,
+                    color=detection.color,
                 )
-        elif isinstance(packet.img_detections, ImgLandmarks):
-            if not self._visualizer:
-                return
 
-            all_landmarks = packet.img_detections.landmarks
-            all_landmarks_indices = packet.img_detections.landmarks_indices
-            colors = packet.img_detections.colors
-            for landmarks, indices in zip(all_landmarks, all_landmarks_indices):
-                for i, landmark in enumerate(landmarks):
-                    # Map normalized coordinates to frame coordinates
-                    l = [(int(point[0] * self._frame_shape[1]), int(point[1] * self._frame_shape[0])) for point in landmark]
-                    idx = indices[i]
-
-                    self._visualizer.add_line(pt1=tuple(l[0]), pt2=tuple(l[1]), color=colors[idx], thickness=4)
-                    self._visualizer.add_circle(coords=tuple(l[0]), radius=8, color=colors[idx], thickness=-1)
-                    self._visualizer.add_circle(coords=tuple(l[1]), radius=8, color=colors[idx], thickness=-1)
-        elif isinstance(packet.img_detections, SemanticSegmentation):
-            raise NotImplementedError('Semantic segmentation visualization is not implemented yet!')
-            if not self._visualizer:
-                return
-
-            # Generate colormap if not already generated
-            if self.segmentation_colormap is None:
-                n_classes = len(self.labels) if self.labels else 8
-                self.segmentation_colormap = generate_colors(n_classes)
-
-            mask = np.array(packet.img_detections.mask).astype(np.uint8)
-
-            if mask.ndim == 3:
-                mask = np.argmax(mask, axis=0)
-
-            try:
-                colorized_mask = np.array(self.segmentation_colormap)[mask]
-            except IndexError:
-                unique_classes = np.unique(mask)
-                max_class = np.max(unique_classes)
-                new_colors = generate_colors(max_class - len(self.segmentation_colormap) + 1)
-                self.segmentation_colormap.extend(new_colors)
-                colorized_mask = np.array(self.segmentation_colormap)[mask]
 
             # bbox = None
             # if self.normalizer.resize_mode == ResizeMode.LETTERBOX:
@@ -263,7 +305,7 @@ class DetectionPacket(FramePacket):
             #     padded_mask[y1:y2, x1:x2] = resized_mask
             #     colorized_mask = padded_mask
 
-            # self._visualizer.add_mask(colorized_mask, alpha=0.5)
+            # vis.add_mask(colorized_mask, alpha=0.5)
 
 
 class TrackerPacket(FramePacket):
@@ -276,13 +318,12 @@ class TrackerPacket(FramePacket):
                  msg: dai.ImgFrame,
                  tracklets: dai.Tracklets):
         super().__init__(name=name,
-                         msg=msg,
-                         frame=msg.getCvFrame() if cv2 else None)
-        self.detections: List[_TrackingDetection] = []
+                         msg=msg)
+        self.detections: List[TrackingDetection] = []
         self.daiTracklets = tracklets
 
     def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
-        det = _TrackingDetection()
+        det = TrackingDetection()
         det.img_detection = img_det
         det.label_str = txt
         det.color = color
@@ -299,6 +340,53 @@ class TrackerPacket(FramePacket):
         for t in self.daiTracklets.tracklets:
             if t.srcImgDetection == det:
                 return t.spatialCoordinates
+
+    def prepare_visualizer_objects(self, visualizer: Visualizer) -> None:
+        # self._add_tracklet_visualization()
+
+    # def _add_tracklet_visualization(self, packet, spatial_points, tracklet2speed):
+        h, w = self.msg.getHeight(), self.msg.getWidth()
+        filtered_tracklets = [tracklet for tracklet in self.daiTracklets.tracklets if
+                              tracklet.id not in self.blacklist]
+        self.frame
+
+        norm_bbox = BoundingBox().resize_to_aspect_ratio(self.frame.shape, self._nn_size, self._resize_mode)
+
+        visualizer.add_detections(detections=filtered_tracklets,
+                                    normalizer=norm_bbox,
+                                    label_map=self.labels,
+                                    spatial_points=spatial_points)
+
+        # Add tracking ids
+        for tracklet in filtered_tracklets:
+            det = tracklet.srcImgDetection
+            bbox = (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)
+            bbox = tuple(map(int, bbox))
+            visualizer.add_text(
+                f'ID: {tracklet.id}',
+                bbox=bbox,
+                position=TextPosition.MID
+            )
+
+            if visualizer.config.tracking.show_speed and tracklet.id in tracklet2speed:
+                speed = tracklet2speed[tracklet.id]
+                speed = f'{speed:.1f} m/s\n{speed * 3.6:.1f} km/h'
+                bbox = tracklet.srcImgDetection
+                bbox = (int(w * bbox.xmin), int(h * bbox.ymin), int(w * bbox.xmax), int(h * bbox.ymax))
+
+                visualizer.add_text(
+                    speed,
+                    bbox=bbox,
+                    position=TextPosition.TOP_RIGHT,
+                    outline=True
+                )
+
+        # Add tracking lines
+        visualizer.add_trail(
+            tracklets=[t for p in self.buffer for t in p.daiTracklets.tracklets if t.id not in self.blacklist],
+            label_map=self.labels,
+            bbox=norm_bbox,
+        )
 
 
 class TwoStagePacket(DetectionPacket):
@@ -320,7 +408,7 @@ class TwoStagePacket(DetectionPacket):
         self._cntr = 0
 
     def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
-        det = _TwoStageDetection()
+        det = TwoStageDetection()
         det.img_detection = img_det
         det.color = color
         det.top_left = (bbox[0], bbox[1])

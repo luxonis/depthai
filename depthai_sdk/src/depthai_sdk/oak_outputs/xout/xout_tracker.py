@@ -1,18 +1,16 @@
 import logging
 import math
 from collections import defaultdict
-from typing import Union, Dict, Optional
+from typing import Dict, Optional
 
 import depthai as dai
 import numpy as np
 from depthai_sdk.classes import DetectionPacket, TrackerPacket
-from depthai_sdk.classes.packets import _TrackingDetection
+from depthai_sdk.classes.packets import TrackingDetection
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_nn import XoutNnResults
 from depthai_sdk.tracking import KalmanFilter
 from depthai_sdk.visualize.bbox import BoundingBox
-from depthai_sdk.visualize.configs import TextPosition
-from depthai_sdk.visualize.visualizer import Visualizer
 
 
 class XoutTracker(XoutNnResults):
@@ -23,14 +21,15 @@ class XoutTracker(XoutNnResults):
                  frames: StreamXout,
                  device: dai.Device,
                  tracklets: StreamXout,
+                 bbox: BoundingBox,
                  apply_kalman: bool = False,
                  forget_after_n_frames: Optional[int] = None,
-                 calculate_speed: bool = False):
-        super().__init__(det_nn, frames, tracklets)
-        self.name = 'Object Tracker'
-        self.device = device
+                 calculate_speed: bool = False,
+                 ):
 
-        self.__read_device_calibration()
+        super().__init__(det_nn, frames, tracklets, bbox)
+        self.name = 'Object Tracker'
+        self.__read_device_calibration(device)
 
         self.buffer = []
         self.spatial_buffer = []
@@ -43,10 +42,16 @@ class XoutTracker(XoutNnResults):
         self.kalman_filters: Dict[int, Dict[str, KalmanFilter]] = {}
         self.calculate_speed = calculate_speed
 
-    def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
-        spatial_points = self._get_spatial_points(packet)
-        threshold = self.forget_after_n_frames
+    def package(self, msgs: Dict) -> TrackerPacket:
+        packet = TrackerPacket(
+            self.get_packet_name(),
+            msgs[self.frames.name],
+            msgs[self.nn_results.name]
+        )
 
+        spatial_points = self._get_spatial_points(packet)
+
+        threshold = self.forget_after_n_frames
         if threshold:
             self._update_lost_counter(packet, threshold)
 
@@ -58,63 +63,11 @@ class XoutTracker(XoutNnResults):
 
         # Estimate speed
         tracklet2speed = self._calculate_speed(spatial_points)
-
-        if self._visualizer:
-            self._add_tracklet_visualization(packet, spatial_points, tracklet2speed)
-
         self._add_detections(packet, tracklet2speed)
 
-    def package(self, msgs: Dict) -> TrackerPacket:
-        return TrackerPacket(
-            self.get_packet_name(),
-            msgs[self.frames.name],
-            msgs[self.nn_results.name]
-        )
+        return packet
 
-    def _add_tracklet_visualization(self, packet, spatial_points, tracklet2speed):
-        h, w = self._frame_shape[:2]
-        filtered_tracklets = [tracklet for tracklet in packet.daiTracklets.tracklets if
-                              tracklet.id not in self.blacklist]
-
-        norm_bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
-
-        self._visualizer.add_detections(detections=filtered_tracklets,
-                                        normalizer=norm_bbox,
-                                        label_map=self.labels,
-                                        spatial_points=spatial_points)
-
-        # Add tracking ids
-        for tracklet in filtered_tracklets:
-            det = tracklet.srcImgDetection
-            bbox = (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)
-            bbox = tuple(map(int, bbox))
-            self._visualizer.add_text(
-                f'ID: {tracklet.id}',
-                bbox=bbox,
-                position=TextPosition.MID
-            )
-
-            if self._visualizer.config.tracking.show_speed and tracklet.id in tracklet2speed:
-                speed = tracklet2speed[tracklet.id]
-                speed = f'{speed:.1f} m/s\n{speed * 3.6:.1f} km/h'
-                bbox = tracklet.srcImgDetection
-                bbox = (int(w * bbox.xmin), int(h * bbox.ymin), int(w * bbox.xmax), int(h * bbox.ymax))
-
-                self._visualizer.add_text(
-                    speed,
-                    bbox=bbox,
-                    position=TextPosition.TOP_RIGHT,
-                    outline=True
-                )
-
-        # Add tracking lines
-        self._visualizer.add_trail(
-            tracklets=[t for p in self.buffer for t in p.daiTracklets.tracklets if t.id not in self.blacklist],
-            label_map=self.labels,
-            bbox=norm_bbox,
-        )
-
-    def _update_lost_counter(self, packet, lost_threshold: int):
+    def _update_lost_counter(self, packet: TrackerPacket, lost_threshold: int):
         for i, tracklet in enumerate(packet.daiTracklets.tracklets):
             if tracklet.status == dai.Tracklet.TrackingStatus.NEW:
                 self.__remove_from_blacklist(tracklet)
@@ -129,7 +82,7 @@ class XoutTracker(XoutNnResults):
                 self.__add_to_blacklist(tracklet)
                 self.lost_counter.pop(tracklet.id)
 
-    def _update_buffers(self, packet, spatial_points=None):
+    def _update_buffers(self, packet: TrackerPacket, spatial_points=None):
         # Update buffer
         self.buffer.append(packet)
         if self.buffer_size < len(self.buffer):
@@ -141,7 +94,7 @@ class XoutTracker(XoutNnResults):
             if self.buffer_size < 5:
                 self.spatial_buffer.pop(0)
 
-    def _kalman_filter(self, packet, spatial_points=None):
+    def _kalman_filter(self, packet: TrackerPacket, spatial_points=None):
         current_time = packet.daiTracklets.getTimestamp()
         is_3d = spatial_points is not None
 
@@ -208,17 +161,17 @@ class XoutTracker(XoutNnResults):
             if tracklets:
                 packet.daiTracklets.tracklets = tracklets
 
-    def _add_detections(self, packet, tracklet2speed):
+    def _add_detections(self, packet: TrackerPacket, tracklet2speed):
         for tracklet in packet.daiTracklets.tracklets:
             if tracklet.id in self.blacklist:  # Skip blacklisted tracklets
                 continue
 
-            d = _TrackingDetection()
+            d = TrackingDetection()
             img_d = tracklet.srcImgDetection
             d.tracklet = tracklet
             d.label = self.labels[img_d.label][0] if self.labels else str(img_d.label)
             d.color = self.labels[img_d.label][1] if self.labels else (255, 255, 255)
-            roi = tracklet.roi.denormalize(self._frame_shape[1], self._frame_shape[0])
+            roi = tracklet.roi.denormalize(*packet.get_size())
             d.top_left = (int(roi.x), int(roi.y))
             d.bottom_right = (int(roi.x + roi.width), int(roi.y + roi.height))
 
@@ -273,7 +226,7 @@ class XoutTracker(XoutNnResults):
         return tracklet2speed
 
     @staticmethod
-    def _get_spatial_points(packet) -> list:
+    def _get_spatial_points(packet: TrackerPacket) -> list:
         try:
             if packet._is_spatial_detection():
                 spatial_points = [packet._get_spatials(det.srcImgDetection)
@@ -314,8 +267,8 @@ class XoutTracker(XoutNnResults):
         tracklet_obj.srcImgDetection = img_d
         return tracklet_obj
 
-    def __read_device_calibration(self):
-        calib = self.device.readCalibration()
+    def __read_device_calibration(self, device: dai.Device):
+        calib = device.readCalibration()
         eeprom = calib.getEepromData()
         left_cam = calib.getStereoLeftCameraId()
         if left_cam != dai.CameraBoardSocket.AUTO and left_cam in eeprom.cameraData.keys():
