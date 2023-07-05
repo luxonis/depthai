@@ -41,6 +41,17 @@ class BoundingBox:
     def __str__(self):
         return f"({self.xmin}, {self.ymin}), ({self.xmax}, {self.ymax})"
 
+    def clip(self, min=0.0, max=1.0) -> 'BoundingBox':
+        """
+        Clips the bounding box to the given range.
+        """
+        return BoundingBox((
+            np.clip(self.xmin, min, max),
+            np.clip(self.ymin, min, max),
+            np.clip(self.xmax, min, max),
+            np.clip(self.ymax, min, max),
+        ))
+
     def to_tuple(self, frame_shape: Union[Sequence, None] = None) -> Tuple:
         """
         Get bounding box coordinates as a tuple (xmin, ymin, xmax, ymax).

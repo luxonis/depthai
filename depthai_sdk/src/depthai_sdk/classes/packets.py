@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from typing import Tuple, List, Union, Optional
+from typing import Sequence, Tuple, List, Union, Optional, Dict
 from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
 import depthai as dai
 import numpy as np
@@ -423,9 +423,31 @@ class TwoStagePacket(DetectionPacket):
 
 
 class IMUPacket(BasePacket):
-    def __init__(self, name, packet: dai.IMUPacket):
+    def __init__(self, name, packet: dai.IMUPacket, rotation = None):
         self.packet = packet
         super().__init__(name)
+
+        self.acceleroMeter = packet.acceleroMeter
+        self.gyroscope = packet.gyroscope
+        self.magneticField = packet.magneticField
+        self.rotationVector = rotation if rotation is not None else packet.rotationVector
+
+        # Check which reports are available
+        self.available_reports: Dict[str, dai.IMUReport] = {}
+        for i, val in enumerate([self.acceleroMeter, self.gyroscope, self.magneticField, self.rotationVector]):
+            if (i==3 and rotation) or val.getTimestampDevice() != timedelta(0):
+                self.available_reports[val.__class__.__name__] = val
+
+    def get_imu_vals(self) -> Tuple[Sequence, Sequence, Sequence, Sequence]:
+        """
+        Returns imu values in a tuple. Returns in format (accelerometer_values, gyroscope_values, quaternion, magnetometer_values)
+        """
+        return (
+            [self.acceleroMeter.x, self.acceleroMeter.y, self.acceleroMeter.z],
+            [self.gyroscope.x, self.gyroscope.y, self.gyroscope.z],
+            [self.rotationVector.i, self.rotationVector.j, self.rotationVector.k, self.rotationVector.real],
+            [self.magneticField.x, self.magneticField.y, self.magneticField.z]
+        )
 
     def __str__(self):
         accelerometer_str = 'Accelerometer [m/s^2]: (x: %.2f, y: %.2f, z: %.2f)' % (
@@ -443,15 +465,11 @@ class IMUPacket(BasePacket):
         return f'IMU Packet: {accelerometer_str} {gyroscope_str}'
 
     def _get_imu_report(self) -> dai.IMUReport:
-        if self.packet.acceleroMeter is not None:
-            return self.packet.acceleroMeter
-        elif self.packet.gyroscope is not None:
-            return self.packet.gyroscope
-        elif self.packet.magneticField is not None:
-            return self.packet.magneticField
-        elif self.packet.rotationVector is not None:
-            return self.packet.rotationVector
-        raise RuntimeError('Unknown IMU packet type')
+        """
+        Get the first available IMU report
+        """
+        for name, val in self.available_reports.items():
+            return val
 
     def get_timestamp(self) -> timedelta:
         return self._get_imu_report().getTimestampDevice()
