@@ -45,10 +45,10 @@ class StereoComponent(Component):
     def __init__(self,
                  device: dai.Device,
                  pipeline: dai.Pipeline,
+                 left: Union[CameraComponent, dai.node.MonoCamera],  # Left stereo camera
+                 right: Union[CameraComponent, dai.node.MonoCamera],  # Right stereo camera
                  resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
                  fps: Optional[float] = None,
-                 left: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Left mono camera
-                 right: Union[None, CameraComponent, dai.node.MonoCamera] = None,  # Right mono camera
                  replay: Optional[Replay] = None,
                  args: Any = None,
                  name: Optional[str] = None,
