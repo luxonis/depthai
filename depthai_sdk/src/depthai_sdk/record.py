@@ -36,10 +36,10 @@ def _run(recorder: Recorder, frame_queue: Queue):
 
 class RecordType(IntEnum):
     VIDEO = 1  # Save to video file
-    ROSBAG = 2  # To ROS .bag
-    MCAP = 3  # To .mcap
-    DB3 = 4 # To .db3 (ros2)
-
+    VIDEO_LOSSLESS = 2  # Save to lossless video file (.avi)
+    ROSBAG = 3  # To ROS .bag
+    MCAP = 4  # To .mcap
+    DB3 = 5 # To .db3 (ros2)
 
 class Record(XoutSeqSync):
     """
@@ -70,6 +70,9 @@ class Record(XoutSeqSync):
         elif self.record_type == RecordType.VIDEO:
             from .recorders.video_recorder import VideoRecorder
             self.recorder = VideoRecorder()
+        elif self.record_type == RecordType.VIDEO_LOSSLESS:
+            from .recorders.video_recorder import VideoRecorder
+            self.recorder = VideoRecorder(lossless=True)
         elif self.record_type == RecordType.ROSBAG:
             from .recorders.rosbag_recorder import Rosbag1Recorder
             self.recorder = Rosbag1Recorder()
@@ -103,7 +106,7 @@ class Record(XoutSeqSync):
         Start recording process. This will create and start the pipeline,
         start recording threads, and initialize all queues.
         """
-        if self.record_type == RecordType.VIDEO:
+        if self.record_type == RecordType.VIDEO or self.record_type == RecordType.VIDEO_LOSSLESS:
             self._streams = [out.frames.name for out in xouts]  # required by XoutSeqSync
             self.stream_num = len(xouts)
             self.name_mapping = dict()

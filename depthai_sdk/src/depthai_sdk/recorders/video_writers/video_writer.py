@@ -21,7 +21,7 @@ class VideoWriter(BaseWriter):
     _fps: float
     _path: str
 
-    def __init__(self, path: Path, name: str, fourcc: str, fps: float):
+    def __init__(self, path: Path, name: str, fourcc: str, fps: float, lossless: bool = False):
         """
         Args:
             path: Path to save the output. Either a folder or a file.
@@ -38,6 +38,7 @@ class VideoWriter(BaseWriter):
 
         self._buffer = None
         self._is_buffer_enabled = False
+        self._lossless = lossless
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
@@ -61,14 +62,20 @@ class VideoWriter(BaseWriter):
         self.create_file(subfolder, frame)
 
     def create_file(self, subfolder: str, frame: Union[dai.ImgFrame, np.ndarray]):
-        path_to_file = create_writer_dir(self.path / subfolder, self.name, 'mp4')
+        if self._lossless:
+            extension = 'avi'
+        else:
+            extension = 'mp4'
 
-        if not path_to_file.endswith('.mp4'):
-            path_to_file = path_to_file[:-4] + '.mp4'
+        path_to_file = create_writer_dir(self.path / subfolder, self.name, extension)
+
+        if not path_to_file.endswith('.' + extension):
+            path_to_file = path_to_file[:-4] + '.' + extension
 
         self._create_file(path_to_file, frame)
 
-    def _create_file(self, path_to_file: str, frame: Union[dai.ImgFrame, np.ndarray]):
+
+    def _create_file(self, path_to_file: str, frame: Union[dai.ImgFrame, np.ndarray], lossless: bool = False):
         if isinstance(frame, np.ndarray):
             self._h, self._w = frame.shape[:2]
         else:
@@ -79,7 +86,23 @@ class VideoWriter(BaseWriter):
 
         c = 1 if frame.ndim == 2 else frame.shape[2]
 
-        self._fourcc = 'mp4v'
+        if self._lossless:
+            if not path_to_file.endswith('.avi'):
+                raise RuntimeError("Lossless video can only be saved to .avi file")
+            if isinstance(frame, np.ndarray):
+                c = 1 if frame.ndim == 2 else frame.shape[2]
+                self._fourcc = "GREY" if c == 1 else "I420"
+            else:
+                if frame.getType() == dai.ImgFrame.Type.RAW16:  # Depth
+                    self._fourcc = "FFV1"
+                elif frame.getType() == dai.ImgFrame.Type.RAW8:  # Mono Cams
+                    self._fourcc = "GREY"
+                else:
+                    self._fourcc = "I420"
+        else:
+            if not path_to_file.endswith('.mp4'):
+                raise RuntimeError("Video file for default video writer must be .mp4")
+            self._fourcc = "mp4v"
         self._file = cv2.VideoWriter(path_to_file,
                                      cv2.VideoWriter_fourcc(*self._fourcc),
                                      self._fps,
