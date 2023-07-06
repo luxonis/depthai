@@ -149,7 +149,7 @@ class CameraComponent(Component):
                 sensor_type = dai.CameraSensorType.COLOR if dai.node.ColorCamera else dai.CameraSensorType.MONO
                 res = getClosesResolution(sensor, sensor_type, width=1300)
                 self.node.setResolution(res)
-                scale = getClosestIspScale(self.node.getIspSize(), width=1300, videoEncoder=(self.encoder is not None))
+                scale = getClosestIspScale(self.node.getIspSize(), width=1300, videoEncoder=(encode is not None))
                 self.node.setIspScale(*scale)
 
             curr_size = self.node.getVideoSize()
