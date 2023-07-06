@@ -47,8 +47,6 @@ class StereoComponent(Component):
                  pipeline: dai.Pipeline,
                  left: Union[CameraComponent, dai.node.MonoCamera],  # Left stereo camera
                  right: Union[CameraComponent, dai.node.MonoCamera],  # Right stereo camera
-                 resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
-                 fps: Optional[float] = None,
                  replay: Optional[Replay] = None,
                  args: Any = None,
                  name: Optional[str] = None,
@@ -78,8 +76,6 @@ class StereoComponent(Component):
 
         self._device = device
         self._replay: Optional[Replay] = replay
-        self._resolution: Optional[Union[str, dai.MonoCameraProperties.SensorResolution]] = resolution
-        self._fps: Optional[float] = fps
         self._args: Dict = args
         self.name = name
 
@@ -119,25 +115,6 @@ class StereoComponent(Component):
             # Live stream, check whether we have correct cameras
             if len(device.getCameraSensorNames()) == 1:
                 raise Exception('OAK-1 camera does not have Stereo camera pair!')
-
-            # If not specified, default to 400P resolution for faster processing
-            self._resolution = self._resolution or dai.MonoCameraProperties.SensorResolution.THE_400_P
-
-            # Always use 1200p for OAK-D-LR and OAK-D-SR
-            if self._device.getDeviceName() == 'OAK-D-LR':
-                self._resolution = dai.MonoCameraProperties.SensorResolution.THE_1200_P
-
-            if not self.left: # Should never happen
-                self.left = CameraComponent(device, pipeline, 'left', self._resolution, self._fps, replay=self._replay)
-            if not self.right:
-                self.right = CameraComponent(device, pipeline, 'right', self._resolution, self._fps,
-                                             replay=self._replay)
-
-            # AR0234 outputs 1200p, so we need to resize it to 800p on RVC2
-            if self._device.getDeviceName() == 'OAK-D-LR':
-                if isinstance(self.left, CameraComponent) and isinstance(self.right, CameraComponent):
-                    self.left.config_color_camera(isp_scale=(2, 3))
-                    self.right.config_color_camera(isp_scale=(2, 3))
 
             if self._get_ir_drivers():
                 laser = self._args.get('irDotBrightness', None)

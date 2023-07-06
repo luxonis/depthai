@@ -70,6 +70,14 @@ def parse_bool(value: str) -> bool:
         raise ValueError(f"Couldn't parse '{value}' to bool!")
 
 
+def get_first_color_cam(device: dai.Device) -> dai.CameraBoardSocket:
+    for cam in device.getConnectedCameraFeatures():
+        if cam.supportedTypes[0] == dai.CameraSensorType.COLOR:
+            return cam.socket
+    # Default
+    return dai.CameraBoardSocket.CAM_A
+
+
 def parse_camera_socket(value: Union[str, dai.CameraBoardSocket]) -> dai.CameraBoardSocket:
     if isinstance(value, dai.CameraBoardSocket):
         return value

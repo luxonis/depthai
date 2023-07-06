@@ -17,7 +17,7 @@ class CameraComponent(Component):
     def __init__(self,
                  device: dai.Device,
                  pipeline: dai.Pipeline,
-                 source: Union[str, dai.CameraBoardSocket],
+                 source: dai.CameraBoardSocket,
                  resolution: Optional[Union[
                      str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
                  ]] = None,
