@@ -147,9 +147,17 @@ class CameraComponent(Component):
             if not self._resolution_forced:  # Find the closest resolution
                 sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == self.node.getBoardSocket()][0]
                 sensor_type = dai.CameraSensorType.COLOR if dai.node.ColorCamera else dai.CameraSensorType.MONO
-                res = getClosesResolution(sensor, sensor_type, width=1300)
+                targetWidthRes = 1300
+                targetWidthIsp = targetWidthRes
+                if self._args["defaultResolution"] == "min":
+                    targetWidthRes = 0
+                    targetWidthIsp = 1300 # Still keep the same target for the ISP
+                elif self._args["defaultResolution"] == "max":
+                    targetWidthRes = 1000000 # Some big number
+                    targetWidthIsp = targetWidthRes
+                res = getClosesResolution(sensor, sensor_type, width=targetWidthRes)
                 self.node.setResolution(res)
-                scale = getClosestIspScale(self.node.getIspSize(), width=1300, videoEncoder=(self.encoder is not None))
+                scale = getClosestIspScale(self.node.getIspSize(), width=targetWidthIsp, videoEncoder=(self.encoder is not None))
                 self.node.setIspScale(*scale)
 
             curr_size = self.node.getVideoSize()
@@ -401,6 +409,13 @@ class CameraComponent(Component):
         else:
             self.node.setFps(fps)
 
+    def get_socket(self) -> dai.CameraBoardSocket:
+        if self.is_replay():
+            return self._replay.streams[self._source].get_socket()
+        else:
+            return self.node.getBoardSocket();
+
+
     def config_encoder_h26x(self,
                             rate_control_mode: Optional[dai.VideoEncoderProperties.RateControlMode] = None,
                             keyframe_freq: Optional[int] = None,
@@ -449,6 +464,15 @@ class CameraComponent(Component):
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
             return StreamXout(self.node.id, self.node.video, name=self.name)
 
+    def get_stream_xout_isp(self) -> StreamXout:
+        if self.is_replay():
+            return ReplayStream(self._source)
+        elif self.is_mono():
+            # Leave the out output in case it's a mono camera
+            return StreamXout(self.node.id, self.stream, name=self.name)
+        else:  # ColorCamera
+            return StreamXout(self.node.id, self.node.isp, name=self.name)
+
     def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
         """
         Set the number of frames to be stored in the pool.
@@ -479,6 +503,14 @@ class CameraComponent(Component):
                 return self.replay(pipeline, device)
             else:
                 return self.camera(pipeline, device)
+
+        def isp(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            """
+            Streams ISP output. Produces FramePacket.
+            """
+            out = XoutFrames(self._comp.get_stream_xout_isp(), self._comp.get_fps())
+            out.name = self._comp._source
+            return self._comp._create_xout(pipeline, out)
 
         def camera(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutFrames:
             """
