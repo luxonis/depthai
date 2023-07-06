@@ -75,15 +75,15 @@ class OakCamera:
         if args:
             if isinstance(args, bool):
                 self._args = ArgsParser.parseArgs()
-                # Set up the OakCamera
-                if self._args.get('recording', None):
-                    replay = self._args.get('recording', None)
-                if self._args.get('deviceId', None):
-                    device = self._args.get('deviceId', None)
-                if self._args.get('usbSpeed', None):
-                    usb_speed = parse_usb_speed(self._args.get('usbSpeed', None))
             else:  # Already parsed
                 self._args = args
+            # Set up the OakCamera
+            if self._args.get('recording', None):
+                replay = self._args.get('recording', None)
+            if self._args.get('deviceId', None):
+                device = self._args.get('deviceId', None)
+            if self._args.get('usbSpeed', None):
+                usb_speed = parse_usb_speed(self._args.get('usbSpeed', None))
 
         if config is None:
             config = dai.Device.Config()
@@ -104,12 +104,12 @@ class OakCamera:
         self._out_templates: List[BaseConfig] = []
 
         self._rotation = rotation
-
+        self._calibration = None
         if replay is not None:
             self.replay = Replay(replay)
             self.replay.initPipeline(self.pipeline)
             logging.info(f'Available streams from recording: {self.replay.getStreams()}')
-    
+        self._init_calibration()
     def camera(self,
                source: Union[str, dai.CameraBoardSocket],
                resolution: Optional[Union[
@@ -193,10 +193,14 @@ class OakCamera:
         """
         components: List[CameraComponent] = []
         # Loop over all available camera sensors
-        for cam_sensor in self._oak.device.getConnectedCameraFeatures():
+        if self.replay:
+            sources = self.replay.getStreams() # TODO handle in case the stream is not from a camera
+        else:
+            sources = [cam_sensor.socket for cam_sensor in self._oak.device.getConnectedCameraFeatures()]
+        for source in sources:
             comp = CameraComponent(self._oak.device,
                                    self.pipeline,
-                                   source=cam_sensor.socket,
+                                   source=source,
                                    resolution=resolution,
                                    fps=fps,
                                    encode=encode,
@@ -564,6 +568,14 @@ class OakCamera:
                 output[i] = output[i].out.main
         return output
 
+    def _init_calibration(self):
+        if self.replay:
+            self._calibration = self.pipeline.getCalibrationData()
+        else:
+            self._calibration = self._oak.device.readCalibration()
+        if self._calibration is None:
+            logging.warn("No calibration data found on the device or in replay")
+
     def sync(self, outputs: Union[Callable, List[Callable]], callback: Callable, visualize=False):
         """
         Synchronize multiple components outputs forward them to the callback.
@@ -688,3 +700,10 @@ class OakCamera:
         Returns list of all sensors added to the pipeline.
         """
         return self._oak.image_sensors
+
+    @property
+    def calibration(self) -> dai.CalibrationHandler:
+        """
+        Returns calibration handler
+        """
+        return self._calibration
