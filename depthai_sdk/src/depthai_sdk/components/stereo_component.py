@@ -135,6 +135,38 @@ class StereoComponent(Component):
         self._left_stream = self._get_output_stream(self.left)
         self._right_stream = self._get_output_stream(self.right)
 
+        # Check whether input stereo pairs are larger than 1280 pixels in width (limitation of the RVC2/RVC3).
+        # If that's the case, create ImageManip to downscale the streams.
+        downscale_manips = []
+        if isinstance(self.left, CameraComponent):
+            # Check whether input size width is larger than 1280
+            w, h = self.left.stream_size
+            if w > 1280:
+                manip = pipeline.create(dai.node.ImageManip)
+                new_h = int(h * (1280 / w))
+                manip.setResize(1280, new_h)
+                logging.info(f'Input frame size to stereo component was {w}x{h}, added downscalling to 1280x{new_h}')
+                manip.setMaxOutputFrameSize(1280 * new_h)
+                # Stereo works on GRAY8 frames
+                manip.setFrameType(dai.ImgFrame.Type.GRAY8)
+                self._left_stream.link(manip.inputImage)
+                self._left_stream = manip.out
+                downscale_manips.append(manip)
+        if isinstance(self.right, CameraComponent):
+            # Check whether input size width is larger than 1280
+            w, h = self.right.stream_size
+            if w > 1280:
+                manip = pipeline.create(dai.node.ImageManip)
+                new_h = int(h * (1280 / w))
+                manip.setResize(1280, new_h)
+                logging.info(f'Input frame size to stereo component was {w}x{h}, added downscalling to 1280x{new_h}')
+                manip.setMaxOutputFrameSize(1280 * new_h)
+                # Stereo works on GRAY8 frames
+                manip.setFrameType(dai.ImgFrame.Type.GRAY8)
+                self._right_stream.link(manip.inputImage)
+                self._right_stream = manip.out
+                downscale_manips.append(manip)
+
         if self._replay:  # Replay
             self._replay.initStereoDepth(self.node, left_name=self.left._source, right_name=self.right._source)
         else:
