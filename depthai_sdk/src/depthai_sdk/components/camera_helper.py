@@ -82,10 +82,10 @@ def getClosestIspScale(camResolution: Tuple[int, int],
     """
     if width and height:
         raise ValueError("You have to specify EITHER width OR height to calculate desired ISP scaling options!")
-    if not width and not height:
+    if width is None and height is None:
         raise ValueError("You have to provide width or height calculate desired ISP scaling options!")
 
-    minError = 99999
+    minError = 999999
     ispScale: List[int] = None
     for ratio, (n, d) in availableIspScales():
         newW = int((camResolution[0] * n - 1) / d + 1)
@@ -102,7 +102,7 @@ def getClosestIspScale(camResolution: Tuple[int, int],
         if newW % 2 != 0 or newH % 2 != 0:
             continue
 
-        err = abs((newW - width) if width else (newH - height))
+        err = abs((newW - width) if width is not None else (newH - height))
         if err < minError:
             ispScale = [n, d, n, d]
             minError = err
@@ -197,12 +197,12 @@ def getClosesResolution(sensor: dai.CameraFeatures,
                         height: Optional[int] = None, ):
     if width and height:
         raise ValueError("You have to specify EITHER width OR height to calculate desired ISP scaling options!")
-    if not width and not height:
+    if width is None and height is None:
         raise ValueError("You have to provide width or height calculate desired ISP scaling options!")
 
-    minError = 99999
+    minError = 999999
     closestRes = None
-    desired, i = (width, 0) if width else (height, 1)
+    desired, i = (width, 0) if width is not None else (height, 1)
 
     resolutions = [get_sensor_resolution(type, conf.width, conf.height) for conf in sensor.configs if conf.type == type]
 
@@ -219,7 +219,7 @@ def getResize(size: Tuple[int, int],
                     height: Optional[int] = None) -> Tuple[int, int]:
     if width and height:
         raise ValueError("You have to specify EITHER width OR height to calculate desired ISP scaling options!")
-    if not width and not height:
+    if width is None and height is None:
         raise ValueError("You have to provide width or height calculate desired ISP scaling options!")
 
     if width:
