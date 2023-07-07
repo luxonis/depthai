@@ -12,11 +12,12 @@ class VideoRecorder(Recorder):
     Writes unencoded streams to mp4 using cv2.VideoWriter
     """
 
-    def __init__(self):
+    def __init__(self, lossless: bool = False):
         self.path = None
         self._stream_type = dict()
         self._writers = dict()
         self._closed = False
+        self._lossless = lossless
 
     def __getitem__(self, item):
         return self._writers[item]
@@ -46,7 +47,7 @@ class VideoRecorder(Recorder):
             fourcc = stream.fourcc()  # TODO add default fourcc? stream.fourcc() can be None.
             if stream.is_raw():
                 from .video_writers.video_writer import VideoWriter
-                self._writers[xout_name] = VideoWriter(self.path, xout_name, fourcc, xout.fps)
+                self._writers[xout_name] = VideoWriter(self.path, xout_name, fourcc, xout.fps, self._lossless)
             else:
                 try:
                     from .video_writers.av_writer import AvWriter

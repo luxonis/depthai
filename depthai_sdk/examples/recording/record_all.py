@@ -27,7 +27,7 @@ with OakCamera(args=args) as oak:
         oak.visualize(stereo)
     # Sync & save all streams
     if args["recordStreams"]:
-        oak.record(cams_isp, args["saveStreamsTo"], RecordType.VIDEO)
+        oak.record(cams_isp, args["saveStreamsTo"], RecordType.VIDEO_LOSSLESS)
     oak.visualize(cams_isp, fps=True)
 
     oak.start(blocking=True)
