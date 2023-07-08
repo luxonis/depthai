@@ -3,7 +3,7 @@ import logging
 import time
 import warnings
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Union, Callable
+from typing import Dict, Any, Optional, List, Union, Callable, Type
 
 from depthai_sdk import CV2_HAS_GUI_SUPPORT
 from depthai_sdk.visualize.visualizer import Visualizer
@@ -134,9 +134,9 @@ class OakCamera:
         socket = source
         if isinstance(source, str):
             socket = parse_camera_socket(source.split(",")[0])
-        for comp in self._components:
-            if isinstance(comp, CameraComponent) and comp.node.getBoardSocket() == socket:
-                return comp
+        comp = self._find_component(CameraComponent, socket)
+        if comp is not None:
+            return comp
 
         comp = CameraComponent(self._oak.device,
                                self.pipeline,
@@ -360,6 +360,18 @@ class OakCamera:
         )
         self._components.append(comp)
         return comp
+
+    def _find_component(self,
+                        type_: Type[Component],
+                        socket: Optional[dai.CameraBoardSocket] = None
+                        ) -> Optional[Component]:
+        for component in self._components:
+            if isinstance(component, type_):
+                if socket is None:
+                    return component
+                if component.node.getBoardSocket() == socket:
+                    return component
+        return None
 
     def _init_device(self,
                      config: dai.Device.Config,
