@@ -192,25 +192,22 @@ class OakCamera:
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
         """
         components: List[CameraComponent] = []
+
         # Loop over all available camera sensors
         if self.replay:
             sources = self.replay.getStreams() # TODO handle in case the stream is not from a camera
         else:
-            sources = [cam_sensor.socket for cam_sensor in self._oak.device.getConnectedCameraFeatures()]
+            sources = self._oak.device.getConnectedCameras()
         for source in sources:
-            comp = CameraComponent(self._oak.device,
-                                   self.pipeline,
-                                   source=source,
-                                   resolution=resolution,
-                                   fps=fps,
-                                   encode=encode,
-                                   rotation=self._rotation,
-                                   replay=self.replay,
-                                   name=None,
-                                   args=self._args)
-            components.append(comp)
+            components.append(
+                self.camera(
+                    source=source,
+                    resolution=resolution,
+                    fps=fps,
+                    encode=encode,
+                )
+            )
 
-        self._components.extend(components)
         return components
 
     def create_all_cameras(self,
