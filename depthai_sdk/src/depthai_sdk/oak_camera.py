@@ -329,6 +329,10 @@ class OakCamera:
         """
         Create IMU component
         """
+        comp = self._find_component(IMUComponent)
+        if comp is not None:
+            return comp
+
         comp = IMUComponent(self._oak.device, self.pipeline)
         self._components.append(comp)
         return comp
