@@ -284,6 +284,10 @@ class OakCamera:
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
+        comp = self._find_component(StereoComponent)
+        if comp is not None:
+            return comp
+
         if left is None:
             left = self.camera(source=dai.CameraBoardSocket.LEFT, resolution=resolution, fps=fps)
         if right is None:
