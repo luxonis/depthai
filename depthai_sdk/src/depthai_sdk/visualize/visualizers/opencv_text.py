@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 class OpenCvTextVis:
-    def __init__(self,  text: VisText, config):
+    def __init__(self,  text: VisText, config: VisConfig):
         self.text = text
         self.config = config
 
@@ -27,7 +27,7 @@ class OpenCvTextVis:
 
         font_scale = obj.size or text_config.font_scale
         if obj.size is None and text_config.auto_scale:
-            font_scale = obj.get_text_scale(shape, obj.bbox)
+            font_scale = self.get_text_scale(shape, obj.bbox)
 
         # Calculate font thickness
         font_thickness = max(1, int(font_scale * 2)) \
@@ -45,7 +45,7 @@ class OpenCvTextVis:
                             org=obj.coords,
                             fontFace=text_config.font_face,
                             fontScale=font_scale,
-                            color=text_config.bg_color,
+                            color=text_config.background_color,
                             thickness=font_thickness + 1,
                             lineType=text_config.line_type)
 
@@ -61,7 +61,7 @@ class OpenCvTextVis:
 
             obj.coords = (obj.coords[0], y + dy)
 
-    def get_relative_position(self, obj: VisText) -> Tuple[int, int]:
+    def get_relative_position(self, obj: VisText, frame_shape) -> Tuple[int, int]:
         """
         Get relative position of the text w.r.t. the bounding box.
         If bbox is None,the position is relative to the frame.
@@ -70,14 +70,14 @@ class OpenCvTextVis:
             obj.bbox = BoundingBox()
         text_config = self.config.text
 
-        tl, br = obj.bbox.denormalize(obj.frame_shape)
+        tl, br = obj.bbox.denormalize(frame_shape)
         shape = br[0] - tl[0], br[1] - tl[1]
 
-        bbox_arr = obj.bbox.to_tuple(obj.frame_shape)
+        bbox_arr = obj.bbox.to_tuple(frame_shape)
 
         font_scale = obj.size or text_config.font_scale
         if obj.size is None and text_config.auto_scale:
-            font_scale = obj.get_text_scale(shape, bbox_arr)
+            self.get_text_scale(shape, bbox_arr)
 
         text_width, text_height = 0, 0
         for text in obj.text.splitlines():
@@ -120,7 +120,7 @@ class OpenCvTextVis:
             bbox[3] /= frame_shape[0]
             self.text.bbox = BoundingBox(bbox)
 
-        self.text.coords = self.text.coords or self.get_relative_position(self.text)
+        self.text.coords = self.text.coords or self.get_relative_position(self.text, frame_shape)
 
     def get_text_scale(self,
                        frame_shape: Union[np.ndarray, Tuple[int, ...]],

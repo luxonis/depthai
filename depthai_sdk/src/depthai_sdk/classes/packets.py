@@ -1,13 +1,15 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
+import time
 from typing import Sequence, Tuple, List, Union, Optional, Dict
 from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
 import depthai as dai
 import numpy as np
 from depthai_sdk.visualize.bbox import BoundingBox
-from depthai_sdk.visualize.configs import TextPosition
+from depthai_sdk.visualize.configs import StereoColor, TextPosition
 from depthai_sdk.visualize.visualizer import Visualizer
 from depthai_sdk.classes.nn_results import Detection, TrackingDetection, TwoStageDetection
+from numpy.distutils.fcompiler.none import NoneFCompiler
 
 try:
     import cv2
@@ -125,15 +127,101 @@ class MjpegPacket(FramePacket):
         return cv2.imdecode(self.msg.getData(), flag)
 
 
+class DisparityPacket(FramePacket):
+    def __init__(self,
+                 name: str,
+                 img: dai.ImgFrame,
+                 multiplier: float,
+                 disparity_map: Optional[np.ndarray] = None,
+                 colorize: StereoColor = None,
+                 colormap: int = None,
+                 mono_frame: Optional[dai.ImgFrame] = None,
+                 ):
+        """
+        disparity_map might be filtered, eg. if WLS filter is enabled
+        """
+        super().__init__(name=name, msg=img)
+        self.mono_frame = mono_frame
+        self.disparity_map = disparity_map
+        self.multiplier = multiplier
+        self.colorize = colorize
+        self.colormap = colormap
+
+    def get_disparity(self) -> np.ndarray:
+        if self.disparity_map is not None:
+            return self.disparity_map
+        else:
+            self.msg.getFrame()
+
+    def get_colorized_frame(self, visualizer) -> np.ndarray:
+        frame = self.get_disparity()
+        colorized_disp = frame * self.multiplier
+
+        try:
+            mono_frame = self.mono_frame.getCvFrame()
+        except AttributeError:
+            mono_frame = None
+
+        stereo_config = visualizer.config.stereo
+
+        colorize = self.colorize or stereo_config.colorize
+        if self.colormap is not None:
+            colormap = self.colormap
+        else:
+            colormap = stereo_config.colormap
+            colormap[0] = [0, 0, 0]  # Invalidate pixels 0 to be black
+
+        if mono_frame is not None and colorized_disp.ndim == 2 and mono_frame.ndim == 3:
+            colorized_disp = colorized_disp[..., np.newaxis]
+
+        if colorize == StereoColor.GRAY:
+            pass
+        elif colorize == StereoColor.RGB:
+            colorized_disp = cv2.applyColorMap(colorized_disp.astype(np.uint8), colormap)
+        elif colorize == StereoColor.RGBD:
+            colorized_disp = cv2.applyColorMap(
+                (colorized_disp + mono_frame * 0.5).astype(np.uint8), colormap
+            )
+        return colorized_disp
+
 class DepthPacket(FramePacket):
+    def __init__(self, name: str,
+                 msg: dai.ImgFrame):
+        super().__init__(name, msg)
+        self.depth = msg.getFrame()
+
+class DisparityDepthPacket(DisparityPacket):
     def __init__(self,
                  name: str,
                  img_frame: dai.ImgFrame,
-                 mono_frame: Optional[dai.ImgFrame],
-                 depth_map: Optional[np.ndarray] = None):
-        super().__init__(name=name, msg=img_frame)
-        self.mono_frame = mono_frame
-        self.depth_map = depth_map
+                 colorize: StereoColor = None,
+                 colormap: int = None,
+                 mono_frame: Optional[dai.ImgFrame] = None,
+                 disp_scale_factor = 255 / 95,
+                 ):
+        # DepthPacket.__init__(self, name=name, msg=img_frame)
+        super().__init__(
+            name=name,
+            img=img_frame,
+            disparity_map=None,
+            multiplier=255 / 95,
+            colorize=colorize,
+            colormap=colormap,
+            mono_frame=mono_frame,
+        )
+        self.disp_scale_factor = disp_scale_factor
+
+    def get_disparity(self) -> np.ndarray:
+        print('Get disp DisparityDepthPacket')
+        with np.errstate(divide='ignore'):
+            disparity = self.disp_scale_factor / self.msg.getFrame()
+        disparity[disparity == np.inf] = 0
+        return disparity
+
+
+    # def get_colorized_frame(self, visualizer) -> np.ndarray:
+        # Convert depth to disparity for nicer visualization
+
 
 class PointcloudPacket(DepthPacket):
     def __init__(self,
@@ -398,10 +486,14 @@ class TwoStagePacket(DetectionPacket):
                  msg: dai.ImgFrame,
                  img_detections: dai.ImgDetections,
                  nn_data: List[dai.NNData],
-                 labels: List[int]):
+                 labels: List[int],
+                 bbox: BoundingBox
+                 ):
         super().__init__(name=name,
                          msg=msg,
-                         img_detections=img_detections)
+                         dai_msg=img_detections,
+                         bbox=bbox
+                         )
         self.frame = self.msg.getCvFrame() if cv2 else None
         self.nnData = nn_data
         self.labels = labels

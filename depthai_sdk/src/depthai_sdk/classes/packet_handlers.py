@@ -1,7 +1,7 @@
 import os
 from abc import abstractmethod
 from typing import Optional, Callable, List, Union, Dict
-from queue import Queue
+from queue import Queue, Empty
 
 from depthai_sdk.classes.packets import BasePacket, FramePacket
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync, TimestampSync
@@ -20,7 +20,7 @@ import depthai as dai
 class BasePacketHandler:
     def __init__(self, main_thread=False):
         self.fps = FPS()
-        self.queue = Queue(30) if main_thread else None
+        self.queue = Queue(2) if main_thread else None
         self.outputs: List[Callable]
         self.sync = None
 
@@ -66,9 +66,11 @@ class BasePacketHandler:
         Called from main thread.
         """
         if self.queue:
-            while not self.queue.empty():
-                packet = self.queue.get()
+            try:
+                packet = self.queue.get_nowait()
                 self.new_packet(packet)
+            except Empty:
+                pass
 
     @abstractmethod
     def new_packet(self, packet):
@@ -136,12 +138,18 @@ class VisualizePacketHandler(BasePacketHandler):
         packet.prepare_visualizer_objects(self.visualizer)
 
         if self.callback:
+            # Add self.visualizer to packet attributes
+            packet.visualizer = self.visualizer
+            print(len(self.visualizer.objects), 'objects')
             self.callback(packet)
         else:
             self.visualizer.show(packet)
 
         if self.recorder:
             self.recorder.write(packet)
+
+    def close(self):
+        self.visualizer.close()
 
 
 class RecordPacketHandler(BasePacketHandler):

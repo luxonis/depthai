@@ -1,3 +1,5 @@
+import logging
+from depthai_sdk.classes.packets import DepthPacket, DisparityPacket, FramePacket
 from depthai_sdk.visualize.objects import (
     VisBoundingBox,
     VisCircle,
@@ -17,7 +19,7 @@ from depthai_sdk.visualize.visualizers.opencv_text import OpenCvTextVis
 import cv2
 
 class OpenCvVisualizer(Visualizer):
-    def _draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
+    def draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
         and communicate with the RobotHub application.
@@ -72,10 +74,17 @@ class OpenCvVisualizer(Visualizer):
         self.reset()
         return frame
 
-    def show(self, packet: 'FramePacket') -> None:
-        frame = packet.decode()
+    def show(self, packet) -> None:
+        if isinstance(packet, DisparityPacket):
+            frame = packet.get_colorized_frame(self)
+        elif isinstance(packet, FramePacket):
+            frame = packet.decode()
+        else:
+            logging.warning(f'Unknown packet type: {type(packet)}')
+            return
+
         if frame is not None:
-            cv2.imshow(packet.name, self._draw(frame))
+            cv2.imshow(packet.name, self.draw(frame))
 
     # Moved from XoutFrames
 
@@ -125,3 +134,14 @@ class OpenCvVisualizer(Visualizer):
     def close(self):
         cv2.destroyAllWindows()
 
+
+
+# class Clickable:
+#     def __init__(self, decay_step: int = 30):
+#         super().__init__()
+#         self.buffer = None
+#         self.decay_step = decay_step
+
+#     def on_click_callback(self, event, x, y, flags, param) -> None:
+#         if event == cv2.EVENT_MOUSEMOVE:
+#             self.buffer = ([0, param[0][y, x], [x, y]])

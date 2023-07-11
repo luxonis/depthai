@@ -294,15 +294,14 @@ class XoutTwoStage(XoutNnResults):
         if self.synced(seq):
             # print('Synced', seq)
             # Frames synced!
-            if self.queue.full():
-                self.queue.get()  # Get one, so queue isn't full
-
+            dets = self.msgs[seq][self.nn_results.name]
             packet = TwoStagePacket(
                 self.get_packet_name(),
                 self.msgs[seq][self.frames.name],
-                self.msgs[seq][self.nn_results.name],
+                dets,
                 self.msgs[seq][self.second_nn_out.name],
-                self.whitelist_labels
+                self.whitelist_labels,
+                self.bbox
             )
 
             # Throws RuntimeError: dictionary changed size during iteration
@@ -317,7 +316,7 @@ class XoutTwoStage(XoutNnResults):
                         new_msgs[name] = msg
                 self.msgs = new_msgs
 
-            return packet
+            return self._add_detections_to_packet(packet, dets)
 
     def add_detections(self, seq: str, dets: dai.ImgDetections):
         # Used to match the scaled bounding boxes by the 2-stage NN script node

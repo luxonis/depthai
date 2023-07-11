@@ -455,17 +455,15 @@ class OakCamera:
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        logging.info("Closing OAK camera")
+        self._stop = True
+
+    def close(self):
         if self.replay:
-            logging.info("Closing replay")
             self.replay.close()
-        if self.device is not None:
-            self.device.close()
 
         for handler in self._packet_handlers:
             handler.close()
 
-        self.device.close()
 
     def start(self, blocking=False):
         """
@@ -527,6 +525,10 @@ class OakCamera:
 
         Returns: key pressed from cv2.waitKey, or None if
         """
+        if self._stop:
+            self.close()
+            return
+
         if CV2_HAS_GUI_SUPPORT:
             key = cv2.waitKey(1)
             if key == ord('q'):
@@ -543,6 +545,7 @@ class OakCamera:
 
             if self.replay._stop:
                 self._stop = True
+                self.close()
                 return key
 
         for poll in self._polling:
@@ -550,6 +553,7 @@ class OakCamera:
 
         if self.device.isClosed():
             self._stop = True
+            self.close()
             return None
 
         return key
@@ -588,7 +592,7 @@ class OakCamera:
                   fps=False,
                   callback: Callable = None,
                   visualizer: str = 'opencv'
-                  ):
+                  ) -> Visualizer:
         """
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
         Args:
@@ -618,7 +622,7 @@ class OakCamera:
         if main_thread:
             self._polling.append(handler._poll)
 
-        return visualizer
+        return vis
 
     def queue(self, output: Union[Callable, Component, List], max_size: int = 30) -> QueuePacketHandler:
         """

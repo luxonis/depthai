@@ -32,9 +32,6 @@ class XoutPointcloud(XoutFrames):
 
         self.msgs = dict()
 
-    def visualize(self, packet: DepthPacket):
-        pass
-
     def xstreams(self) -> List[StreamXout]:
         if self.color_frames is not None:
             return [self.frames, self.color_frames]

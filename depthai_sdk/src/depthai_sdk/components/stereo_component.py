@@ -13,7 +13,7 @@ from depthai_sdk.components.parser import parse_median_filter, parse_encode
 from depthai_sdk.components.stereo_control import StereoControl
 from depthai_sdk.components.undistort import _get_mesh
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
-from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
+from depthai_sdk.oak_outputs.xout.xout_depth import XoutDisparityDepth
 from depthai_sdk.oak_outputs.xout.xout_disparity import XoutDisparity
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
@@ -448,13 +448,10 @@ class StereoComponent(Component):
             return self.depth(pipeline, device)
 
         def disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
-
             return XoutDisparity(
                 device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
                 disp_factor=255.0 / self._comp.node.getMaxDisparity(),
-                fps=fps,
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
@@ -469,17 +466,13 @@ class StereoComponent(Component):
             return XoutFrames(StreamXout(self._comp.node.id, self._comp.node.rectifiedRight, 'Rectified right'))
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
-
-            return XoutDepth(
+            return XoutDisparityDepth(
                 device=device,
                 frames=StreamXout(self._comp.node.id, self._comp.depth, name=self._comp.name),
                 dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
-                fps=fps,
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
-                wls_config=self._comp.wls_config,
                 ir_settings=self._comp.ir_settings
             )
 
@@ -493,12 +486,8 @@ class StereoComponent(Component):
             if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
                 return XoutMjpeg(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
                                 color=self._comp.colormap is not None,
-                                lossless=self._comp.encoder.getLossless(),
-                                fps=self._comp.encoder.getFrameRate(),
-                                frame_shape=(1200, 800))
+                                lossless=self._comp.encoder.getLossless())
             else:
                 return XoutH26x(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
                                color=self._comp.colormap is not None,
-                               profile=self._comp._encoderProfile,
-                               fps=self._comp.encoder.getFrameRate(),
-                               frame_shape=(1200, 800))
+                               profile=self._comp._encoderProfile)

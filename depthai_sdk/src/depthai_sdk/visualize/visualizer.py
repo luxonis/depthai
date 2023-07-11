@@ -448,3 +448,6 @@ class Visualizer:
         kwargs.pop('self')
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
         return kwargs
+
+    def close(self):
+        pass

@@ -61,7 +61,7 @@ class GenericObject(ABC):
         Returns:
             self
         """
-        pass
+        return self
 
     @abstractmethod
     def serialize(self) -> dict:

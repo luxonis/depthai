@@ -593,15 +593,18 @@ class NNComponent(Component):
 
         self.config_nn(conf_threshold=nn_config.get('conf_threshold', None))
 
-    # def _get_input_frame_size(self) -> Tuple[int, int]:
-    #     return self._input.stream_size
+    def _get_input_frame_size(self) -> Tuple[int, int]:
+        if self._is_multi_stage():
+            return self._input._get_input_frame_size()
+        return self._input.stream_size
     #
     def get_bbox(self) -> BoundingBox:
         bbox = BoundingBox()
         if self._is_multi_stage():
             bbox = self._input.get_bbox()
 
-        old_ar = self._input.stream_size[0] / self._input.stream_size[1]
+        stream_size = self._get_input_frame_size()
+        old_ar = stream_size[0] / stream_size[1]
         new_ar = self._size[0] / self._size[1]
         return bbox.resize_to_aspect_ratio(old_ar, new_ar, self._ar_resize_mode)
 
