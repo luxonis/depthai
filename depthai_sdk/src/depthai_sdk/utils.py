@@ -5,7 +5,7 @@ import sys
 import urllib.request
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union, Any
-
+import tempfile
 try:
     import cv2
 except ImportError:
@@ -487,11 +487,14 @@ def report_crash_dump(device: dai.Device) -> None:
         device_id = crash_dump.deviceId
 
         crash_dump_json = crash_dump.serializeToJson()
-        path = f'/tmp/crash_{commit_hash}_{device_id}.json'
-        with open(path, 'w') as f:
-            json.dump(crash_dump_json, f)
-
         from sentry_sdk import capture_exception, configure_scope
-        with configure_scope() as scope:
-            scope.add_attachment(content_type='application/json', path=path)
-            capture_exception(CrashDumpException())
+        # Save crash dump to a temporary file
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / f'crash_{commit_hash}_{device_id}.json'
+            with open(path, 'w') as f:
+                json.dump(crash_dump_json, f)
+
+            with configure_scope() as scope:
+                logging.info('Reporting crash dump to sentry.')
+                scope.add_attachment(content_type='application/json', path=path)
+                capture_exception(CrashDumpException())
