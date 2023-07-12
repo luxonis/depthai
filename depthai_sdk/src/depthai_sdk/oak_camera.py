@@ -131,16 +131,30 @@ class OakCamera:
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
+        sensor_type = None
         if isinstance(source, str):
-            socket_name = source.split(",")[0].lower()
-            if socket_name == 'left':
+            if "," in source:  # For sensors that support multiple
+                parts = source.lower().split(',')
+                source = parts[0]
+                if parts[1] in ["c", "color"]:
+                    sensor_type = dai.CameraSensorType.COLOR
+                elif parts[1] in ["m", "mono"]:
+                    sensor_type = dai.CameraSensorType.MONO
+                else:
+                    raise Exception(
+                        "Please specify sensor type with c/color or m/mono after the ','"
+                        " - eg. `cam = oak.create_camera('cama,c')`"
+                    )
+
+            if source == 'left':
                 source = self._calibration.getStereoLeftCameraId()
-            elif socket_name == 'right':
+            elif source == 'right':
                 source = self._calibration.getStereoRightCameraId()
-            elif socket_name in ['color', 'rgb']:
+            elif source in ['color', 'rgb']:
                 source = get_first_color_cam(self.device)
             else:
-                source = parse_camera_socket(socket_name)
+                source = parse_camera_socket(source)
+
         for comp in self._components:
             if isinstance(comp, CameraComponent) and comp.node.getBoardSocket() == source:
                 return comp
@@ -151,6 +165,7 @@ class OakCamera:
                                resolution=resolution,
                                fps=fps,
                                encode=encode,
+                               sensor_type=sensor_type,
                                rotation=self._rotation,
                                replay=self.replay,
                                name=name,

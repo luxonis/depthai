@@ -1,6 +1,6 @@
 import math
 import depthai as dai
-from typing import *
+from typing import List, Tuple, Dict, Any, Optional, Union
 import numpy as np
 import cv2
 
@@ -165,6 +165,16 @@ def setCameraControl(control: dai.CameraControl,
 
     # TODO: Add contrast, exposure compensation, brightness, manual exposure, and saturation
 
+
+def get_max_resolution(sensor: dai.CameraFeatures) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
+    max_res = None
+    max_num = 0
+    for conf in sensor.configs:
+        (res, size) = get_sensor_resolution(conf.type, conf.width, conf.height)
+        if size[0] * size[1] > max_num:
+            max_num = size[0] * size[1]
+            max_res = res
+    return max_res
 
 def get_sensor_resolution(type: dai.CameraSensorType, width: int, height: int) -> Tuple[Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution], Tuple[int,int]]:
     def get_res(resolutions: Dict[Any, Tuple[int,int]]):
