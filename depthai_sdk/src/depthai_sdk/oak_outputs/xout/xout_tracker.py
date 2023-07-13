@@ -42,16 +42,13 @@ class TrackedObject:
             ts=ts,
             filtered_2d=self._calc_kalman_2d(tracklet,ts) if self.apply_kalman else None,
             filtered_3d=self._calc_kalman_3d(tracklet,ts) if self.apply_kalman and is_3d else None,
-            speed=0.0, speed_kmph=0.0, speed_mph=0.0
+            speed=None,
             )
         self.previous_detections.append(tracking_det)
         # Calc speed should be called after adding new TrackingDetection to self.previous_detections
-        speed_mps = self.calc_speed() if (self.calculate_speed and is_3d) else 0.0
-        tracking_det.speed = speed_mps
-        tracking_det.speed_kmph=speed_mps * 3.6
-        tracking_det.speed_mph=speed_mps * 2.236936
+        tracking_det.speed = self.calc_speed(ts) if (self.calculate_speed and is_3d) else None
 
-    def calc_speed(self) -> float:
+    def calc_speed(self, ts: timedelta) -> float:
         """
         Should be called after adding new TrackingDetection to self.previous_detections
         """
@@ -64,6 +61,9 @@ class TrackedObject:
         speeds = []
         for i in range(len(self.previous_detections) - 1):
             d1 = self.previous_detections[i]
+            # if d1 timestamp is older than 1 second, skip
+            if (ts - d1.ts).total_seconds() > 1:
+                continue
             d2 = self.previous_detections[i + 1]
             distance = get_dist(get_coords(d1), get_coords(d2))
             time = (d2.ts - d1.ts).total_seconds()

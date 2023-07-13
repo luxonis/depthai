@@ -485,9 +485,9 @@ class StereoComponent(Component):
 
             if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
                 return XoutMjpeg(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                                color=self._comp.colormap is not None,
+                                is_color=self._comp.colormap is not None,
                                 lossless=self._comp.encoder.getLossless())
             else:
                 return XoutH26x(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                               color=self._comp.colormap is not None,
+                               is_color=self._comp.colormap is not None,
                                profile=self._comp._encoderProfile)

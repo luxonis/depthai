@@ -8,7 +8,8 @@ def callback(packet: TrackerPacket):
     for obj_id, tracklets in packet.tracklets.items():
         if len(tracklets) != 0:
             tracklet = tracklets[-1]
-        print(f'Speed for object {obj_id}: {tracklet.speed:.02f} m/s, {tracklet.speed_kmph:.02f} km/h, {tracklet.speed_mph:.02f} mph')
+        if tracklet.speed is not None:
+            print(f'Speed for object {obj_id}: {tracklet.speed:.02f} m/s, {tracklet.speed_kmph:.02f} km/h, {tracklet.speed_mph:.02f} mph')
 
     frame = packet.visualizer.draw(packet.decode())
     cv2.imshow('Speed estimation', frame)

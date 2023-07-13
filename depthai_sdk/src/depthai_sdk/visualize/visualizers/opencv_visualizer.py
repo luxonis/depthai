@@ -75,7 +75,7 @@ class OpenCvVisualizer(Visualizer):
         return frame
 
     def show(self, packet) -> None:
-        if isinstance(packet, DisparityPacket):
+        if type(packet) == DisparityPacket:
             frame = packet.get_colorized_frame(self)
         elif isinstance(packet, FramePacket):
             frame = packet.decode()

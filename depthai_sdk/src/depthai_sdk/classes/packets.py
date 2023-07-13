@@ -434,7 +434,14 @@ class TrackerPacket(FramePacket):
                 label=f"[{obj_id}] {tracking_det.label_str}",
                 color=tracking_det.color,
             )
-
+            if visualizer.config.tracking.show_speed and \
+                tracking_det.speed is not None:
+                visualizer.add_text(
+                    text=f"{tracking_det.speed:.2f} m/s",
+                    color=tracking_det.color,
+                    bbox=self.bbox.get_relative_bbox(bb),
+                    position=TextPosition.BOTTOM_RIGHT,
+                )
             w,h = self.get_size()
             for i in range(len(tracking_dets) - 1):
                 visualizer.add_line(

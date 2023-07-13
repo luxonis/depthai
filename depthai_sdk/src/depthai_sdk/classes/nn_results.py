@@ -29,9 +29,14 @@ class TrackingDetection(Detection):
     tracklet: dai.Tracklet
     filtered_2d: BoundingBox
     filtered_3d: dai.Point3f
-    speed: float = 0.0  # m/s
-    speed_kmph: float = 0.0  # km/h
-    speed_mph: float = 0.0  # mph
+    speed: Union[float, None] # m/s
+
+    @property
+    def speed_kmph(self) -> float:
+        return self.speed * 3.6
+    @property
+    def speed_mph(self) -> float:
+        return self.speed * 2.236936
 
 @dataclass
 class TwoStageDetection(Detection):
