@@ -118,7 +118,8 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 detection.confidence,
                 self.labels[detection.label][1] if self.labels else (255, 255, 255),
                 BoundingBox(detection),
-                detection.angle if hasattr(detection, 'angle') else None
+                detection.angle if hasattr(detection, 'angle') else None,
+                ts=dets.getTimestamp()
             ))
         return packet
 

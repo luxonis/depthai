@@ -404,77 +404,81 @@ class TrackerPacket(FramePacket):
     def __init__(self,
                  name: str,
                  msg: dai.ImgFrame,
-                 tracklets: dai.Tracklets):
+                 tracklets: dai.Tracklets,
+                 bbox: BoundingBox,
+                 ):
         super().__init__(name=name,
                          msg=msg)
-        self.detections: List[TrackingDetection] = []
-        self.daiTracklets = tracklets
 
-    def _add_detection(self, img_det: dai.ImgDetection, bbox: np.ndarray, txt: str, color):
-        det = TrackingDetection()
-        det.img_detection = img_det
-        det.label_str = txt
-        det.color = color
-        det.top_left = (bbox[0], bbox[1])
-        det.bottom_right = (bbox[2], bbox[3])
-        self.detections.append(det)
+        # int: object_id, list: TrackingDetection
+        self.tracklets: Dict[int, List[TrackingDetection]] = {}
+        self.daiTracklets = tracklets
+        self.bbox = bbox
 
     def _is_spatial_detection(self) -> bool:
         coords = self.daiTracklets.tracklets[0].spatialCoordinates
         return coords.x != 0.0 or coords.y != 0.0 or coords.z != 0.0
 
-    def _get_spatials(self, det: dai.ImgDetection) -> dai.Point3f:
-        # Not the cleanest solution, but oh well
-        for t in self.daiTracklets.tracklets:
-            if t.srcImgDetection == det:
-                return t.spatialCoordinates
-
     def prepare_visualizer_objects(self, visualizer: Visualizer) -> None:
         # self._add_tracklet_visualization()
 
     # def _add_tracklet_visualization(self, packet, spatial_points, tracklet2speed):
-        h, w = self.msg.getHeight(), self.msg.getWidth()
-        filtered_tracklets = [tracklet for tracklet in self.daiTracklets.tracklets if
-                              tracklet.id not in self.blacklist]
-        self.frame
+        # h, w = self.msg.getHeight(), self.msg.getWidth()
+        # filtered_tracklets = [tracklet for tracklet in self.daiTracklets.tracklets if
+        #                       tracklet.id not in self.blacklist]
 
-        norm_bbox = BoundingBox().resize_to_aspect_ratio(self.frame.shape, self._nn_size, self._resize_mode)
-
-        visualizer.add_detections(detections=filtered_tracklets,
-                                    normalizer=norm_bbox,
-                                    label_map=self.labels,
-                                    spatial_points=spatial_points)
-
-        # Add tracking ids
-        for tracklet in filtered_tracklets:
-            det = tracklet.srcImgDetection
-            bbox = (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)
-            bbox = tuple(map(int, bbox))
-            visualizer.add_text(
-                f'ID: {tracklet.id}',
-                bbox=bbox,
-                position=TextPosition.MID
-            )
-
-            if visualizer.config.tracking.show_speed and tracklet.id in tracklet2speed:
-                speed = tracklet2speed[tracklet.id]
-                speed = f'{speed:.1f} m/s\n{speed * 3.6:.1f} km/h'
-                bbox = tracklet.srcImgDetection
-                bbox = (int(w * bbox.xmin), int(h * bbox.ymin), int(w * bbox.xmax), int(h * bbox.ymax))
-
-                visualizer.add_text(
-                    speed,
-                    bbox=bbox,
-                    position=TextPosition.TOP_RIGHT,
-                    outline=True
+        for obj_id, tracking_dets in self.tracklets.items():
+            for tracking_det in tracking_dets:
+                bb = tracking_det.filtered_2d or tracking_det.bbox
+                visualizer.add_bbox(
+                    bbox=self.bbox.get_relative_bbox(bb),
+                    label=f"[{obj_id}] {tracking_det.label_str}",
+                    color=tracking_det.color,
                 )
 
+            w,h = self.get_size()
+            for i in range(len(tracking_dets) - 1):
+                visualizer.add_line(
+                    pt1=tracking_dets[i].bbox.get_centroid().denormalize((h,w)),
+                    pt2=tracking_dets[i + 1].bbox.get_centroid().denormalize((h,w)),
+                    color=tracking_dets[i].color,
+                    thickness=visualizer.config.tracking.line_thickness,
+                )
+
+        # visualizer.add_detections(detections=filtered_tracklets,
+        #                             normalizer=norm_bbox,
+        #                             label_map=self.labels,
+        #                             spatial_points=spatial_points)
+        # Add tracking ids
+        # for tracklet in filtered_tracklets:
+        #     det = tracklet.srcImgDetection
+        #     bbox = (w * det.xmin, h * det.ymin, w * det.xmax, h * det.ymax)
+        #     bbox = tuple(map(int, bbox))
+        #     visualizer.add_text(
+        #         f'ID: {tracklet.id}',
+        #         bbox=bbox,
+        #         position=TextPosition.MID
+        #     )
+
+        #     if visualizer.config.tracking.show_speed and .id in tracklet2speed:
+        #         speed = tracklet2speed[tracklet.id]
+        #         speed = f'{speed:.1f} m/s\n{speed * 3.6:.1f} km/h'
+        #         bbox = tracklet.srcImgDetection
+        #         bbox = (int(w * bbox.xmin), int(h * bbox.ymin), int(w * bbox.xmax), int(h * bbox.ymax))
+
+        #         visualizer.add_text(
+        #             speed,
+        #             bbox=bbox,
+        #             position=TextPosition.TOP_RIGHT,
+        #             outline=True
+        #         )
+
         # Add tracking lines
-        visualizer.add_trail(
-            tracklets=[t for p in self.buffer for t in p.daiTracklets.tracklets if t.id not in self.blacklist],
-            label_map=self.labels,
-            bbox=norm_bbox,
-        )
+        # visualizer.add_trail(
+        #     tracklets=[d.tracklet for d in self.detections],
+        #     label_map=self.labels,
+        #     bbox=self.bbox,
+        # )
 
 
 class TwoStagePacket(DetectionPacket):

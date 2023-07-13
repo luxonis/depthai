@@ -1,13 +1,17 @@
 import cv2
 
 from depthai_sdk import OakCamera
+from depthai_sdk.classes.packets import TrackerPacket
 
 
-def callback(packet):
-    for detection in packet.detections:
-        print(f'Speed: {detection.speed:.02f} m/s, {detection.speed_kmph:.02f} km/h, {detection.speed_mph:.02f} mph')
+def callback(packet: TrackerPacket):
+    for obj_id, tracklets in packet.tracklets.items():
+        if len(tracklets) != 0:
+            tracklet = tracklets[-1]
+            print(tracklet)
+        print(f'Speed for object {obj_id}: {tracklet.speed:.02f} m/s, {tracklet.speed_kmph:.02f} km/h, {tracklet.speed_mph:.02f} mph')
 
-    frame = packet.visualizer.draw(packet.frame)
+    frame = packet.visualizer.draw(packet.decode())
     cv2.imshow('Speed estimation', frame)
 
 

@@ -5,6 +5,7 @@ below. If the latter, model json config will incldue handler.py logic for decodi
 These will be integrated into depthai-core, bonus points for on-device decoding of some popular models.
 """
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import List, Tuple, Any, Union, Optional
 
 import numpy as np
@@ -21,10 +22,13 @@ class Detection:
     color: Tuple[int, int, int]
     bbox: BoundingBox
     angle: Optional[int]
+    ts: Optional[timedelta]
 
 @dataclass
 class TrackingDetection(Detection):
     tracklet: dai.Tracklet
+    filtered_2d: BoundingBox
+    filtered_3d: dai.Point3f
     speed: float = 0.0  # m/s
     speed_kmph: float = 0.0  # km/h
     speed_mph: float = 0.0  # mph

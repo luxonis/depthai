@@ -76,10 +76,11 @@ class NNComponent(Component):
         # ImageManip used to resize the input to match the expected NN input size
         self.image_manip: Optional[dai.node.ImageManip] = None
         self.x_in: Optional[dai.node.XLinkIn] = None  # Used for multi-stage pipeline
+        # Tracker:
         self.tracker = pipeline.createObjectTracker() if tracker else None
-        self.apply_tracking_filter = False
+        self.apply_tracking_filter = True # Enable by default
+        self.calculate_speed = True
         self.forget_after_n_frames = None
-        self.calculate_speed = False
 
         # Private properties
         self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
@@ -754,15 +755,15 @@ class NNComponent(Component):
                 if input_nn._input.encoder is None:
                     raise Exception('Encoder not enabled for the input')
 
-                det_nn_out = StreamXout(id=self._comp._input.node.id,
-                                        out=self._comp._input.node.out,
-                                        name=self._comp._input.name)
+                det_nn_out = StreamXout(id=input_nn.node.id,
+                                        out=input_nn.node.out,
+                                        name=input_nn.name)
                 frames = StreamXout(id=input_nn._input.encoder.id,
                                     out=input_nn._input.encoder.bitstream,
                                     name=self._comp.name)
                 second_nn_out = StreamXout(self._comp.node.id, self._comp.node.out, name=self._comp.name)
 
-                out = XoutTwoStage(det_nn=self._comp._input,
+                out = XoutTwoStage(det_nn=input_nn,
                                    second_nn=self._comp,
                                    frames=frames,
                                    det_out=det_nn_out,
@@ -784,8 +785,6 @@ class NNComponent(Component):
                     nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
                     color=self._comp._input.is_color(),
                     lossless=self._comp._input.encoder.getLossless(),
-                    fps=self._comp._input.encoder.getFrameRate(),
-                    frame_shape=self._comp._input.stream_size,
                     bbox=self._comp.get_bbox()
                 )
             else:
@@ -795,8 +794,6 @@ class NNComponent(Component):
                     nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
                     color=self._comp._input.is_color(),
                     profile=self._comp._input._encoder_profile,
-                    fps=self._comp._input.encoder.getFrameRate(),
-                    frame_shape=self._comp._input.stream_size,
                     bbox=self._comp.get_bbox()
                 )
 
