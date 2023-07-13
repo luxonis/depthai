@@ -212,7 +212,6 @@ class DisparityDepthPacket(DisparityPacket):
         self.disp_scale_factor = disp_scale_factor
 
     def get_disparity(self) -> np.ndarray:
-        print('Get disp DisparityDepthPacket')
         with np.errstate(divide='ignore'):
             disparity = self.disp_scale_factor / self.msg.getFrame()
         disparity[disparity == np.inf] = 0
@@ -428,13 +427,13 @@ class TrackerPacket(FramePacket):
         #                       tracklet.id not in self.blacklist]
 
         for obj_id, tracking_dets in self.tracklets.items():
-            for tracking_det in tracking_dets:
-                bb = tracking_det.filtered_2d or tracking_det.bbox
-                visualizer.add_bbox(
-                    bbox=self.bbox.get_relative_bbox(bb),
-                    label=f"[{obj_id}] {tracking_det.label_str}",
-                    color=tracking_det.color,
-                )
+            tracking_det = tracking_dets[-1] # Get the last detection
+            bb = tracking_det.filtered_2d or tracking_det.bbox
+            visualizer.add_bbox(
+                bbox=self.bbox.get_relative_bbox(bb),
+                label=f"[{obj_id}] {tracking_det.label_str}",
+                color=tracking_det.color,
+            )
 
             w,h = self.get_size()
             for i in range(len(tracking_dets) - 1):

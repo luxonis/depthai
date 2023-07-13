@@ -140,7 +140,6 @@ class VisualizePacketHandler(BasePacketHandler):
         if self.callback:
             # Add self.visualizer to packet attributes
             packet.visualizer = self.visualizer
-            print(len(self.visualizer.objects), 'objects')
             self.callback(packet)
         else:
             self.visualizer.show(packet)

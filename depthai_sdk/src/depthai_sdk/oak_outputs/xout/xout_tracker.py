@@ -76,10 +76,7 @@ class TrackedObject:
         window = np.hanning(window_size)
         window /= window.sum()
 
-        print('window', speeds, window)
-
         smoothed = np.convolve(speeds, window, mode='same')
-        print('smoothed', np.mean(smoothed))
         return np.mean(smoothed)
 
     def _is_3d(self, tracklet: dai.Tracklet) -> bool:
@@ -88,7 +85,6 @@ class TrackedObject:
                tracklet.spatialCoordinates.z != 0.0
 
     def _calc_kalman_3d(self, tracklet: dai.Tracklet, ts: timedelta) -> Union[None, dai.Point3f]:
-        print('a')
         x_space = tracklet.spatialCoordinates.x
         y_space = tracklet.spatialCoordinates.y
         z_space = tracklet.spatialCoordinates.z
@@ -98,7 +94,6 @@ class TrackedObject:
         if self.kalman_3d is None:
             self.kalman_3d = KalmanFilter(10, 0.1, meas_vec_space, ts)
             return None
-        print('b')
 
         dt = (ts - self.kalman_3d.time).total_seconds()
         self.kalman_3d.predict(dt)
@@ -106,14 +101,9 @@ class TrackedObject:
         self.kalman_3d.time = ts
         self.kalman_3d.meas_std = meas_std_space
         vec_space = self.kalman_3d.x
-        print('c')
-        print('vec_space', vec_space)
-        p =dai.Point3f(vec_space[0], vec_space[1], vec_space[2])
-        print(p)
-        return p
+        return dai.Point3f(vec_space[0], vec_space[1], vec_space[2])
 
     def _calc_kalman_2d(self, tracklet: dai.Tracklet, ts: timedelta) -> Union[None, BoundingBox]:
-        print('1')
         bb = BoundingBox(tracklet.srcImgDetection)
         x_mid, y_mid = bb.get_centroid().to_tuple()
 
@@ -131,10 +121,10 @@ class TrackedObject:
         vec_bbox = self.kalman_2d.x
 
         return BoundingBox([
-            vec_bbox[0] - vec_bbox[2] / 2,
-            vec_bbox[0] + vec_bbox[2] / 2,
-            vec_bbox[1] - vec_bbox[3] / 2,
-            vec_bbox[1] + vec_bbox[3] / 2,
+            vec_bbox[0][0] - vec_bbox[2][0] / 2,
+            vec_bbox[1][0] - vec_bbox[3][0] / 2,
+            vec_bbox[0][0] + vec_bbox[2][0] / 2,
+            vec_bbox[1][0] + vec_bbox[3][0] / 2,
         ])
 
 class XoutTracker(XoutNnResults):
