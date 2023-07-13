@@ -429,7 +429,7 @@ def _create_config() -> None:
     config_file = Path.home().joinpath('.depthai_sdk', 'config.json')
     default_config = {
         'sentry': True,
-        'sentry_dsn': 'https://981545d5effd480d883f3ff0b1306e49@o1095304.ingest.sentry.io/4504685274791936'
+        'sentry_dsn': 'https://67bc97fb3ee947bf90d83c892eaf19fe@sentry.luxonis.com/3'
     }
     if not config_file.exists():
         config_file.write_text(json.dumps(default_config))

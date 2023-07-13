@@ -5,6 +5,7 @@ import warnings
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, Callable
 
+from depthai_sdk import CV2_HAS_GUI_SUPPORT
 from depthai_sdk.visualize.visualizer import Visualizer
 
 try:
@@ -21,7 +22,7 @@ from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.nn_component import NNComponent
-from depthai_sdk.components.parser import parse_usb_speed
+from depthai_sdk.components.parser import parse_usb_speed, parse_camera_socket
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.components.pointcloud_component import PointcloudComponent
 from depthai_sdk.oak_device import OakDevice
@@ -108,16 +109,16 @@ class OakCamera:
             self.replay = Replay(replay)
             self.replay.initPipeline(self.pipeline)
             logging.info(f'Available streams from recording: {self.replay.getStreams()}')
-
-    def create_camera(self,
-                      source: Union[str, dai.CameraBoardSocket],
-                      resolution: Optional[Union[
-                          str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
-                      ]] = None,
-                      fps: Optional[float] = None,
-                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-                      name: Optional[str] = None,
-                      ) -> CameraComponent:
+    
+    def camera(self,
+               source: Union[str, dai.CameraBoardSocket],
+               resolution: Optional[Union[
+                   str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
+                   ]] = None,
+               fps: Optional[float] = None,
+               encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+               name: Optional[str] = None,
+               ) -> CameraComponent:
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
         recording is passed during OakCamera initialization. Mocking the camera will send frames from the host to the
@@ -130,6 +131,13 @@ class OakCamera:
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
+        socket = source
+        if isinstance(source, str):
+            socket = parse_camera_socket(source.split(",")[0])
+        for comp in self._components:
+            if isinstance(comp, CameraComponent) and comp.node.getBoardSocket() == socket:
+                return comp
+
         comp = CameraComponent(self._oak.device,
                                self.pipeline,
                                source=source,
@@ -143,13 +151,38 @@ class OakCamera:
         self._components.append(comp)
         return comp
 
-    def create_all_cameras(self,
-                           resolution: Optional[Union[
+    def create_camera(self,
+                      source: Union[str, dai.CameraBoardSocket],
+                      resolution: Optional[Union[
                           str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
                       ]] = None,
-                           fps: Optional[float] = None,
-                           encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-                           ) -> List[CameraComponent]:
+                      fps: Optional[float] = None,
+                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                      name: Optional[str] = None,
+                      ) -> CameraComponent:
+        """
+        Deprecated, use camera() instead.
+
+        Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
+        recording is passed during OakCamera initialization. Mocking the camera will send frames from the host to the
+        OAK device (via XLinkIn node).
+
+        Args:
+            source (str / dai.CameraBoardSocket): Camera source
+            resolution (str/SensorResolution): Sensor resolution of the camera.
+            fps (float): Sensor FPS
+            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
+            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
+        """
+        return self.camera(source, resolution, fps, encode, name)
+
+    def all_cameras(self,
+                    resolution: Optional[Union[
+                        str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
+                        ]] = None,
+                    fps: Optional[float] = None,
+                    encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                    ) -> List[CameraComponent]:
         """
         Creates Camera component for each camera sensors on the OAK camera.
 
@@ -176,6 +209,25 @@ class OakCamera:
         self._components.extend(components)
         return components
 
+    def create_all_cameras(self,
+                           resolution: Optional[Union[
+                               str, dai.ColorCameraProperties.SensorResolution, 
+                               dai.MonoCameraProperties.SensorResolution
+                               ]] = None,
+                           fps: Optional[float] = None,
+                           encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                           ) -> List[CameraComponent]:
+        """
+        Deprecated, use all_cameras() instead.
+
+        Creates Camera component for each camera sensors on the OAK camera.
+
+        Args:
+            resolution (str/SensorResolution): Sensor resolution of the camera.
+            fps (float): Sensor FPS
+            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
+        """
+        return self.all_cameras(resolution, fps, encode)
 
     def create_nn(self,
                   model: Union[str, Dict, Path],
@@ -212,14 +264,14 @@ class OakCamera:
         self._components.append(comp)
         return comp
 
-    def create_stereo(self,
-                      resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
-                      fps: Optional[float] = None,
-                      left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
-                      right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
-                      name: Optional[str] = None,
-                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
-                      ) -> StereoComponent:
+    def stereo(self,
+               resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
+               fps: Optional[float] = None,
+               left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
+               right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
+               name: Optional[str] = None,
+               encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
+               ) -> StereoComponent:
         """
         Create Stereo camera component. If left/right cameras/component aren't specified they will get created internally.
 
@@ -231,6 +283,11 @@ class OakCamera:
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
+        if left is None:
+            left = self.camera(source=dai.CameraBoardSocket.LEFT, resolution=resolution, fps=fps)
+        if right is None:
+            right = self.camera(source=dai.CameraBoardSocket.RIGHT, resolution=resolution, fps=fps)
+
         comp = StereoComponent(self._oak.device,
                                self.pipeline,
                                resolution=resolution,
@@ -243,6 +300,29 @@ class OakCamera:
                                encode=encode)
         self._components.append(comp)
         return comp
+
+    def create_stereo(self,
+                      resolution: Union[None, str, dai.MonoCameraProperties.SensorResolution] = None,
+                      fps: Optional[float] = None,
+                      left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
+                      right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
+                      name: Optional[str] = None,
+                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
+                      ) -> StereoComponent:
+        """
+        Deprecated, use stereo() instead.
+
+        Create Stereo camera component. If left/right cameras/component aren't specified they will get created internally.
+
+        Args:
+            resolution (str/SensorResolution): If monochrome cameras aren't already passed, create them and set specified resolution
+            fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
+            left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
+            right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
+            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
+            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
+        """
+        return self.stereo(resolution, fps, left, right, name, encode)
 
     def create_imu(self) -> IMUComponent:
         """
@@ -399,7 +479,7 @@ class OakCamera:
 
         Returns: key pressed from cv2.waitKey, or None if
         """
-        if cv2:
+        if CV2_HAS_GUI_SUPPORT:
             key = cv2.waitKey(1)
             if key == ord('q'):
                 self._stop = True

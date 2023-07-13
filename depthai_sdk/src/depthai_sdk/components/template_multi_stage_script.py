@@ -1,6 +1,10 @@
 import time
 msgs = dict()
 cntr = 0
+
+${INIT}
+width=xmax-xmin; height=ymax-ymin;
+
 def add_msg(msg, name, seq = None):
     global msgs
     if seq is None:
@@ -32,10 +36,7 @@ def get_msgs():
     return None
 
 def correct_bb(xmin,ymin,xmax,ymax):
-    if xmin < 0: xmin = 0.001
-    if ymin < 0: ymin = 0.001
-    if xmax > 1: xmax = 0.999
-    if ymax > 1: ymax = 0.999
+    
     return [xmin,ymin,xmax,ymax]
 
 while True:
@@ -64,14 +65,19 @@ while True:
         for i, det in enumerate(dets.detections):
             ${CHECK_LABELS}
             cfg = ImageManipConfig()
-            bb = correct_bb(
-                det.xmin${SCALE_BB_XMIN},
-                det.ymin${SCALE_BB_YMIN},
-                det.xmax${SCALE_BB_XMAX},
-                det.ymax${SCALE_BB_YMAX},
-                )
-            cfg.setCropRect(*bb)
-            ${DEBUG}node.warn(f"Sending {i + 1}. det. Det {det.xmin}, {det.ymin}, {det.xmax}, {det.ymax}")
+            # Change to fit the full-frame
+            new_xmin=xmin+width*det.xmin
+            new_ymin=ymin+height*det.ymin
+            new_xmax=xmin+width*det.xmax
+            new_ymax=ymin+height*det.ymax
+
+            if new_xmin < 0: new_xmin = 0.001
+            if new_ymin < 0: new_ymin = 0.001
+            if new_xmax > 1: new_xmax = 0.999
+            if new_ymax > 1: new_ymax = 0.999
+
+            cfg.setCropRect(new_xmin, new_ymin, new_xmax, new_ymax)
+            ${DEBUG}node.warn(f"Sending {i + 1}. det. Det {new_xmin}, {new_ymin}, {new_xmax}, {new_ymax}")
             cfg.setResize(${WIDTH}, ${HEIGHT})
             cfg.setKeepAspectRatio(False)
             node.io['manip_cfg'].send(cfg)

@@ -5,6 +5,7 @@ CameraComponent
 nodes and supports mocking the camera when recording is passed during OakCamera initialization. When using :ref:`Replaying` feature, this component will
 mock the camera by sending frames from the host to the OAK device (via `XLinkIn <https://docs.luxonis.com/projects/api/en/latest/components/nodes/xlink_in/>`__ node).
 
+
 Usage
 #####
 

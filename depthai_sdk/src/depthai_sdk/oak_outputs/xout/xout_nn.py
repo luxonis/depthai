@@ -1,3 +1,4 @@
+import threading
 from typing import List, Union, Dict, Any, Optional, Tuple
 
 import depthai as dai
@@ -293,6 +294,8 @@ class XoutTwoStage(XoutNnResults):
         self.input_queue = None
         self.input_cfg_queue = None
 
+        self.lock = threading.Lock()
+
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.nn_results, self.second_nn_out]
 
@@ -398,11 +401,12 @@ class XoutTwoStage(XoutNnResults):
             #     if int(s) <= int(seq):
             #         del self.msgs[s]
 
-            new_msgs = {}
-            for name, msg in self.msgs.items():
-                if int(name) > int(seq):
-                    new_msgs[name] = msg
-            self.msgs = new_msgs
+            with self.lock:
+                new_msgs = {}
+                for name, msg in self.msgs.items():
+                    if int(name) > int(seq):
+                        new_msgs[name] = msg
+                self.msgs = new_msgs
 
     def add_detections(self, seq: str, dets: dai.ImgDetections):
         # Used to match the scaled bounding boxes by the 2-stage NN script node

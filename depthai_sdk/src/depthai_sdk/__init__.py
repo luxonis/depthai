@@ -1,5 +1,6 @@
 from depthai_sdk.args_parser import ArgsParser
 from depthai_sdk.classes.enum import ResizeMode
+from depthai_sdk.constants import CV2_HAS_GUI_SUPPORT
 from depthai_sdk.logger import set_logging_level
 from depthai_sdk.oak_camera import OakCamera
 from depthai_sdk.oak_device import OakDevice
@@ -10,7 +11,7 @@ from depthai_sdk.utils import *
 from depthai_sdk.utils import _create_config, get_config_field
 from depthai_sdk.visualize import *
 
-__version__ = '1.11.0'
+__version__ = '1.12.1'
 
 
 def __import_sentry(sentry_dsn: str) -> None:
