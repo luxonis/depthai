@@ -28,13 +28,6 @@ red = (255, 0, 0)
 green = (0, 255, 0)
 
 stringToCam = {
-                # 'RGB': dai.CameraBoardSocket.RGB,
-                # 'LEFT': dai.CameraBoardSocket.LEFT,
-                # 'RIGHT': dai.CameraBoardSocket.RIGHT,
-                # 'AUTO': dai.CameraBoardSocket.AUTO,
-                # 'CAM_A' : dai.CameraBoardSocket.RGB,
-                # 'CAM_B' : dai.CameraBoardSocket.LEFT,
-                # 'CAM_C' : dai.CameraBoardSocket.CAM_C,
                 'RGB'   : dai.CameraBoardSocket.CAM_A,
                 'LEFT'  : dai.CameraBoardSocket.CAM_B,
                 'RIGHT' : dai.CameraBoardSocket.CAM_C,
@@ -46,24 +39,6 @@ stringToCam = {
                 'CAM_F' : dai.CameraBoardSocket.CAM_F,
                 'CAM_G' : dai.CameraBoardSocket.CAM_G,
                 'CAM_H' : dai.CameraBoardSocket.CAM_H
-                }
-
-CamToString = {
-                # dai.CameraBoardSocket.RGB : 'RGB'  ,
-                # dai.CameraBoardSocket.LEFT : 'LEFT' ,
-                # dai.CameraBoardSocket.RIGHT : 'RIGHT',
-                # dai.CameraBoardSocket.AUTO : 'AUTO'
-                dai.CameraBoardSocket.CAM_A : 'RGB'  ,
-                dai.CameraBoardSocket.CAM_B : 'LEFT' ,
-                dai.CameraBoardSocket.CAM_C : 'RIGHT',
-                dai.CameraBoardSocket.CAM_A : 'CAM_A',
-                dai.CameraBoardSocket.CAM_B : 'CAM_B',
-                dai.CameraBoardSocket.CAM_C : 'CAM_C',
-                dai.CameraBoardSocket.CAM_D : 'CAM_D',
-                dai.CameraBoardSocket.CAM_E : 'CAM_E',
-                dai.CameraBoardSocket.CAM_F : 'CAM_F',
-                dai.CameraBoardSocket.CAM_G : 'CAM_G',
-                dai.CameraBoardSocket.CAM_H : 'CAM_H'
                 }
 
 camToMonoRes = {
@@ -183,6 +158,8 @@ def parse_args():
                         help="Don't take the board calibration for initialization but start with an empty one")
     parser.add_argument('-disall', '--enableDebugMessageSync', default=False, action="store_true",
                         help="Display all the information in calibration.")
+    parser.add_argument('-trc', '--traceLevel', type=int, default=0,
+                        help="Set to trace the steps in calibration. Number from 1 to 5.")
 
     options = parser.parse_args()
 
@@ -317,7 +294,7 @@ class MessageSync:
         #     print()
         # print()
 
-    def get_synced(self, enableDebugMessageSync):
+    def get_synced(self):
 
         # Atleast 3 messages should be buffered
         min_len = min([len(queue) for queue in self.queues.values()])
@@ -355,7 +332,7 @@ class MessageSync:
             # Mark minimum
             if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.3):
                 min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
-                if enableDebugMessageSync:
+                if self.enableDebugMessageSync:
                     print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
             if min_ts_diff['ts'] < self.min_diff_timestamp:
@@ -372,11 +349,10 @@ class MessageSync:
                         # pop out the older messages
                         for i in range(0, min_ts_diff['indicies'][name]+1):
                             self.queues[name].popleft()
-                    if enableDebugMessageSync:
+                    if self.enableDebugMessageSync:
                         print('Returning synced messages with error:', min_ts_diff['ts'], min_ts_diff['indicies'])
                     return synced
 
-        # print('
 
 class Main:
     output_scale_factor = 0.5
@@ -391,7 +367,8 @@ class Main:
         global debug
         self.args = parse_args()
         debug = self.args.debug
-        enableDebugMessageSync=self.args.enableDebugMessageSync
+        self.enableDebugMessageSync=self.args.enableDebugMessageSync
+        self.traceLevel= self.args.traceLevel
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
@@ -434,7 +411,6 @@ class Main:
         for properties in cameraProperties:
             for in_cam in self.board_config['cameras'].keys():
                 cam_info = self.board_config['cameras'][in_cam]
-                print(cameraProperties)
                 if properties.socket == stringToCam[in_cam]:
                     self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
                     print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
@@ -448,20 +424,6 @@ class Main:
                             self.args.markerSizeCm,
                             self.aruco_dictionary)
 
-
-        
-
-        """ cameraProperties = self.device.getConnectedCameraProperties()
-        for properties in cameraProperties:
-            if properties.sensorName == 'OV7251':
-                raise Exception(
-            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!") 
-
-        self.device.startPipeline(pipeline)"""
-        # self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
-        # self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
-        # if not self.args.disableRgb:
-        #     self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
 
     def mouse_event_callback(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
@@ -545,6 +507,7 @@ class Main:
             if cam_info['type'] == 'mono':
                 cam_node = pipeline.createMonoCamera()
                 xout = pipeline.createXLinkOut()
+
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
@@ -684,9 +647,9 @@ class Main:
         timer = self.args.captureDelay
         prev_time = None
         curr_time = None
-        enableDebugMessageSync= self.args.enableDebugMessageSync
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue), 0.3) # 3ms tolerance
+        syncCollector = MessageSync(len(self.camera_queue), 0.003 ) # 3ms tolerance
+        syncCollector.enableDebugMessageSync = self.args.enableDebugMessageSync
         self.mouseTrigger = False
         while not finished:
             currImageList = {}
@@ -838,7 +801,7 @@ class Main:
             tried = {}
             allPassed = True
             if capturing:
-                syncedMsgs = syncCollector.get_synced(enableDebugMessageSync)
+                syncedMsgs = syncCollector.get_synced()
                 if syncedMsgs == False or syncedMsgs == None:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
@@ -885,200 +848,11 @@ class Main:
                     break
 
 
-    """ def capture_images(self):
-        finished = False
-        capturing = False
-        captured_left = False
-        captured_right = False
-        captured_color = False
-        tried_left = False
-        tried_right = False
-        tried_color = False
-        recent_left = None
-        recent_right = None
-        recent_color = None
-        combine_img = None
-        start_timer = False
-        timer = self.args.captureDelay
-        prev_time = None
-        curr_time = None
-        self.display_name = "left + right + rgb"
-        # with self.get_pipeline() as pipeline:
-        while not finished:
-            current_left  = self.left_camera_queue.tryGet()
-            current_right = self.right_camera_queue.tryGet()
-            if not self.args.disableRgb:
-                current_color = self.rgb_camera_queue.tryGet()
-            else:
-                current_color = None
-            # recent_left = left_frame.getCvFrame()
-            # recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
-            if not current_left is None:
-                recent_left = current_left
-            if not current_right is None:
-                recent_right = current_right
-            if not current_color is None:
-                recent_color = current_color
-
-            if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
-                print("Continuing...")
-                continue
-
-            recent_frames = [('left', recent_left), ('right', recent_right)]
-            if not self.args.disableRgb:
-                recent_frames.append(('rgb', recent_color))
-
-            key = cv2.waitKey(1)
-            if key == 27 or key == ord("q"):
-                print("py: Calibration has been interrupted!")
-                raise SystemExit(0)
-            elif key == ord(" "):
-                if debug:
-                    print("setting timer true------------------------")
-                start_timer = True
-                prev_time = time.time()
-                timer = self.args.captureDelay
-
-            frame_list = []
-            # left_frame = recent_left.getCvFrame()
-            # rgb_frame = recent_color.getCvFrame()
-
-            for packet in recent_frames:
-                frame = packet[1].getCvFrame()
-                # print(packet[0])
-                # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                if packet[0] == 'rgb':
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                # print(frame.shape)
-                if self.polygons is None:
-                    self.height, self.width = frame.shape
-                    print(self.height, self.width)
-                    self.polygons = calibUtils.setPolygonCoordinates(
-                        self.height, self.width)
-
-                # if debug:
-                #     print("Timestamp difference ---> l & rgb")
-                lrgb_time = 0
-                if not self.args.disableRgb:
-                    lrgb_time = min([abs((recent_left.getTimestamp() - recent_color.getTimestamp()).microseconds), abs((recent_color.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
-                lr_time = min([abs((recent_left.getTimestamp() - recent_right.getTimestamp()).microseconds), abs((recent_right.getTimestamp() - recent_left.getTimestamp()).microseconds)]) / 1000
-
-                if debug:
-                    print(f'Timestamp difference between l & RGB ---> {lrgb_time} in microseconds')
-                    print(f'Timestamp difference between l & r ---> {lr_time} in microseconds')
-
-                if capturing and lrgb_time < 50 and lr_time < 30:
-                    print("Capturing  ------------------------")
-                    if packet[0] == 'left' and not tried_left:
-                        captured_left = self.parse_frame(frame, packet[0])
-                        tried_left = True
-                        captured_left_frame = frame.copy()
-                    elif packet[0] == 'rgb' and not tried_color and not self.args.disableRgb:
-                        captured_color = self.parse_frame(frame, packet[0])
-                        tried_color = True
-                        captured_color_frame = frame.copy()
-                    elif packet[0] == 'right' and not tried_right:
-                        captured_right = self.parse_frame(frame, packet[0])
-                        tried_right = True
-                        captured_right_frame = frame.copy()
-
-
-                has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
-                    (packet[0] == "rgb" and captured_color)
-
-                if self.args.invert_v and self.args.invert_h:
-                    frame = cv2.flip(frame, -1)
-                elif self.args.invert_v:
-                    frame = cv2.flip(frame, 0)
-                elif self.args.invert_h:
-                    frame = cv2.flip(frame, 1)
-
-                cv2.putText(
-                    frame,
-                    "Polygon Position: {}. Captured {} of {} {} images".format(
-                        self.current_polygon + 1, self.images_captured, self.total_images, packet[0]
-                    ),
-                    (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0)
-                )
-                if self.polygons is not None:
-                    cv2.polylines(
-                        frame, np.array([self.polygons[self.current_polygon]]),
-                        True, (0, 255, 0) if captured_left else (0, 0, 255), 4
-                    )
-
-                small_frame = cv2.resize(
-                    frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
-                # cv2.imshow(packet.stream_name, small_frame)
-                frame_list.append(small_frame)
-
-                if self.args.disableRgb:
-                    captured_color = True
-                    tried_color = True
-                if captured_left and captured_right and captured_color:
-                    print("Images captured --> {}".format(self.images_captured))
-                    if not self.images_captured:
-                        if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
-                            self.show_failed_orientation()
-                        # if not self.test_camera_orientation(captured_left_frame, captured_color_frame):
-                        #     self.show_failed_orientation()
-
-                    self.images_captured += 1
-                    self.images_captured_polygon += 1
-                    capturing = False
-                    tried_left = False
-                    tried_right = False
-                    tried_color = False
-                    captured_left = False
-                    captured_right = False
-                    captured_color = False
-                elif tried_left and tried_right and tried_color:
-                    self.show_failed_capture_frame()
-                    capturing = False
-                    tried_left = False
-                    tried_right = False
-                    tried_color = False
-                    captured_left = False
-                    captured_right = False
-                    captured_color = False
-                    break
-
-                if self.images_captured_polygon == self.args.count:
-                    self.images_captured_polygon = 0
-                    self.current_polygon += 1
-
-                    if self.current_polygon == len(self.polygons):
-                        finished = True
-                        cv2.destroyAllWindows()
-                        break
-            
-            if not self.args.disableRgb:
-                frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
-                combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
-            else:
-                combine_img = np.vstack((frame_list[0], frame_list[1]))
-                self.display_name = "left + right"
-
-            if start_timer == True:
-                curr_time = time.time()
-                if curr_time - prev_time >= 1:
-                    prev_time = curr_time
-                    timer = timer-1
-                if timer <= 0 and start_timer == True:
-                    start_timer = False
-                    capturing = True
-                    print('Statrt capturing...')
-                
-                image_shape = combine_img.shape
-                cv2.putText(combine_img, str(timer),
-                        (image_shape[1]//2, image_shape[0]//2), font,
-                        7, (0, 255, 255),
-                        4, cv2.LINE_AA)
-            cv2.imshow(self.display_name, combine_img)
-            frame_list.clear() """
 
     def calibrate(self):
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
+        stereo_calib.traceLevel = self.args.traceLevel
         dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
@@ -1221,19 +995,6 @@ class Main:
                         is_write_factory_sucessful = False
 
                 if is_write_succesful:
-                    
-
-                    """ eepromUnionData = {}
-                    calibHandler = self.device.readCalibration2()
-                    eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
-
-                    calibHandler = self.device.readFactoryCalibration()
-                    eepromUnionData['calibrationFactory'] = calibHandler.eepromToJson()
-
-                    eepromUnionData['calibrationUserRaw'] = self.device.readCalibrationRaw()
-                    eepromUnionData['calibrationFactoryRaw'] = self.device.readFactoryCalibrationRaw()
-                    with open(calib_dest_path, "w") as outfile:
-                        json.dump(eepromUnionData, outfile, indent=4) """
                     self.device.close()
                     text = "EEPROM written succesfully"
                     resImage = create_blank(900, 512, rgb_color=green)
