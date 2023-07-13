@@ -3,7 +3,7 @@ import os
 import time
 from threading import Thread
 from time import monotonic
-
+from typing import List, Dict, Tuple, Optional, Callable
 import depthai as dai
 
 from depthai_sdk.classes.enum import ResizeMode
@@ -24,6 +24,7 @@ class ReplayStream:
     _shape: Tuple[int, int]  # width, height
     disabled: bool
     size_bytes: int  # bytes
+    callbacks: List[Callable]  # List of callbacks
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -37,6 +38,7 @@ class ReplayStream:
 
         self.resize: Tuple[int, int] = None
         self.resize_mode: ResizeMode = None
+        self.callbacks = []
 
     def get_socket(self) -> dai.CameraBoardSocket:
         if self.camera_socket:
@@ -200,6 +202,9 @@ class Replay:
     def get_fps(self) -> float:
         return self.fps
 
+    def _add_callback(self, stream_name: str, callback: Callable):
+        self.streams[stream_name.lower()].callbacks.append(callback)
+
     def resize(self, stream_name: str, size: Tuple[int, int], mode: ResizeMode = ResizeMode.STRETCH):
         """
         Resize color frames prior to sending them to the device.
@@ -288,17 +293,17 @@ class Replay:
         left.node.out.link(stereo.left)
         right.node.out.link(stereo.right)
 
-    def start(self, cb):
+    def start(self):
         """
         Start sending frames to the OAK device on a new thread
         """
-        self.thread = Thread(target=self.run, args=(cb,))
+        self.thread = Thread(target=self.run, args=())
         self.thread.start()
 
-    def run(self, cb):
+    def run(self):
         delay = 1.0 / self.fps
         while True:
-            if not self.sendFrames(cb):
+            if not self.sendFrames():
                 break
 
             time.sleep(delay)
@@ -308,7 +313,7 @@ class Replay:
         logging.info('Replay `run` thread stopped')
         self._stop = True
 
-    def sendFrames(self, cb=None) -> bool:
+    def sendFrames(self) -> bool:
         """
         Reads and sends recorded frames from all enabled streams to the OAK camera.
 
@@ -323,7 +328,7 @@ class Replay:
         for stream_name, stream in self.streams.items():
             stream.imgFrame = self._createImgFrame(stream)
             # Save the imgFrame
-            if cb:  # callback
+            for cb in stream.callbacks:  # callback
                 cb(stream_name.lower(), stream.imgFrame)
 
             # Don't send these frames to the OAK camera
@@ -339,7 +344,7 @@ class Replay:
     def createQueues(self, device: dai.Device):
         """
         Creates input queue for each enabled stream
-        
+
         Args:
             device (dai.Device): Device to which we will stream frames
         """
@@ -402,7 +407,7 @@ class Replay:
     def _readFrames(self) -> bool:
         """
         Reads frames from all Readers.
-        
+
         Returns:
             bool: True if successful, otherwise False.
         """

@@ -486,9 +486,18 @@ class OakCamera:
         self.device.startPipeline(self.pipeline)
 
         for name, callbacks in self._new_msg_callbacks.items():
-            q = self.device.getOutputQueue(name, maxSize=4, blocking=False)
-            for cb in callbacks:
-                q.addCallback(cb)
+            try:
+                q = self.device.getOutputQueue(name, maxSize=4, blocking=False)
+                for cb in callbacks:
+                    q.addCallback(cb)
+            # TODO: make this nicer, have self._new_msg_callbacks know whether it's replay or not
+            except Exception as e:
+                if self.replay:
+                    for cb in callbacks:
+                        self.replay._add_callback(name, cb)
+                else:
+                    raise e
+
 
         # Append callbacks to be called from main thread
         # self._polling.append()
@@ -502,6 +511,7 @@ class OakCamera:
 
         if self.replay:
             self.replay.createQueues(self.device)
+            self.replay.start()
             # Called from Replay module on each new frame sent to the device.
 
 
