@@ -156,10 +156,10 @@ def parse_args():
                         help="Enable mouse trigger for image capture")
     parser.add_argument('-nic', '--noInitCalibration', default=False, action="store_true",
                         help="Don't take the board calibration for initialization but start with an empty one")
+    parser.add_argument('-trc', '--traceLevel', type=int, default=0,
+                        help="Set to trace the steps in calibration. Number from 1 to 5. If you want to display all, set trace number to 10.")
     parser.add_argument('-disall', '--enableDebugMessageSync', default=False, action="store_true",
                         help="Display all the information in calibration.")
-    parser.add_argument('-trc', '--traceLevel', type=int, default=0,
-                        help="Set to trace the steps in calibration. Number from 1 to 5.")
 
     options = parser.parse_args()
 
@@ -192,14 +192,6 @@ class HostSync:
         self.arrays[name].appendleft({'data': data, 'timestamp': ts})
         if self.recentFrameTs == None or self.recentFrameTs - ts:
             self.recentFrameTs = ts
-        # print(len(self.arrays[name]))
-        # print(f'Added Msgs typ {name}')
-        # print(ts)
-        # for name, arr in self.arrays.items():
-        #     for i, obj in enumerate(arr):
-        #         if self.remove(obj['timestamp']):
-        #             arr.remove(obj)
-        #         else: break
     
     def clearQueues(self):
         print('Clearing Queues...')
@@ -210,9 +202,6 @@ class HostSync:
     def get_synced(self):
         synced = {}
         for name, msgList in self.arrays.items():
-            # print('len(pivotM---------sgList)')
-            # print(len(pivotMsgList))
-
             if len(msgList) != self.arraySize:
                 return False 
 
@@ -247,27 +236,6 @@ class HostSync:
             # raise SystemExit(1)
             self.clearQueues()
             return False
-
-
-        """ for name, arr in self.arrays.items():
-            for i, obj in enumerate(arr):
-                time_diff = abs(obj['timestamp'] - self.recentFrameTs)
-                print("Time diff for {0} is {1} milliseconds".format(name ,time_diff.total_seconds() * 1000))
-                # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
-                # time difference is below 20ms, it's considered as synced
-                if time_diff < self.deltaMilliSec:
-                    synced[name] = obj['data']
-                    # print(f"{name}: {i}/{len(arr)}")
-                    break
-        print(f'Size of Synced is {len(synced)} amd array size is {len(self.arrays)}')
-        if len(synced) == len(self.arrays):
-            for name, arr in self.arrays.items():
-                for i, obj in enumerate(arr):
-                    if self.remove(obj['timestamp']):
-                        arr.remove(obj)
-                    else: break
-            return synced
-        return False """
 
 
 class MessageSync:
@@ -330,7 +298,7 @@ class MessageSync:
                 acc_diff = acc_diff + abs(min_ts - msg.getTimestampDevice().total_seconds())
 
             # Mark minimum
-            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.3):
+            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.03):
                 min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
                 if self.enableDebugMessageSync:
                     print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
@@ -648,7 +616,7 @@ class Main:
         prev_time = None
         curr_time = None
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue), 0.003 ) # 3ms tolerance
+        syncCollector = MessageSync(len(self.camera_queue), 0.3 ) # 3ms tolerance
         syncCollector.enableDebugMessageSync = self.args.enableDebugMessageSync
         self.mouseTrigger = False
         while not finished:
@@ -821,9 +789,10 @@ class Main:
                     for name, frameMsg in syncedMsgs.items():
                         self.coverageImages[name] = self.draw_corners(frameMsg.getCvFrame(), self.coverageImages[name], color)
                     if not self.images_captured:
-                        leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
-                        rightStereo = self.board_config['cameras'][self.board_config['stereo_config']['right_cam']]['name']
-                        print(f'Left Camera of stereo is {leftStereo} and right Camera of stereo is {rightStereo}')
+                        if 'stereo_config' in self.board_config['cameras']:
+                            leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
+                            rightStereo = self.board_config['cameras'][self.board_config['stereo_config']['right_cam']]['name']
+                            print(f'Left Camera of stereo is {leftStereo} and right Camera of stereo is {rightStereo}')
                         # if not self.test_camera_orientation(syncedMsgs[leftStereo].getCvFrame(), syncedMsgs[rightStereo].getCvFrame()):
                         #     self.show_failed_orientation()
 
@@ -865,8 +834,8 @@ class Main:
                                         self.args.squaresX,
                                         self.args.squaresY,
                                         self.args.cameraMode,
-                                        self.args.rectifiedDisp, # Turn off enable disp rectify
-                                        self.args.enableDebugMessageSync)
+                                        self.args.rectifiedDisp) # Turn off enable disp rectify
+
             if self.args.noInitCalibration:
                 calibration_handler = dai.CalibrationHandler()
             else:
