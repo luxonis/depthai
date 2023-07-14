@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
+from asyncio.constants import SENDFILE_FALLBACK_READBUFFER_SIZE
 from datetime import timedelta
 import time
-from typing import Sequence, Tuple, List, Union, Optional, Dict
+from typing import Sequence, Tuple, List, Union, Optional, Dict, Callable
 from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
 import depthai as dai
 import numpy as np
@@ -61,9 +62,18 @@ class FramePacket(BasePacket):
 
     def __init__(self,
                  name: str,
-                 msg: dai.ImgFrame):
+                 msg: dai.ImgFrame,
+                 ):
         self.msg = msg
+        self._get_codec = None
+        self.__frame = None
         super().__init__(name)
+
+    @property
+    def frame(self):
+        if self.__frame is None:
+            self.__frame = self.decode()
+        return self.__frame
 
     def get_timestamp(self) -> timedelta:
         return self.msg.getTimestampDevice(dai.CameraExposureOffset.MIDDLE)
@@ -71,61 +81,32 @@ class FramePacket(BasePacket):
     def get_sequence_num(self) -> int:
         return self.msg.getSequenceNum()
 
-    def decode(self) -> Optional[np.ndarray]:
-        return self.msg.getCvFrame() if cv2 else None
-
-    def get_size(self) -> Tuple[int, int]:
-        return self.msg.getWidth(), self.msg.getHeight()
-
-class H26xPacket(FramePacket):
-    def __init__(self,
-                name: str,
-                msg: dai.ImgFrame,
-                codec,
-                is_color: bool
-                ):
-        super().__init__(name=name, msg=msg)
-        self.codec = codec
-        self.is_color = is_color
+    def set_decode_codec(self, get_codec: Callable):
+        self._get_codec = get_codec
 
     def decode(self) -> Optional[np.ndarray]:
-        if self.codec is None:
-            raise ImportError('av is not installed. Please install it with `pip install av`')
+        if self._get_codec is None:
+            return self.msg.getCvFrame() if cv2 else None
 
-        enc_packets = self.codec.parse(self.msg.getData())
+        codec = self._get_codec()
+        if codec is None:
+            return self.msg.getCvFrame() if cv2 else None
+
+        # PyAV decoding support H264, H265, JPEG and Lossless JPEG
+        print('decoding...')
+
+        enc_packets = codec.parse(self.msg.getData())
         if len(enc_packets) == 0:
             return None
 
-        frames = self.codec.decode(enc_packets[-1])
+        frames = codec.decode(enc_packets[-1])
         if not frames:
             return None
 
-        frame = frames[0].to_ndarray(format='bgr24')
+        return frames[0].to_ndarray(format='bgr24')
 
-        if not self.is_color:
-            # Convert to grayscale
-            frame = frame[:, :, 0]
-        return frame
-
-class MjpegPacket(FramePacket):
-    def __init__(self,
-                name: str,
-                msg: dai.ImgFrame,
-                is_color: bool,
-                is_lossless: bool,
-                ):
-        self.is_lossless = is_lossless
-        self.is_color = is_color
-        super().__init__(name=name, msg=msg)
-
-    def decode(self) -> np.ndarray:
-        if self.is_lossless:
-            raise NotImplementedError('Lossless MJPEG decoding is not supported!')
-        if cv2 is None:
-            raise ImportError('cv2 is not installed. Please install it with `pip install opencv-python`')
-        flag = cv2.IMREAD_COLOR if self.is_color else cv2.IMREAD_GRAYSCALE
-        return cv2.imdecode(self.msg.getData(), flag)
-
+    def get_size(self) -> Tuple[int, int]:
+        return self.msg.getWidth(), self.msg.getHeight()
 
 class DisparityPacket(FramePacket):
     def __init__(self,

@@ -11,7 +11,9 @@ with OakCamera() as oak:
     def cb(msgs: Dict):
         print('synced!', msgs)
 
-    oak.sync([color.out.encoded, nn.out.passthrough, nn.out.main, nn2.out.main], cb)
+    oak.callback([color.out.encoded, nn.out.passthrough, nn.out.main, nn2.out.main], cb) \
+        .configure_syncing(enable_sync=True, threshold_ms=20)
+
     # oak.show_graph()
 
     oak.start(blocking=True)

@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
+from depthai_sdk.classes.packets import FramePacket
 from typing import List, Optional, Callable
 import depthai as dai
 
@@ -54,6 +55,12 @@ class XoutBase(ABC):
                 packet = [packet]
 
             for p in packet:
+                # In case we have encoded frames, we need to set the codec
+                if isinstance(p, FramePacket) and \
+                        hasattr(self, 'get_codec') and \
+                        self._fourcc is not None:
+                    p.set_decode_codec(self.get_codec)
+
                 self.on_callback(p)
                 self.new_packet_callback(p)
 

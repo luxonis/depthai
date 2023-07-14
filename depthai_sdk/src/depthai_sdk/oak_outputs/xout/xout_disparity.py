@@ -89,23 +89,36 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
         return [self.frames, self.mono_frames]
 
     def package(self, msgs: Dict) -> DisparityPacket:
-        disparity_frame = msgs[self.frames.name].getFrame()
+        img_frame = msgs[self.frames.name]
         mono_frame = msgs[self.mono_frames.name] if self.mono_frames else None
+        # TODO: refactor the mess below
+        packet = DisparityPacket(
+            self.get_packet_name(),
+            img_frame,
+            self.multiplier,
+            disparity_map=None,
+            colorize=self.colorize,
+            colormap=self.colormap,
+            mono_frame=mono_frame,
+        )
+        packet._get_codec = self.get_codec
+
+        if self._fourcc is None:
+            disparity_frame = img_frame.getFrame()
+        else:
+            disparity_frame = packet.decode()
+            if disparity_frame is None:
+                return None
 
         if mono_frame and self.use_wls_filter:
             # Perform WLS filtering
             # If we have wls enabled, it means CV2 is installed
             disparity_frame = self.wls_filter.filter(disparity_frame, mono_frame.getCvFrame())
 
-        return DisparityPacket(
-            self.get_packet_name(),
-            msgs[self.frames.name],
-            self.multiplier,
-            disparity_frame,
-            colorize=self.colorize,
-            colormap=self.colormap,
-            mono_frame=mono_frame,
-        )
+        packet.disparity_map = disparity_frame
+
+        return packet
+
 
     def _auto_ir_search(self, frame: np.ndarray):
         # Perform neighbourhood search if we got worse metric values
