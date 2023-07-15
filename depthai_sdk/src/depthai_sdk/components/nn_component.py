@@ -36,7 +36,7 @@ class NNComponent(Component):
                  nn_type: Optional[str] = None,  # Either 'yolo' or 'mobilenet'
                  decode_fn: Optional[Callable] = None,
                  tracker: bool = False,  # Enable object tracker - only for Object detection models
-                 spatial: Union[None, bool, StereoComponent] = None,
+                 spatial: Optional[StereoComponent] = None,
                  replay: Optional[Replay] = None,
                  args: Dict = None,  # User defined args
                  name: Optional[str] = None
@@ -97,7 +97,7 @@ class NNComponent(Component):
 
         self._input_queue = Optional[None]  # Input queue for multi-stage pipeline
 
-        self._spatial: Optional[Union[bool, StereoComponent]] = spatial
+        self._spatial: Optional[StereoComponent] = spatial
         self._replay: Optional[Replay] = replay  # Replay module
 
         # For visualizer
@@ -208,12 +208,9 @@ class NNComponent(Component):
             )
 
         if self._spatial:
-            if isinstance(self._spatial, bool):  # Create new StereoComponent
-                self._spatial = StereoComponent(device, pipeline, args=self._args, replay=self._replay)
-            if isinstance(self._spatial, StereoComponent):
-                self._stereo_node: dai.node.StereoDepth = self._spatial.node
-                self._spatial.depth.link(self.node.inputDepth)
-                self._spatial.config_stereo(align=self._input)
+            self._stereo_node: dai.node.StereoDepth = self._spatial.node
+            self._spatial.depth.link(self.node.inputDepth)
+            self._spatial.config_stereo(align=self._input)
             # Configure Spatial Detection Network
 
         if self._args:

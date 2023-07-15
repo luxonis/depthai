@@ -42,10 +42,6 @@ class PointcloudComponent(Component):
 
         self._replay: Optional[Replay] = replay
 
-        # Colorization aspect
-        if colorize is None:
-            self.colorize_comp = CameraComponent(device, pipeline, source='color', replay=replay, args=args)
-
         if isinstance(self.colorize_comp, CameraComponent):
             self.colorize_comp.config_color_camera(isp_scale=(2,5))
 

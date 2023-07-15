@@ -22,7 +22,7 @@ from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.nn_component import NNComponent
-from depthai_sdk.components.parser import parse_usb_speed, parse_camera_socket
+from depthai_sdk.components.parser import parse_usb_speed, parse_camera_socket, get_first_color_cam
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.components.pointcloud_component import PointcloudComponent
 from depthai_sdk.oak_device import OakDevice
@@ -131,19 +131,41 @@ class OakCamera:
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
-        socket = source
+        sensor_type = None
         if isinstance(source, str):
-            socket = parse_camera_socket(source.split(",")[0])
+            if "," in source:  # For sensors that support multiple
+                parts = source.lower().split(',')
+                source = parts[0]
+                if parts[1] in ["c", "color"]:
+                    sensor_type = dai.CameraSensorType.COLOR
+                elif parts[1] in ["m", "mono"]:
+                    sensor_type = dai.CameraSensorType.MONO
+                else:
+                    raise Exception(
+                        "Please specify sensor type with c/color or m/mono after the ','"
+                        " - eg. `cam = oak.create_camera('cama,c')`"
+                    )
+
+            if source == 'left':
+                source = self._calibration.getStereoLeftCameraId()
+            elif source == 'right':
+                source = self._calibration.getStereoRightCameraId()
+            elif source in ['color', 'rgb']:
+                source = get_first_color_cam(self.device)
+            else:
+                source = parse_camera_socket(source)
+
         for comp in self._components:
-            if isinstance(comp, CameraComponent) and comp.node.getBoardSocket() == socket:
+            if isinstance(comp, CameraComponent) and comp.node.getBoardSocket() == source:
                 return comp
 
-        comp = CameraComponent(self._oak.device,
+        comp = CameraComponent(self.device,
                                self.pipeline,
                                source=source,
                                resolution=resolution,
                                fps=fps,
                                encode=encode,
+                               sensor_type=sensor_type,
                                rotation=self._rotation,
                                replay=self.replay,
                                name=name,
@@ -254,6 +276,8 @@ class OakCamera:
             decode_fn: Custom decoding function for the model's output
             name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
+        if spatial and type(spatial) == bool:
+            spatial = self.stereo()
         comp = NNComponent(self._oak.device,
                            self.pipeline,
                            model=model,
@@ -288,14 +312,12 @@ class OakCamera:
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
         if left is None:
-            left = self.camera(source=dai.CameraBoardSocket.LEFT, resolution=resolution, fps=fps)
+            left = self.camera(source="left", resolution=resolution, fps=fps)
         if right is None:
-            right = self.camera(source=dai.CameraBoardSocket.RIGHT, resolution=resolution, fps=fps)
+            right = self.camera(source="right", resolution=resolution, fps=fps)
 
         comp = StereoComponent(self._oak.device,
                                self.pipeline,
-                               resolution=resolution,
-                               fps=fps,
                                left=left,
                                right=right,
                                replay=self.replay,

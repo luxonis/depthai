@@ -17,12 +17,13 @@ class CameraComponent(Component):
     def __init__(self,
                  device: dai.Device,
                  pipeline: dai.Pipeline,
-                 source: Union[str, dai.CameraBoardSocket],
+                 source: dai.CameraBoardSocket,
                  resolution: Optional[Union[
                      str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
                  ]] = None,
                  fps: Optional[float] = None,
                  encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
+                 sensor_type: Optional[dai.CameraSensorType] = None,
                  rotation: Optional[int] = None,
                  replay: Optional[Replay] = None,
                  name: Optional[str] = None,
@@ -39,6 +40,7 @@ class CameraComponent(Component):
             resolution (optional): Camera resolution, eg. '800p' or '4k'
             fps (float, optional): Camera FPS
             encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
+            sensor_type: To force color/mono/tof camera
             rotation (int, optional): Rotate the camera by 90, 180, 270 degrees
             replay (Replay object): Replay object to use for mocking the camera
             name (str, optional): Name of the output stream
@@ -47,6 +49,7 @@ class CameraComponent(Component):
         super().__init__()
         self.out = self.Out(self)
         self._pipeline = pipeline
+        self._device = device
 
         self.node: Optional[Union[dai.node.ColorCamera, dai.node.MonoCamera, dai.node.XLinkIn]] = None
         self.encoder: Optional[dai.node.VideoEncoder] = None
@@ -55,6 +58,7 @@ class CameraComponent(Component):
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
 
         self._source = str(source)
+        self._socket = source
         self._replay: Optional[Replay] = replay
         self._args: Dict = args
         self.name = name
@@ -91,44 +95,22 @@ class CameraComponent(Component):
         # Livestreaming, not replay
         else:
             node_type: dai.node = None
-            if isinstance(source, str):
-                source = source.upper()
-                # When sensors can be either color or mono (eg. AR0234), we allow specifying it
-                if "," in source:  # For sensors that support multiple
-                    parts = source.split(',')
-                    source = parts[0]
-                    if parts[1] in ["C", "COLOR"]:
-                        node_type = dai.node.ColorCamera
-                    elif parts[1] in ["M", "MONO"]:
-                        node_type = dai.node.MonoCamera
-                    else:
-                        raise Exception(
-                            "Please specify sensor type with c/color or m/mono after the ','"
-                            " - eg. `cam = oak.create_camera('cama,c')`"
-                        )
-                elif source in ["COLOR", "RGB"]:
-                    for features in device.getConnectedCameraFeatures():
-                        if dai.CameraSensorType.COLOR in features.supportedTypes:
-                            source = features.socket
-                            break
-                    if not isinstance(source, dai.CameraBoardSocket):
-                        raise ValueError("Couldn't find a color camera!")
+            sensors = [f for f in device.getConnectedCameraFeatures() if f.socket == source]
+            if len(sensors) == 0:
+                raise Exception(f"No camera found on user-specified socket {source}")
+            sensor = sensors[0]
 
-            socket = parse_camera_socket(source)
-            sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == socket][0]
-
-            if node_type is None:  # User specified camera type
-                type = sensor.supportedTypes[0]
-                if type == dai.CameraSensorType.COLOR:
-                    node_type = dai.node.ColorCamera
-                elif type == dai.CameraSensorType.MONO:
-                    node_type = dai.node.MonoCamera
-                else:
-                    raise Exception(f"{sensor} doesn't support either COLOR or MONO ")
+            sensor_type = sensor_type or sensor.supportedTypes[0]
+            if sensor_type == dai.CameraSensorType.COLOR:
+                node_type = dai.node.ColorCamera
+            elif sensor_type == dai.CameraSensorType.MONO:
+                node_type = dai.node.MonoCamera
+            else:
+                raise Exception(f"{sensor} doesn't support either COLOR or MONO ")
 
             # Create the node, and set the socket
             self.node = pipeline.create(node_type)
-            self.node.setBoardSocket(socket)
+            self.node.setBoardSocket(source)
 
         self._resolution_forced: bool = resolution is not None
         if resolution:
@@ -385,7 +367,12 @@ class CameraComponent(Component):
 
     def _set_resolution(self, resolution):
         if not self.is_replay():
-            self.node.setResolution(parse_resolution(type(self.node), resolution))
+            if isinstance(resolution, str) and resolution.lower() in ['max', 'maximum']:
+                sensor = [f for f in self._device.getConnectedCameraFeatures() if f.socket == self._socket][0]
+                resolution = get_max_resolution(sensor)
+            else:
+                resolution = parse_resolution(type(self.node), resolution)
+            self.node.setResolution(resolution)
         # TODO: support potentially downscaling depthai-recording
 
     def is_replay(self) -> bool:
