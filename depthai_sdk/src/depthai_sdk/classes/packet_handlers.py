@@ -152,9 +152,9 @@ class VisualizePacketHandler(BasePacketHandler):
 
 
 class RecordPacketHandler(BasePacketHandler):
-    def __init__(self, outputs, rec: Record):
+    def __init__(self, outputs, recorder: Record):
         self._save_outputs(outputs)
-        self.rec = rec
+        self.recorder = recorder
         super().__init__()
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
@@ -164,12 +164,13 @@ class RecordPacketHandler(BasePacketHandler):
             xouts.append(xout)
             self._create_xout(pipeline, xout, xout_streams)
 
-        self.rec.start(device, xouts)
+        self.recorder.start(device, xouts)
+
+    def new_packet(self, packet: BasePacket):
+        self.recorder.write(packet)
 
     def close(self):
-        self.rec.close()
-        for xout in self.outputs:
-            xout.close()
+        self.recorder.close()
 
 class CallbackPacketHandler(BasePacketHandler):
     def __init__(self, outputs, callback: Callable, main_thread=False):

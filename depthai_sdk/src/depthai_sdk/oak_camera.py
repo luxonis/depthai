@@ -520,6 +520,7 @@ class OakCamera:
             # Constant loop: get messages, call callbacks
             while self.running():
                 self.poll()
+            self.close()
 
     def running(self) -> bool:
         """
@@ -536,7 +537,6 @@ class OakCamera:
         Returns: key pressed from cv2.waitKey, or None if
         """
         if self._stop:
-            self.close()
             return
 
         if CV2_HAS_GUI_SUPPORT:
@@ -574,7 +574,7 @@ class OakCamera:
     def record(self,
                outputs: Union[Callable, List[Callable]],
                path: str,
-               record_type: RecordType = RecordType.VIDEO):
+               record_type: RecordType = RecordType.VIDEO) -> RecordPacketHandler:
         """
         Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
         them to the computer in desired format (raw, mp4, mcap, bag..).
@@ -583,9 +583,9 @@ class OakCamera:
             path: Folder path where to save these streams
             record_type: Record type
         """
-        record = Record(Path(path).resolve(), record_type)
-        self._packet_handlers.append(RecordPacketHandler(outputs, record))
-        return record
+        handler = RecordPacketHandler(outputs, Record(Path(path).resolve(), record_type))
+        self._packet_handlers.append(handler)
+        return handler
 
     def show_graph(self):
         """

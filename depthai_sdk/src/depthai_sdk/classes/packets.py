@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from asyncio.constants import SENDFILE_FALLBACK_READBUFFER_SIZE
 from datetime import timedelta
 import time
 from typing import Sequence, Tuple, List, Union, Optional, Dict, Callable

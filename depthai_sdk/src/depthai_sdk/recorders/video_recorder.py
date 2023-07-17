@@ -51,7 +51,7 @@ class VideoRecorder(Recorder):
             else:
                 try:
                     from .video_writers.av_writer import AvWriter
-                    self._writers[xout_name] = AvWriter(self.path, xout_name, fourcc, xout.fps, xout._frame_shape)
+                    self._writers[xout_name] = AvWriter(self.path, xout_name, fourcc)
                 except Exception as e:
                     # TODO here can be other errors, not only import error
                     logging.warning(f'Exception while creating AvWriter: {e}.'
