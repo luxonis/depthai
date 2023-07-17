@@ -93,8 +93,6 @@ class FramePacket(BasePacket):
             return self.msg.getCvFrame() if cv2 else None
 
         # PyAV decoding support H264, H265, JPEG and Lossless JPEG
-        print('decoding...')
-
         enc_packets = codec.parse(self.msg.getData())
         if len(enc_packets) == 0:
             return None
