@@ -268,7 +268,7 @@ class StereoComponent(Component):
         if confidence is not None: self.node.initialConfig.setConfidenceThreshold(confidence)
         if align is not None:
             self._align_component = align
-            self.node.setDepthAlign(align.node.getBoardSocket())
+            self.node.setDepthAlign(align._socket)
         if median is not None: self.node.setMedianFilter(parse_median_filter(median))
         if extended is not None: self.node.initialConfig.setExtendedDisparity(extended)
         if subpixel is not None: self.node.initialConfig.setSubpixel(subpixel)

@@ -31,7 +31,7 @@ from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.nn_component import NNComponent
-from depthai_sdk.components.parser import parse_usb_speed, parse_camera_socket, get_first_color_cam
+from depthai_sdk.components.parser import parse_usb_speed, parse_camera_socket, get_first_color_cam, parse_open_vino_version
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.components.pointcloud_component import PointcloudComponent
 from depthai_sdk.record import RecordType, Record
@@ -57,7 +57,7 @@ class OakCamera:
     def __init__(self,
                  device: Optional[str] = None,
                  usb_speed: Union[None, str, dai.UsbSpeed] = None,  # Auto by default
-                 replay: Optional[str] = None,
+                 replay: Union[None, str, Path] = None,
                  rotation: int = 0,
                  config: dai.Device.Config = None,
                  args: Union[bool, Dict] = True
@@ -118,12 +118,11 @@ class OakCamera:
         self._packet_handlers: List[BasePacketHandler] = []
 
         self._rotation = rotation
-        self._calibration = None
         if replay is not None:
             self.replay = Replay(replay)
             self.replay.initPipeline(self.pipeline)
             logging.info(f'Available streams from recording: {self.replay.getStreams()}')
-        self._init_calibration()
+        self._calibration = self._init_calibration()
 
     def camera(self,
                source: Union[str, dai.CameraBoardSocket],
@@ -171,7 +170,7 @@ class OakCamera:
                 source = parse_camera_socket(source)
 
         for comp in self._components:
-            if isinstance(comp, CameraComponent) and comp.node.getBoardSocket() == source:
+            if isinstance(comp, CameraComponent) and comp._socket == source:
                 return comp
 
         comp = CameraComponent(self.device,
@@ -188,7 +187,7 @@ class OakCamera:
         self._components.append(comp)
         return comp
 
-       def _init_device(self,
+    def _init_device(self,
                      config: dai.Device.Config,
                      device_str: Optional[str] = None,
                      ) -> None:
@@ -260,9 +259,9 @@ class OakCamera:
         if self.replay:
             sources = self.replay.getStreams() # TODO handle in case the stream is not from a camera
         else:
-            sources = [cam_sensor.socket for cam_sensor in self._oak.device.getConnectedCameraFeatures()]
+            sources = [cam_sensor.socket for cam_sensor in self.device.getConnectedCameraFeatures()]
         for source in sources:
-            comp = CameraComponent(self._oak.device,
+            comp = CameraComponent(self.device,
                                    self.pipeline,
                                    source=source,
                                    resolution=resolution,
@@ -320,7 +319,8 @@ class OakCamera:
         """
         if spatial and type(spatial) == bool:
             spatial = self.stereo()
-        comp = NNComponent(self._oak.device,
+
+        comp = NNComponent(self.device,
                            self.pipeline,
                            model=model,
                            input=input,
@@ -358,7 +358,7 @@ class OakCamera:
         if right is None:
             right = self.camera(source="right", resolution=resolution, fps=fps)
 
-        comp = StereoComponent(self._oak.device,
+        comp = StereoComponent(self.device,
                                self.pipeline,
                                left=left,
                                right=right,
@@ -463,6 +463,8 @@ class OakCamera:
 
         for handler in self._packet_handlers:
             handler.close()
+
+        self.device.close()
 
 
     def start(self, blocking=False):
@@ -677,3 +679,13 @@ class OakCamera:
         Returns list of all sensors added to the pipeline.
         """
         return self.device.getConnectedCameraFeatures()
+
+    def _init_calibration(self) -> dai.CalibrationHandler:
+        calibration = None
+        if self.replay:
+            calibration = self.pipeline.getCalibrationData()
+        else:
+            calibration = self.device.readCalibration()
+        if calibration is None:
+            logging.warn("No calibration data found on the device or in replay")
+        return calibration

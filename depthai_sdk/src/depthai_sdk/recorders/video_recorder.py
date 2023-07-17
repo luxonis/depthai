@@ -42,22 +42,24 @@ class VideoRecorder(Recorder):
             # for example, 'color_bitstream' (encoded) or 'color_video' (unencoded),
             # if component was created with name='color'
             xout_name = xout.name  # for example, 'color' --> file is color.mp4 (encoded) or color.avi (unencoded)
-
+            file_name = xout_name
+            if file_name.startswith('CameraBoardSocket.'):
+                file_name = file_name[len('CameraBoardSocket.'):]
             stream = OakStream(xout)
             fourcc = stream.fourcc()  # TODO add default fourcc? stream.fourcc() can be None.
             if stream.is_raw():
                 from .video_writers.video_writer import VideoWriter
-                self._writers[xout_name] = VideoWriter(self.path, xout_name, fourcc, xout.fps, self._lossless)
+                self._writers[xout_name] = VideoWriter(self.path, file_name, fourcc, xout.fps, self._lossless)
             else:
                 try:
                     from .video_writers.av_writer import AvWriter
-                    self._writers[xout_name] = AvWriter(self.path, xout_name, fourcc)
+                    self._writers[xout_name] = AvWriter(self.path, file_name, fourcc)
                 except Exception as e:
                     # TODO here can be other errors, not only import error
                     logging.warning(f'Exception while creating AvWriter: {e}.'
                                     '\nFalling back to FileWriter, saving uncontainerized encoded streams.')
                     from .video_writers.file_writer import FileWriter
-                    self._writers[xout_name] = FileWriter(self.path, xout_name, fourcc)
+                    self._writers[xout_name] = FileWriter(self.path, file_name, fourcc)
 
     def create_files_for_buffer(self, subfolder: str, buf_name: str):
         for _, writer in self._writers.items():

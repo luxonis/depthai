@@ -69,8 +69,14 @@ class CameraComponent(Component):
         self._preview_num_frames_pool = 4
 
         if self.is_replay():
-            if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
+            stream_name = None
+            for name, stream in self._replay.streams.items():
+                if stream.get_socket() == self._socket:
+                    stream_name = name
+                    break
+            if stream_name is None:
                 raise Exception(f"{source} stream was not found in specified depthai-recording!")
+            self._source = stream_name
             res = self._replay.getShape(self._source)
             # print('resolution', res)
             # resize = getResize(res, width=1200)
