@@ -158,7 +158,7 @@ def parse_args():
                         help="Don't take the board calibration for initialization but start with an empty one")
     parser.add_argument('-trc', '--traceLevel', type=int, default=0,
                         help="Set to trace the steps in calibration. Number from 1 to 5. If you want to display all, set trace number to 10.")
-    parser.add_argument('-disall', '--enableDebugMessageSync', default=False, action="store_true",
+    parser.add_argument('-edms', '--enableDebugMessageSync', default=False, action="store_true",
                         help="Display all the information in calibration.")
 
     options = parser.parse_args()
