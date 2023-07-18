@@ -7,6 +7,7 @@ from typing import List, Tuple, Optional, Union, Any, Dict
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
+from depthai_sdk.fps import FPSHandler
 
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
@@ -14,7 +15,16 @@ from depthai_sdk.visualize.encoder import JSONEncoder
 from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask, \
     VisBoundingBox
 
+class VisualzierFps:
+    def __init__(self):
+        self.fps_list: Dict[str, FPSHandler] = {}
 
+    def get_fps(self, name: str, timestamp: timedelta) -> float:
+        if name not in self.fps_list:
+            self.fps_list[name] = FPSHandler()
+
+        self.fps_list[name].nextIter()
+        return self.fps_list[name].fps()
 
 class Visualizer:
     # Constants
@@ -26,6 +36,7 @@ class Visualizer:
 
         if fps:
             self.output(show_fps=fps)
+            self.fps = VisualzierFps()
         if scale:
             self.output(img_scale=float(scale))
 

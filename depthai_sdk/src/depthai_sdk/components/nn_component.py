@@ -143,10 +143,6 @@ class NNComponent(Component):
         # Creates ImageManip node that resizes the input to match the expected NN input size.
         # DepthAI uses CHW (Planar) channel layout and BGR color order convention.
         self.image_manip = pipeline.createImageManip()
-        self.image_manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
-        self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
-        self.image_manip.inputImage.setBlocking(False)
-        self.image_manip.inputImage.setQueueSize(2)
         # Configures ImageManip node. Letterbox by default
         self._change_resize_mode(ResizeMode.LETTERBOX)
 
@@ -388,6 +384,10 @@ class NNComponent(Component):
 
         # Reset ImageManip node config
         self.image_manip.initialConfig.set(dai.RawImageManipConfig())
+        self.image_manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
+        self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
+        self.image_manip.inputImage.setBlocking(False)
+        self.image_manip.inputImage.setQueueSize(2)
 
         if self._ar_resize_mode == ResizeMode.CROP:
             self.image_manip.initialConfig.setResize(self._size)

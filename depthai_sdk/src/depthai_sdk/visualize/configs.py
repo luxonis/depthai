@@ -89,7 +89,7 @@ class TextConfig:
 @dataclass
 class TrackingConfig:
     """Configuration for drawing tracking bounding boxes."""
-    max_length: int = -1
+    max_length: int = 500
     deletion_lost_threshold: int = 5
     line_thickness: int = 1
     fading_tails: bool = False

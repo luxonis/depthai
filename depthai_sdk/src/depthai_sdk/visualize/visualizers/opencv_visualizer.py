@@ -75,6 +75,10 @@ class OpenCvVisualizer(Visualizer):
         return frame
 
     def show(self, packet) -> None:
+        if self.config.output.show_fps:
+            fps = self.fps.get_fps(packet.name, packet.get_timestamp())
+            self.add_text(text=f'FPS: {fps:.1f}', position=TextPosition.TOP_LEFT)
+
         if type(packet) == DisparityPacket:
             frame = packet.get_colorized_frame(self)
         elif isinstance(packet, FramePacket):
@@ -84,7 +88,10 @@ class OpenCvVisualizer(Visualizer):
             return
 
         if frame is not None:
-            cv2.imshow(packet.name, self.draw(frame))
+            drawn_frame = self.draw(frame)
+            if self.config.output.img_scale:
+                drawn_frame = cv2.resize(drawn_frame, None, fx=self.config.output.img_scale, fy=self.config.output.img_scale)
+            cv2.imshow(packet.name, drawn_frame)
 
     # Moved from XoutFrames
 
