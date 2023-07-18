@@ -24,6 +24,12 @@ class Detection:
     angle: Optional[int]
     ts: Optional[timedelta]
 
+    @property
+    def top_left(self) -> Tuple[float, float]:
+        return self.bbox.top_left()
+    @property
+    def bottom_right(self) -> Tuple[float, float]:
+        return self.bbox.bottom_right()
 @dataclass
 class TrackingDetection(Detection):
     tracklet: dai.Tracklet
@@ -49,6 +55,12 @@ class GenericNNOutput:
     """
     def __init__(self, nn_data: Union[dai.NNData, dai.ImgDetections, dai.SpatialImgDetections]):
         self.nn_data = nn_data
+
+    def getTimestamp(self) -> timedelta:
+        return self.nn_data.getTimestamp()
+
+    def getSequenceNum(self) -> int:
+        return self.nn_data.getSequenceNum()
 
 
 @dataclass

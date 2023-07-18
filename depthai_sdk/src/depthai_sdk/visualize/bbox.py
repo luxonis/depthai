@@ -52,6 +52,18 @@ class BoundingBox:
             np.clip(self.ymax, min, max),
         ))
 
+    def top_left(self) -> Tuple[float, float]:
+        """
+        Get top-left corner of the bounding box.
+        """
+        return self.xmin, self.ymin
+
+    def bottom_right(self) -> Tuple[float, float]:
+        """
+        Get bottom-right corner of the bounding box.
+        """
+        return self.xmax, self.ymax
+
     def to_tuple(self, frame_shape: Union[Sequence, None] = None) -> Tuple:
         """
         Get bounding box coordinates as a tuple (xmin, ymin, xmax, ymax).

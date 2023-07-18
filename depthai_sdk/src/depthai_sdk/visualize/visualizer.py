@@ -119,7 +119,7 @@ class Visualizer:
                  outline: bool = True,
                  background_color: Tuple[int, int, int] = None,
                  background_transparency: float = 0.5,
-                 bbox: Union[np.ndarray, Tuple[int, ...], BoundingBox] = None,
+                 bbox: Union[np.ndarray, Tuple, BoundingBox] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10) -> 'Visualizer':
         """
@@ -141,6 +141,9 @@ class Visualizer:
         Returns:
             self
         """
+        if isinstance(bbox, Tuple) and type(bbox[0]) == float:
+            bbox = BoundingBox(bbox)
+
         text_overlay = VisText(text=text,
                                coords=coords,
                                size=size,

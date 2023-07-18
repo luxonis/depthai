@@ -334,18 +334,18 @@ class DetectionPacket(FramePacket):
 
     def prepare_visualizer_objects(self, vis: Visualizer) -> None:
         # Add detections to packet
-        if isinstance(self.img_detections, dai.ImgDetections) \
-                or isinstance(self.img_detections, dai.SpatialImgDetections) \
-                or isinstance(self.img_detections, Detections):
-
-            for detection in self.detections:
-                # Add detections to visualizer
-                vis.add_bbox(
-                    bbox=self.bbox.get_relative_bbox(detection.bbox),
-                    label=detection.label_str,
-                    color=detection.color,
-                )
-
+        for detection in self.detections:
+            # Add detections to visualizer
+            vis.add_bbox(
+                bbox=detection.bbox,
+                # label=detection.label_str,
+                color=detection.color,
+            )
+            vis.add_text(
+                f'{detection.label_str} {100 * detection.confidence:.0f}%',
+                bbox=detection.bbox,
+                position=TextPosition.TOP_LEFT,
+            )
 
             # bbox = None
             # if self.normalizer.resize_mode == ResizeMode.LETTERBOX:
@@ -482,7 +482,6 @@ class TwoStagePacket(DetectionPacket):
                          dai_msg=img_detections,
                          bbox=bbox
                          )
-        self.frame = self.msg.getCvFrame() if cv2 else None
         self.nnData = nn_data
         self.labels = labels
         self._cntr = 0

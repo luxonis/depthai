@@ -91,10 +91,8 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
 
             decoded_nn_result = decode_fn(nn_result)
             if type(decoded_nn_result) == Detections:
-                packet = DetectionPacket(self.get_packet_name(), img, nn_result, decoded_nn_result, self.bbox)
+                packet = DetectionPacket(self.get_packet_name(), img, nn_result, self.bbox)
                 return self._add_detections_to_packet(packet, decoded_nn_result)
-                # packet.detections = 
-                # return packet
             elif type(decoded_nn_result) == ImgLandmarks:
                 return ImgLandmarksPacket(self.get_packet_name(), img, nn_result, decoded_nn_result, self.bbox)
             elif type(decoded_nn_result) == SemanticSegmentation:
@@ -113,12 +111,12 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                                   )-> DetectionPacket:
         for detection in dets.detections:
             packet.detections.append(Detection(
-                detection if isinstance(detection, dai.ImgDetection)  else None,
-                self.labels[detection.label][0] if self.labels else str(detection.label),
-                detection.confidence,
-                self.labels[detection.label][1] if self.labels else (255, 255, 255),
-                BoundingBox(detection),
-                detection.angle if hasattr(detection, 'angle') else None,
+                img_detection=detection if isinstance(detection, dai.ImgDetection)  else None,
+                label_str=self.labels[detection.label][0] if self.labels else str(detection.label),
+                confidence=detection.confidence,
+                color=self.labels[detection.label][1] if self.labels else (255, 255, 255),
+                bbox=packet.bbox.get_relative_bbox(BoundingBox(detection)),
+                angle=detection.angle if hasattr(detection, 'angle') else None,
                 ts=dets.getTimestamp()
             ))
         return packet
@@ -155,7 +153,6 @@ class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
         with np.errstate(all='ignore'):
             disp = (self.factor / depth).astype(np.uint8)
 
-        print('disp max', np.max(disp), 'disp min', np.min(disp))
         packet.frame = colorize_disparity(disp, multiplier=1)
         draw_mappings(packet)
 

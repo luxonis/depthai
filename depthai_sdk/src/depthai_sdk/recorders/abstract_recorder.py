@@ -37,7 +37,6 @@ class OakStream:
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.RAW
         elif isinstance(xout, outputs.xout_frames.XoutFrames):
-            print(xout._fourcc)
             self.xlink_name = xout.frames.name
             if xout._fourcc is None:
                 self.type = self.StreamType.RAW

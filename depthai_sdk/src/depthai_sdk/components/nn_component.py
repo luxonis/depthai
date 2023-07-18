@@ -348,8 +348,13 @@ class NNComponent(Component):
         Gets the blob from the config file.
         """
         if isinstance(version, dai.OpenVINO.Version):
-            vals = str(version).split('_')
-            version = f"{vals[1]}.{vals[2]}"
+            version = str(version)
+        if isinstance(version, str):
+            if version.startswith('VERSION_'):
+                version = version[8:]
+            if '_' in version:
+                vals = version.split('_')
+                version = f'{vals[0]}.{vals[1]}'
 
         if 'model_name' in model:  # Use blobconverter to download the model
             zoo_type = model.get("zoo", 'intel')
@@ -602,14 +607,13 @@ class NNComponent(Component):
         return self._get_camera_comp().stream_size
     #
     def get_bbox(self) -> BoundingBox:
-        bbox = BoundingBox()
         if self._is_multi_stage():
-            bbox = self._input.get_bbox()
-
-        stream_size = self._get_input_frame_size()
-        old_ar = stream_size[0] / stream_size[1]
-        new_ar = self._size[0] / self._size[1]
-        return bbox.resize_to_aspect_ratio(old_ar, new_ar, self._ar_resize_mode)
+            return self._input.get_bbox()
+        else:
+            stream_size = self._get_input_frame_size()
+            old_ar = stream_size[0] / stream_size[1]
+            new_ar = self._size[0] / self._size[1]
+            return BoundingBox().resize_to_aspect_ratio(old_ar, new_ar, self._ar_resize_mode)
 
     """
     Available outputs (to the host) of this component
