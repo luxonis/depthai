@@ -1,7 +1,7 @@
 import logging
 import warnings
 from enum import Enum
-from typing import Optional, Union, Any, Dict, Tuple
+from typing import Optional, Union, Any, Dict, Tuple, List
 
 import cv2
 import depthai as dai
@@ -123,13 +123,23 @@ class StereoComponent(Component):
             # If not specified, default to 400P resolution for faster processing
             self._resolution = self._resolution or dai.MonoCameraProperties.SensorResolution.THE_400_P
 
-            if not self.left:
+            # Always use 1200p for OAK-D-LR and OAK-D-SR
+            if self._device.getDeviceName() == 'OAK-D-LR':
+                self._resolution = dai.MonoCameraProperties.SensorResolution.THE_1200_P
+
+            if not self.left: # Should never happen
                 self.left = CameraComponent(device, pipeline, 'left', self._resolution, self._fps, replay=self._replay)
             if not self.right:
                 self.right = CameraComponent(device, pipeline, 'right', self._resolution, self._fps,
                                              replay=self._replay)
 
-            if 0 < len(device.getIrDrivers()):
+            # AR0234 outputs 1200p, so we need to resize it to 800p on RVC2
+            if self._device.getDeviceName() == 'OAK-D-LR':
+                if isinstance(self.left, CameraComponent) and isinstance(self.right, CameraComponent):
+                    self.left.config_color_camera(isp_scale=(2, 3))
+                    self.right.config_color_camera(isp_scale=(2, 3))
+
+            if self._get_ir_drivers():
                 laser = self._args.get('irDotBrightness', None)
                 laser = laser if laser is not None else 800
                 if 0 < laser:
@@ -347,19 +357,28 @@ class StereoComponent(Component):
             auto_mode: Enable/disable auto IR.
             continuous_mode: Enable/disable continious mode.
         """
-        warnings.warn('Auto IR is an experimental feature, which may not work as expected. '
-                      'Please report any issues at https://discuss.luxonis.com/t/support/.')
-        self.ir_settings = {
-            'auto_mode': auto_mode,
-            'continuous_mode': continuous_mode
-        }
+        if self._get_ir_drivers():
+            self.ir_settings = {
+                'auto_mode': auto_mode,
+                'continuous_mode': continuous_mode
+            }
+            self.set_ir(0, 0)
 
-    def set_ir(self, dot_projector_brightness: int, flood_brightness: int):
+    def set_ir(self, dot_projector_brightness: int = None, flood_brightness: int = None):
         """
         Sets IR brightness and flood.
         """
-        self._device.setIrLaserDotProjectorBrightness(dot_projector_brightness)
-        self._device.setIrFloodLightBrightness(flood_brightness)
+        if self._get_ir_drivers():
+            if dot_projector_brightness is not None:
+                self._device.setIrLaserDotProjectorBrightness(dot_projector_brightness)
+            if flood_brightness is not None:
+                self._device.setIrFloodLightBrightness(flood_brightness)
+
+    def _get_ir_drivers(self) -> List[Tuple[str, int, int]]:
+        """
+        Returns a list of IR drivers.
+        """
+        return self._device.getIrDrivers()
 
     def _get_disparity_factor(self, device: dai.Device) -> float:
         """

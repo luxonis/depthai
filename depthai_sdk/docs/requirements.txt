@@ -1,3 +1,4 @@
-Sphinx==4.1.2
+Sphinx==4.2.0
 sphinx-rtd-theme==0.5.0
 autodocsumm==0.2.10
+sphinx-tabs==3.4.0

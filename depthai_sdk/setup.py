@@ -9,7 +9,7 @@ install_requires = [requirement for requirement in requirements if '--' not in r
 
 setup(
     name='depthai-sdk',
-    version='1.11.0',
+    version='1.12.1',
     description='This package provides an abstraction of the DepthAI API library.',
     long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
@@ -30,7 +30,8 @@ setup(
         "replay": ['mcap>=0.0.10',
                    'mcap-ros1-support==0.0.8',
                    'rosbags==0.9.11'],
-        "record": ['av']
+        "record": ['av'],
+        "test": ['pytest']
     },
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",

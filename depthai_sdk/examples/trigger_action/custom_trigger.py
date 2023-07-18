@@ -27,7 +27,7 @@ def my_condition(packet) -> bool:
 with OakCamera() as oak:
     color = oak.create_camera('color', fps=30)
     stereo = oak.create_stereo('800p')
-    stereo.config_stereo(align='color')
+    stereo.config_stereo(align=color)
 
     trigger = Trigger(input=stereo.out.depth, condition=my_condition, cooldown=30)
     action = RecordAction(

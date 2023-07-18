@@ -39,6 +39,7 @@ class _TrackingDetection(_Detection):
 class _TwoStageDetection(_Detection):
     nn_data: dai.NNData
 
+
 class NNDataPacket:
     """
     Contains only dai.NNData message
@@ -49,6 +50,7 @@ class NNDataPacket:
     def __init__(self, name: str, nn_data: dai.NNData):
         self.name = name
         self.msg = nn_data
+
 
 class FramePacket:
     """
@@ -79,6 +81,7 @@ class PointcloudPacket:
         self.depth_imgFrame = dai.ImgFrame
         self.color_frame = color_frame
         self.visualizer = visualizer
+
 
 class DepthPacket(FramePacket):
     mono_frame: dai.ImgFrame
