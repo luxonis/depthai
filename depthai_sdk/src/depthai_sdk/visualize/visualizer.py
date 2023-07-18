@@ -19,7 +19,7 @@ class VisualzierFps:
     def __init__(self):
         self.fps_list: Dict[str, FPSHandler] = {}
 
-    def get_fps(self, name: str, timestamp: timedelta) -> float:
+    def get_fps(self, name: str) -> float:
         if name not in self.fps_list:
             self.fps_list[name] = FPSHandler()
 

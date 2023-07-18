@@ -56,5 +56,4 @@ class IMUComponent(Component):
             return self.text(pipeline, device)
 
         def text(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = StreamXout(self._comp.node.id, self._comp.node.out, name='imu')
-            return XoutIMU(out, self._comp.fps)
+            return XoutIMU(StreamXout(self._comp.node.out, name='imu'), self._comp.fps)

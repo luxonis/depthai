@@ -337,13 +337,13 @@ class DetectionPacket(FramePacket):
         for detection in self.detections:
             # Add detections to visualizer
             vis.add_bbox(
-                bbox=detection.bbox,
+                bbox=self.bbox.get_relative_bbox(detection.bbox),
                 # label=detection.label_str,
                 color=detection.color,
             )
             vis.add_text(
                 f'{detection.label_str} {100 * detection.confidence:.0f}%',
-                bbox=detection.bbox,
+                bbox=self.bbox.get_relative_bbox(detection.bbox),
                 position=TextPosition.TOP_LEFT,
             )
             # Spatial coordinates
@@ -353,7 +353,7 @@ class DetectionPacket(FramePacket):
                 z_meters = detection.img_detection.spatialCoordinates.z / 1000
                 vis.add_text(
                     f'X: {x_meters:.2f}m\nY: {y_meters:.2f}m\nZ: {z_meters:.2f}m',
-                    bbox=detection.bbox,
+                    bbox=self.bbox.get_relative_bbox(detection.bbox),
                     position=TextPosition.BOTTOM_LEFT,
                 )
 

@@ -115,7 +115,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
                 label_str=self.labels[detection.label][0] if self.labels else str(detection.label),
                 confidence=detection.confidence,
                 color=self.labels[detection.label][1] if self.labels else (255, 255, 255),
-                bbox=packet.bbox.get_relative_bbox(BoundingBox(detection)),
+                bbox=BoundingBox(detection),
                 angle=detection.angle if hasattr(detection, 'angle') else None,
                 ts=dets.getTimestamp()
             ))

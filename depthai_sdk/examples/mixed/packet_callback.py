@@ -9,19 +9,20 @@ def cb_1(packet: FramePacket):
     cv2.imshow('Color frames from cb', packet.frame)
 
 def cb_2(packets: Dict[str, FramePacket]):
+    print(packets)
     # Sycned packets.
-    ts_color = packets['color_video'].get_timestamp()
-    ts_left = packets['left_out'].get_timestamp()
-    ts_imu = packets['imu_out'].get_timestamp()
+    ts_color = packets['color'].get_timestamp()
+    ts_left = packets['left'].get_timestamp()
+    ts_imu = packets['imu'].get_timestamp()
     print(f"---- New synced packets. Diff between color and left: {abs(ts_color-ts_left) / timedelta(milliseconds=1)} ms, color and IMU: {abs(ts_imu-ts_color) / timedelta(milliseconds=1)} ms")
 
     for name, packet in packets.items():
         print(f'Packet {name}, timestamp: {packet.get_timestamp()}, Seq number: {packet.get_sequence_num()}')
 
 with OakCamera() as oak:
-    color = oak.create_camera('color', fps=32)
-    left = oak.create_camera('left', fps=30)
-    right = oak.create_camera('right', fps=30)
+    color = oak.create_camera('color', fps=32, name='color')
+    left = oak.create_camera('left', fps=30, name='left')
+    right = oak.create_camera('right', fps=30, name='right')
     imu = oak.create_imu()
 
     oak.callback(

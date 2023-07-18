@@ -443,7 +443,7 @@ class StereoComponent(Component):
             """
             mono_frames = None
             if self._comp.wls_config['enabled'] or self._comp._colorize == StereoColor.RGBD:
-                mono_frames = StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name)
+                mono_frames = StreamXout(self._comp._right_stream, name=self._comp.name)
             return mono_frames
 
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
@@ -453,8 +453,8 @@ class StereoComponent(Component):
         def disparity(self, pipeline: dai.Pipeline, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
             return XoutDisparity(
                 device=device,
-                frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream, name=self._comp.name) if fourcc else
-                       StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
+                frames=StreamXout(self._comp.encoder.bitstream, name=self._comp.name) if fourcc else
+                       StreamXout(self._comp.disparity, name=self._comp.name),
                 disp_factor=255.0 / self._comp.node.getMaxDisparity(),
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
@@ -464,15 +464,15 @@ class StereoComponent(Component):
             ).set_fourcc(fourcc)
 
         def rectified_left(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return XoutFrames(StreamXout(self._comp.node.id, self._comp.node.rectifiedLeft, 'Rectified left'))
+            return XoutFrames(StreamXout(self._comp.node.rectifiedLeft, 'Rectified left'))
 
         def rectified_right(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return XoutFrames(StreamXout(self._comp.node.id, self._comp.node.rectifiedRight, 'Rectified right'))
+            return XoutFrames(StreamXout(self._comp.node.rectifiedRight, 'Rectified right'))
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             return XoutDisparityDepth(
                 device=device,
-                frames=StreamXout(self._comp.node.id, self._comp.depth, name=self._comp.name),
+                frames=StreamXout(self._comp.depth, name=self._comp.name),
                 dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,

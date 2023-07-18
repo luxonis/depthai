@@ -76,7 +76,7 @@ class OpenCvVisualizer(Visualizer):
 
     def show(self, packet) -> None:
         if self.config.output.show_fps:
-            fps = self.fps.get_fps(packet.name, packet.get_timestamp())
+            fps = self.fps.get_fps(packet.name)
             self.add_text(text=f'FPS: {fps:.1f}', position=TextPosition.TOP_LEFT)
 
         if type(packet) == DisparityPacket:

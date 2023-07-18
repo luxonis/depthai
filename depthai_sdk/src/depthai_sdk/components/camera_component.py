@@ -57,6 +57,9 @@ class CameraComponent(Component):
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
 
         self._source = str(source)
+        if self._source.startswith('CameraBoardSocket.'):
+            self._source = self._source[len('CameraBoardSocket.'):]
+
         self._socket = source
         self._replay: Optional[Replay] = replay
         self._args: Dict = args
@@ -439,17 +442,17 @@ class CameraComponent(Component):
 
     def get_stream_xout(self, fourcc: Optional[str] = None) -> StreamXout:
         if self.encoder is not None and fourcc is not None:
-            return StreamXout(self.encoder.id, self.encoder.bitstream, name=self._source)
+            return StreamXout(self.encoder.bitstream, name=self.name)
         elif self.is_replay():
-            return ReplayStream(self._source)
+            return ReplayStream(self.name or self._source)
         elif self.is_mono():
-            return StreamXout(self.node.id, self.stream, name=self._source)
+            return StreamXout(self.stream, name=self.name)
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(self._num_frames_pool)
             self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
-            return StreamXout(self.node.id, self.node.video, name=self._source)
+            return StreamXout(self.node.video, name=self.name)
 
     def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
         """

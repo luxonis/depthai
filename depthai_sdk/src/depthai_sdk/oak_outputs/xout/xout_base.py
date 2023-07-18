@@ -6,12 +6,13 @@ import depthai as dai
 
 
 class StreamXout:
-    def __init__(self, id: int, out: dai.Node.Output, name: Optional[str] = None):
+    def __init__(self, out: dai.Node.Output, name: Optional[str] = None):
         self.stream = out
         if name is not None:
-            self.name = f'{name}_{str(out.name)}'
+            self.name = name
         else:
-            self.name = f"{str(id)}_{out.name}"
+            node = out.getParent()
+            self.name = f"{str(node.id)}_{out.name}"
 
 
 class ReplayStream(StreamXout):

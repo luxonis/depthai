@@ -6,9 +6,9 @@ from typing import Dict
 import cv2
 
 with OakCamera() as oak:
-    color = oak.create_camera('color', fps=32)
-    left = oak.create_camera('left', fps=30)
-    right = oak.create_camera('right', fps=30)
+    color = oak.create_camera('color', fps=32, name='color')
+    left = oak.create_camera('left', fps=30, name='left')
+    right = oak.create_camera('right', fps=30, name='right')
     imu = oak.create_imu()
 
     q1 = oak.queue(color, max_size=5).get_queue()
@@ -31,9 +31,9 @@ with OakCamera() as oak:
         try:
             packets: Dict[str, FramePacket] = q2.get(block=False)
 
-            ts_color = packets['color_video'].get_timestamp()
-            ts_left = packets['left_out'].get_timestamp()
-            ts_imu = packets['imu_out'].get_timestamp()
+            ts_color = packets['color'].get_timestamp()
+            ts_left = packets['left'].get_timestamp()
+            ts_imu = packets['imu'].get_timestamp()
             print(f"---- New synced packets. Diff between color and left: {abs(ts_color-ts_left) / timedelta(milliseconds=1)} ms, color and IMU: {abs(ts_imu-ts_color) / timedelta(milliseconds=1)} ms")
 
             for name, packet in packets.items():
