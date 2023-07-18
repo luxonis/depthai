@@ -28,13 +28,6 @@ red = (255, 0, 0)
 green = (0, 255, 0)
 
 stringToCam = {
-                # 'RGB': dai.CameraBoardSocket.RGB,
-                # 'LEFT': dai.CameraBoardSocket.LEFT,
-                # 'RIGHT': dai.CameraBoardSocket.RIGHT,
-                # 'AUTO': dai.CameraBoardSocket.AUTO,
-                # 'CAM_A' : dai.CameraBoardSocket.RGB,
-                # 'CAM_B' : dai.CameraBoardSocket.LEFT,
-                # 'CAM_C' : dai.CameraBoardSocket.CAM_C,
                 'RGB'   : dai.CameraBoardSocket.CAM_A,
                 'LEFT'  : dai.CameraBoardSocket.CAM_B,
                 'RIGHT' : dai.CameraBoardSocket.CAM_C,
@@ -46,24 +39,6 @@ stringToCam = {
                 'CAM_F' : dai.CameraBoardSocket.CAM_F,
                 'CAM_G' : dai.CameraBoardSocket.CAM_G,
                 'CAM_H' : dai.CameraBoardSocket.CAM_H
-                }
-
-CamToString = {
-                # dai.CameraBoardSocket.RGB : 'RGB'  ,
-                # dai.CameraBoardSocket.LEFT : 'LEFT' ,
-                # dai.CameraBoardSocket.RIGHT : 'RIGHT',
-                # dai.CameraBoardSocket.AUTO : 'AUTO'
-                dai.CameraBoardSocket.CAM_A : 'RGB'  ,
-                dai.CameraBoardSocket.CAM_B : 'LEFT' ,
-                dai.CameraBoardSocket.CAM_C : 'RIGHT',
-                dai.CameraBoardSocket.CAM_A : 'CAM_A',
-                dai.CameraBoardSocket.CAM_B : 'CAM_B',
-                dai.CameraBoardSocket.CAM_C : 'CAM_C',
-                dai.CameraBoardSocket.CAM_D : 'CAM_D',
-                dai.CameraBoardSocket.CAM_E : 'CAM_E',
-                dai.CameraBoardSocket.CAM_F : 'CAM_F',
-                dai.CameraBoardSocket.CAM_G : 'CAM_G',
-                dai.CameraBoardSocket.CAM_H : 'CAM_H'
                 }
 
 camToMonoRes = {
@@ -106,13 +81,13 @@ def parse_args():
 
     Image capture requires the use of a printed OpenCV charuco calibration target applied to a flat surface(ex: sturdy cardboard).
     Default board size used in this script is 22x16. However you can send a customized one too.
-    When taking photos, ensure enough amount of markers are visible and images are crisp.
+    When taking photos, ensure enough amount of markers are visible and images are crisp. 
     The board does not need to fit within each drawn red polygon shape, but it should mimic the display of the polygon.
 
     If the calibration checkerboard corners cannot be found, the user will be prompted to try that calibration pose again.
 
     The script requires a RMS error < 1.0 to generate a calibration file. If RMS exceeds this threshold, an error is displayed.
-    An average epipolar error of <1.5 is considered to be good, but not required.
+    An average epipolar error of <1.5 is considered to be good, but not required. 
 
     Example usage:
 
@@ -121,7 +96,7 @@ def parse_args():
 
     Only run image processing only with same board setup. Requires a set of saved capture images:
     python3 calibrate.py -s 3.0 -ms 2.5 -brd DM2CAM -m process
-
+    
     Delete all existing images before starting image capture:
     python3 calibrate.py -i delete
     '''
@@ -145,7 +120,7 @@ def parse_args():
                         help="Disable rgb camera Calibration")
     parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
                         help="Interchange Left and right camera port.")
-    parser.add_argument("-m", "--mode", default=['capture', 'process', 'flash'], nargs='*', type=str, required=False,
+    parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
                         help="BW1097, BW1098OBC - Board type from resources/depthai_boards/boards (not case-sensitive). "
@@ -182,7 +157,9 @@ def parse_args():
                         help="Enable mouse trigger for image capture")
     parser.add_argument('-nic', '--noInitCalibration', default=False, action="store_true",
                         help="Don't take the board calibration for initialization but start with an empty one")
-    parser.add_argument('-disall', '--enableDebugMessageSync', default=False, action="store_true",
+    parser.add_argument('-trc', '--traceLevel', type=int, default=0,
+                        help="Set to trace the steps in calibration. Number from 1 to 5. If you want to display all, set trace number to 10.")
+    parser.add_argument('-edms', '--enableDebugMessageSync', default=False, action="store_true",
                         help="Display all the information in calibration.")
 
     options = parser.parse_args()
@@ -195,23 +172,8 @@ def parse_args():
             raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
-
-    if options.rgbLensPosition < 0:
-        if options.board == "OAK-D-LITE":
-            options.rgbLensPosition = 25
-        else:
-            options.rgbLensPosition = 135
-            
+        
     return options
-class MessageSync:
-    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10, min_queue_depth=3):
-        self.num_queues = num_queues
-        self.min_diff_timestamp = min_diff_timestamp
-        self.max_num_messages = max_num_messages
-        # self.queues = [deque() for _ in range(num_queues)]
-        self.queues = dict()
-        self.queue_depth = min_queue_depth
-        # self.earliest_ts = {}
 
 class HostSync:
     def __init__(self, deltaMilliSec):
@@ -231,14 +193,6 @@ class HostSync:
         self.arrays[name].appendleft({'data': data, 'timestamp': ts})
         if self.recentFrameTs == None or self.recentFrameTs - ts:
             self.recentFrameTs = ts
-        # print(len(self.arrays[name]))
-        # print(f'Added Msgs typ {name}')
-        # print(ts)
-        # for name, arr in self.arrays.items():
-        #     for i, obj in enumerate(arr):
-        #         if self.remove(obj['timestamp']):
-        #             arr.remove(obj)
-        #         else: break
     
     def clearQueues(self):
         print('Clearing Queues...')
@@ -249,9 +203,6 @@ class HostSync:
     def get_synced(self):
         synced = {}
         for name, msgList in self.arrays.items():
-            # print('len(pivotM---------sgList)')
-            # print(len(pivotMsgList))
-
             if len(msgList) != self.arraySize:
                 return False 
 
@@ -288,29 +239,8 @@ class HostSync:
             return False
 
 
-        """ for name, arr in self.arrays.items():
-            for i, obj in enumerate(arr):
-                time_diff = abs(obj['timestamp'] - self.recentFrameTs)
-                print("Time diff for {0} is {1} milliseconds".format(name ,time_diff.total_seconds() * 1000))
-                # 20ms since we add rgb/depth frames at 30FPS => 33ms. If
-                # time difference is below 20ms, it's considered as synced
-                if time_diff < self.deltaMilliSec:
-                    synced[name] = obj['data']
-                    # print(f"{name}: {i}/{len(arr)}")
-                    break
-        print(f'Size of Synced is {len(synced)} amd array size is {len(self.arrays)}')
-        if len(synced) == len(self.arrays):
-            for name, arr in self.arrays.items():
-                for i, obj in enumerate(arr):
-                    if self.remove(obj['timestamp']):
-                        arr.remove(obj)
-                    else: break
-            return synced
-        return False """
-
-
 class MessageSync:
-    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=4, min_queue_depth=3):
+    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10, min_queue_depth=3):
         self.num_queues = num_queues
         self.min_diff_timestamp = min_diff_timestamp
         self.max_num_messages = max_num_messages
@@ -369,9 +299,9 @@ class MessageSync:
                 acc_diff = acc_diff + abs(min_ts - msg.getTimestampDevice().total_seconds())
 
             # Mark minimum
-            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.0001):
+            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.03):
                 min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
-                if enableDebugMessageSync:
+                if self.enableDebugMessageSync:
                     print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
             if min_ts_diff['ts'] < self.min_diff_timestamp:
@@ -388,11 +318,10 @@ class MessageSync:
                         # pop out the older messages
                         for i in range(0, min_ts_diff['indicies'][name]+1):
                             self.queues[name].popleft()
-                    if enableDebugMessageSync:
+                    if self.enableDebugMessageSync:
                         print('Returning synced messages with error:', min_ts_diff['ts'], min_ts_diff['indicies'])
                     return synced
 
-        # print('
 
 class Main:
     output_scale_factor = 0.5
@@ -402,30 +331,17 @@ class Main:
     current_polygon = 0
     images_captured_polygon = 0
     images_captured = 0
-    camera_model = "perspective"
 
     def __init__(self):
         global debug
         self.args = parse_args()
-        self.device = None
         debug = self.args.debug
-        enableDebugMessageSync=self.args.enableDebugMessageSync
+        self.enableDebugMessageSync=self.args.enableDebugMessageSync
+        self.traceLevel= self.args.traceLevel
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.focus_value = self.args.rgbLensPosition
-        depthai_boards_path = Path(__file__).parent / 'resources/depthai_boards/boards'
-
-        if not depthai_boards_path.exists():
-            # try to update submodules
-            try:
-                print("DepthAI boards directory not found! Trying to update submodules...")
-                subprocess.run(['git', 'submodule', 'update', '--init', '--recursive'], check=True)
-                if not depthai_boards_path.exists():
-                    raise Exception("depthai_boards submodule not found after updating submodules.")
-            except Exception:
-                raise ValueError(f"Could not download depthai_boards submodule. Please make sure you have cloned the depthai-boards submodule. Run the following command to clone it: git submodule update --init --recursive")
-
         if self.args.board:
             board_path = Path(self.args.board)
             if not board_path.exists():
@@ -471,34 +387,8 @@ class Main:
                     # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
                     break
 
-        self.charuco_board = cv2.aruco.CharucoBoard_create(
-                            self.args.squaresX, self.args.squaresY,
-                            self.args.squareSizeCm,
-                            self.args.markerSizeCm,
-                            self.aruco_dictionary)
-
-
-        
-
-        """ cameraProperties = self.device.getConnectedCameraProperties()
-        for properties in cameraProperties:
-            if properties.sensorName == 'OV7251':
-                raise Exception(
-            "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
-
-        self.device.startPipeline(pipeline)"""
-        # self.left_camera_queue = self.device.getOutputQueue("left", 30, True)
-        # self.right_camera_queue = self.device.getOutputQueue("right", 30, True)
-        # if not self.args.disableRgb:
-        #     self.rgb_camera_queue = self.device.getOutputQueue("rgb", 30, True)
-
-    def mouse_event_callback(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.mouseTrigger = True
-
-    def startPipeline(self):
-        pipeline = self.create_pipeline()
-        self.device.startPipeline(pipeline)
+            pipeline = self.create_pipeline()
+            self.device.startPipeline(pipeline)
 
         self.camera_queue = {}
         for config_cam in self.board_config['cameras']:
@@ -714,9 +604,9 @@ class Main:
         timer = self.args.captureDelay
         prev_time = None
         curr_time = None
-        enableDebugMessageSync= self.args.enableDebugMessageSync
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue), 0.003) # 3ms tolerance
+        syncCollector = MessageSync(len(self.camera_queue), 0.3 ) # 3ms tolerance
+        syncCollector.enableDebugMessageSync = self.args.enableDebugMessageSync
         self.mouseTrigger = False
         while not finished:
             currImageList = {}
@@ -868,7 +758,7 @@ class Main:
             tried = {}
             allPassed = True
             if capturing:
-                syncedMsgs = syncCollector.get_synced(enableDebugMessageSync)
+                syncedMsgs = syncCollector.get_synced()
                 if syncedMsgs == False or syncedMsgs == None:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
@@ -888,9 +778,10 @@ class Main:
                     for name, frameMsg in syncedMsgs.items():
                         self.coverageImages[name] = self.draw_corners(frameMsg.getCvFrame(), self.coverageImages[name], color)
                     if not self.images_captured:
-                        leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
-                        rightStereo = self.board_config['cameras'][self.board_config['stereo_config']['right_cam']]['name']
-                        print(f'Left Camera of stereo is {leftStereo} and right Camera of stereo is {rightStereo}')
+                        if 'stereo_config' in self.board_config['cameras']:
+                            leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
+                            rightStereo = self.board_config['cameras'][self.board_config['stereo_config']['right_cam']]['name']
+                            print(f'Left Camera of stereo is {leftStereo} and right Camera of stereo is {rightStereo}')
                         # if not self.test_camera_orientation(syncedMsgs[leftStereo].getCvFrame(), syncedMsgs[rightStereo].getCvFrame()):
                         #     self.show_failed_orientation()
 
@@ -915,209 +806,11 @@ class Main:
                     break
 
 
-    """ def capture_images(self):
-        finished = False
-        capturing = False
-        captured_left = False
-        captured_right = False
-        captured_color = False
-        tried_left = False
-        tried_right = False
-        tried_color = False
-        recent_left = None
-        recent_right = None
-        recent_color = None
-        combine_img = None
-        start_timer = False
-        timer = self.args.captureDelay
-        prev_time = None
-        curr_time = None
-        self.display_name = "left + right + rgb"
-        last_frame_time = time.time()
-        # with self.get_pipeline() as pipeline:
-        while not finished:
-            current_left  = self.left_camera_queue.tryGet()
-            current_right = self.right_camera_queue.tryGet()
-            if not self.args.disableRgb:
-                current_color = self.rgb_camera_queue.tryGet()
-            else:
-                current_color = None
-            # recent_left = left_frame.getCvFrame()
-            # recent_color = cv2.cvtColor(rgb_frame.getCvFrame(), cv2.COLOR_BGR2GRAY)
-            if not current_left is None:
-                recent_left = current_left
-            if not current_right is None:
-                recent_right = current_right
-            if not current_color is None:
-                recent_color = current_color
-
-            if recent_left is None or recent_right is None or (recent_color is None and not self.args.disableRgb):
-                if time.time() - last_frame_time > 5:
-                    if self.args.disableRgb:
-                        print("Error: Couldn't retrieve left and right frames for more than 5 seconds. Exiting...")
-                    else:
-                        print("Error: Couldn't retrieve left, rigth and color frames for more than 5 seconds. Exiting...")
-                    raise SystemExit(1)
-                cv2.waitKey(1)
-                continue
-
-            last_frame_time = time.time()
-
-            recent_frames = [('left', recent_left), ('right', recent_right)]
-            if not self.args.disableRgb:
-                recent_frames.append(('rgb', recent_color))
-
-            key = cv2.waitKey(1)
-            if key == 27 or key == ord("q"):
-                print("py: Calibration has been interrupted!")
-                raise SystemExit(0)
-            elif key == ord(" "):
-                if debug:
-                    print("setting timer true------------------------")
-                start_timer = True
-                prev_time = time.time()
-                timer = self.args.captureDelay
-
-            frame_list = []
-            # left_frame = recent_left.getCvFrame()
-            # rgb_frame = recent_color.getCvFrame()
-
-            for packet in recent_frames:
-                frame = packet[1].getCvFrame()
-                # print(packet[0])
-                # frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
-                if packet[0] == 'rgb':
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                # print(frame.shape)
-                if self.polygons is None:
-                    self.height, self.width = frame.shape
-                    print(self.height, self.width)
-                    self.polygons = calibUtils.setPolygonCoordinates(
-                        self.height, self.width)
-
-                # if debug:
-                #     print("Timestamp difference ---> l & rgb")
-                lrgb_time = 0
-                if not self.args.disableRgb:
-                    lrgb_time = min([abs((recent_left.getTimestampDevice() - recent_color.getTimestampDevice()).microseconds), abs((recent_color.getTimestampDevice() - recent_left.getTimestampDevice()).microseconds)]) / 1000
-                lr_time = min([abs((recent_left.getTimestampDevice() - recent_right.getTimestampDevice()).microseconds), abs((recent_right.getTimestampDevice() - recent_left.getTimestampDevice()).microseconds)]) / 1000
-
-                if debug:
-                    print(f'Timestamp difference between l & RGB ---> {lrgb_time} in microseconds')
-                    print(f'Timestamp difference between l & r ---> {lr_time} in microseconds')
-
-                if capturing and lrgb_time < 50 and lr_time < 30:
-                    print("Capturing  ------------------------")
-                    if packet[0] == 'left' and not tried_left:
-                        captured_left = self.parse_frame(frame, packet[0])
-                        tried_left = True
-                        captured_left_frame = frame.copy()
-                    elif packet[0] == 'rgb' and not tried_color and not self.args.disableRgb:
-                        captured_color = self.parse_frame(frame, packet[0])
-                        tried_color = True
-                        captured_color_frame = frame.copy()
-                    elif packet[0] == 'right' and not tried_right:
-                        captured_right = self.parse_frame(frame, packet[0])
-                        tried_right = True
-                        captured_right_frame = frame.copy()
-
-
-                has_success = (packet[0] == "left" and captured_left) or (packet[0] == "right" and captured_right)  or \
-                    (packet[0] == "rgb" and captured_color)
-
-                if self.args.invert_v and self.args.invert_h:
-                    frame = cv2.flip(frame, -1)
-                elif self.args.invert_v:
-                    frame = cv2.flip(frame, 0)
-                elif self.args.invert_h:
-                    frame = cv2.flip(frame, 1)
-
-                cv2.putText(
-                    frame,
-                    "Polygon Position: {}. Captured {} of {} {} images".format(
-                        self.current_polygon + 1, self.images_captured, self.total_images, packet[0]
-                    ),
-                    (0, 700), cv2.FONT_HERSHEY_TRIPLEX, 1.0, (255, 0, 0)
-                )
-                if self.polygons is not None:
-                    cv2.polylines(
-                        frame, np.array([self.polygons[self.current_polygon]]),
-                        True, (0, 255, 0) if captured_left else (0, 0, 255), 4
-                    )
-
-                small_frame = cv2.resize(
-                    frame, (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
-                # cv2.imshow(packet.stream_name, small_frame)
-                frame_list.append(small_frame)
-
-                if self.args.disableRgb:
-                    captured_color = True
-                    tried_color = True
-                if captured_left and captured_right and captured_color:
-                    print("Images captured --> {}".format(self.images_captured))
-                    if not self.images_captured:
-                        if not self.test_camera_orientation(captured_left_frame, captured_right_frame):
-                            self.show_failed_orientation()
-                        # if not self.test_camera_orientation(captured_left_frame, captured_color_frame):
-                        #     self.show_failed_orientation()
-
-                    self.images_captured += 1
-                    self.images_captured_polygon += 1
-                    capturing = False
-                    tried_left = False
-                    tried_right = False
-                    tried_color = False
-                    captured_left = False
-                    captured_right = False
-                    captured_color = False
-                elif tried_left and tried_right and tried_color:
-                    self.show_failed_capture_frame()
-                    capturing = False
-                    tried_left = False
-                    tried_right = False
-                    tried_color = False
-                    captured_left = False
-                    captured_right = False
-                    captured_color = False
-                    break
-
-                if self.images_captured_polygon == self.args.count:
-                    self.images_captured_polygon = 0
-                    self.current_polygon += 1
-
-                    if self.current_polygon == len(self.polygons):
-                        finished = True
-                        cv2.destroyAllWindows()
-                        break
-
-            if not self.args.disableRgb:
-                frame_list[2] = np.pad(frame_list[2], ((40, 0), (0,0)), 'constant', constant_values=0)
-                combine_img = np.hstack((frame_list[0], frame_list[1], frame_list[2]))
-            else:
-                combine_img = np.vstack((frame_list[0], frame_list[1]))
-                self.display_name = "left + right"
-
-            if start_timer == True:
-                curr_time = time.time()
-                if curr_time - prev_time >= 1:
-                    prev_time = curr_time
-                    timer = timer-1
-                if timer <= 0 and start_timer == True:
-                    start_timer = False
-                    capturing = True
-                    print('Statrt capturing...')
-
-                image_shape = combine_img.shape
-                cv2.putText(combine_img, str(timer),
-                        (image_shape[1]//2, image_shape[0]//2), font,
-                        7, (0, 255, 255),
-                        4, cv2.LINE_AA)
-            cv2.imshow(self.display_name, combine_img)
-            frame_list.clear() """
 
     def calibrate(self):
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
+        stereo_calib.traceLevel = self.args.traceLevel
         dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
@@ -1130,8 +823,8 @@ class Main:
                                         self.args.squaresX,
                                         self.args.squaresY,
                                         self.args.cameraMode,
-                                        self.args.rectifiedDisp, # Turn off enable disp rectify
-                                        self.args.printer)
+                                        self.args.rectifiedDisp) # Turn off enable disp rectify
+
             if self.args.noInitCalibration:
                 calibration_handler = dai.CalibrationHandler()
             else:
@@ -1260,19 +953,6 @@ class Main:
                         is_write_factory_sucessful = False
 
                 if is_write_succesful:
-                    
-
-                    """ eepromUnionData = {}
-                    calibHandler = self.device.readCalibration2()
-                    eepromUnionData['calibrationUser'] = calibHandler.eepromToJson()
-
-                    calibHandler = self.device.readFactoryCalibration()
-                    eepromUnionData['calibrationFactory'] = calibHandler.eepromToJson()
-
-                    eepromUnionData['calibrationUserRaw'] = self.device.readCalibrationRaw()
-                    eepromUnionData['calibrationFactoryRaw'] = self.device.readFactoryCalibrationRaw()
-                    with open(calib_dest_path, "w") as outfile:
-                        json.dump(eepromUnionData, outfile, indent=4) """
                     self.device.close()
                     text = "EEPROM written succesfully"
                     resImage = create_blank(900, 512, rgb_color=green)
@@ -1306,14 +986,6 @@ class Main:
             raise SystemExit(1)
 
     def run(self):
-
-        if self.args.datasetPath:
-            self.dataset_path = Path(self.args.datasetPath)
-        else:
-            self.dataset_path = Path("dataset").absolute()
-
-        self.dataset_path.mkdir(parents=True, exist_ok=True)
-
         if 'capture' in self.args.mode:
             try:
                 if Path('dataset').exists():
@@ -1334,10 +1006,7 @@ class Main:
             print("Using dataset path: {}".format(self.args.datasetPath))
             self.dataset_path = self.args.datasetPath
         if 'process' in self.args.mode:
-            status, err_text, result_config = self.calibrate()
-            if 'flash' in self.args.mode:
-                self.flash(result_config)
-
+            self.calibrate()
         print('py: DONE.')
 
 

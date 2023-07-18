@@ -30,6 +30,7 @@ if sys.version_info[0] != 3:
 is_pi = this_platform.startswith("arm")
 prebuiltWheelsPythonVersion = [7,9]
 if is_pi and sys.version_info[1] not in prebuiltWheelsPythonVersion:
+
     print("[WARNING] There are no prebuilt wheels for Python 3.{} for OpenCV, building process on this device may be long and unstable".format(sys.version_info[1]))
 
 if not in_venv:
