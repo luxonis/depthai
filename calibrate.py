@@ -116,8 +116,6 @@ def parse_args():
                         help="number of chessboard squares in Y direction in charuco boards.")
     parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
                         help="Display rectified images with lines drawn for epipolar check")
-    parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
-                        help="Disable rgb camera Calibration")
     parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
                         help="Interchange Left and right camera port.")
     parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
@@ -161,7 +159,8 @@ def parse_args():
                         help="Set to trace the steps in calibration. Number from 1 to 5. If you want to display all, set trace number to 10.")
     parser.add_argument('-edms', '--enableDebugMessageSync', default=False, action="store_true",
                         help="Display all the information in calibration.")
-
+    parser.add_argument('-mst', '--minSyncTimestamp',  type=float, default=0.03,
+                        help="Minimum time difference between pictures taken from different cameras.  Default: %(default)s ")
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -605,7 +604,7 @@ class Main:
         prev_time = None
         curr_time = None
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue), 0.3 ) # 3ms tolerance
+        syncCollector = MessageSync(len(self.camera_queue), self.args.minSyncTimestamp) # 3ms tolerance
         syncCollector.enableDebugMessageSync = self.args.enableDebugMessageSync
         self.mouseTrigger = False
         while not finished:
@@ -892,7 +891,7 @@ class Main:
                         right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
                         left_cam = cam_info['name']
                         
-                        epipolar_threshold = 0.6
+                        epipolar_threshold = self.args.maxEpiploarError
 
                         if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
                             color = red
