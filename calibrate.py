@@ -60,7 +60,6 @@ antibandingOpts = {
     '60':  dai.CameraControl.AntiBandingMode.MAINS_60_HZ,
 }
 
-
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
     # Create black blank image
@@ -128,7 +127,7 @@ def parse_args():
     parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
                         help="Invert horizontal axis of the camera for the display")
     parser.add_argument("-ep", "--maxEpiploarError", default="0.7", type=float, required=False,
-                         help="Sets the maximum epiploar allowed with rectification")
+                         help="Sets the maximum epiploar allowed with rectification. Default: %(default)s")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
@@ -239,7 +238,7 @@ class HostSync:
 
 
 class MessageSync:
-    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10, min_queue_depth=3):
+    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=4, min_queue_depth=3):
         self.num_queues = num_queues
         self.min_diff_timestamp = min_diff_timestamp
         self.max_num_messages = max_num_messages
@@ -262,7 +261,7 @@ class MessageSync:
         #     print()
         # print()
 
-    def get_synced(self, enableDebugMessageSync):
+    def get_synced(self):
 
         # Atleast 3 messages should be buffered
         min_len = min([len(queue) for queue in self.queues.values()])
@@ -386,8 +385,20 @@ class Main:
                     # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
                     break
 
-            pipeline = self.create_pipeline()
-            self.device.startPipeline(pipeline)
+        self.charuco_board = cv2.aruco.CharucoBoard_create(
+                            self.args.squaresX, self.args.squaresY,
+                            self.args.squareSizeCm,
+                            self.args.markerSizeCm,
+                            self.aruco_dictionary)
+
+
+    def mouse_event_callback(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.mouseTrigger = True
+
+    def startPipeline(self):
+        pipeline = self.create_pipeline()
+        self.device.startPipeline(pipeline)
 
         self.camera_queue = {}
         for config_cam in self.board_config['cameras']:
