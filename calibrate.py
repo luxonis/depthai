@@ -20,7 +20,7 @@ import depthai as dai
 import numpy as np
 import copy
 
-import calibration_coms.calibration_utils as calibUtils
+import depthai_calibration.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 debug = False
