@@ -2,6 +2,6 @@
 	path = resources/depthai_boards
 	url = https://github.com/luxonis/depthai-boards
 
-[submodule "calibration_coms"]
-	path = calibration_coms
-	url = git@github.com:luxonis/calibtaion_coms.git
+[submodule "depthai_calibration"]
+	path = depthai_calibration
+	url = git@github.com:luxonis/depthai-calibration.git
