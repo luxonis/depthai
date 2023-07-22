@@ -131,8 +131,8 @@ class StereoCalibration(object):
                 cam_info['name'], intrinsics))
             
             coverage_name = cam_info['name']
-            print_text = f'Coverage Image of {coverage_name} with reprojection error of {ret}'
-            cv2.putText(coverageImage, print_text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 0, 0), 2)
+            print_text = f'Coverage Image of {coverage_name} with reprojection error of {round(ret,5)}'
+            cv2.putText(coverageImage, print_text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2*coverageImage.shape[0]/coverageImage.shape[1], (0, 0, 0), 2)
             # coverageImages[coverage_name] = coverageImage
             coverage_file_path = filepath + '/' + coverage_name + '_coverage.png'
             cv2.imwrite(coverage_file_path, coverageImage)
