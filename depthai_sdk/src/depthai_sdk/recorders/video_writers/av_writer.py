@@ -141,9 +141,8 @@ class AvWriter(BaseWriter):
             p = self._stream.encode(None)
             self._file.mux(p)
             self._file.close()
-
-        # Remux the stream to finalize the output file
-        self.remux_video(str(self._file.name))
+            # Remux the stream to finalize the output file
+            self.remux_video(str(self._file.name))
 
     def remux_video(self, input_file: Union[Path, str]) -> None:
         """
