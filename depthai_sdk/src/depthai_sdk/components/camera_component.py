@@ -63,7 +63,8 @@ class CameraComponent(Component):
         self._socket = source
         self._replay: Optional[Replay] = replay
         self._args: Dict = args
-        self.name = name
+
+        self.name = name or self._source
 
         if rotation not in [None, 0, 90, 180, 270]:
             raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
@@ -377,7 +378,7 @@ class CameraComponent(Component):
         if not self.is_replay():
             if isinstance(resolution, str) and resolution.lower() in ['max', 'maximum']:
                 sensor = [f for f in self._device.getConnectedCameraFeatures() if f.socket == self._socket][0]
-                resolution = get_max_resolution(sensor)
+                resolution = get_max_resolution(type(self.node), sensor)
             else:
                 resolution = parse_resolution(type(self.node), resolution)
             self.node.setResolution(resolution)

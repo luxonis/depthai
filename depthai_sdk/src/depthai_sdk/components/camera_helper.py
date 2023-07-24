@@ -166,10 +166,14 @@ def setCameraControl(control: dai.CameraControl,
     # TODO: Add contrast, exposure compensation, brightness, manual exposure, and saturation
 
 
-def get_max_resolution(sensor: dai.CameraFeatures) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
+def get_max_resolution(node: dai.node, sensor: dai.CameraFeatures) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
     max_res = None
     max_num = 0
     for conf in sensor.configs:
+        if node == dai.node.ColorCamera and conf.type != dai.CameraSensorType.COLOR:
+            continue
+        if node == dai.node.MonoCamera and conf.type != dai.CameraSensorType.MONO:
+            continue
         (res, size) = get_sensor_resolution(conf.type, conf.width, conf.height)
         if size[0] * size[1] > max_num:
             max_num = size[0] * size[1]
