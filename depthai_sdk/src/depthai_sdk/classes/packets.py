@@ -218,18 +218,37 @@ class PointcloudPacket(BasePacket):
     def get_timestamp(self) -> timedelta:
         return self.depth_map.getTimestampDevice()
 
-class SpatialBbMappingPacket(FramePacket):
+class SpatialBbMappingPacket(DisparityDepthPacket):
     """
     Output from Spatial Detection nodes - depth frame + bounding box mappings. Inherits FramePacket.
     """
     def __init__(self,
                  name: str,
                  msg: dai.ImgFrame,
-                 spatials: dai.SpatialImgDetections):
+                 spatials: dai.SpatialImgDetections,
+                 disp_scale_factor: float):
         super().__init__(name=name,
-                         msg=msg)
+                         img_frame=msg,
+                         disp_scale_factor=disp_scale_factor)
         self.spatials = spatials
 
+    def prepare_visualizer_objects(self, vis: Visualizer) -> None:
+        # Add detections to packet
+        for detection in self.spatials.detections:
+            br = detection.boundingBoxMapping.roi.bottomRight()
+            tl = detection.boundingBoxMapping.roi.topLeft()
+            bbox = BoundingBox([tl.x, tl.y, br.x, br.y])
+            # Add detections to visualizer
+            vis.add_bbox(
+                bbox=bbox,
+                thickness=3,
+                color=(0,0,0)
+            )
+            vis.add_bbox(
+                bbox=bbox,
+                thickness=1,
+                color=(255,255,255)
+            )
 
 class NnOutputPacket(FramePacket):
     """

@@ -79,7 +79,7 @@ class OpenCvVisualizer(Visualizer):
             fps = self.fps.get_fps(packet.name)
             self.add_text(text=f'FPS: {fps:.1f}', position=TextPosition.TOP_LEFT)
 
-        if type(packet) == DisparityPacket or type(packet) == DisparityDepthPacket:
+        if isinstance(packet, DisparityPacket):
             frame = packet.get_colorized_frame(self)
         elif isinstance(packet, FramePacket):
             frame = packet.decode()

@@ -21,6 +21,7 @@ from depthai_sdk.components.nn_helper import *
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
+from depthai_sdk.visualize.visualizer_helper import depth_to_disp_factor
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_nn import XoutTwoStage, XoutNnResults, XoutSpatialBbMappings, XoutNnData
@@ -698,6 +699,7 @@ class NNComponent(Component):
                 stereo=self._comp._stereo_node,
                 frames=StreamXout(out=self._comp.node.passthroughDepth, name=self._comp.name),
                 configs=StreamXout(out=self._comp.node.out),
+                dispScaleFactor=depth_to_disp_factor(device, self._comp._stereo_node),
                 bbox=self._comp.get_bbox()
             )
 

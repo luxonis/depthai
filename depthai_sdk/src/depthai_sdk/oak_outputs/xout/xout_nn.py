@@ -20,6 +20,8 @@ from depthai_sdk.classes.packets import (
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.oak_outputs.xout.xout_depth import XoutDisparityDepth
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.visualize.visualizer_helper import colorize_disparity, draw_mappings, depth_to_disp_factor
 from depthai_sdk.visualize.bbox import BoundingBox
@@ -121,48 +123,42 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             ))
         return packet
 
-class XoutSpatialBbMappings(XoutSeqSync, XoutFrames):
+class XoutSpatialBbMappings(XoutDisparityDepth, SequenceNumSync):
     def __init__(self,
                  device: dai.Device,
                  stereo: dai.node.StereoDepth,
-                 frames: StreamXout,
-                 configs: StreamXout,
+                 frames: StreamXout, # passthroughDepth
+                 configs: StreamXout, # out
+                 dispScaleFactor: float,
                  bbox: BoundingBox):
         self._stereo = stereo
         self.frames = frames
         self.configs = configs
         self.bbox = bbox
 
-        XoutFrames.__init__(self, frames)
-        XoutSeqSync.__init__(self, [frames, configs])
+        XoutDisparityDepth.__init__(self, device, frames, dispScaleFactor, None)
+        SequenceNumSync.__init__(self, 2)
 
-        self.device = device
-        self.multiplier = 255 / 95.0
-        self.factor = None
-        self.name = 'Depth & Bounding Boxes'
+    def new_msg(self, name: str, msg):
+        # Ignore frames that we aren't listening for
+        if name not in self._streams: return
+
+        synced = self.sync(msg.getSequenceNum(), name, msg)
+        if synced:
+            return self.package(synced)
+
+    def on_callback(self, packet) -> None:
+        pass
 
     def xstreams(self) -> List[StreamXout]:
         return [self.frames, self.configs]
-
-    def visualize(self, packet: SpatialBbMappingPacket):
-        if not self.factor:
-            size = (packet.msg.getWidth(), packet.msg.getHeight())
-            self.factor = depth_to_disp_factor(self.device, self._stereo)
-
-        depth = np.array(packet.msg.getFrame())
-        with np.errstate(all='ignore'):
-            disp = (self.factor / depth).astype(np.uint8)
-
-        packet.frame = colorize_disparity(disp, multiplier=1)
-        draw_mappings(packet)
-
-        super().visualize(packet)
 
     def package(self, msgs: Dict) -> SpatialBbMappingPacket:
         return SpatialBbMappingPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
-            msgs[self.configs.name]
+            msgs[self.configs.name],
+            disp_scale_factor=self.disp_scale_factor,
         )
 
 class XoutTwoStage(XoutNnResults):
