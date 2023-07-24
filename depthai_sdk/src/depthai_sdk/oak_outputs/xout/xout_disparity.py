@@ -176,7 +176,7 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
         fill_rate = np.count_nonzero(frame) / frame.size
         self._metrics_buffer['fill_rate'].append(fill_rate)
 
-        if len(self._metrics_buffer['fill_rate']) < max(30):
+        if len(self._metrics_buffer['fill_rate']) < 30:
             return
 
         fill_rate_avg = np.mean(self._metrics_buffer['fill_rate'])

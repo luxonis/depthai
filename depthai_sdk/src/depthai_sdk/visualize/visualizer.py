@@ -33,10 +33,10 @@ class Visualizer:
         self._frame_shape: Optional[Tuple[int, ...]] = None
 
         self.config = VisConfig()
+        self.fps = VisualzierFps()
 
         if fps:
             self.output(show_fps=fps)
-            self.fps = VisualzierFps()
         if scale:
             self.output(img_scale=float(scale))
 

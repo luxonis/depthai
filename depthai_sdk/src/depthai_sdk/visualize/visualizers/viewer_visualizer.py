@@ -1,4 +1,4 @@
-from depthai_sdk.classes.packets import FramePacket, IMUPacket
+from depthai_sdk.classes.packets import FramePacket, IMUPacket, PointcloudPacket
 from depthai_sdk.visualize.objects import (
     VisBoundingBox,
     VisCircle,
@@ -10,10 +10,7 @@ from depthai_sdk.visualize.objects import (
     )
 from depthai_sdk.visualize.visualizer import Visualizer
 from typing import Tuple, List, Union, Optional, Sequence
-from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
-from depthai_sdk.visualize.bbox import BoundingBox
 import numpy as np
-import cv2
 import subprocess
 import logging
 import sys
@@ -63,7 +60,15 @@ class DepthaiViewerVisualizer(Visualizer):
 
         if type(packet) == IMUPacket:
             viewer.log_imu(*packet.get_imu_vals())
-
+        elif type(packet) == PointcloudPacket:
+            if packet.colorize_frame is not None:
+                bgr_frame = packet.colorize_frame
+                rgb_frame = bgr_frame[..., ::-1]
+                frame = np.dstack((rgb_frame, np.full(bgr_frame.shape[:2], 255, dtype=np.uint8)))
+                viewer.log_image(f'color', frame)
+                viewer.log_points(packet.name, packet.points.reshape(-1, 3) / 1000, colors=rgb_frame.reshape(-1, 3))
+            else:
+                viewer.log_points(packet.name, packet.points.reshape(-1, 3) / 1000)
 
         vis_bbs = []
         for i, obj in enumerate(self.objects):

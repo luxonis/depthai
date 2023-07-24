@@ -24,7 +24,7 @@ class XoutPointcloud(XoutFrames):
                  color_frames: Optional[StreamXout] = None):
 
         self.color_frames = color_frames
-        XoutFrames.__init__(self, frames=depth_frames, fps=fps)
+        XoutFrames.__init__(self, frames=depth_frames)
         self.name = 'Pointcloud'
         self.fps = fps
         self.device = device

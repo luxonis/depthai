@@ -200,18 +200,23 @@ class DisparityDepthPacket(DisparityPacket):
         # Convert depth to disparity for nicer visualization
 
 
-class PointcloudPacket(DepthPacket):
+class PointcloudPacket(BasePacket):
     def __init__(self,
                  name: str,
                  points: np.ndarray,
                  depth_map: dai.ImgFrame,
-                 colorize_frame: Optional[np.ndarray]):
-        self.points = points
-        super().__init__(name=name,
-                        img_frame=depth_map,
-                        mono_frame=colorize_frame,
-                        depth_map=depth_map.getFrame())
+                 colorize_frame: Optional[dai.ImgFrame]):
 
+        super().__init__(name=name)
+        self.points = points
+        self.colorize_frame = colorize_frame.getCvFrame() if colorize_frame is not None else None
+        self.depth_map = depth_map
+
+    def get_sequence_num(self) -> int:
+        return self.depth_map.getSequenceNum()
+
+    def get_timestamp(self) -> timedelta:
+        return self.depth_map.getTimestampDevice()
 
 class SpatialBbMappingPacket(FramePacket):
     """

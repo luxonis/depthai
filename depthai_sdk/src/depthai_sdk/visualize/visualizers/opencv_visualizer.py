@@ -1,5 +1,5 @@
 import logging
-from depthai_sdk.classes.packets import DepthPacket, DisparityPacket, FramePacket
+from depthai_sdk.classes.packets import DepthPacket, DisparityPacket, FramePacket, DisparityDepthPacket
 from depthai_sdk.visualize.objects import (
     VisBoundingBox,
     VisCircle,
@@ -79,7 +79,7 @@ class OpenCvVisualizer(Visualizer):
             fps = self.fps.get_fps(packet.name)
             self.add_text(text=f'FPS: {fps:.1f}', position=TextPosition.TOP_LEFT)
 
-        if type(packet) == DisparityPacket:
+        if type(packet) == DisparityPacket or type(packet) == DisparityDepthPacket:
             frame = packet.get_colorized_frame(self)
         elif isinstance(packet, FramePacket):
             frame = packet.decode()
