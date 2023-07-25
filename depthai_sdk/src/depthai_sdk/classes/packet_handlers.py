@@ -42,6 +42,8 @@ class BasePacketHandler:
 
         self.fps.next_iter()
         if self.queue:
+            if self.queue.full():
+                self.queue.get() # Remove oldest packet
             self.queue.put(packet)
         else:
             self.new_packet(packet)

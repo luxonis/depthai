@@ -8,7 +8,7 @@ from typing import Dict, List
 
 import depthai as dai
 
-from depthai_sdk.classes.packets import FramePacket
+from depthai_sdk.classes.packets import FramePacket, IMUPacket
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.recorders.abstract_recorder import Recorder
@@ -87,7 +87,10 @@ class Record:
 
         msgs = dict()
         for name, packet in packets.items():
-            msgs[name] = packet.msg
+            if isinstance(packet, FramePacket):
+                msgs[name] = packet.msg
+            elif isinstance(packet, IMUPacket):
+                msgs[name] = packet.packet
         self.frame_q.put(msgs)
 
     def start(self, device: dai.Device, xouts: List[XoutFrames]):

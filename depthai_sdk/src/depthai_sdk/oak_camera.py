@@ -38,7 +38,6 @@ from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.utils import report_crash_dump
-from queue import Queue
 
 class UsbWarning(UserWarning):
     pass
@@ -455,9 +454,10 @@ class OakCamera:
         return self
 
     def __exit__(self, exc_type, exc_value, tb):
-        self._stop = True
+        self.close()
 
     def close(self):
+        logging.info("Closing OAK camera")
         if self.replay:
             self.replay.close()
 
@@ -466,6 +466,12 @@ class OakCamera:
 
         self.device.close()
 
+    def _new_oak_msg(self, q_name: str, msg):
+        if self._stop:
+            return
+        if q_name in self._new_msg_callbacks:
+            for callback in self._new_msg_callbacks[q_name]:
+                callback(q_name, msg)
 
     def start(self, blocking=False):
         """
@@ -487,16 +493,13 @@ class OakCamera:
         # Upload the pipeline to the device and start it
         self.device.startPipeline(self.pipeline)
 
-        for name, callbacks in self._new_msg_callbacks.items():
+        for xlink_name in self._new_msg_callbacks:
             try:
-                q = self.device.getOutputQueue(name, maxSize=4, blocking=False)
-                for cb in callbacks:
-                    q.addCallback(cb)
+                self.device.getOutputQueue(xlink_name, maxSize=4, blocking=False).addCallback(self._new_oak_msg)
             # TODO: make this nicer, have self._new_msg_callbacks know whether it's replay or not
             except Exception as e:
                 if self.replay:
-                    for cb in callbacks:
-                        self.replay._add_callback(name, cb)
+                    self.replay._add_callback(xlink_name, self._new_oak_msg)
                 else:
                     raise e
 
@@ -522,7 +525,6 @@ class OakCamera:
             # Constant loop: get messages, call callbacks
             while self.running():
                 self.poll()
-            self.close()
 
     def running(self) -> bool:
         """
@@ -538,9 +540,8 @@ class OakCamera:
 
         Returns: key pressed from cv2.waitKey, or None if
         """
-        if self._stop:
-            return
-
+        # if self._stop:
+        #     return
         if CV2_HAS_GUI_SUPPORT:
             key = cv2.waitKey(1)
             if key == ord('q'):
@@ -557,7 +558,6 @@ class OakCamera:
 
             if self.replay._stop:
                 self._stop = True
-                self.close()
                 return key
 
         for poll in self._polling:
@@ -565,7 +565,6 @@ class OakCamera:
 
         if self.device.isClosed():
             self._stop = True
-            self.close()
             return None
 
         return key

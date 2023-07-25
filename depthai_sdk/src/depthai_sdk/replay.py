@@ -314,6 +314,7 @@ class Replay:
         """
         if not self._pause:  # If replaying is paused, don't read new frames
             if not self._readFrames():
+                self._stop = True
                 return False  # End of the recording
 
         self._now = monotonic()
