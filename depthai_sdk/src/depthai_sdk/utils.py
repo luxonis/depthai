@@ -2,10 +2,12 @@ import importlib
 import json
 import logging
 import sys
+import tempfile
+import traceback
 import urllib.request
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union, Any
-import tempfile
+
 try:
     import cv2
 except ImportError:
@@ -397,16 +399,16 @@ def _create_cache_folder() -> bool:
     return True
 
 
-def _create_config() -> None:
+def _create_config() -> Optional[dict]:
     """
-    Create config file in user's home directory.
+    Create config file in user's home directory. If config file already exists, check if sentry_dsn is correct.
 
     Returns:
-        None.
+        dict: Config file content.
     """
     if not _create_cache_folder():
         logging.debug('Failed to create config file.')
-        return
+        return None
 
     config_file = Path.home().joinpath('.depthai_sdk', 'config.json')
     default_config = {
@@ -415,6 +417,13 @@ def _create_config() -> None:
     }
     if not config_file.exists():
         config_file.write_text(json.dumps(default_config))
+    else:
+        content = json.loads(config_file.read_text())
+        if content['sentry_dsn'] != default_config['sentry_dsn']:
+            content['sentry_dsn'] = default_config['sentry_dsn']
+            config_file.write_text(json.dumps(content))
+
+    return json.loads(config_file.read_text())
 
 
 def set_sentry_status(status: bool = True) -> None:
@@ -429,8 +438,7 @@ def set_sentry_status(status: bool = True) -> None:
     """
     # check if config exists
     config_file = Path.home().joinpath('.depthai_sdk', 'config.json')
-    if not config_file.exists():
-        _create_config()
+    _create_config()
 
     # read config
     config = json.loads(config_file.read_text())
@@ -446,13 +454,8 @@ def get_config_field(key: str) -> Any:
         bool: True if sentry is enabled, False otherwise.
     """
     # check if config exists
-    config_file = Path.home().joinpath('.depthai_sdk', 'config.json')
-    if not config_file.exists():
-        raise FileNotFoundError('Config file not found.')
-
-    # read config
-    config = json.loads(config_file.read_text())
-    return config[key]
+    config_file = _create_config()
+    return config_file.get(key, None)
 
 
 def report_crash_dump(device: dai.Device) -> None:
@@ -478,5 +481,23 @@ def report_crash_dump(device: dai.Device) -> None:
 
             with configure_scope() as scope:
                 logging.info('Reporting crash dump to sentry.')
-                scope.add_attachment(content_type='application/json', path=path)
+                scope.add_attachment(content_type='application/json', path=str(path))
                 capture_exception(CrashDumpException())
+
+
+def _sentry_before_send(event, hint):
+    if 'exc_info' in hint:
+        exc_type, exc_value, tb = hint['exc_info']
+        tb_info = traceback.extract_tb(tb)
+
+        if isinstance(exc_value, (KeyboardInterrupt, SystemExit)):
+            return None
+
+        # Loop through the traceback to check for any frame that originated in your module
+        for tbi in tb_info:
+            # Assuming your module files have the pattern "my_module_*", you can do:
+            if 'depthai_sdk' in tbi.filename:
+                return event  # if the error originated in your module, send it
+
+    # If none of the frames came from your module, or there's no exception info, don't send the event
+    return None
