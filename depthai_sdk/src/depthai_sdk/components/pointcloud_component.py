@@ -42,8 +42,6 @@ class PointcloudComponent(Component):
 
         self._replay: Optional[Replay] = replay
 
-        if isinstance(self.colorize_comp, CameraComponent):
-            self.colorize_comp.config_color_camera(isp_scale=(2,5))
 
         # Depth aspect
         if stereo is None:

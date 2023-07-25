@@ -89,25 +89,22 @@ class XoutBase(ABC):
             return None
 
     def is_h265(self) -> bool:
-        if type(self).__name__ == 'XoutH26x':
-            # XoutH26x class has profile attribute
-            return self.profile == dai.VideoEncoderProperties.Profile.H265_MAIN
-        return False
+        fourcc = getattr(self, '_fourcc', None)
+        return fourcc is not None and fourcc.lower() == 'hevc'
 
     def is_h264(self) -> bool:
-        if type(self).__name__ == 'XoutH26x':
-            # XoutH26x class has profile attribute
-            return self.profile != dai.VideoEncoderProperties.Profile.H265_MAIN
-        return False
-
-    def is_h26x(self) -> bool:
-        return type(self).__name__ == 'XoutH26x'
+        fourcc = getattr(self, '_fourcc', None)
+        return fourcc is not None and fourcc.lower() == 'h264'
 
     def is_mjpeg(self) -> bool:
-        return type(self).__name__ == 'XoutMjpeg'
+        fourcc = getattr(self, '_fourcc', None)
+        return fourcc is not None and fourcc.lower() == 'mjpeg'
+
+    def is_h26x(self) -> bool:
+        return self.is_h264() or self.is_h265()
 
     def is_raw(self) -> bool:
-        return type(self).__name__ == 'XoutFrames'
+        return type(self).__name__ == 'XoutFrames' and self._fourcc is None
 
     def is_depth(self) -> bool:
         return type(self).__name__ == 'XoutDepth'
