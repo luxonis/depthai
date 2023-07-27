@@ -821,6 +821,7 @@ class Main:
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
         stereo_calib.traceLevel = self.args.traceLevel
+        stereo_calib.output_scale_factor = self.args.outputScaleFactor
         dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
