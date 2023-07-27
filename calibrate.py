@@ -60,7 +60,6 @@ antibandingOpts = {
     '60':  dai.CameraControl.AntiBandingMode.MAINS_60_HZ,
 }
 
-
 def create_blank(width, height, rgb_color=(0, 0, 0)):
     """Create new image(numpy array) filled with certain color in RGB"""
     # Create black blank image
@@ -240,7 +239,7 @@ class HostSync:
 
 
 class MessageSync:
-    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=10, min_queue_depth=3):
+    def __init__(self, num_queues, min_diff_timestamp, max_num_messages=4, min_queue_depth=3):
         self.num_queues = num_queues
         self.min_diff_timestamp = min_diff_timestamp
         self.max_num_messages = max_num_messages
@@ -263,7 +262,7 @@ class MessageSync:
         #     print()
         # print()
 
-    def get_synced(self, enableDebugMessageSync):
+    def get_synced(self):
 
         # Atleast 3 messages should be buffered
         min_len = min([len(queue) for queue in self.queues.values()])
@@ -387,8 +386,20 @@ class Main:
                     # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
                     break
 
-            pipeline = self.create_pipeline()
-            self.device.startPipeline(pipeline)
+        self.charuco_board = cv2.aruco.CharucoBoard_create(
+                            self.args.squaresX, self.args.squaresY,
+                            self.args.squareSizeCm,
+                            self.args.markerSizeCm,
+                            self.aruco_dictionary)
+
+
+    def mouse_event_callback(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.mouseTrigger = True
+
+    def startPipeline(self):
+        pipeline = self.create_pipeline()
+        self.device.startPipeline(pipeline)
 
         self.camera_queue = {}
         for config_cam in self.board_config['cameras']:
