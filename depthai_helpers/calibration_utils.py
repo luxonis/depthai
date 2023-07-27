@@ -110,16 +110,30 @@ class StereoCalibration(object):
             self.aruco_dictionary)
 
         # parameters = aruco.DetectorParameters_create()
+        combinedCoverageImage = None
+        resizeWidth, resizeHeight = 0, 0
         assert mrk_size != None,  "ERROR: marker size not set"
         for camera in board_config['cameras'].keys():
-            combinedCoverageImage = None
+            cam_info = board_config['cameras'][camera]
+            images_path = filepath + '/' + cam_info['name']
+            image_files = glob.glob(images_path + "/*")
+            image_files.sort()
+            for im in image_files:
+                frame = cv2.imread(im)
+                height, width, _ = frame.shape
+                widthRatio = resizeWidth / width
+                heightRatio = resizeHeight / height
+                if (widthRatio > 0.8 and heightRatio > 0.8 and widthRatio <= 1.0 and heightRatio <= 1.0) or (widthRatio > 1.2 and heightRatio > 1.2) or (resizeHeight == 0):
+                    resizeWidth = width
+                    resizeHeight = height
+                break
+        for camera in board_config['cameras'].keys():
             cam_info = board_config['cameras'][camera]
             print(
                 '<------------Calibrating {} ------------>'.format(cam_info['name']))
             images_path = filepath + '/' + cam_info['name']
             ret, intrinsics, dist_coeff, _, _, size, coverageImage = self.calibrate_intrinsics(
                 images_path, cam_info['hfov'])
-            # coverageImages[cam_info['name']] = coverageImage
             cam_info['intrinsics'] = intrinsics
             cam_info['dist_coeff'] = dist_coeff
             cam_info['size'] = size # (Width, height)
@@ -132,16 +146,30 @@ class StereoCalibration(object):
             
             coverage_name = cam_info['name']
             print_text = f'Coverage Image of {coverage_name} with reprojection error of {round(ret,5)}'
-            cv2.putText(coverageImage, print_text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 2*coverageImage.shape[0]/coverageImage.shape[1], (0, 0, 0), 2)
-            # coverageImages[coverage_name] = coverageImage
+            height, width, _ = coverageImage.shape
+
+            if width > resizeWidth and height > resizeHeight:
+                coverageImage = cv2.resize(
+                coverageImage, (0, 0), fx= resizeWidth / width, fy= resizeWidth / width)
+
+            height, width, _ = coverageImage.shape
+            if height > resizeHeight:
+                height_offset = (height - resizeHeight)//2
+                coverageImage = coverageImage[height_offset:height_offset+resizeHeight, :]
+
+            height, width, _ = coverageImage.shape
+            height_offset = (resizeHeight - height)//2
+            width_offset = (resizeWidth - width)//2
+            subImage = np.pad(coverageImage, ((height_offset, height_offset), (width_offset, width_offset), (0, 0)), 'constant', constant_values=0)
+            cv2.putText(subImage, print_text, (50, 50+height_offset), cv2.FONT_HERSHEY_SIMPLEX, 2*coverageImage.shape[0]/1750, (0, 0, 0), 2)
+            if combinedCoverageImage is None:
+                combinedCoverageImage = subImage
+            else:
+                combinedCoverageImage = np.hstack((combinedCoverageImage, subImage))
             coverage_file_path = filepath + '/' + coverage_name + '_coverage.png'
             cv2.imwrite(coverage_file_path, coverageImage)
-            if combinedCoverageImage is None:
-                combinedCoverageImage = coverageImage
-            else:
-                combinedCoverageImage = np.hstack((combinedCoverageImage, coverageImage))            
 
-        combinedCoverageImage = cv2.resize(combinedCoverageImage, (0, 0), fx=0.7, fy=0.7)
+        combinedCoverageImage = cv2.resize(combinedCoverageImage, (0, 0), fx=0.45, fy=0.45)
         cv2.imshow('coverage image', combinedCoverageImage)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
