@@ -95,9 +95,9 @@ class BasePacketHandler:
 
         self.outputs = output
 
-    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase, xout_streams: Dict):
+    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase, xout_streams: Dict, custom_callback: Callable = None):
         # Assign which callback to call when packet is prepared
-        xout.new_packet_callback = self._new_packet_callback
+        xout.new_packet_callback = custom_callback or self._new_packet_callback
 
         for xstream in xout.xstreams():
             if xstream.name not in xout_streams:
@@ -267,31 +267,38 @@ class RosPacketHandler(BasePacketHandler):
     #     except:
     #         return False
 
+
 class TriggerActionPacketHandler(BasePacketHandler):
     def __init__(self, trigger: Trigger, action: Union[Callable, Action]):
+        super().__init__()
         self.trigger = trigger
         self.action = Action(None, action) if isinstance(action, Callable) else action
+        self.controller = TriggerAction(self.trigger, self.action)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
-        controller = TriggerAction(self.trigger, self.action)
-
         trigger_xout: XoutBase = self.trigger.input(pipeline, device)
-        # trigger_xout.setup_base(controller.new_packet_trigger)
+        self._create_xout(pipeline, trigger_xout, xout_streams, self.controller.new_packet_trigger)
 
         if isinstance(self.action, Callable):
-            return [trigger_xout]
+            self._save_outputs([trigger_xout])
+            return
 
         action_xouts = []
         if self.action.inputs:
             for output in self.action.inputs:
                 xout: XoutBase = output(pipeline, device)
-                # xout.setup_base(controller.new_packet_action)
+                xout.new_packet_callback = self.controller.new_packet_action
+                self._create_xout(pipeline, xout, xout_streams, self.controller.new_packet_action)
                 action_xouts.append(xout)
 
         if isinstance(self.action, RecordAction):
             self.action.setup(device, action_xouts)  # creates writers for VideoRecorder()
 
-        return [trigger_xout] + action_xouts
+        self._save_outputs([trigger_xout] + action_xouts)
+
+    def new_packet(self, packet):
+        pass
+
 
 class StreamPacketHandler(BasePacketHandler):
     """
