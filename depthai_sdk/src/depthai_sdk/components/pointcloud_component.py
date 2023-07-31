@@ -100,5 +100,4 @@ class PointcloudComponent(Component):
 
             return XoutPointcloud(device,
                                  StreamXout(self._comp.depth, name=self._comp.name),
-                                 color_frames=colorize,
-                                 fps=30)
+                                 color_frames=colorize)

@@ -20,13 +20,11 @@ class XoutPointcloud(XoutFrames):
     def __init__(self,
                  device: dai.Device,
                  depth_frames: StreamXout,
-                 fps: int,
                  color_frames: Optional[StreamXout] = None):
 
         self.color_frames = color_frames
         XoutFrames.__init__(self, frames=depth_frames)
         self.name = 'Pointcloud'
-        self.fps = fps
         self.device = device
         self.xyz = None
 
