@@ -30,7 +30,7 @@ class XoutBase(ABC):
         #     self._fps_counter[name] = FPS()
 
         # It will get assigned later inside the BasePacketHandler class
-        self.new_packet_callback: Callable
+        self.new_packet_callback: Callable = lambda x: None
 
     def get_packet_name(self) -> str:
         if self._packet_name is None:
