@@ -8,8 +8,7 @@ from .abstract_recorder import *
 
 class VideoRecorder(Recorder):
     """
-    Writes encoded streams raw (.mjpeg/.h264/.hevc) or directly to mp4 container.
-    Writes unencoded streams to mp4 using cv2.VideoWriter
+    Writes video streams (.mjpeg/.h264/.hevc) or directly to mp4/avi container.
     """
 
     def __init__(self, lossless: bool = False):
@@ -47,9 +46,11 @@ class VideoRecorder(Recorder):
                 file_name = file_name[len('CameraBoardSocket.'):]
             stream = OakStream(xout)
             fourcc = stream.fourcc()  # TODO add default fourcc? stream.fourcc() can be None.
-            if stream.is_raw():
+
+            print(fourcc, xout_name, stream.type)
+            if stream.is_raw() or stream.is_depth():
                 from .video_writers.video_writer import VideoWriter
-                self._writers[xout_name] = VideoWriter(self.path, file_name, fourcc, xout.fps, self._lossless)
+                self._writers[xout_name] = VideoWriter(self.path, file_name, self._lossless)
             else:
                 try:
                     from .video_writers.av_writer import AvWriter
