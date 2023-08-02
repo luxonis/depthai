@@ -18,8 +18,7 @@ class VideoWriter(BaseWriter):
         Args:
             path: Path to save the output. Either a folder or a file.
             name: Name of the stream.
-            fourcc: FourCC code of the codec used to compress the frames.
-            fps: Frames per second.
+            lossless: If True, save the stream without compression.
         """
 
         super().__init__(path, name)
@@ -32,6 +31,16 @@ class VideoWriter(BaseWriter):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
+
+    def create_file_for_buffer(self, subfolder: str, buf_name: str):
+        if self._buffers[buf_name] is None:
+            raise RuntimeError(f"Buffer {buf_name} is not enabled")
+
+        if len(self._buffers[buf_name]) == 0:
+            return None
+
+        frame = self._buffers[buf_name][0]
+        self.create_file(subfolder, frame)
 
     def create_file(self, subfolder: str, frame: dai.ImgFrame):
         if self._lossless or frame.getType() == dai.ImgFrame.Type.RAW16:
@@ -57,7 +66,6 @@ class VideoWriter(BaseWriter):
         else: # Mono/Color, encode
             self._fourcc = 'h264'
             options['crf'] = '15'
-
 
         self._file = av.open(path_to_file, 'w')
         self._stream = self._file.add_stream(self._fourcc)
