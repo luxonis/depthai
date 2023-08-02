@@ -89,7 +89,7 @@ def get_first_color_cam(device: dai.Device) -> dai.CameraBoardSocket:
         if cam.supportedTypes[0] == dai.CameraSensorType.COLOR:
             return cam.socket
     # Default
-    return dai.CameraBoardSocket.CAM_A
+    return None
 
 
 def parse_camera_socket(value: Union[str, dai.CameraBoardSocket]) -> dai.CameraBoardSocket:

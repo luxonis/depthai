@@ -16,6 +16,7 @@ from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
 from depthai_sdk.oak_outputs.fps import FPS
 import depthai as dai
+import logging
 
 class BasePacketHandler:
     def __init__(self, main_thread=False):
@@ -60,7 +61,8 @@ class BasePacketHandler:
         """
         if enable_sync:
             if len(self.outputs) < 2:
-                raise Exception('Syncing requires at least 2 outputs!')
+                logging.error('Syncing requires at least 2 outputs! Skipping syncing.')
+                return
             self.sync = TimestampSync(len(self.outputs), threshold_ms)
 
     def _poll(self):

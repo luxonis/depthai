@@ -64,7 +64,7 @@ class CameraComponent(Component):
         self._replay: Optional[Replay] = replay
         self._args: Dict = args
 
-        self.name = name or self._source
+        self.name = name
 
         if rotation not in [None, 0, 90, 180, 270]:
             raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
@@ -443,17 +443,17 @@ class CameraComponent(Component):
 
     def get_stream_xout(self, fourcc: Optional[str] = None) -> StreamXout:
         if self.encoder is not None and fourcc is not None:
-            return StreamXout(self.encoder.bitstream, name=self.name)
+            return StreamXout(self.encoder.bitstream, name=self.name or self._source + '_bitstream')
         elif self.is_replay():
             return ReplayStream(self.name or self._source)
         elif self.is_mono():
-            return StreamXout(self.stream, name=self.name)
+            return StreamXout(self.stream, name=self.name or self._source + '_mono')
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(self._num_frames_pool)
             self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
-            return StreamXout(self.node.video, name=self.name)
+            return StreamXout(self.node.video, name=self.name or self._source + '_video')
 
     def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
         """

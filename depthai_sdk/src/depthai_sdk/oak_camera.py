@@ -168,6 +168,9 @@ class OakCamera:
             else:
                 source = parse_camera_socket(source)
 
+            if source in [None, dai.CameraBoardSocket.AUTO]:
+                return None # There's no camera on this socket
+
         for comp in self._components:
             if isinstance(comp, CameraComponent) and comp._socket == source:
                 return comp
@@ -356,6 +359,9 @@ class OakCamera:
             left = self.camera(source="left", resolution=resolution, fps=fps)
         if right is None:
             right = self.camera(source="right", resolution=resolution, fps=fps)
+
+        if right is None or left is None:
+            return None
 
         comp = StereoComponent(self.device,
                                self.pipeline,
