@@ -10,6 +10,7 @@ from depthai_sdk.classes.packets import _TrackingDetection
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_nn import XoutNnResults
 from depthai_sdk.tracking import KalmanFilter
+from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import TextPosition
 from depthai_sdk.visualize.visualizer import Visualizer
 
@@ -23,7 +24,8 @@ class XoutTracker(XoutNnResults):
                  device: dai.Device,
                  tracklets: StreamXout,
                  apply_kalman: bool = False,
-                 forget_after_n_frames: Optional[int] = None):
+                 forget_after_n_frames: Optional[int] = None,
+                 calculate_speed: bool = False):
         super().__init__(det_nn, frames, tracklets)
         self.name = 'Object Tracker'
         self.device = device
@@ -39,6 +41,7 @@ class XoutTracker(XoutNnResults):
         self.apply_kalman = apply_kalman
         self.forget_after_n_frames = forget_after_n_frames
         self.kalman_filters: Dict[int, Dict[str, KalmanFilter]] = {}
+        self.calculate_speed = calculate_speed
 
     def setup_visualize(self,
                         visualizer: Visualizer,
@@ -47,11 +50,18 @@ class XoutTracker(XoutNnResults):
         super().setup_visualize(visualizer, visualizer_enabled, name)
 
     def on_callback(self, packet: Union[DetectionPacket, TrackerPacket]):
-        if self._visualizer:
-            self._visualizer.frame_shape = self._frame_shape
+        if len(packet.frame.shape) == 2:
+            packet.frame = np.dstack((packet.frame, packet.frame, packet.frame))
+
+        frame_shape = self.det_nn._input.stream_size[::-1]
+
+        if self._frame_shape is None:
+            # Lazy-load the frame shape
+            self._frame_shape = np.array([*frame_shape])
+            if self._visualizer:
+                self._visualizer.frame_shape = self._frame_shape
 
         spatial_points = self._get_spatial_points(packet)
-
         threshold = self.forget_after_n_frames
 
         if threshold:
@@ -90,9 +100,11 @@ class XoutTracker(XoutNnResults):
         filtered_tracklets = [tracklet for tracklet in packet.daiTracklets.tracklets if
                               tracklet.id not in self.blacklist]
 
-        self._visualizer.add_detections(filtered_tracklets,
-                                        self.normalizer,
-                                        self.labels,
+        norm_bbox = BoundingBox().resize_to_aspect_ratio(packet.frame.shape, self._nn_size, self._resize_mode)
+
+        self._visualizer.add_detections(detections=filtered_tracklets,
+                                        normalizer=norm_bbox,
+                                        label_map=self.labels,
                                         spatial_points=spatial_points)
 
         # Add tracking ids
@@ -106,7 +118,7 @@ class XoutTracker(XoutNnResults):
                 position=TextPosition.MID
             )
 
-            if self._visualizer.config.tracking.speed and tracklet.id in tracklet2speed:
+            if self._visualizer.config.tracking.show_speed and tracklet.id in tracklet2speed:
                 speed = tracklet2speed[tracklet.id]
                 speed = f'{speed:.1f} m/s\n{speed * 3.6:.1f} km/h'
                 bbox = tracklet.srcImgDetection
@@ -122,7 +134,8 @@ class XoutTracker(XoutNnResults):
         # Add tracking lines
         self._visualizer.add_trail(
             tracklets=[t for p in self.buffer for t in p.daiTracklets.tracklets if t.id not in self.blacklist],
-            label_map=self.labels
+            label_map=self.labels,
+            bbox=norm_bbox,
         )
 
     def _update_lost_counter(self, packet, lost_threshold: int):
@@ -241,7 +254,7 @@ class XoutTracker(XoutNnResults):
             packet.detections.append(d)
 
     def _calculate_speed(self, spatial_points) -> dict:
-        if spatial_points is None:
+        if spatial_points is None or self.calculate_speed is False:
             return {}
 
         tracklet2speed = {}

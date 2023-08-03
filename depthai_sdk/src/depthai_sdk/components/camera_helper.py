@@ -178,6 +178,18 @@ def get_sensor_resolution(type: dai.CameraSensorType, width: int, height: int) -
     else:
         raise Exception('Camera sensor type unknown!', type)
 
+def get_resolution_size(
+        resolution: Union[
+            dai.ColorCameraProperties.SensorResolution,
+            dai.MonoCameraProperties.SensorResolution
+            ]) -> Tuple[int,int]:
+    if resolution in colorResolutions:
+        return colorResolutions[resolution]
+    elif resolution in monoResolutions:
+        return monoResolutions[resolution]
+    else:
+        raise Exception('Camera sensor resolution unknown!', resolution)
+
 def getClosesResolution(sensor: dai.CameraFeatures,
                         type: dai.CameraSensorType,
                         width: Optional[int] = None,

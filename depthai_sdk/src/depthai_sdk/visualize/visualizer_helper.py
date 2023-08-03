@@ -9,7 +9,6 @@ except ImportError:
     cv2 = None
 
 import depthai as dai
-import distinctipy
 import numpy as np
 
 from depthai_sdk.classes.packets import (
@@ -19,8 +18,7 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
     _TrackingDetection
 )
-from depthai_sdk.oak_outputs.normalize_bb import NormalizeBoundingBox
-
+from depthai_sdk.visualize.bbox import BoundingBox
 
 class FramePosition(IntEnum):
     """
@@ -240,14 +238,6 @@ def rectangle(src,
 
     return src
 
-
-def get_text_color(background, threshold=0.6):
-    bck = np.array(background) / 256
-    clr = distinctipy.get_text_color((bck[2], bck[1], bck[0]), threshold)
-    clr = distinctipy.get_rgb256(clr)
-    return (clr[2], clr[1], clr[0])
-
-
 def draw_mappings(packet: SpatialBbMappingPacket):
     dets = packet.spatials.detections
     for det in dets:
@@ -273,7 +263,7 @@ def spatials_text(spatials: dai.Point3f):
 
 
 def draw_detections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPacket],
-                    norm: NormalizeBoundingBox,
+                    norm: BoundingBox,
                     label_map: List[Tuple[str, Tuple]] = None):
     """
     Draw object detections to the frame.
@@ -290,7 +280,7 @@ def draw_detections(packet: Union[DetectionPacket, _TwoStageDetection, TrackerPa
         img_detections = [det for det in packet.img_detections.detections]
 
     for detection in img_detections:
-        bbox = norm.normalize(packet.frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
+        bbox = norm.get_relative_bbox(BoundingBox(detection)).to_tuple(packet.frame.shape)
 
         if label_map:
             txt, color = label_map[detection.label]
@@ -372,13 +362,30 @@ def draw_bb_mappings(depth_frame: Union[dai.ImgFrame, Any], bb_mappings: dai.Spa
         rectangle(depth_frame_color, (xmin, ymin, xmax, ymax), (255, 255, 255), 1)
 
 
-def calc_disp_multiplier(device: dai.Device, size: Tuple[int, int]) -> float:
+def depth_to_disp_factor(device: dai.Device, stereo: dai.node.StereoDepth) -> float:
+    """
+    Calculates the disparity factor used to calculate disparity from depth, which is used for visualization.
+    `disparity[0..95] = disparity_factor / depth`. We can then multiply disparity by 255/95 to get 0..255 range.
+    @param device: OAK device
+    """
     calib = device.readCalibration()
-    baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
-    intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, size)
-    focal_length = intrinsics[0][0]
-    return baseline * focal_length
+    cam1=calib.getStereoLeftCameraId()
+    cam2=calib.getStereoRightCameraId()
+    baseline = calib.getBaselineDistance(cam1=cam1, cam2=cam2, useSpecTranslation=True) * 10  # cm to mm
+    rawConf = stereo.initialConfig.get()
 
+    align: dai.CameraBoardSocket = stereo.properties.depthAlignCamera
+    if align == dai.CameraBoardSocket.AUTO:
+        align = cam2
+
+    intrinsics = calib.getCameraIntrinsics(align)
+    focalLength = intrinsics[0][0]
+
+    factor = baseline * focalLength
+    if rawConf.algorithmControl.enableExtended:
+        factor /= 2
+
+    return factor
 
 def hex_to_bgr(hex: str) -> Tuple[int, ...]:
     """

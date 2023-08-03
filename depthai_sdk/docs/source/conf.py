@@ -22,7 +22,7 @@ copyright = u"@build_year@, Luxonis"
 author = 'Luxonis'
 
 # The full version, including alpha/beta/rc tags
-release = '1.9.2'
+release = '1.12.1'
 
 
 # -- General configuration ---------------------------------------------------
@@ -36,6 +36,8 @@ extensions = [
     "sphinx_rtd_theme",
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'autodocsumm',
+    'sphinx_tabs.tabs'
 ]
 
 # Add any paths that contain templates here, relative to this directory.

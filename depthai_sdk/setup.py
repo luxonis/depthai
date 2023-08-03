@@ -9,7 +9,7 @@ install_requires = [requirement for requirement in requirements if '--' not in r
 
 setup(
     name='depthai-sdk',
-    version='1.9.4.1',
+    version='1.12.1',
     description='This package provides an abstraction of the DepthAI API library.',
     long_description=io.open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",
@@ -18,8 +18,8 @@ setup(
     author='Luxonis',
     author_email='support@luxonis.com',
     license='MIT',
-    packages=['depthai_sdk'],
-    package_dir={"": "src"},  # https://stackoverflow.com/a/67238346/5494277
+    packages=['depthai_sdk', 'depthai_sdk_console_scripts'],
+    package_dir={'': 'src'},  # https://stackoverflow.com/a/67238346/5494277
     install_requires=install_requires,
     include_package_data=True,
     extras_require={
@@ -31,14 +31,7 @@ setup(
                    'mcap-ros1-support==0.0.8',
                    'rosbags==0.9.11'],
         "record": ['av'],
-        "minimal": ['numpy',
-                    'blobconverter',
-                    'depthai',
-                    'PyTurboJPEG',
-                    'marshmallow',
-                    'distinctipy',
-                    'xmltodict',
-                    ]
+        "test": ['pytest']
     },
     project_urls={
         "Bug Tracker": "https://github.com/luxonis/depthai/issues",
@@ -54,4 +47,9 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],
+    entry_points={
+        'console_scripts': [
+            'depthai_sdk = depthai_sdk_console_scripts.depthai_sdk:main',
+        ]
+    },
 )

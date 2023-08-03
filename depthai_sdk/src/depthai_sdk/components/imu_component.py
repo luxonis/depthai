@@ -33,8 +33,6 @@ class IMUComponent(Component):
             batch_report_threshold: Number of reports to batch before sending them to the host.
             max_batch_reports: Maximum number of batched reports to send to the host.
             enable_firmware_update: Enable firmware update if true, disable otherwise.
-
-        Returns: None
         """
         sensors = sensors or [dai.IMUSensor.ACCELEROMETER_RAW, dai.IMUSensor.GYROSCOPE_RAW]
 

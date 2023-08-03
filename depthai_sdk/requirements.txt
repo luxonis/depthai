@@ -1,12 +1,13 @@
 numpy>=1.19; python_version < "3.7"
 numpy>=1.21; python_version >= "3.7"
 opencv-contrib-python>4
-blobconverter>=1.2.8
+blobconverter>=1.4.1
 pytube>=12.1.0
 --extra-index-url https://artifacts.luxonis.com/artifactory/luxonis-python-snapshot-local/
 # This specific commit is needed for the debug mode (oak.show_graph()). TODO: update when depthai has new release
 depthai==2.19.1.0.dev0+c758169e0836f1793c6998f8a21ad3f26ac00485
 PyTurboJPEG==1.6.4
 marshmallow==3.17.0
-distinctipy
 xmltodict
+sentry-sdk==1.21.0
+depthai-pipeline-graph==0.0.5

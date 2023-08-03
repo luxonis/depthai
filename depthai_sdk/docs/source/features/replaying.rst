@@ -21,9 +21,9 @@ Replaying support
 Replaying feature is quite extensible, and supports a variety of different inputs:
 
 #. Single image.
-#. Folder with images. Images are getting rotated every 3 seconds. `Example here <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__..
-#. Url to a video/image.
-#. Url to a YouTube video.
+#. Folder with images. Images are getting rotated every 3 seconds. `Example here <https://github.com/luxonis/depthai-experiments/tree/master/gen2-people-counter>`__.
+#. URL to a video/image.
+#. URL to a YouTube video.
 #. Path to :ref:`depthai-recording <Replaying a depthai-recording>`.
 #. A name of a :ref:`public depthai-recording <Public depthai-recordings>`.
 
@@ -49,13 +49,15 @@ Script below will also do depth reconstruction and will display 3D detections co
 
 .. figure:: https://user-images.githubusercontent.com/18037362/193642506-76bd2d36-3ae8-4d0b-bbed-083a94463155.png
 
-    Live view pipeline uses live camera feeds (MonoCamera, ColorCamera) whereas Replaying pipeline uses XLinkIn nodes to which we send recorded frames
+    Live view pipeline uses live camera feeds (MonoCamera, ColorCamera) whereas Replaying pipeline uses XLinkIn nodes to which we send recorded frames.
 
 Public depthai-recordings
 #########################
 
 We host several depthai-recordings on our servers that you can easily use in your
-application (eg. ``OakCamera(recording='cars-california-01')``). Recording will get downloaded & cached on the computer for future use.
+application, e.g., :class:`OakCamera(recording='cars-california-01') <depthai_sdk.OakCamera>`. Recording will get downloaded & cached on the computer for future use.
+
+The following table lists all available recordings:
 
 .. list-table::
    :header-rows: 1
@@ -108,6 +110,11 @@ application (eg. ``OakCamera(recording='cars-california-01')``). Recording will 
      - ``color.mp4``
      - 5.3 MB
      - Top-down view at an angle, source video `here <https://pixabay.com/videos/people-commerce-shop-busy-mall-6387/>`__
+   * - ``people-tracking-above-05``
+     - ``CAM_A.mp4``, ``CAM_A.mp4``, ``calib.json``
+     - 12 MB (35sec)
+     - Top-down view, left+right stereo cameras, `demo usage at replay.py <https://github.com/luxonis/depthai-experiments/tree/master/gen2-record-replay>`__
+
 
 
 ..

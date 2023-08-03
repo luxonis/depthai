@@ -1,23 +1,36 @@
-import subprocess
+import os
 from abc import abstractmethod
 from pathlib import Path
-from typing import Optional, Callable, List
-import depthai as dai
+from typing import Optional, Callable, List, Union
 
-from depthai_sdk.classes import FramePacket
+import depthai as dai
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_base import XoutBase
 from depthai_sdk.record import Record
 from depthai_sdk.recorders.video_recorder import VideoRecorder
+from depthai_sdk.trigger_action.actions.abstract_action import Action
+from depthai_sdk.trigger_action.actions.record_action import RecordAction
+from depthai_sdk.trigger_action.trigger_action import TriggerAction
+from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
-import os
 
+def find_new_name(name: str, names: List[str]):
+    while True:
+        arr = name.split(' ')
+        num = arr[-1]
+        if num.isnumeric():
+            arr[-1] = str(int(num) + 1)
+            name = " ".join(arr)
+        else:
+            name = f"{name} 2"
+        if name not in names:
+            return name
 
 class BaseConfig:
     @abstractmethod
-    def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
+    def setup(self, pipeline: dai.Pipeline, device: dai.Device, names: List[str]) -> List[XoutBase]:
         raise NotImplementedError()
 
 
@@ -37,24 +50,12 @@ class OutputConfig(BaseConfig):
         self.visualizer_enabled = visualizer_enabled
         self.record_path = record_path
 
-    def find_new_name(self, name: str, names: List[str]):
-        while True:
-            arr = name.split(' ')
-            num = arr[-1]
-            if num.isnumeric():
-                arr[-1] = str(int(num) + 1)
-                name = " ".join(arr)
-            else:
-                name = f"{name} 2"
-            if name not in names:
-                return name
-
     def setup(self, pipeline: dai.Pipeline, device, names: List[str]) -> List[XoutBase]:
         xoutbase: XoutBase = self.output(pipeline, device)
         xoutbase.setup_base(self.callback)
 
         if xoutbase.name in names:  # Stream name already exist, append a number to it
-            xoutbase.name = self.find_new_name(xoutbase.name, names)
+            xoutbase.name = find_new_name(xoutbase.name, names)
         names.append(xoutbase.name)
 
         recorder = None
@@ -130,8 +131,10 @@ class RosStreamConfig(BaseConfig):
 
     def new_msg(self, name, msg):
         self.ros.new_msg(name, msg)
+
     def check_queue(self, block):
         pass  # No queues
+
     def start_fps(self):
         pass
 
@@ -162,7 +165,7 @@ class SyncConfig(BaseConfig, SequenceNumSync):
     def new_packet(self, packet):
         # print('new packet', packet, packet.name, 'seq num',packet.imgFrame.getSequenceNum())
         synced = self.sync(
-            packet.imgFrame.getSequenceNum(),
+            packet.msg.getSequenceNum(),
             packet.name,
             packet
         )
@@ -176,7 +179,33 @@ class SyncConfig(BaseConfig, SequenceNumSync):
             xoutbase.setup_base(self.new_packet)
             xouts.append(xoutbase)
 
-            if self.visualizer:
-                xoutbase.setup_visualize(self.visualizer, xoutbase.name)
-
         return xouts
+
+
+class TriggerActionConfig(BaseConfig):
+    def __init__(self, trigger: Trigger, action: Union[Callable, Action]):
+        self.trigger = trigger
+        self.action = Action(None, action) if isinstance(action, Callable) else action
+
+    def setup(self, pipeline: dai.Pipeline, device, _) -> List[XoutBase]:
+        controller = TriggerAction(self.trigger, self.action)
+
+        trigger_xout: XoutBase = self.trigger.input(pipeline, device)
+        trigger_xout.setup_base(controller.new_packet_trigger)
+        # without setting visualizer up, XoutNnResults.on_callback() won't work
+        trigger_xout.setup_visualize(visualizer=Visualizer(), name=trigger_xout.name, visualizer_enabled=False)
+
+        if isinstance(self.action, Callable):
+            return [trigger_xout]
+
+        action_xouts = []
+        if self.action.inputs:
+            for output in self.action.inputs:
+                xout: XoutBase = output(pipeline, device)
+                xout.setup_base(controller.new_packet_action)
+                action_xouts.append(xout)
+
+        if isinstance(self.action, RecordAction):
+            self.action.setup(device, action_xouts)  # creates writers for VideoRecorder()
+
+        return [trigger_xout] + action_xouts
