@@ -9,15 +9,13 @@ import numpy as np
 
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component
-from depthai_sdk.components.parser import parse_median_filter, parse_encode
+from depthai_sdk.components.parser import parse_median_filter, parse_encode, encoder_profile_to_fourcc
 from depthai_sdk.components.stereo_control import StereoControl
 from depthai_sdk.components.undistort import _get_mesh
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
-from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
+from depthai_sdk.oak_outputs.xout.xout_depth import XoutDisparityDepth
 from depthai_sdk.oak_outputs.xout.xout_disparity import XoutDisparity
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
-from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
 from depthai_sdk.replay import Replay
 from depthai_sdk.visualize.configs import StereoColor
 from depthai_sdk.visualize.visualizer_helper import depth_to_disp_factor
@@ -270,7 +268,7 @@ class StereoComponent(Component):
         if confidence is not None: self.node.initialConfig.setConfidenceThreshold(confidence)
         if align is not None:
             self._align_component = align
-            self.node.setDepthAlign(align.node.getBoardSocket())
+            self.node.setDepthAlign(align._socket)
         if median is not None: self.node.setMedianFilter(parse_median_filter(median))
         if extended is not None: self.node.initialConfig.setExtendedDisparity(extended)
         if subpixel is not None: self.node.initialConfig.setSubpixel(subpixel)
@@ -426,6 +424,11 @@ class StereoComponent(Component):
         mapX_r, mapY_r = cv2.initUndistortRectifyMap(M2, d2, R2, M2, imageSize, cv2.CV_32FC1)
         return mapX_l, mapY_l, mapX_r, mapY_r
 
+    def get_fourcc(self) -> Optional[str]:
+        if self.encoder is None:
+            return None
+        return encoder_profile_to_fourcc(self._encoderProfile)
+
     """
     Available outputs (to the host) of this component
     """
@@ -440,80 +443,47 @@ class StereoComponent(Component):
             """
             mono_frames = None
             if self._comp.wls_config['enabled'] or self._comp._colorize == StereoColor.RGBD:
-                mono_frames = StreamXout(self._comp.node.id, self._comp._right_stream, name=self._comp.name)
+                mono_frames = StreamXout(self._comp._right_stream, name=self._comp.name)
             return mono_frames
 
         def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             # By default, we want to show disparity
             return self.depth(pipeline, device)
 
-        def disparity(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
-
-            out = XoutDisparity(
+        def disparity(self, pipeline: dai.Pipeline, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
+            return XoutDisparity(
                 device=device,
-                frames=StreamXout(self._comp.node.id, self._comp.disparity, name=self._comp.name),
+                frames=StreamXout(self._comp.encoder.bitstream, name=self._comp.name) if fourcc else
+                       StreamXout(self._comp.disparity, name=self._comp.name),
                 disp_factor=255.0 / self._comp.node.getMaxDisparity(),
-                fps=fps,
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
                 wls_config=self._comp.wls_config,
                 ir_settings=self._comp.ir_settings,
-            )
-
-            return self._comp._create_xout(pipeline, out)
+            ).set_fourcc(fourcc)
 
         def rectified_left(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
-            out = XoutFrames(
-                frames=StreamXout(self._comp.node.id, self._comp.node.rectifiedLeft),
-                fps=fps)
-            out.name = 'Rectified left'
-            return self._comp._create_xout(pipeline, out)
+            return XoutFrames(StreamXout(self._comp.node.rectifiedLeft, 'Rectified left'))
 
         def rectified_right(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
-            out = XoutFrames(
-                frames=StreamXout(self._comp.node.id, self._comp.node.rectifiedRight),
-                fps=fps)
-            out.name = 'Rectified right'
-            return self._comp._create_xout(pipeline, out)
+            return XoutFrames(StreamXout(self._comp.node.rectifiedRight, 'Rectified right'))
 
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            fps = self._comp.left.get_fps() if self._comp._replay is None else self._comp._replay.get_fps()
-
-            out = XoutDepth(
+            return XoutDisparityDepth(
                 device=device,
-                frames=StreamXout(self._comp.node.id, self._comp.depth, name=self._comp.name),
+                frames=StreamXout(self._comp.depth, name=self._comp.name),
                 dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
-                fps=fps,
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,
                 colormap=self._comp._postprocess_colormap,
-                wls_config=self._comp.wls_config,
                 ir_settings=self._comp.ir_settings
             )
-            return self._comp._create_xout(pipeline, out)
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             if not self._comp.encoder:
                 raise RuntimeError('Encoder not enabled, cannot output encoded frames')
-
             if self._comp.wls_config['enabled']:
                 warnings.warn('WLS filter is enabled, but cannot be applied to encoded frames.')
 
-            if self._comp._encoderProfile == dai.VideoEncoderProperties.Profile.MJPEG:
-                out = XoutMjpeg(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                                color=self._comp.colormap is not None,
-                                lossless=self._comp.encoder.getLossless(),
-                                fps=self._comp.encoder.getFrameRate(),
-                                frame_shape=(1200, 800))
-            else:
-                out = XoutH26x(frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream),
-                               color=self._comp.colormap is not None,
-                               profile=self._comp._encoderProfile,
-                               fps=self._comp.encoder.getFrameRate(),
-                               frame_shape=(1200, 800))
-
-            return self._comp._create_xout(pipeline, out)
+            return self.disparity(pipeline, device, fourcc=self._comp.get_fourcc())

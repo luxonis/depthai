@@ -43,6 +43,8 @@ class IMUComponent(Component):
         self.node.setMaxBatchReports(maxBatchReports=max_batch_reports)
         self.node.enableFirmwareUpdate(enable_firmware_update)
 
+        self.fps = report_rate
+
     class Out:
         def __init__(self, imu_component: 'IMUComponent'):
             self._comp = imu_component
@@ -54,7 +56,4 @@ class IMUComponent(Component):
             return self.text(pipeline, device)
 
         def text(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = self._comp.node.out
-            out = StreamXout(self._comp.node.id, out)
-            imu_out = XoutIMU(out)
-            return self._comp._create_xout(pipeline, imu_out)
+            return XoutIMU(StreamXout(self._comp.node.out, name='imu'), self._comp.fps)

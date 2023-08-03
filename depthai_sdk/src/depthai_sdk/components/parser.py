@@ -29,6 +29,20 @@ def rgb_resolution(resolution: Union[
     else:  # Default
         return dai.ColorCameraProperties.SensorResolution.THE_1080_P
 
+def encoder_profile_to_fourcc(profile: dai.VideoEncoderProperties.Profile) -> str:
+    """
+    Converts encoder profile to fourcc string
+    """
+    if profile == dai.VideoEncoderProperties.Profile.MJPEG:
+        return 'mjpeg'
+    elif profile == dai.VideoEncoderProperties.Profile.H265_MAIN:
+        return 'hevc'
+    elif profile in [dai.VideoEncoderProperties.Profile.H264_BASELINE,
+                     dai.VideoEncoderProperties.Profile.H264_HIGH,
+                     dai.VideoEncoderProperties.Profile.H264_MAIN
+                    ]:
+        return 'h264'
+    raise ValueError(f'Unknown encoder profile: {profile}')
 
 def mono_resolution(resolution: Union[
     None, str, dai.MonoCameraProperties.SensorResolution]) -> dai.MonoCameraProperties.SensorResolution:
@@ -75,7 +89,7 @@ def get_first_color_cam(device: dai.Device) -> dai.CameraBoardSocket:
         if cam.supportedTypes[0] == dai.CameraSensorType.COLOR:
             return cam.socket
     # Default
-    return dai.CameraBoardSocket.CAM_A
+    return None
 
 
 def parse_camera_socket(value: Union[str, dai.CameraBoardSocket]) -> dai.CameraBoardSocket:

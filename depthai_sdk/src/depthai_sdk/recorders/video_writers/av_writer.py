@@ -1,7 +1,8 @@
+from datetime import timedelta
 import os
 from fractions import Fraction
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional, List
 
 import depthai as dai
 import numpy as np
@@ -45,7 +46,7 @@ def is_keyframe(encoded_frame: np.array) -> bool:
 
 
 class AvWriter(BaseWriter):
-    def __init__(self, path: Path, name: str, fourcc: str, fps: float, frame_shape: Tuple[int, int]):
+    def __init__(self, path: Path, name: str, fourcc: str):
         """
         Args:
             path: Path to the folder where the file will be created.
@@ -57,13 +58,15 @@ class AvWriter(BaseWriter):
         super().__init__(path, name)
 
         self.start_ts = None
-        self.frame_shape = frame_shape
-
-        self._fps = fps
         self._fourcc = fourcc
-        self._stream = None
 
-    def _create_stream(self, fourcc: str, fps: float) -> None:
+        self._stream = None
+        self._file = None
+        self.closed = False
+        self._codec = None # Used to determine dimensions of encoded frames
+        self._frame_buffer: List[dai.ImgFrame] = []
+
+    def _create_stream(self, shape: Tuple) -> None:
         """
         Create stream in file with given fourcc and fps, works in-place.
 
@@ -71,16 +74,24 @@ class AvWriter(BaseWriter):
             fourcc: Stream codec.
             fps: Frames per second of the stream.
         """
-        self._stream = self._file.add_stream(fourcc, rate=int(fps))
+        self._stream = self._file.add_stream(self._fourcc)
         self._stream.time_base = Fraction(1, 1000 * 1000)  # Microseconds
 
         # We need to set pixel format for MJEPG, for H264/H265 it's yuv420p by default
-        if fourcc == 'mjpeg':
+        if self._fourcc == 'mjpeg':
             self._stream.pix_fmt = 'yuvj420p'
 
-        if self.frame_shape is not None:
-            self._stream.width = self.frame_shape[0]
-            self._stream.height = self.frame_shape[1]
+        self._stream.width = shape[0]
+        self._stream.height = shape[1]
+
+    def get_dimension(self, img: dai.ImgFrame) -> Optional[Tuple[int, int]]:
+        enc_packets = self._codec.parse(img.getData())
+        if len(enc_packets) == 0:
+            return None
+        frames = self._codec.decode(enc_packets[-1])
+        if not frames:
+            return None
+        return (frames[0].width, frames[0].height)
 
     def create_file_for_buffer(self, subfolder: str, buf_name: str) -> None:  # independent of type of frames
         self.create_file(subfolder)
@@ -104,23 +115,20 @@ class AvWriter(BaseWriter):
         """
         global av
         import av
-        self._file = av.open(str(Path(path_to_file).with_suffix(f'.{self._fourcc}')), 'w')
-        self._create_stream(self._fourcc, self._fps)
+        # We will remux .h264 later
+        suffix = '.h264' if self._fourcc.lower() == 'h264' else '.mp4'
+        self._file = av.open(str(Path(path_to_file).with_suffix(suffix)), 'w')
 
-    def write(self, frame: dai.ImgFrame) -> None:
-        """
-        Write packet bytes to h264 file.
+        # Needed to get dimensions from the frame. Only decode first frame.
+        self._codec = av.CodecContext.create(self._fourcc, "r")
 
-        Args:
-            frame: ImgFrame from depthai pipeline.
-        """
-        if self._file is None:
-            self.create_file(subfolder='')
-
+    def __mux_imgframe(self, frame: dai.ImgFrame) -> None:
         frame_data = frame.getData()
 
-        if self.start_ts is None and not is_keyframe(frame_data):
-            return
+        if self.start_ts is None:
+            # For H26x, wait for a keyframe
+            if self._fourcc != 'mjpeg' and not is_keyframe(frame_data):
+                return
 
         packet = av.Packet(frame_data)  # Create new packet with byte array
 
@@ -129,22 +137,51 @@ class AvWriter(BaseWriter):
             self.start_ts = frame.getTimestampDevice()
 
         ts = int((frame.getTimestampDevice() - self.start_ts).total_seconds() * 1e6)  # To microsec
-        packet.dts = ts
-        packet.pts = ts
+        packet.dts = ts + 1 # +1 to avoid zero dts
+        packet.pts = ts + 1
+        packet.stream = self._stream
         self._file.mux_one(packet)  # Mux the Packet into container
+
+    def write(self, frame: dai.ImgFrame) -> None:
+        """
+        Write packet bytes to h264 file.
+
+        Args:
+            frame: ImgFrame from depthai pipeline.
+        """
+        if self.closed:
+            return
+        if self._file is None:
+            self.create_file(subfolder='')
+
+        if self._stream is None:
+            shape = self.get_dimension(frame)
+            if shape is None:
+                # Save frame, so we can mux it later when dimnesions are known
+                self._frame_buffer.append(frame)
+                return
+
+            self._create_stream(shape)
+            for buffered_frame in self._frame_buffer:
+                self.__mux_imgframe(buffered_frame)
+
+        self.__mux_imgframe(frame)
 
     def close(self) -> None:
         """
-        Close the file and remux it to mp4.
+        Close the file and potentially remux it to mp4.
         """
+        self.closed = True
         if self._file is not None:
             p = self._stream.encode(None)
             self._file.mux(p)
             self._file.close()
-            # Remux the stream to finalize the output file
-            self.remux_video(str(self._file.name))
 
-    def remux_video(self, input_file: Union[Path, str]) -> None:
+        # Remux the h264 stream to finalize the output file
+        if self._fourcc == 'h264':
+            self.remux_h264_video(str(self._file.name))
+
+    def remux_h264_video(self, input_file: Union[Path, str]) -> None:
         """
         Remuxes h264 file to mp4.
 
@@ -160,13 +197,13 @@ class AvWriter(BaseWriter):
         with av.open(mp4_file, "w", format="mp4") as output_container, \
                 av.open(input_file, "r", format=self._fourcc) as input_container:
             input_stream = input_container.streams[0]
-            output_stream = output_container.add_stream(template=input_stream, rate=self._fps)
+            fps =  input_stream.average_rate
+            output_stream = output_container.add_stream(template=input_stream, rate=fps)
 
-            if self.frame_shape:
-                output_stream.width = self.frame_shape[0]
-                output_stream.height = self.frame_shape[1]
+            output_stream.width = input_stream.width
+            output_stream.height = input_stream.height
 
-            frame_time = (1 / self._fps) * input_stream.time_base.denominator
+            frame_time = (1 / fps) * input_stream.time_base.denominator
             for i, packet in enumerate(input_container.demux(input_stream)):
                 packet.dts = i * frame_time
                 packet.pts = i * frame_time

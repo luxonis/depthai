@@ -4,41 +4,36 @@ from dataclasses import replace
 from enum import Enum
 from typing import List, Tuple, Optional, Union, Any, Dict
 
-try:
-    import cv2
-except ImportError:
-    cv2 = None
-
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
+from depthai_sdk.fps import FPSHandler
 
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
 from depthai_sdk.visualize.encoder import JSONEncoder
 from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask, \
     VisBoundingBox
-from depthai_sdk.visualize.visualizer_helper import VisualizerHelper
 
+class VisualzierFps:
+    def __init__(self):
+        self.fps_list: Dict[str, FPSHandler] = {}
 
-class Platform(Enum):
-    """
-    Platform on which the visualizer is running.
-    """
-    ROBOTHUB = 'robothub'
-    PC = 'pc'
+    def get_fps(self, name: str) -> float:
+        if name not in self.fps_list:
+            self.fps_list[name] = FPSHandler()
 
+        self.fps_list[name].nextIter()
+        return self.fps_list[name].fps()
 
-class Visualizer(VisualizerHelper):
+class Visualizer:
     # Constants
-    IS_INTERACTIVE = 'DISPLAY' in os.environ or os.name == 'nt'
-
     def __init__(self, scale: float = None, fps: bool = False):
-        self.platform: Platform = self._detect_platform()
         self.objects: List[GenericObject] = []
         self._frame_shape: Optional[Tuple[int, ...]] = None
 
         self.config = VisConfig()
+        self.fps = VisualzierFps()
 
         if fps:
             self.output(show_fps=fps)
@@ -59,7 +54,7 @@ class Visualizer(VisualizerHelper):
         return self
 
     def add_bbox(self,
-                 bbox: Union[np.ndarray, Tuple[int, ...]],
+                 bbox: BoundingBox,
                  color: Tuple[int, int, int] = None,
                  thickness: int = None,
                  bbox_style: BboxStyle = None,
@@ -135,7 +130,7 @@ class Visualizer(VisualizerHelper):
                  outline: bool = True,
                  background_color: Tuple[int, int, int] = None,
                  background_transparency: float = 0.5,
-                 bbox: Union[np.ndarray, Tuple[int, ...], BoundingBox] = None,
+                 bbox: Union[np.ndarray, Tuple, BoundingBox] = None,
                  position: TextPosition = TextPosition.TOP_LEFT,
                  padding: int = 10) -> 'Visualizer':
         """
@@ -157,6 +152,9 @@ class Visualizer(VisualizerHelper):
         Returns:
             self
         """
+        if isinstance(bbox, Tuple) and type(bbox[0]) == float:
+            bbox = BoundingBox(bbox)
+
         text_overlay = VisText(text=text,
                                coords=coords,
                                size=size,
@@ -258,7 +256,7 @@ class Visualizer(VisualizerHelper):
         self.add_object(mask_overlay)
         return self
 
-    def draw(self, frame: np.ndarray) -> Optional[np.ndarray]:
+    def drawn(self, frame: np.ndarray) -> Optional[np.ndarray]:
         """
         Draw all objects on the frame if the platform is PC. Otherwise, serialize the objects
         and communicate with the RobotHub application.
@@ -269,20 +267,13 @@ class Visualizer(VisualizerHelper):
         Returns:
             np.ndarray if the platform is PC, None otherwise.
         """
-        # Draw overlays
-        for obj in self.objects:
-            obj.draw(frame)
+        raise NotImplementedError('Visualizers that inherit from Visualizer must implement draw() method!')
 
-        # Resize frame if needed
-        img_scale = self.config.output.img_scale
-        if img_scale:
-            if isinstance(img_scale, Tuple):
-                frame = cv2.resize(frame, img_scale)
-            elif isinstance(img_scale, float) and img_scale != 1.0:
-                frame = cv2.resize(frame, dsize=None, fx=img_scale, fy=img_scale)
-
-        self.reset()
-        return frame
+    def show(self, packet):
+        """
+        Show the packet on the screen.
+        """
+        pass
 
     def serialize(self, force_reset: bool = True) -> str:
         """
@@ -295,7 +286,6 @@ class Visualizer(VisualizerHelper):
             Stringified JSON.
         """
         parent = {
-            'platform': self.platform.value,
             'frame_shape': self.frame_shape,
             'config': self.config,
             'objects': [obj.serialize() for obj in self.objects]
@@ -458,15 +448,6 @@ class Visualizer(VisualizerHelper):
 
         return self
 
-    def _detect_platform(self) -> Platform:
-        """
-        Detect the platform on which the visualizer is running.
-
-        Returns:
-            Platform
-        """
-        return Platform.PC if self.IS_INTERACTIVE else Platform.ROBOTHUB
-
     @property
     def frame_shape(self) -> Tuple[int, ...]:
         return self._frame_shape
@@ -481,3 +462,6 @@ class Visualizer(VisualizerHelper):
         kwargs.pop('self')
         kwargs = {k: v for k, v in kwargs.items() if v is not None}
         return kwargs
+
+    def close(self):
+        pass

@@ -42,8 +42,6 @@ class PointcloudComponent(Component):
 
         self._replay: Optional[Replay] = replay
 
-        if isinstance(self.colorize_comp, CameraComponent):
-            self.colorize_comp.config_color_camera(isp_scale=(2,5))
 
         # Depth aspect
         if stereo is None:
@@ -98,11 +96,8 @@ class PointcloudComponent(Component):
         def pointcloud(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             colorize = None
             if self._comp.colorize_comp is not None:
-                colorize = StreamXout(self._comp.colorize_comp.node.id, self._comp.colorize_comp.stream, name="Color")
+                colorize = StreamXout(self._comp.colorize_comp.stream, name="Color")
 
-            out = XoutPointcloud(device,
-                                 StreamXout(self._comp.stereo_depth_node.id, self._comp.depth, name=self._comp.name),
-                                 color_frames=colorize,
-                                 fps=30
-                                 )
-            return self._comp._create_xout(pipeline, out)
+            return XoutPointcloud(device,
+                                 StreamXout(self._comp.depth, name=self._comp.name),
+                                 color_frames=colorize)

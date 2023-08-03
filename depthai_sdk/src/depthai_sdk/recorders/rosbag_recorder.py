@@ -236,6 +236,7 @@ class _RosbagBaseRecorder(Recorder):
         self._closed = False
 
         self.imu_interpolation = ImuInterpolation()
+
     def _update(self, device: dai.Device, xouts: List['XoutFrames']):
         """
         Args:
@@ -357,20 +358,19 @@ class _RosbagBaseRecorder(Recorder):
         elif stream.ros_type == PointCloud2:
             raise Exception('PointCloud2 not yet implemented')
         elif stream.ros_type == Imu:
-            dai_msg: dai.IMUData
-            for packet in dai_msg.packets:
-                report = packet.acceleroMeter or packet.gyroscope or packet.magneticField or packet.rotationVector
-                msg = Imu(
-                    header=self.get_header(report.getTimestampDevice(), report.sequence),
-                    orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
-                    orientation_covariance=np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                    angular_velocity=Vector3(0.0, 0.0, 0.0),
-                    angular_velocity_covariance=np.array([]),
-                    linear_acceleration=Vector3(0.0, 0.0, 0.0),
-                    linear_acceleration_covariance=np.array([])
-                )
-                self.imu_interpolation.Imu(msg, packet)
-                self.write_to_rosbag(name, stream.ros_type.__msgtype__, msg)
+            packet: dai.IMUPacket = dai_msg
+            report = packet.acceleroMeter or packet.gyroscope or packet.magneticField or packet.rotationVector
+            msg = Imu(
+                header=self.get_header(report.getTimestampDevice(), report.sequence),
+                orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+                orientation_covariance=np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+                angular_velocity=Vector3(0.0, 0.0, 0.0),
+                angular_velocity_covariance=np.array([]),
+                linear_acceleration=Vector3(0.0, 0.0, 0.0),
+                linear_acceleration_covariance=np.array([])
+            )
+            self.imu_interpolation.Imu(msg, packet)
+            self.write_to_rosbag(name, stream.ros_type.__msgtype__, msg)
         elif stream.ros_type == Image:
             # msg = self.bridge.Image(dai_msg)
             dai_msg: dai.ImgFrame

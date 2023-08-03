@@ -6,15 +6,12 @@ with OakCamera() as oak:
     nn = oak.create_nn('mobilenet-ssd', color)
     oak.visualize([nn.out.passthrough, nn], fps=True)
 
-    # Build the pipeline, connect to the oak, update components. Place interop logic AFTER oak.build()
-    pipeline = oak.build()
-
     nn.node.setNumInferenceThreads(2) # Configure components' nodes
 
-    features = pipeline.create(dai.node.FeatureTracker) # Create new pipeline nodes
+    features = oak.pipeline.create(dai.node.FeatureTracker) # Create new pipeline nodes
     color.node.video.link(features.inputImage)
 
-    out = pipeline.create(dai.node.XLinkOut)
+    out = oak.pipeline.create(dai.node.XLinkOut)
     out.setStreamName('features')
     features.outputFeatures.link(out.input)
 

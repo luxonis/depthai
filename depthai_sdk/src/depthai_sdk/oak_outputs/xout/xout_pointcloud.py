@@ -20,20 +20,15 @@ class XoutPointcloud(XoutFrames):
     def __init__(self,
                  device: dai.Device,
                  depth_frames: StreamXout,
-                 fps: int,
                  color_frames: Optional[StreamXout] = None):
 
         self.color_frames = color_frames
-        XoutFrames.__init__(self, frames=depth_frames, fps=fps)
+        XoutFrames.__init__(self, frames=depth_frames)
         self.name = 'Pointcloud'
-        self.fps = fps
         self.device = device
         self.xyz = None
 
         self.msgs = dict()
-
-    def visualize(self, packet: DepthPacket):
-        pass
 
     def xstreams(self) -> List[StreamXout]:
         if self.color_frames is not None:
@@ -59,9 +54,6 @@ class XoutPointcloud(XoutFrames):
 
         if len(self.msgs[seq]) == len(self.xstreams()):
             # Frames synced!
-            if self.queue.full():
-                self.queue.get()  # Get one, so queue isn't full
-
             depth_frame: dai.ImgFrame = self.msgs[seq][self.frames.name]
 
             color_frame = None
@@ -74,18 +66,16 @@ class XoutPointcloud(XoutFrames):
             pcl = self.xyz * np.expand_dims(np.array(depth_frame.getFrame()), axis = -1)
 
             # TODO: postprocessing
-
-            packet = PointcloudPacket(
-                self.get_packet_name(),
-                pcl,
-                depth_map=depth_frame,
-                color_frame=color_frame,
-                visualizer=self._visualizer
-            )
-            self.queue.put(packet, block=False)
-
+            # Cleanup
             new_msgs = {}
             for name, msg in self.msgs.items():
                 if int(name) > int(seq):
                     new_msgs[name] = msg
             self.msgs = new_msgs
+
+            return PointcloudPacket(
+                self.get_packet_name(),
+                pcl,
+                depth_map=depth_frame,
+                colorize_frame=color_frame
+            )

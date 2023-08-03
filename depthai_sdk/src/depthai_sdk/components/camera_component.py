@@ -1,14 +1,13 @@
 import logging
+from multiprocessing import Value
 from typing import Dict
 
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component
-from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket
+from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket, encoder_profile_to_fourcc
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_h26x import XoutH26x
-from depthai_sdk.oak_outputs.xout.xout_mjpeg import XoutMjpeg
 from depthai_sdk.replay import Replay
 from depthai_sdk.components.camera_control import CameraControl
 
@@ -58,9 +57,13 @@ class CameraComponent(Component):
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
 
         self._source = str(source)
+        if self._source.startswith('CameraBoardSocket.'):
+            self._source = self._source[len('CameraBoardSocket.'):]
+
         self._socket = source
         self._replay: Optional[Replay] = replay
         self._args: Dict = args
+
         self.name = name
 
         if rotation not in [None, 0, 90, 180, 270]:
@@ -70,8 +73,14 @@ class CameraComponent(Component):
         self._preview_num_frames_pool = 4
 
         if self.is_replay():
-            if source.casefold() not in list(map(lambda x: x.casefold(), self._replay.getStreams())):
+            stream_name = None
+            for name, stream in self._replay.streams.items():
+                if stream.get_socket() == self._socket:
+                    stream_name = name
+                    break
+            if stream_name is None:
                 raise Exception(f"{source} stream was not found in specified depthai-recording!")
+            self._source = stream_name
             res = self._replay.getShape(self._source)
             # print('resolution', res)
             # resize = getResize(res, width=1200)
@@ -369,7 +378,7 @@ class CameraComponent(Component):
         if not self.is_replay():
             if isinstance(resolution, str) and resolution.lower() in ['max', 'maximum']:
                 sensor = [f for f in self._device.getConnectedCameraFeatures() if f.socket == self._socket][0]
-                resolution = get_max_resolution(sensor)
+                resolution = get_max_resolution(type(self.node), sensor)
             else:
                 resolution = parse_resolution(type(self.node), resolution)
             self.node.setResolution(resolution)
@@ -432,17 +441,19 @@ class CameraComponent(Component):
         if lossless is not None:
             self.encoder.setLossless(lossless)
 
-    def get_stream_xout(self) -> StreamXout:
-        if self.is_replay():
-            return ReplayStream(self._source)
+    def get_stream_xout(self, fourcc: Optional[str] = None) -> StreamXout:
+        if self.encoder is not None and fourcc is not None:
+            return StreamXout(self.encoder.bitstream, name=self.name or self._source + '_bitstream')
+        elif self.is_replay():
+            return ReplayStream(self.name or self._source)
         elif self.is_mono():
-            return StreamXout(self.node.id, self.stream, name=self.name)
+            return StreamXout(self.stream, name=self.name or self._source + '_mono')
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(self._num_frames_pool)
             self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
-            return StreamXout(self.node.id, self.node.video, name=self.name)
+            return StreamXout(self.node.video, name=self.name or self._source + '_video')
 
     def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
         """
@@ -456,6 +467,11 @@ class CameraComponent(Component):
             if preview_num_frames is not None:
                 self._preview_num_frames_pool = preview_num_frames
 
+    def get_fourcc(self) -> Optional[str]:
+        if self.encoder is None:
+            return None
+        return encoder_profile_to_fourcc(self._encoder_profile)
+
     """
     Available outputs (to the host) of this component
     """
@@ -468,49 +484,24 @@ class CameraComponent(Component):
             """
             Default output. Uses either camera(), replay(), or encoded() depending on the component settings.
             """
-            if self._comp.encoder:
-                return self.encoded(pipeline, device)
-            elif self._comp.is_replay():
+            if self._comp.is_replay():
                 return self.replay(pipeline, device)
             else:
                 return self.camera(pipeline, device)
 
-        def camera(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutFrames:
+        def camera(self, pipeline: dai.Pipeline, device: dai.Device, fourcc: Optional[str] = None) -> XoutFrames:
             """
             Streams camera output to the OAK camera. Produces FramePacket.
             """
-            out = XoutFrames(self._comp.get_stream_xout(), self._comp.get_fps())
-            out.name = self._comp._source
-            return self._comp._create_xout(pipeline, out)
+            return XoutFrames(self._comp.get_stream_xout(fourcc), fourcc)
 
         def replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
             If depthai-recording was used, it won't stream anything, but it will instead use frames that were sent to the OAK.
             Produces FramePacket.
             """
-            out = XoutFrames(ReplayStream(self._comp._source), self._comp.get_fps())
-            return self._comp._create_xout(pipeline, out)
+            return XoutFrames(ReplayStream(self._comp._source))
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            """
-            If encoding was enabled, it will stream bitstream from VideoEncoder node to the host.
-            Produces FramePacket.
-            """
-            if self._comp._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
-                out = XoutMjpeg(
-                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream, name=self._comp.name),
-                    color=self._comp.is_color(),
-                    lossless=self._comp.encoder.getLossless(),
-                    fps=self._comp.encoder.getFrameRate(),
-                    frame_shape=self._comp.stream_size
-                )
-            else:
-                out = XoutH26x(
-                    frames=StreamXout(self._comp.encoder.id, self._comp.encoder.bitstream, name=self._comp.name),
-                    color=self._comp.is_color(),
-                    profile=self._comp._encoder_profile,
-                    fps=self._comp.encoder.getFrameRate(),
-                    frame_shape=self._comp.stream_size
-                )
-            out.name = self._comp._source
-            return self._comp._create_xout(pipeline, out)
+            return self.camera(pipeline, device, fourcc=self._comp.get_fourcc())
+

@@ -5,6 +5,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Callable, Union, List, Dict
 
+from depthai_sdk.visualize.bbox import BoundingBox
+
 try:
     import blobconverter
 except ImportError:
@@ -19,10 +21,10 @@ from depthai_sdk.components.nn_helper import *
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
+from depthai_sdk.visualize.visualizer_helper import depth_to_disp_factor
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_nn import XoutTwoStage, XoutNnResults, XoutSpatialBbMappings, XoutNnData
-from depthai_sdk.oak_outputs.xout.xout_nn_encoded import XoutNnMjpeg, XoutNnH26x
 from depthai_sdk.oak_outputs.xout.xout_tracker import XoutTracker
 from depthai_sdk.replay import Replay
 
@@ -74,10 +76,11 @@ class NNComponent(Component):
         # ImageManip used to resize the input to match the expected NN input size
         self.image_manip: Optional[dai.node.ImageManip] = None
         self.x_in: Optional[dai.node.XLinkIn] = None  # Used for multi-stage pipeline
+        # Tracker:
         self.tracker = pipeline.createObjectTracker() if tracker else None
-        self.apply_tracking_filter = False
+        self.apply_tracking_filter = True # Enable by default
+        self.calculate_speed = True
         self.forget_after_n_frames = None
-        self.calculate_speed = False
 
         # Private properties
         self._ar_resize_mode: ResizeMode = ResizeMode.LETTERBOX  # Default
@@ -141,11 +144,8 @@ class NNComponent(Component):
         # Creates ImageManip node that resizes the input to match the expected NN input size.
         # DepthAI uses CHW (Planar) channel layout and BGR color order convention.
         self.image_manip = pipeline.createImageManip()
-        self.image_manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
-        self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
-        self.image_manip.inputImage.setBlocking(False)
-        self.image_manip.inputImage.setQueueSize(2)
-        self._ar_resize_mode = ResizeMode.LETTERBOX  # Default
+        # Configures ImageManip node. Letterbox by default
+        self._change_resize_mode(ResizeMode.LETTERBOX)
 
         if isinstance(self._input, CameraComponent):
             self._stream_input = self._input.stream
@@ -163,7 +163,7 @@ class NNComponent(Component):
             self.image_manip = pipeline.createImageManip()
             self.image_manip.setNumFramesPool(20)
             self._input._stream_input.link(self.image_manip.inputImage)
-            frame_full_size = self._input._input.stream_size
+            frame_full_size = self._get_input_frame_size()
 
             if self._input._is_detector():
                 self.image_manip.setMaxOutputFrameSize(frame_full_size[0] * frame_full_size[1] * 3)
@@ -216,11 +216,6 @@ class NNComponent(Component):
         if self._args:
             if self._is_spatial():
                 self._config_spatials_args(self._args)
-
-    def forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
-        # TODO: remove this once 2.23 is released, and just reset the ImageManip.
-        self._change_resize_mode(self._ar_resize_mode)
-        return None
 
     def get_name(self):
         model = self._config.get('model', None)
@@ -350,8 +345,13 @@ class NNComponent(Component):
         Gets the blob from the config file.
         """
         if isinstance(version, dai.OpenVINO.Version):
-            vals = str(version).split('_')
-            version = f"{vals[1]}.{vals[2]}"
+            version = str(version)
+        if isinstance(version, str):
+            if version.startswith('VERSION_'):
+                version = version[8:]
+            if '_' in version:
+                vals = version.split('_')
+                version = f'{vals[0]}.{vals[1]}'
 
         if 'model_name' in model:  # Use blobconverter to download the model
             zoo_type = model.get("zoo", 'intel')
@@ -383,9 +383,12 @@ class NNComponent(Component):
 
         self._ar_resize_mode = mode
 
-        # TODO: uncomment this when depthai 2.21.3 is released. In some cases (eg.
-        # setting first crop, then letterbox), the last config isn't used.
-        # self.image_manip.initialConfig.set(dai.RawImageManipConfig())
+        # Reset ImageManip node config
+        self.image_manip.initialConfig.set(dai.RawImageManipConfig())
+        self.image_manip.setFrameType(dai.RawImgFrame.Type.BGR888p)
+        self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
+        self.image_manip.inputImage.setBlocking(False)
+        self.image_manip.inputImage.setQueueSize(2)
 
         if self._ar_resize_mode == ResizeMode.CROP:
             self.image_manip.initialConfig.setResize(self._size)
@@ -552,8 +555,7 @@ class NNComponent(Component):
         """
         if resize_mode:
             self._ar_resize_mode = ResizeMode.parse(resize_mode)
-            # TODO: After 2.23 is released, uncomment this
-            # self._change_resize_mode(self._ar_resize_mode)
+            self._change_resize_mode(self._ar_resize_mode)
 
         if conf_threshold is not None and self._is_detector():
             self.node.setConfidenceThreshold(conf_threshold)
@@ -597,49 +599,65 @@ class NNComponent(Component):
 
         self.config_nn(conf_threshold=nn_config.get('conf_threshold', None))
 
+    def _get_camera_comp(self) -> CameraComponent:
+        if self._is_multi_stage():
+            return self._input._get_camera_comp()
+        return self._input
+
+    def _get_input_frame_size(self) -> Tuple[int, int]:
+        # TODO: if user passes node output as the NN input (eg. examples/mixed/switch_between_models.py),
+        # this function will fail
+        return self._get_camera_comp().stream_size
+    #
+    def get_bbox(self) -> BoundingBox:
+        if self._is_multi_stage():
+            return self._input.get_bbox()
+        else:
+            try:
+                stream_size = self._get_input_frame_size()
+                old_ar = stream_size[0] / stream_size[1]
+                new_ar = self._size[0] / self._size[1]
+                return BoundingBox().resize_to_aspect_ratio(old_ar, new_ar, self._ar_resize_mode)
+            except:
+                return BoundingBox()
+
     """
     Available outputs (to the host) of this component
     """
-
     class Out:
         def __init__(self, nn_component: 'NNComponent'):
             self._comp = nn_component
 
-        def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+        def main(self, pipeline: dai.Pipeline, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
             """
             Default output. Streams NN results and high-res frames that were downscaled and used for inferencing.
             Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
             if self._comp._is_multi_stage():
-                input_nn = self._comp._input
-                if input_nn._input.encoder:
-                    return self.encoded(pipeline=pipeline, device=device)
-            elif self._comp._input.encoder:
-                return self.encoded(pipeline=pipeline, device=device)
+                det_nn_out = StreamXout(out=self._comp._input.node.out)
+                second_nn_out = StreamXout(out=self._comp.node.out, name=self._comp.name)
 
-            if self._comp._is_multi_stage():
-                det_nn_out = StreamXout(id=self._comp._input.node.id,
-                                        out=self._comp._input.node.out,
-                                        name=self._comp._input.name)
-                second_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
-
-                out = XoutTwoStage(det_nn=self._comp._input,
+                return XoutTwoStage(det_nn=self._comp._input,
                                    second_nn=self._comp,
                                    frames=self._comp._input._input.get_stream_xout(),
                                    det_out=det_nn_out,
                                    second_nn_out=second_nn_out,
                                    device=device,
-                                   input_queue_name="input_queue" if self._comp.x_in else None)
+                                   input_queue_name="input_queue" if self._comp.x_in else None,
+                                   bbox=self._comp.get_bbox()).set_fourcc(fourcc)
             else:
-                det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+                # TODO: refactor. This is a bit hacky, as we want to support passing node output as the input
+                # to the NNComponent. In such case, we don't have access to VideoEnc (inside CameraComponent)
+                det_nn_out = StreamXout(out=self._comp.node.out, name=self._comp.name)
                 input_stream = self._comp._stream_input
-                out = XoutNnResults(det_nn=self._comp,
-                                    frames=StreamXout(id=input_stream.getParent().id,
-                                                      out=input_stream,
-                                                      name=self._comp.name),
-                                    nn_results=det_nn_out)
-
-            return self._comp._create_xout(pipeline, out)
+                if fourcc is None:
+                    frame_stream = StreamXout(out=input_stream)
+                else:
+                    frame_stream = self._comp._get_camera_comp().get_stream_xout(fourcc)
+                return XoutNnResults(det_nn=self._comp,
+                                    frames=frame_stream,
+                                    nn_results=det_nn_out,
+                                    bbox=self._comp.get_bbox()).set_fourcc(fourcc)
 
         def passthrough(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             """
@@ -647,42 +665,26 @@ class NNComponent(Component):
             Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
             if self._comp._is_multi_stage():
-                det_nn_out = StreamXout(id=self._comp._input.node.id,
-                                        out=self._comp._input.node.out,
-                                        name=self._comp._input.name)
-                frames = StreamXout(id=self._comp._input.node.id,
-                                    out=self._comp._input.node.passthrough,
-                                    name=self._comp.name)
-                second_nn_out = StreamXout(self._comp.node.id, self._comp.node.out, name=self._comp.name)
-
-                out = XoutTwoStage(det_nn=self._comp._input,
-                                   second_nn=self._comp,
-                                   frames=frames,
-                                   det_out=det_nn_out,
-                                   second_nn_out=second_nn_out,
-                                   device=device,
-                                   input_queue_name="input_queue" if self._comp.x_in else None)
+                return XoutTwoStage(det_nn=self._comp._input,
+                                second_nn=self._comp,
+                                frames=StreamXout(out=self._comp._input.node.passthrough),
+                                det_out=StreamXout(out=self._comp._input.node.out),
+                                second_nn_out=StreamXout(self._comp.node.out, name=self._comp.name),
+                                device=device,
+                                input_queue_name="input_queue" if self._comp.x_in else None,
+                                bbox=self._comp.get_bbox())
             else:
-                det_nn_out = StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
-                frames = StreamXout(id=self._comp.node.id, out=self._comp.node.passthrough, name=self._comp.name)
-
-                out = XoutNnResults(det_nn=self._comp,
-                                    frames=frames,
-                                    nn_results=det_nn_out)
-
-            return self._comp._create_xout(pipeline, out)
+                return XoutNnResults(det_nn=self._comp,
+                                    frames=StreamXout(out=self._comp.node.passthrough),
+                                    nn_results=StreamXout(out=self._comp.node.out, name=self._comp.name),
+                                    bbox=BoundingBox()
+                                    )
 
         def image_manip(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = XoutFrames(frames=StreamXout(id=self._comp.image_manip.id,
-                                               out=self._comp.image_manip.out,
-                                               name=self._comp.name))
-            return self._comp._create_xout(pipeline, out)
+            return XoutFrames(StreamXout(out=self._comp.image_manip.out))
 
         def input(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = XoutFrames(frames=StreamXout(id=self._comp._input.node.id,
-                                               out=self._comp._stream_input,
-                                               name=self._comp.name))
-            return self._comp._create_xout(pipeline, out)
+            return XoutFrames(StreamXout(out=self._comp._stream_input))
 
         def spatials(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutSpatialBbMappings:
             """
@@ -692,14 +694,14 @@ class NNComponent(Component):
                 raise Exception('SDK tried to output spatial data (depth + bounding box mappings),'
                                 'but this is not a Spatial Detection network!')
 
-            out = XoutSpatialBbMappings(
+            return XoutSpatialBbMappings(
                 device=device,
                 stereo=self._comp._stereo_node,
-                frames=StreamXout(id=self._comp.node.id, out=self._comp.node.passthroughDepth, name=self._comp.name),
-                configs=StreamXout(id=self._comp.node.id, out=self._comp.node.out, name=self._comp.name)
+                frames=StreamXout(out=self._comp.node.passthroughDepth, name=self._comp.name),
+                configs=StreamXout(out=self._comp.node.out),
+                dispScaleFactor=depth_to_disp_factor(device, self._comp._stereo_node),
+                bbox=self._comp.get_bbox()
             )
-
-            return self._comp._create_xout(pipeline, out)
 
         def twostage_crops(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutFrames:
             """
@@ -708,11 +710,7 @@ class NNComponent(Component):
             if not self._comp._is_multi_stage():
                 raise Exception('SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
-            out = XoutFrames(frames=StreamXout(id=self._comp._multi_stage_nn.manip.id,
-                                               out=self._comp._multi_stage_nn.manip.out,
-                                               name=self._comp.name))
-
-            return self._comp._create_xout(pipeline, out)
+            return XoutFrames(frames=StreamXout(out=self._comp._multi_stage_nn.manip.out))
 
         def tracker(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutTracker:
             """
@@ -727,77 +725,29 @@ class NNComponent(Component):
             # TODO: add support for full frame tracking
             self._comp.node.passthrough.link(self._comp.tracker.inputTrackerFrame)
 
-            out = XoutTracker(det_nn=self._comp,
+            return XoutTracker(det_nn=self._comp,
                               frames=self._comp._input.get_stream_xout(),  # CameraComponent
                               device=device,
-                              tracklets=StreamXout(self._comp.tracker.id, self._comp.tracker.out),
+                              tracklets=StreamXout(self._comp.tracker.out),
+                              bbox=self._comp.get_bbox(),
                               apply_kalman=self._comp.apply_tracking_filter,
                               forget_after_n_frames=self._comp.forget_after_n_frames,
-                              calculate_speed=self._comp.calculate_speed)
-
-            return self._comp._create_xout(pipeline, out)
+                              calculate_speed=self._comp.calculate_speed,
+                              )
 
         def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutNnResults:
             """
             Streams NN results and encoded frames (frames used for inferencing)
             Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
             """
-            if self._comp._is_multi_stage():
-                input_nn = self._comp._input
-
-                if input_nn._input.encoder is None:
-                    raise Exception('Encoder not enabled for the input')
-
-                det_nn_out = StreamXout(id=self._comp._input.node.id,
-                                        out=self._comp._input.node.out,
-                                        name=self._comp._input.name)
-                frames = StreamXout(id=input_nn._input.encoder.id,
-                                    out=input_nn._input.encoder.bitstream,
-                                    name=self._comp.name)
-                second_nn_out = StreamXout(self._comp.node.id, self._comp.node.out, name=self._comp.name)
-
-                out = XoutTwoStage(det_nn=self._comp._input,
-                                   second_nn=self._comp,
-                                   frames=frames,
-                                   det_out=det_nn_out,
-                                   second_nn_out=second_nn_out,
-                                   device=device,
-                                   input_queue_name="input_queue" if self._comp.x_in else None)
-
-                return self._comp._create_xout(pipeline, out)
-
-            if self._comp._input.encoder is None:
-                raise Exception('Encoder not enabled for the input')
-
-            if self._comp._input._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
-                out = XoutNnMjpeg(
-                    det_nn=self._comp,
-                    frames=StreamXout(self._comp._input.encoder.id, self._comp._input.encoder.bitstream),
-                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
-                    color=self._comp._input.is_color(),
-                    lossless=self._comp._input.encoder.getLossless(),
-                    fps=self._comp._input.encoder.getFrameRate(),
-                    frame_shape=self._comp._input.stream_size
-                )
-            else:
-                out = XoutNnH26x(
-                    det_nn=self._comp,
-                    frames=StreamXout(self._comp._input.node.id, self._comp._input.encoder.bitstream),
-                    nn_results=StreamXout(self._comp.node.id, self._comp.node.out),
-                    color=self._comp._input.is_color(),
-                    profile=self._comp._input._encoder_profile,
-                    fps=self._comp._input.encoder.getFrameRate(),
-                    frame_shape=self._comp._input.stream_size
-                )
-
-            return self._comp._create_xout(pipeline, out)
+            # A bit hacky, maybe we can remove this alltogether
+            return self.main(pipeline, device, fourcc=self._comp._get_camera_comp().get_fourcc())
 
         def nn_data(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutNnData:
             if type(self._comp.node) == dai.node.NeuralNetwork:
-                out = XoutNnData(xout=StreamXout(self._comp.node.id, self._comp.node.out))
+                return XoutNnData(xout=StreamXout(self._comp.node.out))
             else:
-                out = XoutNnData(xout=StreamXout(self._comp.node.id, self._comp.node.outNetwork))
-            return self._comp._create_xout(pipeline, out)
+                return XoutNnData(xout=StreamXout(self._comp.node.outNetwork))
 
     # Checks
     def _is_spatial(self) -> bool:
