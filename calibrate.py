@@ -23,7 +23,6 @@ import copy
 import depthai_calibration.calibration_utils as calibUtils
 
 font = cv2.FONT_HERSHEY_SIMPLEX
-debug = False
 red = (255, 0, 0)
 green = (0, 255, 0)
 
@@ -115,10 +114,6 @@ def parse_args():
                         help="number of chessboard squares in Y direction in charuco boards.")
     parser.add_argument("-rd", "--rectifiedDisp", default=True, action="store_false",
                         help="Display rectified images with lines drawn for epipolar check")
-    parser.add_argument("-drgb", "--disableRgb", default=False, action="store_true",
-                        help="Disable rgb camera Calibration")
-    parser.add_argument("-slr", "--swapLR", default=False, action="store_true",
-                        help="Interchange Left and right camera port.")
     parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
     parser.add_argument("-brd", "--board", default=None, type=str, required=True,
@@ -129,14 +124,13 @@ def parse_args():
     parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
                         help="Invert horizontal axis of the camera for the display")
     parser.add_argument("-ep", "--maxEpiploarError", default="0.7", type=float, required=False,
-                         help="Sets the maximum epiploar allowed with rectification")
+                         help="Sets the maximum epiploar allowed with rectification. Default: %(default)s")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
                         required=False, help="Set the manual lens position of the camera for calibration")
     parser.add_argument("-cd", "--captureDelay", default=5, type=int,
                         required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
-    parser.add_argument("-d", "--debug", default=False, action="store_true", help="Enable debug logs.")
     parser.add_argument("-fac", "--factoryCalibration", default=False, action="store_true",
                         help="Enable writing to Factory Calibration.")
     parser.add_argument("-osf", "--outputScaleFactor", type=float, default=0.5,
@@ -158,9 +152,8 @@ def parse_args():
                         help="Don't take the board calibration for initialization but start with an empty one")
     parser.add_argument('-trc', '--traceLevel', type=int, default=0,
                         help="Set to trace the steps in calibration. Number from 1 to 5. If you want to display all, set trace number to 10.")
-    parser.add_argument('-edms', '--enableDebugMessageSync', default=False, action="store_true",
-                        help="Display all the information in calibration.")
-
+    parser.add_argument('-mst', '--minSyncTimestamp',  type=float, default=0.05,
+                        help="Minimum time difference between pictures taken from different cameras.  Default: %(default)s ")
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -300,7 +293,7 @@ class MessageSync:
             # Mark minimum
             if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.03):
                 min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
-                if self.enableDebugMessageSync:
+                if self.traceLevel == 0 or self.traceLevel == 1:
                     print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
             if min_ts_diff['ts'] < self.min_diff_timestamp:
@@ -317,7 +310,7 @@ class MessageSync:
                         # pop out the older messages
                         for i in range(0, min_ts_diff['indicies'][name]+1):
                             self.queues[name].popleft()
-                    if self.enableDebugMessageSync:
+                    if self.traceLevel == 1:
                         print('Returning synced messages with error:', min_ts_diff['ts'], min_ts_diff['indicies'])
                     return synced
 
@@ -332,10 +325,7 @@ class Main:
     images_captured = 0
 
     def __init__(self):
-        global debug
         self.args = parse_args()
-        debug = self.args.debug
-        self.enableDebugMessageSync=self.args.enableDebugMessageSync
         self.traceLevel= self.args.traceLevel
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
@@ -357,7 +347,7 @@ class Main:
         # random polygons for count
         self.total_images = self.args.count * \
             len(calibUtils.setPolygonCoordinates(1000, 600))
-        if debug:
+        if self.traceLevel == 1:
             print("Using Arguments=", self.args)
         if self.args.datasetPath:
             Path(self.args.datasetPath).mkdir(parents=True, exist_ok=True)
@@ -578,6 +568,24 @@ class Main:
         cv2.imshow(self.display_name, info_frame)
         cv2.waitKey(1000)
 
+    def show_failed_sync_images(self):
+        width, height = int(
+            self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
+        info_frame = np.zeros((self.height, self.width, 3), np.uint8)
+        print(f"py: Capture failed, unable to sync images! Fix the argument minSyncTimestamp or (-mts). Set to: {self.minSyncTimestamp}")
+        def show(position, text):
+            cv2.putText(info_frame, text, position,
+                        cv2.FONT_HERSHEY_TRIPLEX, 0.7, (0, 255, 0))
+
+        show((50, int(height / 2 - 40)),
+             "Capture failed, unable to sync images!")
+        show((60, int(height / 2 + 40)), "Fix the argument -mts.")
+
+        # cv2.imshow("left", info_frame)
+        # cv2.imshow("right", info_frame)
+        cv2.imshow(self.display_name, info_frame)
+        cv2.waitKey(0)
+
     def show_failed_orientation(self):
         width, height = int(
             self.width * self.output_scale_factor), int(self.height * self.output_scale_factor)
@@ -616,9 +624,11 @@ class Main:
         prev_time = None
         curr_time = None
         self.display_name = "Image Window"
-        syncCollector = MessageSync(len(self.camera_queue), 0.3 ) # 3ms tolerance
-        syncCollector.enableDebugMessageSync = self.args.enableDebugMessageSync
+        self.minSyncTimestamp = self.args.minSyncTimestamp
+        syncCollector = MessageSync(len(self.camera_queue), self.minSyncTimestamp) # 3ms tolerance
+        syncCollector.traceLevel = self.args.traceLevel
         self.mouseTrigger = False
+        sync_trys = 0
         while not finished:
             currImageList = {}
             for key in self.camera_queue.keys():
@@ -770,10 +780,18 @@ class Main:
             allPassed = True
             if capturing:
                 syncedMsgs = syncCollector.get_synced()
+                if sync_trys > 10:
+                    self.show_failed_sync_images()
+                    finished = True
+                    self.device.close()
+                    print("Images were unable to sync, threshold to high. Device closing with exception.")
+                    raise SystemExit(1)
                 if syncedMsgs == False or syncedMsgs == None:
                     for key in self.camera_queue.keys():
                         self.camera_queue[key].getAll()
+                    sync_trys += 1
                     continue
+
                 for name, frameMsg in syncedMsgs.items():
                     print(f"Time stamp of {name} is {frameMsg.getTimestamp()}")
                     if self.coverageImages[name] is None:
@@ -822,6 +840,7 @@ class Main:
         print("Starting image processing")
         stereo_calib = calibUtils.StereoCalibration()
         stereo_calib.traceLevel = self.args.traceLevel
+        stereo_calib.output_scale_factor = self.args.outputScaleFactor
         dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
@@ -903,7 +922,7 @@ class Main:
                         right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
                         left_cam = cam_info['name']
                         
-                        epipolar_threshold = 0.6
+                        epipolar_threshold = self.args.maxEpiploarError
 
                         if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
                             color = red
