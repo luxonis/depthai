@@ -866,13 +866,13 @@ class Main:
             for camera in result_config['cameras'].keys():
                 cam_info = result_config['cameras'][camera]
                 # log_list.append(self.ccm_selected[cam_info['name']])
-                reprojection_error_threshold = 1.0
+                reprojection_error_threshold = 3.0
                 if cam_info['size'][1] > 720:
                     #print(cam_info['size'][1])
                     reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
 
                 if cam_info['name'] == 'rgb':
-                    reprojection_error_threshold = 3
+                    reprojection_error_threshold = 6
                 print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
                 
                 if cam_info['reprojection_error'] > reprojection_error_threshold:
@@ -903,7 +903,7 @@ class Main:
                         right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
                         left_cam = cam_info['name']
                         
-                        epipolar_threshold = 0.6
+                        epipolar_threshold = 1.2
 
                         if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
                             color = red
