@@ -40,19 +40,6 @@ stringToCam = {
                 'CAM_H' : dai.CameraBoardSocket.CAM_H
                 }
 
-productNametoBoard = {
-                'RGB'   : dai.CameraBoardSocket.CAM_A,
-                'LEFT'  : dai.CameraBoardSocket.CAM_B,
-                'RIGHT' : dai.CameraBoardSocket.CAM_C,
-                'CAM_A' : dai.CameraBoardSocket.CAM_A,
-                'CAM_B' : dai.CameraBoardSocket.CAM_B,
-                'CAM_C' : dai.CameraBoardSocket.CAM_C,
-                'CAM_D' : dai.CameraBoardSocket.CAM_D,
-                'CAM_E' : dai.CameraBoardSocket.CAM_E,
-                'CAM_F' : dai.CameraBoardSocket.CAM_F,
-                'CAM_G' : dai.CameraBoardSocket.CAM_G,
-                'CAM_H' : dai.CameraBoardSocket.CAM_H
-                }
 
 camToMonoRes = {
                 'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
@@ -163,7 +150,7 @@ def parse_args():
                         help="Save calibration file to this path")
     parser.add_argument('-dst', '--datasetPath', type=str, default="dataset",
                         help="Path to dataset used for processing images")
-    parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.1,
+    parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.7,
                         help="Minimum percentage of detected markers to consider a frame valid")
     parser.add_argument('-nm', '--numMarkers', type=int, default=None, help="Number of markers in the board")
     parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
@@ -980,25 +967,25 @@ class Main:
                             right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
                             if right_cam not in self.args.disableCamera:
                                 left_cam = cam_info['name']
-    
+
                                 epipolar_threshold = self.args.maxEpiploarError
-    
+
                                 if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
                                     color = red
                                     error_text.append("high epipolar error between " + left_cam + " and " + right_cam)
                                 elif cam_info['extrinsics']['epipolar_error'] == -1:
                                     color = red
                                     error_text.append("Epiploar validation failed between " + left_cam + " and " + right_cam)
-    
+
                                 text = cam_info['name'] + " and " + right_cam + ' epipolar_error: {}\n'.format(cam_info['extrinsics']['epipolar_error'], '.6f')
                                 target_file.write(text)
-    
+
                                 # log_list.append(cam_info['extrinsics']['epipolar_error'])
                                 # text = left_cam + "-" + right_cam + ' Avg Epipolar error: ' + format(cam_info['extrinsics']['epipolar_error'], '.6f')
                                 # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
                                 # vis_y += 30
                                 specTranslation = np.array([cam_info['extrinsics']['specTranslation']['x'], cam_info['extrinsics']['specTranslation']['y'], cam_info['extrinsics']['specTranslation']['z']], dtype=np.float32)
-    
+
                                 calibration_handler.setCameraExtrinsics(stringToCam[camera], stringToCam[cam_info['extrinsics']['to_cam']], cam_info['extrinsics']['rotation_matrix'], cam_info['extrinsics']['translation'], specTranslation)
                                 if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
                                     calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
