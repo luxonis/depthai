@@ -152,7 +152,7 @@ class CameraComponent(Component):
                 self.node.setIspScale(*scale)
 
             curr_size = self.node.getVideoSize()
-            closest = getClosestVideoSize(*curr_size)
+            closest = getClosestVideoSize(*curr_size, videoEncoder=encode)
             self.node.setVideoSize(*closest)
             self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 
