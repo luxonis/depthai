@@ -163,6 +163,8 @@ def parse_args():
                         help="Minimum time difference between pictures taken from different cameras.  Default: %(default)s ")
     parser.add_argument('-it', '--numPictures',  type=float, default=None,
                         help="Number of pictures taken.")
+    parser.add_argument('-ebp', '--enablePolynomsdisplay', default=False, action="store_true",
+                        help="Enable the display of polynoms.")
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
@@ -339,6 +341,7 @@ class Main:
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.device = dai.Device()
+        self.enablePolynomsdisplay = self.args.enablePolynomsdisplay
 
         if self.args.board:
             board_path = Path(self.args.board)
@@ -377,8 +380,11 @@ class Main:
 
         # TODO: set the total images
         # random polygons for count
-        self.total_images = self.args.count * \
-            len(calibUtils.setPolygonCoordinates(1000, 600))
+        if self.args.numPictures:
+            self.total_images = self.args.numPictures
+        else:
+            self.total_images = self.args.count * \
+                len(calibUtils.setPolygonCoordinates(1000, 600))
         if self.traceLevel == 1:
             print("Using Arguments=", self.args)
         if self.args.datasetPath:
@@ -390,7 +396,7 @@ class Main:
         
         #TODO
         if self.args.cameraMode != "perspective": 
-            self.args.minDetectedMarkersPercent = 1
+            self.args.minDetectedMarkersPercent = 1.0
         
         self.coverageImages ={} 
         for cam_id in self.board_config['cameras']:
@@ -556,8 +562,12 @@ class Main:
     def show_info_frame(self):
         info_frame = np.zeros((600, 1100, 3), np.uint8)
         print("Starting image capture. Press the [ESC] key to abort.")
-        print("Will take {} total images, {} per each polygon.".format(
-            self.total_images, self.args.count))
+        if self.enablePolynomsdisplay:
+            print("Will take {} total images, {} per each polygon.".format(
+                self.total_images, self.args.count))
+        else:
+            print("Will take {} total images.".format(
+                self.total_images))
 
         def show(position, text):
             cv2.putText(info_frame, text, position,
@@ -567,10 +577,14 @@ class Main:
         show((25, 160), "Press the [ESC] key to abort.")
         show((25, 220), "Press the [spacebar] key to capture the image.")
         show((25, 280), "Press the \"s\" key to stop capturing images and begin calibration.")
-        show((25, 360), "Polygon on the image represents the desired chessboard")
-        show((25, 420), "position, that will provide best calibration score.")
-        show((25, 480), "Will take {} total images, {} per each polygon.".format(
-            self.total_images, self.args.count))
+        if self.enablePolynomsdisplay:
+            show((25, 360), "Polygon on the image represents the desired chessboard")
+            show((25, 420), "position, that will provide best calibration score.")
+            show((25, 480), "Will take {} total images, {} per each polygon.".format(
+                self.total_images, self.args.count))
+        else:
+            show((25, 480), "Will take {} total images.".format(
+                self.total_images))
         show((25, 550), "To continue, press [spacebar]...")
 
         cv2.imshow("info", info_frame)
@@ -752,7 +766,7 @@ class Main:
                     localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
                     localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))    
                     localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())    
-                if self.images_captured_polygon<len(self.polygons):
+                if self.images_captured_polygon<len(self.polygons) and self.args.enablePolynomsdisplay:
                     cv2.polylines(
                         imgFrame, localPolygon,
                         True, (0, 0, 255), 4)
