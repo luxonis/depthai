@@ -27,7 +27,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/StereoComponent/stereo.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/StereoComponent/stereo.py>`_.
     
 
         .. literalinclude:: ../../../../examples/StereoComponent/stereo.py

@@ -51,7 +51,7 @@ When the trigger is activated, it records a 15 seconds video (5 seconds before t
    :language: python
 
 Reference
--------------
+---------
 
 .. autoclass:: depthai_sdk.trigger_action.TriggerAction
     :members:

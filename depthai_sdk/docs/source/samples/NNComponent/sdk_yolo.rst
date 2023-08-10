@@ -33,7 +33,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/NNComponent/yolo.py>`__.
+        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/NNComponent/yolo.py>`__.
 
 
         .. literalinclude:: ../../../../examples/NNComponent/yolo.py

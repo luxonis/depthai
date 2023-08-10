@@ -21,7 +21,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/streaming/ros_publishing.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/streaming/ros_publishing.py>`_.
 
         .. literalinclude:: ../../../../examples/streaming/ros_publishing.py
             :language: python

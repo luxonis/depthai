@@ -26,7 +26,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/trigger_action/person_record.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/trigger_action/person_record.py>`_.
 
         .. literalinclude:: ../../../../examples/trigger_action/person_record.py
             :language: python
