@@ -130,12 +130,12 @@ def parse_args():
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
                         help="Invert horizontal axis of the camera for the display")
-    parser.add_argument("-ep", "--maxEpiploarError", default="0.7", type=float, required=False,
+    parser.add_argument("-ep", "--maxEpiploarError", default="0.8", type=float, required=False,
                          help="Sets the maximum epiploar allowed with rectification. Default: %(default)s")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
-    parser.add_argument('-rlp', '--rgbLensPosition', nargs='*', action=ParseKwargs, required=False, help="Set the manual lens position of the camera for calibration. Example -rlp rgb=135 night=135")
-    parser.add_argument('-dsb', '--disableCamera', nargs='+', required=False, help="Set which camera should be disabled. Example -dsb rgb left right")
+    parser.add_argument('-rlp', '--rgbLensPosition', nargs='*', action=ParseKwargs, required=False, default={} , help="Set the manual lens position of the camera for calibration. Example -rlp rgb=135 night=135")
+    parser.add_argument('-dsb', '--disableCamera', nargs='+', required=False, default=[] , help="Set which camera should be disabled. Example -dsb rgb left right")
     parser.add_argument("-cd", "--captureDelay", default=5, type=int,
                         required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
     parser.add_argument("-fac", "--factoryCalibration", default=False, action="store_true",
@@ -388,6 +388,7 @@ class Main:
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         
+        #TODO
         if self.args.cameraMode != "perspective": 
             self.args.minDetectedMarkersPercent = 1
         
@@ -524,7 +525,10 @@ class Main:
                         cam_node.initialControl.setChromaDenoise(4)
 
                     if cam_info['hasAutofocus']:
-                        cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
+                        if self.args.rgbLensPosition:
+                            cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
+                        else:
+                            cam_node.initialControl.setManualFocus(135)
 
                         controlIn = pipeline.createXLinkIn()
                         controlIn.setStreamName(cam_info['name'] + '-control')
@@ -955,8 +959,10 @@ class Main:
                     if self.args.cameraMode != 'perspective':
                         calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Fisheye)
                     if 'hasAutofocus' in cam_info and cam_info['hasAutofocus']:
-                        print(camera.upper())
-                        calibration_handler.setLensPosition(stringToCam[camera], self.args.rgbLensPosition[stringToCam[camera.upper()]])
+                        if self.args.rgbLensPosition:
+                            calibration_handler.setLensPosition(stringToCam[camera], int(self.args.rgbLensPosition[cam_info["name"]]))
+                        else:
+                            calibration_handler.setLensPosition(stringToCam[camera], int(135))
 
                     # log_list.append(self.focusSigma[cam_info['name']])
                     # log_list.append(cam_info['reprojection_error'])
