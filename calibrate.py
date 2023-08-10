@@ -729,6 +729,12 @@ class Main:
                 #     resizeHeight = height
             
             # print(f'Scale Shape  is {resizeWidth}x{resizeHeight}' )
+                if self.args.invert_v and self.args.invert_h:
+                    currImageList[name] = cv2.flip(currImageList[name], -1)
+                elif self.args.invert_v:
+                    currImageList[name] = cv2.flip(currImageList[name], 0)
+                elif self.args.invert_h:
+                    currImageList[name] = cv2.flip(currImageList[name], 1)
             
             combinedImage = None
             combinedCoverageImage = None
