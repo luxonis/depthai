@@ -30,7 +30,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/replay/photo-download.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/replay/photo-download.py>`_.
 
 
         .. literalinclude:: ../../../../examples/replay/photo-download.py

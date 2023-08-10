@@ -20,7 +20,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/recording/mcap_record_imu.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/recording/mcap_record_imu.py>`_.
 
 
         .. literalinclude:: ../../../../examples/recording/mcap_record_imu.py
