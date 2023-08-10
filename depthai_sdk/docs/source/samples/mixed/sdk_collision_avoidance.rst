@@ -31,7 +31,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/mixed/collision_avoidance.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/mixed/collision_avoidance.py>`_.
 
         .. literalinclude:: ../../../../examples/mixed/collision_avoidance.py
             :language: python

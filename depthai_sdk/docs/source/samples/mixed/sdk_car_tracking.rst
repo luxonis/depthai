@@ -30,7 +30,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/mixed/car_tracking.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/mixed/car_tracking.py>`_.
 
         .. literalinclude:: ../../../../examples/mixed/car_tracking.py
             :language: python

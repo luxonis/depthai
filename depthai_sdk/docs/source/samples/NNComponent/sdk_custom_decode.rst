@@ -27,7 +27,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/NNComponent/custom_decode.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/NNComponent/custom_decode.py>`_.
 
         .. literalinclude:: ../../../../examples/NNComponent/custom_decode.py
             :language: python

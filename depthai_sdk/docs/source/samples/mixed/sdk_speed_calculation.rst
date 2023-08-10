@@ -30,7 +30,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/mixed/speed_calculation.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/mixed/speed_calculation.py>`_.
 
 
         .. literalinclude:: ../../../../examples/mixed/speed_calculation.py

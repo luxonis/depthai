@@ -33,7 +33,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/NNComponent/spatial_detection.py>`__
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/NNComponent/spatial_detection.py>`__
         
 
         .. literalinclude:: ../../../../examples/NNComponent/spatial_detection.py

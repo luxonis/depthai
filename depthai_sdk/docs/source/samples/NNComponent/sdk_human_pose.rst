@@ -29,7 +29,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/NNComponent/human_pose.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/NNComponent/human_pose.py>`_.
 
         .. literalinclude:: ../../../../examples/NNComponent/human_pose.py
             :language: python

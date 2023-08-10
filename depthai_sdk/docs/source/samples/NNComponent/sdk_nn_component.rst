@@ -28,7 +28,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/NNComponent/nn_component.py>`__.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/NNComponent/nn_component.py>`__.
 
         .. literalinclude:: ../../../../examples/NNComponent/nn_component.py
             :language: python

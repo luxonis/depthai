@@ -28,7 +28,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/CameraComponent/cam_ffc.py>`__
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/CameraComponent/cam_ffc.py>`__
 
         .. literalinclude:: ../../../../examples/CameraComponent/cam_ffc.py
             :language: python

@@ -38,7 +38,7 @@ More information at `Maximizing FOV <https://docs.luxonis.com/projects/api/en/la
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/NNComponent/deeplabv3_person.py>`__
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/NNComponent/deeplabv3_person.py>`__
         
         .. literalinclude:: ../../../../examples/NNComponent/deeplabv3_person.py
             :language: python

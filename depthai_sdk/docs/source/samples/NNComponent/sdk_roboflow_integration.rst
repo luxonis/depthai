@@ -27,7 +27,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/NNComponent/roboflow_integration.py>`__.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/NNComponent/roboflow_integration.py>`__.
 
         .. literalinclude:: ../../../../examples/NNComponent/roboflow_integration.py
             :language: python

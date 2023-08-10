@@ -31,7 +31,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/visualizer/visualizer_callback.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/visualizer/visualizer_callback.py>`_.
 
         .. literalinclude:: ../../../../examples/visualizer/visualizer_callback.py
             :language: python

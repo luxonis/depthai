@@ -27,7 +27,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/StereoComponent/stereo_encoded.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/StereoComponent/stereo_encoded.py>`_.
 
         .. literalinclude:: ../../../../examples/StereoComponent/stereo_encoded.py
             :language: python

@@ -27,7 +27,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/trigger_action/custom_action.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/trigger_action/custom_action.py>`_.
 
         .. literalinclude:: ../../../../examples/trigger_action/custom_action.py
             :language: python
