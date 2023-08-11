@@ -24,10 +24,11 @@ Source Code
 ###########
 
 One thing worth noting is the resize mode option. Because inference is done on a color camera which has a 16:9 aspect ratio, and the model expects a 1:1 aspect ratio, we need
-to resize the input frame to fit the model. This is done in three ways: 
-    - letterbox - resize the frame to fit the model, and pad the rest with black pixels
-    - crop - crop the frame to fit the model
-    - stretch - stretch the frame to fit the model
+to resize the input frame to fit the model. This is done in three ways:
+
+- letterbox - resize the frame to fit the model, and pad the rest with black pixels
+- crop - crop the frame to fit the model
+- stretch - stretch the frame to fit the model
 
 More information at `Maximizing FOV <https://docs.luxonis.com/projects/api/en/latest/tutorials/maximize_fov/>`__.
 
@@ -37,7 +38,7 @@ More information at `Maximizing FOV <https://docs.luxonis.com/projects/api/en/la
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/NNComponent/deeplabv3_person.py>`__
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/NNComponent/deeplabv3_person.py>`__
         
         .. literalinclude:: ../../../../examples/NNComponent/deeplabv3_person.py
             :language: python

@@ -30,7 +30,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/NNComponent/emotion-recognition.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/NNComponent/emotion-recognition.py>`_.
 
         .. literalinclude:: ../../../../examples/NNComponent/emotion-recognition.py
             :language: python

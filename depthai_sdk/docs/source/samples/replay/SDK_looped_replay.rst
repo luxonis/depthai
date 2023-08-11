@@ -29,10 +29,10 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/replay/looped_replay.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/replay/looped_replay.py>`_.
 
 
-        .. literalinclude:: ../../../../examples/replay/looped_replay.py
+        .. literalinclude:: ../../../../examples/replay/looped-replay.py
             :language: python
             :linenos:
 

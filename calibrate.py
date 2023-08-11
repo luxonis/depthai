@@ -293,8 +293,7 @@ class MessageSync:
             # Mark minimum
             if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.03):
                 min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
-                if self.traceLevel == 0 or self.traceLevel == 1:
-                    print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
+                print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
             if min_ts_diff['ts'] < self.min_diff_timestamp:
                 # Check if atleast 5 messages deep
@@ -838,9 +837,7 @@ class Main:
 
     def calibrate(self):
         print("Starting image processing")
-        stereo_calib = calibUtils.StereoCalibration()
-        stereo_calib.traceLevel = self.args.traceLevel
-        stereo_calib.output_scale_factor = self.args.outputScaleFactor
+        stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel, self.args.outputScaleFactor)
         dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:

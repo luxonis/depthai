@@ -32,9 +32,9 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/CameraComponent/camera_control_with_NN.py>`__
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/CameraComponent/camera_control_with_nn.py>`__
 
-        .. literalinclude:: ../../../../examples/CameraComponent/camera_control_with_NN.py
+        .. literalinclude:: ../../../../examples/CameraComponent/camera_control_with_nn.py
             :language: python
             :linenos:
 

@@ -33,7 +33,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/IMUComponent/imu_rerun.py>`__.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/IMUComponent/imu_rerun.py>`__.
 
         .. literalinclude:: ../../../../examples/IMUComponent/imu_rerun.py
             :language: python

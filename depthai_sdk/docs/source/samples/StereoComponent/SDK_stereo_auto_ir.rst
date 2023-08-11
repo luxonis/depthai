@@ -29,7 +29,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/StereoComponent/stereo_auto_ir.py>`_.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/StereoComponent/stereo_auto_ir.py>`_.
 
         .. literalinclude:: ../../../../examples/StereoComponent/stereo_auto_ir.py
             :language: python
