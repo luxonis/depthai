@@ -355,8 +355,8 @@ class Main:
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         
-        if self.args.cameraMode != "perspective": 
-            self.args.minDetectedMarkersPercent = 1
+        #if self.args.cameraMode != "perspective": 
+        #   self.args.minDetectedMarkersPercent = 1
         
         self.coverageImages ={} 
         for cam_id in self.board_config['cameras']:
