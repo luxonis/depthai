@@ -163,7 +163,7 @@ def parse_args():
                         help="Minimum time difference between pictures taken from different cameras.  Default: %(default)s ")
     parser.add_argument('-it', '--numPictures',  type=float, default=None,
                         help="Number of pictures taken.")
-    parser.add_argument('-ebp', '--enablePolynomsdisplay', default=False, action="store_true",
+    parser.add_argument('-ebp', '--enablePolygonsDisplay', default=True, action="store_true",
                         help="Enable the display of polynoms.")
     options = parser.parse_args()
 
@@ -341,9 +341,10 @@ class Main:
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.device = dai.Device()
-        self.enablePolynomsdisplay = self.args.enablePolynomsdisplay
-
+        self.enablePolygonsDisplay = self.args.enablePolygonsDisplay
+        self.board_name = None
         if self.args.board:
+            self.board_name = self.args.board
             board_path = Path(self.args.board)
             if not board_path.exists():
                 board_path = (Path(__file__).parent / 'resources/depthai_boards/boards' / self.args.board.upper()).with_suffix('.json').resolve()
@@ -540,7 +541,7 @@ class Main:
                         controlIn.setStreamName(cam_info['name'] + '-control')
                         controlIn.out.link(cam_node.inputControl)
 
-                # cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
+                cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
                 xout.input.setBlocking(False)
                 xout.input.setQueueSize(1)
 
@@ -562,7 +563,7 @@ class Main:
     def show_info_frame(self):
         info_frame = np.zeros((600, 1100, 3), np.uint8)
         print("Starting image capture. Press the [ESC] key to abort.")
-        if self.enablePolynomsdisplay:
+        if self.enablePolygonsDisplay:
             print("Will take {} total images, {} per each polygon.".format(
                 self.total_images, self.args.count))
         else:
@@ -577,7 +578,7 @@ class Main:
         show((25, 160), "Press the [ESC] key to abort.")
         show((25, 220), "Press the [spacebar] key to capture the image.")
         show((25, 280), "Press the \"s\" key to stop capturing images and begin calibration.")
-        if self.enablePolynomsdisplay:
+        if self.enablePolygonsDisplay:
             show((25, 360), "Polygon on the image represents the desired chessboard")
             show((25, 420), "position, that will provide best calibration score.")
             show((25, 480), "Will take {} total images, {} per each polygon.".format(
@@ -683,6 +684,7 @@ class Main:
         syncCollector.traceLevel = self.args.traceLevel
         self.mouseTrigger = False
         sync_trys = 0
+        combinedCoverageImage = None
         while not finished:
             currImageList = {}
             for key in self.camera_queue.keys():
@@ -702,7 +704,7 @@ class Main:
             resizeHeight = 0
             resizeWidth = 0
             for name, imgFrame in currImageList.items():
-                self.coverageImages[name]=None
+                #self.coverageImages[name]=None
                 
                 # print(f'original Shape of {name} is {imgFrame.shape}' )
                
@@ -737,7 +739,6 @@ class Main:
                     currImageList[name] = cv2.flip(currImageList[name], 1)
             
             combinedImage = None
-            combinedCoverageImage = None
             for name, imgFrame in currImageList.items():
                 height, width, _ = imgFrame.shape
                 if width > resizeWidth and height > resizeHeight:
@@ -772,7 +773,7 @@ class Main:
                     localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
                     localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))    
                     localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())    
-                if self.images_captured_polygon<len(self.polygons) and self.args.enablePolynomsdisplay:
+                if self.images_captured_polygon<len(self.polygons) and self.args.enablePolygonsDisplay:
                     cv2.polylines(
                         imgFrame, localPolygon,
                         True, (0, 0, 255), 4)
@@ -788,14 +789,20 @@ class Main:
                 width_offset = (resizeWidth - width)//2
                 subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset, width_offset), (0, 0)), 'constant', constant_values=0)
                 if self.coverageImages[name] is not None:
-                    currCoverImage = cv2.resize(self.coverageImages[name], (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
+                    height, width, _ = self.coverageImages[name].shape
+                    if height > resizeHeight:
+                        height_offset = (height - resizeHeight)//2
+                        self.coverageImages[name] = self.coverageImages[name][height_offset:height_offset+resizeHeight, :]
+                    if len(self.coverageImages[name].shape) != 3:
+                        self.coverageImages[name] = cv2.cvtColor(self.coverageImages[name], cv2.COLOR_GRAY2RGB)
+                    currCoverImage = cv2.resize(self.coverageImages[name], (0, 0), fx=resizeWidth / width, fy=resizeWidth / width)
                     padding = ((height_offset, height_offset), (width_offset,width_offset), (0, 0))
                     subCoverageImage = np.pad(currCoverImage, padding, 'constant', constant_values=0)
                     if combinedCoverageImage is None:
                         combinedCoverageImage = subCoverageImage
                     else:
                         combinedCoverageImage = np.hstack((combinedCoverageImage, subCoverageImage))
-
+                print(combinedCoverageImage)
 
                 if combinedImage is None:
                     combinedImage = subImage
@@ -866,11 +873,15 @@ class Main:
                     tried[name] = self.parse_frame(frameMsg.getCvFrame(), name)
                     print(f'Status of {name} is {tried[name]}')
                     allPassed = allPassed and tried[name]
-                
                 if allPassed:
                     color = (int(np.random.randint(0, 255)), int(np.random.randint(0, 255)), int(np.random.randint(0, 255)))
                     for name, frameMsg in syncedMsgs.items():
-                        self.coverageImages[name] = self.draw_corners(frameMsg.getCvFrame(), self.coverageImages[name], color)
+                        print(frameMsg.getCvFrame().shape)
+                        if len(frameMsg.getCvFrame().shape) == 3:
+                            frameMsg_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
+                            print(frameMsg.getCvFrame().shape)
+                            self.coverageImages[name] = cv2.cvtColor(self.coverageImages[name], cv2.COLOR_BGR2GRAY)
+                        self.coverageImages[name] = self.draw_corners(frameMsg_frame, self.coverageImages[name], color)
                     if not self.images_captured:
                         if 'stereo_config' in self.board_config['cameras']:
                             leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
