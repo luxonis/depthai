@@ -468,7 +468,7 @@ class Main:
         marker_corners, ids, charuco_corners, charuco_ids = self.detect_markers_corners(frame)
         for corner in charuco_corners:
             corner_int = (int(corner[0][0]), int(corner[0][1]))
-            cv2.circle(displayframe, corner_int, 8, color, -1)
+            cv2.circle(displayframe, corner_int, 8*displayframe.shape[1]//1900, color, -1)
         height, width = displayframe.shape[:2]
         start_point = (0, 0)  # top of the image
         end_point = (0, height)
@@ -684,7 +684,6 @@ class Main:
         syncCollector.traceLevel = self.args.traceLevel
         self.mouseTrigger = False
         sync_trys = 0
-        combinedCoverageImage = None
         while not finished:
             currImageList = {}
             for key in self.camera_queue.keys():
@@ -739,6 +738,7 @@ class Main:
                     currImageList[name] = cv2.flip(currImageList[name], 1)
             
             combinedImage = None
+            combinedCoverageImage = None
             for name, imgFrame in currImageList.items():
                 height, width, _ = imgFrame.shape
                 if width > resizeWidth and height > resizeHeight:
@@ -789,25 +789,34 @@ class Main:
                 width_offset = (resizeWidth - width)//2
                 subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset, width_offset), (0, 0)), 'constant', constant_values=0)
                 if self.coverageImages[name] is not None:
-                    height, width, _ = self.coverageImages[name].shape
-                    if height > resizeHeight:
-                        height_offset = (height - resizeHeight)//2
-                        self.coverageImages[name] = self.coverageImages[name][height_offset:height_offset+resizeHeight, :]
                     if len(self.coverageImages[name].shape) != 3:
                         self.coverageImages[name] = cv2.cvtColor(self.coverageImages[name], cv2.COLOR_GRAY2RGB)
-                    currCoverImage = cv2.resize(self.coverageImages[name], (0, 0), fx=resizeWidth / width, fy=resizeWidth / width)
+                    imgFrame = self.coverageImages[name]
+                    cv2.resize(imgFrame, (0, 0), fx=self.output_scale_factor*2, fy=self.output_scale_factor*2)
+                    height, width, _ = imgFrame.shape
+                    if width > resizeWidth and height > resizeHeight:
+                        imgFrame = cv2.resize(
+                        imgFrame, (0, 0), fx= resizeWidth / width, fy= resizeWidth / width)
+                    height, width, _ = imgFrame.shape
+                    if height > resizeHeight:
+                        height_offset = (height - resizeHeight)//2
+                        imgFrame = imgFrame[height_offset:height_offset+resizeHeight, :]
+                    height, width, _ = imgFrame.shape
+                    height_offset = (resizeHeight - height)//2
+                    width_offset = (resizeWidth - width)//2
                     padding = ((height_offset, height_offset), (width_offset,width_offset), (0, 0))
-                    subCoverageImage = np.pad(currCoverImage, padding, 'constant', constant_values=0)
+                    subCoverageImage = np.pad(imgFrame, padding, 'constant', constant_values=0)
+                    print_text = f"Camera: {name}, picture {self.images_captured}"
+                    cv2.putText(subCoverageImage, print_text, (15, 15+height_offset), cv2.FONT_HERSHEY_SIMPLEX, 2*imgFrame.shape[0]/1750, (0, 0, 0), 2)                    
                     if combinedCoverageImage is None:
                         combinedCoverageImage = subCoverageImage
                     else:
                         combinedCoverageImage = np.hstack((combinedCoverageImage, subCoverageImage))
-                print(combinedCoverageImage)
-
                 if combinedImage is None:
                     combinedImage = subImage
                 else:
                     combinedImage = np.hstack((combinedImage, subImage))
+                
             key = cv2.waitKey(1)
             if key == 27 or key == ord("q"):
                 print("py: Calibration has been interrupted!")
@@ -846,6 +855,7 @@ class Main:
 
             cv2.imshow(self.display_name, display_image)
             if combinedCoverageImage is not None:
+                #combinedCoverageImage = cv2.resize(combinedCoverageImage, (0, 0), fx=self.output_scale_factor*2, fy=self.output_scale_factor*2)
                 cv2.imshow("Coverage-Image", combinedCoverageImage)
 
             tried = {}
@@ -876,11 +886,11 @@ class Main:
                 if allPassed:
                     color = (int(np.random.randint(0, 255)), int(np.random.randint(0, 255)), int(np.random.randint(0, 255)))
                     for name, frameMsg in syncedMsgs.items():
-                        print(frameMsg.getCvFrame().shape)
-                        if len(frameMsg.getCvFrame().shape) == 3:
-                            frameMsg_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
-                            print(frameMsg.getCvFrame().shape)
-                            self.coverageImages[name] = cv2.cvtColor(self.coverageImages[name], cv2.COLOR_BGR2GRAY)
+                        frameMsg_frame = frameMsg.getCvFrame()
+                        if len(frameMsg.getCvFrame().shape) != 3:
+                            frameMsg_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_GRAY2RGB)
+                        if len(self.coverageImages[name].shape) != 3:
+                            self.coverageImages[name] = cv2.cvtColor(self.coverageImages[name], cv2.COLOR_GRAY2RGB)
                         self.coverageImages[name] = self.draw_corners(frameMsg_frame, self.coverageImages[name], color)
                     if not self.images_captured:
                         if 'stereo_config' in self.board_config['cameras']:
