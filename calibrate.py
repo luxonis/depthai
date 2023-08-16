@@ -113,8 +113,8 @@ def parse_args():
                         help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
     parser.add_argument("-ms", "--markerSizeCm", type=float, required=False,
                         help="Marker size in charuco boards.")
-    parser.add_argument("-db", "--defaultBoard", default=False, action="store_true",
-                        help="Calculates the -ms parameter automatically based on aspect ratio of charuco board in the repository")
+    parser.add_argument("-db", "--defaultBoard", default=str,
+                        help="Calculates the size of markers, numbers of squareX and squareY base on the choosing board from charuco_boards directory.")
     parser.add_argument("-nx", "--squaresX", default="11", type=int, required=False,
                         help="number of chessboard squares in X direction in charuco boards.")
     parser.add_argument("-ny", "--squaresY", default="8", type=int, required=False,
@@ -152,7 +152,6 @@ def parse_args():
                         help="Path to dataset used for processing images")
     parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.7,
                         help="Minimum percentage of detected markers to consider a frame valid")
-    parser.add_argument('-nm', '--numMarkers', type=int, default=None, help="Number of markers in the board")
     parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
                         help="Enable mouse trigger for image capture")
     parser.add_argument('-nic', '--noInitCalibration', default=False, action="store_true",
@@ -168,11 +167,15 @@ def parse_args():
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
+    if options.defaultBoard:
+        board_name = options.defaultBoard
+        _, size, numX, numY= board_name.split("_")
+        options.squaresX = numX
+        options.squaresY = numY
     if options.markerSizeCm is None:
-        if options.defaultBoard:
-            options.markerSizeCm = options.squareSizeCm * 0.75
-        else:
-            raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
+        options.markerSizeCm = options.squareSizeCm * 0.75
+    else:
+        raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
         
@@ -441,10 +444,7 @@ class Main:
         marker_corners, _, _ = cv2.aruco.detectMarkers(
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
-        if not self.args.numMarkers:
-            num_all_markers = math.floor(self.args.squaresX * self.args.squaresY / 2)
-        else:
-            num_all_markers = self.args.numMarkers
+        num_all_markers = math.floor(self.args.squaresX * self.args.squaresY / 2)
         print(f'Total markers needed -> {(num_all_markers * self.args.minDetectedMarkersPercent)}')
         return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
 
