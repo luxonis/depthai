@@ -15,7 +15,16 @@ _Click on the GIF below to see a full example run_
 __Documentation is available at [https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/](https://docs.luxonis.com/en/latest/pages/tutorials/first_steps/#first-steps-with-depthai).__
 
 ## Installation
-
+First you need to clone this repository with
+```
+git clone https://github.com/luxonis/depthai.git
+git pull
+git submodule update --init
+```
+In case you have repository already cloned, you can update your submodules with:
+```
+git pull --recurse-submodules 
+```
 There are two installation steps that need to be performed to make sure the demo works:
 - **One-time installation** that will add all necessary packages to your OS.
   ```
