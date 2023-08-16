@@ -113,7 +113,7 @@ def parse_args():
                         help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
     parser.add_argument("-ms", "--markerSizeCm", type=float, required=False,
                         help="Marker size in charuco boards.")
-    parser.add_argument("-db", "--defaultBoard", default=str,
+    parser.add_argument("-db", "--defaultBoard", default=None, type=str,
                         help="Calculates the size of markers, numbers of squareX and squareY base on the choosing board from charuco_boards directory.")
     parser.add_argument("-nx", "--squaresX", default="11", type=int, required=False,
                         help="number of chessboard squares in X direction in charuco boards.")
@@ -167,11 +167,11 @@ def parse_args():
     options = parser.parse_args()
 
     # Set some extra defaults, `-brd` would override them
-    if options.defaultBoard:
+    if options.defaultBoard is not None:
         board_name = options.defaultBoard
         _, size, numX, numY= board_name.split("_")
-        options.squaresX = numX
-        options.squaresY = numY
+        options.squaresX = int(numX)
+        options.squaresY = int(numY)
     if options.markerSizeCm is None:
         options.markerSizeCm = options.squareSizeCm * 0.75
     else:
