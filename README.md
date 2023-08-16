@@ -18,6 +18,7 @@ __Documentation is available at [https://docs.luxonis.com/en/latest/pages/tutori
 First you need to clone this repository with
 ```
 git clone https://github.com/luxonis/depthai.git
+cd depthai
 git pull
 git submodule update --init
 ```
