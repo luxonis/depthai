@@ -51,15 +51,12 @@ def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tu
     """
     For colorCamera.video output
     """
-    while True:
-        if width % 2 == 0: # YUV420/NV12 width needs to be an even number to be convertible to BGR on host using cv2
-            if not videoEncoder or width % 32 == 0: # VideoEncoder HW limitation - width must be divisible by 32
-                break
-        width -= 1
-    while True:
-        if height % 2 == 0: # YUV420/NV12 height needs to be an even number to be convertible to BGR on host using cv2
-            break
-        height -= 1
+    width_divider = 32 if videoEncoder else 2
+    width = (width // width_divider) * width_divider
+
+    height_divider = 8 if videoEncoder else 2
+    height = (height // height_divider) * height_divider
+
     return (width, height)
 
 
