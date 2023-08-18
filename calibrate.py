@@ -114,7 +114,7 @@ def parse_args():
     parser.add_argument("-ms", "--markerSizeCm", type=float, required=False,
                         help="Marker size in charuco boards.")
     parser.add_argument("-db", "--defaultBoard", default=None, type=str,
-                        help="Calculates the size of markers, numbers of squareX and squareY base on the choosing board from charuco_boards directory.")
+                        help="Calculates the size of markers, numbers of squareX and squareY base on the choosing board from charuco_boards directory. Input: name of the board")
     parser.add_argument("-nx", "--squaresX", default="11", type=int, required=False,
                         help="number of chessboard squares in X direction in charuco boards.")
     parser.add_argument("-ny", "--squaresY", default="8", type=int, required=False,
@@ -426,6 +426,7 @@ class Main:
             for in_cam in self.board_config['cameras'].keys():
                 cam_info = self.board_config['cameras'][in_cam]
                 if cam_info["name"] not in self.args.disableCamera:
+                    print(properties.socket)
                     if properties.socket == stringToCam[in_cam]:
                         self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
                         print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
