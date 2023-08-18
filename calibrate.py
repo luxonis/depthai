@@ -136,7 +136,7 @@ def parse_args():
                         required=False, help="Choose between perspective and Fisheye")
     parser.add_argument('-rlp', '--rgbLensPosition', nargs='*', action=ParseKwargs, required=False, default={} , help="Set the manual lens position of the camera for calibration. Example -rlp rgb=135 night=135")
     parser.add_argument('-dsb', '--disableCamera', nargs='+', required=False, default=[] , help="Set which camera should be disabled. Example -dsb rgb left right")
-    parser.add_argument("-cd", "--captureDelay", default=5, type=int,
+    parser.add_argument("-cd", "--captureDelay", default=2, type=int,
                         required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
     parser.add_argument("-fac", "--factoryCalibration", default=False, action="store_true",
                         help="Enable writing to Factory Calibration.")
@@ -168,12 +168,17 @@ def parse_args():
 
     # Set some extra defaults, `-brd` would override them
     if options.defaultBoard is not None:
-        board_name = options.defaultBoard
-        _, size, numX, numY= board_name.split("_")
-        options.squaresX = int(numX)
-        options.squaresY = int(numY)
+        try: 
+            board_name = options.defaultBoard
+            _, _, size, numX, numY= board_name.split("_")
+            options.squaresX = int(numX)
+            options.squaresY = int(numY)
+        except:
+            raise argparse.ArgumentTypeError(options.defaultBoard, "Board name has not been found.")
     if options.markerSizeCm is None:
         options.markerSizeCm = options.squareSizeCm * 0.75
+    if options.traceLevel == 1:
+        print(f"Charuco board selected is: board_name = {board_name}, numX = {numX}, numY = {numY}, squareSize {options.squareSizeCm} cm, markerSize {options.markerSizeCm} cm")
     else:
         raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
