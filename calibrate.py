@@ -362,8 +362,15 @@ class Main:
             cameraProperties = self.device.getConnectedCameraFeatures()
             calibData = self.device.readCalibration()
             eeprom = calibData.getEepromData()
+            eeprom.productName = eeprom.productName.replace(" ", "-")
+            eeprom.boardName = eeprom.boardName.replace(" ", "-")
             print(f"Product name: {eeprom.productName}, board name {eeprom.boardName}")
-            detection = eeprom.productName.split()
+            if eeprom.productName.split("-")[0] == "OAK":
+                detection = eeprom.productName.split("-")
+            elif eeprom.boardName.split("-")[0] == "OAK":
+                detection = eeprom.boardName.split("-")
+            else:
+                raise ValueError(f"Board config for Product name: {eeprom.productName}, board name {eeprom.boardName} not found.")
             if "AF" in detection:
                 detection.remove("AF")
             if "FF" in detection:
@@ -372,6 +379,8 @@ class Main:
                 detection.remove("9782")
             self.board_name = '-'.join(detection).upper()
             board_path = Path(self.board_name)
+            if self.traceLevel == 1:
+                print(f"Board path specified as {board_path}")
             if not board_path.exists():
                 board_path = (Path(__file__).parent / 'resources/depthai_boards/boards' / self.board_name.upper()).with_suffix('.json').resolve()
                 if not board_path.exists():
