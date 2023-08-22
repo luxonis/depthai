@@ -349,6 +349,7 @@ class Main:
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
         self.device = dai.Device()
+        print(self.device.getDeviceName())
         self.enablePolygonsDisplay = self.args.enablePolygonsDisplay
         self.board_name = None
         if self.args.board:
@@ -459,8 +460,8 @@ class Main:
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
         num_all_markers = math.floor(self.args.squaresX * self.args.squaresY / 2)
-        print(f'Total markers needed -> {(num_all_markers * self.args.minDetectedMarkersPercent)}')
-        return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
+        print(f'Total markers needed -> {int(num_all_markers * self.args.minDetectedMarkersPercent)}')
+        return not (len(marker_corners) <  int(num_all_markers * self.args.minDetectedMarkersPercent))
 
     def detect_markers_corners(self, frame):
         marker_corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, self.aruco_dictionary)
