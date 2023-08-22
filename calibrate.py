@@ -177,12 +177,12 @@ def parse_args():
             raise argparse.ArgumentTypeError(options.defaultBoard, "Board name has not been found.")
     if options.markerSizeCm is None:
         options.markerSizeCm = options.squareSizeCm * 0.75
-    if options.traceLevel == 1:
-        print(f"Charuco board selected is: board_name = {board_name}, numX = {numX}, numY = {numY}, squareSize {options.squareSizeCm} cm, markerSize {options.markerSizeCm} cm")
     else:
         raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
+    if options.traceLevel == 1:
+        print(f"Charuco board selected is: board_name = {board_name}, numX = {numX}, numY = {numY}, squareSize {options.squareSizeCm} cm, markerSize {options.markerSizeCm} cm")
         
     return options
 
