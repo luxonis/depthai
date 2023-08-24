@@ -490,6 +490,12 @@ class StereoComponent(Component):
         def rectified_right(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             return XoutFrames(StreamXout(self._comp.node.rectifiedRight, 'Rectified right'))
 
+        def synced_left(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            return XoutFrames(StreamXout(self._comp.node.syncedLeft, 'Synced left'))
+
+        def synced_right(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
+            return XoutFrames(StreamXout(self._comp.node.syncedRight, 'Synced right'))
+
         def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
             return XoutDisparityDepth(
                 device=device,

@@ -366,9 +366,10 @@ def depth_to_disp_factor(device: dai.Device, stereo: dai.node.StereoDepth) -> fl
     baseline = calib.getBaselineDistance(cam1=cam1, cam2=cam2, useSpecTranslation=True) * 10  # cm to mm
     rawConf = stereo.initialConfig.get()
 
-    align: dai.CameraBoardSocket = stereo.properties.depthAlignCamera
-    if align == dai.CameraBoardSocket.AUTO:
-        align = cam2
+    # align: dai.CameraBoardSocket = stereo.properties.depthAlignCamera
+    # if align == dai.CameraBoardSocket.AUTO:
+    #     align = cam2
+    align = cam2 # FIXME - add a getter for this in depthai
 
     intrinsics = calib.getCameraIntrinsics(align)
     focalLength = intrinsics[0][0]
