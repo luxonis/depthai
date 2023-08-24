@@ -148,7 +148,6 @@ class StereoComponent(Component):
         maxStereoWidth = 1280 # TODO expose from depthai
         if self._rvc_version == 3:
             maxStereoWidth = 1920
-        print(f"maxStereoWidth is {maxStereoWidth}")
         if isinstance(self.left, CameraComponent):
             # Check whether input size width is larger than 1280
             w, h = self.left.stream_size
