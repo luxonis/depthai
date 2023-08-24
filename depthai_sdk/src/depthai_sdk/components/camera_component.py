@@ -63,6 +63,7 @@ class CameraComponent(Component):
         self._socket = source
         self._replay: Optional[Replay] = replay
         self._args: Dict = args
+        self._rvc_version = 2 # Default
 
         self.name = name
 
@@ -120,6 +121,16 @@ class CameraComponent(Component):
             # Create the node, and set the socket
             self.node = pipeline.create(node_type)
             self.node.setBoardSocket(source)
+            device_info = device.getDeviceInfo()
+            if not hasattr(dai, "X_LINK_RVC3"):
+                # Assume RVC2 in this case
+                self._rvc_version = 2
+            elif device_info.platform == dai.X_LINK_MYRIAD_X:
+                self._rvc_version = 2
+            elif device_info.platform == dai.X_LINK_RVC3:
+                self._rvc_version = 3
+            else:
+                raise ValueError("Could not get the rvc version from the device.")
 
         self._resolution_forced: bool = resolution is not None
         if resolution:
@@ -149,7 +160,8 @@ class CameraComponent(Component):
                 res = getClosesResolution(sensor, sensor_type, width=targetWidthRes)
                 self.node.setResolution(res)
                 scale = getClosestIspScale(self.node.getIspSize(), width=targetWidthIsp, videoEncoder=(encode is not None))
-                self.node.setIspScale(*scale)
+                if self._rvc_version == 2:
+                    self.node.setIspScale(*scale) # Not supported on RVC3
 
             curr_size = self.node.getVideoSize()
             closest = getClosestVideoSize(*curr_size, videoEncoder=encode)

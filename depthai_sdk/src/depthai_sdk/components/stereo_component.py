@@ -108,7 +108,7 @@ class StereoComponent(Component):
         }
 
         self._undistortion_offset: Optional[int] = None
-
+        self._rvc_version = 2 # Default
         if not self._replay:
             # Live stream, check whether we have correct cameras
             if len(device.getCameraSensorNames()) == 1:
@@ -129,17 +129,32 @@ class StereoComponent(Component):
             input_size = self._get_stream_size(self.left)
             if input_size:
                 self.node.setInputResolution(*input_size)
-
+            device_info = device.getDeviceInfo()
+            if not hasattr(dai, "X_LINK_RVC3"):
+                # Assume RVC2 in this case
+                self._rvc_version = 2
+            elif device_info.platform == dai.X_LINK_MYRIAD_X:
+                self._rvc_version = 2
+            elif device_info.platform == dai.X_LINK_RVC3:
+                self._rvc_version = 3
+            else:
+                raise ValueError("Could not get the rvc version from the device.")
         self._left_stream = self._get_output_stream(self.left)
         self._right_stream = self._get_output_stream(self.right)
 
         # Check whether input stereo pairs are larger than 1280 pixels in width (limitation of the RVC2/RVC3).
         # If that's the case, create ImageManip to downscale the streams.
         downscale_manips = []
+        maxStereoWidth = 1280 # TODO expose from depthai
+        if self._rvc_version == 3:
+            maxStereoWidth = 1920
+        print(f"maxStereoWidth is {maxStereoWidth}")
         if isinstance(self.left, CameraComponent):
             # Check whether input size width is larger than 1280
             w, h = self.left.stream_size
-            if w > 1280:
+            if isinstance(self.left.node, dai.node.ColorCamera):
+                w, h = self.left.node.getIspSize()
+            if w > maxStereoWidth:
                 manip = pipeline.create(dai.node.ImageManip)
                 new_h = int(h * (1280 / w))
                 manip.setResize(1280, new_h)
@@ -151,9 +166,11 @@ class StereoComponent(Component):
                 self._left_stream = manip.out
                 downscale_manips.append(manip)
         if isinstance(self.right, CameraComponent):
+            if isinstance(self.right.node, dai.node.ColorCamera):
+                w, h = self.right.node.getIspSize()
             # Check whether input size width is larger than 1280
             w, h = self.right.stream_size
-            if w > 1280:
+            if w > maxStereoWidth:
                 manip = pipeline.create(dai.node.ImageManip)
                 new_h = int(h * (1280 / w))
                 manip.setResize(1280, new_h)
@@ -211,11 +228,14 @@ class StereoComponent(Component):
         CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output
     ]) -> dai.Node.Output:
         if isinstance(input, CameraComponent):
-            return input.stream
+            if isinstance(input.node, dai.node.ColorCamera):
+                return input.node.isp
+            else:
+                return input.stream
         elif isinstance(input, dai.node.MonoCamera):
             return input.out
         elif isinstance(input, dai.node.ColorCamera):
-            return input.video
+            return input.isp # For RVC3, it's better to use ISP output
         elif isinstance(input, dai.Node.Output):
             return input
         else:
@@ -226,11 +246,13 @@ class StereoComponent(Component):
                          input: Union[CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output]) -> \
             Optional[Tuple[int, int]]:
         if isinstance(input, CameraComponent):
+            if isinstance(input.node, dai.node.ColorCamera):
+                return input.node.getIspSize()
             return input.stream_size
         elif isinstance(input, dai.node.MonoCamera):
             return input.getResolutionSize()
         elif isinstance(input, dai.node.ColorCamera):
-            return input.getVideoSize()
+            return input.getIspSize()
         else:
             return None
 
