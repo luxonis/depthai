@@ -131,7 +131,7 @@ class DisparityPacket(FramePacket):
         else:
             self.msg.getFrame()
 
-    def get_colorized_frame(self, visualizer) -> np.ndarray:
+    def get_colorized_frame(self, visualizer = None) -> np.ndarray:
         frame = self.get_disparity()
         colorized_disp = frame * self.multiplier
 
@@ -139,15 +139,22 @@ class DisparityPacket(FramePacket):
             mono_frame = self.mono_frame.getCvFrame()
         except AttributeError:
             mono_frame = None
+        stereo_config = None
+        colorize = None
+        if visualizer:
+            stereo_config = visualizer.config.stereo
+            colorize = self.colorize or stereo_config.colorize
+        if colorize is None:
+            colorize = StereoColor.RGB
 
-        stereo_config = visualizer.config.stereo
-
-        colorize = self.colorize or stereo_config.colorize
         if self.colormap is not None:
             colormap = self.colormap
-        else:
+        elif stereo_config:
             colormap = stereo_config.colormap
             colormap[0] = [0, 0, 0]  # Invalidate pixels 0 to be black
+        else:
+            colormap = cv2.COLORMAP_JET
+            # colormap[0] = [0, 0, 0]  # Invalidate pixels 0 to be black
 
         if mono_frame is not None and colorized_disp.ndim == 2 and mono_frame.ndim == 3:
             colorized_disp = colorized_disp[..., np.newaxis]
