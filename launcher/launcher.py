@@ -14,6 +14,8 @@ from packaging import version
 # PyQt5
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from choose_app_dialog import ChooseAppDialog
+
 # Constants
 SCRIPT_DIRECTORY=Path(os.path.abspath(os.path.dirname(__file__)))
 DEPTHAI_DEMO_SCRIPT='depthai_demo.py'
@@ -69,11 +71,11 @@ qApp.setWindowIcon(QtGui.QIcon(str(SCRIPT_DIRECTORY/'splash2.png')))
 # Create splash screen
 splashScreen = SplashScreen(str(SCRIPT_DIRECTORY/'splash2.png'))
 
-def closeSplash():
-    splashScreen.hide()
 
 class Worker(QtCore.QThread):
     signalUpdateQuestion = QtCore.pyqtSignal(str, str)
+    signalChooseApp = QtCore.pyqtSignal()
+    signalCloseSplash = QtCore.pyqtSignal()
     sigInfo = QtCore.pyqtSignal(str, str)
     sigCritical = QtCore.pyqtSignal(str, str)
     sigWarning = QtCore.pyqtSignal(str, str)
@@ -89,6 +91,22 @@ class Worker(QtCore.QThread):
         else:
             self.shouldUpdate = False
             return False
+        
+    @QtCore.pyqtSlot()
+    def chooseApp(self) -> None:
+        """
+        Until Depthai Viewer is in beta, allow the user to choose between running the demo or the viewer.
+        """
+        # If the dialog is rejected, the user has clicked exit - so we exit
+        dialog = ChooseAppDialog(splashScreen)
+        if dialog.exec_() == QtWidgets.QDialog.Accepted:
+            self.viewerChosen = dialog.viewerChosen
+        else:
+            raise RuntimeError("User cancelled app choice dialog")
+        
+    @QtCore.pyqtSlot()
+    def closeSplash(self):
+        splashScreen.close()
 
     @QtCore.pyqtSlot(str,str)
     def showInformation(self, title, message):
@@ -105,6 +123,8 @@ class Worker(QtCore.QThread):
     def __init__(self, parent = None):
         QtCore.QThread.__init__(self, parent)
         self.signalUpdateQuestion[str, str].connect(self.updateQuestion, QtCore.Qt.BlockingQueuedConnection)
+        self.signalChooseApp.connect(self.chooseApp, QtCore.Qt.BlockingQueuedConnection)
+        self.signalCloseSplash.connect(self.closeSplash, QtCore.Qt.BlockingQueuedConnection)
         self.sigInfo[str, str].connect(self.showInformation, QtCore.Qt.BlockingQueuedConnection)
         self.sigCritical[str, str].connect(self.showCritical, QtCore.Qt.BlockingQueuedConnection)
         self.sigWarning[str, str].connect(self.showWarning, QtCore.Qt.BlockingQueuedConnection)
@@ -306,58 +326,110 @@ class Worker(QtCore.QThread):
                 self.sigWarning.emit(title, message)
 
             try:
+                self.signalChooseApp.emit()
                 # Set to quit splash screen a little after subprocess is ran
                 skipSplashQuitFirstTime = False
                 def removeSplash():
                     time.sleep(2.5)
                     if not skipSplashQuitFirstTime:
-                        closeSplash()
+                        self.signalCloseSplash.emit()
                 quitThread = threading.Thread(target=removeSplash)
                 quitThread.start()
-
-                # All ready, run the depthai_demo.py as a separate process
-                ret = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
-
-                # Print out stderr first
-                sys.stderr.write(ret.stderr.decode())
-
-                print(f'DepthAI Demo ret code: {ret.returncode}')
-                # Install dependencies if demo signaled missing dependencies
-                if ret.returncode == 42:
-                    skipSplashQuitFirstTime = True
-                    print(f'Dependency issue raised. Retrying by installing requirements and restarting demo.')
-
-                    # present message of installing dependencies
-                    splashScreen.updateSplashMessage('Installing DepthAI Requirements ...')
-                    splashScreen.enableHeartbeat(True)
-
-                    # Install requirements for depthai_demo.py
-                    MAX_RETRY_COUNT = 3
-                    installReqCall = None
-                    for retry in range(0, MAX_RETRY_COUNT):
-                        installReqCall = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
-                        if installReqCall.returncode == 0:
-                            break
-                    if installReqCall.returncode != 0:
-                        # Some error happened. Notify user
-                        title = 'Error Installing DepthAI Requirements'
-                        message = f"Couldn't install DepthAI requirements. Check internet connection and try again. Log available at: {LOG_FILE_PATH}"
-                        print(f'Message Box ({title}): {message}')
-                        print(f'Install dependencies call failed with return code: {installReqCall.returncode}, message: {installReqCall.stderr.decode()}')
-                        self.sigCritical.emit(title, message)
-                        raise Exception(title)
-
-                    # Remove message and animation
+                if self.viewerChosen:
+                    print("Depthai Viewer chosen, checking if depthai-viewer is installed.")
+                    # Check if depthai-viewer is installed
+                    is_viewer_installed_cmd = [sys.executable, "-m", "pip", "show", "depthai-viewer"]
+                    viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    if viewer_available_ret.returncode != 0:
+                        splashScreen.updateSplashMessage('Installing Depthai Viewer ...')
+                        splashScreen.enableHeartbeat(True)
+                        print("Depthai Viewer not installed, installing...")
+                        # Depthai Viewer isn't installed, install it
+                        # First upgrade pip
+                        subprocess.run([sys.executable, "-m", "pip", "install", "-U", "pip"], check=True)
+                        # Install depthai-viewer - Don't check, it can error out because of dependency conflicts but still install successfully
+                        subprocess.run([sys.executable, "-m", "pip", "install", "depthai-viewer"]) 
+                        # Check again if depthai-viewer is installed
+                        viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        if viewer_available_ret.returncode != 0:
+                            raise RuntimeError("Depthai Viewer failed to install.")
                     splashScreen.updateSplashMessage('')
                     splashScreen.enableHeartbeat(False)
 
-                    quitThread.join()
-                    skipSplashQuitFirstTime = False
-                    quitThread = threading.Thread(target=removeSplash)
-                    quitThread.start()
+                    viewer_version = version.parse(viewer_available_ret.stdout.decode().splitlines()[1].split(" ")[1].strip())
+                    print(f"Installed Depthai Viewer version: {viewer_version}")
+                    # Get latest depthai-viewer version
+                    latest_ret = subprocess.run([sys.executable, "-m", "pip", "index", "versions", "depthai-viewer"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    if latest_ret.returncode != 0:
+                        raise RuntimeError("Couldn't get latest depthai-viewer version.")
+                    latest_viewer_version = version.parse(latest_ret.stdout.decode().split("LATEST:")[1].strip())
+                    print(f"Latest Depthai Viewer version: {latest_viewer_version}")
+                    if latest_viewer_version > viewer_version:
+                        # Update is available, ask user if they want to update
+                        title = 'DepthAI Viewer update available'
+                        message = f'Version {str(latest_viewer_version)} of depthai-viewer is available, current version {str(viewer_version)}. Would you like to update?'
+                        self.signalUpdateQuestion.emit(title, message)
+                        if self.shouldUpdate:
+                            splashScreen.updateSplashMessage(f'Updating Depthai Viewer to version {latest_viewer_version} ...')
+                            splashScreen.enableHeartbeat(True)
+                            # Update depthai-viewer
+                            subprocess.run([sys.executable, "-m", "pip", "install", "-U", "depthai-viewer"])
+                            # Test again to see if viewer is installed and updated
+                            viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                            if viewer_available_ret.returncode != 0:
+                                raise RuntimeError(f"Installing version {latest_viewer_version} failed.")
+                            viewer_version = version.parse(viewer_available_ret.stdout.decode().splitlines()[1].split(" ")[1].strip())
+                            if latest_viewer_version > viewer_version:
+                                raise RuntimeError("Depthai Viewer failed to update.")
+                            splashScreen.updateSplashMessage('')
+                            splashScreen.enableHeartbeat(False)
 
+                    # All ready, run the depthai-viewer as a seperate process
+                    ret = subprocess.run([sys.executable, "-m", "depthai_viewer"])
+                else:    
                     # All ready, run the depthai_demo.py as a separate process
-                    subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository)
+                    ret = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+
+                    # Print out stderr first
+                    sys.stderr.write(ret.stderr.decode())
+
+                    print(f'DepthAI Demo ret code: {ret.returncode}')
+                    # Install dependencies if demo signaled missing dependencies
+                    if ret.returncode == 42:
+                        skipSplashQuitFirstTime = True
+                        print(f'Dependency issue raised. Retrying by installing requirements and restarting demo.')
+
+                        # present message of installing dependencies
+                        splashScreen.updateSplashMessage('Installing DepthAI Requirements ...')
+                        splashScreen.enableHeartbeat(True)
+
+                        # Install requirements for depthai_demo.py
+                        MAX_RETRY_COUNT = 3
+                        installReqCall = None
+                        for retry in range(0, MAX_RETRY_COUNT):
+                            installReqCall = subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_INSTALL_REQUIREMENTS_SCRIPT}'], cwd=pathToDepthaiRepository, stderr=subprocess.PIPE)
+                            if installReqCall.returncode == 0:
+                                break
+                        if installReqCall.returncode != 0:
+                            # Some error happened. Notify user
+                            title = 'Error Installing DepthAI Requirements'
+                            message = f"Couldn't install DepthAI requirements. Check internet connection and try again. Log available at: {LOG_FILE_PATH}"
+                            print(f'Message Box ({title}): {message}')
+                            print(f'Install dependencies call failed with return code: {installReqCall.returncode}, message: {installReqCall.stderr.decode()}')
+                            self.sigCritical.emit(title, message)
+                            raise Exception(title)
+
+                        # Remove message and animation
+                        splashScreen.updateSplashMessage('')
+                        splashScreen.enableHeartbeat(False)
+
+                        quitThread.join()
+                        skipSplashQuitFirstTime = False
+                        quitThread = threading.Thread(target=removeSplash)
+                        quitThread.start()
+
+                        # All ready, run the depthai_demo.py as a separate process
+                        subprocess.run([sys.executable, f'{pathToDepthaiRepository}/{DEPTHAI_DEMO_SCRIPT}'], cwd=pathToDepthaiRepository)
             except:
                 pass
             finally:
@@ -368,8 +440,7 @@ class Worker(QtCore.QThread):
             print(f'Unknown error occured ({ex}), exiting...')
         finally:
             # At the end quit anyway
-            closeSplash()
-            splashScreen.close()
+            self.signalCloseSplash.emit()
             qApp.exit()
 
 qApp.worker = Worker()
