@@ -1,3 +1,11 @@
+import logging
+import subprocess
+import sys
+
+import depthai_viewer as viewer
+import numpy as np
+from depthai_viewer.components.rect2d import RectFormat
+
 from depthai_sdk.classes.packets import FramePacket, IMUPacket, PointcloudPacket
 from depthai_sdk.visualize.objects import (
     VisBoundingBox,
@@ -7,28 +15,22 @@ from depthai_sdk.visualize.objects import (
     VisMask,
     VisText,
     VisTrail,
-    )
+)
 from depthai_sdk.visualize.visualizer import Visualizer
-from typing import Tuple, List, Union, Optional, Sequence
-import numpy as np
-import subprocess
-import logging
-import sys
-import depthai as dai
-import depthai_viewer as viewer
-from depthai_viewer.components.rect2d import RectFormat
 
 
 class DepthaiViewerVisualizer(Visualizer):
     """
     Visualizer for Depthai Viewer (https://github.com/luxonis/depthai-viewer)
     """
+
     def __init__(self, scale, fps):
         super().__init__(scale, fps)
 
         try:
             # timeout is optional, but it might be good to prevent the script from hanging if the module is large.
-            process = subprocess.Popen([sys.executable, "-m", "depthai_viewer"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process = subprocess.Popen([sys.executable, "-m", "depthai_viewer"], stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE)
             stdout, stderr = process.communicate(timeout=3)
 
             if process.returncode != 0:
@@ -37,7 +39,8 @@ class DepthaiViewerVisualizer(Visualizer):
                     # Already running
                     pass
                 elif 'No module named depthai_viewer' in err_msg:
-                    raise Exception((f"DepthAI Viewer is not installed. Please run '{sys.executable} -m pip install depthai_viewer' to install it."))
+                    raise Exception(f"DepthAI Viewer is not installed. "
+                                    f"Please run '{sys.executable} -m pip install depthai_viewer' to install it.")
                 else:
                     logging.exception(f"Error occurred while trying to run depthai_viewer: {err_msg}")
             else:

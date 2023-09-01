@@ -1,14 +1,17 @@
 import logging
+import math
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Tuple, List, Union, Optional, Sequence
 from types import SimpleNamespace
+from typing import Tuple, List, Union
+
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
+
 
 def spatials_text(spatials: dai.Point3f):
     return SimpleNamespace(
@@ -92,6 +95,7 @@ class GenericObject(ABC):
             List of children.
         """
         return self._children
+
 
 class VisImage(GenericObject):
     def __init__(self, image: np.ndarray, frame_shape: Tuple[int, ...]):
@@ -229,8 +233,7 @@ class VisDetections(GenericObject):
             # Get normalized bounding box
             normalized_bbox = self.normalizer.get_relative_bbox(BoundingBox(detection))
             if len(self.frame_shape) < 2:
-                logging.debug('Visualizer: skipping detection because frame shape is invalid: {}'
-                              .format(self.frame_shape))
+                logging.debug(f'Visualizer: skipping detection because frame shape is invalid: {self.frame_shape}')
                 return self
 
             # TODO can normalize accept frame shape?

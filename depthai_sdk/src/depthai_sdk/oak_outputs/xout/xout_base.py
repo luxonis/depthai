@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from datetime import timedelta
-from depthai_sdk.classes.packets import FramePacket
 from typing import List, Optional, Callable
+
 import depthai as dai
+
+from depthai_sdk.classes.packets import FramePacket
 
 
 class StreamXout:
@@ -24,10 +25,6 @@ class XoutBase(ABC):
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
         self._packet_name = None
-
-        # self._fps_counter = dict()
-        # for name in self._streams:
-        #     self._fps_counter[name] = FPS()
 
         # It will get assigned later inside the BasePacketHandler class
         self.new_packet_callback: Callable = lambda x: None

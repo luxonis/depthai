@@ -2,8 +2,8 @@ from typing import List
 
 import depthai as dai
 
-from depthai_sdk.components.component import Component, XoutBase
-from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
+from depthai_sdk.components.component import Component
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
 from depthai_sdk.oak_outputs.xout.xout_imu import XoutIMU
 
 
@@ -16,6 +16,8 @@ class IMUComponent(Component):
         super().__init__()
         self.node = pipeline.createIMU()
         self.config_imu()  # Default settings, component won't work without them
+
+        self.fps = 100
 
     def config_imu(self,
                    sensors: List[dai.IMUSensor] = None,

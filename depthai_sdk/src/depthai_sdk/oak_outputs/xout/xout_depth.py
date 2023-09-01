@@ -1,13 +1,12 @@
 from typing import Optional, Dict
 
 import depthai as dai
-import numpy as np
 
 from depthai_sdk.classes.packets import DisparityDepthPacket
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_disparity import XoutDisparity
 from depthai_sdk.visualize.configs import StereoColor
-import time
+
 
 class XoutDisparityDepth(XoutDisparity):
     def __init__(self,

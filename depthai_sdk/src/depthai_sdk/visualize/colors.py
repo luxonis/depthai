@@ -1,7 +1,7 @@
-import numpy as np
-import math
 import colorsys
+import math
 from typing import Tuple
+
 
 def generate_colors(number_of_colors: int, pastel=0.5):
     colors = []
@@ -25,12 +25,13 @@ def generate_colors(number_of_colors: int, pastel=0.5):
     # Return only the first `number_of_colors` colors
     return colors[:number_of_colors]
 
-def get_text_color(background_color: Tuple[int,int,int], threshold=0.6):
+
+def get_text_color(background_color: Tuple[int, int, int], threshold=0.6):
     """
     Determines whether black or white text will be more legible against a given background color.
 
     Args:
-        background_color_bgr: The BGR color that the text will be displayed on.
+        background_color: The BGR color that the text will be displayed on.
         threshold: Float between 0 and 1. A threshold closer to 1 results in the function choosing white text more often.
 
     Returns:
@@ -41,6 +42,7 @@ def get_text_color(background_color: Tuple[int,int,int], threshold=0.6):
         return (0, 0, 0)  # BGR for black
     else:
         return (255, 255, 255)  # BGR for white
+
 
 def hex_to_bgr(hex: str) -> Tuple[int, ...]:
     """

@@ -1,9 +1,10 @@
-import logging
+import os
 import os
 import time
 from threading import Thread
 from time import monotonic
-from typing import List, Dict, Tuple, Optional, Callable
+from typing import Callable
+
 import depthai as dai
 
 from depthai_sdk.classes.enum import ResizeMode
@@ -15,12 +16,14 @@ _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.webm']
 _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '.pbm', '.pgm', '.ppm', '.pxm',
              '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
 
+
 def _run(delay: float, sendFrames: Callable):
     while True:
         if not sendFrames():
             break
         time.sleep(delay)
     logging.info('Replay `run` thread stopped')
+
 
 class ReplayStream:
     @property
@@ -32,11 +35,11 @@ class ReplayStream:
         self.queue: dai.DataInputQueue = None
         self.disabled = False
         self.stream_name = ''
-        self.camera_socket: dai.CameraBoardSocket = None # Forced socket
+        self.camera_socket: dai.CameraBoardSocket = None  # Forced socket
 
         self.resize: Tuple[int, int] = None
         self.resize_mode: ResizeMode = None
-        self._shape: Tuple[int,int] = None
+        self._shape: Tuple[int, int] = None
         self.callbacks: List[Callable] = []
 
         self.frame: np.ndarray  # Last read frame from Reader (ndarray)
@@ -56,7 +59,7 @@ class ReplayStream:
 
 
 class Replay:
-    def __init__(self, path: Union[Path,str]):
+    def __init__(self, path: Union[Path, str]):
         """
         Helper file to replay recorded depthai stream. It reads from recorded files (mjpeg/avi/mp4/h265/h264/bag)
         and sends frames back to OAK camera to replay the scene, including depth reconstruction from 2 synced mono
@@ -302,7 +305,7 @@ class Replay:
         """
         Start sending frames to the OAK device on a new thread
         """
-        self.thread = Thread(target=_run, args=(1.0 / self.fps, self.sendFrames, ))
+        self.thread = Thread(target=_run, args=(1.0 / self.fps, self.sendFrames,))
         self.thread.start()
 
     def sendFrames(self) -> bool:

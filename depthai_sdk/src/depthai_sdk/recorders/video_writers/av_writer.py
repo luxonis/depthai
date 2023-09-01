@@ -1,4 +1,3 @@
-from datetime import timedelta
 import os
 from fractions import Fraction
 from pathlib import Path
@@ -63,7 +62,7 @@ class AvWriter(BaseWriter):
         self._stream = None
         self._file = None
         self.closed = False
-        self._codec = None # Used to determine dimensions of encoded frames
+        self._codec = None  # Used to determine dimensions of encoded frames
         self._frame_buffer: List[dai.ImgFrame] = []
 
     def _create_stream(self, shape: Tuple) -> None:
@@ -91,7 +90,7 @@ class AvWriter(BaseWriter):
         frames = self._codec.decode(enc_packets[-1])
         if not frames:
             return None
-        return (frames[0].width, frames[0].height)
+        return frames[0].width, frames[0].height
 
     def create_file_for_buffer(self, subfolder: str, buf_name: str) -> None:  # independent of type of frames
         self.create_file(subfolder)
@@ -137,7 +136,7 @@ class AvWriter(BaseWriter):
             self.start_ts = frame.getTimestampDevice()
 
         ts = int((frame.getTimestampDevice() - self.start_ts).total_seconds() * 1e6)  # To microsec
-        packet.dts = ts + 1 # +1 to avoid zero dts
+        packet.dts = ts + 1  # +1 to avoid zero dts
         packet.pts = ts + 1
         packet.stream = self._stream
         self._file.mux_one(packet)  # Mux the Packet into container
@@ -197,7 +196,7 @@ class AvWriter(BaseWriter):
         with av.open(mp4_file, "w", format="mp4") as output_container, \
                 av.open(input_file, "r", format=self._fourcc) as input_container:
             input_stream = input_container.streams[0]
-            fps =  input_stream.average_rate
+            fps = input_stream.average_rate
             output_stream = output_container.add_stream(template=input_stream, rate=fps)
 
             output_stream.width = input_stream.width

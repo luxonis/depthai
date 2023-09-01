@@ -8,10 +8,11 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import List, Tuple, Any, Union, Optional
 
-import numpy as np
 import depthai as dai
+import numpy as np
 
 from depthai_sdk.visualize.bbox import BoundingBox
+
 
 @dataclass
 class Detection:
@@ -27,22 +28,27 @@ class Detection:
     @property
     def top_left(self) -> Tuple[float, float]:
         return self.bbox.top_left()
+
     @property
     def bottom_right(self) -> Tuple[float, float]:
         return self.bbox.bottom_right()
+
+
 @dataclass
 class TrackingDetection(Detection):
     tracklet: dai.Tracklet
     filtered_2d: BoundingBox
     filtered_3d: dai.Point3f
-    speed: Union[float, None] # m/s
+    speed: Union[float, None]  # m/s
 
     @property
     def speed_kmph(self) -> float:
         return self.speed * 3.6
+
     @property
     def speed_mph(self) -> float:
         return self.speed * 2.236936
+
 
 @dataclass
 class TwoStageDetection(Detection):
@@ -53,6 +59,7 @@ class GenericNNOutput:
     """
     Generic NN output, to be used for higher-level abstractions (eg. automatic visualization of results).
     """
+
     def __init__(self, nn_data: Union[dai.NNData, dai.ImgDetections, dai.SpatialImgDetections]):
         self.nn_data = nn_data
 
@@ -75,6 +82,7 @@ class Detections(GenericNNOutput):
     """
     Detection results containing bounding boxes, labels and confidences. Optionally can contain rotation angles.
     """
+
     def __init__(self,
                  nn_data: Union[dai.NNData, dai.ImgDetections, dai.SpatialImgDetections],
                  is_rotated: bool = False):
@@ -129,4 +137,3 @@ class InstanceSegmentation(GenericNNOutput):
 
     def __init__(self, nn_data: dai.NNData, masks: List[np.ndarray], labels: List[int]):
         raise NotImplementedError('Instance segmentation not yet implemented')
-        super().__init__(nn_data)

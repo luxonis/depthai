@@ -1,22 +1,24 @@
+import logging
 import os
 from abc import abstractmethod
-from typing import Optional, Callable, List, Union, Dict
 from queue import Queue, Empty
+from typing import Optional, Callable, List, Union, Dict
 
-from depthai_sdk.classes.packets import BasePacket, FramePacket
-from depthai_sdk.oak_outputs.syncing import SequenceNumSync, TimestampSync
-from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
+import depthai as dai
+
+from depthai_sdk.classes.packets import BasePacket
 from depthai_sdk.components.component import Component
+from depthai_sdk.oak_outputs.fps import FPS
+from depthai_sdk.oak_outputs.syncing import TimestampSync
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.record import Record
-from depthai_sdk.recorders.video_recorder import VideoRecorder
 from depthai_sdk.trigger_action.actions.abstract_action import Action
 from depthai_sdk.trigger_action.actions.record_action import RecordAction
 from depthai_sdk.trigger_action.trigger_action import TriggerAction
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
-from depthai_sdk.oak_outputs.fps import FPS
-import depthai as dai
-import logging
+
 
 class BasePacketHandler:
     def __init__(self, main_thread=False):
@@ -44,14 +46,14 @@ class BasePacketHandler:
         self.fps.next_iter()
         if self.queue:
             if self.queue.full():
-                self.queue.get() # Remove oldest packet
+                self.queue.get()  # Remove oldest packet
             self.queue.put(packet)
         else:
             self.new_packet(packet)
 
     def configure_syncing(self,
-                        enable_sync: bool = True,
-                        threshold_ms: int = 17):
+                          enable_sync: bool = True,
+                          threshold_ms: int = 17):
         """
         If multiple outputs are used, then PacketHandler can do timestamp syncing of multiple packets
         before calling new_packet().
@@ -97,7 +99,8 @@ class BasePacketHandler:
 
         self.outputs = output
 
-    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase, xout_streams: Dict, custom_callback: Callable = None):
+    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase, xout_streams: Dict,
+                     custom_callback: Callable = None):
         # Assign which callback to call when packet is prepared
         xout.new_packet_callback = custom_callback or self._new_packet_callback
 
@@ -122,7 +125,8 @@ class VisualizePacketHandler(BasePacketHandler):
         self._save_outputs(outputs)
 
         if 1 < len(self.outputs) and record_path is not None:
-            raise Exception('Recording multiple streams is not supported! Call oak.visualize(out, record_path="vid.mp4") for each stream separately')
+            raise Exception('Recording multiple streams is not supported! '
+                            'Call oak.visualize(out, record_path="vid.mp4") for each stream separately')
 
         self.callback = callback  # Callback that gets called after syncing
         self.visualizer = visualizer
@@ -162,7 +166,7 @@ class RecordPacketHandler(BasePacketHandler):
         super().__init__()
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
-        xouts: List[XoutBase] = []
+        xouts: List[XoutFrames] = []
         for output in self.outputs:
             xout = output(pipeline, device)
             xouts.append(xout)
@@ -175,6 +179,7 @@ class RecordPacketHandler(BasePacketHandler):
 
     def close(self):
         self.recorder.close()
+
 
 class CallbackPacketHandler(BasePacketHandler):
     def __init__(self, outputs, callback: Callable, main_thread=False):
@@ -189,6 +194,7 @@ class CallbackPacketHandler(BasePacketHandler):
 
     def new_packet(self, packet):
         self.callback(packet)
+
 
 class QueuePacketHandler(BasePacketHandler):
     def __init__(self, outputs, max_size: int):
@@ -205,8 +211,8 @@ class QueuePacketHandler(BasePacketHandler):
             self._create_xout(pipeline, xout, xout_streams)
 
     def configure_syncing(self,
-                        enable_sync: bool = True,
-                        threshold_ms: int = 17) -> 'QueuePacketHandler':
+                          enable_sync: bool = True,
+                          threshold_ms: int = 17) -> 'QueuePacketHandler':
         """
         If multiple outputs are used, then PacketHandler can do timestamp syncing of multiple packets
         before calling new_packet().
@@ -224,6 +230,7 @@ class QueuePacketHandler(BasePacketHandler):
 
 class RosPacketHandler(BasePacketHandler):
     def __init__(self, outputs):
+        super().__init__()
         self._save_outputs(outputs)
 
         envs = os.environ

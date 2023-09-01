@@ -1,19 +1,17 @@
 import math
-import depthai as dai
 from typing import List, Tuple, Dict, Any, Optional, Union
-import numpy as np
-import cv2
 
+import depthai as dai
 
-monoResolutions: Dict[dai.MonoCameraProperties.SensorResolution, Tuple[int,int]] = {
-    dai.MonoCameraProperties.SensorResolution.THE_1200_P: (1920, 1200), # Monochrome AR0234
-    dai.MonoCameraProperties.SensorResolution.THE_800_P: (1280, 800), # OV9282
+monoResolutions: Dict[dai.MonoCameraProperties.SensorResolution, Tuple[int, int]] = {
+    dai.MonoCameraProperties.SensorResolution.THE_1200_P: (1920, 1200),  # Monochrome AR0234
+    dai.MonoCameraProperties.SensorResolution.THE_800_P: (1280, 800),  # OV9282
     dai.MonoCameraProperties.SensorResolution.THE_720_P: (1280, 720),
-    dai.MonoCameraProperties.SensorResolution.THE_480_P: (640, 480), # OV7251
+    dai.MonoCameraProperties.SensorResolution.THE_480_P: (640, 480),  # OV7251
     dai.MonoCameraProperties.SensorResolution.THE_400_P: (640, 400),
 }
 
-colorResolutions: Dict[dai.ColorCameraProperties.SensorResolution, Tuple[int,int]] = {
+colorResolutions: Dict[dai.ColorCameraProperties.SensorResolution, Tuple[int, int]] = {
     dai.ColorCameraProperties.SensorResolution.THE_5312X6000: (5312, 6000),  # IMX582 cropped
     dai.ColorCameraProperties.SensorResolution.THE_13_MP: (4208, 3120),  # AR214
     dai.ColorCameraProperties.SensorResolution.THE_12_MP: (4056, 3040),  # IMX378, IMX477, IMX577
@@ -27,9 +25,10 @@ colorResolutions: Dict[dai.ColorCameraProperties.SensorResolution, Tuple[int,int
     dai.ColorCameraProperties.SensorResolution.THE_720_P: (1280, 720),
 }
 
-sensorResolutions: Dict[Any, Tuple[int,int]] = []
+sensorResolutions: Dict[Any, Tuple[int, int]] = []
 sensorResolutions.extend(monoResolutions)
 sensorResolutions.extend(colorResolutions)
+
 
 def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
     """
@@ -47,7 +46,8 @@ def availableIspScales() -> List[Tuple[int, Tuple[int, int]]]:
     lst.sort(reverse=True)
     return lst
 
-def getClosestVideoSize(width: int, height: int, videoEncoder: bool=False) -> Tuple[int, int]:
+
+def getClosestVideoSize(width: int, height: int, videoEncoder: bool = False) -> Tuple[int, int]:
     """
     For colorCamera.video output
     """
@@ -163,7 +163,8 @@ def setCameraControl(control: dai.CameraControl,
     # TODO: Add contrast, exposure compensation, brightness, manual exposure, and saturation
 
 
-def get_max_resolution(node: dai.node, sensor: dai.CameraFeatures) -> Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
+def get_max_resolution(node: dai.node, sensor: dai.CameraFeatures) -> Union[
+    dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution]:
     max_res = None
     max_num = 0
     for conf in sensor.configs:
@@ -177,11 +178,13 @@ def get_max_resolution(node: dai.node, sensor: dai.CameraFeatures) -> Union[dai.
             max_res = res
     return max_res
 
-def get_sensor_resolution(type: dai.CameraSensorType, width: int, height: int) -> Tuple[Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution], Tuple[int,int]]:
-    def get_res(resolutions: Dict[Any, Tuple[int,int]]):
+
+def get_sensor_resolution(type: dai.CameraSensorType, width: int, height: int) -> Tuple[
+    Union[dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution], Tuple[int, int]]:
+    def get_res(resolutions: Dict[Any, Tuple[int, int]]):
         for res, (w, h) in resolutions.items():
             if width == w and height == h:
-                return (res, (w,h))
+                return (res, (w, h))
 
     if type == dai.CameraSensorType.COLOR:
         return get_res(colorResolutions)
@@ -190,17 +193,19 @@ def get_sensor_resolution(type: dai.CameraSensorType, width: int, height: int) -
     else:
         raise Exception('Camera sensor type unknown!', type)
 
+
 def get_resolution_size(
         resolution: Union[
             dai.ColorCameraProperties.SensorResolution,
             dai.MonoCameraProperties.SensorResolution
-            ]) -> Tuple[int,int]:
+        ]) -> Tuple[int, int]:
     if resolution in colorResolutions:
         return colorResolutions[resolution]
     elif resolution in monoResolutions:
         return monoResolutions[resolution]
     else:
         raise Exception('Camera sensor resolution unknown!', resolution)
+
 
 def getClosesResolution(sensor: dai.CameraFeatures,
                         type: dai.CameraSensorType,
@@ -226,8 +231,8 @@ def getClosesResolution(sensor: dai.CameraFeatures,
 
 
 def getResize(size: Tuple[int, int],
-                    width: Optional[int] = None,
-                    height: Optional[int] = None) -> Tuple[int, int]:
+              width: Optional[int] = None,
+              height: Optional[int] = None) -> Tuple[int, int]:
     if width and height:
         raise ValueError("You have to specify EITHER width OR height to calculate desired ISP scaling options!")
     if width is None and height is None:

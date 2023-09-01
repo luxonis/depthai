@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List
+from typing import List, Union, Dict
 
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
@@ -19,7 +19,7 @@ class XoutSeqSync(XoutBase, SequenceNumSync):
         self.msgs = dict()
 
     @abstractmethod
-    def package(self, msgs: List):
+    def package(self, msgs: Union[List, Dict]):
         raise NotImplementedError('XoutSeqSync is an abstract class, you need to override package() method!')
 
     def new_msg(self, name: str, msg):

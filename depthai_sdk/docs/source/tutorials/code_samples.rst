@@ -47,8 +47,7 @@ are presented with code.
 .. rubric:: NN
 - :ref:`Age-Gender Inference` - Demonstrates age-gender inference
 - :ref:`Custom Decode Function` - Demonstrates custom decoding function
-- :ref:`Deeplabv3 Person Segmentation` - Demonstrates Deeplabv3 person segmentation 
-- :ref:`Emotion Recognition` - Demonstrates emotion recognition 
+- :ref:`Emotion Recognition` - Demonstrates emotion recognition
 - :ref:`Face Detection RGB` - Run face detection on RGB camera
 - :ref:`Face Detection Mono` - Run face detection on mono camera
 - :ref:`Human Pose Estimation` - Run human pose estimation inference

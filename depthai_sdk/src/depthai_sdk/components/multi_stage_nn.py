@@ -2,9 +2,10 @@ import os
 from pathlib import Path
 from string import Template
 from typing import Tuple, Optional, List
-from depthai_sdk.classes.enum import ResizeMode
+
 import depthai as dai
 
+from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.types import GenericNeuralNetwork
 
 
@@ -45,7 +46,7 @@ class MultiStageNN:
                 self.init = f"xmin = 0; ymin = {-cropping}; xmax = 1; ymax = {1 + cropping}"
             else:
                 self.init = f"xmin = {cropping}; ymin = 0; xmax = {1 - cropping}; ymax = 1"
-        else: # Stretch
+        else:  # Stretch
             self.init = f"xmin=0; ymin=0; xmax=1; ymax=1"
 
         self.script: dai.node.Script = pipeline.create(dai.node.Script)
@@ -55,7 +56,7 @@ class MultiStageNN:
         detection_node.out.link(self.script.inputs['detections'])
         high_res_frames.link(self.script.inputs['frames'])
 
-        self.configure() # User might later call this again with different parameters
+        self.configure()  # User might later call this again with different parameters
 
         self.manip: dai.node.ImageManip = pipeline.create(dai.node.ImageManip)
         self.manip.initialConfig.setResize(size)
@@ -66,13 +67,18 @@ class MultiStageNN:
         self.script.outputs['manip_img'].link(self.manip.inputImage)
         self.out: dai.Node.Output = self.manip.out
 
+        self.whitelist_labels: Optional[List[int]] = None
+        self.scale_bb: Optional[Tuple[int, int]] = None
+
     def configure(self,
                   debug: bool = False,
                   whitelist_labels: Optional[List[int]] = None,
                   scale_bb: Optional[Tuple[int, int]] = None) -> None:
         """
         Args:
-            config (MultiStageConfig, optional): Configuration object. Defaults to None.
+            debug (bool, optional): Enable debug mode. Defaults to False.
+            whitelist_labels (Optional[List[int]], optional): List of labels to keep. Defaults to None.
+            scale_bb (Optional[Tuple[int, int]], optional): Scale bounding box. Defaults to None.
         """
         # Used later for visualization
         self.whitelist_labels = whitelist_labels

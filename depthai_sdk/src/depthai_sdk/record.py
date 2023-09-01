@@ -4,13 +4,12 @@ from enum import IntEnum
 from pathlib import Path
 from queue import Queue
 from threading import Thread
-from typing import Dict, List
+from typing import List
 
 import depthai as dai
 
 from depthai_sdk.classes.packets import FramePacket, IMUPacket
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.recorders.abstract_recorder import Recorder
 
 
@@ -39,7 +38,8 @@ class RecordType(IntEnum):
     VIDEO_LOSSLESS = 2  # Save to lossless video file (.avi)
     ROSBAG = 3  # To ROS .bag
     MCAP = 4  # To .mcap
-    DB3 = 5 # To .db3 (ros2)
+    DB3 = 5  # To .db3 (ros2)
+
 
 class Record:
     """
@@ -115,9 +115,6 @@ class Record:
             logging.info(f"Recorder type is {self.record_type}, not MCAP! Config attempt ignored.")
             return
         self.recorder.set_pointcloud(pointcloud)
-
-    # def config_video(self, ):
-    # Nothing to configure for video recorder
 
     # TODO: implement config of BAG to either record depth as frame or pointcloud
     # def config_bag(self, pointcloud: bool):
