@@ -8,7 +8,7 @@ Packets are **synchronized collections** of one or more `DepthAI messages <https
 #. Used callback output via :meth:`OakCamera.callback(..., callback=fn, enable_visualizer=True) <depthai_sdk.OakCamera.callback>`.
 
 API Usage
-#####
+#########
 
 #. :meth:`OakCamera.visualize() <depthai_sdk.OakCamera.visualize>`: In the example below SDK won't show the frame to the user, but instead it will send the packet to the callback function. SDK will draw detections (bounding boxes, labels) on the ``packet.frame``.
 #. :meth:`OakCamera.callback() <depthai_sdk.OakCamera.callback>`: This will also send :class:`DetectionPacket <depthai_sdk.classes.packets.DetectionPacket>` to the callback function, the only difference is that the SDK won't draw on the frame, so you can draw detections on the frame yourself.

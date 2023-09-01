@@ -1,9 +1,9 @@
 import importlib
-from pathlib import Path
 import os
-from typing import Dict, Union, Optional, Tuple
+from pathlib import Path
+from typing import Dict, Union
+
 import requests
-import depthai as dai
 
 BLOBS_PATH = Path.home() / Path('.cache/blobs')
 

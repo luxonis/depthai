@@ -11,6 +11,7 @@ except ImportError:
 
 try:
     from turbojpeg import TurboJPEG, TJFLAG_FASTUPSAMPLE, TJFLAG_FASTDCT, TJPF_GRAY
+
     turbo = TurboJPEG()
 except:
     turbo = None

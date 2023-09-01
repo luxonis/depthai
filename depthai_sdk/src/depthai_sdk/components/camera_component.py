@@ -1,15 +1,15 @@
 import logging
-from multiprocessing import Value
 from typing import Dict
 
 from depthai_sdk.classes.enum import ResizeMode
+from depthai_sdk.components.camera_control import CameraControl
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component, ComponentOutput
-from depthai_sdk.components.parser import parse_resolution, parse_encode, parse_camera_socket, encoder_profile_to_fourcc
+from depthai_sdk.components.parser import parse_resolution, parse_encode, encoder_profile_to_fourcc
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.replay import Replay
-from depthai_sdk.components.camera_control import CameraControl
+from depthai_sdk.types import Resolution
 
 
 class CameraComponent(Component):
@@ -25,6 +25,7 @@ class CameraComponent(Component):
                  sensor_type: Optional[dai.CameraSensorType] = None,
                  rotation: Optional[int] = None,
                  replay: Optional[Replay] = None,
+                 name: Optional[str] = None,
                  args: Dict = None):
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
@@ -41,6 +42,7 @@ class CameraComponent(Component):
             sensor_type: To force color/mono/tof camera
             rotation (int, optional): Rotate the camera by 90, 180, 270 degrees
             replay (Replay object): Replay object to use for mocking the camera
+            name (str, optional): Name of the output stream
             args (Dict): Use user defined arguments when constructing the pipeline
         """
         super().__init__()
@@ -62,7 +64,10 @@ class CameraComponent(Component):
             self._source = self._source[len('CameraBoardSocket.'):]
 
         self._socket = source
+        self._replay: Optional[Replay] = replay
         self._args: Dict = args
+
+        self.name = name
 
         if rotation not in [None, 0, 90, 180, 270]:
             raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
@@ -140,13 +145,14 @@ class CameraComponent(Component):
                 targetWidthIsp = targetWidthRes
                 if self._args["defaultResolution"] == "min":
                     targetWidthRes = 0
-                    targetWidthIsp = 1300 # Still keep the same target for the ISP
+                    targetWidthIsp = 1300  # Still keep the same target for the ISP
                 elif self._args["defaultResolution"] == "max":
-                    targetWidthRes = 1000000 # Some big number
+                    targetWidthRes = 1000000  # Some big number
                     targetWidthIsp = targetWidthRes
                 res = getClosesResolution(sensor, sensor_type, width=targetWidthRes)
                 self.node.setResolution(res)
-                scale = getClosestIspScale(self.node.getIspSize(), width=targetWidthIsp, videoEncoder=(encode is not None))
+                scale = getClosestIspScale(self.node.getIspSize(), width=targetWidthIsp,
+                                           videoEncoder=(encode is not None))
                 self.node.setIspScale(*scale)
 
             curr_size = self.node.getVideoSize()
@@ -194,7 +200,6 @@ class CameraComponent(Component):
         if self._args:
             self._config_camera_args(self._args)
 
-
         # Runtime camera control
         self.control = CameraControl()
         self._control_xlink_in = None
@@ -202,7 +207,8 @@ class CameraComponent(Component):
             self._control_xlink_in = pipeline.create(dai.node.XLinkIn)
             self._control_xlink_in.setStreamName(f"{self.node.id}_inputControl")
             self._control_xlink_in.out.link(self.node.inputControl)
-            self._control_xlink_in.setMaxDataSize(1) # CameraControl message doesn't use any additional data (only metadata)
+            # CameraControl message doesn't use any additional data (only metadata)
+            self._control_xlink_in.setMaxDataSize(1)
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
@@ -220,23 +226,21 @@ class CameraComponent(Component):
         rot_manip.setMaxOutputFrameSize(w * h * 3)
         return rot_manip
 
-    # Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
     def config_camera(self,
                       # preview: Union[None, str, Tuple[int, int]] = None,
                       size: Union[None, Tuple[int, int], str] = None,
                       resize_mode: ResizeMode = ResizeMode.CROP,
                       fps: Optional[float] = None,
-                      resolution: Optional[Union[
-                          str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
-                      ]] = None
+                      resolution: Optional[Resolution] = None
                       ) -> None:
         """
         Configure resolution, scale, FPS, etc.
         """
-
-        # TODO
-        if fps: self.set_fps(fps)
-        if resolution: self._set_resolution(resolution)
+        # TODO: Should be mono/color camera agnostic. Also call this from __init__ if args is enabled
+        if fps:
+            self.set_fps(fps)
+        if resolution:
+            self._set_resolution(resolution)
 
         if size:
             from .parser import parse_size
@@ -252,7 +256,6 @@ class CameraComponent(Component):
                     raise ValueError("Currently only ResizeMode.CROP is supported mode for specifying size!")
             else:
                 # TODO: Use ImageManip to set mono frame size
-
                 raise NotImplementedError("Not yet implemented")
 
     def _config_camera_args(self, args: Dict):
@@ -291,17 +294,16 @@ class CameraComponent(Component):
         :param detection_component: NNComponent that will be used to control the camera
         :param auto_focus: Enable auto focus to the object
         :param auto_exposure: Enable auto exposure to the object
-        :param auto_white_balance: auto white balance to the object
         """
 
         if not auto_focus and not auto_exposure:
-            logging.error(
-                'Attempted to control camera with NN, but both Auto-Focus and Auto-Exposure were disabled! Attempt ignored.'
-            )
+            logging.error('Attempted to control camera with NN, '
+                          'but both Auto-Focus and Auto-Exposure were disabled! Attempt ignored.')
             return
+
         if 'NNComponent' not in str(type(detection_component)):
             raise ValueError('nn_component must be an instance of NNComponent!')
-        if not detection_component._is_detector():
+        if not detection_component.is_detector():
             raise ValueError('nn_component must be a object detection model (YOLO/MobileNetSSD based)!')
 
         from depthai_sdk.components.control_camera_with_nn import control_camera_with_nn
@@ -312,7 +314,7 @@ class CameraComponent(Component):
             nn_output=detection_component.node.out,
             resize_mode=detection_component._ar_resize_mode,
             resolution=self.node.getResolution(),
-            nn_size = detection_component._size,
+            nn_size=detection_component._size,
             af=auto_focus,
             ae=auto_exposure,
             debug=debug
@@ -335,16 +337,13 @@ class CameraComponent(Component):
                             chroma_denoise: Optional[int] = None,
                             ) -> None:
         if not self.is_color():
-            logging.info(
-                'Attempted to configure ColorCamera, but this component doesn\'t have it. Config attempt ignored.'
-            )
+            logging.info('Attempted to configure ColorCamera, '
+                         'but this component doesn\'t have it. Config attempt ignored.')
             return
 
         if self.is_replay():
             logging.info('Tried configuring ColorCamera, but replaying is enabled. Config attempt ignored.')
             return
-
-        self.node: dai.node.ColorCamera
 
         if interleaved is not None: self.node.setInterleaved(interleaved)
         if color_order:
@@ -441,17 +440,17 @@ class CameraComponent(Component):
 
     def get_stream_xout(self, fourcc: Optional[str] = None) -> StreamXout:
         if self.encoder is not None and fourcc is not None:
-            return StreamXout(self.encoder.bitstream, self._source + '_bitstream')
+            return StreamXout(self.encoder.bitstream, name=self.name or self._source + '_bitstream')
         elif self.is_replay():
-            return ReplayStream(self._source)
+            return ReplayStream(self.name or self._source)
         elif self.is_mono():
-            return StreamXout(self.stream, self._source + '_mono')
+            return StreamXout(self.stream, name=self.name or self._source + '_mono')
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(self._num_frames_pool)
             self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
-            return StreamXout(self.node.video, self._source + '_video')
+            return StreamXout(self.node.video, name=self.name or self._source + '_video')
 
     def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
         """
@@ -494,4 +493,3 @@ class CameraComponent(Component):
             self.encoded = self.EncodedOut(camera_component)
 
             self.main = self.replay if camera_component.is_replay() else self.camera
-

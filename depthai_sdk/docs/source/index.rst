@@ -39,6 +39,15 @@ ease of use when developing apps for OAK devices**.
 
    features/*
 
+
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+   :caption: Examples
+   
+   tutorials/code_samples.rst
+
+
 .. toctree::
     :maxdepth: 2
     :hidden:
@@ -46,3 +55,4 @@ ease of use when developing apps for OAK devices**.
     :caption: References
 
     api_reference.rst
+

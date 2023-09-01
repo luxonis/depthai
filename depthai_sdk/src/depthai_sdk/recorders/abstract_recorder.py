@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
+from enum import IntEnum
 from pathlib import Path
 from typing import List
+
 import depthai as dai
+
 import depthai_sdk.oak_outputs.xout as outputs
-from enum import IntEnum
 
 
 class Recorder(ABC):

@@ -1,6 +1,7 @@
 import threading
-from typing import Dict, List, Any, Optional
 from datetime import timedelta
+from typing import Dict, Any, Optional
+
 
 class SequenceNumSync:
     """
@@ -46,23 +47,20 @@ class SequenceNumSync:
 
                 return ret
 
-
         return None
+
 
 class TimestampSync:
     def __init__(self, stream_num: int, ms_threshold: int):
-        self.msgs: Dict[str, Dict[str, Any]] = dict()
+        self.msgs: Dict[str, Any] = dict()
         self.stream_num: int = stream_num
         self.ms_threshold = ms_threshold
 
     def sync(self, timestamp, name: str, msg):
-        if not name in self.msgs:
+        if name not in self.msgs:
             self.msgs[name] = []
 
         self.msgs[name].append((timestamp, msg))
-
-        # print(f'Stream {name} has a len of {len(self.msgs[name])}')
-        # print(f'Added {name} msg with ts {timestamp}')
 
         synced = {}
         for name, arr in self.msgs.items():
@@ -72,19 +70,16 @@ class TimestampSync:
             diffs = []
             for i, (msg_ts, msg) in enumerate(arr):
                 diffs.append(abs(msg_ts - timestamp))
-            if len(diffs) == 0: break
-            diffsSorted = diffs.copy()
-            diffsSorted.sort()
-            dif = diffsSorted[0]
-            # print(f'Min sync {name} with ts {dif}, target ts, location {diffs.index(dif)}')
+            if len(diffs) == 0:
+                break
+            diffs_sorted = diffs.copy()
+            diffs_sorted.sort()
+            dif = diffs_sorted[0]
 
             if dif < timedelta(milliseconds=self.ms_threshold):
-                # print(f'Found synced {name} with ts {msg_ts}, target ts {ts}, diff {dif}, location {diffs.index(dif)}')
-                # print(diffs)
                 synced[name] = diffs.index(dif)
 
-
-        if len(synced) == self.stream_num: # We have all synced streams
+        if len(synced) == self.stream_num:  # We have all synced streams
             # Remove older self.msgs
             for name, i in synced.items():
                 self.msgs[name] = self.msgs[name][i:]
@@ -94,4 +89,3 @@ class TimestampSync:
                 ret[name] = synced_msg
             return ret
         return None
-

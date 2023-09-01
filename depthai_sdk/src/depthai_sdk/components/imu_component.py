@@ -17,6 +17,7 @@ class IMUComponent(Component):
 
         self.imu_name: str = device.getConnectedIMU()
         self.node = pipeline.createIMU()
+        self.fps = 100
         self.config_imu()  # Default settings, component won't work without them
 
     def get_imu_name(self) -> str:

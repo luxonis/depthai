@@ -1,10 +1,7 @@
-import logging
-import warnings
-from typing import Optional, Union, Any, Dict, Tuple
+from typing import Optional, Union, Any
 
-import cv2
 import depthai as dai
-import numpy as np
+
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.stereo_component import StereoComponent
@@ -32,12 +29,11 @@ class PointcloudComponent(Component):
         self.out = self.Out(self)
 
         self.stereo_depth_node: dai.node.StereoDepth
-        self.depth: dai.Node.Output # Depth node output
+        self.depth: dai.Node.Output  # Depth node output
 
         self.colorize_comp: Optional[CameraComponent] = colorize
 
         self._replay: Optional[Replay] = replay
-
 
         # Depth aspect
         if stereo is None:
@@ -52,8 +48,8 @@ class PointcloudComponent(Component):
             config.postProcessing.spatialFilter.enable = True
             config.postProcessing.spatialFilter.holeFillingRadius = 2
             config.postProcessing.spatialFilter.numIterations = 1
-            config.postProcessing.thresholdFilter.minRange = 400 # 40cm
-            config.postProcessing.thresholdFilter.maxRange = 20000 # 20m
+            config.postProcessing.thresholdFilter.minRange = 400  # 40cm
+            config.postProcessing.thresholdFilter.maxRange = 20000  # 20m
             config.postProcessing.decimationFilter.decimationFactor = 2
             config.postProcessing.decimationFilter.decimationMode = dai.RawStereoDepthConfig.PostProcessing.DecimationFilter.DecimationMode.NON_ZERO_MEDIAN
             stereo.node.initialConfig.set(config)
@@ -72,15 +68,11 @@ class PointcloudComponent(Component):
             self.stereo_depth_node = stereo.getParent()
             self.depth = stereo
 
-
-    def config_postprocessing(self,
-                              ) -> None:
+    def config_postprocessing(self) -> None:
         """
         Configures postprocessing options.
-
-        Args:
         """
-        pass
+        raise NotImplementedError("config_postprocessing() not yet implemented")
 
     class Out:
         class PointcloudOut(ComponentOutput):
@@ -89,8 +81,8 @@ class PointcloudComponent(Component):
                 if self._comp.colorize_comp is not None:
                     colorize = StreamXout(self._comp.colorize_comp.stream, name="Color")
                 return XoutPointcloud(device,
-                        StreamXout(self._comp.depth),
-                        color_frames=colorize).set_comp_out(self)
+                                      StreamXout(self._comp.depth),
+                                      color_frames=colorize).set_comp_out(self)
 
         def __init__(self, component: 'PointcloudComponent'):
             self.pointcloud = self.PointcloudOut(component)

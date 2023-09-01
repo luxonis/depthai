@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from typing import List, Tuple, Dict, Any, Optional
+
 import depthai as dai
 
 try:
@@ -106,6 +107,7 @@ class VideoCapReader(AbstractReader):
     def getShape(self, name: str) -> Tuple[int, int]:
         shape = self.videos[name.lower()]['shape']
         return shape
+
     def get_socket(self, name: str) -> Optional[dai.CameraBoardSocket]:
         return self.videos[name.lower()]['socket']
 

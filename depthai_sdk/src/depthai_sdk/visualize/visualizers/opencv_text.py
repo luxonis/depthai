@@ -1,12 +1,15 @@
 from typing import Optional, Sequence, Tuple, Union
-from depthai_sdk.visualize.configs import VisConfig, TextPosition
-from depthai_sdk.visualize.bbox import BoundingBox
-from depthai_sdk.visualize.objects import VisText
+
 import cv2
 import numpy as np
 
+from depthai_sdk.visualize.bbox import BoundingBox
+from depthai_sdk.visualize.configs import VisConfig
+from depthai_sdk.visualize.objects import VisText
+
+
 class OpenCvTextVis:
-    def __init__(self,  text: VisText, config: VisConfig):
+    def __init__(self, text: VisText, config: VisConfig):
         self.text = text
         self.config = config
 

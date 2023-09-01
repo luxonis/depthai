@@ -1,19 +1,18 @@
 import json
-import os
 from dataclasses import replace
-from enum import Enum
 from typing import List, Tuple, Optional, Union, Any, Dict
 
 import depthai as dai
 import numpy as np
 from depthai import ImgDetection
-from depthai_sdk.fps import FPSHandler
 
+from depthai_sdk.fps import FPSHandler
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, TextPosition, BboxStyle, StereoColor
 from depthai_sdk.visualize.encoder import JSONEncoder
 from depthai_sdk.visualize.objects import VisDetections, GenericObject, VisText, VisTrail, VisCircle, VisLine, VisMask, \
     VisBoundingBox
+
 
 class VisualzierFps:
     def __init__(self):
@@ -25,6 +24,7 @@ class VisualzierFps:
 
         self.fps_list[name].nextIter()
         return self.fps_list[name].fps()
+
 
 class Visualizer:
     # Constants

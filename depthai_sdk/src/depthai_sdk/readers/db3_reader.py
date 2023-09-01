@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Generator, List, Dict, Tuple
+from typing import Generator, List, Dict, Tuple, Optional
 
 import cv2
 import numpy as np
@@ -34,8 +34,7 @@ class Db3Reader(AbstractReader):
                 if stream.lower() in con.topic.lower():
                     self.generators[stream.lower()] = self.reader.messages([con])
 
-
-    def read(self) -> Dict[str, np.ndarray]:
+    def read(self) -> Optional[Dict[str, np.ndarray]]:
         ros_msgs: Dict[str, np.ndarray] = dict()
 
         try:
@@ -76,7 +75,7 @@ class Db3Reader(AbstractReader):
 
     def getShape(self, name: str) -> Tuple[int, int]:
         frame = self.frames[name]
-        return (frame.shape[1], frame.shape[0])
+        return frame.shape[1], frame.shape[0]
 
     def get_message_size(self, name: str) -> int:
         size = 1

@@ -66,7 +66,7 @@ class VideoRecorder(Recorder):
         for _, writer in self._writers.items():
             writer.create_file_for_buffer(subfolder, buf_name)
 
-    def create_file_for_buffer(self, wr_name: str, subfolder: str, buf_name: str):  # get frames' properties for the file from buf_name
+    def create_file_for_buffer(self, wr_name: str, subfolder: str, buf_name: str):
         self._writers[wr_name].create_file_for_buffer(subfolder, buf_name)
 
     def create_file(self, wr_name: str, subfolder: str, frame: Union[np.ndarray, dai.ImgFrame]):
