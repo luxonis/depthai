@@ -10,7 +10,7 @@ from depthai_sdk.utils import *
 from depthai_sdk.utils import _create_config, get_config_field, _sentry_before_send
 from depthai_sdk.visualize import *
 
-__version__ = '1.12.1'
+__version__ = '1.13.0'
 
 
 def __import_sentry(sentry_dsn: str) -> None:
