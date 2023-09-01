@@ -99,8 +99,16 @@ class BasePacketHandler:
 
         self.outputs = output
 
-    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase, xout_streams: Dict, custom_callback: Callable = None):
+    def _create_xout(self,
+                     pipeline: dai.Pipeline,
+                     xout: XoutBase,
+                     xout_streams: Dict,
+                     custom_callback: Callable = None,
+                     custom_packet_postfix: str = None):
         # Check for duplicate packet name, raise error if found (user error)
+        if custom_packet_postfix:
+            xout.set_packet_name_postfix(custom_packet_postfix)
+
         name = xout.get_packet_name()
         if name in self._packet_names:
             raise ValueError(f'User specified duplicate packet name "{name}"! Please specify unique names (or leave empty) for each component output.')

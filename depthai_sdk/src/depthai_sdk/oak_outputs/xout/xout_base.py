@@ -24,6 +24,7 @@ class XoutBase(ABC):
     def __init__(self) -> None:
         self._streams = [xout.name for xout in self.xstreams()]
         self._packet_name = None
+        self._packet_name_postfix = None
 
         # self._fps_counter = dict()
         # for name in self._streams:
@@ -35,7 +36,13 @@ class XoutBase(ABC):
     def get_packet_name(self) -> str:
         if self._packet_name is None:
             self._packet_name = ";".join([xout.name for xout in self.xstreams()])
-        return self._packet_name
+        return self._packet_name + (f'_{self._packet_name_postfix}' if self._packet_name_postfix else '')
+
+    def set_packet_name_postfix(self, postfix: str) -> None:
+        """
+        Set postfix to packet name.
+        """
+        self._packet_name_postfix = postfix
 
     def set_comp_out(self, comp_out: ComponentOutput) -> 'XoutBase':
         """
