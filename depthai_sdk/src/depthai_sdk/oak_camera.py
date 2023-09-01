@@ -28,7 +28,7 @@ from depthai_sdk.classes.packet_handlers import (
 )
 #RecordConfig, OutputConfig, SyncConfig, RosStreamConfig, TriggerActionConfig
 from depthai_sdk.components.camera_component import CameraComponent
-from depthai_sdk.components.component import Component
+from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.nn_component import NNComponent
 from depthai_sdk.components.parser import parse_usb_speed, parse_camera_socket, get_first_color_cam, parse_open_vino_version
@@ -575,11 +575,11 @@ class OakCamera:
 
         return key
 
-    def sync(self, outputs: Union[Callable, List[Callable]], callback: Callable, visualize=False):
+    def sync(self, outputs: Union[ComponentOutput, List[ComponentOutput]], callback: Callable, visualize=False):
         raise DeprecationWarning('sync() is deprecated. Use callback() instead.')
 
     def record(self,
-               outputs: Union[Callable, List[Callable]],
+               outputs: Union[ComponentOutput, List[ComponentOutput]],
                path: str,
                record_type: RecordType = RecordType.VIDEO) -> RecordPacketHandler:
         """
@@ -603,7 +603,7 @@ class OakCamera:
         self._polling.append(self._pipeine_graph.update)
 
     def visualize(self,
-                  output: Union[List, Callable, Component],
+                  output: Union[List, ComponentOutput, Component],
                   record_path: Optional[str] = None,
                   scale: float = None,
                   fps=False,
@@ -641,7 +641,7 @@ class OakCamera:
 
         return vis
 
-    def queue(self, output: Union[Callable, Component, List], max_size: int = 30) -> QueuePacketHandler:
+    def queue(self, output: Union[ComponentOutput, Component, List], max_size: int = 30) -> QueuePacketHandler:
         """
         Create a queue for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
@@ -652,7 +652,7 @@ class OakCamera:
         self._packet_handlers.append(handler)
         return handler
 
-    def callback(self, output: Union[List, Callable, Component], callback: Callable, main_thread=False) -> CallbackPacketHandler:
+    def callback(self, output: Union[List, ComponentOutput, Component], callback: Callable, main_thread=False) -> CallbackPacketHandler:
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
         Args:
@@ -667,7 +667,7 @@ class OakCamera:
         self._packet_handlers.append(handler)
         return handler
 
-    def ros_stream(self, output: Union[List, Callable, Component]) -> RosPacketHandler:
+    def ros_stream(self, output: Union[List, ComponentOutput, Component]) -> RosPacketHandler:
         """
         Publish component output(s) to ROS streams.
         """

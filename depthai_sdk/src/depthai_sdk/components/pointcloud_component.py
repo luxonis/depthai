@@ -6,7 +6,7 @@ import cv2
 import depthai as dai
 import numpy as np
 from depthai_sdk.components.camera_component import CameraComponent
-from depthai_sdk.components.component import Component
+from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_pointcloud import XoutPointcloud
@@ -87,17 +87,15 @@ class PointcloudComponent(Component):
         pass
 
     class Out:
+        class PointcloudOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                colorize = None
+                if self._comp.colorize_comp is not None:
+                    colorize = StreamXout(self._comp.colorize_comp.stream, name="Color")
+                return XoutPointcloud(device,
+                        StreamXout(self._comp.depth, name=self._comp.name),
+                        color_frames=colorize).set_comp_out(self)
+
         def __init__(self, component: 'PointcloudComponent'):
-            self._comp = component
-
-        def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return self.pointcloud(pipeline, device)
-
-        def pointcloud(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            colorize = None
-            if self._comp.colorize_comp is not None:
-                colorize = StreamXout(self._comp.colorize_comp.stream, name="Color")
-
-            return XoutPointcloud(device,
-                                 StreamXout(self._comp.depth, name=self._comp.name),
-                                 color_frames=colorize)
+            self.pointcloud = self.PointcloudOut(component)
+            self.main = self.pointcloud

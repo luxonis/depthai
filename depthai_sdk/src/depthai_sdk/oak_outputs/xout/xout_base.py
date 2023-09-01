@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from datetime import timedelta
 from depthai_sdk.classes.packets import FramePacket
+from depthai_sdk.components.component import ComponentOutput
 from typing import List, Optional, Callable
 import depthai as dai
 
@@ -36,6 +36,19 @@ class XoutBase(ABC):
         if self._packet_name is None:
             self._packet_name = ";".join([xout.name for xout in self.xstreams()])
         return self._packet_name
+
+    def set_comp_out(self, comp_out: ComponentOutput) -> 'XoutBase':
+        """
+        Set ComponentOutput to Xout.
+        """
+        if comp_out.name is None:
+            # If user hasn't specified component's output name, generate one
+            comp_out.name = self.get_packet_name()
+        else:
+            # Otherwise, set packet name to user-specified one
+            self._packet_name = comp_out.name
+        return self
+
 
     @abstractmethod
     def xstreams(self) -> List[StreamXout]:
