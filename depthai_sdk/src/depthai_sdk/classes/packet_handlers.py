@@ -295,7 +295,11 @@ class TriggerActionPacketHandler(BasePacketHandler):
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         trigger_xout: XoutBase = self.trigger.input(device)
-        self._create_xout(pipeline, trigger_xout, xout_streams, self.controller.new_packet_trigger)
+        self._create_xout(pipeline=pipeline,
+                          xout=trigger_xout,
+                          xout_streams=xout_streams,
+                          custom_callback=self.controller.new_packet_trigger,
+                          custom_packet_postfix='trigger')
 
         if isinstance(self.action, Callable):
             self._save_outputs([trigger_xout])
@@ -306,7 +310,11 @@ class TriggerActionPacketHandler(BasePacketHandler):
             for output in self.action.inputs:
                 xout: XoutBase = output(device)
                 xout.new_packet_callback = self.controller.new_packet_action
-                self._create_xout(pipeline, xout, xout_streams, self.controller.new_packet_action)
+                self._create_xout(pipeline=pipeline,
+                                  xout=xout,
+                                  xout_streams=xout_streams,
+                                  custom_callback=self.controller.new_packet_action,
+                                  custom_packet_postfix='action')
                 action_xouts.append(xout)
 
         if isinstance(self.action, RecordAction):
