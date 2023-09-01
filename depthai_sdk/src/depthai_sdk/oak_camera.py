@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, Callable
 
 from depthai_sdk import CV2_HAS_GUI_SUPPORT
+from depthai_sdk.types import Resolution
 from depthai_sdk.visualize.visualizer import Visualizer
 
 try:
