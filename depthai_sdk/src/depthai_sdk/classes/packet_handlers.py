@@ -286,7 +286,7 @@ class TriggerActionPacketHandler(BasePacketHandler):
         self.controller = TriggerAction(self.trigger, self.action)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
-        trigger_xout: XoutBase = self.trigger.input(pipeline, device)
+        trigger_xout: XoutBase = self.trigger.input(device)
         self._create_xout(pipeline, trigger_xout, xout_streams, self.controller.new_packet_trigger)
 
         if isinstance(self.action, Callable):

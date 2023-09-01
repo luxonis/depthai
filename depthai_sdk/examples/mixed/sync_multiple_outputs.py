@@ -3,7 +3,7 @@ from typing import Dict
 from depthai_sdk import OakCamera
 
 with OakCamera() as oak:
-    color = oak.create_camera('color', encode='h264', name='color')
+    color = oak.create_camera('color', encode='h264')
     nn = oak.create_nn('mobilenet-ssd', color, name='mobilenet')
     nn2 = oak.create_nn('face-detection-retail-0004', color, name='face-detection')
 

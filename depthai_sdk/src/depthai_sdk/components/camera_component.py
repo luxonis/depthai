@@ -25,7 +25,6 @@ class CameraComponent(Component):
                  sensor_type: Optional[dai.CameraSensorType] = None,
                  rotation: Optional[int] = None,
                  replay: Optional[Replay] = None,
-                 name: Optional[str] = None,
                  args: Dict = None):
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
@@ -42,7 +41,6 @@ class CameraComponent(Component):
             sensor_type: To force color/mono/tof camera
             rotation (int, optional): Rotate the camera by 90, 180, 270 degrees
             replay (Replay object): Replay object to use for mocking the camera
-            name (str, optional): Name of the output stream
             args (Dict): Use user defined arguments when constructing the pipeline
         """
         super().__init__()
@@ -65,8 +63,6 @@ class CameraComponent(Component):
 
         self._socket = source
         self._args: Dict = args
-
-        self.name = name
 
         if rotation not in [None, 0, 90, 180, 270]:
             raise ValueError(f'Angle {rotation} not supported! Use 0, 90, 180, 270.')
@@ -445,17 +441,17 @@ class CameraComponent(Component):
 
     def get_stream_xout(self, fourcc: Optional[str] = None) -> StreamXout:
         if self.encoder is not None and fourcc is not None:
-            return StreamXout(self.encoder.bitstream, name=self.name or self._source + '_bitstream')
+            return StreamXout(self.encoder.bitstream, self._source + '_bitstream')
         elif self.is_replay():
-            return ReplayStream(self.name or self._source)
+            return ReplayStream(self._source)
         elif self.is_mono():
-            return StreamXout(self.stream, name=self.name or self._source + '_mono')
+            return StreamXout(self.stream, self._source + '_mono')
         else:  # ColorCamera
             self.node.setVideoNumFramesPool(self._num_frames_pool)
             self.node.setPreviewNumFramesPool(self._preview_num_frames_pool)
             # node.video instead of preview (self.stream) was used to reduce bandwidth
             # consumption by 2 (3bytes/pixel vs 1.5bytes/pixel)
-            return StreamXout(self.node.video, name=self.name or self._source + '_video')
+            return StreamXout(self.node.video, self._source + '_video')
 
     def set_num_frames_pool(self, num_frames: int, preview_num_frames: Optional[int] = None):
         """
@@ -489,7 +485,7 @@ class CameraComponent(Component):
 
         class EncodedOut(CameraOut):
             def __call__(self, device: dai.Device) -> XoutBase:
-                return super(device, fourcc=self._comp.get_fourcc())
+                return super().__call__(device, fourcc=self._comp.get_fourcc())
 
 
         def __init__(self, camera_component: 'CameraComponent'):

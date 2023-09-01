@@ -47,7 +47,6 @@ class StereoComponent(Component):
                  right: Union[CameraComponent, dai.node.MonoCamera],  # Right stereo camera
                  replay: Optional[Replay] = None,
                  args: Any = None,
-                 name: Optional[str] = None,
                  encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None):
         """
         Args:
@@ -58,7 +57,6 @@ class StereoComponent(Component):
             right (None / dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
             replay (Replay object, optional): Replay
             args (Any, optional): Use user defined arguments when constructing the pipeline
-            name (str, optional): Name of the output stream
             encode (str/bool/Profile, optional): Encode the output stream
         """
         super().__init__()
@@ -75,7 +73,6 @@ class StereoComponent(Component):
         self._device = device
         self._replay: Optional[Replay] = replay
         self._args: Dict = args
-        self.name = name
 
         self.left = left
         self.right = right
@@ -438,8 +435,8 @@ class StereoComponent(Component):
         Create mono frames output if WLS filter is enabled or colorize is set to RGBD
         """
         mono_frames = None
-        if self._comp.wls_config['enabled'] or self._comp._colorize == StereoColor.RGBD:
-            mono_frames = StreamXout(self._comp._right_stream, name=self._comp.name)
+        if self.wls_config['enabled'] or self._colorize == StereoColor.RGBD:
+            mono_frames = StreamXout(self._right_stream)
         return mono_frames
 
     class Out:
@@ -447,7 +444,7 @@ class StereoComponent(Component):
             def __call__(self, device: dai.Device) -> XoutBase:
                 return XoutDisparityDepth(
                     device=device,
-                    frames=StreamXout(self._comp.depth, name=self._comp.name),
+                    frames=StreamXout(self._comp.depth),
                     dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
                     mono_frames=self._comp._mono_frames(),
                     colorize=self._comp._colorize,
@@ -456,11 +453,11 @@ class StereoComponent(Component):
                 ).set_comp_out(self)
 
         class DisparityOut(ComponentOutput):
-            def __call__(self, device: dai.Device) -> XoutBase:
+            def __call__(self, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
                 return XoutDisparity(
                     device=device,
-                    frames=StreamXout(self._comp.encoder.bitstream, name=self._comp.name) if fourcc else
-                        StreamXout(self._comp.disparity, name=self._comp.name),
+                    frames=StreamXout(self._comp.encoder.bitstream) if fourcc else
+                        StreamXout(self._comp.disparity),
                     disp_factor=255.0 / self._comp.node.getMaxDisparity(),
                     mono_frames=self._comp._mono_frames(),
                     colorize=self._comp._colorize,
@@ -477,24 +474,14 @@ class StereoComponent(Component):
             def __call__(self, device: dai.Device) -> XoutBase:
                 return XoutFrames(StreamXout(self._comp.node.rectifiedRight, 'Rectified right')).set_comp_out(self)
 
-        class EncodedOut(ComponentOutput):
+        class EncodedOut(DisparityOut):
             def __call__(self, device: dai.Device) -> XoutBase:
                 if not self._comp.encoder:
                     raise RuntimeError('Encoder not enabled, cannot output encoded frames')
                 if self._comp.wls_config['enabled']:
                     warnings.warn('WLS filter is enabled, but cannot be applied to encoded frames.')
-                return XoutDisparity(
-                    device=device,
-                    frames=StreamXout(self._comp.encoder.bitstream, name=self._comp.name) if fourcc else
-                        StreamXout(self._comp.disparity, name=self._comp.name),
-                    disp_factor=255.0 / self._comp.node.getMaxDisparity(),
-                    mono_frames=self._comp._mono_frames(),
-                    colorize=self._comp._colorize,
-                    colormap=self._comp._postprocess_colormap,
-                    wls_config=self._comp.wls_config,
-                    ir_settings=self._comp.ir_settings,
-                ).set_fourcc(fourcc).set_comp_out(self)
 
+                return super().__call__(device, fourcc=self._comp.get_fourcc())
 
         def __init__(self, stereo_component: 'StereoComponent'):
             self._comp = stereo_component
@@ -503,4 +490,5 @@ class StereoComponent(Component):
             self.rectified_left = self.RectifiedLeftOut(stereo_component)
             self.rectified_right = self.RectifiedRightOut(stereo_component)
             self.disparity = self.DisparityOut(stereo_component)
+            self.encoded = self.EncodedOut(stereo_component)
             self.main = self.depth

@@ -41,7 +41,6 @@ class NNComponent(Component):
                  spatial: Optional[StereoComponent] = None,
                  replay: Optional[Replay] = None,
                  args: Dict = None,  # User defined args
-                 name: Optional[str] = None
                  ) -> None:
         """
         Neural Network component abstracts:
@@ -58,11 +57,9 @@ class NNComponent(Component):
             spatial (bool, default False): Enable getting Spatial coordinates (XYZ), only for Obj detectors. Yolo/SSD use on-device spatial calc, others on-host (gen2-calc-spatials-on-host)
             replay (Replay object): Replay
             args (Any, optional): Use user defined arguments when constructing the pipeline
-            name (str, optional): Name of the output stream
         """
         super().__init__()
 
-        self.name = name
         self.out = self.Out(self)
 
         self.triggers = defaultdict(list)
@@ -634,7 +631,7 @@ class NNComponent(Component):
             def __call__(self, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
                 if self._comp._is_multi_stage():
                     det_nn_out = StreamXout(out=self._comp._input.node.out)
-                    second_nn_out = StreamXout(out=self._comp.node.out, name=self._comp.name)
+                    second_nn_out = StreamXout(out=self._comp.node.out)
 
                     return XoutTwoStage(det_nn=self._comp._input,
                                     second_nn=self._comp,
@@ -647,7 +644,7 @@ class NNComponent(Component):
                 else:
                     # TODO: refactor. This is a bit hacky, as we want to support passing node output as the input
                     # to the NNComponent. In such case, we don't have access to VideoEnc (inside CameraComponent)
-                    det_nn_out = StreamXout(out=self._comp.node.out, name=self._comp.name)
+                    det_nn_out = StreamXout(out=self._comp.node.out)
                     input_stream = self._comp._stream_input
                     if fourcc is None:
                         frame_stream = StreamXout(out=input_stream)
@@ -669,14 +666,14 @@ class NNComponent(Component):
                                     second_nn=self._comp,
                                     frames=StreamXout(out=self._comp._input.node.passthrough),
                                     det_out=StreamXout(out=self._comp._input.node.out),
-                                    second_nn_out=StreamXout(self._comp.node.out, name=self._comp.name),
+                                    second_nn_out=StreamXout(self._comp.node.out),
                                     device=device,
                                     input_queue_name="input_queue" if self._comp.x_in else None,
                                     bbox=self._comp.get_bbox()).set_comp_out(self)
                 else:
                     return XoutNnResults(det_nn=self._comp,
                                         frames=StreamXout(out=self._comp.node.passthrough),
-                                        nn_results=StreamXout(out=self._comp.node.out, name=self._comp.name),
+                                        nn_results=StreamXout(out=self._comp.node.out),
                                         bbox=BoundingBox()
                                         ).set_comp_out(self)
         class ImgManipOut(ComponentOutput):
@@ -699,7 +696,7 @@ class NNComponent(Component):
                 return XoutSpatialBbMappings(
                     device=device,
                     stereo=self._comp._stereo_node,
-                    frames=StreamXout(out=self._comp.node.passthroughDepth, name=self._comp.name),
+                    frames=StreamXout(out=self._comp.node.passthroughDepth),
                     configs=StreamXout(out=self._comp.node.out),
                     dispScaleFactor=depth_to_disp_factor(device, self._comp._stereo_node),
                     bbox=self._comp.get_bbox()
@@ -746,7 +743,7 @@ class NNComponent(Component):
                 Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
                 """
                 # A bit hacky, maybe we can remove this alltogether
-                return super(device, fourcc=self._comp._get_camera_comp().get_fourcc())
+                return super().__call__(device, fourcc=self._comp._get_camera_comp().get_fourcc())
 
         class NnDataOut(ComponentOutput):
             def __call__(self, device: dai.Device) -> XoutNnData:
