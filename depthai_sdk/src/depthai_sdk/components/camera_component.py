@@ -4,7 +4,7 @@ from typing import Dict
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.camera_control import CameraControl
 from depthai_sdk.components.camera_helper import *
-from depthai_sdk.components.component import Component
+from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.parser import parse_resolution, parse_encode, encoder_profile_to_fourcc
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
@@ -46,7 +46,10 @@ class CameraComponent(Component):
             args (Dict): Use user defined arguments when constructing the pipeline
         """
         super().__init__()
+        # _replay should be set before .out, as it's used in .out
+        self._replay: Optional[Replay] = replay
         self.out = self.Out(self)
+
         self._pipeline = pipeline
         self._device = device
 
@@ -471,30 +474,22 @@ class CameraComponent(Component):
     """
 
     class Out:
+        class CameraOut(ComponentOutput):
+            def __call__(self, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
+                return XoutFrames(self._comp.get_stream_xout(fourcc), fourcc).set_comp_out(self)
+
+        class ReplayOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(ReplayStream(self._comp._source)).set_comp_out(self)
+
+        class EncodedOut(CameraOut):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return super().__call__(device, fourcc=self._comp.get_fourcc())
+
+
         def __init__(self, camera_component: 'CameraComponent'):
-            self._comp = camera_component
+            self.replay = self.ReplayOut(camera_component)
+            self.camera = self.CameraOut(camera_component)
+            self.encoded = self.EncodedOut(camera_component)
 
-        def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            """
-            Default output. Uses either camera(), replay(), or encoded() depending on the component settings.
-            """
-            if self._comp.is_replay():
-                return self.replay(pipeline, device)
-            else:
-                return self.camera(pipeline, device)
-
-        def camera(self, pipeline: dai.Pipeline, device: dai.Device, fourcc: Optional[str] = None) -> XoutFrames:
-            """
-            Streams camera output to the OAK camera. Produces FramePacket.
-            """
-            return XoutFrames(self._comp.get_stream_xout(fourcc), fourcc)
-
-        def replay(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            """
-            If depthai-recording was used, it won't stream anything, but it will instead use frames that were sent to the OAK.
-            Produces FramePacket.
-            """
-            return XoutFrames(ReplayStream(self._comp._source))
-
-        def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return self.camera(pipeline, device, fourcc=self._comp.get_fourcc())
+            self.main = self.replay if camera_component.is_replay() else self.camera

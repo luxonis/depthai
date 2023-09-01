@@ -3,7 +3,7 @@ from typing import Optional, Union, Any
 import depthai as dai
 
 from depthai_sdk.components.camera_component import CameraComponent
-from depthai_sdk.components.component import Component
+from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_pointcloud import XoutPointcloud
@@ -18,14 +18,12 @@ class PointcloudComponent(Component):
                  stereo: Union[None, StereoComponent, dai.node.StereoDepth, dai.Node.Output] = None,
                  colorize: Optional[CameraComponent] = None,
                  replay: Optional[Replay] = None,
-                 args: Any = None,
-                 name: Optional[str] = None):
+                 args: Any = None):
         """
         Args:
             pipeline (dai.Pipeline): DepthAI pipeline
             replay (Replay object, optional): Replay
             args (Any, optional): Use user defined arguments when constructing the pipeline
-            name (str, optional): Name of the output stream
         """
         super().__init__()
         self.out = self.Out(self)
@@ -34,8 +32,6 @@ class PointcloudComponent(Component):
         self.depth: dai.Node.Output  # Depth node output
 
         self.colorize_comp: Optional[CameraComponent] = colorize
-
-        self.name = name
 
         self._replay: Optional[Replay] = replay
 
@@ -79,17 +75,15 @@ class PointcloudComponent(Component):
         raise NotImplementedError("config_postprocessing() not yet implemented")
 
     class Out:
+        class PointcloudOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                colorize = None
+                if self._comp.colorize_comp is not None:
+                    colorize = StreamXout(self._comp.colorize_comp.stream, name="Color")
+                return XoutPointcloud(device,
+                                      StreamXout(self._comp.depth),
+                                      color_frames=colorize).set_comp_out(self)
+
         def __init__(self, component: 'PointcloudComponent'):
-            self._comp = component
-
-        def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return self.pointcloud(pipeline, device)
-
-        def pointcloud(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            colorize = None
-            if self._comp.colorize_comp is not None:
-                colorize = StreamXout(self._comp.colorize_comp.stream, name="Color")
-
-            return XoutPointcloud(device,
-                                  StreamXout(self._comp.depth, name=self._comp.name),
-                                  color_frames=colorize)
+            self.pointcloud = self.PointcloudOut(component)
+            self.main = self.pointcloud

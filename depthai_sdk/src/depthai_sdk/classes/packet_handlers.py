@@ -7,7 +7,7 @@ from typing import Optional, Callable, List, Union, Dict
 import depthai as dai
 
 from depthai_sdk.classes.packets import BasePacket
-from depthai_sdk.components.component import Component
+from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.oak_outputs.fps import FPS
 from depthai_sdk.oak_outputs.syncing import TimestampSync
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
@@ -24,8 +24,10 @@ class BasePacketHandler:
     def __init__(self, main_thread=False):
         self.fps = FPS()
         self.queue = Queue(2) if main_thread else None
-        self.outputs: List[Callable]
+        self.outputs: List[ComponentOutput]
         self.sync = None
+
+        self._packet_names = {}  # Check for duplicate packet name, raise error if found (user error)
 
     @abstractmethod
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
@@ -88,7 +90,7 @@ class BasePacketHandler:
         """
         pass
 
-    def _save_outputs(self, output: Union[List, Callable, Component]):
+    def _save_outputs(self, output: Union[List, ComponentOutput, Component]):
         if not isinstance(output, List):
             output = [output]
 
@@ -99,8 +101,22 @@ class BasePacketHandler:
 
         self.outputs = output
 
-    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase, xout_streams: Dict,
-                     custom_callback: Callable = None):
+    def _create_xout(self,
+                     pipeline: dai.Pipeline,
+                     xout: XoutBase,
+                     xout_streams: Dict,
+                     custom_callback: Callable = None,
+                     custom_packet_postfix: str = None):
+        # Check for duplicate packet name, raise error if found (user error)
+        if custom_packet_postfix:
+            xout.set_packet_name_postfix(custom_packet_postfix)
+
+        name = xout.get_packet_name()
+        if name in self._packet_names:
+            raise ValueError(
+                f'User specified duplicate packet name "{name}"! Please specify unique names (or leave empty) for each component output.')
+        self._packet_names[name] = True
+
         # Assign which callback to call when packet is prepared
         xout.new_packet_callback = custom_callback or self._new_packet_callback
 
@@ -137,7 +153,7 @@ class VisualizePacketHandler(BasePacketHandler):
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout: XoutBase = output(device)
             self._create_xout(pipeline, xout, xout_streams)
 
     def new_packet(self, packet: BasePacket):
@@ -168,7 +184,7 @@ class RecordPacketHandler(BasePacketHandler):
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         xouts: List[XoutFrames] = []
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout = output(device)
             xouts.append(xout)
             self._create_xout(pipeline, xout, xout_streams)
 
@@ -189,7 +205,7 @@ class CallbackPacketHandler(BasePacketHandler):
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout = output(device)
             self._create_xout(pipeline, xout, xout_streams)
 
     def new_packet(self, packet):
@@ -207,7 +223,7 @@ class QueuePacketHandler(BasePacketHandler):
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout = output(device)
             self._create_xout(pipeline, xout, xout_streams)
 
     def configure_syncing(self,
@@ -251,7 +267,7 @@ class RosPacketHandler(BasePacketHandler):
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         xouts = []
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout = output(device)
             self._create_xout(pipeline, xout, xout_streams)
             xouts.append(xout)
 
@@ -285,8 +301,12 @@ class TriggerActionPacketHandler(BasePacketHandler):
         self.controller = TriggerAction(self.trigger, self.action)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
-        trigger_xout: XoutBase = self.trigger.input(pipeline, device)
-        self._create_xout(pipeline, trigger_xout, xout_streams, self.controller.new_packet_trigger)
+        trigger_xout: XoutBase = self.trigger.input(device)
+        self._create_xout(pipeline=pipeline,
+                          xout=trigger_xout,
+                          xout_streams=xout_streams,
+                          custom_callback=self.controller.new_packet_trigger,
+                          custom_packet_postfix='trigger')
 
         if isinstance(self.action, Callable):
             self._save_outputs([trigger_xout])
@@ -295,9 +315,13 @@ class TriggerActionPacketHandler(BasePacketHandler):
         action_xouts = []
         if self.action.inputs:
             for output in self.action.inputs:
-                xout: XoutBase = output(pipeline, device)
+                xout: XoutBase = output(device)
                 xout.new_packet_callback = self.controller.new_packet_action
-                self._create_xout(pipeline, xout, xout_streams, self.controller.new_packet_action)
+                self._create_xout(pipeline=pipeline,
+                                  xout=xout,
+                                  xout_streams=xout_streams,
+                                  custom_callback=self.controller.new_packet_action,
+                                  custom_packet_postfix='action')
                 action_xouts.append(xout)
 
         if isinstance(self.action, RecordAction):
