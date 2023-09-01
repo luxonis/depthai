@@ -1,8 +1,10 @@
 import logging
+from queue import Queue
 from threading import Thread
 from typing import Dict, Any
-from queue import Queue
+
 import rclpy
+
 from depthai_sdk.integrations.ros.ros_base import RosBase
 
 

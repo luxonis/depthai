@@ -39,6 +39,7 @@ def getLocalRecording(recording: str) -> Optional[Path]:
         return p
     return None
 
+
 def getAvailableRecordings() -> Dict[str, Tuple[List[str], int]]:
     """
     Get available (online) depthai-recordings. Returns list of available recordings and it's size

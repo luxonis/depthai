@@ -14,8 +14,10 @@ LIMITS = {
     'illumination_led': (0, 1500),
 }
 
+
 def clamp(value, min_value, max_value):
     return max(min(value, max_value), min_value)
+
 
 class StereoControl:
     def __init__(self, device: dai.Device):

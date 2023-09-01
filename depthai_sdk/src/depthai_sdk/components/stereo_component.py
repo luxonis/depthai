@@ -51,15 +51,14 @@ class StereoComponent(Component):
                  encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None):
         """
         Args:
-            pipeline (dai.Pipeline): DepthAI pipeline
-            resolution (str/SensorResolution): If monochrome cameras aren't already passed, create them and set specified resolution
-            fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
-            left (None / dai.None.Output / CameraComponent): Left mono camera source. Will get handled by Camera object.
-            right (None / dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
-            replay (Replay object, optional): Replay
-            args (Any, optional): Use user defined arguments when constructing the pipeline
-            name (str, optional): Name of the output stream
-            encode (str/bool/Profile, optional): Encode the output stream
+            device (dai.Device): DepthAI device.
+            pipeline (dai.Pipeline): DepthAI pipeline.
+            left (dai.None.Output / CameraComponent): Left mono camera source. Will get handled by Camera object.
+            right (dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
+            replay (Replay object, optional): Replay object to use for playback.
+            args (Any, optional): Use user defined arguments when constructing the pipeline.
+            name (str, optional): Name of the output stream.
+            encode (str/bool/Profile, optional): Encode the output stream.
         """
         super().__init__()
         self.out = self.Out(self)
@@ -183,14 +182,14 @@ class StereoComponent(Component):
         self.node.setRectifyEdgeFillColor(0)
 
         if self._undistortion_offset is not None:
-            calibData = self._replay._calibData if self._replay else device.readCalibration()
+            calib_data = self._replay._calibData if self._replay else device.readCalibration()
             w_frame, h_frame = self._get_stream_size(self.left)
-            mapX_left, mapY_left, mapX_right, mapY_right = self._get_maps(w_frame, h_frame, calibData)
+            mapX_left, mapY_left, mapX_right, mapY_right = self._get_maps(w_frame, h_frame, calib_data)
             mesh_l = _get_mesh(mapX_left, mapY_left)
             mesh_r = _get_mesh(mapX_right, mapY_right)
-            meshLeft = list(mesh_l.tobytes())
-            meshRight = list(mesh_r.tobytes())
-            self.node.loadMeshData(meshLeft, meshRight)
+            mesh_left = list(mesh_l.tobytes())
+            mesh_right = list(mesh_r.tobytes())
+            self.node.loadMeshData(mesh_left, mesh_right)
 
         if self._args:
             self._config_stereo_args(self._args)
@@ -199,8 +198,8 @@ class StereoComponent(Component):
         self._control_xlink_in = pipeline.create(dai.node.XLinkIn)
         self._control_xlink_in.setStreamName(f"{self.node.id}_inputControl")
         self._control_xlink_in.out.link(self.node.inputConfig)
-        self._control_xlink_in.setMaxDataSize(
-            1)  # CameraControl message doesn't use any additional data (only metadata)
+        # CameraControl message doesn't use any additional data (only metadata)
+        self._control_xlink_in.setMaxDataSize(1)
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
@@ -396,12 +395,12 @@ class StereoComponent(Component):
         calib = device.readCalibration()
         baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
         intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, self.right.getResolutionSize())
-        focalLength = intrinsics[0][0]
+        focal_length = intrinsics[0][0]
         disp_levels = self.node.getMaxDisparity() / 95
-        return baseline * focalLength * disp_levels
+        return baseline * focal_length * disp_levels
 
     def _get_maps(self, width: int, height: int, calib: dai.CalibrationHandler):
-        imageSize = (width, height)
+        image_size = (width, height)
         M1 = np.array(calib.getCameraIntrinsics(calib.getStereoLeftCameraId(), width, height))
         M2 = np.array(calib.getCameraIntrinsics(calib.getStereoRightCameraId(), width, height))
         d1 = np.array(calib.getDistortionCoefficients(calib.getStereoLeftCameraId()))
@@ -420,8 +419,8 @@ class StereoComponent(Component):
         M2[0][0] += self._undistortion_offset
         M2[1][1] += self._undistortion_offset
 
-        mapX_l, mapY_l = cv2.initUndistortRectifyMap(M1, d1, R1, M2, imageSize, cv2.CV_32FC1)
-        mapX_r, mapY_r = cv2.initUndistortRectifyMap(M2, d2, R2, M2, imageSize, cv2.CV_32FC1)
+        mapX_l, mapY_l = cv2.initUndistortRectifyMap(M1, d1, R1, M2, image_size, cv2.CV_32FC1)
+        mapX_r, mapY_r = cv2.initUndistortRectifyMap(M2, d2, R2, M2, image_size, cv2.CV_32FC1)
         return mapX_l, mapY_l, mapX_r, mapY_r
 
     def get_fourcc(self) -> Optional[str]:
@@ -454,7 +453,7 @@ class StereoComponent(Component):
             return XoutDisparity(
                 device=device,
                 frames=StreamXout(self._comp.encoder.bitstream, name=self._comp.name) if fourcc else
-                       StreamXout(self._comp.disparity, name=self._comp.name),
+                StreamXout(self._comp.disparity, name=self._comp.name),
                 disp_factor=255.0 / self._comp.node.getMaxDisparity(),
                 mono_frames=self._mono_frames(),
                 colorize=self._comp._colorize,

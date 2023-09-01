@@ -1,7 +1,7 @@
 from typing import List, Optional
+
 from depthai_sdk.classes.packets import FramePacket
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
-import depthai as dai
 
 try:
     import cv2
@@ -16,13 +16,12 @@ class XoutFrames(XoutBase):
 
     def __init__(self,
                  frames: StreamXout,
-                 fourcc: Optional[str] = None, # 'mjpeg', 'h264', 'hevc'
+                 fourcc: Optional[str] = None,  # 'mjpeg', 'h264', 'hevc'
                  ):
         """
         Args:
             frames: StreamXout object.
-            fps: Frames per second for the output stream.
-            frame_shape: Shape of the frame. If not provided, it will be inferred from the first frame.
+            fourcc: Codec to use for encoding. If None, no encoding will be done.
         """
         self.frames = frames
         self.name = frames.name
@@ -52,7 +51,7 @@ class XoutFrames(XoutBase):
             try:
                 import av
             except ImportError:
-                raise ImportError('Attempted to decode an encoded frame, but av is not installed. Please install it with `pip install av`')
+                raise ImportError('Attempted to decode an encoded frame, but av is not installed.'
+                                  ' Please install it with `pip install av`')
             self._codec = av.CodecContext.create(self._fourcc, "r")
         return self._codec
-

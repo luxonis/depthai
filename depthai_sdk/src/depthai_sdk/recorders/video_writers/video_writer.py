@@ -1,8 +1,9 @@
-from pathlib import Path
-import av
-import depthai as dai
 from datetime import timedelta
 from fractions import Fraction
+from pathlib import Path
+
+import av
+import depthai as dai
 
 from depthai_sdk.recorders.video_writers import BaseWriter
 from depthai_sdk.recorders.video_writers.utils import create_writer_dir
@@ -55,7 +56,6 @@ class VideoWriter(BaseWriter):
 
         self._create_file(path_to_file, frame)
 
-
     def _create_file(self, path_to_file: str, frame: dai.ImgFrame):
         options = {}
         if self._lossless:
@@ -63,7 +63,7 @@ class VideoWriter(BaseWriter):
         elif frame.getType() == dai.ImgFrame.Type.RAW16:
             self._fourcc = 'ffv1'
             self._format = 'gray16le'
-        else: # Mono/Color, encode
+        else:  # Mono/Color, encode
             self._fourcc = 'h264'
             options['crf'] = '15'
 
@@ -81,17 +81,17 @@ class VideoWriter(BaseWriter):
             self._start_ts = img_frame.getTimestampDevice()
 
         if img_frame.getType() == dai.ImgFrame.Type.YUV420p:
-            format='yuv420p'
+            video_format = 'yuv420p'
         elif img_frame.getType() == dai.ImgFrame.Type.NV12:
-            format='nv12'
+            video_format = 'nv12'
         elif img_frame.getType() in [dai.ImgFrame.Type.RAW8, dai.ImgFrame.Type.GRAY8]:
-            format = 'gray'
+            video_format = 'gray'
         elif img_frame.getType() == dai.ImgFrame.Type.RAW16:
-            format = 'gray16le'
+            video_format = 'gray16le'
         else:
             raise ValueError(f'Unsupported frame type: {img_frame.getType()}')
 
-        video_frame = av.VideoFrame.from_ndarray(img_frame.getFrame(), format=format)
+        video_frame = av.VideoFrame.from_ndarray(img_frame.getFrame(), format=video_format)
 
         ts = int((img_frame.getTimestampDevice() - self._start_ts).total_seconds() * 1e3)  # To milliseconds
         video_frame.pts = ts + 1

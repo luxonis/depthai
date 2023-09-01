@@ -2,11 +2,11 @@ from typing import List
 
 import depthai as dai
 import numpy as np
+from ahrs.filters import Mahony
 
 from depthai_sdk.classes import IMUPacket
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
-from depthai_sdk.visualize.visualizer import Visualizer
-from ahrs.filters import Mahony
+
 
 class XoutIMU(XoutBase):
     def __init__(self, imu_xout: StreamXout, fps: int):
@@ -20,7 +20,7 @@ class XoutIMU(XoutBase):
     def xstreams(self) -> List[StreamXout]:
         return [self.imu_out]
 
-    def new_msg(self, name: str, msg: dai.IMUData) -> None:
+    def new_msg(self, name: str, msg: dai.IMUData):
         if name not in self._streams:
             return
 

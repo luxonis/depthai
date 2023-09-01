@@ -1,24 +1,25 @@
-from datetime import timedelta
 import logging
 import math
-from collections import defaultdict
+from datetime import timedelta
 from typing import Dict, Optional, List, Union, Tuple
 
 import depthai as dai
 import numpy as np
-from depthai_sdk.classes import DetectionPacket, TrackerPacket
+
+from depthai_sdk.classes import TrackerPacket
 from depthai_sdk.classes.packets import TrackingDetection
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_nn import XoutNnResults
 from depthai_sdk.tracking import KalmanFilter
 from depthai_sdk.visualize.bbox import BoundingBox
 
+
 class TrackedObject:
     def __init__(self, baseline: float, focal: float, apply_kalman: bool, calculate_speed: bool):
         # Point
-        self.kalman_3d: KalmanFilter = None
+        self.kalman_3d: Optional[KalmanFilter] = None
         # BBox
-        self.kalman_2d: KalmanFilter = None
+        self.kalman_2d: Optional[KalmanFilter] = None
 
         self.previous_detections: List[TrackingDetection] = []
         self.blacklist = False
@@ -40,21 +41,22 @@ class TrackedObject:
             angle=None,
             tracklet=tracklet,
             ts=ts,
-            filtered_2d=self._calc_kalman_2d(tracklet,ts) if self.apply_kalman else None,
-            filtered_3d=self._calc_kalman_3d(tracklet,ts) if self.apply_kalman and is_3d else None,
+            filtered_2d=self._calc_kalman_2d(tracklet, ts) if self.apply_kalman else None,
+            filtered_3d=self._calc_kalman_3d(tracklet, ts) if self.apply_kalman and is_3d else None,
             speed=None,
-            )
+        )
         self.previous_detections.append(tracking_det)
         # Calc speed should be called after adding new TrackingDetection to self.previous_detections
         tracking_det.speed = self.calc_speed(ts) if (self.calculate_speed and is_3d) else None
 
-    def calc_speed(self, ts: timedelta) -> float:
+    def calc_speed(self, ts: timedelta) -> Union[float, np.ndarray]:
         """
         Should be called after adding new TrackingDetection to self.previous_detections
         """
+
         def get_coords(det) -> dai.Point3f:
-            return det.filtered_3d or \
-                     det.tracklet.spatialCoordinates
+            return det.filtered_3d or det.tracklet.spatialCoordinates
+
         def get_dist(p1: dai.Point3f, p2: dai.Point3f) -> float:
             return np.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2 + (p2.z - p1.z) ** 2) / 1000
 
@@ -80,9 +82,9 @@ class TrackedObject:
         return np.mean(smoothed)
 
     def _is_3d(self, tracklet: dai.Tracklet) -> bool:
-        return tracklet.spatialCoordinates.x != 0.0 or \
-               tracklet.spatialCoordinates.y != 0.0 or \
-               tracklet.spatialCoordinates.z != 0.0
+        return (tracklet.spatialCoordinates.x != 0.0 or
+                tracklet.spatialCoordinates.y != 0.0 or
+                tracklet.spatialCoordinates.z != 0.0)
 
     def _calc_kalman_3d(self, tracklet: dai.Tracklet, ts: timedelta) -> Union[None, dai.Point3f]:
         x_space = tracklet.spatialCoordinates.x
@@ -127,6 +129,7 @@ class TrackedObject:
             vec_bbox[1][0] + vec_bbox[3][0] / 2,
         ])
 
+
 class XoutTracker(XoutNnResults):
     def __init__(self,
                  det_nn: 'NNComponent',
@@ -160,7 +163,8 @@ class XoutTracker(XoutNnResults):
             # If there is no id in self.tracked_objects, create new TrackedObject. This could happen if
             # TrackingStatus.NEW, or we removed it (too many lost frames)
             if tracklet.id not in self.tracked_objects:
-                self.tracked_objects[tracklet.id] = TrackedObject(self.baseline, self.focal, self.apply_kalman,self.calculate_speed)
+                self.tracked_objects[tracklet.id] = TrackedObject(self.baseline, self.focal, self.apply_kalman,
+                                                                  self.calculate_speed)
 
             if tracklet.status == dai.Tracklet.TrackingStatus.NEW:
                 pass
@@ -169,19 +173,18 @@ class XoutTracker(XoutNnResults):
             elif tracklet.status == dai.Tracklet.TrackingStatus.LOST:
                 self.tracked_objects[tracklet.id].lost_counter += 1
 
-
             img_d = tracklet.srcImgDetection
             # When adding new tracklet, TrackletObject class will also perform filtering
             # and speed estimation
             self.tracked_objects[tracklet.id] \
                 .new_tracklet(tracklet,
-                            tracklets.getTimestamp(),
-                            self.labels[img_d.label][1] if self.labels else (255, 255, 255),
-                            self.labels[img_d.label][0] if self.labels else str(img_d.label)
-                            )
+                              tracklets.getTimestamp(),
+                              self.labels[img_d.label][1] if self.labels else (255, 255, 255),
+                              self.labels[img_d.label][0] if self.labels else str(img_d.label)
+                              )
             if tracklet.status == dai.Tracklet.TrackingStatus.REMOVED or \
-                (self.forget_after_n_frames is not None and \
-                self.forget_after_n_frames <= self.tracked_objects[tracklet.id].lost_counter):
+                    (self.forget_after_n_frames is not None and \
+                     self.forget_after_n_frames <= self.tracked_objects[tracklet.id].lost_counter):
                 # Remove TrackedObject
                 self.tracked_objects.pop(tracklet.id)
 

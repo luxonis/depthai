@@ -78,7 +78,6 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
         XoutFrames.__init__(self, frames=frames)
         XoutSeqSync.__init__(self, [frames, mono_frames])
 
-
     def on_callback(self, packet) -> None:
         if self.ir_settings['auto_mode']:
             self._auto_ir_search(packet.msg.getFrame())
@@ -118,7 +117,6 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
         packet.disparity_map = disparity_frame
 
         return packet
-
 
     def _auto_ir_search(self, frame: np.ndarray):
         # Perform neighbourhood search if we got worse metric values
@@ -198,4 +196,3 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
     def _reset_buffers(self):
         self._X, self._y = [], []
         del self._metrics_buffer['fill_rate']
-

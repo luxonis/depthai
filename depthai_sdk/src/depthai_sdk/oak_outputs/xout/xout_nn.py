@@ -2,7 +2,6 @@ import threading
 from typing import List, Union, Dict, Any, Optional, Tuple
 
 import depthai as dai
-import numpy as np
 
 from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
 from depthai_sdk.classes.enum import ResizeMode
@@ -12,20 +11,19 @@ from depthai_sdk.classes.packets import (
     ImgLandmarksPacket,
     NnOutputPacket,
     SemanticSegmentationPacket,
-    TrackerPacket,
     SpatialBbMappingPacket,
     TwoStagePacket,
     NNDataPacket
 )
-from depthai_sdk.classes.enum import ResizeMode
-from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
-from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDisparityDepth
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
-from depthai_sdk.visualize.visualizer_helper import colorize_disparity, draw_mappings, depth_to_disp_factor
+from depthai_sdk.types import XoutNNOutputPacket
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.colors import generate_colors, hex_to_bgr
+
 
 class XoutNnData(XoutBase):
     def __init__(self, xout: StreamXout):
@@ -82,7 +80,7 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
         self._resize_mode: ResizeMode = det_nn._ar_resize_mode
         self._nn_size: Tuple[int, int] = det_nn._size
 
-    def package(self, msgs: Dict) -> DetectionPacket:
+    def package(self, msgs: Dict) -> XoutNNOutputPacket:
         nn_result = msgs[self.nn_results.name]
         img = msgs[self.frames.name]
         if type(nn_result) == dai.NNData:
@@ -110,10 +108,10 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
     def _add_detections_to_packet(self,
                                   packet: DetectionPacket,
                                   dets: Union[dai.ImgDetections, dai.SpatialImgDetections, Detections]
-                                  )-> DetectionPacket:
+                                  ) -> DetectionPacket:
         for detection in dets.detections:
             packet.detections.append(Detection(
-                img_detection=detection if isinstance(detection, dai.ImgDetection)  else None,
+                img_detection=detection if isinstance(detection, dai.ImgDetection) else None,
                 label_str=self.labels[detection.label][0] if self.labels else str(detection.label),
                 confidence=detection.confidence,
                 color=self.labels[detection.label][1] if self.labels else (255, 255, 255),
@@ -123,12 +121,13 @@ class XoutNnResults(XoutSeqSync, XoutFrames):
             ))
         return packet
 
+
 class XoutSpatialBbMappings(XoutDisparityDepth, SequenceNumSync):
     def __init__(self,
                  device: dai.Device,
                  stereo: dai.node.StereoDepth,
-                 frames: StreamXout, # passthroughDepth
-                 configs: StreamXout, # out
+                 frames: StreamXout,  # passthroughDepth
+                 configs: StreamXout,  # out
                  dispScaleFactor: float,
                  bbox: BoundingBox):
         self._stereo = stereo
@@ -160,6 +159,7 @@ class XoutSpatialBbMappings(XoutDisparityDepth, SequenceNumSync):
             msgs[self.configs.name],
             disp_scale_factor=self.disp_scale_factor,
         )
+
 
 class XoutTwoStage(XoutNnResults):
     """
@@ -206,7 +206,7 @@ class XoutTwoStage(XoutNnResults):
 
     # No need for `def visualize()` as `XoutNnResults.visualize()` does what we want
 
-    def new_msg(self, name: str, msg: dai.Buffer) -> None:
+    def new_msg(self, name: str, msg: dai.Buffer):
         if name not in self._streams:
             return  # From Replay modules. TODO: better handling?
 
@@ -278,15 +278,12 @@ class XoutTwoStage(XoutNnResults):
 
                     self.input_cfg_queue.send(cfg)
 
-            # print(f'Added detection seq {seq}')
         elif name in self.frames.name:
             self.msgs[seq][name] = msg
-            # print(f'Added frame seq {seq}')
         else:
             raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
 
         if self.synced(seq):
-            # print('Synced', seq)
             # Frames synced!
             dets = self.msgs[seq][self.nn_results.name]
             packet = TwoStagePacket(
@@ -297,11 +294,6 @@ class XoutTwoStage(XoutNnResults):
                 self.whitelist_labels,
                 self.bbox
             )
-
-            # Throws RuntimeError: dictionary changed size during iteration
-            # for s in self.msgs:
-            #     if int(s) <= int(seq):
-            #         del self.msgs[s]
 
             with self.lock:
                 new_msgs = {}
