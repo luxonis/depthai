@@ -9,7 +9,9 @@ with OakCamera() as oak:
     nn = oak.create_nn('mobilenet-ssd', color, spatial=stereo)
 
     # Sync & save all (encoded) streams
-    oak.record([color.out.encoded, left.out.encoded, right.out.encoded], './record', RecordType.VIDEO)
+    oak.record([color.out.encoded, left.out.encoded, right.out.encoded], './record', RecordType.VIDEO) \
+        .configure_syncing(enable_sync=True, threshold_ms=50)
+
     oak.visualize([color.out.encoded], fps=True)
 
     oak.start(blocking=True)

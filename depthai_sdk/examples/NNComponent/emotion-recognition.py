@@ -16,7 +16,7 @@ def callback(packet: TwoStagePacket):
         emotion_name = emotions[np.argmax(emotion_results)]
 
         visualizer.add_text(emotion_name,
-                            bbox=(*det.top_left, *det.bottom_right),
+                            bbox=packet.bbox.get_relative_bbox(det.bbox),
                             position=TextPosition.BOTTOM_RIGHT)
 
     visualizer.draw(packet.frame)

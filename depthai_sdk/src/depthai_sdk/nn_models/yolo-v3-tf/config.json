@@ -22,6 +22,7 @@
             "confidence_threshold" : 0.5
         }
     },
+    "openvino_version": "2021.4",
     "mappings":
     {
         "labels":

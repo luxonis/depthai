@@ -200,10 +200,6 @@ Visualizer
     :members:
     :undoc-members:
 
-.. autoclass:: depthai_sdk.visualize.visualizer.Platform
-    :members:
-    :undoc-members:
-
 Objects
 -------
 

@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
+from enum import IntEnum
 from pathlib import Path
 from typing import List
+
 import depthai as dai
+
 import depthai_sdk.oak_outputs.xout as outputs
-from enum import IntEnum
 
 
 class Recorder(ABC):
@@ -30,16 +32,7 @@ class OakStream:
         IMU = 5
 
     def __init__(self, xout: outputs.xout_base.XoutBase):
-        if isinstance(xout, outputs.xout_mjpeg.XoutMjpeg):
-            self.type = self.StreamType.MJPEG
-            self.xlink_name = xout.frames.name
-        elif isinstance(xout, outputs.xout_h26x.XoutH26x):
-            self.xlink_name = xout.frames.name
-            if xout.profile == dai.VideoEncoderProperties.Profile.H265_MAIN:
-                self.type = self.StreamType.H265
-            else:
-                self.type = self.StreamType.H264
-        elif isinstance(xout, outputs.xout_depth.XoutDepth):
+        if isinstance(xout, outputs.xout_depth.XoutDisparityDepth):
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.DEPTH  # TODO is depth raw or should it be DEPTH?
         elif isinstance(xout, outputs.xout_disparity.XoutDisparity):
@@ -47,8 +40,16 @@ class OakStream:
             self.type = self.StreamType.RAW
         elif isinstance(xout, outputs.xout_frames.XoutFrames):
             self.xlink_name = xout.frames.name
-            self.type = self.StreamType.RAW
-        elif isinstance(xout, outputs.XoutIMU):
+            if xout._fourcc is None:
+                self.type = self.StreamType.RAW
+            elif xout._fourcc == 'hevc':
+                self.type = self.StreamType.H265
+            elif xout._fourcc == 'h264':
+                self.type = self.StreamType.H264
+            elif xout._fourcc == 'mjpeg':
+                self.type = self.StreamType.MJPEG
+
+        elif isinstance(xout, outputs.xout_imu.XoutIMU):
             self.xlink_name = xout.imu_out.name
             self.type = self.StreamType.IMU
         else:
