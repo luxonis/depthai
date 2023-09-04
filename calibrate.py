@@ -168,9 +168,14 @@ def parse_args():
 
     # Set some extra defaults, `-brd` would override them
     if options.defaultBoard is not None:
-        try: 
+        try:
             board_name = options.defaultBoard
-            _, _, size, numX, numY= board_name.split("_")
+            try:
+                board_name, _ = board_name.split(".")
+            except:
+                board_name = board_name
+            _, size, charcuo_num = board_name.split("_")
+            numX, numY = charcuo_num.split("x")
             options.squaresX = int(numX)
             options.squaresY = int(numY)
         except:
@@ -346,12 +351,14 @@ class Main:
         self.args = parse_args()
         self.traceLevel= self.args.traceLevel
         self.output_scale_factor = self.args.outputScaleFactor
-        self.aruco_dictionary = cv2.aruco.Dictionary_get(
-            cv2.aruco.DICT_4X4_1000)
+        #self.aruco_dictionary = cv2.aruco.Dictionary_get(
+        #    cv2.aruco.DICT_4X4_1000)
         self.device = dai.Device()
-        print(self.device.getDeviceName())
         self.enablePolygonsDisplay = self.args.enablePolygonsDisplay
         self.board_name = None
+        cameraProperties = self.device.getConnectedCameraFeatures()
+        calibData = self.device.readCalibration()
+        eeprom = calibData.getEepromData()
         if self.args.board:
             self.board_name = self.args.board
             board_path = Path(self.args.board)
@@ -365,25 +372,30 @@ class Main:
                 self.board_config = self.board_config['board_config']
                 self.board_config_backup = self.board_config
         else:
-            cameraProperties = self.device.getConnectedCameraFeatures()
-            calibData = self.device.readCalibration()
-            eeprom = calibData.getEepromData()
-            eeprom.productName = eeprom.productName.replace(" ", "-")
-            eeprom.boardName = eeprom.boardName.replace(" ", "-")
-            print(f"Product name: {eeprom.productName}, board name {eeprom.boardName}")
-            if eeprom.productName.split("-")[0] == "OAK":
-                detection = eeprom.productName.split("-")
-            elif eeprom.boardName.split("-")[0] == "OAK":
-                detection = eeprom.boardName.split("-")
-            else:
-                raise ValueError(f"Board config for Product name: {eeprom.productName}, board name {eeprom.boardName} not found.")
+            try: 
+                detection = self.device.getDeviceName()
+                print(f"Device name: {detection}")
+                detection = detection.split("-")
+            except:
+                cameraProperties = self.device.getConnectedCameraFeatures()
+                calibData = self.device.readCalibration()
+                eeprom = calibData.getEepromData()
+                eeprom.productName = eeprom.productName.replace(" ", "-").upper()
+                eeprom.boardName = eeprom.boardName.replace(" ", "-").upper()
+                print(f"Product name: {eeprom.productName}, board name {eeprom.boardName}")
+                if eeprom.productName.split("-")[0] == "OAK":
+                    detection = eeprom.productName.split("-")
+                elif eeprom.boardName.split("-")[0] == "OAK":
+                    detection = eeprom.boardName.split("-")
+                else:
+                    raise ValueError(f"Board config for Product name: {eeprom.productName}, board name {eeprom.boardName} not found.")
             if "AF" in detection:
                 detection.remove("AF")
-            if "FF" in detection:
+            else:
                 detection.remove("FF")
             if "9782" in detection:
                 detection.remove("9782")
-            self.board_name = '-'.join(detection).upper()
+            self.board_name = '-'.join(detection)
             board_path = Path(self.board_name)
             if self.traceLevel == 1:
                 print(f"Board path specified as {board_path}")
@@ -606,10 +618,10 @@ class Main:
         cv2.imshow("info", info_frame)
         while True:
             key = cv2.waitKey(1)
-            if key == ord(" "):
+            if key & 0xFF == ord(" "):
                 cv2.destroyAllWindows()
                 return
-            elif key == 27 or key == ord("q"):  # 27 - ESC
+            elif key & 0xFF == 27 or key == ord("q"):  # 27 - ESC
                 cv2.destroyAllWindows()
                 raise SystemExit(0)
 
@@ -833,7 +845,7 @@ class Main:
                     combinedImage = np.hstack((combinedImage, subImage))
                 
             key = cv2.waitKey(1)
-            if key == 27 or key == ord("q"):
+            if (key & 0xFF)== 27  or (key & 0xFF) == ord("q"):
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
             elif key == ord(" ") or self.mouseTrigger == True:
