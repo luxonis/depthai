@@ -629,7 +629,7 @@ class NNComponent(Component):
             """
 
             def __call__(self, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
-                if self._comp._is_multi_stage():
+                if self._comp.is_multi_stage():
                     det_nn_out = StreamXout(out=self._comp._input.node.out)
                     second_nn_out = StreamXout(out=self._comp.node.out)
 
@@ -661,7 +661,7 @@ class NNComponent(Component):
                 Default output. Streams NN results and passthrough frames (frames used for inferencing)
                 Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
                 """
-                if self._comp._is_multi_stage():
+                if self._comp.is_multi_stage():
                     return XoutTwoStage(det_nn=self._comp._input,
                                         second_nn=self._comp,
                                         frames=StreamXout(out=self._comp._input.node.passthrough),
@@ -690,7 +690,7 @@ class NNComponent(Component):
                 """
                 Streams depth and bounding box mappings (``SpatialDetectionNework.boundingBoxMapping``). Produces SpatialBbMappingPacket.
                 """
-                if not self._comp._is_spatial():
+                if not self._comp.is_spatial():
                     raise Exception('SDK tried to output spatial data (depth + bounding box mappings),'
                                     'but this is not a Spatial Detection network!')
 
@@ -708,7 +708,7 @@ class NNComponent(Component):
                 """
                 Streams 2. stage cropped frames to the host. Produces FramePacket.
                 """
-                if not self._comp._is_multi_stage():
+                if not self._comp.is_multi_stage():
                     raise Exception(
                         'SDK tried to output TwoStage crop frames, but this is not a Two-Stage NN component!')
 
@@ -719,7 +719,7 @@ class NNComponent(Component):
                 """
                 Streams ObjectTracker tracklets and high-res frames that were downscaled and used for inferencing. Produces TrackerPacket.
                 """
-                if not self._comp._is_tracker():
+                if not self._comp.is_tracker():
                     raise Exception('Tracker was not enabled! Enable with cam.create_nn("[model]", tracker=True)!')
 
                 self._comp.node.passthrough.link(self._comp.tracker.inputDetectionFrame)
