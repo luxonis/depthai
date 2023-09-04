@@ -4,8 +4,8 @@ from depthai_sdk import OakCamera
 
 with OakCamera() as oak:
     color = oak.create_camera('color', encode='h264')
-    nn = oak.create_nn('mobilenet-ssd', color, name='mobilenet')
-    nn2 = oak.create_nn('face-detection-retail-0004', color, name='face-detection')
+    nn = oak.create_nn('mobilenet-ssd', color)
+    nn2 = oak.create_nn('face-detection-retail-0004', color)
 
     def cb(msgs: Dict):
         print('====== New synced packets! ======')
