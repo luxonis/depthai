@@ -391,7 +391,7 @@ class Main:
                     raise ValueError(f"Board config for Product name: {eeprom.productName}, board name {eeprom.boardName} not found.")
             if "AF" in detection:
                 detection.remove("AF")
-            else:
+            if "FF" in detection:
                 detection.remove("FF")
             if "9782" in detection:
                 detection.remove("9782")
