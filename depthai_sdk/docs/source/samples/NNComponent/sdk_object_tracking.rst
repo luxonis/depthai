@@ -34,7 +34,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/NNComponent/object_tracking.py>`__.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/NNComponent/object_tracking.py>`__.
 
         .. literalinclude:: ../../../../examples/NNComponent/object_tracking.py
             :language: python

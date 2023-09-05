@@ -33,7 +33,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/IMUComponent/imu.py>`__.
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/IMUComponent/imu.py>`__.
 
         .. literalinclude:: ../../../../examples/IMUComponent/imu.py
             :language: python

@@ -30,7 +30,7 @@ Source Code
 
     .. tab:: Python
 
-        Also `available on GitHub <https://github.com/luxonis/depthai/depthai_sdk/examples/CameraComponent/rotated.py>`__
+        Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/CameraComponent/rotated.py>`__
 
         .. literalinclude:: ../../../../examples/CameraComponent/rotated.py
             :language: python

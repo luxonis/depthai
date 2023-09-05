@@ -72,7 +72,7 @@ are presented with code.
 - :ref:`Stereo Recording` - Records disparity stream
 
 .. rubric:: Replay
-- :ref:`People Counter on Video Replay` - Run people counter on a pre-saved video
+- :ref:`Object counting on images` - Count number of objects on a folder of images (cycle through images every 3 sec)
 - :ref:`People Tracker on Video Replay` - Run people tracker on a pre-saved video
 - :ref:`Face Detection Inference on Downloaded Image` - Run face detection on a downloaded image
 - :ref:`Vehicle Detection on a Youtube Video` - Run vehicle detection on a Youtube video stream
