@@ -351,8 +351,8 @@ class Main:
         self.args = parse_args()
         self.traceLevel= self.args.traceLevel
         self.output_scale_factor = self.args.outputScaleFactor
-        #self.aruco_dictionary = cv2.aruco.Dictionary_get(
-        #    cv2.aruco.DICT_4X4_1000)
+        self.aruco_dictionary = cv2.aruco.Dictionary_get(
+            cv2.aruco.DICT_4X4_1000)
         self.device = dai.Device()
         self.enablePolygonsDisplay = self.args.enablePolygonsDisplay
         self.board_name = None
