@@ -359,6 +359,7 @@ class Main:
         cameraProperties = self.device.getConnectedCameraFeatures()
         calibData = self.device.readCalibration()
         eeprom = calibData.getEepromData()
+        #TODO Change only in getDeviceName in next revision.
         if self.args.board:
             self.board_name = self.args.board
             board_path = Path(self.args.board)
@@ -660,7 +661,7 @@ class Main:
 
         show((50, int(height / 2 - 40)),
              "Capture failed, unable to sync images!")
-        show((60, int(height / 2 + 40)), "Fix the argument -mts.")
+        show((60, int(height / 2 + 40)), "Fix the argument -mst.")
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
