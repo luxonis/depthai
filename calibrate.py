@@ -150,7 +150,7 @@ def parse_args():
                         help="Save calibration file to this path")
     parser.add_argument('-dst', '--datasetPath', type=str, default="dataset",
                         help="Path to dataset used for processing images")
-    parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.7,
+    parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.4,
                         help="Minimum percentage of detected markers to consider a frame valid")
     parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
                         help="Enable mouse trigger for image capture")
@@ -165,7 +165,6 @@ def parse_args():
     parser.add_argument('-ebp', '--enablePolygonsDisplay', default=True, action="store_true",
                         help="Enable the display of polynoms.")
     options = parser.parse_args()
-
     # Set some extra defaults, `-brd` would override them
     if options.defaultBoard is not None:
         try:
@@ -182,8 +181,6 @@ def parse_args():
             raise argparse.ArgumentTypeError(options.defaultBoard, "Board name has not been found.")
     if options.markerSizeCm is None:
         options.markerSizeCm = options.squareSizeCm * 0.75
-    else:
-        raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
     if options.traceLevel == 1:
@@ -580,8 +577,7 @@ class Main:
         if not self.is_markers_found(frame):
             return False
 
-        filename = calibUtils.image_filename(
-            stream_name, self.current_polygon, self.images_captured)
+        filename = calibUtils.image_filename(self.current_polygon, self.images_captured)
         path = Path(self.args.datasetPath) / stream_name / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(path), frame)
