@@ -150,7 +150,7 @@ def parse_args():
                         help="Save calibration file to this path")
     parser.add_argument('-dst', '--datasetPath', type=str, default="dataset",
                         help="Path to dataset used for processing images")
-    parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.7,
+    parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.4,
                         help="Minimum percentage of detected markers to consider a frame valid")
     parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
                         help="Enable mouse trigger for image capture")
