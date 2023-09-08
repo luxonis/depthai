@@ -480,7 +480,7 @@ class Main:
                                                                                 rejectedCorners=rejectedImgPoints)
         if len(marker_corners) <= 0:
             return marker_corners, ids, None, None
-        ret, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, ids, frame, self.charuco_board)
+        ret, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, ids, frame, self.charuco_board, minMarkers = 1)
         return marker_corners, ids, charuco_corners, charuco_ids
 
     def draw_markers(self, frame):
