@@ -158,7 +158,7 @@ def parse_args():
                         help="Don't take the board calibration for initialization but start with an empty one")
     parser.add_argument('-trc', '--traceLevel', type=int, default=0,
                         help="Set to trace the steps in calibration. Number from 1 to 5. If you want to display all, set trace number to 10.")
-    parser.add_argument('-mst', '--minSyncTimestamp',  type=float, default=0.05,
+    parser.add_argument('-mst', '--minSyncTimestamp',  type=float, default=0.2,
                         help="Minimum time difference between pictures taken from different cameras.  Default: %(default)s ")
     parser.add_argument('-it', '--numPictures',  type=float, default=None,
                         help="Number of pictures taken.")
@@ -417,7 +417,7 @@ class Main:
         if self.traceLevel == 1:
             print("Using Arguments=", self.args)
         if self.args.datasetPath:
-            Path(self.args.datasetPath).mkdir(parents=True, exist_ok=True)
+            path = Path(self.args.datasetPath).mkdir(parents=True, exist_ok=True)
 
         # if self.args.board.upper() == 'OAK-D-LITE':
         #     raise Exception(
@@ -486,7 +486,7 @@ class Main:
     def draw_markers(self, frame):
         marker_corners, ids, charuco_corners, charuco_ids = self.detect_markers_corners(frame)
         if charuco_ids is not None and len(charuco_ids) > 0:
-            return cv2.aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids, (0, 255, 0));
+            return cv2.aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids, (0, 255, 0))
         return frame
 
     def draw_corners(self, frame, displayframe, color):
@@ -532,7 +532,8 @@ class Main:
                 if cam_info['type'] == 'mono':
                     cam_node = pipeline.createMonoCamera()
                     xout = pipeline.createXLinkOut()
-
+                    sensorName = cam_info['sensorName']
+                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
                     cam_node.setBoardSocket(stringToCam[cam_id])
                     cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
                     cam_node.setFps(fps)
@@ -545,7 +546,7 @@ class Main:
 
                     cam_node.setBoardSocket(stringToCam[cam_id])
                     sensorName = cam_info['sensorName']
-                    print(f'Sensor name is {sensorName}')
+                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
                     cam_node.setResolution(camToRgbRes[cam_info['sensorName'].upper()])
                     cam_node.setFps(fps)
 
@@ -1133,13 +1134,22 @@ class Main:
             raise SystemExit(1)
 
     def run(self):
+        self.dataset_path = self.args.datasetPath
         if 'capture' in self.args.mode:
+            print("Saving dataset to: {}".format(self.args.datasetPath))
+            if self.dataset_path != "dataset":
+                answer = input("This folders content will be deleted for sake of calibration: Proceed? (y/n)")
+                if answer == "y" or answer == "Y":
+                    print("Starting calibration")
+                else:
+                    print("Calibration ended by user.")
+                    raise SystemExit(1)
             try:
-                if Path('dataset').exists():
-                    shutil.rmtree('dataset/')
+                if Path(self.dataset_path).exists():
+                    shutil.rmtree(Path(self.dataset_path))
                 for cam_id in self.board_config['cameras']:
                     name = self.board_config['cameras'][cam_id]['name']
-                    Path("dataset/{}".format(name)).mkdir(parents=True, exist_ok=True)
+                    Path(Path(self.dataset_path) / "{}".format(name)).mkdir(parents=True, exist_ok=True)
                 
             except OSError:
                 traceback.print_exc()
@@ -1148,10 +1158,8 @@ class Main:
             self.startPipeline()
             self.show_info_frame()
             self.capture_images_sync()
-        self.dataset_path = str(Path("dataset").absolute())
-        if self.args.datasetPath:
-            print("Using dataset path: {}".format(self.args.datasetPath))
-            self.dataset_path = self.args.datasetPath
+        print("Using dataset path: {}".format(self.args.datasetPath))
+        self.dataset_path = self.args.datasetPath
         if 'process' in self.args.mode:
             self.calibrate()
         print('py: DONE.')
