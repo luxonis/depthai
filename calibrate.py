@@ -162,7 +162,7 @@ def parse_args():
                         help="Minimum time difference between pictures taken from different cameras.  Default: %(default)s ")
     parser.add_argument('-it', '--numPictures',  type=float, default=None,
                         help="Number of pictures taken.")
-    parser.add_argument('-ebp', '--enablePolygonsDisplay', default=True, action="store_true",
+    parser.add_argument('-ebp', '--enablePolygonsDisplay', default=False, action="store_true",
                         help="Enable the display of polynoms.")
     options = parser.parse_args()
     # Set some extra defaults, `-brd` would override them
@@ -1134,16 +1134,17 @@ class Main:
             raise SystemExit(1)
 
     def run(self):
-        self.dataset_path = self.args.datasetPath
         if 'capture' in self.args.mode:
-            print("Saving dataset to: {}".format(self.args.datasetPath))
-            if self.dataset_path != "dataset":
-                answer = input("This folders content will be deleted for sake of calibration: Proceed? (y/n)")
-                if answer == "y" or answer == "Y":
-                    print("Starting calibration")
-                else:
-                    print("Calibration ended by user.")
-                    raise SystemExit(1)
+            if self.args.datasetPath:
+                print("Saving dataset to: {}".format(self.args.datasetPath))
+                self.dataset_path = self.args.datasetPath
+                if self.dataset_path != "dataset":
+                    answer = input("This folders content will be deleted for sake of calibration: Proceed? (y/n)")
+                    if answer == "y" or answer == "Y":
+                        print("Starting calibration")
+                    else:
+                        print("Calibration ended by user.")
+                        raise SystemExit(1)
             try:
                 if Path(self.dataset_path).exists():
                     shutil.rmtree(Path(self.dataset_path))
