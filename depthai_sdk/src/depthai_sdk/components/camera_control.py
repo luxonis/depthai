@@ -252,6 +252,12 @@ class CameraControl:
             if controls['exposure'].get('lock', None) is not None:
                 logger.info(f'Setting exposure lock to {controls["exposure"]["lock"]}.')
                 ctrl.setAutoExposureLock(controls['exposure']['lock'])
+            if controls['exposure'].get('roi', False) and controls['exposure']['roi']:
+                logger.info(f'Setting roi exposure to {controls["exposure"]["roi"]}.')
+                startX, startY, endX, endY = controls["exposure"]["roi"]
+                width = endX - startX
+                height = endY - startY
+                ctrl.setAutoExposureRegion(startX = startX, startY = startY, width = width, height = height)
             if controls['exposure'].get('region', None) is not None:
                 # logger.info(f'Setting exposure region to {controls["exposure"]["region"]}.')
                 # ctrl.setAutoExposureRegion(*controls['exposure']['region'])
