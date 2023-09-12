@@ -87,7 +87,7 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
                 self.use_wls_filter = False
 
         XoutFrames.__init__(self, frames=frames)
-        XoutSeqSync.__init__(self, [frames, mono_frames])
+        XoutSeqSync.__init__(self, self.xstreams())
 
     def on_callback(self, packet) -> None:
         if self.ir_settings['auto_mode']:

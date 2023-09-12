@@ -192,6 +192,7 @@ class DisparityDepthPacket(DisparityPacket):
                  colormap: int = None,
                  mono_frame: Optional[dai.ImgFrame] = None,
                  disp_scale_factor=255 / 95,
+                 confidence_map=None
                  ):
         # DepthPacket.__init__(self, name=name, msg=img_frame)
         super().__init__(
@@ -202,6 +203,7 @@ class DisparityDepthPacket(DisparityPacket):
             colorize=colorize,
             colormap=colormap,
             mono_frame=mono_frame,
+            confidence_map=confidence_map
         )
         self.disp_scale_factor = disp_scale_factor
 

@@ -32,6 +32,7 @@ class XoutDisparityDepth(XoutDisparity):
 
     def package(self, msgs: Dict) -> DisparityDepthPacket:
         mono_frame = msgs[self.mono_frames.name] if self.mono_frames else None
+        confidence_map = msgs[self.confidence_map.name] if self.confidence_map else None
         return DisparityDepthPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
@@ -39,4 +40,5 @@ class XoutDisparityDepth(XoutDisparity):
             colormap=self.colormap,
             mono_frame=mono_frame,
             disp_scale_factor=self.disp_scale_factor,
+            confidence_map=confidence_map
         )

@@ -459,6 +459,12 @@ class StereoComponent(Component):
             mono_frames = StreamXout(self._right_stream)
         return mono_frames
 
+    def _try_get_confidence_map(self):
+        confidence_map = None
+        if self.enable_depth_score:
+            confidence_map = StreamXout(self.node.confidenceMap, name='depth_score')
+        return confidence_map
+
     class Out:
         class DepthOut(ComponentOutput):
             def __call__(self, device: dai.Device) -> XoutBase:
@@ -470,7 +476,7 @@ class StereoComponent(Component):
                     colorize=self._comp._colorize,
                     colormap=self._comp._postprocess_colormap,
                     ir_settings=self._comp.ir_settings,
-                    confidence_map=self._try_get_confidence_map()
+                    confidence_map=self._comp._try_get_confidence_map()
 
                 ).set_comp_out(self)
 
@@ -486,7 +492,7 @@ class StereoComponent(Component):
                     colormap=self._comp._postprocess_colormap,
                     wls_config=self._comp.wls_config,
                     ir_settings=self._comp.ir_settings,
-                    confidence_map=self._try_get_confidence_map()
+                    confidence_map=self._comp._try_get_confidence_map()
                 ).set_comp_out(self)
 
         class RectifiedLeftOut(ComponentOutput):
@@ -515,11 +521,3 @@ class StereoComponent(Component):
             self.disparity = self.DisparityOut(stereo_component)
             self.encoded = self.EncodedOut(stereo_component)
             self.main = self.depth
-
-        def _try_get_confidence_map(self):
-            confidence_map = None
-            if self._comp.enable_depth_score:
-                confidence_map = StreamXout(self._comp.node.id,
-                                            self._comp.node.confidenceMap,
-                                            name='depth_score')
-            return confidence_map
