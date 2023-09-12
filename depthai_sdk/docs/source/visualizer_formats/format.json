@@ -1,11 +1,4 @@
 {
-  "platform": {
-    "type": "string",
-    "enum": [
-      "pc",
-      "robothub"
-    ]
-  },
   "frame_shape": {
     "type": "array",
     "items": {

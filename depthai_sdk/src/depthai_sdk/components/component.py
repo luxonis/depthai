@@ -1,23 +1,11 @@
-from abc import ABC, abstractmethod
-from typing import Optional
-
+from abc import ABC
 import depthai as dai
-
-from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
 
 
 class Component(ABC):
     """
     SDK component is used as an abstraction to the current DepthAI API node or group of nodes.    
     """
-
-    def forced_openvino_version(self) -> Optional[dai.OpenVINO.Version]:
-        """
-        Checks whether the component forces a specific OpenVINO version. Only used by NNComponent (which overrides this
-        method). This function is called after Camera has been configured and right before we connect to the OAK camera.
-        @return: Forced OpenVINO version (optional).
-        """
-        return None
 
     def on_pipeline_started(self, device: dai.Device) -> None:
         """
@@ -26,23 +14,61 @@ class Component(ABC):
         """
         pass
 
-    def _stream_name_ok(self, pipeline: dai.Pipeline, name: str) -> bool:
-        # Check if there's already an XLinkOut stream with this name
-        for node in pipeline.getAllNodes():
-            if isinstance(node, dai.node.XLinkOut) and node.getStreamName() == name:
-                return False
-        return True
 
-    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase) -> XoutBase:
-        for xstream in xout.xstreams():
-            if not self._stream_name_ok(pipeline, xstream.name):
-                continue
+    # So users can use:
+    # packets: Dict[Packet] = q.get()
+    # depthPacket = packets['depth']
+    # depthPacket = packets[stereoComp]
+    def __str__(self):
+        return self.out.main.__str__()
 
-            if isinstance(xstream, ReplayStream):
-                continue
+    def __hash__(self):
+        return self.__str__().__hash__()
 
-            xlink = pipeline.createXLinkOut()
-            xlink.setStreamName(xstream.name)
-            xstream.stream.link(xlink.input)
+    def __eq__(self, other):
+        if isinstance(other, Component):
+            return str(self) == str(other)
+        elif isinstance(other, str):
+            return str(self) == other
+        else:
+            return False
 
-        return xout
+class ComponentOutput(ABC):
+    """
+    Output of a component
+    """
+    def __init__(self, component: Component):
+        """
+        If user hasn't specified component's output name, we will
+        generate one in Xout class
+        """
+        self.name = None
+        self._comp = component
+
+    def set_name(self, name: str) -> 'ComponentOutput':
+        """
+        Name component's output, which will be used for packet names. If not specified, it
+        will be generated automatically after pipeline is started (after `oak.start()`) by
+        combining all Xout Stream names (eg. "6_out;3_out").
+        """
+        self.name = name
+        return self
+
+    # So users can use:
+    # packets: Dict[Packet] = q.get()
+    # depthPacket = packets['depth']
+    # depthPacket = packets[stereoComp.out.depth]
+    def __str__(self):
+        return self.name
+
+    def __hash__(self):
+        return self.__str__().__hash__()
+
+    def __eq__(self, other):
+        if isinstance(other, ComponentOutput):
+            return str(self) == str(other)
+        elif isinstance(other, str):
+            return str(self) == other
+        else:
+            return False
+

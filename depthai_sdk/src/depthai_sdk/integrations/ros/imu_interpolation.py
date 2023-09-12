@@ -1,7 +1,8 @@
 from enum import Enum
 from typing import List
-import numpy as np
+
 import depthai as dai
+import numpy as np
 
 
 class ImuSyncMethod(Enum):

@@ -14,7 +14,7 @@ def callback(packet: TwoStagePacket):
         gender_str = "Woman" if gender[0] > gender[1] else "Man"
 
         visualizer.add_text(f'{gender_str}\nAge: {age}',
-                            bbox=(*det.top_left, *det.bottom_right),
+                            bbox=packet.bbox.get_relative_bbox(det.bbox),
                             position=TextPosition.BOTTOM_RIGHT)
 
     frame = visualizer.draw(packet.frame)

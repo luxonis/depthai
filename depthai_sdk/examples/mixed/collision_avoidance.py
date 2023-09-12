@@ -1,6 +1,6 @@
 from depthai_sdk import OakCamera
 from depthai_sdk.visualize.configs import StereoColor
-from depthai_sdk.classes.packets import DepthPacket
+from depthai_sdk.classes.packets import DisparityDepthPacket
 import math
 import depthai as dai
 import cv2
@@ -11,7 +11,7 @@ CRITICAL = 500 # 50cm, red
 
 slc_data = []
 
-def cb(packet: DepthPacket):
+def cb(packet: DisparityDepthPacket):
     global slc_data
     fontType = cv2.FONT_HERSHEY_TRIPLEX
 
@@ -55,8 +55,6 @@ with OakCamera() as oak:
     stereo.config_stereo(confidence=50, lr_check=True, extended=True)
 
     oak.visualize([stereo], fps=True, callback=cb)
-
-    oak.build()
 
     slc = oak.pipeline.create(dai.node.SpatialLocationCalculator)
     for x in range(15):

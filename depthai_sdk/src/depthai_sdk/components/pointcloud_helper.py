@@ -1,5 +1,6 @@
-import numpy as np
 import depthai as dai
+import numpy as np
+
 
 def create_xyz(device: dai.Device, width: int, height: int):
     calibData = device.readCalibration()
@@ -29,4 +30,3 @@ def create_xyz(device: dai.Device, width: int, height: int):
 
     xyz = np.stack([x_coord, y_coord], axis=-1)
     return np.pad(xyz, ((0, 0), (0, 0), (0, 1)), "constant", constant_values=1.0)
-
