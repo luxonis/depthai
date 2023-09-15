@@ -76,6 +76,17 @@ class StereoComponent(Component):
         self.left = left
         self.right = right
 
+        device_info = device.getDeviceInfo()
+        if not hasattr(dai, "X_LINK_RVC3"):
+            # Assume RVC2 in this case
+            self._rvc_version = 2
+        elif device_info.platform == dai.X_LINK_MYRIAD_X:
+            self._rvc_version = 2
+        elif device_info.platform == dai.X_LINK_RVC3:
+            self._rvc_version = 3
+        else:
+            raise ValueError("Could not get the rvc version from the device.")
+
         self.node: dai.node.StereoDepth = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 
@@ -125,16 +136,6 @@ class StereoComponent(Component):
             input_size = self._get_stream_size(self.left)
             if input_size:
                 self.node.setInputResolution(*input_size)
-            device_info = device.getDeviceInfo()
-            if not hasattr(dai, "X_LINK_RVC3"):
-                # Assume RVC2 in this case
-                self._rvc_version = 2
-            elif device_info.platform == dai.X_LINK_MYRIAD_X:
-                self._rvc_version = 2
-            elif device_info.platform == dai.X_LINK_RVC3:
-                self._rvc_version = 3
-            else:
-                raise ValueError("Could not get the rvc version from the device.")
         self._left_stream = self._get_output_stream(self.left)
         self._right_stream = self._get_output_stream(self.right)
 

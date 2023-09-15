@@ -368,7 +368,7 @@ class Replay:
 
     def _createNewFrame(self, cvFrame) -> dai.ImgFrame:
         imgFrame = dai.ImgFrame()
-        imgFrame.setData(cvFrame)
+        imgFrame.setFrame(cvFrame)
         imgFrame.setTimestamp(self._now)
         imgFrame.setSequenceNum(self._seqNum)
         shape = cvFrame.shape[::-1]
