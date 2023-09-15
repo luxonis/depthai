@@ -1,29 +1,33 @@
+import logging
 import os
 from abc import abstractmethod
-from typing import Optional, Callable, List, Union, Dict
 from queue import Queue, Empty
+from typing import Optional, Callable, List, Union, Dict
 
-from depthai_sdk.classes.packets import BasePacket, FramePacket
-from depthai_sdk.oak_outputs.syncing import SequenceNumSync, TimestampSync
+import depthai as dai
+
+from depthai_sdk.classes.packets import BasePacket
+from depthai_sdk.components.component import Component, ComponentOutput
+from depthai_sdk.oak_outputs.fps import FPS
+from depthai_sdk.oak_outputs.syncing import TimestampSync
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
-from depthai_sdk.components.component import Component
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.record import Record
-from depthai_sdk.recorders.video_recorder import VideoRecorder
 from depthai_sdk.trigger_action.actions.abstract_action import Action
 from depthai_sdk.trigger_action.actions.record_action import RecordAction
 from depthai_sdk.trigger_action.trigger_action import TriggerAction
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.visualize.visualizer import Visualizer
-from depthai_sdk.oak_outputs.fps import FPS
-import depthai as dai
-import logging
+
 
 class BasePacketHandler:
     def __init__(self, main_thread=False):
         self.fps = FPS()
         self.queue = Queue(2) if main_thread else None
-        self.outputs: List[Callable]
+        self.outputs: List[ComponentOutput]
         self.sync = None
+
+        self._packet_names = {}  # Check for duplicate packet name, raise error if found (user error)
 
     @abstractmethod
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
@@ -44,14 +48,14 @@ class BasePacketHandler:
         self.fps.next_iter()
         if self.queue:
             if self.queue.full():
-                self.queue.get() # Remove oldest packet
+                self.queue.get()  # Remove oldest packet
             self.queue.put(packet)
         else:
             self.new_packet(packet)
 
     def configure_syncing(self,
-                        enable_sync: bool = True,
-                        threshold_ms: int = 17):
+                          enable_sync: bool = True,
+                          threshold_ms: int = 17):
         """
         If multiple outputs are used, then PacketHandler can do timestamp syncing of multiple packets
         before calling new_packet().
@@ -86,7 +90,7 @@ class BasePacketHandler:
         """
         pass
 
-    def _save_outputs(self, output: Union[List, Callable, Component]):
+    def _save_outputs(self, output: Union[List, ComponentOutput, Component]):
         if not isinstance(output, List):
             output = [output]
 
@@ -97,7 +101,22 @@ class BasePacketHandler:
 
         self.outputs = output
 
-    def _create_xout(self, pipeline: dai.Pipeline, xout: XoutBase, xout_streams: Dict, custom_callback: Callable = None):
+    def _create_xout(self,
+                     pipeline: dai.Pipeline,
+                     xout: XoutBase,
+                     xout_streams: Dict,
+                     custom_callback: Callable = None,
+                     custom_packet_postfix: str = None):
+        # Check for duplicate packet name, raise error if found (user error)
+        if custom_packet_postfix:
+            xout.set_packet_name_postfix(custom_packet_postfix)
+
+        name = xout.get_packet_name()
+        if name in self._packet_names:
+            raise ValueError(
+                f'User specified duplicate packet name "{name}"! Please specify unique names (or leave empty) for each component output.')
+        self._packet_names[name] = True
+
         # Assign which callback to call when packet is prepared
         xout.new_packet_callback = custom_callback or self._new_packet_callback
 
@@ -122,7 +141,8 @@ class VisualizePacketHandler(BasePacketHandler):
         self._save_outputs(outputs)
 
         if 1 < len(self.outputs) and record_path is not None:
-            raise Exception('Recording multiple streams is not supported! Call oak.visualize(out, record_path="vid.mp4") for each stream separately')
+            raise Exception('Recording multiple streams is not supported! '
+                            'Call oak.visualize(out, record_path="vid.mp4") for each stream separately')
 
         self.callback = callback  # Callback that gets called after syncing
         self.visualizer = visualizer
@@ -133,7 +153,7 @@ class VisualizePacketHandler(BasePacketHandler):
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout: XoutBase = output(device)
             self._create_xout(pipeline, xout, xout_streams)
 
     def new_packet(self, packet: BasePacket):
@@ -162,9 +182,9 @@ class RecordPacketHandler(BasePacketHandler):
         super().__init__()
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
-        xouts: List[XoutBase] = []
+        xouts: List[XoutFrames] = []
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout = output(device)
             xouts.append(xout)
             self._create_xout(pipeline, xout, xout_streams)
 
@@ -176,6 +196,7 @@ class RecordPacketHandler(BasePacketHandler):
     def close(self):
         self.recorder.close()
 
+
 class CallbackPacketHandler(BasePacketHandler):
     def __init__(self, outputs, callback: Callable, main_thread=False):
         self._save_outputs(outputs)
@@ -184,11 +205,12 @@ class CallbackPacketHandler(BasePacketHandler):
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout = output(device)
             self._create_xout(pipeline, xout, xout_streams)
 
     def new_packet(self, packet):
         self.callback(packet)
+
 
 class QueuePacketHandler(BasePacketHandler):
     def __init__(self, outputs, max_size: int):
@@ -201,12 +223,12 @@ class QueuePacketHandler(BasePacketHandler):
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout = output(device)
             self._create_xout(pipeline, xout, xout_streams)
 
     def configure_syncing(self,
-                        enable_sync: bool = True,
-                        threshold_ms: int = 17) -> 'QueuePacketHandler':
+                          enable_sync: bool = True,
+                          threshold_ms: int = 17) -> 'QueuePacketHandler':
         """
         If multiple outputs are used, then PacketHandler can do timestamp syncing of multiple packets
         before calling new_packet().
@@ -224,6 +246,7 @@ class QueuePacketHandler(BasePacketHandler):
 
 class RosPacketHandler(BasePacketHandler):
     def __init__(self, outputs):
+        super().__init__()
         self._save_outputs(outputs)
 
         envs = os.environ
@@ -244,7 +267,7 @@ class RosPacketHandler(BasePacketHandler):
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
         xouts = []
         for output in self.outputs:
-            xout = output(pipeline, device)
+            xout = output(device)
             self._create_xout(pipeline, xout, xout_streams)
             xouts.append(xout)
 
@@ -278,8 +301,12 @@ class TriggerActionPacketHandler(BasePacketHandler):
         self.controller = TriggerAction(self.trigger, self.action)
 
     def setup(self, pipeline: dai.Pipeline, device: dai.Device, xout_streams: Dict[str, List]):
-        trigger_xout: XoutBase = self.trigger.input(pipeline, device)
-        self._create_xout(pipeline, trigger_xout, xout_streams, self.controller.new_packet_trigger)
+        trigger_xout: XoutBase = self.trigger.input(device)
+        self._create_xout(pipeline=pipeline,
+                          xout=trigger_xout,
+                          xout_streams=xout_streams,
+                          custom_callback=self.controller.new_packet_trigger,
+                          custom_packet_postfix='trigger')
 
         if isinstance(self.action, Callable):
             self._save_outputs([trigger_xout])
@@ -288,9 +315,13 @@ class TriggerActionPacketHandler(BasePacketHandler):
         action_xouts = []
         if self.action.inputs:
             for output in self.action.inputs:
-                xout: XoutBase = output(pipeline, device)
+                xout: XoutBase = output(device)
                 xout.new_packet_callback = self.controller.new_packet_action
-                self._create_xout(pipeline, xout, xout_streams, self.controller.new_packet_action)
+                self._create_xout(pipeline=pipeline,
+                                  xout=xout,
+                                  xout_streams=xout_streams,
+                                  custom_callback=self.controller.new_packet_action,
+                                  custom_packet_postfix='action')
                 action_xouts.append(xout)
 
         if isinstance(self.action, RecordAction):

@@ -1,4 +1,3 @@
-import copy
 import logging
 import time
 import warnings
@@ -6,6 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, Callable
 
 from depthai_sdk import CV2_HAS_GUI_SUPPORT
+from depthai_sdk.types import Resolution
 from depthai_sdk.visualize.visualizer import Visualizer
 
 try:
@@ -26,18 +26,25 @@ from depthai_sdk.classes.packet_handlers import (
     CallbackPacketHandler,
     VisualizePacketHandler
 )
-#RecordConfig, OutputConfig, SyncConfig, RosStreamConfig, TriggerActionConfig
+# RecordConfig, OutputConfig, SyncConfig, RosStreamConfig, TriggerActionConfig
 from depthai_sdk.components.camera_component import CameraComponent
-from depthai_sdk.components.component import Component
+from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.nn_component import NNComponent
-from depthai_sdk.components.parser import parse_usb_speed, parse_camera_socket, get_first_color_cam, parse_open_vino_version
+from depthai_sdk.components.parser import (
+    parse_usb_speed,
+    parse_camera_socket,
+    get_first_color_cam,
+    parse_open_vino_version
+)
 from depthai_sdk.components.stereo_component import StereoComponent
 from depthai_sdk.components.pointcloud_component import PointcloudComponent
 from depthai_sdk.record import RecordType, Record
 from depthai_sdk.replay import Replay
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 from depthai_sdk.utils import report_crash_dump
+
+
 
 class UsbWarning(UserWarning):
     pass
@@ -127,10 +134,9 @@ class OakCamera:
                source: Union[str, dai.CameraBoardSocket],
                resolution: Optional[Union[
                    str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
-                   ]] = None,
+               ]] = None,
                fps: Optional[float] = None,
                encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-               name: Optional[str] = None,
                ) -> CameraComponent:
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
@@ -142,7 +148,6 @@ class OakCamera:
             resolution (str/SensorResolution): Sensor resolution of the camera.
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
-            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         sensor_type = None
         if isinstance(source, str):
@@ -169,7 +174,7 @@ class OakCamera:
                 source = parse_camera_socket(source)
 
             if source in [None, dai.CameraBoardSocket.AUTO]:
-                return None # There's no camera on this socket
+                return None  # There's no camera on this socket
 
         for comp in self._components:
             if isinstance(comp, CameraComponent) and comp._socket == source:
@@ -184,7 +189,6 @@ class OakCamera:
                                sensor_type=sensor_type,
                                rotation=self._rotation,
                                replay=self.replay,
-                               name=name,
                                args=self._args)
         self._components.append(comp)
         return comp
@@ -218,12 +222,9 @@ class OakCamera:
 
     def create_camera(self,
                       source: Union[str, dai.CameraBoardSocket],
-                      resolution: Optional[Union[
-                          str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
-                      ]] = None,
+                      resolution: Optional[Resolution] = None,
                       fps: Optional[float] = None,
                       encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
-                      name: Optional[str] = None,
                       ) -> CameraComponent:
         """
         Deprecated, use camera() instead.
@@ -237,14 +238,13 @@ class OakCamera:
             resolution (str/SensorResolution): Sensor resolution of the camera.
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
-            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
-        return self.camera(source, resolution, fps, encode, name)
+        return self.camera(source, resolution, fps, encode)
 
     def all_cameras(self,
                     resolution: Optional[Union[
                         str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
-                        ]] = None,
+                    ]] = None,
                     fps: Optional[float] = None,
                     encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                     ) -> List[CameraComponent]:
@@ -259,7 +259,7 @@ class OakCamera:
         components: List[CameraComponent] = []
         # Loop over all available camera sensors
         if self.replay:
-            sources = self.replay.getStreams() # TODO handle in case the stream is not from a camera
+            sources = self.replay.getStreams()  # TODO handle in case the stream is not from a camera
         else:
             sources = [cam_sensor.socket for cam_sensor in self.device.getConnectedCameraFeatures()]
         for source in sources:
@@ -271,7 +271,6 @@ class OakCamera:
                                    encode=encode,
                                    rotation=self._rotation,
                                    replay=self.replay,
-                                   name=None,
                                    args=self._args)
             components.append(comp)
 
@@ -280,9 +279,9 @@ class OakCamera:
 
     def create_all_cameras(self,
                            resolution: Optional[Union[
-                               str, dai.ColorCameraProperties.SensorResolution, 
+                               str, dai.ColorCameraProperties.SensorResolution,
                                dai.MonoCameraProperties.SensorResolution
-                               ]] = None,
+                           ]] = None,
                            fps: Optional[float] = None,
                            encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                            ) -> List[CameraComponent]:
@@ -305,7 +304,6 @@ class OakCamera:
                   tracker: bool = False,  # Enable object tracker - only for Object detection models
                   spatial: Union[None, bool, StereoComponent] = None,
                   decode_fn: Optional[Callable] = None,
-                  name: Optional[str] = None
                   ) -> NNComponent:
         """
         Creates Neural Network component.
@@ -317,7 +315,6 @@ class OakCamera:
             tracker: Enable object tracker, if model is object detector (yolo/mobilenet)
             spatial: Calculate 3D spatial coordinates, if model is object detector (yolo/mobilenet) and depth stream is available
             decode_fn: Custom decoding function for the model's output
-            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
         """
         if spatial and type(spatial) == bool:
             spatial = self.stereo()
@@ -331,8 +328,7 @@ class OakCamera:
                            spatial=spatial,
                            decode_fn=decode_fn,
                            replay=self.replay,
-                           args=self._args,
-                           name=name)
+                           args=self._args)
         self._components.append(comp)
         return comp
 
@@ -341,7 +337,6 @@ class OakCamera:
                fps: Optional[float] = None,
                left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
-               name: Optional[str] = None,
                encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
                ) -> StereoComponent:
         """
@@ -352,7 +347,6 @@ class OakCamera:
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
-            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
         if left is None:
@@ -369,7 +363,6 @@ class OakCamera:
                                right=right,
                                replay=self.replay,
                                args=self._args,
-                               name=name,
                                encode=encode)
         self._components.append(comp)
         return comp
@@ -392,10 +385,9 @@ class OakCamera:
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
-            name (str): Name used to identify the X-out stream. This name will also be associated with the frame in the callback function.
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
-        return self.stereo(resolution, fps, left, right, name, encode)
+        return self.stereo(resolution, fps, left, right, encode)
 
     def create_imu(self) -> IMUComponent:
         """
@@ -408,7 +400,6 @@ class OakCamera:
     def create_pointcloud(self,
                           stereo: Union[None, StereoComponent, dai.node.StereoDepth, dai.Node.Output] = None,
                           colorize: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output, bool] = None,
-                          name: Optional[str] = None,
                           ) -> PointcloudComponent:
 
         if colorize is None:
@@ -428,7 +419,6 @@ class OakCamera:
             colorize=colorize,
             replay=self.replay,
             args=self._args,
-            name=name
         )
         self._components.append(comp)
         return comp
@@ -452,7 +442,7 @@ class OakCamera:
             self.pipeline.setCalibrationData(calib)
         if tuning_blob is not None:
             self.pipeline.setCameraTuningBlobPath(tuning_blob)
-        ov_version =  parse_open_vino_version(openvino_version)
+        ov_version = parse_open_vino_version(openvino_version)
         if ov_version is not None:
             self.pipeline.setOpenVINOVersion(ov_version)
 
@@ -509,7 +499,6 @@ class OakCamera:
                 else:
                     raise e
 
-
         # Append callbacks to be called from main thread
         # self._polling.append()
         if self._pipeine_graph is not None:
@@ -524,7 +513,6 @@ class OakCamera:
             self.replay.createQueues(self.device)
             self.replay.start()
             # Called from Replay module on each new frame sent to the device.
-
 
         # Check if callbacks (sync/non-sync are set)
         if blocking:
@@ -575,20 +563,22 @@ class OakCamera:
 
         return key
 
-    def sync(self, outputs: Union[Callable, List[Callable]], callback: Callable, visualize=False):
+    def sync(self, outputs: Union[ComponentOutput, List[ComponentOutput]], callback: Callable, visualize=False):
         raise DeprecationWarning('sync() is deprecated. Use callback() instead.')
 
     def record(self,
-               outputs: Union[Callable, List[Callable]],
+               outputs: Union[ComponentOutput, List[ComponentOutput]],
                path: str,
-               record_type: RecordType = RecordType.VIDEO) -> RecordPacketHandler:
+               record_type: RecordType = RecordType.VIDEO
+               ) -> RecordPacketHandler:
         """
         Record component outputs. This handles syncing multiple streams (eg. left, right, color, depth) and saving
         them to the computer in desired format (raw, mp4, mcap, bag..).
+
         Args:
-            outputs (Component/Component output): Component output(s) to be recorded
-            path: Folder path where to save these streams
-            record_type: Record type
+            outputs (Component/Component output): Component output(s) to be recorded.
+            path: Folder path where to save these streams.
+            record_type: Record type.
         """
         handler = RecordPacketHandler(outputs, Record(Path(path).resolve(), record_type))
         self._packet_handlers.append(handler)
@@ -603,7 +593,7 @@ class OakCamera:
         self._polling.append(self._pipeine_graph.update)
 
     def visualize(self,
-                  output: Union[List, Callable, Component],
+                  output: Union[List, ComponentOutput, Component],
                   record_path: Optional[str] = None,
                   scale: float = None,
                   fps=False,
@@ -612,19 +602,21 @@ class OakCamera:
                   ) -> Visualizer:
         """
         Visualize component output(s). This handles output streaming (OAK->host), message syncing, and visualizing.
+
         Args:
-            output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out())
-            record_path: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi
-            scale: Scale the output window by this factor
-            fps: Whether to show FPS on the output window
-            callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed
+            output (Component/Component output): Component output(s) to be visualized. If component is passed, SDK will visualize its default output (out()).
+            record_path: Path where to store the recording (visualization window name gets appended to that path), supported formats: mp4, avi.
+            scale: Scale the output window by this factor.
+            fps: Whether to show FPS on the output window.
+            callback: Instead of showing the frame, pass the Packet to the callback function, where it can be displayed.
+            visualizer: Which visualizer to use. Options: 'opencv', 'depthai-viewer', 'robothub'.
         """
         main_thread = False
         visualizer = visualizer.lower()
         if visualizer in ['opencv', 'cv2']:
             from depthai_sdk.visualize.visualizers.opencv_visualizer import OpenCvVisualizer
             vis = OpenCvVisualizer(scale, fps)
-            main_thread=True # OpenCV's imshow() requires to be called from the main thread
+            main_thread = True  # OpenCV's imshow() requires to be called from the main thread
         elif visualizer in ['depthai-viewer', 'depthai_viewer', 'viewer', 'depthai']:
             from depthai_sdk.visualize.visualizers.viewer_visualizer import DepthaiViewerVisualizer
             vis = DepthaiViewerVisualizer(scale, fps)
@@ -633,7 +625,10 @@ class OakCamera:
         else:
             raise ValueError(f"Unknown visualizer: {visualizer}. Options: 'opencv'")
 
-        handler = VisualizePacketHandler(output, vis, callback=callback, record_path=record_path, main_thread=main_thread)
+        handler = VisualizePacketHandler(output,
+                                         vis,
+                                         callback=callback, record_path=record_path,
+                                         main_thread=main_thread)
         self._packet_handlers.append(handler)
 
         if main_thread:
@@ -641,9 +636,10 @@ class OakCamera:
 
         return vis
 
-    def queue(self, output: Union[Callable, Component, List], max_size: int = 30) -> QueuePacketHandler:
+    def queue(self, output: Union[ComponentOutput, Component, List], max_size: int = 30) -> QueuePacketHandler:
         """
         Create a queue for the component output(s). This handles output streaming (OAK->Host) and message syncing.
+
         Args:
             output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output.
             max_size: Maximum queue size for this output.
@@ -652,13 +648,17 @@ class OakCamera:
         self._packet_handlers.append(handler)
         return handler
 
-    def callback(self, output: Union[List, Callable, Component], callback: Callable, main_thread=False) -> CallbackPacketHandler:
+    def callback(self,
+                 output: Union[List, Callable, Component],
+                 callback: Callable,
+                 main_thread=False
+                 ) -> CallbackPacketHandler:
         """
         Create a callback for the component output(s). This handles output streaming (OAK->Host) and message syncing.
+
         Args:
             output: Component output(s) to be visualized. If component is passed, SDK will visualize its default output.
             callback: Handler function to which the Packet will be sent.
-            enable_visualizer: Whether to enable visualizer for this output.
             main_thread: Whether to run the callback in the main thread. If False, it will call the callback in a separate thread, so some functions (eg. cv2.imshow) won't work.
         """
         handler = CallbackPacketHandler(output, callback=callback, main_thread=main_thread)
@@ -667,7 +667,7 @@ class OakCamera:
         self._packet_handlers.append(handler)
         return handler
 
-    def ros_stream(self, output: Union[List, Callable, Component]) -> RosPacketHandler:
+    def ros_stream(self, output: Union[List, ComponentOutput, Component]) -> RosPacketHandler:
         """
         Publish component output(s) to ROS streams.
         """
@@ -675,7 +675,7 @@ class OakCamera:
         self._packet_handlers.append(handler)
         return handler
 
-    def trigger_action(self, trigger: Trigger, action: Union[Action, Callable]):
+    def trigger_action(self, trigger: Trigger, action: Union[Action, Callable]) -> None:
         self._packet_handlers.append(TriggerActionPacketHandler(trigger, action))
 
     @property
@@ -686,11 +686,10 @@ class OakCamera:
         return self.device.getConnectedCameraFeatures()
 
     def _init_calibration(self) -> dai.CalibrationHandler:
-        calibration = None
         if self.replay:
             calibration = self.pipeline.getCalibrationData()
         else:
             calibration = self.device.readCalibration()
         if calibration is None:
-            logging.warn("No calibration data found on the device or in replay")
+            logging.warning("No calibration data found on the device or in replay")
         return calibration

@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
-import time
 from typing import Sequence, Tuple, List, Union, Optional, Dict, Callable
-from depthai_sdk.classes import Detections, ImgLandmarks, SemanticSegmentation
+
 import depthai as dai
 import numpy as np
+
+from depthai_sdk.classes import ImgLandmarks, SemanticSegmentation
+from depthai_sdk.classes.nn_results import Detection, TrackingDetection, TwoStageDetection
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import StereoColor, TextPosition
 from depthai_sdk.visualize.visualizer import Visualizer
-from depthai_sdk.classes.nn_results import Detection, TrackingDetection, TwoStageDetection
-from numpy.distutils.fcompiler.none import NoneFCompiler
 
 try:
     import cv2
@@ -42,17 +42,22 @@ class BasePacket(ABC):
     def get_sequence_num(self) -> int:
         raise NotImplementedError()
 
+
 class NNDataPacket(BasePacket):
     """
     Contains only dai.NNData message
     """
+
     def __init__(self, name: str, nn_data: dai.NNData):
         self.msg = nn_data
         super().__init__(name)
+
     def get_timestamp(self) -> timedelta:
         return self.msg.getTimestamp()
+
     def get_sequence_num(self) -> int:
         return self.msg.getTimestampDevice()
+
 
 class FramePacket(BasePacket):
     """
@@ -104,6 +109,7 @@ class FramePacket(BasePacket):
 
     def get_size(self) -> Tuple[int, int]:
         return self.msg.getWidth(), self.msg.getHeight()
+
 
 class DisparityPacket(FramePacket):
     def __init__(self,
@@ -169,11 +175,13 @@ class DisparityPacket(FramePacket):
             )
         return colorized_disp
 
+
 class DepthPacket(FramePacket):
     def __init__(self, name: str,
                  msg: dai.ImgFrame):
         super().__init__(name, msg)
         self.depth = msg.getFrame()
+
 
 class DisparityDepthPacket(DisparityPacket):
     def __init__(self,
@@ -182,7 +190,7 @@ class DisparityDepthPacket(DisparityPacket):
                  colorize: StereoColor = None,
                  colormap: int = None,
                  mono_frame: Optional[dai.ImgFrame] = None,
-                 disp_scale_factor = 255 / 95,
+                 disp_scale_factor=255 / 95,
                  ):
         # DepthPacket.__init__(self, name=name, msg=img_frame)
         super().__init__(
@@ -202,9 +210,8 @@ class DisparityDepthPacket(DisparityPacket):
         disparity[disparity == np.inf] = 0
         return disparity
 
-
     # def get_colorized_frame(self, visualizer) -> np.ndarray:
-        # Convert depth to disparity for nicer visualization
+    # Convert depth to disparity for nicer visualization
 
 
 class PointcloudPacket(BasePacket):
@@ -213,7 +220,6 @@ class PointcloudPacket(BasePacket):
                  points: np.ndarray,
                  depth_map: dai.ImgFrame,
                  colorize_frame: Optional[dai.ImgFrame]):
-
         super().__init__(name=name)
         self.points = points
         self.colorize_frame = colorize_frame.getCvFrame() if colorize_frame is not None else None
@@ -225,10 +231,12 @@ class PointcloudPacket(BasePacket):
     def get_timestamp(self) -> timedelta:
         return self.depth_map.getTimestampDevice()
 
+
 class SpatialBbMappingPacket(DisparityDepthPacket):
     """
     Output from Spatial Detection nodes - depth frame + bounding box mappings. Inherits FramePacket.
     """
+
     def __init__(self,
                  name: str,
                  msg: dai.ImgFrame,
@@ -249,18 +257,20 @@ class SpatialBbMappingPacket(DisparityDepthPacket):
             vis.add_bbox(
                 bbox=bbox,
                 thickness=3,
-                color=(0,0,0)
+                color=(0, 0, 0)
             )
             vis.add_bbox(
                 bbox=bbox,
                 thickness=1,
-                color=(255,255,255)
+                color=(255, 255, 255)
             )
+
 
 class NnOutputPacket(FramePacket):
     """
     NN result + image frame. Inherits FramePacket.
     """
+
     def __init__(self,
                  name: str,
                  msg: dai.ImgFrame,
@@ -272,10 +282,12 @@ class NnOutputPacket(FramePacket):
         self.nn_data = nn_data
         self.bbox = bbox
 
+
 class ImgLandmarksPacket(NnOutputPacket):
     """
     Output from Landmarks Estimation nodes - image frame + landmarks. Inherits NnOutputPacket.
     """
+
     def __init__(self,
                  name: str,
                  msg: dai.ImgFrame,
@@ -303,10 +315,12 @@ class ImgLandmarksPacket(NnOutputPacket):
                 vis.add_circle(coords=tuple(l[0]), radius=8, color=colors[idx], thickness=-1)
                 vis.add_circle(coords=tuple(l[1]), radius=8, color=colors[idx], thickness=-1)
 
+
 class SemanticSegmentationPacket(NnOutputPacket):
     """
     Output from Semantic Segmentation nodes - image frame + segmentation mask. Inherits NnOutputPacket.
     """
+
     def __init__(self,
                  name: str,
                  msg: dai.ImgFrame,
@@ -322,24 +336,6 @@ class SemanticSegmentationPacket(NnOutputPacket):
     def prepare_visualizer_objects(self, vis: Visualizer) -> None:
         raise NotImplementedError('Semantic segmentation visualization is not implemented yet!')
 
-        # Generate colormap if not already generated
-        if self.segmentation_colormap is None:
-            n_classes = len(self.labels) if self.labels else 8
-            self.segmentation_colormap = generate_colors(n_classes)
-
-        mask = np.array(packet.img_detections.mask).astype(np.uint8)
-
-        if mask.ndim == 3:
-            mask = np.argmax(mask, axis=0)
-
-        try:
-            colorized_mask = np.array(self.segmentation_colormap)[mask]
-        except IndexError:
-            unique_classes = np.unique(mask)
-            max_class = np.max(unique_classes)
-            new_colors = generate_colors(max_class - len(self.segmentation_colormap) + 1)
-            self.segmentation_colormap.extend(new_colors)
-            colorized_mask = np.array(self.segmentation_colormap)[mask]
 
 class DetectionPacket(FramePacket):
     """
@@ -351,7 +347,7 @@ class DetectionPacket(FramePacket):
                  msg: dai.ImgFrame,
                  dai_msg: Union[dai.ImgDetections, dai.SpatialImgDetections, dai.NNData],
                  bbox: BoundingBox,
-                ):
+                 ):
 
         super().__init__(name=name,
                          msg=msg)
@@ -388,31 +384,6 @@ class DetectionPacket(FramePacket):
                     position=TextPosition.BOTTOM_LEFT,
                 )
 
-            # bbox = None
-            # if self.normalizer.resize_mode == ResizeMode.LETTERBOX:
-            #     bbox = self.normalizer.get_letterbox_bbox(packet.frame, normalize=True)
-            #     input_h, input_w = self.normalizer.aspect_ratio
-            #     resize_bbox = bbox[0] * input_w, bbox[1] * input_h, bbox[2] * input_w, bbox[3] * input_h
-            #     resize_bbox = np.int0(resize_bbox)
-            # else:
-            #     resize_bbox = self.normalizer.normalize(frame=np.zeros(self._frame_shape, dtype=bool),
-            #                                             bbox=bbox or (0., 0., 1., 1.))
-
-            # x1, y1, x2, y2 = resize_bbox
-            # h, w = packet.frame.shape[:2]
-            # # Stretch mode
-            # if self.normalizer.resize_mode == ResizeMode.STRETCH:
-            #     colorized_mask = cv2.resize(colorized_mask, (w, h))
-            # elif self.normalizer.resize_mode == ResizeMode.LETTERBOX:
-            #     colorized_mask = cv2.resize(colorized_mask[y1:y2, x1:x2], (w, h))
-            # else:
-            #     padded_mask = np.zeros((h, w, 3), dtype=np.uint8)
-            #     resized_mask = cv2.resize(colorized_mask, (x2 - x1, y2 - y1))
-            #     padded_mask[y1:y2, x1:x2] = resized_mask
-            #     colorized_mask = padded_mask
-
-            # vis.add_mask(colorized_mask, alpha=0.5)
-
 
 class TrackerPacket(FramePacket):
     """
@@ -438,15 +409,9 @@ class TrackerPacket(FramePacket):
         return coords.x != 0.0 or coords.y != 0.0 or coords.z != 0.0
 
     def prepare_visualizer_objects(self, visualizer: Visualizer) -> None:
-        # self._add_tracklet_visualization()
-
-    # def _add_tracklet_visualization(self, packet, spatial_points, tracklet2speed):
-        # h, w = self.msg.getHeight(), self.msg.getWidth()
-        # filtered_tracklets = [tracklet for tracklet in self.daiTracklets.tracklets if
-        #                       tracklet.id not in self.blacklist]
         tracking_config = visualizer.config.tracking
         for obj_id, tracking_dets in self.tracklets.items():
-            tracking_det = tracking_dets[-1] # Get the last detection
+            tracking_det = tracking_dets[-1]  # Get the last detection
             bb = tracking_det.filtered_2d or tracking_det.bbox
             visualizer.add_bbox(
                 bbox=self.bbox.get_relative_bbox(bb),
@@ -459,18 +424,18 @@ class TrackerPacket(FramePacket):
                 position=TextPosition.TOP_LEFT,
             )
             if visualizer.config.tracking.show_speed and \
-                tracking_det.speed is not None:
+                    tracking_det.speed is not None:
                 visualizer.add_text(
                     text=f"{tracking_det.speed:.2f} m/s",
                     color=tracking_det.color,
                     bbox=self.bbox.get_relative_bbox(bb),
                     position=TextPosition.BOTTOM_RIGHT,
                 )
-            w,h = self.get_size()
+            w, h = self.get_size()
             tracklet_length = 0
             for i in reversed(range(len(tracking_dets) - 1)):
-                p1 = self.bbox.get_relative_bbox(tracking_dets[i].bbox).get_centroid().denormalize((h,w))
-                p2 = self.bbox.get_relative_bbox(tracking_dets[i + 1].bbox).get_centroid().denormalize((h,w))
+                p1 = self.bbox.get_relative_bbox(tracking_dets[i].bbox).get_centroid().denormalize((h, w))
+                p2 = self.bbox.get_relative_bbox(tracking_dets[i + 1].bbox).get_centroid().denormalize((h, w))
 
                 if tracking_config.max_length != -1:
                     tracklet_length += np.linalg.norm(np.array(p1) - np.array(p2))
@@ -482,21 +447,9 @@ class TrackerPacket(FramePacket):
                     thickness = max(1, int(np.ceil(thickness * i / len(tracking_dets))))
 
                 visualizer.add_line(pt1=p1, pt2=p2,
-                    color=tracking_dets[i].color,
-                    thickness=thickness
-                )
-
-        # visualizer.add_detections(detections=filtered_tracklets,
-        #                             normalizer=norm_bbox,
-        #                             label_map=self.labels,
-        #                             spatial_points=spatial_points)
-        # Add tracking ids
-        # Add tracking lines
-        # visualizer.add_trail(
-        #     tracklets=[d.tracklet for d in self.detections],
-        #     label_map=self.labels,
-        #     bbox=self.bbox,
-        # )
+                                    color=tracking_dets[i].color,
+                                    thickness=thickness
+                                    )
 
 
 class TwoStagePacket(DetectionPacket):
@@ -536,7 +489,7 @@ class TwoStagePacket(DetectionPacket):
 
 
 class IMUPacket(BasePacket):
-    def __init__(self, name, packet: dai.IMUPacket, rotation = None):
+    def __init__(self, name, packet: dai.IMUPacket, rotation=None):
         self.packet = packet
         super().__init__(name)
 
@@ -548,7 +501,7 @@ class IMUPacket(BasePacket):
         # Check which reports are available
         self.available_reports: Dict[str, dai.IMUReport] = {}
         for i, val in enumerate([self.acceleroMeter, self.gyroscope, self.magneticField, self.rotationVector]):
-            if (i==3 and rotation) or val.getTimestampDevice() != timedelta(0):
+            if (i == 3 and rotation) or val.getTimestampDevice() != timedelta(0):
                 self.available_reports[val.__class__.__name__] = val
 
     def get_imu_vals(self) -> Tuple[Sequence, Sequence, Sequence, Sequence]:

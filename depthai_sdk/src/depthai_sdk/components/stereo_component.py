@@ -7,7 +7,7 @@ import cv2
 import depthai as dai
 import numpy as np
 
-from depthai_sdk.components.camera_component import CameraComponent
+from depthai_sdk.components.camera_component import CameraComponent, ComponentOutput
 from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_median_filter, parse_encode, encoder_profile_to_fourcc
 from depthai_sdk.components.stereo_control import StereoControl
@@ -47,19 +47,16 @@ class StereoComponent(Component):
                  right: Union[CameraComponent, dai.node.MonoCamera],  # Right stereo camera
                  replay: Optional[Replay] = None,
                  args: Any = None,
-                 name: Optional[str] = None,
                  encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None):
         """
         Args:
-            pipeline (dai.Pipeline): DepthAI pipeline
-            resolution (str/SensorResolution): If monochrome cameras aren't already passed, create them and set specified resolution
-            fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
-            left (None / dai.None.Output / CameraComponent): Left mono camera source. Will get handled by Camera object.
-            right (None / dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
-            replay (Replay object, optional): Replay
-            args (Any, optional): Use user defined arguments when constructing the pipeline
-            name (str, optional): Name of the output stream
-            encode (str/bool/Profile, optional): Encode the output stream
+            device (dai.Device): DepthAI device.
+            pipeline (dai.Pipeline): DepthAI pipeline.
+            left (dai.None.Output / CameraComponent): Left mono camera source. Will get handled by Camera object.
+            right (dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
+            replay (Replay object, optional): Replay object to use for playback.
+            args (Any, optional): Use user defined arguments when constructing the pipeline.
+            encode (str/bool/Profile, optional): Encode the output stream.
         """
         super().__init__()
         self.out = self.Out(self)
@@ -75,7 +72,6 @@ class StereoComponent(Component):
         self._device = device
         self._replay: Optional[Replay] = replay
         self._args: Dict = args
-        self.name = name
 
         self.left = left
         self.right = right
@@ -199,14 +195,14 @@ class StereoComponent(Component):
         self.node.setRectifyEdgeFillColor(0)
 
         if self._undistortion_offset is not None:
-            calibData = self._replay._calibData if self._replay else device.readCalibration()
+            calib_data = self._replay._calibData if self._replay else device.readCalibration()
             w_frame, h_frame = self._get_stream_size(self.left)
-            mapX_left, mapY_left, mapX_right, mapY_right = self._get_maps(w_frame, h_frame, calibData)
+            mapX_left, mapY_left, mapX_right, mapY_right = self._get_maps(w_frame, h_frame, calib_data)
             mesh_l = _get_mesh(mapX_left, mapY_left)
             mesh_r = _get_mesh(mapX_right, mapY_right)
-            meshLeft = list(mesh_l.tobytes())
-            meshRight = list(mesh_r.tobytes())
-            self.node.loadMeshData(meshLeft, meshRight)
+            mesh_left = list(mesh_l.tobytes())
+            mesh_right = list(mesh_r.tobytes())
+            self.node.loadMeshData(mesh_left, mesh_right)
 
         if self._args:
             self._config_stereo_args(self._args)
@@ -215,8 +211,8 @@ class StereoComponent(Component):
         self._control_xlink_in = pipeline.create(dai.node.XLinkIn)
         self._control_xlink_in.setStreamName(f"{self.node.id}_inputControl")
         self._control_xlink_in.out.link(self.node.inputConfig)
-        self._control_xlink_in.setMaxDataSize(
-            1)  # CameraControl message doesn't use any additional data (only metadata)
+        # CameraControl message doesn't use any additional data (only metadata)
+        self._control_xlink_in.setMaxDataSize(1)
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
@@ -417,12 +413,12 @@ class StereoComponent(Component):
         calib = device.readCalibration()
         baseline = calib.getBaselineDistance(useSpecTranslation=True) * 10  # mm
         intrinsics = calib.getCameraIntrinsics(dai.CameraBoardSocket.RIGHT, self.right.getResolutionSize())
-        focalLength = intrinsics[0][0]
+        focal_length = intrinsics[0][0]
         disp_levels = self.node.getMaxDisparity() / 95
-        return baseline * focalLength * disp_levels
+        return baseline * focal_length * disp_levels
 
     def _get_maps(self, width: int, height: int, calib: dai.CalibrationHandler):
-        imageSize = (width, height)
+        image_size = (width, height)
         M1 = np.array(calib.getCameraIntrinsics(calib.getStereoLeftCameraId(), width, height))
         M2 = np.array(calib.getCameraIntrinsics(calib.getStereoRightCameraId(), width, height))
         d1 = np.array(calib.getDistortionCoefficients(calib.getStereoLeftCameraId()))
@@ -441,8 +437,8 @@ class StereoComponent(Component):
         M2[0][0] += self._undistortion_offset
         M2[1][1] += self._undistortion_offset
 
-        mapX_l, mapY_l = cv2.initUndistortRectifyMap(M1, d1, R1, M2, imageSize, cv2.CV_32FC1)
-        mapX_r, mapY_r = cv2.initUndistortRectifyMap(M2, d2, R2, M2, imageSize, cv2.CV_32FC1)
+        mapX_l, mapY_l = cv2.initUndistortRectifyMap(M1, d1, R1, M2, image_size, cv2.CV_32FC1)
+        mapX_r, mapY_r = cv2.initUndistortRectifyMap(M2, d2, R2, M2, image_size, cv2.CV_32FC1)
         return mapX_l, mapY_l, mapX_r, mapY_r
 
     def get_fourcc(self) -> Optional[str]:
@@ -454,63 +450,75 @@ class StereoComponent(Component):
     Available outputs (to the host) of this component
     """
 
+    def _mono_frames(self):
+        """
+        Create mono frames output if WLS filter is enabled or colorize is set to RGBD
+        """
+        mono_frames = None
+        if self.wls_config['enabled'] or self._colorize == StereoColor.RGBD:
+            mono_frames = StreamXout(self._right_stream)
+        return mono_frames
+
     class Out:
+        class DepthOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutDisparityDepth(
+                    device=device,
+                    frames=StreamXout(self._comp.depth),
+                    dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
+                    mono_frames=self._comp._mono_frames(),
+                    colorize=self._comp._colorize,
+                    colormap=self._comp._postprocess_colormap,
+                    ir_settings=self._comp.ir_settings
+                ).set_comp_out(self)
+
+        class DisparityOut(ComponentOutput):
+            def __call__(self, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
+                return XoutDisparity(
+                    device=device,
+                    frames=StreamXout(self._comp.encoder.bitstream) if fourcc else
+                    StreamXout(self._comp.disparity),
+                    disp_factor=255.0 / self._comp.node.getMaxDisparity(),
+                    mono_frames=self._comp._mono_frames(),
+                    colorize=self._comp._colorize,
+                    colormap=self._comp._postprocess_colormap,
+                    wls_config=self._comp.wls_config,
+                    ir_settings=self._comp.ir_settings,
+                ).set_comp_out(self)
+
+        class RectifiedLeftOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(StreamXout(self._comp.node.rectifiedLeft, 'Rectified left')).set_comp_out(self)
+
+        class RectifiedRightOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(StreamXout(self._comp.node.rectifiedRight, 'Rectified right')).set_comp_out(self)
+
+        class SyncedLeftOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(StreamXout(self._comp.node.syncedLeft, 'Synced left')).set_comp_out(self)
+
+        class SyncedRightOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(StreamXout(self._comp.node.syncedRight, 'Synced right')).set_comp_out(self)
+
+        class EncodedOut(DisparityOut):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                if not self._comp.encoder:
+                    raise RuntimeError('Encoder not enabled, cannot output encoded frames')
+                if self._comp.wls_config['enabled']:
+                    warnings.warn('WLS filter is enabled, but cannot be applied to encoded frames.')
+
+                return super().__call__(device, fourcc=self._comp.get_fourcc())
+
         def __init__(self, stereo_component: 'StereoComponent'):
             self._comp = stereo_component
 
-        def _mono_frames(self):
-            """
-            Create mono frames output if WLS filter is enabled or colorize is set to RGBD
-            """
-            mono_frames = None
-            if self._comp.wls_config['enabled'] or self._comp._colorize == StereoColor.RGBD:
-                mono_frames = StreamXout(self._comp._right_stream, name=self._comp.name)
-            return mono_frames
-
-        def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            # By default, we want to show disparity
-            return self.depth(pipeline, device)
-
-        def disparity(self, pipeline: dai.Pipeline, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
-            return XoutDisparity(
-                device=device,
-                frames=StreamXout(self._comp.encoder.bitstream, name=self._comp.name) if fourcc else
-                       StreamXout(self._comp.disparity, name=self._comp.name),
-                disp_factor=255.0 / self._comp.node.getMaxDisparity(),
-                mono_frames=self._mono_frames(),
-                colorize=self._comp._colorize,
-                colormap=self._comp._postprocess_colormap,
-                wls_config=self._comp.wls_config,
-                ir_settings=self._comp.ir_settings,
-            ).set_fourcc(fourcc)
-
-        def rectified_left(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return XoutFrames(StreamXout(self._comp.node.rectifiedLeft, 'Rectified left'))
-
-        def rectified_right(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return XoutFrames(StreamXout(self._comp.node.rectifiedRight, 'Rectified right'))
-
-        def synced_left(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return XoutFrames(StreamXout(self._comp.node.syncedLeft, 'Synced left'))
-
-        def synced_right(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return XoutFrames(StreamXout(self._comp.node.syncedRight, 'Synced right'))
-
-        def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            return XoutDisparityDepth(
-                device=device,
-                frames=StreamXout(self._comp.depth, name=self._comp.name),
-                dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
-                mono_frames=self._mono_frames(),
-                colorize=self._comp._colorize,
-                colormap=self._comp._postprocess_colormap,
-                ir_settings=self._comp.ir_settings
-            )
-
-        def encoded(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            if not self._comp.encoder:
-                raise RuntimeError('Encoder not enabled, cannot output encoded frames')
-            if self._comp.wls_config['enabled']:
-                warnings.warn('WLS filter is enabled, but cannot be applied to encoded frames.')
-
-            return self.disparity(pipeline, device, fourcc=self._comp.get_fourcc())
+            self.depth = self.DepthOut(stereo_component)
+            self.rectified_left = self.RectifiedLeftOut(stereo_component)
+            self.rectified_right = self.RectifiedRightOut(stereo_component)
+            self.synced_left = self.SyncedLeftOut(stereo_component)
+            self.synced_right = self.SyncedRightOut(stereo_component)
+            self.disparity = self.DisparityOut(stereo_component)
+            self.encoded = self.EncodedOut(stereo_component)
+            self.main = self.depth

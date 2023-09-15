@@ -1,10 +1,10 @@
-import math
 from enum import IntEnum
-
 from typing import Tuple, Union, List, Any, Dict
+
+from depthai_sdk.classes.nn_results import TrackingDetection, TwoStageDetection
+from depthai_sdk.visualize.configs import BboxStyle
 from depthai_sdk.visualize.objects import VisBoundingBox
-from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
-from depthai_sdk.classes.nn_results import Detection, TrackingDetection, TwoStageDetection
+
 try:
     import cv2
 except ImportError:
@@ -19,6 +19,7 @@ from depthai_sdk.classes.packets import (
     TrackerPacket,
 )
 from depthai_sdk.visualize.bbox import BoundingBox
+
 
 class FramePosition(IntEnum):
     """
@@ -238,6 +239,7 @@ def rectangle(src,
 
     return src
 
+
 def draw_mappings(packet: SpatialBbMappingPacket):
     dets = packet.spatials.detections
     for det in dets:
@@ -361,10 +363,10 @@ def depth_to_disp_factor(device: dai.Device, stereo: dai.node.StereoDepth) -> fl
     @param device: OAK device
     """
     calib = device.readCalibration()
-    cam1=calib.getStereoLeftCameraId()
-    cam2=calib.getStereoRightCameraId()
+    cam1 = calib.getStereoLeftCameraId()
+    cam2 = calib.getStereoRightCameraId()
     baseline = calib.getBaselineDistance(cam1=cam1, cam2=cam2, useSpecTranslation=True) * 10  # cm to mm
-    rawConf = stereo.initialConfig.get()
+    raw_conf = stereo.initialConfig.get()
 
     # align: dai.CameraBoardSocket = stereo.properties.depthAlignCamera
     # if align == dai.CameraBoardSocket.AUTO:
@@ -372,24 +374,25 @@ def depth_to_disp_factor(device: dai.Device, stereo: dai.node.StereoDepth) -> fl
     align = cam2 # FIXME - add a getter for this in depthai
 
     intrinsics = calib.getCameraIntrinsics(align)
-    focalLength = intrinsics[0][0]
+    focal_length = intrinsics[0][0]
 
-    factor = baseline * focalLength
-    if rawConf.algorithmControl.enableExtended:
+    factor = baseline * focal_length
+    if raw_conf.algorithmControl.enableExtended:
         factor /= 2
 
     return factor
 
+
 def draw_bbox(img: np.ndarray,
-                pt1: Tuple[int, int],
-                pt2: Tuple[int, int],
-                color: Tuple[int, int, int],
-                thickness: int,
-                r: int,
-                line_width: int,
-                line_height: int,
-                alpha: float
-                ) -> None:
+              pt1: Tuple[int, int],
+              pt2: Tuple[int, int],
+              color: Tuple[int, int, int],
+              thickness: int,
+              r: int,
+              line_width: int,
+              line_height: int,
+              alpha: float
+              ) -> None:
     """
     Draw a rounded rectangle on the image (in-place).
 
@@ -402,6 +405,7 @@ def draw_bbox(img: np.ndarray,
         r: Radius of the rounded corners.
         line_width: Width of the rectangle line.
         line_height: Height of the rectangle line.
+        alpha: Opacity of the rectangle.
     """
     x1, y1 = pt1
     x2, y2 = pt2
@@ -470,17 +474,14 @@ def draw_bbox(img: np.ndarray,
 
         cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
 
+
 def draw_stylized_bbox(img: np.ndarray, obj: VisBoundingBox) -> None:
     """
     Draw a stylized bounding box. The style is either passed as an argument or defined in the config.
 
     Args:
         img: Image to draw on.
-        pt1: Top left corner.
-        pt2: Bottom right corner.
-        color: Boundary color.
-        thickness: Border thickness.
-        bbox_style: Bounding box style.
+        obj: Bounding box to draw.
     """
     pt1, pt2 = obj.bbox.denormalize(img.shape)
 
@@ -494,11 +495,18 @@ def draw_stylized_bbox(img: np.ndarray, obj: VisBoundingBox) -> None:
     alpha = obj.config.detection.fill_transparency
 
     if bbox_style == BboxStyle.RECTANGLE:
-        draw_bbox(img, pt1, pt2, obj.color, obj.thickness, 0, line_width=0, line_height=0, alpha=alpha)
+        draw_bbox(img, pt1, pt2,
+                  obj.color, obj.thickness, 0,
+                  line_width=0, line_height=0, alpha=alpha)
     elif bbox_style == BboxStyle.CORNERS:
-        draw_bbox(img, pt1, pt2, obj.color, obj.thickness, 0, line_width=line_width, line_height=line_height, alpha=alpha)
+        draw_bbox(img, pt1, pt2,
+                  obj.color, obj.thickness, 0,
+                  line_width=line_width, line_height=line_height, alpha=alpha)
     elif bbox_style == BboxStyle.ROUNDED_RECTANGLE:
-        draw_bbox(img, pt1, pt2, obj.color, obj.thickness, roundness, line_width=0, line_height=0, alpha=alpha)
+        draw_bbox(img, pt1, pt2,
+                  obj.color, obj.thickness, roundness,
+                  line_width=0, line_height=0, alpha=alpha)
     elif bbox_style == BboxStyle.ROUNDED_CORNERS:
-        draw_bbox(img, pt1, pt2, obj.color, obj.thickness, roundness, line_width=line_width, line_height=line_height, alpha=alpha)
-
+        draw_bbox(img, pt1, pt2,
+                  obj.color, obj.thickness, roundness,
+                  line_width=line_width, line_height=line_height, alpha=alpha)

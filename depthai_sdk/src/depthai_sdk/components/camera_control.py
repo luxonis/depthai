@@ -1,6 +1,7 @@
-import depthai as dai
-from itertools import cycle
 import logging
+from itertools import cycle
+
+import depthai as dai
 
 logger = logging.getLogger(__name__)
 
@@ -18,17 +19,22 @@ LIMITS = {
     'chroma_denoise': (0, 4)
 }
 
+
 def clamp(value, min_value, max_value):
     return max(min(value, max_value), min_value)
+
 
 class CameraControl:
     def __init__(self):
         self.queue = None
 
-        self._cycle_awb_mode = cycle([item for name, item in vars(dai.CameraControl.AutoWhiteBalanceMode).items() if name.isupper()])
-        self._cycle_ab_mode = cycle([item for name, item in vars(dai.CameraControl.AntiBandingMode).items() if name.isupper()])
+        self._cycle_awb_mode = cycle(
+            [item for name, item in vars(dai.CameraControl.AutoWhiteBalanceMode).items() if name.isupper()])
+        self._cycle_ab_mode = cycle(
+            [item for name, item in vars(dai.CameraControl.AntiBandingMode).items() if name.isupper()])
         # self._cycle_effect_mode = cycle([item for name, item in vars(dai.CameraControl.EffectMode).items() if name.isupper()])
-        self._cycle_af_mode = cycle([item for name, item in vars(dai.CameraControl.AutoFocusMode).items() if name.isupper()])
+        self._cycle_af_mode = cycle(
+            [item for name, item in vars(dai.CameraControl.AutoFocusMode).items() if name.isupper()])
 
         self._current_vals = {
             'exposure_time': 20000,
@@ -76,7 +82,9 @@ class CameraControl:
             logger.error(f'Exposure time cannot be greater than {LIMITS["exposure"][1]}')
             return
         self._current_vals['exposure_time'] += step
-        self.send_controls({'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
+        self.send_controls(
+            {'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
+
     def exposure_time_down(self, step=500):
         """
         Decrease exposure time by step.
@@ -87,7 +95,8 @@ class CameraControl:
             logger.error(f'Exposure time cannot be less than {LIMITS["exposure"][0]}')
             return
         self._current_vals['exposure_time'] -= step
-        self.send_controls({'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
+        self.send_controls(
+            {'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
 
     def sensitivity_up(self, step=50):
         """
@@ -99,7 +108,8 @@ class CameraControl:
             logger.error(f'Sensitivity cannot be greater than {LIMITS["gain"][1]}')
             return
         self._current_vals['sensitivity'] += step
-        self.send_controls({'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
+        self.send_controls(
+            {'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
 
     def sensitivity_down(self, step=50):
         """
@@ -111,7 +121,8 @@ class CameraControl:
             logger.error(f'Sensitivity cannot be less than {LIMITS["gain"][0]}')
             return
         self._current_vals['sensitivity'] -= step
-        self.send_controls({'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
+        self.send_controls(
+            {'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
 
     def focus_up(self, step=3):
         """
@@ -303,7 +314,8 @@ class CameraControl:
         if controls.get('white-balance', None) is not None:
             if controls['white-balance'].get('mode', None) is not None:
                 if isinstance(controls["focus"]["mode"], str):
-                    controls["white-balance"]["mode"] = getattr(dai.CameraControl.AutoFocusMode, controls["white-balance"]["mode"])
+                    controls["white-balance"]["mode"] = getattr(dai.CameraControl.AutoFocusMode,
+                                                                controls["white-balance"]["mode"])
                 logger.info(f'Setting white balance mode to {controls["white-balance"]["mode"]}.')
                 ctrl.setAutoWhiteBalanceMode(controls["white-balance"]["mode"])
             if controls['white-balance'].get('lock', None) is not None:

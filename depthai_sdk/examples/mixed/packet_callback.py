@@ -20,9 +20,9 @@ def cb_2(packets: Dict[str, FramePacket]):
         print(f'Packet {name}, timestamp: {packet.get_timestamp()}, Seq number: {packet.get_sequence_num()}')
 
 with OakCamera() as oak:
-    color = oak.create_camera('color', fps=32, name='color')
-    left = oak.create_camera('left', fps=30, name='left')
-    right = oak.create_camera('right', fps=30, name='right')
+    color = oak.create_camera('color', fps=32)
+    left = oak.create_camera('left', fps=30)
+    right = oak.create_camera('right', fps=30)
     imu = oak.create_imu()
 
     oak.callback(

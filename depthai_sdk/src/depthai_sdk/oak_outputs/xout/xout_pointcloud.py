@@ -1,14 +1,12 @@
-import logging
-import warnings
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import depthai as dai
 import numpy as np
 
-from depthai_sdk.classes.packets import DepthPacket, PointcloudPacket
+from depthai_sdk.classes.packets import PointcloudPacket
+from depthai_sdk.components.pointcloud_helper import create_xyz
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.components.pointcloud_helper import create_xyz
 
 try:
     import cv2
@@ -21,7 +19,6 @@ class XoutPointcloud(XoutFrames):
                  device: dai.Device,
                  depth_frames: StreamXout,
                  color_frames: Optional[StreamXout] = None):
-
         self.color_frames = color_frames
         XoutFrames.__init__(self, frames=depth_frames)
         self.name = 'Pointcloud'
@@ -35,7 +32,7 @@ class XoutPointcloud(XoutFrames):
             return [self.frames, self.color_frames]
         return [self.frames]
 
-    def new_msg(self, name: str, msg: dai.Buffer) -> None:
+    def new_msg(self, name: str, msg: dai.Buffer):
         if name not in self._streams:
             return  # From Replay modules. TODO: better handling?
 
@@ -63,7 +60,7 @@ class XoutPointcloud(XoutFrames):
             if self.xyz is None:
                 self.xyz = create_xyz(self.device, depth_frame.getWidth(), depth_frame.getHeight())
 
-            pcl = self.xyz * np.expand_dims(np.array(depth_frame.getFrame()), axis = -1)
+            pcl = self.xyz * np.expand_dims(np.array(depth_frame.getFrame()), axis=-1)
 
             # TODO: postprocessing
             # Cleanup
