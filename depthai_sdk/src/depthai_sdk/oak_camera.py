@@ -30,6 +30,7 @@ from depthai_sdk.classes.packet_handlers import (
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.imu_component import IMUComponent
+from depthai_sdk.components.tof_component import ToFComponent
 from depthai_sdk.components.nn_component import NNComponent
 from depthai_sdk.components.parser import (
     parse_usb_speed,
@@ -388,6 +389,17 @@ class OakCamera:
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
         return self.stereo(resolution, fps, left, right, encode)
+
+    def create_tof(self, source: Union[str, dai.CameraBoardSocket, None] = None) -> ToFComponent:
+        """
+        Create ToF component.
+
+        Args:
+            source (str / dai.CameraBoardSocket): ToF camera source
+        """
+        comp = ToFComponent(self.device, self.pipeline, source)
+        self._components.append(comp)
+        return comp
 
     def create_imu(self) -> IMUComponent:
         """
