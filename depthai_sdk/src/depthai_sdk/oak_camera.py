@@ -263,15 +263,7 @@ class OakCamera:
         else:
             sources = [cam_sensor.socket for cam_sensor in self.device.getConnectedCameraFeatures()]
         for source in sources:
-            comp = CameraComponent(self.device,
-                                   self.pipeline,
-                                   source=source,
-                                   resolution=resolution,
-                                   fps=fps,
-                                   encode=encode,
-                                   rotation=self._rotation,
-                                   replay=self.replay,
-                                   args=self._args)
+            comp = self.camera(source=source, resolution=resolution, fps=fps, encode=encode)
             components.append(comp)
 
         self._components.extend(components)

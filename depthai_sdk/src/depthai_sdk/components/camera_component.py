@@ -48,7 +48,6 @@ class CameraComponent(Component):
         super().__init__()
         # _replay should be set before .out, as it's used in .out
         self._replay: Optional[Replay] = replay
-        self.out = self.Out(self)
 
         self._pipeline = pipeline
         self._device = device
@@ -220,6 +219,7 @@ class CameraComponent(Component):
             self._control_xlink_in.out.link(self.node.inputControl)
             # CameraControl message doesn't use any additional data (only metadata)
             self._control_xlink_in.setMaxDataSize(1)
+        self.out = self.Out(self)
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
@@ -497,6 +497,14 @@ class CameraComponent(Component):
             def __call__(self, device: dai.Device) -> XoutBase:
                 return super().__call__(device, fourcc=self._comp.get_fourcc())
 
+        class IspOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(StreamXout(self._comp.node.isp)).set_comp_out(self)
+
+        class OutOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(StreamXout(self._comp.node.out)).set_comp_out(self)
+
 
         def __init__(self, camera_component: 'CameraComponent'):
             self.replay = self.ReplayOut(camera_component)
@@ -504,3 +512,10 @@ class CameraComponent(Component):
             self.encoded = self.EncodedOut(camera_component)
 
             self.main = self.replay if camera_component.is_replay() else self.camera
+            if camera_component.is_replay():
+                self.max = self.replay
+            else:
+                if camera_component.is_color():
+                    self.max = self.IspOut(camera_component)
+                else:
+                    self.max = self.OutOut(camera_component)

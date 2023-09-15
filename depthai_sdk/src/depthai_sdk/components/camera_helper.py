@@ -172,7 +172,11 @@ def get_max_resolution(node: dai.node, sensor: dai.CameraFeatures) -> Union[
             continue
         if node == dai.node.MonoCamera and conf.type != dai.CameraSensorType.MONO:
             continue
-        (res, size) = get_sensor_resolution(conf.type, conf.width, conf.height)
+        resoulution = get_sensor_resolution(conf.type, conf.width, conf.height)
+        if resoulution:
+            (res, size) = resoulution
+        else:
+            continue
         if size[0] * size[1] > max_num:
             max_num = size[0] * size[1]
             max_res = res
@@ -219,9 +223,13 @@ def getClosesResolution(sensor: dai.CameraFeatures,
     minError = 999999
     closestRes = None
     desired, i = (width, 0) if width is not None else (height, 1)
-
-    resolutions = [get_sensor_resolution(type, conf.width, conf.height) for conf in sensor.configs if conf.type == type]
-
+    resolutions = []
+    for conf in sensor.configs:
+        if conf.type != type:
+            continue
+        resolution = get_sensor_resolution(conf.type, conf.width, conf.height)
+        if resolution:
+            resolutions.append(resolution)
     for (res, size) in resolutions:
         err = abs(size[i] - desired)
         if err < minError:
