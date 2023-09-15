@@ -2,10 +2,10 @@ from typing import List, Union
 
 import depthai as dai
 
-from depthai_sdk.components.component import Component, XoutBase
-from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
+from depthai_sdk.components.component import Component, ComponentOutput
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_depth import XoutDepth
+from depthai_sdk.oak_outputs.xout.xout_depth import XoutDisparityDepth
 from depthai_sdk.components.parser import parse_camera_socket
 
 class ToFComponent(Component):
@@ -16,6 +16,7 @@ class ToFComponent(Component):
                  ):
         super().__init__()
         self.out = self.Out(self)
+        self._pipeline = pipeline
 
         if source is None:
             source = self._find_tof(device)
@@ -49,31 +50,33 @@ class ToFComponent(Component):
         raise RuntimeError(f'No ToF sensor found on this camera! {device.getConnectedCameraFeatures()}')
 
     class Out:
-        def __init__(self, component: 'ToFComponent'):
-            self._comp = component
 
-        def main(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            """
-            Default output
-            """
-            return self.depth(pipeline, device)
+        class DepthOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutDisparityDepth(
+                    device=device,
+                    frames=StreamXout(self._comp.node.depth, "tof_depth"),
+                    dispScaleFactor=9500,
+                    mono_frames=None,
+                    ir_settings={
+                        "auto_mode": False
+                    }
+                    ).set_comp_out(self)
 
-        def depth(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            tof_out = XoutDepth(
-                device=device,
-                frames=StreamXout(self._comp.node.id, self._comp.node.depth),
-                dispScaleFactor=9500,
-                fps=30,
-                mono_frames=None
-                )
-            return self._comp._create_xout(pipeline, tof_out)
+        class AmplitudeOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(
+                    frames=StreamXout(self._comp.node.amplitude, "tof_amplitude")
+                    ).set_comp_out(self)
 
-        def amplitude(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = StreamXout(self._comp.node.id, self._comp.node.amplitude)
-            tof_out = XoutFrames(out)
-            return self._comp._create_xout(pipeline, tof_out)
+        class ErrorOut(ComponentOutput):
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(
+                    frames=StreamXout(self._comp.node.error, "tof_error")
+                    ).set_comp_out(self)
 
-        def error(self, pipeline: dai.Pipeline, device: dai.Device) -> XoutBase:
-            out = StreamXout(self._comp.node.id, self._comp.node.error)
-            tof_out = XoutFrames(out)
-            return self._comp._create_xout(pipeline, tof_out)
+        def __init__(self, tof_component: 'ToFComponent'):
+            self.depth = self.DepthOut(tof_component)
+            self.amplitude = self.AmplitudeOut(tof_component)
+            self.error = self.ErrorOut(tof_component)
+            self.main = self.depth

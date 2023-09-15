@@ -17,8 +17,8 @@ Interoperability with DepthAI API
 ---------------------------------
 
 DepthAI SDK was developed with `DepthAI API <https://docs.luxonis.com/projects/api/en/latest/>`__ interoperability in mind.
-Users can access all depthai API nodes inside components, and after ``oak.build()`` also the `dai.Pipeline <https://docs.luxonis.com/projects/api/en/latest/components/pipeline/>`__
-and `dai.Device <https://docs.luxonis.com/projects/api/en/latest/components/device/>`__ objects.
+Users can access all depthai API nodes inside components, along with the `dai.Pipeline <https://docs.luxonis.com/projects/api/en/latest/components/pipeline/>`__ (``oak.pipeline``)
+and `dai.Device <https://docs.luxonis.com/projects/api/en/latest/components/device/>`__ (``oak.device``) objects.
 
 .. literalinclude:: ../../examples/mixed/api_interop.py
    :language: python

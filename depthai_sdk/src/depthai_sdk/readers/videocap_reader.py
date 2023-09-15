@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
+
 import depthai as dai
 
 try:
@@ -21,6 +22,7 @@ class VideoCapReader(AbstractReader):
 
     def __init__(self, path: Path, loop: bool = False) -> None:
         self.videos: Dict[str, Any] = {}
+        self._closed = False
 
         # self.initialFrames: Dict[str, Any] = dict()
         # self.shapes: Dict[str, Tuple[int, int]] = dict()
@@ -28,7 +30,8 @@ class VideoCapReader(AbstractReader):
         self._is_looped = loop
 
         if path.is_file():
-            self.videos[path.stem.lower()] = {
+            stream_name = path.stem if (path.stem in ['left', 'right']) else 'color'
+            self.videos[stream_name] = {
                 'reader': cv2.VideoCapture(str(path)),
                 'socket': dai.CameraBoardSocket.CAM_A
             }
@@ -39,14 +42,16 @@ class VideoCapReader(AbstractReader):
                     continue
 
                 # Check if name of the file starts with left.. right.., or CameraBoardSocket
-                if f_name.startswith('CameraBoardSocket.'):
-                    f_name = f_name.split('CameraBoardSocket.')[1]
+                if f_name.startswith('CAM_'):
+                    # Remove everything after CAM_x
+                    f_name = f_name[:5]
 
+                socket = None
                 try:
                     socket = parse_camera_socket(f_name)
                 except ValueError:
                     # Invalid file name
-                    continue
+                    pass
 
                 # TODO: avoid changing stream names, just use socket
                 # stream = str(socket)
@@ -71,6 +76,8 @@ class VideoCapReader(AbstractReader):
             video['initialFrame'] = f
 
     def read(self):
+        if self._closed:
+            return False
         frames = dict()
         for name, video in self.videos.items():
             if video['initialFrame'] is not None:
@@ -100,11 +107,13 @@ class VideoCapReader(AbstractReader):
     def getShape(self, name: str) -> Tuple[int, int]:
         shape = self.videos[name.lower()]['shape']
         return shape
-    def get_socket(self, name: str):
+
+    def get_socket(self, name: str) -> Optional[dai.CameraBoardSocket]:
         return self.videos[name.lower()]['socket']
 
     def close(self):
         [r['reader'].release() for _, r in self.videos.items()]
+        self._closed = True
 
     def disableStream(self, name: str):
         if name.lower() in self.videos:

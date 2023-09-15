@@ -53,38 +53,53 @@ The following table lists all the models supported by the SDK. The model name is
    * - ``face-detection-retail-0004``
      - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_face_detection_retail_0004.html>`__
      - 33
+   * - ``facemesh_192x192``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/facemesh_192x192>`__
+     - 32
+   * - ``facial_landmarks_68_160x160``
+     - 32
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/blob/main/models/facial_landmarks_68_160x160>`__
+   * - ``human-pose-estimation-0001``
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_human_pose_estimation_0001.html>`__
+     - 8
    * - ``mobilenet-ssd``
      - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_mobilenet_ssd.html>`__
      - 31
+   * - ``mobilenetv2_imagenet_embedder_224x224``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/mobilenetv2_imagenet_embedder_224x224>`__
+     - /
    * - ``pedestrian-detection-adas-0002``
-     - `OMZ <https://docs.openvino.ai/latest/omz_models_model_pedestrian_detection_adas_0002.html>`__
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_pedestrian_detection_adas_0002.html>`__
      - 19
    * - ``person-detection-0200``
-     - `OMZ <https://docs.openvino.ai/latest/omz_models_model_person_detection_0200.html>`__
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_person_detection_0200.html>`__
      - 14
    * - ``person-detection-retail-0013``
-     - `OMZ <https://docs.openvino.ai/latest/omz_models_model_person_detection_retail_0013.html>`__
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_person_detection_retail_0013.html>`__
      - 15
    * - ``person-reidentification-retail-0288``
-     - `OMZ <https://docs.openvino.ai/cn/latest/omz_models_model_person_reidentification_retail_0288.html>`__
+     - `OMZ <https://docs.openvino.ai/cn/2021.4/omz_models_model_person_reidentification_retail_0288.html>`__
      - 33
    * - ``person-vehicle-bike-detection-crossroad-1016``
-     - `OMZ <https://docs.openvino.ai/latest/omz_models_model_person_vehicle_bike_detection_crossroad_1016.html>`__
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_person_vehicle_bike_detection_crossroad_1016.html>`__
      - 12
+   * - ``sbd_mask_classification_224x224``
+     - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/sbd_mask_classification_224x224>`__
+     - 64+
    * - ``vehicle-detection-0202``
-     - `OMZ <https://docs.openvino.ai/latest/omz_models_model_vehicle_detection_0202.html>`__
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_vehicle_detection_0202.html>`__
      - 14
    * - ``vehicle-detection-adas-0002``
-     - `OMZ <https://docs.openvino.ai/latest/omz_models_model_vehicle_detection_adas_0002.html>`__
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_vehicle_detection_adas_0002.html>`__
      - 14
    * - ``vehicle-license-plate-detection-barrier-0106``
-     - `OMZ <https://docs.openvino.ai/latest/omz_models_model_vehicle_license_plate_detection_barrier_0106.html>`__
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_vehicle_license_plate_detection_barrier_0106.html>`__
      - 29
    * - ``yolo-v3-tf``
-     - `OMZ <https://docs.openvino.ai/latest/omz_models_model_yolo_v3_tf.html>`__
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_yolo_v3_tf.html>`__
      - 3.5
    * - ``yolo-v3-tiny-tf``
-     - `OMZ <https://docs.openvino.ai/latest/omz_models_model_yolo_v3_tiny_tf.html>`__
+     - `OMZ <https://docs.openvino.ai/2022.1/omz_models_model_yolo_v3_tiny_tf.html>`__
      - 33
    * - ``yolov4_coco_608x608``
      - `DMZ <https://github.com/luxonis/depthai-model-zoo/tree/main/models/yolov4_coco_608x608>`__

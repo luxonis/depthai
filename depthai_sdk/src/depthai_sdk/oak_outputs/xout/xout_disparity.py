@@ -2,15 +2,15 @@ import itertools
 import logging
 import warnings
 from collections import defaultdict
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 import depthai as dai
 import numpy as np
 
-from depthai_sdk.classes.packets import DepthPacket
-from depthai_sdk.oak_outputs.xout import Clickable
+from depthai_sdk.classes.packets import DisparityPacket
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
 from depthai_sdk.visualize.configs import StereoColor
 
 try:
@@ -19,26 +19,23 @@ except ImportError:
     cv2 = None
 
 
-class XoutDisparity(XoutFrames, Clickable):
+class XoutDisparity(XoutSeqSync, XoutFrames):
     def __init__(self,
                  device: dai.Device,
                  frames: StreamXout,
                  disp_factor: float,
-                 fps: float,
                  mono_frames: Optional[StreamXout],
                  colorize: StereoColor = None,
                  colormap: int = None,
                  wls_config: dict = None,
                  ir_settings: dict = None):
         self.mono_frames = mono_frames
-        self.multiplier = disp_factor
-        self.fps = fps
         self.name = 'Disparity'
+        self.multiplier = disp_factor
         self.device = device
 
         self.colorize = colorize
         self.colormap = colormap
-        self.use_wls_filter = wls_config['enabled']
 
         self.ir_settings = ir_settings
         self._dot_projector_brightness = 0  # [0, 1200]
@@ -56,20 +53,20 @@ class XoutDisparity(XoutFrames, Clickable):
         self._X, self._y = [], []
 
         # Prefer to use WLS level if set, otherwise use lambda and sigma
-        wls_level = wls_config['level']
-        if wls_level and self.use_wls_filter:
+        self.use_wls_filter = wls_config['enabled'] if wls_config else False
+        if self.use_wls_filter:
+            wls_level = wls_config['level']
             logging.debug(
                 f'Using WLS level: {wls_level.name} (lambda: {wls_level.value[0]}, sigma: {wls_level.value[1]})'
             )
-            self.wls_lambda = wls_level.value[0]
-            self.wls_sigma = wls_level.value[1]
-        else:
-            self.wls_lambda = wls_config['lambda']
-            self.wls_sigma = wls_config['sigma']
+            self.wls_lambda = wls_level.value[0] or wls_config['lambda']
+            self.wls_sigma = wls_level.value[1] or wls_config['sigma']
 
-        if self.use_wls_filter:
             try:
                 self.wls_filter = cv2.ximgproc.createDisparityWLSFilterGeneric(False)
+                self.wls_filter.setLambda(self.wls_lambda)
+                self.wls_filter.setSigmaColor(self.wls_sigma)
+
             except AttributeError:
                 warnings.warn(
                     'OpenCV version does not support WLS filter. Disabling WLS filter. '
@@ -78,101 +75,48 @@ class XoutDisparity(XoutFrames, Clickable):
                 )
                 self.use_wls_filter = False
 
-        self.msgs = dict()
-
-        XoutFrames.__init__(self, frames=frames, fps=fps)
-        Clickable.__init__(self, decay_step=int(self.fps))
+        XoutFrames.__init__(self, frames=frames)
+        XoutSeqSync.__init__(self, [frames, mono_frames])
 
     def on_callback(self, packet) -> None:
         if self.ir_settings['auto_mode']:
-            self._auto_ir_search(packet.frame)
-
-    def visualize(self, packet: DepthPacket):
-        frame = packet.frame
-        disparity_frame = (frame * self.multiplier).astype(np.uint8)
-
-        stereo_config = self._visualizer.config.stereo
-
-        if self.use_wls_filter or stereo_config.wls_filter:
-            self.wls_filter.setLambda(self.wls_lambda or stereo_config.wls_lambda)
-            self.wls_filter.setSigmaColor(self.wls_sigma or stereo_config.wls_sigma)
-            disparity_frame = self.wls_filter.filter(disparity_frame, packet.mono_frame.getCvFrame())
-
-        colorize = self.colorize or stereo_config.colorize
-        if self.colormap is not None:
-            colormap = self.colormap
-        else:
-            colormap = stereo_config.colormap
-            colormap[0] = [0, 0, 0]  # Invalidate pixels 0 to be black
-
-        if colorize == StereoColor.GRAY:
-            packet.frame = disparity_frame
-        elif colorize == StereoColor.RGB:
-            packet.frame = cv2.applyColorMap(disparity_frame, colormap)
-        elif colorize == StereoColor.RGBD:
-            packet.frame = cv2.applyColorMap(
-                (disparity_frame * 0.5 + packet.mono_frame.getCvFrame() * 0.5).astype(np.uint8), colormap
-            )
-
-        if self._visualizer.config.output.clickable:
-            cv2.namedWindow(self.name)
-            cv2.setMouseCallback(self.name, self.on_click_callback, param=[disparity_frame])
-
-            if self.buffer:
-                x, y = self.buffer[2]
-                text = f'{self.buffer[1]}'  # Disparity value
-                if packet.depth_map is not None:
-                    text = f"{packet.depth_map[y, x] / 1000 :.2f} m"
-
-                self._visualizer.add_circle(coords=(x, y), radius=3, color=(255, 255, 255), thickness=-1)
-                self._visualizer.add_text(text=text, coords=(x, y - 10))
-
-        super().visualize(packet)
+            self._auto_ir_search(packet.msg.getFrame())
 
     def xstreams(self) -> List[StreamXout]:
         if self.mono_frames is None:
             return [self.frames]
         return [self.frames, self.mono_frames]
 
-    def new_msg(self, name: str, msg: dai.Buffer) -> None:
-        if name not in self._streams:
-            return  # From Replay modules. TODO: better handling?
+    def package(self, msgs: Dict) -> DisparityPacket:
+        img_frame = msgs[self.frames.name]
+        mono_frame = msgs[self.mono_frames.name] if self.mono_frames else None
+        # TODO: refactor the mess below
+        packet = DisparityPacket(
+            self.get_packet_name(),
+            img_frame,
+            self.multiplier,
+            disparity_map=None,
+            colorize=self.colorize,
+            colormap=self.colormap,
+            mono_frame=mono_frame,
+        )
+        packet._get_codec = self.get_codec
 
-        # TODO: what if msg doesn't have sequence num?
-        seq = str(msg.getSequenceNum())
-
-        if seq not in self.msgs:
-            self.msgs[seq] = dict()
-
-        if name == self.frames.name:
-            self.msgs[seq][name] = msg
-        elif name == self.mono_frames.name:
-            self.msgs[seq][name] = msg
+        if self._fourcc is None:
+            disparity_frame = img_frame.getFrame()
         else:
-            raise ValueError('Message from unknown stream name received by TwoStageSeqSync!')
+            disparity_frame = packet.decode()
+            if disparity_frame is None:
+                return None
 
-        if len(self.msgs[seq]) == len(self.xstreams()):
-            # Frames synced!
-            if self.queue.full():
-                self.queue.get()  # Get one, so queue isn't full
+        if mono_frame and self.use_wls_filter:
+            # Perform WLS filtering
+            # If we have wls enabled, it means CV2 is installed
+            disparity_frame = self.wls_filter.filter(disparity_frame, mono_frame.getCvFrame())
 
-            mono_frame = None
-            if self.mono_frames is not None:
-                mono_frame = self.msgs[seq][self.mono_frames.name]
+        packet.disparity_map = disparity_frame
 
-            packet = DepthPacket(
-                self.get_packet_name(),
-                img_frame=self.msgs[seq][self.frames.name],
-                mono_frame=mono_frame,
-                visualizer=self._visualizer
-            )
-            self.queue.put(packet, block=False)
-
-            new_msgs = {}
-            for name, msg in self.msgs.items():
-                if int(name) > int(seq):
-                    new_msgs[name] = msg
-            self.msgs = new_msgs
+        return packet
 
     def _auto_ir_search(self, frame: np.ndarray):
         # Perform neighbourhood search if we got worse metric values
@@ -195,7 +139,7 @@ class XoutDisparity(XoutFrames, Clickable):
         fill_rate = np.count_nonzero(frame) / frame.size
         self._metrics_buffer['fill_rate'].append(fill_rate)
 
-        if len(self._metrics_buffer['fill_rate']) < max(self.fps, 30):
+        if len(self._metrics_buffer['fill_rate']) < 30:
             return False
 
         if candidate_idx >= len(candidate_pairs):
@@ -218,7 +162,7 @@ class XoutDisparity(XoutFrames, Clickable):
             return False
 
         # Skip first half second of frames to allow for auto exposure to settle down
-        fill_rate_avg = np.mean(self._metrics_buffer['fill_rate'][int(self.fps // 2):])
+        fill_rate_avg = np.mean(self._metrics_buffer['fill_rate'][15:])
 
         self._X.append([self._dot_projector_brightness, self._flood_brightness])
         self._y.append(fill_rate_avg)
@@ -230,7 +174,7 @@ class XoutDisparity(XoutFrames, Clickable):
         fill_rate = np.count_nonzero(frame) / frame.size
         self._metrics_buffer['fill_rate'].append(fill_rate)
 
-        if len(self._metrics_buffer['fill_rate']) < max(self.fps, 30):
+        if len(self._metrics_buffer['fill_rate']) < 30:
             return
 
         fill_rate_avg = np.mean(self._metrics_buffer['fill_rate'])

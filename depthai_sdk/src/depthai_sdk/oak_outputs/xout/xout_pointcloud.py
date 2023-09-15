@@ -1,14 +1,12 @@
-import logging
-import warnings
-from typing import List, Optional, Union
+from typing import List, Optional
 
 import depthai as dai
 import numpy as np
 
-from depthai_sdk.classes.packets import DepthPacket, PointcloudPacket
+from depthai_sdk.classes.packets import PointcloudPacket
+from depthai_sdk.components.pointcloud_helper import create_xyz
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.components.pointcloud_helper import create_xyz
 
 try:
     import cv2
@@ -21,28 +19,21 @@ class XoutPointcloud(XoutFrames):
                  device: dai.Device,
                  socket: dai.CameraBoardSocket,
                  depth_frames: StreamXout,
-                 fps: int,
                  color_frames: Optional[StreamXout] = None):
-
         self.color_frames = color_frames
-        XoutFrames.__init__(self, frames=depth_frames, fps=fps)
+        XoutFrames.__init__(self, frames=depth_frames)
         self.name = 'Pointcloud'
-        self.socket = socket
-        self.fps = fps
         self.device = device
         self.xyz = None
 
         self.msgs = dict()
-
-    def visualize(self, packet: DepthPacket):
-        pass
 
     def xstreams(self) -> List[StreamXout]:
         if self.color_frames is not None:
             return [self.frames, self.color_frames]
         return [self.frames]
 
-    def new_msg(self, name: str, msg: dai.Buffer) -> None:
+    def new_msg(self, name: str, msg: dai.Buffer):
         if name not in self._streams:
             return  # From Replay modules. TODO: better handling?
 
@@ -61,9 +52,6 @@ class XoutPointcloud(XoutFrames):
 
         if len(self.msgs[seq]) == len(self.xstreams()):
             # Frames synced!
-            if self.queue.full():
-                self.queue.get()  # Get one, so queue isn't full
-
             depth_frame: dai.ImgFrame = self.msgs[seq][self.frames.name]
 
             color_frame = None
@@ -78,21 +66,19 @@ class XoutPointcloud(XoutFrames):
                 camera_matrix = np.array(intrinsics).reshape(3, 3)
                 self.xyz = create_xyz(camera_matrix, width, height)
 
-            pcl = self.xyz * np.expand_dims(np.array(depth_frame.getFrame()), axis = -1)
+            pcl = self.xyz * np.expand_dims(np.array(depth_frame.getFrame()), axis=-1)
 
             # TODO: postprocessing
-
-            packet = PointcloudPacket(
-                self.get_packet_name(),
-                pcl,
-                depth_map=depth_frame,
-                color_frame=color_frame,
-                visualizer=self._visualizer
-            )
-            self.queue.put(packet, block=False)
-
+            # Cleanup
             new_msgs = {}
             for name, msg in self.msgs.items():
                 if int(name) > int(seq):
                     new_msgs[name] = msg
             self.msgs = new_msgs
+
+            return PointcloudPacket(
+                self.get_packet_name(),
+                pcl,
+                depth_map=depth_frame,
+                colorize_frame=color_frame
+            )

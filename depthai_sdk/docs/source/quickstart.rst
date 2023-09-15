@@ -18,6 +18,38 @@ This class simplifies the creation of pipelines that capture video from the OAK 
 With :class:`OakCamera <depthai_sdk.OakCamera>`, you can easily create color and depth streams using the :meth:`create_camera() <depthai_sdk.OakCamera.create_camera>` and :meth:`create_stereo() <depthai_sdk.OakCamera.create_stereo>` methods respectively, and add pre-trained neural networks using the :meth:`create_nn() <depthai_sdk.OakCamera.create_nn>` method.
 Additionally, you can add custom callbacks to the pipeline using the :meth:`callback() <depthai_sdk.OakCamera.callback>` method and record the outputs using the :meth:`record() <depthai_sdk.OakCamera.record>` method.
 
+Blocking behavior
+^^^^^^^^^^^^^^^^^
+
+When starting the :class:`OakCamera <depthai_sdk.OakCamera>` object, you can specify whether the :meth:`start() <depthai_sdk.OakCamera.start>` method should block the main thread or not. By default, the :meth:`start() <depthai_sdk.OakCamera.start>` method does not block the main thread, which means you will need to manually poll the camera using the :meth:`oak.poll() <depthai_sdk.OakCamera.poll>` method.
+
+.. code-block:: python
+
+    from depthai_sdk import OakCamera
+
+    with OakCamera() as oak:
+        color = oak.create_camera('color', resolution='1080p')
+        oak.visualize([color])
+        oak.start(blocking=False)
+
+        while oak.running():
+            oak.poll()
+            # this code is executed while the pipeline is running
+
+
+Alternatively, setting the ``blocking`` argument to ``True`` will loop and continuously poll the camera, blocking the rest of the code.
+
+
+.. code-block:: python
+
+    from depthai_sdk import OakCamera
+
+    with OakCamera() as oak:
+        color = oak.create_camera('color', resolution='1080p')
+        oak.visualize([color])
+        oak.start(blocking=True)
+        # this code doesn't execute until the pipeline is stopped
+
 Creating color and depth streams
 --------------------------------
 

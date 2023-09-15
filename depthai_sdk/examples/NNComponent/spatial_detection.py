@@ -15,6 +15,6 @@ with OakCamera() as oak:
         calc_algo=dai.SpatialLocationCalculatorAlgorithm.AVERAGE
     )
 
-    oak.visualize([nn.out.main], fps=True)
-    oak.visualize(nn.out.passthrough)
+    oak.visualize(nn.out.main, fps=True)
+    oak.visualize([nn.out.passthrough, nn.out.spatials])
     oak.start(blocking=True)

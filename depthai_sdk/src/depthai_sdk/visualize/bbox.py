@@ -1,13 +1,17 @@
-from typing import Optional, Tuple, Union, Sequence
-import numpy as np
-from depthai_sdk.classes.enum import ResizeMode
+from typing import Optional, Tuple, Union, Sequence, List
+
 import depthai as dai
+import numpy as np
+
+from depthai_sdk.classes.enum import ResizeMode
+
 
 class Point:
     """
     Used within the BoundingBox class when dealing with points.
     """
-    def __init__(self, x: float, y:float):
+
+    def __init__(self, x: float, y: float):
         self.x = x
         self.y = y
 
@@ -15,7 +19,7 @@ class Point:
         return f"({self.x}, {self.y})"
 
     def to_tuple(self) -> Tuple[float, float]:
-        return (self.x, self.y)
+        return self.x, self.y
 
     def denormalize(self, frame_shape: Sequence) -> Tuple[int, int]:
         """
@@ -29,7 +33,8 @@ class BoundingBox:
     This class helps with bounding box calculations. It can be used to calculate relative bounding boxes,
     map points from relative to absolute coordinates and vice versa, crop frames, etc.
     """
-    def __init__(self, bbox: Union[None, np.ndarray, Tuple[float, float, float, float], dai.ImgDetection] = None):
+
+    def __init__(self, bbox: Union[None, List, np.ndarray, Tuple[float, float, float, float], dai.ImgDetection] = None):
         if isinstance(bbox, (Sequence, np.ndarray)):
             self.xmin, self.ymin, self.xmax, self.ymax = bbox
         elif isinstance(bbox, dai.ImgDetection):
@@ -40,6 +45,29 @@ class BoundingBox:
 
     def __str__(self):
         return f"({self.xmin}, {self.ymin}), ({self.xmax}, {self.ymax})"
+
+    def clip(self, min_value=0.0, max_value=1.0) -> 'BoundingBox':
+        """
+        Clips the bounding box to the given range.
+        """
+        return BoundingBox([
+            np.clip(self.xmin, min_value, max_value),
+            np.clip(self.ymin, min_value, max_value),
+            np.clip(self.xmax, min_value, max_value),
+            np.clip(self.ymax, min_value, max_value),
+        ])
+
+    def top_left(self) -> Tuple[float, float]:
+        """
+        Get top-left corner of the bounding box.
+        """
+        return self.xmin, self.ymin
+
+    def bottom_right(self) -> Tuple[float, float]:
+        """
+        Get bottom-right corner of the bounding box.
+        """
+        return self.xmax, self.ymax
 
     def to_tuple(self, frame_shape: Union[Sequence, None] = None) -> Tuple:
         """
@@ -136,9 +164,9 @@ class BoundingBox:
         return frame[left:right, top:bottom]
 
     def resize_to_aspect_ratio(self,
-                                old_aspect_ratio: Union[float, Sequence],
-                                new_aspect_ratio: Union[float, Sequence],
-                                resize_mode: Union[ResizeMode, str] = ResizeMode.LETTERBOX) -> 'BoundingBox':
+                               old_aspect_ratio: Union[float, Sequence],
+                               new_aspect_ratio: Union[float, Sequence],
+                               resize_mode: Union[ResizeMode, str] = ResizeMode.LETTERBOX) -> 'BoundingBox':
         """
         Calculates a new BoundingBox, based on the current BoundingBox, but with a different aspect ratio.
         Example: If the original frame is 1920x1080, and we have a model with input size of 300x300,

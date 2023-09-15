@@ -1,5 +1,6 @@
-import numpy as np
 import depthai as dai
+import numpy as np
+
 
 def create_xyz(camera_matrix: np.ndarray, width: int, height: int):
     xs = np.linspace(0, width - 1, width, dtype=np.float32)
@@ -25,4 +26,3 @@ def create_xyz(camera_matrix: np.ndarray, width: int, height: int):
 
     xyz = np.stack([x_coord, y_coord], axis=-1)
     return np.pad(xyz, ((0, 0), (0, 0), (0, 1)), "constant", constant_values=1.0)
-

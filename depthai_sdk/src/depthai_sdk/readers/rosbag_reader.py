@@ -33,12 +33,12 @@ class RosbagReader(AbstractReader):
     def getShape(self, name: str) -> Tuple[int, int]:
         connection, _, rawdata = next(self.reader.messages('/device_0/sensor_0/Depth_0/image/data'))
         msg = deserialize_cdr(ros1_to_cdr(rawdata, connection.msgtype), connection.msgtype)
-        return (msg.width, msg.height)
+        return msg.width, msg.height
 
     def get_message_size(self, name: str) -> int:
         connection, _, rawdata = next(self.reader.messages('/device_0/sensor_0/Depth_0/image/data'))
         msg = deserialize_cdr(ros1_to_cdr(rawdata, connection.msgtype), connection.msgtype)
-        return len(msg.data) # TODO: test
+        return len(msg.data)  # TODO: test
 
     def close(self):
         self.reader.close()

@@ -96,7 +96,7 @@ class RecordAction(Action):
 
             # Call on_finish_callback if it is specified
             if self.on_finish_callback is not None:
-                self.on_finish_callback(self.path)
+                self.on_finish_callback(str(self.path / subfolder))
 
     def activate(self):
         # Setup for the current recording
