@@ -115,7 +115,6 @@ class StereoComponent(Component):
         }
 
         self._undistortion_offset: Optional[int] = None
-        self._rvc_version = 2 # Default
         if not self._replay:
             # Live stream, check whether we have correct cameras
             if len(device.getCameraSensorNames()) == 1:
