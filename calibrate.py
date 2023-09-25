@@ -365,12 +365,12 @@ class Main:
         #TODO Change only in getDeviceName in next revision.
         if self.args.board:
             self.board_name = self.args.board
-            board_path = Path(self.args.board)
+            board_path = Path(Path(__file__).parent /self.args.board)
             if not board_path.exists():
                 board_path = (Path(__file__).parent / 'resources/depthai_boards/boards' / self.args.board.upper()).with_suffix('.json').resolve()
                 if not board_path.exists():
                     raise ValueError(
-                        'Board config not found: {}'.format(board_path))
+                        'Board config not found: {}'.format(Path(Path(__file__).parent /self.args.board)))
             with open(board_path) as fp:
                 self.board_config = json.load(fp)
                 self.board_config = self.board_config['board_config']
@@ -400,7 +400,7 @@ class Main:
             if "9782" in detection:
                 detection.remove("9782")
             self.board_name = '-'.join(detection)
-            board_path = Path(self.board_name)
+            board_path = Path(Path(__file__).parent /self.board_name)
             if self.traceLevel == 1:
                 print(f"Board path specified as {board_path}")
             if not board_path.exists():
