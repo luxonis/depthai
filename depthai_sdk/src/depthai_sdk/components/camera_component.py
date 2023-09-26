@@ -151,11 +151,11 @@ class CameraComponent(Component):
             if not self._resolution_forced:  # Find the closest resolution
                 sensor = [f for f in device.getConnectedCameraFeatures() if f.socket == self.node.getBoardSocket()][0]
                 sensor_type = dai.CameraSensorType.COLOR if dai.node.ColorCamera else dai.CameraSensorType.MONO
-                targetWidthRes = 1300
+                targetWidthRes = 1280
                 targetWidthIsp = targetWidthRes
                 if self._args["defaultResolution"] == "min":
                     targetWidthRes = 0
-                    targetWidthIsp = 1300  # Still keep the same target for the ISP
+                    targetWidthIsp = 1280  # Still keep the same target for the ISP
                 elif self._args["defaultResolution"] == "max":
                     targetWidthRes = 1000000  # Some big number
                     targetWidthIsp = targetWidthRes
