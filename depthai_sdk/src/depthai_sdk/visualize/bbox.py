@@ -195,16 +195,18 @@ class BoundingBox:
         bb = BoundingBox((0, 0, 1, 1))
 
         if resize_mode == ResizeMode.LETTERBOX:
-            padding = (old_aspect_ratio - new_aspect_ratio) / 2
-            if padding > 0:
+            if old_aspect_ratio < new_aspect_ratio:
+                padding = (new_aspect_ratio - old_aspect_ratio) / (2 * old_aspect_ratio)
+                bb = BoundingBox((-padding, 0, 1 + padding, 1))
+            else:
+                padding = (old_aspect_ratio - new_aspect_ratio) / (2 * new_aspect_ratio)
                 bb = BoundingBox((0, -padding, 1, 1 + padding))
-            else:
-                bb = BoundingBox((padding, 0, 1 - padding, 1))
         elif resize_mode in [ResizeMode.CROP, ResizeMode.FULL_CROP]:
-            cropping = (1 - (new_aspect_ratio / old_aspect_ratio)) / 2
-            if cropping < 0:
-                bb = BoundingBox((0, -cropping, 1, 1 + cropping))
+            if old_aspect_ratio < new_aspect_ratio:
+                cropping = (1 - (old_aspect_ratio / new_aspect_ratio)) / 2
+                bb = BoundingBox((0, cropping, 1, 1 - cropping))
             else:
+                cropping = (1 - (new_aspect_ratio / old_aspect_ratio)) / 2
                 bb = BoundingBox((cropping, 0, 1 - cropping, 1))
         else:
             # ResizeMode.STRETCH doesn't require any adjustments, as the aspect ratio is the same
