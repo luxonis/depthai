@@ -166,7 +166,7 @@ def parse_args():
             options.markerSizeCm = options.squareSizeCm * 0.75
         else:
             raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
-    if options.squareSizeCm < 2.2:
+    if options.squareSizeCm < 1.5:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
 
     if options.rgbLensPosition < 0:
@@ -236,7 +236,7 @@ class MessageSync:
                 acc_diff = acc_diff + abs(min_ts - msg.getTimestampDevice().total_seconds())
 
             # Mark minimum
-            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > 0.0001):
+            if min_ts_diff is None or (acc_diff < min_ts_diff['ts'] and abs(acc_diff - min_ts_diff['ts']) > self.min_diff_timestamp):
                 min_ts_diff = {'ts': acc_diff, 'indicies': indicies.copy()}
                 print('new minimum:', min_ts_diff, 'min required:', self.min_diff_timestamp)
 
@@ -331,6 +331,7 @@ class Main:
                         break
 
             pipeline = self.create_pipeline()
+            time.sleep(10)
             self.device.startPipeline(pipeline)
 
             self.camera_queue = {}
@@ -416,8 +417,8 @@ class Main:
                 xout.setStreamName(cam_info['name'])
                 # xout.input.setBlocking(False)
                 # xout.input.setQueueSize(4)
-                if cam_info['flip']:
-                    cam_node.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
+                #if cam_info['flip']:
+                #   cam_node.setImageOrientation(dai.CameraImageOrientation.ROTATE_180_DEG)
 
                 cam_node.isp.link(xout.input)
                 if cam_info['sensorName'] == "OV9*82":
@@ -440,7 +441,6 @@ class Main:
                 cam_node.setBoardSocket(stringToCam[cam_id])
                 cam_node.setResolution(camToRgbRes[cam_info['sensorName']])
                 cam_node.setFps(fps)
-
                 # Configure ToF node output FPS:
                 # - `ALL` for full FPS, both modulation frequencies, may flicker a little
                 # - `MIN` for half the FPS
@@ -454,6 +454,7 @@ class Main:
 
                 cam_node.raw.link(tof_node.input)
                 tof_node.amplitude.link(xout.input)
+                tof_node.depth.link(xout.input)
 
             else :
                 type_ret = cam_info['type']
@@ -588,9 +589,10 @@ class Main:
                 print(f'Timestamp of  {key} is {frameMsg.getTimestampDevice()}')
 
                 gray_frame = None
-                if frameMsg.getType() == dai.RawImgFrame.Type.RAW8:
+                if frameMsg.getType() == dai.RawImgFrame.Type.RAW8 or frameMsg.getType() == dai.RawImgFrame.Type.RAW16:
                     gray_frame = frameMsg.getCvFrame()
                 else:
+                    print(key)
                     gray_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_BGR2GRAY)
                 currImageList[key] = gray_frame
             tmpCurrImageList = {}
