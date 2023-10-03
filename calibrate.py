@@ -789,7 +789,7 @@ class Main:
                                                         [np.sin(theta),  np.cos(theta)]])
                     
                     localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
-                    localPolygon[0][:, 1] += abs(localPolygon.min())    
+                    localPolygon[0][:, 1] += abs(localPolygon.min())
                 if self.images_captured_polygon == 2:
                     # perspectiveRotationMatrix = Rotation.from_euler('z', -45, degrees=True).as_matrix()
                     angle = -30.
