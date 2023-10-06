@@ -1074,7 +1074,7 @@ class Main:
                                     calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
             target_file.close()
 
-            if len(error_text) == 0 and self.args.debugProcessingMode:
+            if len(error_text) == 0 and not self.args.debugProcessingMode:
                 print('Flashing Calibration data into ')
                 # print(calib_dest_path)
 
