@@ -168,11 +168,7 @@ class StereoComponent(Component):
             self._right_stream.link(self.node.right)
 
         if self.encoder:
-            try:
-                fps = self.left.get_fps()  # CameraComponent
-            except AttributeError:
-                fps = self.left.getFps()  # MonoCamera
-
+            fps = self.get_fps()
             self.encoder.setDefaultProfilePreset(fps, self._encoderProfile)
             self.node.disparity.link(self.encoder.input)
 
@@ -419,6 +415,12 @@ class StereoComponent(Component):
         mapX_l, mapY_l = cv2.initUndistortRectifyMap(M1, d1, R1, M2, image_size, cv2.CV_32FC1)
         mapX_r, mapY_r = cv2.initUndistortRectifyMap(M2, d2, R2, M2, image_size, cv2.CV_32FC1)
         return mapX_l, mapY_l, mapX_r, mapY_r
+
+    def get_fps(self) -> float:
+        try:
+            return self.left.get_fps()  # CameraComponent
+        except AttributeError:
+            return self.left.getFps()  # MonoCamera
 
     def get_fourcc(self) -> Optional[str]:
         if self.encoder is None:
