@@ -78,6 +78,7 @@ class StereoComponent(Component):
 
         self.node: dai.node.StereoDepth = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        self.colormap_manip: Optional[dai.node.ImageManip] = None
 
         self._align_component: Optional[CameraComponent] = None
         self.ir_settings = {
@@ -326,21 +327,21 @@ class StereoComponent(Component):
             colormap: Colormap to use for colorizing the disparity map.
         """
         if self.colormap != colormap and self.encoder:
-            colormap_manip = self.node.getParentPipeline().create(dai.node.ImageManip)
-            colormap_manip.initialConfig.setColormap(colormap, self.node.initialConfig.getMaxDisparity())
-            colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
+            self.colormap_manip = self.node.getParentPipeline().create(dai.node.ImageManip)
+            self.colormap_manip.initialConfig.setColormap(colormap, self.node.initialConfig.getMaxDisparity())
+            self.colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
             if self._align_component:
                 h, w = self._align_component.node.getIspSize() \
                     if isinstance(self._align_component.node, dai.node.ColorCamera) \
                     else self._align_component.node.getResolutionSize()
             else:
                 h, w = self.left.stream_size
-            colormap_manip.setMaxOutputFrameSize(h * w * 3)
-            self.node.disparity.link(colormap_manip.inputImage)
+            self.colormap_manip.setMaxOutputFrameSize(h * w * 3)
+            self.node.disparity.link(self.colormap_manip.inputImage)
 
             if self.encoder:
                 self.node.disparity.unlink(self.encoder.input)
-                colormap_manip.out.link(self.encoder.input)
+                self.colormap_manip.out.link(self.encoder.input)
         elif not self.encoder:
             warnings.warn('At the moment, colormap can be used only if encoder is enabled.')
 
