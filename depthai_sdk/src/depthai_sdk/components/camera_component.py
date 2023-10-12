@@ -84,18 +84,17 @@ class CameraComponent(Component):
             if stream_name is None:
                 raise Exception(f"{source} stream was not found in specified depthai-recording!")
             self._source = stream_name
-            res = self._replay.getShape(self._source)
+
             # print('resolution', res)
             # resize = getResize(res, width=1200)
             # self._replay.setResizeColor(resize)
             stream = self._replay.streams[self._source]
-            if stream.node is None:
+            if stream.xlinkin is None:
                 return  # Stream disabled
 
-            self.node = stream.node
-            # print('resize', resize)
-            self.node.setMaxDataSize(res[0] * res[1] * 3)
-            self.stream_size = res
+            self.node = stream.warp if stream.warp is not None else stream.xlinkin
+
+            self.stream_size = stream.shape
             self.stream = self.node.out
 
             if rotation in [90, 180, 270]:

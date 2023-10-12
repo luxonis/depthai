@@ -10,6 +10,7 @@ import depthai as dai
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.readers.abstract_reader import AbstractReader
 from depthai_sdk.utils import *
+from depthai_sdk.components.undistort import get_mesh
 
 _fileTypes = ['color', 'left', 'right', 'disparity', 'depth']
 _videoExt = ['.mjpeg', '.avi', '.mp4', '.h265', '.h264', '.webm']
@@ -31,10 +32,11 @@ class ReplayStream:
         return self.resize if self.resize else self._shape
 
     def __init__(self):
-        self.node: dai.node.XLinkIn = None
+        self.xlinkin: dai.node.XLinkIn = None
         self.queue: dai.DataInputQueue = None
         self.disabled = False
         self.stream_name = ''
+        self.warp: dai.node.Warp = None
         self.camera_socket: dai.CameraBoardSocket = None  # Forced socket
 
         self.resize: Tuple[int, int] = None
@@ -80,6 +82,7 @@ class Replay:
         self._keepAR = True  # By default, crop image as needed to keep the aspect ratio
         self._pause = False
         self._calibData = None
+        self.pipeline: dai.Pipeline = None
 
         self.fps: float = 30.0
         self.thread: Optional[Thread] = None
@@ -210,6 +213,24 @@ class Replay:
     def get_fps(self) -> float:
         return self.fps
 
+    def undistort(self, stream_name: str, alpha: float = 0):
+        stream = self.streams[stream_name.lower()]
+
+        stream.warp: dai.node.Warp = self.pipeline.create(dai.node.Warp)
+
+        width, height = stream.shape
+        stream.warp.setMaxOutputFrameSize(width * height * 3)
+
+        dewarp_mesh, mesh_dimensions, M_rgb_new = get_mesh(self._calibData, stream.camera_socket, (width,height), alpha)
+        stream.warp.setWarpMesh(dewarp_mesh, mesh_dimensions[0], mesh_dimensions[1])
+
+        stream.xlinkin.out.link(stream.warp.inputImage)
+        stream.output = stream.warp.out
+
+        # Push the new camera matrix to the device so disparity is properly dewarped
+        self._calibData.setCameraIntrinsics(stream.camera_socket, M_rgb_new, (1280,800))
+        self.pipeline.setCalibrationData(self._calibData)
+
     def _add_callback(self, stream_name: str, callback: Callable):
         self.streams[stream_name.lower()].callbacks.append(callback)
 
@@ -259,6 +280,8 @@ class Replay:
         if pipeline is None:  # Create pipeline if not passed
             pipeline = dai.Pipeline()
 
+        self.pipeline = pipeline
+
         if self._calibData is not None:
             pipeline.setCalibrationData(self._calibData)
 
@@ -272,7 +295,7 @@ class Replay:
             if stream.disabled: continue
 
             stream.stream_name = name + '_in'
-            stream.node = createXIn(pipeline, stream.stream_name, stream.size_bytes)
+            stream.xlinkin = createXIn(pipeline, stream.stream_name, stream.size_bytes)
 
         return pipeline
 
@@ -298,8 +321,8 @@ class Replay:
             stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
             stereo.setOutputSize(*self.streams[align_to.lower()].shape)
 
-        left.node.out.link(stereo.left)
-        right.node.out.link(stereo.right)
+        left.xlinkin.out.link(stereo.left)
+        right.xlinkin.out.link(stereo.right)
 
     def start(self):
         """
