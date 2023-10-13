@@ -64,7 +64,6 @@ class CameraComponent(Component):
             self._source = self._source[len('CameraBoardSocket.'):]
 
         self._socket = source
-        self._replay: Optional[Replay] = replay
         self._args: Dict = args
 
         self.name = name
