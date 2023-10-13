@@ -402,42 +402,6 @@ class CameraComponent(Component):
         else:
             self.node.setFps(fps)
 
-    def config_encoder_h26x(self,
-                            rate_control_mode: Optional[dai.VideoEncoderProperties.RateControlMode] = None,
-                            keyframe_freq: Optional[int] = None,
-                            bitrate_kbps: Optional[int] = None,
-                            num_b_frames: Optional[int] = None,
-                            ):
-        if self.encoder is None:
-            raise Exception('Video encoder was not enabled!')
-        if self._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
-            raise Exception('Video encoder was set to MJPEG while trying to configure H26X attributes!')
-
-        if rate_control_mode is not None:
-            self.encoder.setRateControlMode(rate_control_mode)
-        if keyframe_freq is not None:
-            self.encoder.setKeyframeFrequency(keyframe_freq)
-        if bitrate_kbps is not None:
-            self.encoder.setBitrateKbps(bitrate_kbps)
-        if num_b_frames is not None:
-            self.encoder.setNumBFrames(num_b_frames)
-
-    def config_encoder_mjpeg(self,
-                             quality: Optional[int] = None,
-                             lossless: bool = False
-                             ):
-        if self.encoder is None:
-            raise Exception('Video encoder was not enabled!')
-        if self._encoder_profile != dai.VideoEncoderProperties.Profile.MJPEG:
-            raise Exception(
-                f'Video encoder was set to {self._encoder_profile} while trying to configure MJPEG attributes!'
-            )
-
-        if quality is not None:
-            self.encoder.setQuality(quality)
-        if lossless is not None:
-            self.encoder.setLossless(lossless)
-
     def get_stream_xout(self, fourcc: Optional[str] = None) -> StreamXout:
         if self.encoder is not None and fourcc is not None:
             return StreamXout(self.encoder.bitstream, name=self.name or self._source + '_bitstream')
