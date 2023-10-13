@@ -177,26 +177,6 @@ class CameraComponent(Component):
                 self.stream = rot_manip.out
                 self.stream_size = self.stream_size[::-1]
 
-        if encode:
-            self.encoder = pipeline.createVideoEncoder()
-            self._encoder_profile = parse_encode(encode)  # MJPEG by default
-            self.encoder.setDefaultProfilePreset(self.get_fps(), self._encoder_profile)
-
-            if self.is_replay():  # TODO - this might be not needed, we check for replay above and return
-                # Create ImageManip to convert to NV12
-                type_manip = pipeline.createImageManip()
-                type_manip.setFrameType(dai.ImgFrame.Type.NV12)
-                type_manip.setMaxOutputFrameSize(self.stream_size[0] * self.stream_size[1] * 3)
-
-                self.stream.link(type_manip.inputImage)
-                type_manip.out.link(self.encoder.input)
-            elif self.is_mono():
-                self.stream.link(self.encoder.input)
-            elif self.is_color():
-                self.node.video.link(self.encoder.input)
-            else:
-                raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
-
         if self._args:
             self._config_camera_args(self._args)
 

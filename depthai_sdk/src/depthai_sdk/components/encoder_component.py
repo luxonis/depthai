@@ -20,11 +20,13 @@ class EncoderComponent(Component):
 
         self._device = device
         self._pipeline = pipeline
-        self._node_out = _get_node_out(input)
 
         codec = parse_encode(codec)
         self._encoder = pipeline.create(dai.node.VideoEncoder)
         self._encoder.setDefaultProfilePreset(input.get_fps(), codec)
+
+        node_out = _get_node_out(input)
+        node_out.link(self._encoder.input)
 
     def config_encoder_h26x(
         self,
