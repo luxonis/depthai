@@ -21,6 +21,8 @@ class EncoderComponent(Component):
         self._device = device
         self._pipeline = pipeline
 
+        input.ensure_encoder_compatible_size()
+
         self.node = pipeline.create(dai.node.VideoEncoder)
         self.node.setDefaultProfilePreset(input.get_fps(), parse_encode(codec))
 

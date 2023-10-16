@@ -1,5 +1,5 @@
 import logging
-from typing import Dict
+from typing import Dict, List, Optional, Union
 
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.camera_control import CameraControl
@@ -21,7 +21,6 @@ class CameraComponent(Component):
                      str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
                  ]] = None,
                  fps: Optional[float] = None,
-                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                  sensor_type: Optional[dai.CameraSensorType] = None,
                  rotation: Optional[int] = None,
                  replay: Optional[Replay] = None,
@@ -38,7 +37,6 @@ class CameraComponent(Component):
             source (str or dai.CameraBoardSocket): Source of the camera. Either color/rgb/right/left
             resolution (optional): Camera resolution, eg. '800p' or '4k'
             fps (float, optional): Camera FPS
-            encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
             sensor_type: To force color/mono/tof camera
             rotation (int, optional): Rotate the camera by 90, 180, 270 degrees
             replay (Replay object): Replay object to use for mocking the camera
@@ -150,12 +148,11 @@ class CameraComponent(Component):
                     targetWidthIsp = targetWidthRes
                 res = getClosesResolution(sensor, sensor_type, width=targetWidthRes)
                 self.node.setResolution(res)
-                scale = getClosestIspScale(self.node.getIspSize(), width=targetWidthIsp,
-                                           videoEncoder=(encode is not None))
+                scale = getClosestIspScale(self.node.getIspSize(), width=targetWidthIsp)
                 self.node.setIspScale(*scale)
 
             curr_size = self.node.getVideoSize()
-            closest = getClosestVideoSize(*curr_size, videoEncoder=encode)
+            closest = getClosestVideoSize(*curr_size)
             self.node.setVideoSize(*closest)
             self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 
@@ -188,6 +185,17 @@ class CameraComponent(Component):
             self._control_xlink_in.out.link(self.node.inputControl)
             # CameraControl message doesn't use any additional data (only metadata)
             self._control_xlink_in.setMaxDataSize(1)
+
+    def ensure_encoder_compatible_size(self) -> None:
+        self.node.setIspScale(
+            *getClosestIspScale(
+                self.node.getIspSize(),
+                width=self.node.getIspWidth(), 
+                videoEncoder=True)
+        )
+        self.node.setVideoSize(
+            *getClosestVideoSize(*self.node.getVideoSize(), videoEncoder=True)
+        )
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
