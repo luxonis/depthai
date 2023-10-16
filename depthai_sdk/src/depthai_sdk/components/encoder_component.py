@@ -1,11 +1,13 @@
 import logging
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import depthai as dai
 from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.stereo_component import StereoComponent
-from depthai_sdk.components.parser import parse_encode
+from depthai_sdk.components.parser import encoder_profile_to_fourcc, parse_encode
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 
 
 class EncoderComponent(Component):
@@ -15,14 +17,17 @@ class EncoderComponent(Component):
         pipeline: dai.Pipeline,
         input: Union[CameraComponent, StereoComponent],
         codec: Union[str, dai.VideoEncoderProperties.Profile],
+        name: Optional[str] = None,
     ) -> None:
         super().__init__()
+        self.out = _EncoderComponentOutputs(self)
 
         self._device = device
         self._pipeline = pipeline
 
         input.ensure_encoder_compatible_size()
 
+        self.name = name
         self.node = pipeline.create(dai.node.VideoEncoder)
         self.node.setDefaultProfilePreset(input.get_fps(), parse_encode(codec))
 
@@ -62,6 +67,22 @@ class EncoderComponent(Component):
             self.node.setQuality(quality)
         if lossless is not None:
             self.node.setLossless(lossless)
+
+    def get_stream_xout(self) -> StreamXout:
+        return StreamXout(self.node.bitstream, self.name)
+
+    def get_fourcc(self) -> str:
+        return encoder_profile_to_fourcc(self.node.getProfile())
+
+
+class _EncoderComponentMainOutput(ComponentOutput):
+    def __call__(self, device: dai.Device) -> XoutBase:
+        return XoutFrames(self._comp.get_stream_xout(), self._comp.get_fourcc()).set_comp_out(self)
+
+
+class _EncoderComponentOutputs:
+    def __init__(self, component: EncoderComponent) -> None:
+        self.main = _EncoderComponentMainOutput(component)
 
 
 def _get_node_out(component: Union[CameraComponent, StereoComponent]) -> dai.Node.Output:
