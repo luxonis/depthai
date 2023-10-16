@@ -22,11 +22,10 @@ class EncoderComponent(Component):
         self._pipeline = pipeline
 
         codec = parse_encode(codec)
-        self._encoder = pipeline.create(dai.node.VideoEncoder)
-        self._encoder.setDefaultProfilePreset(input.get_fps(), codec)
+        self.node = pipeline.create(dai.node.VideoEncoder)
+        self.node.setDefaultProfilePreset(input.get_fps(), codec)
 
-        node_out = _get_node_out(input)
-        node_out.link(self._encoder.input)
+        _get_node_out(input).link(self.node.input)
 
     def config_encoder_h26x(
         self,
@@ -35,37 +34,33 @@ class EncoderComponent(Component):
         bitrate_kbps: Optional[int] = None,
         num_b_frames: Optional[int] = None,
     ):
-        if self._encoder.getProfile() not in [
+        if self.node.getProfile() not in [
             dai.VideoEncoderProperties.Profile.H264_BASELINE,
             dai.VideoEncoderProperties.Profile.H264_HIGH,
             dai.VideoEncoderProperties.Profile.H264_MAIN,
             dai.VideoEncoderProperties.Profile.H265_MAIN,
         ]:
-            raise ValueError(
-                f"Encoder profile {self._encoder.getProfile()} is not H.26x"
-            )
+            raise ValueError(f"Encoder profile {self.node.getProfile()} is not H.26x")
         if rate_control_mode is not None:
-            self._encoder.setRateControlMode(rate_control_mode)
+            self.node.setRateControlMode(rate_control_mode)
         if keyframe_freq is not None:
-            self._encoder.setKeyframeFrequency(keyframe_freq)
+            self.node.setKeyframeFrequency(keyframe_freq)
         if bitrate_kbps is not None:
-            self._encoder.setBitrateKbps(bitrate_kbps)
+            self.node.setBitrateKbps(bitrate_kbps)
         if num_b_frames is not None:
-            self._encoder.setNumBFrames(num_b_frames)
+            self.node.setNumBFrames(num_b_frames)
 
     def config_encoder_mjpeg(
         self,
         quality: Optional[int] = None,
         lossless: bool = False,
     ):
-        if self._encoder.getProfile() != dai.VideoEncoderProperties.Profile.MJPEG:
-            raise ValueError(
-                f"Encoder profile {self._encoder.getProfile()} is not MJPEG"
-            )
+        if self.node.getProfile() != dai.VideoEncoderProperties.Profile.MJPEG:
+            raise ValueError(f"Encoder profile {self.node.getProfile()} is not MJPEG")
         if quality is not None:
-            self._encoder.setQuality(quality)
+            self.node.setQuality(quality)
         if lossless is not None:
-            self._encoder.setLossless(lossless)
+            self.node.setLossless(lossless)
 
 
 def _get_node_out(
