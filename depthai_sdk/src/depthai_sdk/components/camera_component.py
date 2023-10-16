@@ -5,7 +5,7 @@ from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.camera_control import CameraControl
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component, ComponentOutput
-from depthai_sdk.components.parser import parse_resolution, parse_encode, encoder_profile_to_fourcc
+from depthai_sdk.components.parser import parse_resolution
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.replay import Replay
@@ -52,7 +52,6 @@ class CameraComponent(Component):
         self._device = device
 
         self.node: Optional[Union[dai.node.ColorCamera, dai.node.MonoCamera, dai.node.XLinkIn]] = None
-        self.encoder: Optional[dai.node.VideoEncoder] = None
 
         self.stream: Optional[dai.Node.Output] = None  # Node output to be used as eg. an input into NN
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
@@ -389,10 +388,8 @@ class CameraComponent(Component):
         else:
             self.node.setFps(fps)
 
-    def get_stream_xout(self, fourcc: Optional[str] = None) -> StreamXout:
-        if self.encoder is not None and fourcc is not None:
-            return StreamXout(self.encoder.bitstream, name=self.name or self._source + '_bitstream')
-        elif self.is_replay():
+    def get_stream_xout(self) -> StreamXout:
+        if self.is_replay():
             return ReplayStream(self.name or self._source)
         elif self.is_mono():
             return StreamXout(self.stream, name=self.name or self._source + '_mono')
@@ -415,32 +412,22 @@ class CameraComponent(Component):
             if preview_num_frames is not None:
                 self._preview_num_frames_pool = preview_num_frames
 
-    def get_fourcc(self) -> Optional[str]:
-        if self.encoder is None:
-            return None
-        return encoder_profile_to_fourcc(self._encoder_profile)
-
     """
     Available outputs (to the host) of this component
     """
 
     class Out:
         class CameraOut(ComponentOutput):
-            def __call__(self, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
-                return XoutFrames(self._comp.get_stream_xout(fourcc), fourcc).set_comp_out(self)
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(self._comp.get_stream_xout()).set_comp_out(self)
 
         class ReplayOut(ComponentOutput):
             def __call__(self, device: dai.Device) -> XoutBase:
                 return XoutFrames(ReplayStream(self._comp._source)).set_comp_out(self)
 
-        class EncodedOut(CameraOut):
-            def __call__(self, device: dai.Device) -> XoutBase:
-                return super().__call__(device, fourcc=self._comp.get_fourcc())
-
 
         def __init__(self, camera_component: 'CameraComponent'):
             self.replay = self.ReplayOut(camera_component)
             self.camera = self.CameraOut(camera_component)
-            self.encoded = self.EncodedOut(camera_component)
 
             self.main = self.replay if camera_component.is_replay() else self.camera
