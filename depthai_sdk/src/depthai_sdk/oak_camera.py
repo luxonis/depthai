@@ -84,7 +84,7 @@ class OakCamera:
 
         self.pipeline = dai.Pipeline()
         self._args: Optional[Dict[str, Any]] = None  # User defined arguments
-        self._pipeine_graph = None
+        self._pipeline_graph = None
 
         if args:
             if isinstance(args, bool):
@@ -197,7 +197,6 @@ class OakCamera:
                      config: dai.Device.Config,
                      device_str: Optional[str] = None,
                      ) -> None:
-
         """
         Connect to the OAK camera
         """
@@ -501,8 +500,8 @@ class OakCamera:
 
         # Append callbacks to be called from main thread
         # self._polling.append()
-        if self._pipeine_graph is not None:
-            self._pipeine_graph.create_graph(self.pipeline.serializeToJson()['pipeline'], self.device)
+        if self._pipeline_graph is not None:
+            self._pipeline_graph.create_graph(self.pipeline.serializeToJson()['pipeline'], self.device)
             logging.info('Pipeline graph process started')
 
         # Call on_pipeline_started() for each component
@@ -589,8 +588,8 @@ class OakCamera:
         Shows DepthAI Pipeline graph, which can be useful when debugging. You must call this BEFORE calling the oak.start()!
         """
         from depthai_pipeline_graph.pipeline_graph import PipelineGraph
-        self._pipeine_graph = PipelineGraph()
-        self._polling.append(self._pipeine_graph.update)
+        self._pipeline_graph = PipelineGraph()
+        self._polling.append(self._pipeline_graph.update)
 
     def visualize(self,
                   output: Union[List, ComponentOutput, Component],
