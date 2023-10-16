@@ -40,6 +40,7 @@ stringToCam = {
                 'CAM_H' : dai.CameraBoardSocket.CAM_H
                 }
 
+
 camToMonoRes = {
                 'OV7251' : dai.MonoCameraProperties.SensorResolution.THE_480_P,
                 'OV9282' : dai.MonoCameraProperties.SensorResolution.THE_800_P,
@@ -71,6 +72,12 @@ def create_blank(width, height, rgb_color=(0, 0, 0)):
 
     return image
 
+class ParseKwargs(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        setattr(namespace, self.dest, dict())
+        for value in values:
+            key, value = value.split('=')
+            getattr(namespace, self.dest)[key] = value
 
 def parse_args():
     epilog_text = '''
@@ -106,8 +113,8 @@ def parse_args():
                         help="Square size of calibration pattern used in centimeters. Default: 2.0cm.")
     parser.add_argument("-ms", "--markerSizeCm", type=float, required=False,
                         help="Marker size in charuco boards.")
-    parser.add_argument("-db", "--defaultBoard", default=False, action="store_true",
-                        help="Calculates the -ms parameter automatically based on aspect ratio of charuco board in the repository")
+    parser.add_argument("-db", "--defaultBoard", default=None, type=str,
+                        help="Calculates the size of markers, numbers of squareX and squareY base on the choosing board from charuco_boards directory.")
     parser.add_argument("-nx", "--squaresX", default="11", type=int, required=False,
                         help="number of chessboard squares in X direction in charuco boards.")
     parser.add_argument("-ny", "--squaresY", default="8", type=int, required=False,
@@ -116,20 +123,20 @@ def parse_args():
                         help="Display rectified images with lines drawn for epipolar check")
     parser.add_argument("-m", "--mode", default=['capture', 'process'], nargs='*', type=str, required=False,
                         help="Space-separated list of calibration options to run. By default, executes the full 'capture process' pipeline. To execute a single step, enter just that step (ex: 'process').")
-    parser.add_argument("-brd", "--board", default=None, type=str, required=True,
+    parser.add_argument("-brd", "--board", default=None, type=str,
                         help="BW1097, BW1098OBC - Board type from resources/depthai_boards/boards (not case-sensitive). "
                         "Or path to a custom .json board config. Mutually exclusive with [-fv -b -w]")
     parser.add_argument("-iv", "--invertVertical", dest="invert_v", default=False, action="store_true",
                         help="Invert vertical axis of the camera for the display")
     parser.add_argument("-ih", "--invertHorizontal", dest="invert_h", default=False, action="store_true",
                         help="Invert horizontal axis of the camera for the display")
-    parser.add_argument("-ep", "--maxEpiploarError", default="0.7", type=float, required=False,
+    parser.add_argument("-ep", "--maxEpiploarError", default="0.8", type=float, required=False,
                          help="Sets the maximum epiploar allowed with rectification. Default: %(default)s")
     parser.add_argument("-cm", "--cameraMode", default="perspective", type=str,
                         required=False, help="Choose between perspective and Fisheye")
-    parser.add_argument("-rlp", "--rgbLensPosition", default=135, type=int,
-                        required=False, help="Set the manual lens position of the camera for calibration")
-    parser.add_argument("-cd", "--captureDelay", default=5, type=int,
+    parser.add_argument('-rlp', '--rgbLensPosition', nargs='*', action=ParseKwargs, required=False, default={} , help="Set the manual lens position of the camera for calibration. Example -rlp rgb=135 night=135")
+    parser.add_argument('-dsb', '--disableCamera', nargs='+', required=False, default=[] , help="Set which camera should be disabled. Example -dsb rgb left right")
+    parser.add_argument("-cd", "--captureDelay", default=2, type=int,
                         required=False, help="Choose how much delay to add between pressing the key and capturing the image. Default: %(default)s")
     parser.add_argument("-fac", "--factoryCalibration", default=False, action="store_true",
                         help="Enable writing to Factory Calibration.")
@@ -143,27 +150,41 @@ def parse_args():
                         help="Save calibration file to this path")
     parser.add_argument('-dst', '--datasetPath', type=str, default="dataset",
                         help="Path to dataset used for processing images")
-    parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.5,
+    parser.add_argument('-mdmp', '--minDetectedMarkersPercent', type=float, default=0.4,
                         help="Minimum percentage of detected markers to consider a frame valid")
-    parser.add_argument('-nm', '--numMarkers', type=int, default=None, help="Number of markers in the board")
     parser.add_argument('-mt', '--mouseTrigger', default=False, action="store_true",
                         help="Enable mouse trigger for image capture")
     parser.add_argument('-nic', '--noInitCalibration', default=False, action="store_true",
                         help="Don't take the board calibration for initialization but start with an empty one")
     parser.add_argument('-trc', '--traceLevel', type=int, default=0,
                         help="Set to trace the steps in calibration. Number from 1 to 5. If you want to display all, set trace number to 10.")
-    parser.add_argument('-mst', '--minSyncTimestamp',  type=float, default=0.05,
+    parser.add_argument('-mst', '--minSyncTimestamp',  type=float, default=0.2,
                         help="Minimum time difference between pictures taken from different cameras.  Default: %(default)s ")
+    parser.add_argument('-it', '--numPictures',  type=float, default=None,
+                        help="Number of pictures taken.")
+    parser.add_argument('-ebp', '--enablePolygonsDisplay', default=False, action="store_true",
+                        help="Enable the display of polynoms.")
     options = parser.parse_args()
-
     # Set some extra defaults, `-brd` would override them
+    if options.defaultBoard is not None:
+        try:
+            board_name = options.defaultBoard
+            try:
+                board_name, _ = board_name.split(".")
+            except:
+                board_name = board_name
+            _, size, charcuo_num = board_name.split("_")
+            numX, numY = charcuo_num.split("x")
+            options.squaresX = int(numX)
+            options.squaresY = int(numY)
+        except:
+            raise argparse.ArgumentTypeError(options.defaultBoard, "Board name has not been found.")
     if options.markerSizeCm is None:
-        if options.defaultBoard:
-            options.markerSizeCm = options.squareSizeCm * 0.75
-        else:
-            raise argparse.ArgumentError(options.markerSizeCm, "-ms / --markerSizeCm needs to be provided (you can use -db / --defaultBoard if using calibration board from this repository or calib.io to calculate -ms automatically)")
+        options.markerSizeCm = options.squareSizeCm * 0.75
     if options.squareSizeCm < 2.2:
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
+    if options.traceLevel == 1:
+        print(f"Charuco board selected is: board_name = {board_name}, numX = {numX}, numY = {numY}, squareSize {options.squareSizeCm} cm, markerSize {options.markerSizeCm} cm")
         
     return options
 
@@ -329,8 +350,15 @@ class Main:
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
-        self.focus_value = self.args.rgbLensPosition
+        self.device = dai.Device()
+        self.enablePolygonsDisplay = self.args.enablePolygonsDisplay
+        self.board_name = None
+        cameraProperties = self.device.getConnectedCameraFeatures()
+        calibData = self.device.readCalibration()
+        eeprom = calibData.getEepromData()
+        #TODO Change only in getDeviceName in next revision.
         if self.args.board:
+            self.board_name = self.args.board
             board_path = Path(self.args.board)
             if not board_path.exists():
                 board_path = (Path(__file__).parent / 'resources/depthai_boards/boards' / self.args.board.upper()).with_suffix('.json').resolve()
@@ -341,39 +369,80 @@ class Main:
                 self.board_config = json.load(fp)
                 self.board_config = self.board_config['board_config']
                 self.board_config_backup = self.board_config
+        else:
+            try: 
+                detection = self.device.getDeviceName()
+                print(f"Device name: {detection}")
+                detection = detection.split("-")
+            except:
+                cameraProperties = self.device.getConnectedCameraFeatures()
+                calibData = self.device.readCalibration()
+                eeprom = calibData.getEepromData()
+                eeprom.productName = eeprom.productName.replace(" ", "-").upper()
+                eeprom.boardName = eeprom.boardName.replace(" ", "-").upper()
+                print(f"Product name: {eeprom.productName}, board name {eeprom.boardName}")
+                if eeprom.productName.split("-")[0] == "OAK":
+                    detection = eeprom.productName.split("-")
+                elif eeprom.boardName.split("-")[0] == "OAK":
+                    detection = eeprom.boardName.split("-")
+                else:
+                    raise ValueError(f"Board config for Product name: {eeprom.productName}, board name {eeprom.boardName} not found.")
+            if "AF" in detection:
+                detection.remove("AF")
+            if "FF" in detection:
+                detection.remove("FF")
+            if "9782" in detection:
+                detection.remove("9782")
+            self.board_name = '-'.join(detection)
+            board_path = Path(self.board_name)
+            if self.traceLevel == 1:
+                print(f"Board path specified as {board_path}")
+            if not board_path.exists():
+                board_path = (Path(__file__).parent / 'resources/depthai_boards/boards' / self.board_name.upper()).with_suffix('.json').resolve()
+                if not board_path.exists():
+                    raise ValueError(
+                        'Board config not found: {}'.format(board_path))
+            with open(board_path) as fp:
+                self.board_config = json.load(fp)
+                self.board_config = self.board_config['board_config']
+                self.board_config_backup = self.board_config
 
         # TODO: set the total images
         # random polygons for count
-        self.total_images = self.args.count * \
-            len(calibUtils.setPolygonCoordinates(1000, 600))
+        if self.args.numPictures:
+            self.total_images = self.args.numPictures
+        else:
+            self.total_images = self.args.count * \
+                len(calibUtils.setPolygonCoordinates(1000, 600))
         if self.traceLevel == 1:
             print("Using Arguments=", self.args)
         if self.args.datasetPath:
-            Path(self.args.datasetPath).mkdir(parents=True, exist_ok=True)
+            path = Path(self.args.datasetPath).mkdir(parents=True, exist_ok=True)
 
         # if self.args.board.upper() == 'OAK-D-LITE':
         #     raise Exception(
         #     "OAK-D-Lite Calibration is not supported on main yet. Please use `lite_calibration` branch to calibrate your OAK-D-Lite!!")
         
-        if self.args.cameraMode != "perspective": 
-            self.args.minDetectedMarkersPercent = 1
+        #TODO
+        #if self.args.cameraMode != "perspective": 
+            #self.args.minDetectedMarkersPercent = 1.0
         
         self.coverageImages ={} 
         for cam_id in self.board_config['cameras']:
             name = self.board_config['cameras'][cam_id]['name']
             self.coverageImages[name] = None
 
-        self.device = dai.Device()
         cameraProperties = self.device.getConnectedCameraFeatures()
         for properties in cameraProperties:
             for in_cam in self.board_config['cameras'].keys():
                 cam_info = self.board_config['cameras'][in_cam]
-                if properties.socket == stringToCam[in_cam]:
-                    self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
-                    print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
-                    self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
-                    # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
-                    break
+                if cam_info["name"] not in self.args.disableCamera:
+                    if properties.socket == stringToCam[in_cam]:
+                        self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
+                        print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
+                        self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
+                        # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
+                        break
 
         self.charuco_board = cv2.aruco.CharucoBoard_create(
                             self.args.squaresX, self.args.squaresY,
@@ -393,18 +462,16 @@ class Main:
         self.camera_queue = {}
         for config_cam in self.board_config['cameras']:
             cam = self.board_config['cameras'][config_cam]
-            self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
+            if cam["name"] not in self.args.disableCamera:
+                self.camera_queue[cam['name']] = self.device.getOutputQueue(cam['name'], 1, False)
 
     def is_markers_found(self, frame):
         marker_corners, _, _ = cv2.aruco.detectMarkers(
             frame, self.aruco_dictionary)
         print("Markers count ... {}".format(len(marker_corners)))
-        if not self.args.numMarkers:
-            num_all_markers = math.floor(self.args.squaresX * self.args.squaresY / 2)
-        else:
-            num_all_markers = self.args.numMarkers
-        print(f'Total markers needed -> {(num_all_markers * self.args.minDetectedMarkersPercent)}')
-        return not (len(marker_corners) <  (num_all_markers * self.args.minDetectedMarkersPercent))
+        num_all_markers = math.floor(self.args.squaresX * self.args.squaresY / 2)
+        print(f'Total markers needed -> {int(num_all_markers * self.args.minDetectedMarkersPercent)}')
+        return not (len(marker_corners) <  int(num_all_markers * self.args.minDetectedMarkersPercent))
 
     def detect_markers_corners(self, frame):
         marker_corners, ids, rejectedImgPoints = cv2.aruco.detectMarkers(frame, self.aruco_dictionary)
@@ -413,20 +480,20 @@ class Main:
                                                                                 rejectedCorners=rejectedImgPoints)
         if len(marker_corners) <= 0:
             return marker_corners, ids, None, None
-        ret, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, ids, frame, self.charuco_board)
+        ret, charuco_corners, charuco_ids = cv2.aruco.interpolateCornersCharuco(marker_corners, ids, frame, self.charuco_board, minMarkers = 1)
         return marker_corners, ids, charuco_corners, charuco_ids
 
     def draw_markers(self, frame):
         marker_corners, ids, charuco_corners, charuco_ids = self.detect_markers_corners(frame)
         if charuco_ids is not None and len(charuco_ids) > 0:
-            return cv2.aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids, (0, 255, 0));
+            return cv2.aruco.drawDetectedCornersCharuco(frame, charuco_corners, charuco_ids, (0, 255, 0))
         return frame
 
     def draw_corners(self, frame, displayframe, color):
         marker_corners, ids, charuco_corners, charuco_ids = self.detect_markers_corners(frame)
         for corner in charuco_corners:
             corner_int = (int(corner[0][0]), int(corner[0][1]))
-            cv2.circle(displayframe, corner_int, 8, color, -1)
+            cv2.circle(displayframe, corner_int, 8*displayframe.shape[1]//1900, color, -1)
         height, width = displayframe.shape[:2]
         start_point = (0, 0)  # top of the image
         end_point = (0, height)
@@ -461,43 +528,48 @@ class Main:
         fps = self.args.framerate
         for cam_id in self.board_config['cameras']:
             cam_info = self.board_config['cameras'][cam_id]
-            if cam_info['type'] == 'mono':
-                cam_node = pipeline.createMonoCamera()
-                xout = pipeline.createXLinkOut()
+            if cam_info["name"] not in self.args.disableCamera:
+                if cam_info['type'] == 'mono':
+                    cam_node = pipeline.createMonoCamera()
+                    xout = pipeline.createXLinkOut()
+                    sensorName = cam_info['sensorName']
+                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
+                    cam_node.setBoardSocket(stringToCam[cam_id])
+                    cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
+                    cam_node.setFps(fps)
 
-                cam_node.setBoardSocket(stringToCam[cam_id])
-                cam_node.setResolution(camToMonoRes[cam_info['sensorName']])
-                cam_node.setFps(fps)
+                    xout.setStreamName(cam_info['name'])
+                    cam_node.out.link(xout.input)
+                else:
+                    cam_node = pipeline.createColorCamera()
+                    xout = pipeline.createXLinkOut()
 
-                xout.setStreamName(cam_info['name'])
-                cam_node.out.link(xout.input)
-            else:
-                cam_node = pipeline.createColorCamera()
-                xout = pipeline.createXLinkOut()
-                
-                cam_node.setBoardSocket(stringToCam[cam_id])
-                sensorName = cam_info['sensorName']
-                print(f'Sensor name is {sensorName}')
-                cam_node.setResolution(camToRgbRes[cam_info['sensorName'].upper()])
-                cam_node.setFps(fps)
+                    cam_node.setBoardSocket(stringToCam[cam_id])
+                    sensorName = cam_info['sensorName']
+                    print(f'Sensor name for {cam_info["name"]} is {sensorName}')
+                    cam_node.setResolution(camToRgbRes[cam_info['sensorName'].upper()])
+                    cam_node.setFps(fps)
 
-                xout.setStreamName(cam_info['name'])
-                cam_node.isp.link(xout.input)
-                if cam_info['sensorName'] == "OV9*82":
-                    cam_node.initialControl.setSharpness(0)
-                    cam_node.initialControl.setLumaDenoise(0)
-                    cam_node.initialControl.setChromaDenoise(4)
+                    xout.setStreamName(cam_info['name'])
+                    cam_node.isp.link(xout.input)
+                    if cam_info['sensorName'] == "OV9*82":
+                        cam_node.initialControl.setSharpness(0)
+                        cam_node.initialControl.setLumaDenoise(0)
+                        cam_node.initialControl.setChromaDenoise(4)
 
-                if cam_info['hasAutofocus']:
-                    cam_node.initialControl.setManualFocus(self.focus_value)
+                    if cam_info['hasAutofocus']:
+                        if self.args.rgbLensPosition:
+                            cam_node.initialControl.setManualFocus(int(self.args.rgbLensPosition[stringToCam[cam_id].name.lower()]))
+                        else:
+                            cam_node.initialControl.setManualFocus(135)
 
-                    controlIn = pipeline.createXLinkIn()
-                    controlIn.setStreamName(cam_info['name'] + '-control')
-                    controlIn.out.link(cam_node.inputControl)
+                        controlIn = pipeline.createXLinkIn()
+                        controlIn.setStreamName(cam_info['name'] + '-control')
+                        controlIn.out.link(cam_node.inputControl)
 
-            # cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
-            xout.input.setBlocking(False)
-            xout.input.setQueueSize(1)
+                cam_node.initialControl.setAntiBandingMode(antibandingOpts[self.args.antibanding])
+                xout.input.setBlocking(False)
+                xout.input.setQueueSize(1)
 
         return pipeline
 
@@ -506,8 +578,7 @@ class Main:
         if not self.is_markers_found(frame):
             return False
 
-        filename = calibUtils.image_filename(
-            stream_name, self.current_polygon, self.images_captured)
+        filename = calibUtils.image_filename(self.current_polygon, self.images_captured)
         path = Path(self.args.datasetPath) / stream_name / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         cv2.imwrite(str(path), frame)
@@ -515,31 +586,40 @@ class Main:
         return True
 
     def show_info_frame(self):
-        info_frame = np.zeros((600, 1000, 3), np.uint8)
+        info_frame = np.zeros((600, 1100, 3), np.uint8)
         print("Starting image capture. Press the [ESC] key to abort.")
-        print("Will take {} total images, {} per each polygon.".format(
-            self.total_images, self.args.count))
+        if self.enablePolygonsDisplay:
+            print("Will take {} total images, {} per each polygon.".format(
+                self.total_images, self.args.count))
+        else:
+            print("Will take {} total images.".format(
+                self.total_images))
 
         def show(position, text):
             cv2.putText(info_frame, text, position,
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0))
-
+        show((25, 40), "Calibration of camera {}". format(self.board_name))
         show((25, 100), "Information about image capture:")
         show((25, 160), "Press the [ESC] key to abort.")
         show((25, 220), "Press the [spacebar] key to capture the image.")
-        show((25, 300), "Polygon on the image represents the desired chessboard")
-        show((25, 340), "position, that will provide best calibration score.")
-        show((25, 400), "Will take {} total images, {} per each polygon.".format(
-            self.total_images, self.args.count))
+        show((25, 280), "Press the \"s\" key to stop capturing images and begin calibration.")
+        if self.enablePolygonsDisplay:
+            show((25, 360), "Polygon on the image represents the desired chessboard")
+            show((25, 420), "position, that will provide best calibration score.")
+            show((25, 480), "Will take {} total images, {} per each polygon.".format(
+                self.total_images, self.args.count))
+        else:
+            show((25, 480), "Will take {} total images.".format(
+                self.total_images))
         show((25, 550), "To continue, press [spacebar]...")
 
         cv2.imshow("info", info_frame)
         while True:
             key = cv2.waitKey(1)
-            if key == ord(" "):
+            if key & 0xFF == ord(" "):
                 cv2.destroyAllWindows()
                 return
-            elif key == 27 or key == ord("q"):  # 27 - ESC
+            elif key & 0xFF == 27 or key == ord("q"):  # 27 - ESC
                 cv2.destroyAllWindows()
                 raise SystemExit(0)
 
@@ -578,7 +658,7 @@ class Main:
 
         show((50, int(height / 2 - 40)),
              "Capture failed, unable to sync images!")
-        show((60, int(height / 2 + 40)), "Fix the argument -mts.")
+        show((60, int(height / 2 + 40)), "Fix the argument -mst.")
 
         # cv2.imshow("left", info_frame)
         # cv2.imshow("right", info_frame)
@@ -622,6 +702,7 @@ class Main:
         timer = self.args.captureDelay
         prev_time = None
         curr_time = None
+
         self.display_name = "Image Window"
         self.minSyncTimestamp = self.args.minSyncTimestamp
         syncCollector = MessageSync(len(self.camera_queue), self.minSyncTimestamp) # 3ms tolerance
@@ -647,7 +728,7 @@ class Main:
             resizeHeight = 0
             resizeWidth = 0
             for name, imgFrame in currImageList.items():
-                self.coverageImages[name]=None
+                #self.coverageImages[name]=None
                 
                 # print(f'original Shape of {name} is {imgFrame.shape}' )
                
@@ -674,6 +755,12 @@ class Main:
                 #     resizeHeight = height
             
             # print(f'Scale Shape  is {resizeWidth}x{resizeHeight}' )
+                if self.args.invert_v and self.args.invert_h:
+                    currImageList[name] = cv2.flip(currImageList[name], -1)
+                elif self.args.invert_v:
+                    currImageList[name] = cv2.flip(currImageList[name], 0)
+                elif self.args.invert_h:
+                    currImageList[name] = cv2.flip(currImageList[name], 1)
             
             combinedImage = None
             combinedCoverageImage = None
@@ -689,8 +776,8 @@ class Main:
                     # print(self.height, self.width)
                     self.polygons = calibUtils.setPolygonCoordinates(
                         self.height, self.width)
-                
-                localPolygon = np.array([self.polygons[self.current_polygon]])
+                if self.current_polygon<len(self.polygons):
+                    localPolygon = np.array([self.polygons[self.current_polygon]])
                 # print(localPolygon.shape)
                 # print(localPolygon)
                 if self.images_captured_polygon == 1:
@@ -711,10 +798,10 @@ class Main:
                     localPolygon = np.matmul(localPolygon, perspectiveRotationMatrix).astype(np.int32)
                     localPolygon[0][:, 1] += (height - abs(localPolygon[0][:, 1].max()))    
                     localPolygon[0][:, 0] += abs(localPolygon[0][:, 1].min())    
-
-                cv2.polylines(
-                    imgFrame, localPolygon,
-                    True, (0, 0, 255), 4)
+                if self.images_captured_polygon<len(self.polygons) and self.args.enablePolygonsDisplay:
+                    cv2.polylines(
+                        imgFrame, localPolygon,
+                        True, (0, 0, 255), 4)
                 
                 height, width, _ = imgFrame.shape
                 # TO-DO: fix the rooquick and dirty fix: if the resized image is higher than the target resolution, crop it
@@ -727,21 +814,36 @@ class Main:
                 width_offset = (resizeWidth - width)//2
                 subImage = np.pad(imgFrame, ((height_offset, height_offset), (width_offset, width_offset), (0, 0)), 'constant', constant_values=0)
                 if self.coverageImages[name] is not None:
-                    currCoverImage = cv2.resize(self.coverageImages[name], (0, 0), fx=self.output_scale_factor, fy=self.output_scale_factor)
+                    if len(self.coverageImages[name].shape) != 3:
+                        self.coverageImages[name] = cv2.cvtColor(self.coverageImages[name], cv2.COLOR_GRAY2RGB)
+                    imgFrame = self.coverageImages[name]
+                    cv2.resize(imgFrame, (0, 0), fx=self.output_scale_factor*2, fy=self.output_scale_factor*2)
+                    height, width, _ = imgFrame.shape
+                    if width > resizeWidth and height > resizeHeight:
+                        imgFrame = cv2.resize(
+                        imgFrame, (0, 0), fx= resizeWidth / width, fy= resizeWidth / width)
+                    height, width, _ = imgFrame.shape
+                    if height > resizeHeight:
+                        height_offset = (height - resizeHeight)//2
+                        imgFrame = imgFrame[height_offset:height_offset+resizeHeight, :]
+                    height, width, _ = imgFrame.shape
+                    height_offset = (resizeHeight - height)//2
+                    width_offset = (resizeWidth - width)//2
                     padding = ((height_offset, height_offset), (width_offset,width_offset), (0, 0))
-                    subCoverageImage = np.pad(currCoverImage, padding, 'constant', constant_values=0)
+                    subCoverageImage = np.pad(imgFrame, padding, 'constant', constant_values=0)
+                    print_text = f"Camera: {name}, picture {self.images_captured}"
+                    cv2.putText(subCoverageImage, print_text, (15, 15+height_offset), cv2.FONT_HERSHEY_SIMPLEX, 2*imgFrame.shape[0]/1750, (0, 0, 0), 2)                    
                     if combinedCoverageImage is None:
                         combinedCoverageImage = subCoverageImage
                     else:
                         combinedCoverageImage = np.hstack((combinedCoverageImage, subCoverageImage))
-
-
                 if combinedImage is None:
                     combinedImage = subImage
                 else:
                     combinedImage = np.hstack((combinedImage, subImage))
+                
             key = cv2.waitKey(1)
-            if key == 27 or key == ord("q"):
+            if (key & 0xFF)== 27  or (key & 0xFF) == ord("q"):
                 print("py: Calibration has been interrupted!")
                 raise SystemExit(0)
             elif key == ord(" ") or self.mouseTrigger == True:
@@ -749,6 +851,11 @@ class Main:
                 prev_time = time.time()
                 timer = self.args.captureDelay
                 self.mouseTrigger = False
+            if key == 27 or key == ord("s"):
+                finished = True
+                print("Capturing interrupted by user, procceding with processing of images.")
+                cv2.destroyAllWindows()
+                break
 
             display_image = combinedImage
             if start_timer == True:
@@ -773,6 +880,7 @@ class Main:
 
             cv2.imshow(self.display_name, display_image)
             if combinedCoverageImage is not None:
+                #combinedCoverageImage = cv2.resize(combinedCoverageImage, (0, 0), fx=self.output_scale_factor*2, fy=self.output_scale_factor*2)
                 cv2.imshow("Coverage-Image", combinedCoverageImage)
 
             tried = {}
@@ -800,11 +908,15 @@ class Main:
                     tried[name] = self.parse_frame(frameMsg.getCvFrame(), name)
                     print(f'Status of {name} is {tried[name]}')
                     allPassed = allPassed and tried[name]
-                
                 if allPassed:
                     color = (int(np.random.randint(0, 255)), int(np.random.randint(0, 255)), int(np.random.randint(0, 255)))
                     for name, frameMsg in syncedMsgs.items():
-                        self.coverageImages[name] = self.draw_corners(frameMsg.getCvFrame(), self.coverageImages[name], color)
+                        frameMsg_frame = frameMsg.getCvFrame()
+                        if len(frameMsg.getCvFrame().shape) != 3:
+                            frameMsg_frame = cv2.cvtColor(frameMsg.getCvFrame(), cv2.COLOR_GRAY2RGB)
+                        if len(self.coverageImages[name].shape) != 3:
+                            self.coverageImages[name] = cv2.cvtColor(self.coverageImages[name], cv2.COLOR_GRAY2RGB)
+                        self.coverageImages[name] = self.draw_corners(frameMsg_frame, self.coverageImages[name], color)
                     if not self.images_captured:
                         if 'stereo_config' in self.board_config['cameras']:
                             leftStereo =  self.board_config['cameras'][self.board_config['stereo_config']['left_cam']]['name']
@@ -819,7 +931,6 @@ class Main:
                 else:
                     self.show_failed_capture_frame()
                     capturing = False
-
             # print(f'self.images_captured_polygon  {self.images_captured_polygon}')
             # print(f'self.current_polygon  {self.current_polygon}')
             # print(f'len(self.polygons)  {len(self.polygons)}')
@@ -827,17 +938,23 @@ class Main:
             if self.images_captured_polygon == self.args.count:
                 self.images_captured_polygon = 0
                 self.current_polygon += 1
+                if self.args.numPictures == None:
+                    if self.current_polygon == len(self.polygons):
+                        finished = True
+                        cv2.destroyAllWindows()
+                        break
+                else:
+                    if self.images_captured == self.args.numPictures:
+                        finished = True
+                        cv2.destroyAllWindows()
+                        break
 
-                if self.current_polygon == len(self.polygons):
-                    finished = True
-                    cv2.destroyAllWindows()
-                    break
 
 
 
     def calibrate(self):
         print("Starting image processing")
-        stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel, self.args.outputScaleFactor)
+        stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel, self.args.outputScaleFactor, self.args.disableCamera)
         dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
@@ -881,69 +998,73 @@ class Main:
 
             for camera in result_config['cameras'].keys():
                 cam_info = result_config['cameras'][camera]
-                # log_list.append(self.ccm_selected[cam_info['name']])
-                reprojection_error_threshold = 1.0
-                if cam_info['size'][1] > 720:
-                    #print(cam_info['size'][1])
-                    reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
+                if cam_info["name"] not in self.args.disableCamera:
+                    # log_list.append(self.ccm_selected[cam_info['name']])
+                    reprojection_error_threshold = 1.0
+                    if cam_info['size'][1] > 720:
+                        #print(cam_info['size'][1])
+                        reprojection_error_threshold = reprojection_error_threshold * cam_info['size'][1] / 720
 
-                if cam_info['name'] == 'rgb':
-                    reprojection_error_threshold = 3
-                print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
-                
-                if cam_info['reprojection_error'] > reprojection_error_threshold:
-                    color = red
-                    error_text.append("high Reprojection Error")
-                text = cam_info['name'] + ' Reprojection Error: ' + format(cam_info['reprojection_error'], '.6f')
-                print(text)
-                text = cam_info['name'] + '-reprojection: {}\n'.format(cam_info['reprojection_error'], '.6f')
-                target_file.write(text)
+                    if cam_info['name'] == 'rgb':
+                        reprojection_error_threshold = 3
+                    print('Reprojection error threshold -> {}'.format(reprojection_error_threshold))
 
-                # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
+                    if cam_info['reprojection_error'] > reprojection_error_threshold:
+                        color = red
+                        error_text.append("high Reprojection Error")
+                    text = cam_info['name'] + ' Reprojection Error: ' + format(cam_info['reprojection_error'], '.6f')
+                    print(text)
+                    text = cam_info['name'] + '-reprojection: {}\n'.format(cam_info['reprojection_error'], '.6f')
+                    target_file.write(text)
 
-                calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
-                calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
-                calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
-                if self.args.cameraMode != 'perspective':
-                    calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Fisheye)
-                if 'hasAutofocus' in cam_info and cam_info['hasAutofocus']:
-                    calibration_handler.setLensPosition(stringToCam[camera], self.focus_value)
+                    # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
 
-                # log_list.append(self.focusSigma[cam_info['name']])
-                # log_list.append(cam_info['reprojection_error'])
-                # color = green///
-                # epErrorZText 
-                if 'extrinsics' in cam_info:
+                    calibration_handler.setDistortionCoefficients(stringToCam[camera], cam_info['dist_coeff'])
+                    calibration_handler.setCameraIntrinsics(stringToCam[camera], cam_info['intrinsics'],  cam_info['size'][0], cam_info['size'][1])
+                    calibration_handler.setFov(stringToCam[camera], cam_info['hfov'])
+                    if self.args.cameraMode != 'perspective':
+                        calibration_handler.setCameraType(stringToCam[camera], dai.CameraModel.Fisheye)
+                    if 'hasAutofocus' in cam_info and cam_info['hasAutofocus']:
+                        if self.args.rgbLensPosition:
+                            calibration_handler.setLensPosition(stringToCam[camera], int(self.args.rgbLensPosition[cam_info["name"]]))
+                        else:
+                            calibration_handler.setLensPosition(stringToCam[camera], int(135))
 
-                    if 'to_cam' in cam_info['extrinsics']:
-                        right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
-                        left_cam = cam_info['name']
-                        
-                        epipolar_threshold = self.args.maxEpiploarError
+                    # log_list.append(self.focusSigma[cam_info['name']])
+                    # log_list.append(cam_info['reprojection_error'])
+                    # color = green///
+                    # epErrorZText 
+                    if 'extrinsics' in cam_info:
+                        if 'to_cam' in cam_info['extrinsics']:
+                            right_cam = result_config['cameras'][cam_info['extrinsics']['to_cam']]['name']
+                            if right_cam not in self.args.disableCamera:
+                                left_cam = cam_info['name']
 
-                        if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
-                            color = red
-                            error_text.append("high epipolar error between " + left_cam + " and " + right_cam)
-                        elif cam_info['extrinsics']['epipolar_error'] == -1:
-                            color = red
-                            error_text.append("Epiploar validation failed between " + left_cam + " and " + right_cam)
+                                epipolar_threshold = self.args.maxEpiploarError
 
-                        text = cam_info['name'] + " and " + right_cam + ' epipolar_error: {}\n'.format(cam_info['extrinsics']['epipolar_error'], '.6f')
-                        target_file.write(text)
+                                if cam_info['extrinsics']['epipolar_error'] > epipolar_threshold:
+                                    color = red
+                                    error_text.append("high epipolar error between " + left_cam + " and " + right_cam)
+                                elif cam_info['extrinsics']['epipolar_error'] == -1:
+                                    color = red
+                                    error_text.append("Epiploar validation failed between " + left_cam + " and " + right_cam)
 
-                        # log_list.append(cam_info['extrinsics']['epipolar_error'])
-                        # text = left_cam + "-" + right_cam + ' Avg Epipolar error: ' + format(cam_info['extrinsics']['epipolar_error'], '.6f')
-                        # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
-                        # vis_y += 30
-                        specTranslation = np.array([cam_info['extrinsics']['specTranslation']['x'], cam_info['extrinsics']['specTranslation']['y'], cam_info['extrinsics']['specTranslation']['z']], dtype=np.float32)
+                                text = cam_info['name'] + " and " + right_cam + ' epipolar_error: {}\n'.format(cam_info['extrinsics']['epipolar_error'], '.6f')
+                                target_file.write(text)
 
-                        calibration_handler.setCameraExtrinsics(stringToCam[camera], stringToCam[cam_info['extrinsics']['to_cam']], cam_info['extrinsics']['rotation_matrix'], cam_info['extrinsics']['translation'], specTranslation)
-                        if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
-                            calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
-                            calibration_handler.setStereoRight(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_right'])
-                        elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:                           
-                            calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
-                            calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
+                                # log_list.append(cam_info['extrinsics']['epipolar_error'])
+                                # text = left_cam + "-" + right_cam + ' Avg Epipolar error: ' + format(cam_info['extrinsics']['epipolar_error'], '.6f')
+                                # pygame_render_text(self.screen, text, (vis_x, vis_y), color, 30)
+                                # vis_y += 30
+                                specTranslation = np.array([cam_info['extrinsics']['specTranslation']['x'], cam_info['extrinsics']['specTranslation']['y'], cam_info['extrinsics']['specTranslation']['z']], dtype=np.float32)
+
+                                calibration_handler.setCameraExtrinsics(stringToCam[camera], stringToCam[cam_info['extrinsics']['to_cam']], cam_info['extrinsics']['rotation_matrix'], cam_info['extrinsics']['translation'], specTranslation)
+                                if result_config['stereo_config']['left_cam'] == camera and result_config['stereo_config']['right_cam'] == cam_info['extrinsics']['to_cam']:
+                                    calibration_handler.setStereoLeft(stringToCam[camera], result_config['stereo_config']['rectification_left'])
+                                    calibration_handler.setStereoRight(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_right'])
+                                elif result_config['stereo_config']['left_cam'] == cam_info['extrinsics']['to_cam'] and result_config['stereo_config']['right_cam'] == camera:                           
+                                    calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
+                                    calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
             target_file.close()
 
             if len(error_text) == 0:
@@ -1014,12 +1135,22 @@ class Main:
 
     def run(self):
         if 'capture' in self.args.mode:
+            if self.args.datasetPath:
+                print("Saving dataset to: {}".format(self.args.datasetPath))
+                self.dataset_path = self.args.datasetPath
+                if self.dataset_path != "dataset":
+                    answer = input("This folders content will be deleted for sake of calibration: Proceed? (y/n)")
+                    if answer == "y" or answer == "Y":
+                        print("Starting calibration")
+                    else:
+                        print("Calibration ended by user.")
+                        raise SystemExit(1)
             try:
-                if Path('dataset').exists():
-                    shutil.rmtree('dataset/')
+                if Path(self.dataset_path).exists():
+                    shutil.rmtree(Path(self.dataset_path))
                 for cam_id in self.board_config['cameras']:
                     name = self.board_config['cameras'][cam_id]['name']
-                    Path("dataset/{}".format(name)).mkdir(parents=True, exist_ok=True)
+                    Path(Path(self.dataset_path) / "{}".format(name)).mkdir(parents=True, exist_ok=True)
                 
             except OSError:
                 traceback.print_exc()
@@ -1028,10 +1159,8 @@ class Main:
             self.startPipeline()
             self.show_info_frame()
             self.capture_images_sync()
-        self.dataset_path = str(Path("dataset").absolute())
-        if self.args.datasetPath:
-            print("Using dataset path: {}".format(self.args.datasetPath))
-            self.dataset_path = self.args.datasetPath
+        print("Using dataset path: {}".format(self.args.datasetPath))
+        self.dataset_path = self.args.datasetPath
         if 'process' in self.args.mode:
             self.calibrate()
         print('py: DONE.')

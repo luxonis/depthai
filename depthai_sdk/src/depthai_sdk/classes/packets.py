@@ -120,6 +120,7 @@ class DisparityPacket(FramePacket):
                  colorize: StereoColor = None,
                  colormap: int = None,
                  mono_frame: Optional[dai.ImgFrame] = None,
+                 confidence_map: Optional[np.ndarray] = None
                  ):
         """
         disparity_map might be filtered, eg. if WLS filter is enabled
@@ -130,6 +131,13 @@ class DisparityPacket(FramePacket):
         self.multiplier = multiplier
         self.colorize = colorize
         self.colormap = colormap
+
+        self.confidence_map = confidence_map
+        self.depth_score = None
+        if self.confidence_map:
+            values = 1 - (self.confidence_map.getData() / 255)
+            values_no_outliers = values[np.logical_and(values > 0.0, values < 1.0)]
+            self.depth_score = np.mean(values_no_outliers)
 
     def get_disparity(self) -> np.ndarray:
         if self.disparity_map is not None:
@@ -184,6 +192,7 @@ class DisparityDepthPacket(DisparityPacket):
                  colormap: int = None,
                  mono_frame: Optional[dai.ImgFrame] = None,
                  disp_scale_factor=255 / 95,
+                 confidence_map=None
                  ):
         # DepthPacket.__init__(self, name=name, msg=img_frame)
         super().__init__(
@@ -194,6 +203,7 @@ class DisparityDepthPacket(DisparityPacket):
             colorize=colorize,
             colormap=colormap,
             mono_frame=mono_frame,
+            confidence_map=confidence_map
         )
         self.disp_scale_factor = disp_scale_factor
 

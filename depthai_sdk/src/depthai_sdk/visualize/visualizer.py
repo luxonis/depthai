@@ -325,7 +325,8 @@ class Visualizer:
                colormap: int = None,
                wls_filter: bool = None,
                wls_lambda: float = None,
-               wls_sigma: float = None):
+               wls_sigma: float = None,
+               depth_score: bool = None):
         kwargs = self._process_kwargs(locals())
 
         if len(kwargs) > 0:
