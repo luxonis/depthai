@@ -738,15 +738,6 @@ class NNComponent(Component):
                                    calculate_speed=self._comp.calculate_speed,
                                    ).set_comp_out(self)
 
-        class EncodedOut(MainOut):
-            def __call__(self, device: dai.Device) -> XoutNnResults:
-                """
-                Streams NN results and encoded frames (frames used for inferencing)
-                Produces DetectionPacket or TwoStagePacket (if it's 2. stage NNComponent).
-                """
-                # A bit hacky, maybe we can remove this alltogether
-                return super().__call__(device, fourcc=self._comp._get_camera_comp().get_fourcc())
-
         class NnDataOut(ComponentOutput):
             def __call__(self, device: dai.Device) -> XoutNnData:
                 node_output = self._comp.node.out if \
@@ -763,7 +754,6 @@ class NNComponent(Component):
             self.spatials = self.SpatialOut(nn_component)
             self.twostage_crops = self.TwoStageOut(nn_component)
             self.tracker = self.TrackerOut(nn_component)
-            self.encoded = self.EncodedOut(nn_component)
             self.nn_data = self.NnDataOut(nn_component)
 
     # Checks
