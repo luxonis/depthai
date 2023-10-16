@@ -21,9 +21,8 @@ class EncoderComponent(Component):
         self._device = device
         self._pipeline = pipeline
 
-        codec = parse_encode(codec)
         self.node = pipeline.create(dai.node.VideoEncoder)
-        self.node.setDefaultProfilePreset(input.get_fps(), codec)
+        self.node.setDefaultProfilePreset(input.get_fps(), parse_encode(codec))
 
         _get_node_out(input).link(self.node.input)
 
@@ -63,9 +62,7 @@ class EncoderComponent(Component):
             self.node.setLossless(lossless)
 
 
-def _get_node_out(
-    self, component: Union[CameraComponent, StereoComponent]
-) -> dai.Node.Output:
+def _get_node_out(component: Union[CameraComponent, StereoComponent]) -> dai.Node.Output:
     if isinstance(component, CameraComponent):
         if isinstance(component.node, dai.node.ColorCamera):
             return component.node.video
