@@ -132,6 +132,33 @@ class OakCamera:
             logging.info(f'Available streams from recording: {self.replay.getStreams()}')
         self._calibration = self._init_calibration()
 
+    def _init_device(self,
+                     config: dai.Device.Config,
+                     device_str: Optional[str] = None,
+                     ) -> None:
+
+        """
+        Connect to the OAK camera
+        """
+        self.device = None
+        if device_str is not None:
+            device_info = dai.DeviceInfo(device_str)
+        else:
+            (found, device_info) = dai.Device.getFirstAvailableDevice()
+            if not found:
+                raise Exception("No OAK device found to connect to!")
+
+        self.device = dai.Device(
+            config=config,
+            deviceInfo=device_info,
+        )
+
+        # TODO test with usb3 (SUPER speed)
+        if config.board.usb.maxSpeed != dai.UsbSpeed.HIGH and self.device.getUsbSpeed() == dai.UsbSpeed.HIGH:
+            warnings.warn("Device connected in USB2 mode! This might cause some issues. "
+                          "In such case, please try using a (different) USB3 cable, "
+                          "or force USB2 mode 'with OakCamera(usb_speed='usb2') as oak:'", UsbWarning)
+
     def camera(self,
                source: Union[str, dai.CameraBoardSocket],
                resolution: Optional[Union[
@@ -192,33 +219,6 @@ class OakCamera:
                                args=self._args)
         self._components.append(comp)
         return comp
-
-    def _init_device(self,
-                     config: dai.Device.Config,
-                     device_str: Optional[str] = None,
-                     ) -> None:
-
-        """
-        Connect to the OAK camera
-        """
-        self.device = None
-        if device_str is not None:
-            device_info = dai.DeviceInfo(device_str)
-        else:
-            (found, device_info) = dai.Device.getFirstAvailableDevice()
-            if not found:
-                raise Exception("No OAK device found to connect to!")
-
-        self.device = dai.Device(
-            config=config,
-            deviceInfo=device_info,
-        )
-
-        # TODO test with usb3 (SUPER speed)
-        if config.board.usb.maxSpeed != dai.UsbSpeed.HIGH and self.device.getUsbSpeed() == dai.UsbSpeed.HIGH:
-            warnings.warn("Device connected in USB2 mode! This might cause some issues. "
-                          "In such case, please try using a (different) USB3 cable, "
-                          "or force USB2 mode 'with OakCamera(usb_speed='usb2') as oak:'", UsbWarning)
 
     def create_camera(self,
                       source: Union[str, dai.CameraBoardSocket],
