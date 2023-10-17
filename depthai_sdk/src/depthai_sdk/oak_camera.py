@@ -137,7 +137,6 @@ class OakCamera:
                    str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
                ]] = None,
                fps: Optional[float] = None,
-               encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                ) -> CameraComponent:
         """
         Creates Camera component. This abstracts ColorCamera/MonoCamera nodes and supports mocking the camera when
@@ -186,7 +185,6 @@ class OakCamera:
                                source=source,
                                resolution=resolution,
                                fps=fps,
-                               encode=encode,
                                sensor_type=sensor_type,
                                rotation=self._rotation,
                                replay=self.replay,
@@ -225,7 +223,6 @@ class OakCamera:
                       source: Union[str, dai.CameraBoardSocket],
                       resolution: Optional[Resolution] = None,
                       fps: Optional[float] = None,
-                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                       ) -> CameraComponent:
         """
         Deprecated, use camera() instead.
@@ -240,7 +237,7 @@ class OakCamera:
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
         """
-        return self.camera(source, resolution, fps, encode)
+        return self.camera(source, resolution, fps)
 
     def all_cameras(self,
                     resolution: Optional[Union[
@@ -338,7 +335,6 @@ class OakCamera:
                fps: Optional[float] = None,
                left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
-               encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
                ) -> StereoComponent:
         """
         Create Stereo camera component. If left/right cameras/component aren't specified they will get created internally.
@@ -348,7 +344,6 @@ class OakCamera:
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
-            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
         if left is None:
             left = self.camera(source="left", resolution=resolution, fps=fps)
@@ -363,8 +358,7 @@ class OakCamera:
                                left=left,
                                right=right,
                                replay=self.replay,
-                               args=self._args,
-                               encode=encode)
+                               args=self._args)
         self._components.append(comp)
         return comp
 
@@ -373,8 +367,7 @@ class OakCamera:
                       fps: Optional[float] = None,
                       left: Union[None, dai.Node.Output, CameraComponent] = None,  # Left mono camera
                       right: Union[None, dai.Node.Output, CameraComponent] = None,  # Right mono camera
-                      name: Optional[str] = None,
-                      encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None
+                      name: Optional[str] = None
                       ) -> StereoComponent:
         """
         Deprecated, use stereo() instead.
@@ -386,9 +379,8 @@ class OakCamera:
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
-            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
         """
-        return self.stereo(resolution, fps, left, right, encode)
+        return self.stereo(resolution, fps, left, right)
 
     def create_tof(self, source: Union[str, dai.CameraBoardSocket, None] = None) -> ToFComponent:
         """
