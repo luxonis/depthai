@@ -29,6 +29,7 @@ from depthai_sdk.classes.packet_handlers import (
 # RecordConfig, OutputConfig, SyncConfig, RosStreamConfig, TriggerActionConfig
 from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.component import Component, ComponentOutput
+from depthai_sdk.components.encoder_component import EncoderComponent
 from depthai_sdk.components.imu_component import IMUComponent
 from depthai_sdk.components.tof_component import ToFComponent
 from depthai_sdk.components.nn_component import NNComponent
@@ -381,6 +382,22 @@ class OakCamera:
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
         """
         return self.stereo(resolution, fps, left, right)
+
+    def create_encoder(
+            self,
+            input: Union[CameraComponent, StereoComponent],
+            codec: Union[str, dai.VideoEncoderProperties.Profile],
+    ) -> EncoderComponent:
+        """
+        Create Encoder component.
+
+        Args:
+            input (CameraComponent/StereoComponent): Input to the encoder
+            codec (str/Profile): Codec to use for encoding
+        """
+        comp = EncoderComponent(self.pipeline, input, codec)
+        self._components.append(comp)
+        return comp
 
     def create_tof(self, source: Union[str, dai.CameraBoardSocket, None] = None) -> ToFComponent:
         """
