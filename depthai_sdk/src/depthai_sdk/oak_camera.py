@@ -245,7 +245,6 @@ class OakCamera:
                         str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
                     ]] = None,
                     fps: Optional[float] = None,
-                    encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                     ) -> List[CameraComponent]:
         """
         Creates Camera component for each camera sensors on the OAK camera.
@@ -253,27 +252,22 @@ class OakCamera:
         Args:
             resolution (str/SensorResolution): Sensor resolution of the camera.
             fps (float): Sensor FPS
-            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
         """
         components: List[CameraComponent] = []
         # Loop over all available camera sensors
         if self.replay:
             sources = self.replay.getStreams()  # TODO handle in case the stream is not from a camera
         else:
-            sources = [cam_sensor.socket for cam_sensor in self.device.getConnectedCameraFeatures()]
+            sources = self.device.getConnectedCameras()
         for source in sources:
-            comp = CameraComponent(self.device,
-                                   self.pipeline,
-                                   source=source,
-                                   resolution=resolution,
-                                   fps=fps,
-                                   encode=encode,
-                                   rotation=self._rotation,
-                                   replay=self.replay,
-                                   args=self._args)
-            components.append(comp)
+            components.append(
+                self.camera(
+                    source=source,
+                    resolution=resolution,
+                    fps=fps,
+                )
+            )
 
-        self._components.extend(components)
         return components
 
     def create_all_cameras(self,
@@ -282,7 +276,6 @@ class OakCamera:
                                dai.MonoCameraProperties.SensorResolution
                            ]] = None,
                            fps: Optional[float] = None,
-                           encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                            ) -> List[CameraComponent]:
         """
         Deprecated, use all_cameras() instead.
@@ -294,7 +287,7 @@ class OakCamera:
             fps (float): Sensor FPS
             encode (bool/str/Profile): Whether we want to enable video encoding (accessible via cameraComponent.out_encoded). If True, it will use MJPEG
         """
-        return self.all_cameras(resolution, fps, encode)
+        return self.all_cameras(resolution, fps)
 
     def create_nn(self,
                   model: Union[str, Dict, Path],
