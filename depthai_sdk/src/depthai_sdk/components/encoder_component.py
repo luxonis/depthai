@@ -13,7 +13,6 @@ from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 class EncoderComponent(Component):
     def __init__(
         self,
-        device: dai.Device,
         pipeline: dai.Pipeline,
         input: Union[CameraComponent, StereoComponent],
         codec: Union[str, dai.VideoEncoderProperties.Profile],
@@ -21,9 +20,6 @@ class EncoderComponent(Component):
     ) -> None:
         super().__init__()
         self.out = _EncoderComponentOutputs(self)
-
-        self._device = device
-        self._pipeline = pipeline
 
         input.ensure_encoder_compatible_size()
 
