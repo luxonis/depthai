@@ -186,15 +186,16 @@ class CameraComponent(Component):
             self._control_xlink_in.setMaxDataSize(1)
 
     def ensure_encoder_compatible_size(self) -> None:
-        self.node.setIspScale(
-            *getClosestIspScale(
-                self.node.getIspSize(),
-                width=self.node.getIspWidth(), 
-                videoEncoder=True)
-        )
-        self.node.setVideoSize(
-            *getClosestVideoSize(*self.node.getVideoSize(), videoEncoder=True)
-        )
+        if self.is_color():
+            self.node.setIspScale(
+                *getClosestIspScale(
+                    self.node.getIspSize(),
+                    width=self.node.getIspWidth(),
+                    videoEncoder=True),
+            )
+            self.node.setVideoSize(
+                *getClosestVideoSize(*self.node.getVideoSize(), videoEncoder=True)
+            )
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
