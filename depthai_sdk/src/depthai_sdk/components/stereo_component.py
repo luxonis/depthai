@@ -181,6 +181,12 @@ class StereoComponent(Component):
         # CameraControl message doesn't use any additional data (only metadata)
         self._control_xlink_in.setMaxDataSize(1)
 
+    def ensure_encoder_compatible_size(self) -> None:
+        if isinstance(self.left, Component):
+            self.left.ensure_encoder_compatible_size()
+        if isinstance(self.right, Component):
+            self.right.ensure_encoder_compatible_size()
+
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
             queue = device.getInputQueue(self._control_xlink_in.getStreamName())
