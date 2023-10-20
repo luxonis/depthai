@@ -355,10 +355,10 @@ class Replay:
     def _resize_frame(self, frame: np.ndarray, size: Tuple[int, int], mode: ResizeMode) -> np.ndarray:
         if mode == ResizeMode.STRETCH:
             # No need to keep aspect ratio, image will be squished
-            return cv2.resize(frame, size)
+            return cv2.resize(frame, size, cv2.INTER_AREA)
         elif mode == ResizeMode.CROP:
             cropped = cropToAspectRatio(frame, size)
-            return cv2.resize(cropped, size)
+            return cv2.resize(cropped, size, cv2.INTER_AREA)
         elif mode == ResizeMode.FULL_CROP:
             w = frame.shape[1]
             start_w = int((w - size[0]) / 2)
