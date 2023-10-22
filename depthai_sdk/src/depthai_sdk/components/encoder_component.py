@@ -86,6 +86,8 @@ def _get_node_out(component: Union[CameraComponent, StereoComponent]) -> dai.Nod
             return component.node.video
         elif isinstance(component.node, dai.node.MonoCamera):
             return component.node.out
+        elif isinstance(component.node, dai.node.XLinkIn):
+            return component.node.out
         raise ValueError(f"Unknown camera node: {component.node}")
     elif isinstance(component, StereoComponent):
         if component.colormap_manip:
