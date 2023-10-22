@@ -23,10 +23,12 @@ class EncoderComponent(Component):
         input.ensure_encoder_compatible_size()
 
         self.name = name
+        self.pipeline = pipeline
+        self.manip: Optional[dai.node.ImageManip] = None
         self.node = pipeline.create(dai.node.VideoEncoder)
         self.node.setDefaultProfilePreset(input.get_fps(), parse_encode(codec))
 
-        _get_node_out(input).link(self.node.input)
+        self._get_node_out(input).link(self.node.input)
 
     def config_encoder_h26x(
         self,
@@ -69,6 +71,29 @@ class EncoderComponent(Component):
     def get_fourcc(self) -> str:
         return encoder_profile_to_fourcc(self.node.getProfile())
 
+    def _get_node_out(
+        self, component: Union[CameraComponent, StereoComponent]
+    ) -> dai.Node.Output:
+        if isinstance(component, CameraComponent):
+            if isinstance(component.node, dai.node.ColorCamera):
+                return component.node.video
+            elif isinstance(component.node, dai.node.MonoCamera):
+                return component.node.out
+            elif isinstance(component.node, dai.node.XLinkIn):
+                # Ensure input is in NV12 format when using XLinkIn
+                self.manip = self.pipeline.create(dai.node.ImageManip)
+                self.manip.setFrameType(dai.ImgFrame.Type.NV12)
+                width, height = component.stream_size
+                self.manip.setMaxOutputFrameSize(width * height * 3 // 2)
+                component.node.out.link(self.manip.inputImage)
+                return self.manip.out
+            raise ValueError(f"Unknown camera node: {component.node}")
+        elif isinstance(component, StereoComponent):
+            if component.colormap_manip:
+                return component.colormap_manip.out
+            return component.node.disparity
+        raise ValueError(f"Unknown component: {component}")
+
 
 class _EncoderComponentMainOutput(ComponentOutput):
     def __call__(self, device: dai.Device) -> XoutBase:
@@ -80,19 +105,3 @@ class _EncoderComponentMainOutput(ComponentOutput):
 class _EncoderComponentOutputs:
     def __init__(self, component: EncoderComponent) -> None:
         self.main = _EncoderComponentMainOutput(component)
-
-
-def _get_node_out(component: Union[CameraComponent, StereoComponent]) -> dai.Node.Output:
-    if isinstance(component, CameraComponent):
-        if isinstance(component.node, dai.node.ColorCamera):
-            return component.node.video
-        elif isinstance(component.node, dai.node.MonoCamera):
-            return component.node.out
-        elif isinstance(component.node, dai.node.XLinkIn):
-            return component.node.out
-        raise ValueError(f"Unknown camera node: {component.node}")
-    elif isinstance(component, StereoComponent):
-        if component.colormap_manip:
-            return component.colormap_manip.out
-        return component.node.disparity
-    raise ValueError(f"Unknown component: {component}")
