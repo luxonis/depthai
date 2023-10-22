@@ -72,7 +72,9 @@ class EncoderComponent(Component):
 
 class _EncoderComponentMainOutput(ComponentOutput):
     def __call__(self, device: dai.Device) -> XoutBase:
-        return XoutFrames(self._comp.get_stream_xout(), self._comp.get_fourcc()).set_comp_out(self)
+        return XoutFrames(
+            self._comp.get_stream_xout(), self._comp.get_fourcc()
+        ).set_comp_out(self)
 
 
 class _EncoderComponentOutputs:
