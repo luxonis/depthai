@@ -1,5 +1,4 @@
-import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Optional, Union
 
 import depthai as dai
 from depthai_sdk.components.component import Component, ComponentOutput
