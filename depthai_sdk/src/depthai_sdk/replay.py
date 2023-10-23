@@ -36,7 +36,7 @@ class ReplayStream:
         self.queue: dai.DataInputQueue = None
         self.disabled = False
         self.stream_name = ''
-        self.warp: dai.node.Warp = None
+        self.manip: dai.node.Warp = None
         self.camera_socket: dai.CameraBoardSocket = None  # Forced socket
 
         self.resize: Tuple[int, int] = None
@@ -216,16 +216,16 @@ class Replay:
     def undistort(self, stream_name: str, alpha: float = 0):
         stream = self.streams[stream_name.lower()]
 
-        stream.warp: dai.node.Warp = self.pipeline.create(dai.node.Warp)
+        stream.manip = self.pipeline.create(dai.node.ImageManip)
 
         width, height = stream.shape
-        stream.warp.setMaxOutputFrameSize(width * height * 3)
+        stream.manip.setMaxOutputFrameSize(width * height * 3)
 
         dewarp_mesh, mesh_dimensions, M_rgb_new = get_mesh(self._calibData, stream.camera_socket, (width,height), alpha)
-        stream.warp.setWarpMesh(dewarp_mesh, mesh_dimensions[0], mesh_dimensions[1])
+        stream.manip.setWarpMesh(dewarp_mesh, mesh_dimensions[0], mesh_dimensions[1])
 
-        stream.xlinkin.out.link(stream.warp.inputImage)
-        stream.output = stream.warp.out
+        stream.xlinkin.out.link(stream.manip.inputImage)
+        stream.output = stream.manip.out
 
         # Push the new camera matrix to the device so disparity is properly dewarped
         self._calibData.setCameraIntrinsics(stream.camera_socket, M_rgb_new, (1280,800))

@@ -92,7 +92,7 @@ class CameraComponent(Component):
             if stream.xlinkin is None:
                 return  # Stream disabled
 
-            self.node = stream.warp if stream.warp is not None else stream.xlinkin
+            self.node = stream.manip if stream.manip is not None else stream.xlinkin
 
             self.stream_size = stream.shape
             self.stream = self.node.out
