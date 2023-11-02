@@ -549,8 +549,12 @@ class Main:
                     print(f'Sensor name for {cam_info["name"]} is {sensorName}')
                     cam_node.setResolution(camToRgbRes[cam_info['sensorName'].upper()])
                     cam_node.setFps(fps)
+
+                    #Workaround for depthai!!
                     cam_node.initialControl.setMisc("stride-align", 1)
                     cam_node.initialControl.setMisc("scanline-align", 1)
+
+
                     xout.setStreamName(cam_info['name'])
                     cam_node.isp.link(xout.input)
                     if cam_info['sensorName'] == "OV9*82":
