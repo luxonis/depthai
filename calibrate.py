@@ -48,7 +48,7 @@ camToMonoRes = {
 
 camToRgbRes = {
                 'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
-                'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
+                'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_2104X1560,
                 'OV9782' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX582' : dai.ColorCameraProperties.SensorResolution.THE_12_MP,
                 'AR0234' : dai.ColorCameraProperties.SensorResolution.THE_1200_P,
@@ -549,6 +549,11 @@ class Main:
                     print(f'Sensor name for {cam_info["name"]} is {sensorName}')
                     cam_node.setResolution(camToRgbRes[cam_info['sensorName'].upper()])
                     cam_node.setFps(fps)
+
+                    #Workaround for depthai!!
+                    cam_node.initialControl.setMisc("stride-align", 1)
+                    cam_node.initialControl.setMisc("scanline-align", 1)
+
 
                     xout.setStreamName(cam_info['name'])
                     cam_node.isp.link(xout.input)
