@@ -503,7 +503,7 @@ class OakCamera:
 
         for xlink_name in self._new_msg_callbacks:
             try:
-                self.device.getOutputQueue(xlink_name, maxSize=4, blocking=False).addCallback(self._new_oak_msg)
+                self.device.getOutputQueue(xlink_name, maxSize=1, blocking=False).addCallback(self._new_oak_msg)
             # TODO: make this nicer, have self._new_msg_callbacks know whether it's replay or not
             except Exception as e:
                 if self.replay:
