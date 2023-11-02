@@ -1,11 +1,11 @@
 import logging
-from typing import Dict
+from typing import Dict, List, Optional, Union
 
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.camera_control import CameraControl
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component, ComponentOutput
-from depthai_sdk.components.parser import parse_resolution, parse_encode, encoder_profile_to_fourcc
+from depthai_sdk.components.parser import parse_resolution
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.replay import Replay
@@ -21,7 +21,6 @@ class CameraComponent(Component):
                      str, dai.ColorCameraProperties.SensorResolution, dai.MonoCameraProperties.SensorResolution
                  ]] = None,
                  fps: Optional[float] = None,
-                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None,
                  sensor_type: Optional[dai.CameraSensorType] = None,
                  rotation: Optional[int] = None,
                  replay: Optional[Replay] = None,
@@ -38,7 +37,6 @@ class CameraComponent(Component):
             source (str or dai.CameraBoardSocket): Source of the camera. Either color/rgb/right/left
             resolution (optional): Camera resolution, eg. '800p' or '4k'
             fps (float, optional): Camera FPS
-            encode: Encode streams before sending them to the host. Either True (use default), or mjpeg/h264/h265
             sensor_type: To force color/mono/tof camera
             rotation (int, optional): Rotate the camera by 90, 180, 270 degrees
             replay (Replay object): Replay object to use for mocking the camera
@@ -54,7 +52,6 @@ class CameraComponent(Component):
         self._device = device
 
         self.node: Optional[Union[dai.node.ColorCamera, dai.node.MonoCamera, dai.node.XLinkIn]] = None
-        self.encoder: Optional[dai.node.VideoEncoder] = None
 
         self.stream: Optional[dai.Node.Output] = None  # Node output to be used as eg. an input into NN
         self.stream_size: Optional[Tuple[int, int]] = None  # Output size
@@ -64,7 +61,6 @@ class CameraComponent(Component):
             self._source = self._source[len('CameraBoardSocket.'):]
 
         self._socket = source
-        self._replay: Optional[Replay] = replay
         self._args: Dict = args
 
         self.name = name
@@ -151,12 +147,11 @@ class CameraComponent(Component):
                     targetWidthIsp = targetWidthRes
                 res = getClosesResolution(sensor, sensor_type, width=targetWidthRes)
                 self.node.setResolution(res)
-                scale = getClosestIspScale(self.node.getIspSize(), width=targetWidthIsp,
-                                           videoEncoder=(encode is not None))
+                scale = getClosestIspScale(self.node.getIspSize(), width=targetWidthIsp)
                 self.node.setIspScale(*scale)
 
             curr_size = self.node.getVideoSize()
-            closest = getClosestVideoSize(*curr_size, videoEncoder=encode)
+            closest = getClosestVideoSize(*curr_size)
             self.node.setVideoSize(*closest)
             self.node.setVideoNumFramesPool(2)  # We will increase it later if we are streaming to host
 
@@ -177,26 +172,6 @@ class CameraComponent(Component):
                 self.stream = rot_manip.out
                 self.stream_size = self.stream_size[::-1]
 
-        if encode:
-            self.encoder = pipeline.createVideoEncoder()
-            self._encoder_profile = parse_encode(encode)  # MJPEG by default
-            self.encoder.setDefaultProfilePreset(self.get_fps(), self._encoder_profile)
-
-            if self.is_replay():  # TODO - this might be not needed, we check for replay above and return
-                # Create ImageManip to convert to NV12
-                type_manip = pipeline.createImageManip()
-                type_manip.setFrameType(dai.ImgFrame.Type.NV12)
-                type_manip.setMaxOutputFrameSize(self.stream_size[0] * self.stream_size[1] * 3)
-
-                self.stream.link(type_manip.inputImage)
-                type_manip.out.link(self.encoder.input)
-            elif self.is_mono():
-                self.stream.link(self.encoder.input)
-            elif self.is_color():
-                self.node.video.link(self.encoder.input)
-            else:
-                raise ValueError('CameraComponent is neither Color, Mono, nor Replay!')
-
         if self._args:
             self._config_camera_args(self._args)
 
@@ -209,6 +184,18 @@ class CameraComponent(Component):
             self._control_xlink_in.out.link(self.node.inputControl)
             # CameraControl message doesn't use any additional data (only metadata)
             self._control_xlink_in.setMaxDataSize(1)
+
+    def ensure_encoder_compatible_size(self) -> None:
+        if self.is_color():
+            self.node.setIspScale(
+                *getClosestIspScale(
+                    self.node.getIspSize(),
+                    width=self.node.getIspWidth(),
+                    videoEncoder=True),
+            )
+            self.node.setVideoSize(
+                *getClosestVideoSize(*self.node.getVideoSize(), videoEncoder=True)
+            )
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
@@ -402,46 +389,8 @@ class CameraComponent(Component):
         else:
             self.node.setFps(fps)
 
-    def config_encoder_h26x(self,
-                            rate_control_mode: Optional[dai.VideoEncoderProperties.RateControlMode] = None,
-                            keyframe_freq: Optional[int] = None,
-                            bitrate_kbps: Optional[int] = None,
-                            num_b_frames: Optional[int] = None,
-                            ):
-        if self.encoder is None:
-            raise Exception('Video encoder was not enabled!')
-        if self._encoder_profile == dai.VideoEncoderProperties.Profile.MJPEG:
-            raise Exception('Video encoder was set to MJPEG while trying to configure H26X attributes!')
-
-        if rate_control_mode is not None:
-            self.encoder.setRateControlMode(rate_control_mode)
-        if keyframe_freq is not None:
-            self.encoder.setKeyframeFrequency(keyframe_freq)
-        if bitrate_kbps is not None:
-            self.encoder.setBitrateKbps(bitrate_kbps)
-        if num_b_frames is not None:
-            self.encoder.setNumBFrames(num_b_frames)
-
-    def config_encoder_mjpeg(self,
-                             quality: Optional[int] = None,
-                             lossless: bool = False
-                             ):
-        if self.encoder is None:
-            raise Exception('Video encoder was not enabled!')
-        if self._encoder_profile != dai.VideoEncoderProperties.Profile.MJPEG:
-            raise Exception(
-                f'Video encoder was set to {self._encoder_profile} while trying to configure MJPEG attributes!'
-            )
-
-        if quality is not None:
-            self.encoder.setQuality(quality)
-        if lossless is not None:
-            self.encoder.setLossless(lossless)
-
-    def get_stream_xout(self, fourcc: Optional[str] = None) -> StreamXout:
-        if self.encoder is not None and fourcc is not None:
-            return StreamXout(self.encoder.bitstream, name=self.name or self._source + '_bitstream')
-        elif self.is_replay():
+    def get_stream_xout(self) -> StreamXout:
+        if self.is_replay():
             return ReplayStream(self.name or self._source)
         elif self.is_mono():
             return StreamXout(self.stream, name=self.name or self._source + '_mono')
@@ -464,32 +413,22 @@ class CameraComponent(Component):
             if preview_num_frames is not None:
                 self._preview_num_frames_pool = preview_num_frames
 
-    def get_fourcc(self) -> Optional[str]:
-        if self.encoder is None:
-            return None
-        return encoder_profile_to_fourcc(self._encoder_profile)
-
     """
     Available outputs (to the host) of this component
     """
 
     class Out:
         class CameraOut(ComponentOutput):
-            def __call__(self, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
-                return XoutFrames(self._comp.get_stream_xout(fourcc), fourcc).set_comp_out(self)
+            def __call__(self, device: dai.Device) -> XoutBase:
+                return XoutFrames(self._comp.get_stream_xout()).set_comp_out(self)
 
         class ReplayOut(ComponentOutput):
             def __call__(self, device: dai.Device) -> XoutBase:
                 return XoutFrames(ReplayStream(self._comp._source)).set_comp_out(self)
 
-        class EncodedOut(CameraOut):
-            def __call__(self, device: dai.Device) -> XoutBase:
-                return super().__call__(device, fourcc=self._comp.get_fourcc())
-
 
         def __init__(self, camera_component: 'CameraComponent'):
             self.replay = self.ReplayOut(camera_component)
             self.camera = self.CameraOut(camera_component)
-            self.encoded = self.EncodedOut(camera_component)
 
             self.main = self.replay if camera_component.is_replay() else self.camera

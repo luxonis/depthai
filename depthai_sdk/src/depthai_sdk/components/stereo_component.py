@@ -9,7 +9,7 @@ import numpy as np
 
 from depthai_sdk.components.camera_component import CameraComponent, ComponentOutput
 from depthai_sdk.components.component import Component
-from depthai_sdk.components.parser import parse_median_filter, parse_encode, encoder_profile_to_fourcc
+from depthai_sdk.components.parser import parse_median_filter
 from depthai_sdk.components.stereo_control import StereoControl
 from depthai_sdk.components.undistort import _get_mesh
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
@@ -46,8 +46,7 @@ class StereoComponent(Component):
                  left: Union[CameraComponent, dai.node.MonoCamera],  # Left stereo camera
                  right: Union[CameraComponent, dai.node.MonoCamera],  # Right stereo camera
                  replay: Optional[Replay] = None,
-                 args: Any = None,
-                 encode: Union[None, str, bool, dai.VideoEncoderProperties.Profile] = None):
+                 args: Any = None):
         """
         Args:
             device (dai.Device): DepthAI device.
@@ -56,7 +55,6 @@ class StereoComponent(Component):
             right (dai.None.Output / CameraComponent): Right mono camera source. Will get handled by Camera object.
             replay (Replay object, optional): Replay object to use for playback.
             args (Any, optional): Use user defined arguments when constructing the pipeline.
-            encode (str/bool/Profile, optional): Encode the output stream.
         """
         super().__init__()
         self.out = self.Out(self)
@@ -78,19 +76,13 @@ class StereoComponent(Component):
 
         self.node: dai.node.StereoDepth = pipeline.createStereoDepth()
         self.node.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
+        self.colormap_manip: Optional[dai.node.ImageManip] = None
 
         self._align_component: Optional[CameraComponent] = None
         self.ir_settings = {
             'auto_mode': False,
             'continuous_mode': False,
         }
-
-        # Encoder
-        self.encoder = None
-        if encode:
-            self.encoder = pipeline.createVideoEncoder()
-            # MJPEG by default
-            self._encoderProfile = parse_encode(encode)
 
         # Postprocessing options
         self._colorize = None
@@ -171,15 +163,6 @@ class StereoComponent(Component):
             self._left_stream.link(self.node.left)
             self._right_stream.link(self.node.right)
 
-        if self.encoder:
-            try:
-                fps = self.left.get_fps()  # CameraComponent
-            except AttributeError:
-                fps = self.left.getFps()  # MonoCamera
-
-            self.encoder.setDefaultProfilePreset(fps, self._encoderProfile)
-            self.node.disparity.link(self.encoder.input)
-
         self.node.setRectifyEdgeFillColor(0)
 
         if self._undistortion_offset is not None:
@@ -201,6 +184,12 @@ class StereoComponent(Component):
         self._control_xlink_in.out.link(self.node.inputConfig)
         # CameraControl message doesn't use any additional data (only metadata)
         self._control_xlink_in.setMaxDataSize(1)
+
+    def ensure_encoder_compatible_size(self) -> None:
+        if isinstance(self.left, Component):
+            self.left.ensure_encoder_compatible_size()
+        if isinstance(self.right, Component):
+            self.right.ensure_encoder_compatible_size()
 
     def on_pipeline_started(self, device: dai.Device):
         if self._control_xlink_in is not None:
@@ -344,32 +333,29 @@ class StereoComponent(Component):
     def set_colormap(self, colormap: dai.Colormap):
         """
         Sets the colormap to use for colorizing the disparity map. Used for on-device postprocessing.
-        Works only with `encoded` output.
+        Works only with encoded output.
         Note: This setting can affect the performance.
 
         Args:
             colormap: Colormap to use for colorizing the disparity map.
         """
-        if self.colormap != colormap and self.encoder:
-            colormap_manip = self.node.getParentPipeline().create(dai.node.ImageManip)
-            colormap_manip.initialConfig.setColormap(colormap, self.node.initialConfig.getMaxDisparity())
-            colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
+        if self.colormap != colormap:
+            if self.colormap_manip is not None:
+                self.node.disparity.unlink(self.colormap_manip.inputImage)
+
+            self.colormap_manip = self.node.getParentPipeline().create(dai.node.ImageManip)
+            self.colormap_manip.initialConfig.setColormap(colormap, self.node.initialConfig.getMaxDisparity())
+            self.colormap_manip.initialConfig.setFrameType(dai.ImgFrame.Type.NV12)
             if self._align_component:
-                h, w = self._align_component.node.getIspSize() \
-                    if isinstance(self._align_component.node, dai.node.ColorCamera) \
-                    else self._align_component.node.getResolutionSize()
+                if isinstance(self._align_component.node, dai.node.ColorCamera):
+                    h, w = self._align_component.node.getIspSize()
+                else:
+                    h, w = self._align_component.node.getResolutionSize()
             else:
                 h, w = self.left.stream_size
-            colormap_manip.setMaxOutputFrameSize(h * w * 3)
-            self.node.disparity.link(colormap_manip.inputImage)
-
-            if self.encoder:
-                self.node.disparity.unlink(self.encoder.input)
-                colormap_manip.out.link(self.encoder.input)
-        elif not self.encoder:
-            warnings.warn('At the moment, colormap can be used only if encoder is enabled.')
-
-        self.colormap = colormap
+            self.colormap_manip.setMaxOutputFrameSize(h * w * 3)
+            self.node.disparity.link(self.colormap_manip.inputImage)
+            self.colormap = colormap
 
     def set_auto_ir(self, auto_mode: bool, continuous_mode: bool = False) -> None:
         """
@@ -441,10 +427,11 @@ class StereoComponent(Component):
         mapX_r, mapY_r = cv2.initUndistortRectifyMap(M2, d2, R2, M2, image_size, cv2.CV_32FC1)
         return mapX_l, mapY_l, mapX_r, mapY_r
 
-    def get_fourcc(self) -> Optional[str]:
-        if self.encoder is None:
-            return None
-        return encoder_profile_to_fourcc(self._encoderProfile)
+    def get_fps(self) -> float:
+        try:
+            return self.left.get_fps()  # CameraComponent
+        except AttributeError:
+            return self.left.getFps()  # MonoCamera
 
     """
     Available outputs (to the host) of this component
@@ -481,11 +468,10 @@ class StereoComponent(Component):
                 ).set_comp_out(self)
 
         class DisparityOut(ComponentOutput):
-            def __call__(self, device: dai.Device, fourcc: Optional[str] = None) -> XoutBase:
+            def __call__(self, device: dai.Device) -> XoutBase:
                 return XoutDisparity(
                     device=device,
-                    frames=StreamXout(self._comp.encoder.bitstream) if fourcc else
-                    StreamXout(self._comp.disparity),
+                    frames=StreamXout(self._comp.disparity),
                     disp_factor=255.0 / self._comp.node.getMaxDisparity(),
                     mono_frames=self._comp._mono_frames(),
                     colorize=self._comp._colorize,
@@ -503,15 +489,6 @@ class StereoComponent(Component):
             def __call__(self, device: dai.Device) -> XoutBase:
                 return XoutFrames(StreamXout(self._comp.node.rectifiedRight, 'Rectified right')).set_comp_out(self)
 
-        class EncodedOut(DisparityOut):
-            def __call__(self, device: dai.Device) -> XoutBase:
-                if not self._comp.encoder:
-                    raise RuntimeError('Encoder not enabled, cannot output encoded frames')
-                if self._comp.wls_config['enabled']:
-                    warnings.warn('WLS filter is enabled, but cannot be applied to encoded frames.')
-
-                return super().__call__(device, fourcc=self._comp.get_fourcc())
-
         def __init__(self, stereo_component: 'StereoComponent'):
             self._comp = stereo_component
 
@@ -519,5 +496,4 @@ class StereoComponent(Component):
             self.rectified_left = self.RectifiedLeftOut(stereo_component)
             self.rectified_right = self.RectifiedRightOut(stereo_component)
             self.disparity = self.DisparityOut(stereo_component)
-            self.encoded = self.EncodedOut(stereo_component)
             self.main = self.depth

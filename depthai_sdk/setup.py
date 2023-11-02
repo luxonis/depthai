@@ -28,9 +28,10 @@ setup(
                       'matplotlib==3.5.3; python_version <= "3.7"',
                       'matplotlib==3.6.1; python_version > "3.7"'],
         "replay": ['mcap>=0.0.10',
+                   'mcap-protobuf-support==0.0.4',
                    'mcap-ros1-support==0.0.8',
                    'rosbags==0.9.11'],
-        "record": ['av'],
+        "record": ['av<9'],
         "test": ['pytest']
     },
     project_urls={
