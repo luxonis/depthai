@@ -8,6 +8,7 @@ from typing import Callable
 import depthai as dai
 
 from depthai_sdk.classes.enum import ResizeMode
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.readers.abstract_reader import AbstractReader
 from depthai_sdk.utils import *
 
@@ -22,7 +23,7 @@ def _run(delay: float, sendFrames: Callable):
         if not sendFrames():
             break
         time.sleep(delay)
-    logging.info('Replay `run` thread stopped')
+    LOGGER.info('Replay `run` thread stopped')
 
 
 class ReplayStream:
@@ -172,7 +173,7 @@ class Replay:
         dic = getAvailableRecordings()
         if recording_name in dic:
             arr = dic[recording_name]
-            logging.info("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB"
+            LOGGER.info("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB"
                          .format(recording_name, arr[1] / 1e6))
             path = downloadRecording(recording_name, arr[0])
             return path
@@ -240,14 +241,14 @@ class Replay:
             self.reader.disableStream(stream_name)
 
         if stream_name.lower() not in self.streams:
-            logging.info(f"There's no stream '{stream_name}' available!")
+            LOGGER.info(f"There's no stream '{stream_name}' available!")
             return
 
         self.streams[stream_name.lower()].disabled = True
 
     def specify_socket(self, stream_name: str, socket: dai.CameraBoardSocket):
         if stream_name.lower() not in self.streams:
-            logging.info(f"There's no stream '{stream_name}' available!")
+            LOGGER.info(f"There's no stream '{stream_name}' available!")
             return
         self.streams[stream_name.lower()].camera_socket = socket
 

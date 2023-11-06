@@ -1,4 +1,3 @@
-import logging
 import subprocess
 import sys
 
@@ -7,6 +6,7 @@ import numpy as np
 from depthai_viewer.components.rect2d import RectFormat
 
 from depthai_sdk.classes.packets import FramePacket, IMUPacket, PointcloudPacket
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.visualize.objects import (
     VisBoundingBox,
     VisCircle,
@@ -42,7 +42,7 @@ class DepthaiViewerVisualizer(Visualizer):
                     raise Exception(f"DepthAI Viewer is not installed. "
                                     f"Please run '{sys.executable} -m pip install depthai_viewer' to install it.")
                 else:
-                    logging.exception(f"Error occurred while trying to run depthai_viewer: {err_msg}")
+                    LOGGER.exception(f"Error occurred while trying to run depthai_viewer: {err_msg}")
             else:
                 print("depthai_viewer ran successfully.")
         except subprocess.TimeoutExpired:

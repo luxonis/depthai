@@ -1,4 +1,3 @@
-import logging
 import math
 from abc import ABC, abstractmethod
 from collections import defaultdict
@@ -9,6 +8,7 @@ import depthai as dai
 import numpy as np
 from depthai import ImgDetection
 
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.visualize.bbox import BoundingBox
 from depthai_sdk.visualize.configs import VisConfig, BboxStyle, TextPosition
 
@@ -233,7 +233,7 @@ class VisDetections(GenericObject):
             # Get normalized bounding box
             normalized_bbox = self.normalizer.get_relative_bbox(BoundingBox(detection))
             if len(self.frame_shape) < 2:
-                logging.debug(f'Visualizer: skipping detection because frame shape is invalid: {self.frame_shape}')
+                LOGGER.debug(f'Visualizer: skipping detection because frame shape is invalid: {self.frame_shape}')
                 return self
 
             # TODO can normalize accept frame shape?

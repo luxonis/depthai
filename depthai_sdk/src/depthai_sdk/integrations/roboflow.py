@@ -1,10 +1,10 @@
 import json
-import logging
 from pathlib import Path
 from typing import Dict, Optional
 from zipfile import ZipFile
 
 import depthai as dai
+from depthai_sdk.logger import LOGGER
 import requests
 
 ROBOFLOW_MODELS = Path.home() / Path('.cache/roboflow-models')
@@ -48,9 +48,9 @@ class RoboflowIntegration:
             raise ValueError("This Roboflow's model is not from YOLO family!")
 
         if not str(ret['modelType']).endswith('n'):
-            logging.info('We recommend using a lighter version of the model to get a better performance!')
+            LOGGER.info('We recommend using a lighter version of the model to get a better performance!')
 
-        logging.info(f"Downloading '{ret['name']}' model from Roboflow server")
+        LOGGER.info(f"Downloading '{ret['name']}' model from Roboflow server")
 
         zip_file_req = requests.get(ret['model'])
         zip_file_req.raise_for_status()
@@ -61,7 +61,7 @@ class RoboflowIntegration:
         with open(zip_file_path, 'wb') as f:
             f.write(zip_file_req.content)
 
-        logging.info(f"Downloaded the model to {zip_file_path}")
+        LOGGER.info(f"Downloaded the model to {zip_file_path}")
 
         with ZipFile(zip_file_path, 'r') as zObject:  # Extract the zip
             zObject.extractall(str(ROBOFLOW_MODELS / name))

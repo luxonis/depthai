@@ -1,4 +1,3 @@
-import logging
 from typing import Dict
 
 from depthai_sdk.classes.enum import ResizeMode
@@ -6,6 +5,7 @@ from depthai_sdk.components.camera_control import CameraControl
 from depthai_sdk.components.camera_helper import *
 from depthai_sdk.components.component import Component, ComponentOutput
 from depthai_sdk.components.parser import parse_resolution, parse_encode, encoder_profile_to_fourcc
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout, ReplayStream
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.replay import Replay
@@ -297,7 +297,7 @@ class CameraComponent(Component):
         """
 
         if not auto_focus and not auto_exposure:
-            logging.error('Attempted to control camera with NN, '
+            LOGGER.error('Attempted to control camera with NN, '
                           'but both Auto-Focus and Auto-Exposure were disabled! Attempt ignored.')
             return
 
@@ -337,12 +337,12 @@ class CameraComponent(Component):
                             chroma_denoise: Optional[int] = None,
                             ) -> None:
         if not self.is_color():
-            logging.info('Attempted to configure ColorCamera, '
+            LOGGER.info('Attempted to configure ColorCamera, '
                          'but this component doesn\'t have it. Config attempt ignored.')
             return
 
         if self.is_replay():
-            logging.info('Tried configuring ColorCamera, but replaying is enabled. Config attempt ignored.')
+            LOGGER.info('Tried configuring ColorCamera, but replaying is enabled. Config attempt ignored.')
             return
 
         if interleaved is not None: self.node.setInterleaved(interleaved)

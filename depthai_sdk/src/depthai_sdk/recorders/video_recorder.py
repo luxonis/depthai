@@ -1,9 +1,9 @@
-import logging
 from typing import Union, Dict
 
 import numpy as np
 
 from .abstract_recorder import *
+from depthai_sdk.logger import LOGGER
 
 
 class VideoRecorder(Recorder):
@@ -57,7 +57,7 @@ class VideoRecorder(Recorder):
                     self._writers[xout_name] = AvWriter(self.path, file_name, fourcc)
                 except Exception as e:
                     # TODO here can be other errors, not only import error
-                    logging.warning(f'Exception while creating AvWriter: {e}.'
+                    LOGGER.warning(f'Exception while creating AvWriter: {e}.'
                                     '\nFalling back to FileWriter, saving uncontainerized encoded streams.')
                     from .video_writers.file_writer import FileWriter
                     self._writers[xout_name] = FileWriter(self.path, file_name, fourcc)
@@ -104,7 +104,7 @@ class VideoRecorder(Recorder):
         if self._closed:
             return
         self._closed = True
-        logging.info(f'Video Recorder saved stream(s) to folder: {str(self.path)}')
+        LOGGER.info(f'Video Recorder saved stream(s) to folder: {str(self.path)}')
         # Close opened files
         for name, writer in self._writers.items():
             writer.close()

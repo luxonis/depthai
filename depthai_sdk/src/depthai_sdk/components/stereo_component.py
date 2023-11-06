@@ -1,4 +1,3 @@
-import logging
 import warnings
 from enum import Enum
 from typing import Optional, Union, Any, Dict, Tuple, List
@@ -12,6 +11,7 @@ from depthai_sdk.components.component import Component
 from depthai_sdk.components.parser import parse_median_filter, parse_encode, encoder_profile_to_fourcc
 from depthai_sdk.components.stereo_control import StereoControl
 from depthai_sdk.components.undistort import _get_mesh
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, StreamXout
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDisparityDepth
 from depthai_sdk.oak_outputs.xout.xout_disparity import XoutDisparity
@@ -115,12 +115,12 @@ class StereoComponent(Component):
                 laser = laser if laser is not None else 800
                 if 0 < laser:
                     device.setIrLaserDotProjectorBrightness(laser)
-                    logging.info(f'Setting IR laser dot projector brightness to {laser}mA')
+                    LOGGER.info(f'Setting IR laser dot projector brightness to {laser}mA')
 
                 led = self._args.get('irFloodBrightness', None)
                 if led is not None:
                     device.setIrFloodLightBrightness(int(led))
-                    logging.info(f'Setting IR flood LED brightness to {int(led)}mA')
+                    LOGGER.info(f'Setting IR flood LED brightness to {int(led)}mA')
 
             input_size = self._get_stream_size(self.left)
             if input_size:
@@ -139,7 +139,7 @@ class StereoComponent(Component):
                 manip = pipeline.create(dai.node.ImageManip)
                 new_h = int(h * (1280 / w))
                 manip.setResize(1280, new_h)
-                logging.info(f'Input frame size to stereo component was {w}x{h}, added downscalling to 1280x{new_h}')
+                LOGGER.info(f'Input frame size to stereo component was {w}x{h}, added downscalling to 1280x{new_h}')
                 manip.setMaxOutputFrameSize(1280 * new_h)
                 # Stereo works on GRAY8 frames
                 manip.setFrameType(dai.ImgFrame.Type.GRAY8)
@@ -153,7 +153,7 @@ class StereoComponent(Component):
                 manip = pipeline.create(dai.node.ImageManip)
                 new_h = int(h * (1280 / w))
                 manip.setResize(1280, new_h)
-                logging.info(f'Input frame size to stereo component was {w}x{h}, added downscalling to 1280x{new_h}')
+                LOGGER.info(f'Input frame size to stereo component was {w}x{h}, added downscalling to 1280x{new_h}')
                 manip.setMaxOutputFrameSize(1280 * new_h)
                 # Stereo works on GRAY8 frames
                 manip.setFrameType(dai.ImgFrame.Type.GRAY8)

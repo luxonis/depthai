@@ -1,6 +1,5 @@
 import importlib
 import json
-import logging
 import sys
 import tempfile
 import traceback
@@ -14,6 +13,7 @@ except ImportError:
     cv2 = None
 
 import depthai as dai
+from depthai_sdk.logger import LOGGER
 import numpy as np
 import requests
 import xmltodict
@@ -394,7 +394,7 @@ def _create_cache_folder() -> bool:
     try:
         Path.home().joinpath(".depthai_sdk").mkdir(parents=True, exist_ok=True)
     except PermissionError:
-        logging.debug('Failed to create cache folder.')
+        LOGGER.debug('Failed to create cache folder.')
         return False
 
     return True
@@ -408,7 +408,7 @@ def _create_config() -> Optional[dict]:
         dict: Config file content.
     """
     if not _create_cache_folder():
-        logging.debug('Failed to create config file.')
+        LOGGER.debug('Failed to create config file.')
         return None
 
     config_file = Path.home().joinpath('.depthai_sdk', 'config.json')
@@ -481,7 +481,7 @@ def report_crash_dump(device: dai.Device) -> None:
                 json.dump(crash_dump_json, f)
 
             with configure_scope() as scope:
-                logging.info('Reporting crash dump to sentry.')
+                LOGGER.info('Reporting crash dump to sentry.')
                 scope.add_attachment(content_type='application/json', path=str(path))
                 capture_exception(CrashDumpException())
 
