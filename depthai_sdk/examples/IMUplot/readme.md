@@ -34,3 +34,10 @@ while True:
     time.sleep(.5)
 
 ```
+The window slider changes the width of the scrolling window ie no of points in view
+The delay window can be used to change how many points are plotted per second. This app can comfortably plot at 120Hz
+
+## Example of the running program
+https://github.com/hidara2000/depthai/assets/15170494/b15a974c-2955-4f1d-bc45-a0d702d04b09
+
+
