@@ -2,7 +2,6 @@
 This is a helper class that let's you save depth frames into rosbag (.bag), which can be replayed using RealSense Viewer app.
 '''
 import datetime
-import logging
 import os
 import time
 from pathlib import Path
@@ -31,9 +30,9 @@ from rosbags.typesys.types import sensor_msgs__msg__Imu as Imu
 
 from rosbags.typesys.types import diagnostic_msgs__msg__KeyValue as KeyValue
 
-from depthai_sdk.recorders.abstract_recorder import Recorder
-
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.integrations.ros.imu_interpolation import ImuInterpolation, ImuSyncMethod
+from depthai_sdk.recorders.abstract_recorder import Recorder
 
 CAMERA_INFO = """
 # This message defines meta information for a camera. It should be in a
@@ -415,7 +414,7 @@ class _RosbagBaseRecorder(Recorder):
     def close(self):
         if self._closed: return
         self._closed = True
-        logging.info(f'ROS .bag saved at: {str(self.path)}')
+        LOGGER.info(f'ROS .bag saved at: {str(self.path)}')
         self.writer.close()
 
     # def write_streamInfo(self, depth=False, rgb=False):

@@ -1,5 +1,4 @@
 import json
-import logging
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -22,6 +21,7 @@ from depthai_sdk.components.nn_helper import *
 from depthai_sdk.classes.enum import ResizeMode
 from depthai_sdk.components.parser import *
 from depthai_sdk.components.stereo_component import StereoComponent
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.visualize.visualizer_helper import depth_to_disp_factor
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
@@ -178,7 +178,7 @@ class NNComponent(Component):
                 self.node.input.setBlocking(True)
                 self.node.input.setQueueSize(20)
             else:
-                logging.debug('Using on-host decoding for multi-stage NN')
+                LOGGER.debug('Using on-host decoding for multi-stage NN')
                 # Custom NN
                 self.image_manip.setResize(*self._size)
                 self.image_manip.setMaxOutputFrameSize(self._size[0] * self._size[1] * 3)
@@ -246,7 +246,7 @@ class NNComponent(Component):
                 model = models[str(model)] / 'config.json'
                 self._parse_config(model)
             elif str(model) in zoo_models:
-                logging.warning(
+                LOGGER.warning(
                     'Models from the OpenVINO Model Zoo do not carry any metadata'
                     ' (e.g., label map, decoding logic). Please keep this in mind when using models from Zoo.'
                 )
@@ -322,7 +322,7 @@ class NNComponent(Component):
             self._handler = loadModule(model_config.parent / self._config["handler"])
 
             if not callable(getattr(self._handler, "decode", None)):
-                logging.debug("Custom model handler does not contain 'decode' method!")
+                LOGGER.debug("Custom model handler does not contain 'decode' method!")
             else:
                 self._decode_fn = self._handler.decode if self._decode_fn is None else self._decode_fn
 
@@ -410,7 +410,7 @@ class NNComponent(Component):
             num_frame_pool (int, optional): Number of frames to pool for inference. If None, will use the default value.
         """
         if not self.is_multi_stage():
-            logging.warning("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible!"
+            LOGGER.warning("Input to this model was not a NNComponent, so 2-stage NN inferencing isn't possible!"
                             "This configuration attempt will be ignored.")
             return
 
@@ -520,7 +520,7 @@ class NNComponent(Component):
         Configures (Spatial) Yolo Detection Network node.
         """
         if not self.is_yolo():
-            logging.warning('This is not a YOLO detection network! This configuration attempt will be ignored.')
+            LOGGER.warning('This is not a YOLO detection network! This configuration attempt will be ignored.')
             return
 
         if not self.node:
@@ -569,7 +569,7 @@ class NNComponent(Component):
             calc_algo (dai.SpatialLocationCalculatorAlgorithm, optional): Specifies spatial location calculator algorithm: Average/Min/Max
         """
         if not self.is_spatial():
-            logging.warning('This is not a Spatial Detection network! This configuration attempt will be ignored.')
+            LOGGER.warning('This is not a Spatial Detection network! This configuration attempt will be ignored.')
             return
 
         if bb_scale_factor is not None:

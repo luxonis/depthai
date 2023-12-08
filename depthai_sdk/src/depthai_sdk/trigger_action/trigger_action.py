@@ -1,9 +1,9 @@
-import logging
 from datetime import datetime
 from typing import Union, Callable
 
 from depthai_sdk.classes import FramePacket
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.trigger_action.actions.abstract_action import Action
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 

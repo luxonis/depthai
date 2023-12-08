@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import logging
 from enum import IntEnum
 from pathlib import Path
 from queue import Queue
@@ -9,9 +8,9 @@ from typing import List
 import depthai as dai
 
 from depthai_sdk.classes.packets import FramePacket, IMUPacket
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.recorders.abstract_recorder import Recorder
-
 
 def _run(recorder: Recorder, frame_queue: Queue):
     """
@@ -30,7 +29,7 @@ def _run(recorder: Recorder, frame_queue: Queue):
             break
     # Close all recorders - Can't use ExitStack with VideoWriter
     recorder.close()
-    logging.info('Exiting store frame thread')
+    LOGGER.info('Exiting store frame thread')
 
 
 class RecordType(IntEnum):
@@ -112,7 +111,7 @@ class Record:
     # TODO: support pointclouds in MCAP
     def config_mcap(self, pointcloud: bool):
         if self.record_type != RecordType.MCAP:
-            logging.info(f"Recorder type is {self.record_type}, not MCAP! Config attempt ignored.")
+            LOGGER.info(f"Recorder type is {self.record_type}, not MCAP! Config attempt ignored.")
             return
         self.recorder.set_pointcloud(pointcloud)
 

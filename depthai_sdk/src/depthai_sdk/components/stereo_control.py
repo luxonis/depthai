@@ -1,9 +1,7 @@
 import depthai as dai
 from itertools import cycle
-import logging
 from depthai_sdk.components.parser import parse_median_filter
-
-logger = logging.getLogger(__name__)
+from depthai_sdk.logger import LOGGER
 
 LIMITS = {
     'confidence_threshold': (0, 255),
@@ -43,7 +41,7 @@ class StereoControl:
         Switch between auto white balance modes.
         """
         mode = next(self._cycle_median_filter)
-        logger.info(f'Switching median filter to {mode}')
+        LOGGER.info(f'Switching median filter to {mode}')
         self.send_controls({'postprocessing': {'median': mode}})
 
     def confidence_threshold_up(self, step=10):
@@ -51,7 +49,7 @@ class StereoControl:
         Increase confidence threshold by step
         """
         if LIMITS['confidence_threshold'][1] < self._current_vals['conf_threshold'] + step:
-            logger.error(f'Confidence threshold cannot be greater than {LIMITS["confidence_threshold"][1]}')
+            LOGGER.error(f'Confidence threshold cannot be greater than {LIMITS["confidence_threshold"][1]}')
             return
         self._current_vals['conf_threshold'] += step
         self.send_controls({'cost_matching': {'confidence_threshold': self._current_vals['conf_threshold']}})
@@ -61,7 +59,7 @@ class StereoControl:
         Decrease confidence threshold by step
         """
         if LIMITS['confidence_threshold'][0] > self._current_vals['conf_threshold'] - step:
-            logger.error(f'Confidence threshold cannot be less than {LIMITS["confidence_threshold"][0]}')
+            LOGGER.error(f'Confidence threshold cannot be less than {LIMITS["confidence_threshold"][0]}')
             return
         self._current_vals['conf_threshold'] -= step
         self.send_controls({'cost_matching': {'confidence_threshold': self._current_vals['conf_threshold']}})
@@ -71,7 +69,7 @@ class StereoControl:
         Increase dot projector power by step
         """
         if LIMITS['dot_projector'][1] < self._current_vals['dot_projector'] + step:
-            logger.error(f'Dot projector power cannot be greater than {LIMITS["dot_projector"][1]}')
+            LOGGER.error(f'Dot projector power cannot be greater than {LIMITS["dot_projector"][1]}')
             return
         self._current_vals['dot_projector'] += step
         self.device.setIrFloodLightBrightness(self._current_vals['dot_projector'])
@@ -81,7 +79,7 @@ class StereoControl:
         Decrease dot projector power by step
         """
         if LIMITS['dot_projector'][0] > self._current_vals['dot_projector'] - step:
-            logger.error(f'Dot projector power cannot be less than {LIMITS["dot_projector"][0]}')
+            LOGGER.error(f'Dot projector power cannot be less than {LIMITS["dot_projector"][0]}')
             return
         self._current_vals['dot_projector'] -= step
         self.device.setIrFloodLightBrightness(self._current_vals['dot_projector'])
@@ -91,7 +89,7 @@ class StereoControl:
         Increase illumination led power by step
         """
         if LIMITS['illumination_led'][1] < self._current_vals['illumination_led'] + step:
-            logger.error(f'Illumination led power cannot be greater than {LIMITS["illumination_led"][1]}')
+            LOGGER.error(f'Illumination led power cannot be greater than {LIMITS["illumination_led"][1]}')
             return
         self._current_vals['illumination_led'] += step
         self.device.setIrLaserDotProjectorBrightness(self._current_vals['illumination_led'])
@@ -101,7 +99,7 @@ class StereoControl:
         Decrease illumination led power by step
         """
         if LIMITS['illumination_led'][0] > self._current_vals['illumination_led'] - step:
-            logger.error(f'Illumination led power cannot be less than {LIMITS["illumination_led"][0]}')
+            LOGGER.error(f'Illumination led power cannot be less than {LIMITS["illumination_led"][0]}')
             return
         self._current_vals['illumination_led'] -= step
         self.device.setIrLaserDotProjectorBrightness(self._current_vals['illumination_led'])
@@ -183,15 +181,15 @@ class StereoControl:
         }
         """
         if self.queue is None:
-            logger.error('Cannot send controls when replaying.')
+            LOGGER.error('Cannot send controls when replaying.')
             return
 
-        logger.info(f'Sending controls to StereoDepth node: {controls}')
+        LOGGER.info(f'Sending controls to StereoDepth node: {controls}')
 
         ctrl = dai.StereoDepthConfig()
 
         if controls.get('reset', None) and controls['reset']:
-            logger.info('Resetting camera controls.')
+            LOGGER.info('Resetting camera controls.')
             self.raw_cfg = ctrl.get()
             ctrl.set(self.raw_cfg)
             self.queue.send(ctrl)
