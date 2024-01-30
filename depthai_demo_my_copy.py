@@ -63,7 +63,8 @@ class OverheatError(RuntimeError):
     pass
 
 args = ArgsManager.parseArgs()
-
+print(f"args: {args}")
+args.noSupervisor = True
 if args.noSupervisor and args.guiType == "qt":
     if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
         os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
@@ -1082,6 +1083,7 @@ def process_red_area_in_video():
         if key == ord('q'):
             cv2.destroyAllWindows()
             break
+        
 ##########################################################################################
 
 
@@ -1123,12 +1125,15 @@ def runOpenCv():
 if __name__ == "__main__":
     try:
         if args.noSupervisor:
+            print("args.nosupervisor is TRUEEE\n\n\n")
             if args.guiType == "qt":
                 runQt()
             else:
+                print(f"running runopencv()\n\n\n")
                 args.guiType = "cv"
                 runOpenCv()
         else:
+            print("S = supervisor")
             s = Supervisor()
             if args.guiType != "cv":
                 available = s.checkQtAvailability()
