@@ -64,7 +64,7 @@ class OverheatError(RuntimeError):
 
 args = ArgsManager.parseArgs()
 print(f"args: {args}")
-args.noSupervisor = True
+args.noSupervisor = True # Alfred - i set this manually here for testing.
 if args.noSupervisor and args.guiType == "qt":
     if "QT_QPA_PLATFORM_PLUGIN_PATH" in os.environ:
         os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
