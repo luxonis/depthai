@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 def isolate_red_area(image):
-        # Convert the image to the HSV color space
+    # Convert the image to the HSV color space
     hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV) #convert image from BGR to HSV
 
     # Define the lower and upper bounds for red color in HSV
