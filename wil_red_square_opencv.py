@@ -29,7 +29,7 @@ def isolate_red_area(image):
 
     return binary, result
 
-def main():
+def process_red_area_in_video():
     cap = cv2.VideoCapture(0) # capture video with laptop camera
     while True:
         _, frame = cap.read() #get frame
@@ -47,4 +47,4 @@ def main():
         
         
 if __name__ == '__main__':
-    main()
+    process_red_area_in_video()
