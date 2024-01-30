@@ -1,4 +1,4 @@
-```import cv2
+import cv2
 import numpy as np
 
 def isolate_red_area(image):
@@ -47,4 +47,4 @@ def main():
         
         
 if __name__ == '__main__':
-    main()```
+    main()
