@@ -99,7 +99,7 @@
         run: choco install git -y
       - name: Install python dependency
         shell: pwsh
-        run: choco install python --version 3.10 -y
+        run: choco install python --version 3.10 --force -y
       - name: Install pycharm-community dependency
         shell: pwsh
         run: choco install pycharm-community -y
