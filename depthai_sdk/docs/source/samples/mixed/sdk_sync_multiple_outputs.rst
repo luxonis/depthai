@@ -34,7 +34,7 @@ Source Code
 
         Also `available on GitHub <https://github.com/luxonis/depthai/tree/main/depthai_sdk/examples/CameraComponent/sync_multiple_outputs.py>`__
 
-        .. literalinclude:: ../../../../examples/CameraComponent/sync_multiple_outputs.py
+        .. literalinclude:: ../../../../examples/mixed/sync_multiple_outputs.py
             :language: python
             :linenos:
 
