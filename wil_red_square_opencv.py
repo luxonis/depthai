@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import depthai      # Library necessary for communicating with DepthAI hardware.
 
 def isolate_red_area(image):
     # Convert the image to the HSV color space
@@ -30,21 +31,47 @@ def isolate_red_area(image):
     return binary, result
 
 def process_red_area_in_video():
-    cap = cv2.VideoCapture(0) # capture video with laptop camera
-    while True:
-        _, frame = cap.read() #get frame
-        # cv2.imshow("Original Image", frame) #show original frame
+    # Create a DepthAI pipeline. Pipeline tells DepthAI what operations to perform when running.  Define all of the resources used and flows here
+    pipeline = depthai.Pipeline()
 
-    # Label the red area in the image
-        justred, labeled_image = isolate_red_area(frame) 
-        cv2.imshow("Isolated Red Object", justred) #show just red objects
-        cv2.imshow("Labeled Red Area", labeled_image) #show original image with object framed and text
+    # Want color camera as output: create a ColorCamera node in the pipeline
+    cam_rgb = pipeline.createColorCamera()
+    cam_rgb.setBoardSocket(depthai.CameraBoardSocket.RGB)
+    cam_rgb.setResolution(depthai.ColorCameraProperties.SensorResolution.THE_1080_P)
+
+    # XLinkOut is a "way out" from the device. 
+    # Any data you want to transfer to host needs to be sent via XLink
+    xout_rgb = pipeline.createXLinkOut() # Create an XLinkOut node for the camera preview
+    xout_rgb.setStreamName("video") # Set XLink stream name to video. This is the rgb camera output.
+    cam_rgb.preview.link(xout_rgb.input) # Linking camera preview to XLink input, so that the frames will be sent to host
+
+    # Start the pipeline and search for an available device that will run the pipeline.
+    with depthai.Device(pipeline) as device: 
+        # device is now in "Running" mode, and will send data through XLink.
+
+        video_queue = device.getOutputQueue(name="video", maxSize=1, blocking=False) # define an output queue that takes the XLink stream as input
         
-        key = cv2.waitKey(1)
-        if key == ord('q'):
-            cv2.destroyAllWindows()
-            break
-        
-        
+        while True:
+            # Get the latest frame from the Oak-D camera
+            frame = video_queue.get()
+
+            if frame is not None:
+                # Convert the Oak-D camera frame from OpenCV format to BGR format
+                bgr_frame = frame.getCvFrame()
+
+                # Label the red area in the image
+                justred, labeled_image = isolate_red_area(bgr_frame)
+
+                # Show just red objects
+                cv2.imshow("Isolated Red Object", justred)
+
+                # Show original image with object framed and text
+                cv2.imshow("Labeled Red Area", labeled_image)
+
+            key = cv2.waitKey(1)
+            if key == ord('q'):
+                cv2.destroyAllWindows()
+                break
+
 if __name__ == '__main__':
     process_red_area_in_video()

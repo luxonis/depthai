@@ -1100,7 +1100,7 @@ def runOpenCv():
 
      
     # our opencv implementation
-    cap = cv2.VideoCapture(0)  # capture video with laptop camera
+    cap = cv2.VideoCapture(1)  # capture video with laptop camera
 
     while True:
         _, frame = cap.read()  # get frame
