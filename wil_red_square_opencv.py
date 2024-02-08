@@ -27,7 +27,7 @@ def isolate_red_area(image):
     result = cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 5)  # Draw rectangle around red object
     result = cv2.putText(result, "Fire", text_position, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1) #add text at center of square
     binary = cv2.bitwise_and(result, image, mask=mask) #just for fun, bitwise and with original image to see just red object
-
+# testgit
     return binary, result
 
 def process_red_area_in_video():
