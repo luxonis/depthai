@@ -1,4 +1,5 @@
 blank_issues_enabled: true
+<<<<<<< HEAD
 
 contact_links:
 - name: Documentation
@@ -10,3 +11,15 @@ contact_links:
 - name: Forum
   url: https://discuss.luxonis.com/
   about: Ask your question on our Forum
+=======
+contact_links:
+  - name: 📄 Docs
+    url: https://docs.ultralytics.com/yolov5
+    about: View Ultralytics YOLOv5 Docs
+  - name: 💬 Forum
+    url: https://community.ultralytics.com/
+    about: Ask on Ultralytics Community Forum
+  - name: 🎧 Discord
+    url: https://ultralytics.com/discord
+    about: Ask on Ultralytics Discord
+>>>>>>> yolo/master

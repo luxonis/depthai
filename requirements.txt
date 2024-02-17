@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 requests==2.26.0
 --extra-index-url https://www.piwheels.org/simple
 numpy>=1.21.4 # For RPi Buster (last successful build) and macOS M1 (first build). But allow for higher versions, to support Python3.11 (not available in 1.21.4 yet)
@@ -9,3 +10,54 @@ pyqt5>5,<5.15.6 ; platform_machine != "armv6l" and platform_machine != "armv7l" 
 depthai==2.21.2.0
 Qt.py
 scipy
+=======
+# YOLOv5 requirements
+# Usage: pip install -r requirements.txt
+
+# Base ------------------------------------------------------------------------
+gitpython>=3.1.30
+matplotlib>=3.3
+numpy>=1.23.5
+opencv-python>=4.1.1
+Pillow>=9.4.0
+psutil  # system resources
+PyYAML>=5.3.1
+requests>=2.23.0
+scipy>=1.4.1
+thop>=0.1.1  # FLOPs computation
+torch>=1.8.0  # see https://pytorch.org/get-started/locally (recommended)
+torchvision>=0.9.0
+tqdm>=4.64.0
+ultralytics>=8.0.232
+# protobuf<=3.20.1  # https://github.com/ultralytics/yolov5/issues/8012
+
+# Logging ---------------------------------------------------------------------
+# tensorboard>=2.4.1
+# clearml>=1.2.0
+# comet
+
+# Plotting --------------------------------------------------------------------
+pandas>=1.1.4
+seaborn>=0.11.0
+
+# Export ----------------------------------------------------------------------
+# coremltools>=6.0  # CoreML export
+# onnx>=1.10.0  # ONNX export
+# onnx-simplifier>=0.4.1  # ONNX simplifier
+# nvidia-pyindex  # TensorRT export
+# nvidia-tensorrt  # TensorRT export
+# scikit-learn<=1.1.2  # CoreML quantization
+# tensorflow>=2.4.0,<=2.13.1  # TF exports (-cpu, -aarch64, -macos)
+# tensorflowjs>=3.9.0  # TF.js export
+# openvino-dev>=2023.0  # OpenVINO export
+
+# Deploy ----------------------------------------------------------------------
+setuptools>=65.5.1 # Snyk vulnerability fix
+# tritonclient[all]~=2.24.0
+
+# Extras ----------------------------------------------------------------------
+# ipython  # interactive notebook
+# mss  # screenshots
+# albumentations>=1.0.3
+# pycocotools>=2.0.6  # COCO mAP
+>>>>>>> yolo/master
