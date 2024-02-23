@@ -91,9 +91,9 @@
       - name: Download chocolatey
         shell: pwsh
         run: Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-      - name: Install dependencies
+      - name: Install pycharm-community dependency
         shell: pwsh
-        run: choco install cmake git python --version 3.10 pycharm-community -y
+        run: choco install pycharm-community -y
       - name: Install requrirements
         run: |
           python install_requirements.py
