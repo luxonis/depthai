@@ -1,22 +1,22 @@
-import logging
 from typing import Union, Dict
 
 import numpy as np
 
 from .abstract_recorder import *
+from depthai_sdk.logger import LOGGER
 
 
 class VideoRecorder(Recorder):
     """
-    Writes encoded streams raw (.mjpeg/.h264/.hevc) or directly to mp4 container.
-    Writes unencoded streams to mp4 using cv2.VideoWriter
+    Writes video streams (.mjpeg/.h264/.hevc) or directly to mp4/avi container.
     """
 
-    def __init__(self):
+    def __init__(self, lossless: bool = False):
         self.path = None
         self._stream_type = dict()
         self._writers = dict()
         self._closed = False
+        self._lossless = lossless
 
     def __getitem__(self, item):
         return self._writers[item]
@@ -41,28 +41,32 @@ class VideoRecorder(Recorder):
             # for example, 'color_bitstream' (encoded) or 'color_video' (unencoded),
             # if component was created with name='color'
             xout_name = xout.name  # for example, 'color' --> file is color.mp4 (encoded) or color.avi (unencoded)
-
+            file_name = xout_name
+            if file_name.startswith('CameraBoardSocket.'):
+                file_name = file_name[len('CameraBoardSocket.'):]
             stream = OakStream(xout)
             fourcc = stream.fourcc()  # TODO add default fourcc? stream.fourcc() can be None.
-            if stream.is_raw():
+
+            print(fourcc, xout_name, stream.type)
+            if stream.is_raw() or stream.is_depth():
                 from .video_writers.video_writer import VideoWriter
-                self._writers[xout_name] = VideoWriter(self.path, xout_name, fourcc, xout.fps)
+                self._writers[xout_name] = VideoWriter(self.path, file_name, self._lossless)
             else:
                 try:
                     from .video_writers.av_writer import AvWriter
-                    self._writers[xout_name] = AvWriter(self.path, xout_name, fourcc, xout.fps)
+                    self._writers[xout_name] = AvWriter(self.path, file_name, fourcc)
                 except Exception as e:
                     # TODO here can be other errors, not only import error
-                    logging.warning(f'Exception while creating AvWriter: {e}.'
+                    LOGGER.warning(f'Exception while creating AvWriter: {e}.'
                                     '\nFalling back to FileWriter, saving uncontainerized encoded streams.')
                     from .video_writers.file_writer import FileWriter
-                    self._writers[xout_name] = FileWriter(self.path, xout_name, fourcc)
+                    self._writers[xout_name] = FileWriter(self.path, file_name, fourcc)
 
     def create_files_for_buffer(self, subfolder: str, buf_name: str):
         for _, writer in self._writers.items():
             writer.create_file_for_buffer(subfolder, buf_name)
 
-    def create_file_for_buffer(self, wr_name: str, subfolder: str, buf_name: str):  # get frames' properties for the file from buf_name
+    def create_file_for_buffer(self, wr_name: str, subfolder: str, buf_name: str):
         self._writers[wr_name].create_file_for_buffer(subfolder, buf_name)
 
     def create_file(self, wr_name: str, subfolder: str, frame: Union[np.ndarray, dai.ImgFrame]):
@@ -100,7 +104,7 @@ class VideoRecorder(Recorder):
         if self._closed:
             return
         self._closed = True
-        logging.info(f'Video Recorder saved stream(s) to folder: {str(self.path)}')
+        LOGGER.info(f'Video Recorder saved stream(s) to folder: {str(self.path)}')
         # Close opened files
         for name, writer in self._writers.items():
             writer.close()

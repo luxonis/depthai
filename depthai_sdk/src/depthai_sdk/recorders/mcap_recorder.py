@@ -1,10 +1,10 @@
-import logging
 from pathlib import Path
 from typing import Dict
 
 import depthai as dai
 from mcap_ros1.writer import Writer as Ros1Writer
 
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.integrations.ros.ros_base import RosBase
 # from depthai_sdk.integrations.ros.depthai2ros import DepthAi2Ros1
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
@@ -88,4 +88,4 @@ class McapRecorder(Recorder, RosBase):
         self._closed = True
         self.ros_writer.finish()
         self.stream.close()
-        logging.info(f'.MCAP recording saved at {self.path}')
+        LOGGER.info(f'.MCAP recording saved at {self.path}')

@@ -1,4 +1,3 @@
-import logging
 import time
 from datetime import timedelta, datetime
 from pathlib import Path
@@ -9,6 +8,7 @@ import depthai as dai
 
 from depthai_sdk.classes import FramePacket
 from depthai_sdk.components import Component
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.recorders.video_recorder import VideoRecorder
 from depthai_sdk.trigger_action.actions.abstract_action import Action
 
@@ -24,13 +24,16 @@ class RecordAction(Action):
                  inputs: Union[Component, Callable, List[Union[Component, Callable]]],
                  dir_path: str,
                  duration_before_trigger: Union[int, timedelta],
-                 duration_after_trigger: Union[timedelta, int]):
+                 duration_after_trigger: Union[timedelta, int],
+                 on_finish_callback: Callable[[Union[Path, str]], None] = None,
+                 ):
         """
         Args:
             inputs: Inputs to record video from. Can be a single component or a list of components.
             dir_path: Path to directory where video files will be saved. Directory will be created if it doesn't exist.
             duration_before_trigger: Duration of video to record before trigger event.
             duration_after_trigger: Duration of video to record after trigger event.
+            on_finish_callback: Callback function that will be called when recording is finished. Should accept a single argument - path to the folder with recorded video files.
         """
         super().__init__(inputs)
         self.path = Path(dir_path).resolve()
@@ -47,6 +50,7 @@ class RecordAction(Action):
         self.recorder = VideoRecorder()
         self.stream_names = []  # will be assigned during recorder setup
         self.buffers_status: Dict[str, Dict[str, Union[int, List[int]]]] = {}
+        self.on_finish_callback = on_finish_callback
 
     def _run(self):
         """
@@ -87,8 +91,12 @@ class RecordAction(Action):
                     time.sleep(0.01)
 
             # Close files
-            logging.debug(f'Saved to {str(self.path / subfolder)}')
+            LOGGER.debug(f'Saved to {str(self.path / subfolder)}')
             self.recorder.close_files()
+
+            # Call on_finish_callback if it is specified
+            if self.on_finish_callback is not None:
+                self.on_finish_callback(str(self.path / subfolder))
 
     def activate(self):
         # Setup for the current recording
@@ -137,8 +145,8 @@ class RecordAction(Action):
                 self.buffers_status['ready']['after_t'].append(buffer_id)
 
     def setup(self, device: dai.Device, xouts: List['XoutFrames']):
-        self.stream_names = [xout.frames.name for xout in xouts]  # e.g., [color_video, color_bitstream]
-        logging.debug(f'RecordAction: stream_names = {self.stream_names}')
+        self.stream_names = [xout.name for xout in xouts]  # e.g., [color_video, color_bitstream]
+        LOGGER.debug(f'RecordAction: stream_names = {self.stream_names}')
         self.recorder.update(self.path, device, xouts)
         self._run_thread()
 

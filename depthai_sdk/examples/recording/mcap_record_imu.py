@@ -8,6 +8,7 @@ with OakCamera() as oak:
     imu = oak.create_imu()
     imu.config_imu(report_rate=500, batch_report_threshold=5)
 
+    # Note that for MCAP recording, user has to have ROS installed
     recorder = oak.record([imu, stereo.out.depth], './', RecordType.MCAP)
 
     oak.visualize([left, stereo])

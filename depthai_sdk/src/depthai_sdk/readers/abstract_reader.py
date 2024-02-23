@@ -2,7 +2,9 @@ import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Tuple, Dict
+
 import numpy as np
+
 
 class AbstractReader(ABC):
     @abstractmethod
@@ -23,6 +25,12 @@ class AbstractReader(ABC):
         Returns (width, height)
         """
         pass
+
+    def get_socket(self, name: str):
+        """
+        Returns socket
+        """
+        return None
 
     @abstractmethod
     def get_message_size(self, name: str) -> int:

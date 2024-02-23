@@ -1,13 +1,11 @@
 import blobconverter
-import cv2
 import numpy as np
-from depthai import NNData
-
+import depthai as dai
 from depthai_sdk import OakCamera
-from depthai_sdk.classes import Detections, DetectionPacket
+from depthai_sdk.classes import Detections
 
 
-def decode(nn_data: NNData) -> Detections:
+def decode(nn_data: dai.NNData) -> Detections:
     """
     Custom decode function for the NN component. Decode function has to accept NNData argument.
     The return type should preferably be a class that inherits from depthai_sdk.classes.GenericNNOutput,
@@ -18,29 +16,27 @@ def decode(nn_data: NNData) -> Detections:
     layer = nn_data.getFirstLayerFp16()
     results = np.array(layer).reshape((1, 1, -1, 7))
     dets = Detections(nn_data)
-
     for result in results[0][0]:
-        if result[2] > 0.5:
+        if result[2] > 0.3:
             label = int(result[1])
             conf = result[2]
             bbox = result[3:]
-            dets.add(label, conf, bbox)
+            det = dai.ImgDetection()
+            det.confidence = conf
+            det.label = label
+            det.xmin = bbox[0]
+            det.ymin = bbox[1]
+            det.xmax = bbox[2]
+            det.ymax = bbox[3]
+            dets.detections.append(det)
 
     return dets
-
-
-def callback(packet: DetectionPacket):
-    visualizer = packet.visualizer
-    frame = packet.frame
-    frame = visualizer.draw(frame)
-    cv2.imshow('Custom decode function', frame)
-
 
 with OakCamera() as oak:
     color = oak.create_camera('color')
 
-    nn_path = blobconverter.from_zoo(name='person-detection-0200', version='2021.4')
+    nn_path = blobconverter.from_zoo(name='person-detection-0200', version='2021.4', shaves=6)
     nn = oak.create_nn(nn_path, color, decode_fn=decode)
 
-    oak.visualize(nn, callback=callback)
+    oak.visualize(nn)
     oak.start(blocking=True)

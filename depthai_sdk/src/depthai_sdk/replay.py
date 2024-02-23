@@ -1,12 +1,14 @@
-import logging
+import os
 import os
 import time
 from threading import Thread
 from time import monotonic
+from typing import Callable
 
 import depthai as dai
 
 from depthai_sdk.classes.enum import ResizeMode
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.readers.abstract_reader import AbstractReader
 from depthai_sdk.utils import *
 
@@ -16,47 +18,54 @@ _imageExt = ['.bmp', '.dib', '.jpeg', '.jpg', '.jpe', '.jp2', '.png', '.webp', '
              '.pnm', '.pfm', '.sr', '.ras', '.tiff', '.tif', '.exr', '.hdr', '.pic']
 
 
-class ReplayStream:
-    stream_name: str  # XLink stream name
-    queue: dai.DataInputQueue  # Input queue
-    frame: np.ndarray  # Last read frame from Reader (ndarray)
-    imgFrame: dai.ImgFrame  # Last read ImgFrame from Reader (dai.ImgFrame)
-    _shape: Tuple[int, int]  # width, height
-    disabled: bool
-    size_bytes: int  # bytes
+def _run(delay: float, sendFrames: Callable):
+    while True:
+        if not sendFrames():
+            break
+        time.sleep(delay)
+    LOGGER.info('Replay `run` thread stopped')
 
+
+class ReplayStream:
     @property
     def shape(self) -> Tuple[int, int]:
         return self.resize if self.resize else self._shape
 
     def __init__(self):
         self.node: dai.node.XLinkIn = None
+        self.queue: dai.DataInputQueue = None
         self.disabled = False
         self.stream_name = ''
-        self.camera_socket: dai.CameraBoardSocket = None
+        self.camera_socket: dai.CameraBoardSocket = None  # Forced socket
 
         self.resize: Tuple[int, int] = None
         self.resize_mode: ResizeMode = None
+        self._shape: Tuple[int, int] = None
+        self.callbacks: List[Callable] = []
+
+        self.frame: np.ndarray  # Last read frame from Reader (ndarray)
+        self.imgFrame: dai.ImgFrame  # Last read ImgFrame from Reader (dai.ImgFrame)
+        self.size_bytes: int  # bytes
 
     def get_socket(self) -> dai.CameraBoardSocket:
-        if self.camera_socket:
+        if self.camera_socket is not None:
             return self.camera_socket
-        if 'left' in self.stream_name:
+        if 'left' in self.stream_name.lower():
             return dai.CameraBoardSocket.LEFT
-        elif 'right' in self.stream_name:
+        elif 'right' in self.stream_name.lower():
             return dai.CameraBoardSocket.RIGHT
         else:
-            return dai.CameraBoardSocket.RGB
+            return dai.CameraBoardSocket.CAM_A
         # raise Exception("Please specify replay stream CameraBoardSocket via replay.specify_socket()")
 
 
 class Replay:
-    def __init__(self, path: str):
+    def __init__(self, path: Union[Path, str]):
         """
         Helper file to replay recorded depthai stream. It reads from recorded files (mjpeg/avi/mp4/h265/h264/bag)
         and sends frames back to OAK camera to replay the scene, including depth reconstruction from 2 synced mono
         streams.
-    
+
         Args:
             path (str): Path to the recording folder.
         """
@@ -133,7 +142,8 @@ class Replay:
             stream = ReplayStream()
             stream._shape = self.reader.getShape(stream_name)
             stream.size_bytes = self.reader.get_message_size(stream_name)
-            self.streams[stream_name] = stream
+            stream.camera_socket = self.reader.get_socket(stream_name)
+            self.streams[stream_name.lower()] = stream
 
     def _get_path(self, path: str) -> Path:
         """
@@ -141,6 +151,8 @@ class Replay:
         @param path: depthai-recording path.
         @return: Replay module
         """
+        if isinstance(path, Path):
+            return path.resolve()
         if isUrl(path):
             if isYoutubeLink(path):
                 # Overwrite source - so Replay class can use it
@@ -161,7 +173,7 @@ class Replay:
         dic = getAvailableRecordings()
         if recording_name in dic:
             arr = dic[recording_name]
-            logging.info("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB"
+            LOGGER.info("Downloading depthai recording '{}' from Luxonis' servers, in total {:.2f} MB"
                          .format(recording_name, arr[1] / 1e6))
             path = downloadRecording(recording_name, arr[0])
             return path
@@ -199,6 +211,9 @@ class Replay:
     def get_fps(self) -> float:
         return self.fps
 
+    def _add_callback(self, stream_name: str, callback: Callable):
+        self.streams[stream_name.lower()].callbacks.append(callback)
+
     def resize(self, stream_name: str, size: Tuple[int, int], mode: ResizeMode = ResizeMode.STRETCH):
         """
         Resize color frames prior to sending them to the device.
@@ -208,8 +223,8 @@ class Replay:
             size (Tuple(width, heigth)): Size of color frames that are sent to the camera
             mode (ResizeMode): How to actually resize the stream
         """
-        self.streams[stream_name].resize = size
-        self.streams[stream_name].resize_mode = mode
+        self.streams[stream_name.lower()].resize = size
+        self.streams[stream_name.lower()].resize_mode = mode
 
     def keepAspectRatio(self, keepAspectRatio: bool):
         raise Exception('keepAspectRatio() has been deprecated, use resize(mode=ResizeMode) to set whether to keep AR!')
@@ -225,17 +240,17 @@ class Replay:
         if disableReading:
             self.reader.disableStream(stream_name)
 
-        if stream_name not in self.streams:
-            logging.info(f"There's no stream '{stream_name}' available!")
+        if stream_name.lower() not in self.streams:
+            LOGGER.info(f"There's no stream '{stream_name}' available!")
             return
 
-        self.streams[stream_name].disabled = True
+        self.streams[stream_name.lower()].disabled = True
 
     def specify_socket(self, stream_name: str, socket: dai.CameraBoardSocket):
-        if stream_name not in self.streams:
-            logging.info(f"There's no stream '{stream_name}' available!")
+        if stream_name.lower() not in self.streams:
+            LOGGER.info(f"There's no stream '{stream_name}' available!")
             return
-        self.streams[stream_name].camera_socket = socket
+        self.streams[stream_name.lower()].camera_socket = socket
 
     def initPipeline(self, pipeline: dai.Pipeline = None):
         """
@@ -267,11 +282,11 @@ class Replay:
                         left_name: str = 'left',
                         right_name: str = 'right',
                         align_to: str = ''):
-        if left_name not in self.streams or right_name not in self.streams:
+        if left_name.lower() not in self.streams or right_name.lower() not in self.streams:
             raise Exception("Tried to init StereoDepth, but left/right streams aren't available!")
 
-        left = self.streams[left_name]
-        right = self.streams[right_name]
+        left = self.streams[left_name.lower()]
+        right = self.streams[right_name.lower()]
 
         stereo.setInputResolution(left.shape)
 
@@ -282,32 +297,19 @@ class Replay:
 
         if align_to:  # Enable RGB-depth alignment
             stereo.setDepthAlign(dai.CameraBoardSocket.RGB)
-            stereo.setOutputSize(*self.streams[align_to].shape)
+            stereo.setOutputSize(*self.streams[align_to.lower()].shape)
 
         left.node.out.link(stereo.left)
         right.node.out.link(stereo.right)
 
-    def start(self, cb):
+    def start(self):
         """
         Start sending frames to the OAK device on a new thread
         """
-        self.thread = Thread(target=self.run, args=(cb,))
+        self.thread = Thread(target=_run, args=(1.0 / self.fps, self.sendFrames,))
         self.thread.start()
 
-    def run(self, cb):
-        delay = 1.0 / self.fps
-        while True:
-            if not self.sendFrames(cb):
-                break
-
-            time.sleep(delay)
-            if self._stop:
-                break
-
-        logging.info('Replay `run` thread stopped')
-        self._stop = True
-
-    def sendFrames(self, cb=None) -> bool:
+    def sendFrames(self) -> bool:
         """
         Reads and sends recorded frames from all enabled streams to the OAK camera.
 
@@ -316,14 +318,15 @@ class Replay:
         """
         if not self._pause:  # If replaying is paused, don't read new frames
             if not self._readFrames():
+                self._stop = True
                 return False  # End of the recording
 
         self._now = monotonic()
         for stream_name, stream in self.streams.items():
             stream.imgFrame = self._createImgFrame(stream)
             # Save the imgFrame
-            if cb:  # callback
-                cb(stream_name, stream.imgFrame)
+            for cb in stream.callbacks:  # callback
+                cb(stream_name.lower(), stream.imgFrame)
 
             # Don't send these frames to the OAK camera
             if stream.disabled:
@@ -338,17 +341,17 @@ class Replay:
     def createQueues(self, device: dai.Device):
         """
         Creates input queue for each enabled stream
-        
+
         Args:
             device (dai.Device): Device to which we will stream frames
         """
 
-        for name, stream in self.streams.items():
+        for _, stream in self.streams.items():
             if stream.stream_name:
                 stream.queue = device.getInputQueue(stream.stream_name)
 
     def getStreams(self) -> List[str]:
-        return [name for name, stream in self.streams.items()]
+        return [name.lower() for name, _ in self.streams.items()]
 
     def _resize_frame(self, frame: np.ndarray, size: Tuple[int, int], mode: ResizeMode) -> np.ndarray:
         if mode == ResizeMode.STRETCH:
@@ -401,7 +404,7 @@ class Replay:
     def _readFrames(self) -> bool:
         """
         Reads frames from all Readers.
-        
+
         Returns:
             bool: True if successful, otherwise False.
         """
@@ -410,7 +413,7 @@ class Replay:
             return False  # No more frames!
 
         for name, frame in frames.items():
-            self.streams[name].frame = frame
+            self.streams[name.lower()].frame = frame
 
         # Compress 3-plane frame to a single plane
         # for name, frame in self.frames.items():
@@ -422,13 +425,13 @@ class Replay:
         """
         Get shape of a stream
         """
-        return self.streams[name].shape
+        return self.streams[name.lower()].shape
 
     def close(self):
         """
         Closes all video readers.
         """
         self._stop = True
+        self.reader.close()
         if self.thread:
             self.thread.join()
-        self.reader.close()

@@ -1,9 +1,11 @@
-import logging
+from queue import Queue
 from threading import Thread
 from typing import Dict, Any
-from queue import Queue
+
 import rclpy
+
 from depthai_sdk.integrations.ros.ros_base import RosBase
+from depthai_sdk.logger import LOGGER
 
 
 def ros_thread(queue: Queue):
@@ -16,7 +18,7 @@ def ros_thread(queue: Queue):
         for topic, msg in msgs.items():
             if topic not in publishers:
                 publishers[topic] = node.create_publisher(type(msg), topic, 10)
-                logging.info(f'SDK started publishing ROS messages to {topic}')
+                LOGGER.info(f'SDK started publishing ROS messages to {topic}')
             publishers[topic].publish(msg)
         rclpy.spin_once(node, timeout_sec=0.001)  # 1ms timeout
 

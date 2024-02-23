@@ -1,9 +1,9 @@
-import logging
 from datetime import datetime
 from typing import Union, Callable
 
 from depthai_sdk.classes import FramePacket
 from depthai_sdk.oak_outputs.syncing import SequenceNumSync
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.trigger_action.actions.abstract_action import Action
 from depthai_sdk.trigger_action.triggers.abstract_trigger import Trigger
 
@@ -27,10 +27,7 @@ class TriggerAction(SequenceNumSync):
         if isinstance(action, Action) and action.inputs:
             SequenceNumSync.__init__(self, len(action.inputs))
 
-    def new_packet_trigger(self,
-                           packet: FramePacket,
-                           _=None  # visualizer seems redundant here
-                           ) -> None:
+    def new_packet_trigger(self, packet: FramePacket) -> None:
         """
         This method is called when a new packet is received from the trigger input stream.
 
@@ -44,10 +41,7 @@ class TriggerAction(SequenceNumSync):
                 self.last_trigger_time = trigger_time
                 self.action.activate()
 
-    def new_packet_action(self,
-                          packet: FramePacket,
-                          _=None  # visualizer seems redundant here
-                          ) -> None:
+    def new_packet_action(self, packet: FramePacket) -> None:
         """
         This method is called when a new packet is received from the action input streams.
         Primary purpose of this method is to provide a way to keep a track of the packets.

@@ -1,14 +1,9 @@
-from collections import deque
+from datetime import timedelta
+from fractions import Fraction
 from pathlib import Path
-from typing import Union
 
-try:
-    import cv2
-except ImportError:
-    cv2 = None
-
+import av
 import depthai as dai
-import numpy as np
 
 from depthai_sdk.recorders.video_writers import BaseWriter
 from depthai_sdk.recorders.video_writers.utils import create_writer_dir
@@ -16,39 +11,27 @@ from depthai_sdk.recorders.video_writers.utils import create_writer_dir
 
 class VideoWriter(BaseWriter):
     """
-    Writes raw streams to mp4 using cv2.VideoWriter.
+    Writes raw streams to file
     """
-    _fps: float
-    _path: str
 
-    def __init__(self, path: Path, name: str, fourcc: str, fps: float):
+    def __init__(self, path: Path, name: str, lossless: bool = False):
         """
         Args:
             path: Path to save the output. Either a folder or a file.
             name: Name of the stream.
-            fourcc: FourCC code of the codec used to compress the frames.
-            fps: Frames per second.
+            lossless: If True, save the stream without compression.
         """
 
         super().__init__(path, name)
 
-        self._fourcc = None
-        self._w, self._h = None, None
-        self._fps = fps
+        self._lossless = lossless
 
-        self._buffer = None
-        self._is_buffer_enabled = False
+        self._fourcc: str = None
+        self._format: str = None
+        self._start_ts: timedelta = None
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
-
-    def init_buffer(self, name: str, max_seconds: int):
-        if max_seconds > 0:
-            self._buffers[name] = deque(maxlen=int(max_seconds * self._fps))
-            self._is_buffer_enabled = True
-
-    def set_fourcc(self, fourcc: str):
-        self._fourcc = fourcc
 
     def create_file_for_buffer(self, subfolder: str, buf_name: str):
         if self._buffers[buf_name] is None:
@@ -60,42 +43,70 @@ class VideoWriter(BaseWriter):
         frame = self._buffers[buf_name][0]
         self.create_file(subfolder, frame)
 
-    def create_file(self, subfolder: str, frame: Union[dai.ImgFrame, np.ndarray]):
-        path_to_file = create_writer_dir(self.path / subfolder, self.name, 'mp4')
+    def create_file(self, subfolder: str, frame: dai.ImgFrame):
+        if self._lossless or frame.getType() == dai.ImgFrame.Type.RAW16:
+            extension = 'avi'
+        else:
+            extension = 'mp4'
 
-        if not path_to_file.endswith('.mp4'):
-            path_to_file = path_to_file[:-4] + '.mp4'
+        path_to_file = create_writer_dir(self.path / subfolder, self.name, extension)
+
+        if not path_to_file.endswith('.' + extension):
+            path_to_file = path_to_file[:-4] + '.' + extension
 
         self._create_file(path_to_file, frame)
 
-    def _create_file(self, path_to_file: str, frame: Union[dai.ImgFrame, np.ndarray]):
-        if isinstance(frame, np.ndarray):
-            self._h, self._w = frame.shape[:2]
-        else:
-            self._h, self._w = frame.getHeight(), frame.getWidth()
+    def _create_file(self, path_to_file: str, frame: dai.ImgFrame):
+        options = {}
+        if self._lossless:
+            self._fourcc = 'rawvideo'
+        elif frame.getType() == dai.ImgFrame.Type.RAW16:
+            self._fourcc = 'ffv1'
+            self._format = 'gray16le'
+        else:  # Mono/Color, encode
+            self._fourcc = 'h264'
+            options['crf'] = '15'
 
-        if not isinstance(frame, np.ndarray):
-            frame = frame.getCvFrame()
+        self._file = av.open(path_to_file, 'w')
+        self._stream = self._file.add_stream(self._fourcc)
+        self._stream.options = options
+        self._stream.time_base = Fraction(1, 1000)
+        self._stream.codec_context.width = frame.getWidth()
+        self._stream.codec_context.height = frame.getHeight()
 
-        c = 1 if frame.ndim == 2 else frame.shape[2]
-
-        self._fourcc = 'mp4v'
-        self._file = cv2.VideoWriter(path_to_file,
-                                     cv2.VideoWriter_fourcc(*self._fourcc),
-                                     self._fps,
-                                     (self._w, self._h),
-                                     isColor=c != 1)
-
-    def write(self, frame: Union[dai.ImgFrame, np.ndarray]):
+    def write(self, img_frame: dai.ImgFrame):
         if self._file is None:
-            self.create_file(subfolder='', frame=frame)
+            self.create_file(subfolder='', frame=img_frame)
+        if self._start_ts is None:
+            self._start_ts = img_frame.getTimestampDevice()
 
-        self._file.write(frame if isinstance(frame, np.ndarray) else frame.getCvFrame())
+        if img_frame.getType() == dai.ImgFrame.Type.YUV420p:
+            video_format = 'yuv420p'
+        elif img_frame.getType() == dai.ImgFrame.Type.NV12:
+            video_format = 'nv12'
+        elif img_frame.getType() in [dai.ImgFrame.Type.RAW8, dai.ImgFrame.Type.GRAY8]:
+            video_format = 'gray'
+        elif img_frame.getType() == dai.ImgFrame.Type.RAW16:
+            video_format = 'gray16le'
+        else:
+            raise ValueError(f'Unsupported frame type: {img_frame.getType()}')
+
+        video_frame = av.VideoFrame.from_ndarray(img_frame.getFrame(), format=video_format)
+
+        ts = int((img_frame.getTimestampDevice() - self._start_ts).total_seconds() * 1e3)  # To milliseconds
+        video_frame.pts = ts + 1
+
+        for packet in self._stream.encode(video_frame):
+            self._file.mux(packet)
 
     def close(self) -> None:
         """
         Close the file if it is open.
         """
         if self._file:
-            self._file.release()
-            self._file = None
+            # Flush stream
+            for packet in self._stream.encode():
+                self._file.mux(packet)
+
+            # Close output file
+            self._file.close()

@@ -2,7 +2,6 @@
 This is a helper class that let's you save depth frames into rosbag (.bag), which can be replayed using RealSense Viewer app.
 '''
 import datetime
-import logging
 import os
 import time
 from pathlib import Path
@@ -31,9 +30,9 @@ from rosbags.typesys.types import sensor_msgs__msg__Imu as Imu
 
 from rosbags.typesys.types import diagnostic_msgs__msg__KeyValue as KeyValue
 
-from depthai_sdk.recorders.abstract_recorder import Recorder
-
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.integrations.ros.imu_interpolation import ImuInterpolation, ImuSyncMethod
+from depthai_sdk.recorders.abstract_recorder import Recorder
 
 CAMERA_INFO = """
 # This message defines meta information for a camera. It should be in a
@@ -236,6 +235,7 @@ class _RosbagBaseRecorder(Recorder):
         self._closed = False
 
         self.imu_interpolation = ImuInterpolation()
+
     def _update(self, device: dai.Device, xouts: List['XoutFrames']):
         """
         Args:
@@ -357,20 +357,19 @@ class _RosbagBaseRecorder(Recorder):
         elif stream.ros_type == PointCloud2:
             raise Exception('PointCloud2 not yet implemented')
         elif stream.ros_type == Imu:
-            dai_msg: dai.IMUData
-            for packet in dai_msg.packets:
-                report = packet.acceleroMeter or packet.gyroscope or packet.magneticField or packet.rotationVector
-                msg = Imu(
-                    header=self.get_header(report.getTimestampDevice(), report.sequence),
-                    orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
-                    orientation_covariance=np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                    angular_velocity=Vector3(0.0, 0.0, 0.0),
-                    angular_velocity_covariance=np.array([]),
-                    linear_acceleration=Vector3(0.0, 0.0, 0.0),
-                    linear_acceleration_covariance=np.array([])
-                )
-                self.imu_interpolation.Imu(msg, packet)
-                self.write_to_rosbag(name, stream.ros_type.__msgtype__, msg)
+            packet: dai.IMUPacket = dai_msg
+            report = packet.acceleroMeter or packet.gyroscope or packet.magneticField or packet.rotationVector
+            msg = Imu(
+                header=self.get_header(report.getTimestampDevice(), report.sequence),
+                orientation=Quaternion(x=0.0, y=0.0, z=0.0, w=1.0),
+                orientation_covariance=np.array([-1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
+                angular_velocity=Vector3(0.0, 0.0, 0.0),
+                angular_velocity_covariance=np.array([]),
+                linear_acceleration=Vector3(0.0, 0.0, 0.0),
+                linear_acceleration_covariance=np.array([])
+            )
+            self.imu_interpolation.Imu(msg, packet)
+            self.write_to_rosbag(name, stream.ros_type.__msgtype__, msg)
         elif stream.ros_type == Image:
             # msg = self.bridge.Image(dai_msg)
             dai_msg: dai.ImgFrame
@@ -415,7 +414,7 @@ class _RosbagBaseRecorder(Recorder):
     def close(self):
         if self._closed: return
         self._closed = True
-        logging.info(f'ROS .bag saved at: {str(self.path)}')
+        LOGGER.info(f'ROS .bag saved at: {str(self.path)}')
         self.writer.close()
 
     # def write_streamInfo(self, depth=False, rgb=False):

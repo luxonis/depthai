@@ -206,7 +206,8 @@ class Demo:
             self._nnManager.countLabel(self._conf.getCountLabel(self._nnManager))
             self._pm.setNnManager(self._nnManager)
 
-        self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, usb2Mode=self._conf.args.usbSpeed == "usb2")
+        maxUsbSpeed = dai.UsbSpeed.HIGH if self._conf.args.usbSpeed == "usb2" else dai.UsbSpeed.SUPER
+        self._device = dai.Device(self._pm.pipeline.getOpenVINOVersion(), self._deviceInfo, maxUsbSpeed)
         self._device.addLogCallback(self._logMonitorCallback)
         if sentryEnabled:
             try:
@@ -288,7 +289,7 @@ class Demo:
 
         if self._conf.useCamera:
             cameras = self._device.getConnectedCameras()
-            if dai.CameraBoardSocket.LEFT in cameras and dai.CameraBoardSocket.RIGHT in cameras:
+            if dai.CameraBoardSocket.CAM_B in cameras and dai.CameraBoardSocket.CAM_C in cameras:
                 self._pv.collectCalibData(self._device)
 
             self._updateCameraConfigs({

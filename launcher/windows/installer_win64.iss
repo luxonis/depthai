@@ -95,7 +95,10 @@ Source: "..\{#MyAppIconName}"; DestDir: "{app}"; Flags: ignoreversion
 ; Source: "..\launcher.py"; DestDir: "{app}"; Flags: ignoreversion
 ; Source: "..\requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
 ; Source: "..\splash2.png"; DestDir: "{app}"; Flags: ignoreversion
+; Source: "..\demo_card.png"; DestDir: "{app}"; Flags: ignoreversion
+; Source: "..\viewer_card.png"; DestDir: "{app}"; Flags: ignoreversion
 ; Source: "..\splash_screen.py"; DestDir: "{app}"; Flags: ignoreversion
+; Source: "..\choose_app_dialog.py"; DestDir: "{app}"; Flags: ignoreversion
 ; ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

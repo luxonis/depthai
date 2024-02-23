@@ -59,9 +59,9 @@ class ImageReader(AbstractReader):
             self.cntr[name] = 0
 
         self.last_cycle_time = time.time()
-        self.cycle_sec = 3.0 # Images get cycled every 3 seconds by default
+        self.cycle_sec = 3.0  # Images get cycled every 3 seconds by default
 
-    def set_cycle_fps(self, fps): # Called from replay.py on set_fps()
+    def set_cycle_fps(self, fps):  # Called from replay.py on set_fps()
         self.cycle_sec = 1.0 / fps
 
     def read(self) -> Dict[str, np.ndarray]:
