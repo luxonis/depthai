@@ -594,8 +594,8 @@ class Main:
                     # xout.input.setQueueSize(4)
 
                     cam_node.raw.link(tof_node.input)
-                    tof_node.amplitude.link(xout.input)
-                    tof_node.depth.link(xout.input)
+                    tof_node.initialConfig.set(tof_config)
+                    tof_node.intensity.link(xout.input)
 
                 else :
                     type_ret = cam_info['type']
