@@ -47,6 +47,7 @@ camToMonoRes = {
                 }
 
 camToRgbRes = {
+                'OV9282' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX378' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
                 'S5K33D' : dai.ColorCameraProperties.SensorResolution.THE_800_P,
                 'IMX214' : dai.ColorCameraProperties.SensorResolution.THE_4_K,
