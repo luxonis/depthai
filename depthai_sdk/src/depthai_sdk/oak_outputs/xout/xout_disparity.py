@@ -31,6 +31,7 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
                  frames: StreamXout,
                  disp_factor: float,
                  mono_frames: Optional[StreamXout],
+                 fourcc: str = None,
                  colorize: StereoColor = None,
                  colormap: int = None,
                  wls_config: dict = None,
@@ -86,7 +87,7 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
                 )
                 self.use_wls_filter = False
 
-        XoutFrames.__init__(self, frames=frames)
+        XoutFrames.__init__(self, frames=frames, fourcc=fourcc)
         XoutSeqSync.__init__(self, self.xstreams())
 
     def on_callback(self, packet) -> None:

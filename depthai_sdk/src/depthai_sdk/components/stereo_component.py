@@ -489,6 +489,7 @@ class StereoComponent(Component):
                     disp_factor=255.0 / self._comp.node.getMaxDisparity(),
                     mono_frames=self._comp._mono_frames(),
                     colorize=self._comp._colorize,
+                    fourcc=fourcc,
                     colormap=self._comp._postprocess_colormap,
                     wls_config=self._comp.wls_config,
                     ir_settings=self._comp.ir_settings,

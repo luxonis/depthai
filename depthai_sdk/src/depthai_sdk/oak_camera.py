@@ -348,7 +348,7 @@ class OakCamera:
             fps (float): If monochrome cameras aren't already passed, create them and set specified FPS
             left (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
             right (CameraComponent/dai.node.MonoCamera): Pass the camera object (component/node) that will be used for stereo camera.
-            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use h264 codec.
+            encode (bool/str/Profile): Whether we want to enable video encoding (accessible via StereoComponent.out.encoded). If True, it will use MJPEG.
         """
         if left is None:
             left = self.camera(source="left", resolution=resolution, fps=fps)

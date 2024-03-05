@@ -35,7 +35,7 @@ class OakStream:
         if isinstance(xout, outputs.xout_depth.XoutDisparityDepth):
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.DEPTH  # TODO is depth raw or should it be DEPTH?
-        elif isinstance(xout, outputs.xout_disparity.XoutDisparity):
+        elif isinstance(xout, outputs.xout_disparity.XoutDisparity) and xout._fourcc is None:
             self.xlink_name = xout.frames.name
             self.type = self.StreamType.RAW
         elif isinstance(xout, outputs.xout_frames.XoutFrames):
