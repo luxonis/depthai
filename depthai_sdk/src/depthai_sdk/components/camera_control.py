@@ -123,6 +123,31 @@ class CameraControl:
         self._current_vals['sensitivity'] -= step
         self.send_controls(
             {'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
+    def set_exposure_iso(self, exposure, gain=-1):
+        """
+        Set exposure time and ISO value
+        Args:
+            exposure: Integer - In microseconds 1 to 33000
+            gain:  Integer - 100 - 1600
+        """
+        if exposure < LIMITS['exposure'][0] :
+            exposure = LIMITS['exposure'][0]
+            logger.error(f'Exposure time cannot be less than {LIMITS["exposure"][0]}')
+        elif exposure > LIMITS['exposure'][1] :
+            exposure = LIMITS['exposure'][1]
+            logger.error(f'Exposure time cannot be greater than {LIMITS["exposure"][1]}')
+        if gain < 1:
+            gain = self._current_vals['sensitivity']
+        elif gain < LIMITS['gain'][0] :
+            gain = LIMITS['gain'][0]
+            logger.error(f'ISO Gain cannot be less than {LIMITS["gain"][0]}')
+        elif gain > LIMITS['gain'][1] :
+            gain = LIMITS['gain'][1]
+            logger.error(f'ISO Gain cannot be greater than {LIMITS["gain"][1]}')
+        self._current_vals['exposure_time'] = int(exposure)
+        self._current_vals['sensitivity'] = int(gain)
+        self.send_controls(
+            {'exposure': {'manual': [self._current_vals['exposure_time'], self._current_vals['sensitivity']]}})
 
     def focus_up(self, step=3):
         """
