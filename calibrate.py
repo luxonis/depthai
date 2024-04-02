@@ -353,7 +353,6 @@ class Main:
         self.device = dai.Device()
         self.enablePolygonsDisplay = self.args.enablePolygonsDisplay
         self.board_name = None
-        cameraProperties = self.device.getConnectedCameraFeatures()
         calibData = self.device.readCalibration()
         eeprom = calibData.getEepromData()
         #TODO Change only in getDeviceName in next revision.
@@ -375,7 +374,7 @@ class Main:
                 print(f"Device name: {detection}")
                 detection = detection.split("-")
             except:
-                cameraProperties = self.device.getConnectedCameraFeatures()
+                self.cameraProperties = self.device.getConnectedCameraFeatures()
                 calibData = self.device.readCalibration()
                 eeprom = calibData.getEepromData()
                 eeprom.productName = eeprom.productName.replace(" ", "-").upper()
@@ -432,8 +431,13 @@ class Main:
             name = self.board_config['cameras'][cam_id]['name']
             self.coverageImages[name] = None
 
-        cameraProperties = self.device.getConnectedCameraFeatures()
-        for properties in cameraProperties:
+        if (self._set_camera_features()):
+            print("Camera features set using board config.")
+            print(f"self.cameraProperties: {self.cameraProperties}")
+        else:
+            self.cameraProperties = self.device.getConnectedCameraFeatures()
+
+        for properties in self.cameraProperties:
             for in_cam in self.board_config['cameras'].keys():
                 cam_info = self.board_config['cameras'][in_cam]
                 if cam_info["name"] not in self.args.disableCamera:
@@ -454,6 +458,39 @@ class Main:
     def mouse_event_callback(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.mouseTrigger = True
+
+    def _set_camera_features(self):
+        """
+        Create mock camera properties using manually specified board config
+        """
+
+        self.cameraProperties = self.device.getConnectedCameraFeatures()
+
+        for cam_id in self.board_config['cameras']:
+            try: 
+                sensor_model = self.board_config['cameras'][cam_id]["model"]
+                config_type = self.board_config['cameras'][cam_id]["type"]
+            except KeyError:
+                print(f"Model not found for {cam_id}, skipping...")
+                return False
+            
+            if sensor_model in camToRgbRes:
+                supportedTypes = [dai.CameraSensorType.COLOR]
+            elif sensor_model in camToMonoRes:
+                supportedTypes = [dai.CameraSensorType.MONO]
+            else:
+                print(f"Model {sensor_model} not supported")
+                return False
+            
+            if supportedTypes[0].name != config_type.upper():
+                raise ValueError(f"Mismatch in camera type for {cam_id} with model {sensor_model} and type {config_type}, please fix the board config.")
+
+            for cam in self.cameraProperties:
+                if stringToCam[cam_id] == cam.socket:
+                    cam.sensorName = sensor_model
+                    cam.supportedTypes = supportedTypes
+                    
+        return True
 
     def startPipeline(self):
         pipeline = self.create_pipeline()
