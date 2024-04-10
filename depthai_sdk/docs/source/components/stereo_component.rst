@@ -1,7 +1,7 @@
 StereoComponent
 ===============
 
-:class:`StereoComponent <depthai_sdk.components.StereoComponent>` abstracts `StereoDepth <https://docs.luxonis.com/projects/api/en/latest/components/nodes/imu/>`__ node, its configuration,
+:class:`StereoComponent <depthai_sdk.components.StereoComponent>` abstracts `StereoDepth <https://docs.luxonis.com/projects/api/en/latest/components/nodes/stereo_depth/>`__ node, its configuration,
 filtering (eg. `WLS filter <https://github.com/luxonis/depthai-experiments/tree/master/gen2-wls-filter>`__), and disparity/depth viewing.
 
 Usage
