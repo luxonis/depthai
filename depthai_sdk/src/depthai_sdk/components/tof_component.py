@@ -3,10 +3,11 @@ from typing import List, Union
 import depthai as dai
 
 from depthai_sdk.components.component import Component, ComponentOutput
-from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
-from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
-from depthai_sdk.oak_outputs.xout.xout_depth import XoutDisparityDepth
 from depthai_sdk.components.parser import parse_camera_socket
+from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
+from depthai_sdk.oak_outputs.xout.xout_depth import XoutDisparityDepth
+from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
+
 
 class ToFComponent(Component):
     def __init__(self,
@@ -33,13 +34,6 @@ class ToFComponent(Component):
 
         self.node = pipeline.create(dai.node.ToF)
         self.camera_node.raw.link(self.node.input)
-
-        tofConfig = self.node.initialConfig.get()
-        # tofConfig.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MIN
-        tofConfig.depthParams.freqModUsed = dai.RawToFConfig.DepthParams.TypeFMod.MAX
-        tofConfig.depthParams.avgPhaseShuffle = False
-        tofConfig.depthParams.minimumAmplitude = 3.0
-        self.node.initialConfig.set(tofConfig)
 
     def _find_tof(self, device: dai.Device) -> dai.CameraBoardSocket:
         # Use the first ToF sensor, usually, there will only be one
