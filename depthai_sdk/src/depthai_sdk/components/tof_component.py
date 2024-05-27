@@ -1,8 +1,9 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
 import depthai as dai
 
 from depthai_sdk.components.component import Component, ComponentOutput
+from depthai_sdk.components.camera_component import CameraComponent
 from depthai_sdk.components.parser import parse_camera_socket
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout, XoutBase
 from depthai_sdk.oak_outputs.xout.xout_depth import XoutDisparityDepth
@@ -11,11 +12,15 @@ from depthai_sdk.components.tof_control import ToFControl
 
 
 class ToFComponent(Component):
+
+    _align: Optional[dai.node.ImageAlign] = None
+
     def __init__(
         self,
         device: dai.Device,
         pipeline: dai.Pipeline,
         source: Union[str, dai.CameraBoardSocket, None] = None,
+        align_to: Optional[CameraComponent] = None,
     ):
         super().__init__()
         self.out = self.Out(self)
@@ -41,6 +46,11 @@ class ToFComponent(Component):
         self._control_in.setStreamName(f"{self.node.id}_inputControl")
         self._control_in.out.link(self.node.inputConfig)
 
+        if align_to is not None:
+            self._align = pipeline.create(dai.node.ImageAlign)
+            self.node.depth.link(self._align.input)
+            align_to.node.isp.link(self._align.inputAlignTo)
+
     def _find_tof(self, device: dai.Device) -> dai.CameraBoardSocket:
         # Use the first ToF sensor, usually, there will only be one
         features = device.getConnectedCameraFeatures()
@@ -50,6 +60,15 @@ class ToFComponent(Component):
         raise RuntimeError(
             f"No ToF sensor found on this camera! {device.getConnectedCameraFeatures()}"
         )
+
+    def set_align_to(self, align_to: CameraComponent) -> None:
+        if self._align is None:
+            self._align = self._pipeline.create(dai.node.ImageAlign)
+            self.node.depth.link(self._align.input)
+            if align_to.is_mono():
+                align_to.node.out.link(self._align.inputAlignTo)
+            else:
+                align_to.node.isp.link(self._align.inputAlignTo)
 
     def on_pipeline_started(self, device: dai.Device) -> None:
         self.control.set_input_queue(
@@ -62,7 +81,14 @@ class ToFComponent(Component):
             def __call__(self, device: dai.Device) -> XoutBase:
                 return XoutDisparityDepth(
                     device=device,
-                    frames=StreamXout(self._comp.node.depth, "tof_depth"),
+                    frames=StreamXout(
+                        (
+                            self._comp.node.depth
+                            if self._comp._align is None
+                            else self._comp._align.outputAligned
+                        ),
+                        "tof_depth",
+                    ),
                     dispScaleFactor=9500,
                     mono_frames=None,
                     ir_settings={"auto_mode": False},

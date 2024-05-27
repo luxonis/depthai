@@ -390,14 +390,14 @@ class OakCamera:
         """
         return self.stereo(resolution, fps, left, right, encode)
 
-    def create_tof(self, source: Union[str, dai.CameraBoardSocket, None] = None) -> ToFComponent:
+    def create_tof(self, source: Union[str, dai.CameraBoardSocket, None] = None, align_to: Optional[CameraComponent] = None) -> ToFComponent:
         """
         Create ToF component.
 
         Args:
             source (str / dai.CameraBoardSocket): ToF camera source
         """
-        comp = ToFComponent(self.device, self.pipeline, source)
+        comp = ToFComponent(self.device, self.pipeline, source, align_to)
         self._components.append(comp)
         return comp
 
