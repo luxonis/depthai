@@ -48,8 +48,9 @@ class ToFComponent(Component):
 
         if align_to is not None:
             self._align = pipeline.create(dai.node.ImageAlign)
+            self._align_to_output = align_to.node.isp
             self.node.depth.link(self._align.input)
-            align_to.node.isp.link(self._align.inputAlignTo)
+            self._align_to_output.link(self._align.inputAlignTo)
 
     def _find_tof(self, device: dai.Device) -> dai.CameraBoardSocket:
         # Use the first ToF sensor, usually, there will only be one
@@ -89,8 +90,8 @@ class ToFComponent(Component):
                         ),
                         "tof_depth",
                     ),
+                    aligned_frame=StreamXout(self._comp._align_to_output, "aligned_stream") if self._comp._align else None,
                     dispScaleFactor=9500,
-                    mono_frames=None,
                     ir_settings={"auto_mode": False},
                 ).set_comp_out(self)
 

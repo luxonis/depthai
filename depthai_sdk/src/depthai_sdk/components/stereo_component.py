@@ -450,14 +450,14 @@ class StereoComponent(Component):
     Available outputs (to the host) of this component
     """
 
-    def _mono_frames(self):
+    def _aligned_frames(self):
         """
-        Create mono frames output if WLS filter is enabled or colorize is set to RGBD
+        Create aligned frames output if WLS filter is enabled or colorize is set to RGBD
         """
-        mono_frames = None
+        aligned_frame = None
         if self.wls_config['enabled'] or self._colorize == StereoColor.RGBD:
-            mono_frames = StreamXout(self._right_stream)
-        return mono_frames
+            aligned_frame = StreamXout(self._right_stream)
+        return aligned_frame
 
     def _try_get_confidence_map(self):
         confidence_map = None
@@ -472,7 +472,7 @@ class StereoComponent(Component):
                     device=device,
                     frames=StreamXout(self._comp.depth),
                     dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
-                    mono_frames=self._comp._mono_frames(),
+                    aligned_frame=self._comp._aligned_frames(),
                     colorize=self._comp._colorize,
                     colormap=self._comp._postprocess_colormap,
                     ir_settings=self._comp.ir_settings,
@@ -487,7 +487,7 @@ class StereoComponent(Component):
                     frames=StreamXout(self._comp.encoder.bitstream) if fourcc else
                     StreamXout(self._comp.disparity),
                     disp_factor=255.0 / self._comp.node.getMaxDisparity(),
-                    mono_frames=self._comp._mono_frames(),
+                    aligned_frame=self._comp._aligned_frames(),
                     colorize=self._comp._colorize,
                     fourcc=fourcc,
                     colormap=self._comp._postprocess_colormap,

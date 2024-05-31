@@ -30,14 +30,14 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
                  device: dai.Device,
                  frames: StreamXout,
                  disp_factor: float,
-                 mono_frames: Optional[StreamXout],
+                 aligned_frame: Optional[StreamXout],
                  fourcc: str = None,
                  colorize: StereoColor = None,
                  colormap: int = None,
                  wls_config: dict = None,
                  ir_settings: dict = None,
                  confidence_map: StreamXout = None):
-        self.mono_frames = mono_frames
+        self.aligned_frame = aligned_frame
         self.name = 'Disparity'
         self.multiplier = disp_factor
         self.device = device
@@ -96,8 +96,8 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
 
     def xstreams(self) -> List[StreamXout]:
         streams = [self.frames]
-        if self.mono_frames is not None:
-            streams.append(self.mono_frames)
+        if self.aligned_frame is not None:
+            streams.append(self.aligned_frame)
         if self.confidence_map is not None:
             streams.append(self.confidence_map)
 
@@ -105,7 +105,7 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
 
     def package(self, msgs: Dict) -> DisparityPacket:
         img_frame = msgs[self.frames.name]
-        mono_frame = msgs[self.mono_frames.name] if self.mono_frames else None
+        aligned_frame = msgs[self.aligned_frame.name] if self.aligned_frame else None
         confidence_map = msgs[self.confidence_map.name] if self.confidence_map else None
         # TODO: refactor the mess below
         packet = DisparityPacket(
@@ -116,7 +116,7 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
             colorize=self.colorize,
             colormap=self.colormap,
             confidence_map=confidence_map,
-            mono_frame=mono_frame,
+            aligned_frame=aligned_frame,
         )
         packet._get_codec = self.get_codec
 
@@ -127,10 +127,10 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
             if disparity_frame is None:
                 return None
 
-        if mono_frame and self.use_wls_filter:
+        if aligned_frame and self.use_wls_filter:
             # Perform WLS filtering
             # If we have wls enabled, it means CV2 is installed
-            disparity_frame = self.wls_filter.filter(disparity_frame, mono_frame.getCvFrame())
+            disparity_frame = self.wls_filter.filter(disparity_frame, aligned_frame.getCvFrame())
 
         packet.disparity_map = disparity_frame
 

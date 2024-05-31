@@ -13,7 +13,7 @@ class XoutDisparityDepth(XoutDisparity):
                  device: dai.Device,
                  frames: StreamXout,
                  dispScaleFactor: float,
-                 mono_frames: Optional[StreamXout],
+                 aligned_frame: Optional[StreamXout],
                  colorize: StereoColor = None,
                  colormap: int = None,
                  ir_settings: dict = None,
@@ -22,7 +22,7 @@ class XoutDisparityDepth(XoutDisparity):
         super().__init__(device=device,
                          frames=frames,
                          disp_factor=255 / 95,
-                         mono_frames=mono_frames,
+                         aligned_frame=aligned_frame,
                          colorize=colorize,
                          colormap=colormap,
                          ir_settings=ir_settings,
@@ -31,14 +31,14 @@ class XoutDisparityDepth(XoutDisparity):
         self.disp_scale_factor = dispScaleFactor
 
     def package(self, msgs: Dict) -> DisparityDepthPacket:
-        mono_frame = msgs[self.mono_frames.name] if self.mono_frames else None
+        aligned_frame = msgs[self.aligned_frame.name] if self.aligned_frame else None
         confidence_map = msgs[self.confidence_map.name] if self.confidence_map else None
         return DisparityDepthPacket(
             self.get_packet_name(),
             msgs[self.frames.name],
             colorize=self.colorize,
             colormap=self.colormap,
-            mono_frame=mono_frame,
+            aligned_frame=aligned_frame,
             disp_scale_factor=self.disp_scale_factor,
             confidence_map=confidence_map
         )
