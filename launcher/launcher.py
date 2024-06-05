@@ -123,7 +123,8 @@ class Worker(QtCore.QThread):
     def __init__(self, parent = None):
         QtCore.QThread.__init__(self, parent)
         self.signalUpdateQuestion[str, str].connect(self.updateQuestion, QtCore.Qt.BlockingQueuedConnection)
-        self.signalChooseApp.connect(self.chooseApp, QtCore.Qt.BlockingQueuedConnection)
+        # Commented out for running the viewer directly, without the option of choosing demo
+        #self.signalChooseApp.connect(self.chooseApp, QtCore.Qt.BlockingQueuedConnection)
         self.signalCloseSplash.connect(self.closeSplash, QtCore.Qt.BlockingQueuedConnection)
         self.sigInfo[str, str].connect(self.showInformation, QtCore.Qt.BlockingQueuedConnection)
         self.sigCritical[str, str].connect(self.showCritical, QtCore.Qt.BlockingQueuedConnection)
@@ -324,7 +325,7 @@ class Worker(QtCore.QThread):
                 print(f'Message Box ({title}): {message}')
                 # TODO(themarpe) - could be made optional, if the following raise and message
                 self.sigWarning.emit(title, message)
-
+            '''
             try:
                 self.signalChooseApp.emit()
                 # Set to quit splash screen a little after subprocess is ran
@@ -434,7 +435,76 @@ class Worker(QtCore.QThread):
                 pass
             finally:
                 quitThread.join()
+            '''
+            ### Replaced above commented code with below code unitl ###
+            # No option of choosing demo, running the viewer directly
+            try:
+                # Set to quit splash screen a little after subprocess is ran
+                def removeSplash():
+                    time.sleep(2.5)
+                    self.signalCloseSplash.emit()
+                quitThread = threading.Thread(target=removeSplash)
+                quitThread.start()
 
+                print("Launching DepthAI Viewer.")
+                # Check if depthai-viewer is installed
+                is_viewer_installed_cmd = [sys.executable, "-m", "pip", "show", "depthai-viewer"]
+                viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if viewer_available_ret.returncode != 0:
+                    splashScreen.updateSplashMessage('Installing DepthAI Viewer ...')
+                    splashScreen.enableHeartbeat(True)
+                    print("DepthAI Viewer not installed, installing...")
+                    # DepthAI Viewer isn't installed, install it
+                    # First upgrade pip
+                    subprocess.run([sys.executable, "-m", "pip", "install", "-U", "pip"], check=True)
+                    # Install depthai-viewer - Don't check, it can error out because of dependency conflicts but still install successfully
+                    subprocess.run([sys.executable, "-m", "pip", "install", "depthai-viewer"]) 
+                    # Check again if depthai-viewer is installed
+                    viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    if viewer_available_ret.returncode != 0:
+                        raise RuntimeError("DepthAI Viewer failed to install.")
+                splashScreen.updateSplashMessage('')
+                splashScreen.enableHeartbeat(False)
+
+                viewer_version = version.parse(viewer_available_ret.stdout.decode().splitlines()[1].split(" ")[1].strip())
+                print(f"Installed DepthAI Viewer version: {viewer_version}")
+                # Get latest depthai-viewer version
+                latest_ret = subprocess.run([sys.executable, "-m", "pip", "index", "versions", "depthai-viewer"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if latest_ret.returncode != 0:
+                    raise RuntimeError("Couldn't get latest depthai-viewer version.")
+                latest_viewer_version = version.parse(latest_ret.stdout.decode().split("LATEST:")[1].strip())
+                print(f"Latest DepthAI Viewer version: {latest_viewer_version}")
+                if latest_viewer_version > viewer_version:
+                    # Update is available, ask user if they want to update
+                    title = 'DepthAI Viewer update available'
+                    message = f'Version {str(latest_viewer_version)} of depthai-viewer is available, current version {str(viewer_version)}. Would you like to update?'
+                    self.signalUpdateQuestion.emit(title, message)
+                    if self.shouldUpdate:
+                        splashScreen.updateSplashMessage(f'Updating DepthAI Viewer to version {latest_viewer_version} ...')
+                        splashScreen.enableHeartbeat(True)
+                        # Update depthai-viewer
+                        subprocess.run([sys.executable, "-m", "pip", "install", "-U", "depthai-viewer"])
+                        # Test again to see if viewer is installed and updated
+                        viewer_available_ret = subprocess.run(is_viewer_installed_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        if viewer_available_ret.returncode != 0:
+                            raise RuntimeError(f"Installing version {latest_viewer_version} failed.")
+                        viewer_version = version.parse(viewer_available_ret.stdout.decode().splitlines()[1].split(" ")[1].strip())
+                        if latest_viewer_version > viewer_version:
+                            raise RuntimeError("DepthAI Viewer failed to update.")
+                        splashScreen.updateSplashMessage('')
+                        splashScreen.enableHeartbeat(False)
+
+                # All ready, run the depthai-viewer as a seperate process
+                ret = subprocess.run([sys.executable, "-m", "depthai_viewer"])
+            except Exception as ex:
+                print(f'Exception: {ex}')
+                title = 'Exception'
+                message = f'Unable to start the DepthAI Viewer.\nException: {ex}'
+                print(f'Message Box ({title}): {message}')
+                self.sigCritical.emit(title, message)
+            finally:
+                quitThread.join()
+            ###
         except Exception as ex:
             # Catch all for any kind of an error
             print(f'Unknown error occured ({ex}), exiting...')
