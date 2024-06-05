@@ -60,13 +60,13 @@ class ChooseAppDialog(QtWidgets.QDialog):
         file_path = Path(os.path.abspath(os.path.dirname(__file__)))
         demo_image_path = file_path / "demo_card.png"
         viewer_image_path = file_path / "viewer_card.png"
-        demo_card = CardWidget("DepthAI Demo", demo_image_path)
+        #demo_card = CardWidget("DepthAI Demo", demo_image_path)
         viewer_card = CardWidget("DepthAI Viewer", viewer_image_path)
-        hbox.addWidget(demo_card)
+        #hbox.addWidget(demo_card)
         hbox.addWidget(viewer_card)
         self.setLayout(hbox)
 
-        demo_card.clicked.connect(self.runDemo)
+        #demo_card.clicked.connect(self.runDemo)
         viewer_card.clicked.connect(self.runViewer)
 
         # Get screen dimensions
