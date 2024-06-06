@@ -1,6 +1,7 @@
 import itertools
 import warnings
 from collections import defaultdict
+from functools import cached_property
 from typing import List, Optional, Dict
 
 import depthai as dai
@@ -18,21 +19,31 @@ try:
 except ImportError:
     cv2 = None
 
+IR_FLOOD_LIMIT = 765
+IR_FLOOD_STEP = IR_FLOOD_LIMIT / 4
+IR_DOT_LIMIT = 1200
+IR_DOT_STEP = IR_DOT_LIMIT / 4
+
 
 class XoutDisparity(XoutSeqSync, XoutFrames):
     def __init__(self,
                  device: dai.Device,
                  frames: StreamXout,
                  disp_factor: float,
-                 mono_frames: Optional[StreamXout],
+                 aligned_frame: Optional[StreamXout],
+                 fourcc: str = None,
                  colorize: StereoColor = None,
                  colormap: int = None,
                  wls_config: dict = None,
-                 ir_settings: dict = None):
-        self.mono_frames = mono_frames
+                 ir_settings: dict = None,
+                 confidence_map: StreamXout = None):
+        self.aligned_frame = aligned_frame
         self.name = 'Disparity'
         self.multiplier = disp_factor
         self.device = device
+
+        self.confidence_map = confidence_map
+        self.fig, self.axes = None, None  # for depth score visualization
 
         self.colorize = colorize
         self.colormap = colormap
@@ -47,7 +58,8 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
         self._converged_metric_value = None
 
         # Values that will be tested for function approximation
-        self._candidate_pairs = list(itertools.product(np.arange(0, 1201, 1200 / 4), np.arange(0, 1501, 1500 / 4)))
+        self._candidate_pairs = list(itertools.product(np.arange(0, IR_DOT_LIMIT + 1, IR_DOT_STEP),
+                                                       np.arange(0, IR_FLOOD_LIMIT + 1, IR_FLOOD_STEP)))
         self._neighbourhood_pairs = []
         self._candidate_idx, self._neighbour_idx = 0, 0
         self._X, self._y = [], []
@@ -75,21 +87,26 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
                 )
                 self.use_wls_filter = False
 
-        XoutFrames.__init__(self, frames=frames)
-        XoutSeqSync.__init__(self, [frames, mono_frames])
+        XoutFrames.__init__(self, frames=frames, fourcc=fourcc)
+        XoutSeqSync.__init__(self, self.xstreams())
 
     def on_callback(self, packet) -> None:
         if self.ir_settings['auto_mode']:
             self._auto_ir_search(packet.msg.getFrame())
 
     def xstreams(self) -> List[StreamXout]:
-        if self.mono_frames is None:
-            return [self.frames]
-        return [self.frames, self.mono_frames]
+        streams = [self.frames]
+        if self.aligned_frame is not None:
+            streams.append(self.aligned_frame)
+        if self.confidence_map is not None:
+            streams.append(self.confidence_map)
+
+        return streams
 
     def package(self, msgs: Dict) -> DisparityPacket:
         img_frame = msgs[self.frames.name]
-        mono_frame = msgs[self.mono_frames.name] if self.mono_frames else None
+        aligned_frame = msgs[self.aligned_frame.name] if self.aligned_frame else None
+        confidence_map = msgs[self.confidence_map.name] if self.confidence_map else None
         # TODO: refactor the mess below
         packet = DisparityPacket(
             self.get_packet_name(),
@@ -98,7 +115,8 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
             disparity_map=None,
             colorize=self.colorize,
             colormap=self.colormap,
-            mono_frame=mono_frame,
+            confidence_map=confidence_map,
+            aligned_frame=aligned_frame,
         )
         packet._get_codec = self.get_codec
 
@@ -109,10 +127,10 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
             if disparity_frame is None:
                 return None
 
-        if mono_frame and self.use_wls_filter:
+        if aligned_frame and self.use_wls_filter:
             # Perform WLS filtering
             # If we have wls enabled, it means CV2 is installed
-            disparity_frame = self.wls_filter.filter(disparity_frame, mono_frame.getCvFrame())
+            disparity_frame = self.wls_filter.filter(disparity_frame, aligned_frame.getCvFrame())
 
         packet.disparity_map = disparity_frame
 
@@ -184,8 +202,10 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
             self._auto_ir_converged = False
             self._checking_neighbourhood = True
             self._neighbourhood_pairs = np.unique([
-                [np.clip(self._dot_projector_brightness + i, 0, 1200), np.clip(self._flood_brightness + j, 0, 1500)]
-                for i, j in itertools.product([-300, 300], [-375, 375])
+                [np.clip(self._dot_projector_brightness + i, 0, IR_DOT_LIMIT),
+                 np.clip(self._flood_brightness + j, 0, IR_FLOOD_LIMIT)]
+                for i, j in itertools.product([-IR_DOT_STEP / 2, IR_DOT_STEP / 2],
+                                              [-IR_FLOOD_STEP / 2, IR_FLOOD_STEP / 2])
             ], axis=0)
             self._neighbour_idx = 0
 

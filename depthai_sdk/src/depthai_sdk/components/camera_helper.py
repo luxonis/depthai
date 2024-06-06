@@ -221,6 +221,7 @@ def getClosesResolution(sensor: dai.CameraFeatures,
     desired, i = (width, 0) if width is not None else (height, 1)
 
     resolutions = [get_sensor_resolution(type, conf.width, conf.height) for conf in sensor.configs if conf.type == type]
+    resolutions = [res for res in resolutions if res is not None]
 
     for (res, size) in resolutions:
         err = abs(size[i] - desired)

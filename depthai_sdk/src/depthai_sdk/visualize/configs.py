@@ -92,6 +92,7 @@ class StereoConfig:
     wls_filter: bool = False
     wls_lambda: float = 8000
     wls_sigma: float = 1.5
+    depth_score: bool = False
 
 
 @dataclass

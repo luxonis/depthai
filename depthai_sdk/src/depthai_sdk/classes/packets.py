@@ -119,17 +119,25 @@ class DisparityPacket(FramePacket):
                  disparity_map: Optional[np.ndarray] = None,
                  colorize: StereoColor = None,
                  colormap: int = None,
-                 mono_frame: Optional[dai.ImgFrame] = None,
+                 aligned_frame: Optional[dai.ImgFrame] = None,
+                 confidence_map: Optional[np.ndarray] = None
                  ):
         """
         disparity_map might be filtered, eg. if WLS filter is enabled
         """
         super().__init__(name=name, msg=img)
-        self.mono_frame = mono_frame
+        self.aligned_frame = aligned_frame
         self.disparity_map = disparity_map
         self.multiplier = multiplier
         self.colorize = colorize
         self.colormap = colormap
+
+        self.confidence_map = confidence_map
+        self.depth_score = None
+        if self.confidence_map:
+            values = 1 - (self.confidence_map.getData() / 255)
+            values_no_outliers = values[np.logical_and(values > 0.0, values < 1.0)]
+            self.depth_score = np.mean(values_no_outliers)
 
     def get_disparity(self) -> np.ndarray:
         if self.disparity_map is not None:
@@ -142,9 +150,9 @@ class DisparityPacket(FramePacket):
         colorized_disp = frame * self.multiplier
 
         try:
-            mono_frame = self.mono_frame.getCvFrame()
+            aligned_frame = self.aligned_frame.getCvFrame()
         except AttributeError:
-            mono_frame = None
+            aligned_frame = None
 
         stereo_config = visualizer.config.stereo
 
@@ -155,7 +163,7 @@ class DisparityPacket(FramePacket):
             colormap = stereo_config.colormap
             colormap[0] = [0, 0, 0]  # Invalidate pixels 0 to be black
 
-        if mono_frame is not None and colorized_disp.ndim == 2 and mono_frame.ndim == 3:
+        if aligned_frame is not None and colorized_disp.ndim == 2 and aligned_frame.ndim == 3:
             colorized_disp = colorized_disp[..., np.newaxis]
 
         if colorize == StereoColor.GRAY:
@@ -164,7 +172,7 @@ class DisparityPacket(FramePacket):
             colorized_disp = cv2.applyColorMap(colorized_disp.astype(np.uint8), colormap)
         elif colorize == StereoColor.RGBD:
             colorized_disp = cv2.applyColorMap(
-                (colorized_disp + mono_frame * 0.5).astype(np.uint8), colormap
+                (colorized_disp + aligned_frame * 0.5).astype(np.uint8), colormap
             )
         return colorized_disp
 
@@ -182,8 +190,9 @@ class DisparityDepthPacket(DisparityPacket):
                  img_frame: dai.ImgFrame,
                  colorize: StereoColor = None,
                  colormap: int = None,
-                 mono_frame: Optional[dai.ImgFrame] = None,
+                 aligned_frame: Optional[dai.ImgFrame] = None,
                  disp_scale_factor=255 / 95,
+                 confidence_map=None
                  ):
         # DepthPacket.__init__(self, name=name, msg=img_frame)
         super().__init__(
@@ -193,7 +202,8 @@ class DisparityDepthPacket(DisparityPacket):
             multiplier=255 / 95,
             colorize=colorize,
             colormap=colormap,
-            mono_frame=mono_frame,
+            aligned_frame=aligned_frame,
+            confidence_map=confidence_map
         )
         self.disp_scale_factor = disp_scale_factor
 

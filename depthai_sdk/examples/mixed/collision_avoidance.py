@@ -1,6 +1,7 @@
 from depthai_sdk import OakCamera
 from depthai_sdk.visualize.configs import StereoColor
 from depthai_sdk.classes.packets import DisparityDepthPacket
+from depthai_sdk.visualize.visualizers.opencv_visualizer import OpenCvVisualizer
 import math
 import depthai as dai
 import cv2
@@ -10,38 +11,9 @@ WARNING = 1000 # 1m, orange
 CRITICAL = 500 # 50cm, red
 
 slc_data = []
+fontType = cv2.FONT_HERSHEY_TRIPLEX
 
-def cb(packet: DisparityDepthPacket):
-    global slc_data
-    fontType = cv2.FONT_HERSHEY_TRIPLEX
-
-    depthFrameColor = packet.visualizer.draw(packet.frame)
-
-    for depthData in slc_data:
-        roi = depthData.config.roi
-        roi = roi.denormalize(width=depthFrameColor.shape[1], height=depthFrameColor.shape[0])
-
-        xmin = int(roi.topLeft().x)
-        ymin = int(roi.topLeft().y)
-        xmax = int(roi.bottomRight().x)
-        ymax = int(roi.bottomRight().y)
-
-        coords = depthData.spatialCoordinates
-        distance = math.sqrt(coords.x ** 2 + coords.y ** 2 + coords.z ** 2)
-
-        if distance == 0: # Invalid
-            continue
-
-        if distance < CRITICAL:
-            color = (0, 0, 255)
-            cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), color, thickness=4)
-            cv2.putText(depthFrameColor, "{:.1f}m".format(distance/1000), (xmin + 10, ymin + 20), fontType, 0.5, color)
-        elif distance < WARNING:
-            color = (0, 140, 255)
-            cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), color, thickness=2)
-            cv2.putText(depthFrameColor, "{:.1f}m".format(distance/1000), (xmin + 10, ymin + 20), fontType, 0.5, color)
-
-    cv2.imshow('0_depth', depthFrameColor)
+    
 
 with OakCamera() as oak:
     stereo = oak.create_stereo('720p')
@@ -54,7 +26,6 @@ with OakCamera() as oak:
     stereo.config_postprocessing(colorize=StereoColor.RGBD, colormap=cv2.COLORMAP_BONE)
     stereo.config_stereo(confidence=50, lr_check=True, extended=True)
 
-    oak.visualize([stereo], fps=True, callback=cb)
 
     slc = oak.pipeline.create(dai.node.SpatialLocationCalculator)
     for x in range(15):
@@ -73,10 +44,41 @@ with OakCamera() as oak:
     slc_out.setStreamName('slc')
     slc.out.link(slc_out.input)
 
+    stereoQ = oak.queue(stereo.out.depth).get_queue()
+
     oak.start() # Start the pipeline (upload it to the OAK)
 
-    q = oak.device.getOutputQueue('slc') # Create output queue after calling start()
+    slcQ = oak.device.getOutputQueue('slc') # Create output queue after calling start()
+    vis = OpenCvVisualizer()
     while oak.running():
-        if q.has():
-            slc_data = q.get().getSpatialLocations()
         oak.poll()
+        packet: DisparityDepthPacket = stereoQ.get()
+        slc_data = slcQ.get().getSpatialLocations()
+
+        depthFrameColor = packet.get_colorized_frame(vis)
+
+        for depthData in slc_data:
+            roi = depthData.config.roi
+            roi = roi.denormalize(width=depthFrameColor.shape[1], height=depthFrameColor.shape[0])
+
+            xmin = int(roi.topLeft().x)
+            ymin = int(roi.topLeft().y)
+            xmax = int(roi.bottomRight().x)
+            ymax = int(roi.bottomRight().y)
+
+            coords = depthData.spatialCoordinates
+            distance = math.sqrt(coords.x ** 2 + coords.y ** 2 + coords.z ** 2)
+
+            if distance == 0: # Invalid
+                continue
+
+            if distance < CRITICAL:
+                color = (0, 0, 255)
+                cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), color, thickness=4)
+                cv2.putText(depthFrameColor, "{:.1f}m".format(distance/1000), (xmin + 10, ymin + 20), fontType, 0.5, color)
+            elif distance < WARNING:
+                color = (0, 140, 255)
+                cv2.rectangle(depthFrameColor, (xmin, ymin), (xmax, ymax), color, thickness=2)
+                cv2.putText(depthFrameColor, "{:.1f}m".format(distance/1000), (xmin + 10, ymin + 20), fontType, 0.5, color)
+
+        cv2.imshow('Frame', depthFrameColor)

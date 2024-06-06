@@ -103,6 +103,10 @@ class StereoComponent(Component):
             'sigma': None
         }
 
+        # Output config
+        self.enable_depth_score = False
+        self.validate_calibration = False
+
         self._undistortion_offset: Optional[int] = None
 
         if not self._replay:
@@ -320,6 +324,23 @@ class StereoComponent(Component):
             'sigma': wls_sigma,
         }
 
+    def config_output(self,
+                      depth_score: bool = None,
+                      validate_calibration: bool = None
+                      ) -> None:
+        """
+        Configures output streams.
+
+        Args:
+            depth_score: True to include depth score in the output packets.
+            validate_calibration: Check if the calibration is valid during the runtime (done on-host) and warn
+            the user if it's not. This can be used to detect if the calibration is invalid (e.g. due to temperature drift).
+        """
+        if depth_score is not None:
+            self.enable_depth_score = depth_score
+        if validate_calibration is not None:
+            self.validate_calibration = validate_calibration
+
     def set_colormap(self, colormap: dai.Colormap):
         """
         Sets the colormap to use for colorizing the disparity map. Used for on-device postprocessing.
@@ -429,14 +450,20 @@ class StereoComponent(Component):
     Available outputs (to the host) of this component
     """
 
-    def _mono_frames(self):
+    def _aligned_frames(self):
         """
-        Create mono frames output if WLS filter is enabled or colorize is set to RGBD
+        Create aligned frames output if WLS filter is enabled or colorize is set to RGBD
         """
-        mono_frames = None
+        aligned_frame = None
         if self.wls_config['enabled'] or self._colorize == StereoColor.RGBD:
-            mono_frames = StreamXout(self._right_stream)
-        return mono_frames
+            aligned_frame = StreamXout(self._right_stream)
+        return aligned_frame
+
+    def _try_get_confidence_map(self):
+        confidence_map = None
+        if self.enable_depth_score:
+            confidence_map = StreamXout(self.node.confidenceMap, name='depth_score')
+        return confidence_map
 
     class Out:
         class DepthOut(ComponentOutput):
@@ -445,10 +472,12 @@ class StereoComponent(Component):
                     device=device,
                     frames=StreamXout(self._comp.depth),
                     dispScaleFactor=depth_to_disp_factor(device, self._comp.node),
-                    mono_frames=self._comp._mono_frames(),
+                    aligned_frame=self._comp._aligned_frames(),
                     colorize=self._comp._colorize,
                     colormap=self._comp._postprocess_colormap,
-                    ir_settings=self._comp.ir_settings
+                    ir_settings=self._comp.ir_settings,
+                    confidence_map=self._comp._try_get_confidence_map()
+
                 ).set_comp_out(self)
 
         class DisparityOut(ComponentOutput):
@@ -458,11 +487,13 @@ class StereoComponent(Component):
                     frames=StreamXout(self._comp.encoder.bitstream) if fourcc else
                     StreamXout(self._comp.disparity),
                     disp_factor=255.0 / self._comp.node.getMaxDisparity(),
-                    mono_frames=self._comp._mono_frames(),
+                    aligned_frame=self._comp._aligned_frames(),
                     colorize=self._comp._colorize,
+                    fourcc=fourcc,
                     colormap=self._comp._postprocess_colormap,
                     wls_config=self._comp.wls_config,
                     ir_settings=self._comp.ir_settings,
+                    confidence_map=self._comp._try_get_confidence_map()
                 ).set_comp_out(self)
 
         class RectifiedLeftOut(ComponentOutput):
