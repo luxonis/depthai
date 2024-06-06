@@ -1,4 +1,3 @@
-import logging
 import time
 from datetime import timedelta, datetime
 from pathlib import Path
@@ -9,6 +8,7 @@ import depthai as dai
 
 from depthai_sdk.classes import FramePacket
 from depthai_sdk.components import Component
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.recorders.video_recorder import VideoRecorder
 from depthai_sdk.trigger_action.actions.abstract_action import Action
 
@@ -91,7 +91,7 @@ class RecordAction(Action):
                     time.sleep(0.01)
 
             # Close files
-            logging.debug(f'Saved to {str(self.path / subfolder)}')
+            LOGGER.debug(f'Saved to {str(self.path / subfolder)}')
             self.recorder.close_files()
 
             # Call on_finish_callback if it is specified
@@ -146,7 +146,7 @@ class RecordAction(Action):
 
     def setup(self, device: dai.Device, xouts: List['XoutFrames']):
         self.stream_names = [xout.name for xout in xouts]  # e.g., [color_video, color_bitstream]
-        logging.debug(f'RecordAction: stream_names = {self.stream_names}')
+        LOGGER.debug(f'RecordAction: stream_names = {self.stream_names}')
         self.recorder.update(self.path, device, xouts)
         self._run_thread()
 

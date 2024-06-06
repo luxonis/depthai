@@ -1,10 +1,10 @@
-import logging
 from typing import Optional
 
 import cv2
 import numpy as np
 
 from depthai_sdk.classes.packets import DisparityPacket, FramePacket
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.visualize.configs import TextPosition
 from depthai_sdk.visualize.objects import (
     VisBoundingBox,
@@ -86,7 +86,7 @@ class OpenCvVisualizer(Visualizer):
         elif isinstance(packet, FramePacket):
             frame = packet.decode()
         else:
-            logging.warning(f'Unknown packet type: {type(packet)}')
+            LOGGER.warning(f'Unknown packet type: {type(packet)}')
             return
 
         if frame is not None:

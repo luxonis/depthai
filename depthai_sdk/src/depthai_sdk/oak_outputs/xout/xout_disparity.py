@@ -1,5 +1,4 @@
 import itertools
-import logging
 import warnings
 from collections import defaultdict
 from functools import cached_property
@@ -9,6 +8,7 @@ import depthai as dai
 import numpy as np
 
 from depthai_sdk.classes.packets import DisparityPacket
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_frames import XoutFrames
 from depthai_sdk.oak_outputs.xout.xout_seq_sync import XoutSeqSync
@@ -68,7 +68,7 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
         self.use_wls_filter = wls_config['enabled'] if wls_config else False
         if self.use_wls_filter:
             wls_level = wls_config['level']
-            logging.debug(
+            LOGGER.debug(
                 f'Using WLS level: {wls_level.name} (lambda: {wls_level.value[0]}, sigma: {wls_level.value[1]})'
             )
             self.wls_lambda = wls_level.value[0] or wls_config['lambda']
@@ -169,7 +169,7 @@ class XoutDisparity(XoutSeqSync, XoutFrames):
             self._auto_ir_converged = True
             self._checking_neighbourhood = False
 
-            logging.debug(f'Auto IR converged: dot projector - {self._dot_projector_brightness}mA, '
+            LOGGER.debug(f'Auto IR converged: dot projector - {self._dot_projector_brightness}mA, '
                           f'flood - {self._flood_brightness}mA')
         else:
             self._dot_projector_brightness, self._flood_brightness = candidate_pairs[candidate_idx]

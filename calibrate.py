@@ -164,6 +164,8 @@ def parse_args():
                         help="Number of pictures taken.")
     parser.add_argument('-ebp', '--enablePolygonsDisplay', default=False, action="store_true",
                         help="Enable the display of polynoms.")
+    parser.add_argument('-dbg', '--debugProcessingMode', default=False, action="store_true",
+                        help="Enable processing of images without using the camera.")
     options = parser.parse_args()
     # Set some extra defaults, `-brd` would override them
     if options.defaultBoard is not None:
@@ -185,7 +187,10 @@ def parse_args():
         raise argparse.ArgumentTypeError("-s / --squareSizeCm needs to be greater than 2.2 cm")
     if options.traceLevel == 1:
         print(f"Charuco board selected is: board_name = {board_name}, numX = {numX}, numY = {numY}, squareSize {options.squareSizeCm} cm, markerSize {options.markerSizeCm} cm")
-        
+    if options.debugProcessingMode:
+        options.mode = "process"
+        if options.board is None:
+            raise argparse.ArgumentError(options.board, "Board name (-brd) of camera must be specified in case of using debug mode (-dbg).")
     return options
 
 class HostSync:
@@ -350,31 +355,33 @@ class Main:
         self.output_scale_factor = self.args.outputScaleFactor
         self.aruco_dictionary = cv2.aruco.Dictionary_get(
             cv2.aruco.DICT_4X4_1000)
-        self.device = dai.Device()
         self.enablePolygonsDisplay = self.args.enablePolygonsDisplay
         self.board_name = None
-        calibData = self.device.readCalibration()
-        eeprom = calibData.getEepromData()
+        if not self.args.debugProcessingMode:
+            self.device = dai.Device()
+            cameraProperties = self.device.getConnectedCameraFeatures()
+            calibData = self.device.readCalibration()
+            eeprom = calibData.getEepromData()
         #TODO Change only in getDeviceName in next revision.
         if self.args.board:
             self.board_name = self.args.board
-            board_path = Path(self.args.board)
+            board_path = Path(Path(__file__).parent /self.args.board)
             if not board_path.exists():
                 board_path = (Path(__file__).parent / 'resources/depthai_boards/boards' / self.args.board.upper()).with_suffix('.json').resolve()
                 if not board_path.exists():
                     raise ValueError(
-                        'Board config not found: {}'.format(board_path))
+                        'Board config not found: {}'.format(Path(Path(__file__).parent /self.args.board)))
             with open(board_path) as fp:
                 self.board_config = json.load(fp)
                 self.board_config = self.board_config['board_config']
                 self.board_config_backup = self.board_config
-        else:
+        elif not self.args.debugProcessingMode:
             try: 
                 detection = self.device.getDeviceName()
                 print(f"Device name: {detection}")
                 detection = detection.split("-")
             except:
-                self.cameraProperties = self.device.getConnectedCameraFeatures()
+                cameraProperties = self.device.getConnectedCameraFeatures()
                 calibData = self.device.readCalibration()
                 eeprom = calibData.getEepromData()
                 eeprom.productName = eeprom.productName.replace(" ", "-").upper()
@@ -393,7 +400,7 @@ class Main:
             if "9782" in detection:
                 detection.remove("9782")
             self.board_name = '-'.join(detection)
-            board_path = Path(self.board_name)
+            board_path = Path(Path(__file__).parent /self.board_name)
             if self.traceLevel == 1:
                 print(f"Board path specified as {board_path}")
             if not board_path.exists():
@@ -430,23 +437,18 @@ class Main:
         for cam_id in self.board_config['cameras']:
             name = self.board_config['cameras'][cam_id]['name']
             self.coverageImages[name] = None
-
-        if (self._set_camera_features()):
-            print("Camera features set using board config.")
-            print(f"self.cameraProperties: {self.cameraProperties}")
-        else:
-            self.cameraProperties = self.device.getConnectedCameraFeatures()
-
-        for properties in self.cameraProperties:
-            for in_cam in self.board_config['cameras'].keys():
-                cam_info = self.board_config['cameras'][in_cam]
-                if cam_info["name"] not in self.args.disableCamera:
-                    if properties.socket == stringToCam[in_cam]:
-                        self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
-                        print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
-                        self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
-                        # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
-                        break
+        if not self.args.debugProcessingMode:
+            cameraProperties = self.device.getConnectedCameraFeatures()
+            for properties in cameraProperties:
+                for in_cam in self.board_config['cameras'].keys():
+                    cam_info = self.board_config['cameras'][in_cam]
+                    if cam_info["name"] not in self.args.disableCamera:
+                        if properties.socket == stringToCam[in_cam]:
+                            self.board_config['cameras'][in_cam]['sensorName'] = properties.sensorName
+                            print('Cam: {} and focus: {}'.format(cam_info['name'], properties.hasAutofocus))
+                            self.board_config['cameras'][in_cam]['hasAutofocus'] = properties.hasAutofocus
+                            # self.auto_checkbox_dict[cam_info['name']  + '-Camera-connected'].check()
+                            break
 
         self.charuco_board = cv2.aruco.CharucoBoard_create(
                             self.args.squaresX, self.args.squaresY,
@@ -458,39 +460,6 @@ class Main:
     def mouse_event_callback(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.mouseTrigger = True
-
-    def _set_camera_features(self):
-        """
-        Create mock camera properties using manually specified board config
-        """
-
-        self.cameraProperties = self.device.getConnectedCameraFeatures()
-
-        for cam_id in self.board_config['cameras']:
-            try: 
-                sensor_model = self.board_config['cameras'][cam_id]["model"]
-                config_type = self.board_config['cameras'][cam_id]["type"]
-            except KeyError:
-                print(f"Model not found for {cam_id}, skipping...")
-                return False
-            
-            if sensor_model in camToRgbRes:
-                supportedTypes = [dai.CameraSensorType.COLOR]
-            elif sensor_model in camToMonoRes:
-                supportedTypes = [dai.CameraSensorType.MONO]
-            else:
-                print(f"Model {sensor_model} not supported")
-                return False
-            
-            if supportedTypes[0].name != config_type.upper():
-                raise ValueError(f"Mismatch in camera type for {cam_id} with model {sensor_model} and type {config_type}, please fix the board config.")
-
-            for cam in self.cameraProperties:
-                if stringToCam[cam_id] == cam.socket:
-                    cam.sensorName = sensor_model
-                    cam.supportedTypes = supportedTypes
-                    
-        return True
 
     def startPipeline(self):
         pipeline = self.create_pipeline()
@@ -1006,7 +975,7 @@ class Main:
                                         self.args.cameraMode,
                                         self.args.rectifiedDisp) # Turn off enable disp rectify
 
-            if self.args.noInitCalibration:
+            if self.args.noInitCalibration or self.args.debugProcessingMode:
                 calibration_handler = dai.CalibrationHandler()
             else:
                 calibration_handler = self.device.readCalibration()
@@ -1019,7 +988,8 @@ class Main:
                         calibration_handler.setBoardInfo(str(self.device.getDeviceName()), str(self.args.revision))
             except Exception as e:
                 print('Device closed in exception..' )
-                self.device.close()
+                if not self.args.debugProcessingMode:
+                    self.device.close()
                 print(e)
                 print(traceback.format_exc())
                 raise SystemExit(1)
@@ -1104,7 +1074,7 @@ class Main:
                                     calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
             target_file.close()
 
-            if len(error_text) == 0:
+            if len(error_text) == 0 and not self.args.debugProcessingMode:
                 print('Flashing Calibration data into ')
                 # print(calib_dest_path)
 
@@ -1138,7 +1108,8 @@ class Main:
                         is_write_factory_sucessful = False
 
                 if is_write_succesful:
-                    self.device.close()
+                    if not self.args.debugProcessingMode:
+                        self.device.close()
                     text = "EEPROM written succesfully"
                     resImage = create_blank(900, 512, rgb_color=green)
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
@@ -1146,7 +1117,8 @@ class Main:
                     cv2.waitKey(0)
                     
                 else:
-                    self.device.close()
+                    if not self.args.debugProcessingMode:
+                        self.device.close()
                     text = "EEPROM write Failed!!"
                     resImage = create_blank(900, 512, rgb_color=red)
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
@@ -1155,7 +1127,8 @@ class Main:
                     # return (False, "EEPROM write Failed!!")
             
             else:
-                self.device.close()
+                if not self.args.debugProcessingMode:
+                    self.device.close()
                 print(error_text)
                 for text in error_text: 
                 # text = error_text[0]                
@@ -1164,7 +1137,8 @@ class Main:
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
         except Exception as e:
-            self.device.close()
+            if not self.args.debugProcessingMode:
+                self.device.close()
             print('Device closed in exception..' )
             print(e)
             print(traceback.format_exc())

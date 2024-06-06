@@ -1,4 +1,3 @@
-import logging
 import math
 from datetime import timedelta
 from typing import Dict, Optional, List, Union, Tuple
@@ -8,6 +7,7 @@ import numpy as np
 
 from depthai_sdk.classes import TrackerPacket
 from depthai_sdk.classes.packets import TrackingDetection
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.oak_outputs.xout.xout_base import StreamXout
 from depthai_sdk.oak_outputs.xout.xout_nn import XoutNnResults
 from depthai_sdk.tracking import KalmanFilter
@@ -213,6 +213,6 @@ class XoutTracker(XoutNnResults):
             fov = calib.getFov(calib.getStereoLeftCameraId())
             self.focal = (cam_info.width / 2) / (2. * math.tan(math.radians(fov / 2)))
         else:
-            logging.warning("Calibration data missing, using OAK-D defaults")
+            LOGGER.warning("Calibration data missing, using OAK-D defaults")
             self.baseline = 75
             self.focal = 440

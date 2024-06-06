@@ -1,9 +1,9 @@
-import logging
 import time
 import warnings
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union, Callable
 
+from depthai_sdk.logger import LOGGER
 from depthai_sdk import CV2_HAS_GUI_SUPPORT
 from depthai_sdk.types import Resolution
 from depthai_sdk.visualize.visualizer import Visualizer
@@ -128,7 +128,7 @@ class OakCamera:
         if replay is not None:
             self.replay = Replay(replay)
             self.replay.initPipeline(self.pipeline)
-            logging.info(f'Available streams from recording: {self.replay.getStreams()}')
+            LOGGER.info(f'Available streams from recording: {self.replay.getStreams()}')
         self._calibration = self._init_calibration()
 
     def camera(self,
@@ -465,7 +465,7 @@ class OakCamera:
         self.close()
 
     def close(self):
-        logging.info("Closing OAK camera")
+        LOGGER.info("Closing OAK camera")
         if self.replay:
             self.replay.close()
 
@@ -515,7 +515,7 @@ class OakCamera:
         # self._polling.append()
         if self._pipeine_graph is not None:
             self._pipeine_graph.create_graph(self.pipeline.serializeToJson()['pipeline'], self.device)
-            logging.info('Pipeline graph process started')
+            LOGGER.info('Pipeline graph process started')
 
         # Call on_pipeline_started() for each component
         for comp in self._components:
@@ -703,5 +703,5 @@ class OakCamera:
         else:
             calibration = self.device.readCalibration()
         if calibration is None:
-            logging.warning("No calibration data found on the device or in replay")
+            LOGGER.warning("No calibration data found on the device or in replay")
         return calibration

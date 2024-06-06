@@ -1,4 +1,4 @@
-import logging
+
 import os
 from abc import abstractmethod
 from queue import Queue, Empty
@@ -8,6 +8,7 @@ import depthai as dai
 
 from depthai_sdk.classes.packets import BasePacket
 from depthai_sdk.components.component import Component, ComponentOutput
+from depthai_sdk.logger import LOGGER
 from depthai_sdk.oak_outputs.fps import FPS
 from depthai_sdk.oak_outputs.syncing import TimestampSync
 from depthai_sdk.oak_outputs.xout.xout_base import XoutBase, ReplayStream
@@ -65,7 +66,7 @@ class BasePacketHandler:
         """
         if enable_sync:
             if len(self.outputs) < 2:
-                logging.error('Syncing requires at least 2 outputs! Skipping syncing.')
+                LOGGER.error('Syncing requires at least 2 outputs! Skipping syncing.')
                 return
             self.sync = TimestampSync(len(self.outputs), threshold_ms)
 
