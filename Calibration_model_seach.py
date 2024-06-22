@@ -41,7 +41,7 @@ def plot_histogram(ax, key, error):
     ax.plot(x,pdf_fitted,'r-', label = "Fit Log-Gauss: {:.2f} and {:.2f}".format(param[2], param[0]))
     ax.set_title(key)
     ax.legend()
-    ax.set_ylabel("Reprojection error[px]")
+    ax.set_xlabel("Reprojection error[px]")
     ax.grid()
     return mu, std
 
