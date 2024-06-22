@@ -80,7 +80,7 @@ class ParseKwargs(argparse.Action):
             key, value = value.split('=')
             getattr(namespace, self.dest)[key] = value
 
-def parse_args():
+def parse_args(args = None):
     epilog_text = '''
     Captures and processes images for disparity depth calibration, generating a `<device id>.json` file or `depthai_calib.json`
     that should be loaded when initializing depthai. By default, captures one image for each of the 8 calibration target poses.
@@ -170,7 +170,7 @@ def parse_args():
     parser.add_argument('-cr', '--useCharucos', default=False, action="store_true",
                         help="Enable processing of images with storing charucos for quicker processing stage.")
     parser.add_argument('-pccm', '--calib_per_ccm', nargs='*', action=ParseKwargs, required=False, default={} , help="Set manually per ccm calibration model as boards argument calib_model. Example -pccm rgb=perspective_TILTED left=perspective_DEFAULT")
-    options = parser.parse_args()
+    options = parser.parse_args(args)
     # Set some extra defaults, `-brd` would override them
     if options.defaultBoard is not None:
         try:
@@ -353,8 +353,8 @@ class Main:
     images_captured_polygon = 0
     images_captured = 0
 
-    def __init__(self):
-        self.args = parse_args()
+    def __init__(self, args = None):
+        self.args = parse_args(args)
         self.traceLevel= self.args.traceLevel
         self.output_scale_factor = self.args.outputScaleFactor
         self.charucos = {}
@@ -971,8 +971,7 @@ class Main:
 
     def calibrate(self):
         print("Starting image processing")
-        stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel, self.args.outputScaleFactor, self.args.disableCamera)
-        dest_path = str(Path('resources').absolute())
+        stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel, self.args.outputScaleFactor, self.args.disableCamera, distortion_model=self.args.calib_per_ccm)
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
             # stereo_calib = StereoCalibration()
@@ -1086,6 +1085,16 @@ class Main:
                                     calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
                                     calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
             target_file.close()
+            if self.args.calib_per_ccm is not None:
+                mx_serial_id = ""
+                for key in self.args.calib_per_ccm.keys():
+                    mx_serial_id += f"{key};{self.args.calib_per_ccm[key]}"
+                    mx_serial_id += "_"
+                date_time_string = datetime.now().strftime("_%m_%d_%y_%H_%M")
+                file_name = mx_serial_id + date_time_string
+                dest_path = self.args.saveCalibPath
+                calib_dest_path = dest_path + '/' + file_name + '.json'
+                calibration_handler.eepromToJsonFile(calib_dest_path)
 
             if len(error_text) == 0 and not self.args.debugProcessingMode:
                 print('Flashing Calibration data into ')
