@@ -21,7 +21,7 @@ def plot_reporjection(ax, display_corners, key, all_error):
     ax.set_xlabel('Width')
     ax.set_xlim([0,main.stereo_calib.width[key]])
     ax.set_ylim([0,main.stereo_calib.height[key]])
-    ax.legend()
+    #ax.legend()
     ax.set_ylabel('Height')
     ax.grid()
     return np.mean(all_error)
