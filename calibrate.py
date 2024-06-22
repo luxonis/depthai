@@ -971,11 +971,12 @@ class Main:
 
     def calibrate(self):
         print("Starting image processing")
-        stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel, self.args.outputScaleFactor, self.args.disableCamera, distortion_model=self.args.calib_per_ccm)
+        self.stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel, self.args.outputScaleFactor, self.args.disableCamera, distortion_model=self.args.calib_per_ccm)
+        
         # self.args.cameraMode = 'perspective' # hardcoded for now
         try:
             # stereo_calib = StereoCalibration()
-            status, result_config = stereo_calib.calibrate(
+            status, result_config = self.stereo_calib.calibrate(
                                         self.board_config,
                                         self.dataset_path,
                                         self.args.squareSizeCm,
@@ -1148,7 +1149,7 @@ class Main:
                     cv2.waitKey(0)
                     # return (False, "EEPROM write Failed!!")
             
-            else:
+            elif not self.args.debugProcessingMode:
                 if not self.args.debugProcessingMode:
                     self.device.close()
                 print(error_text)
