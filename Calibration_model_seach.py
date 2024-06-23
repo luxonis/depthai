@@ -47,7 +47,6 @@ def plot_histogram(ax, key, error):
     
     ax.plot(x, p, 'k', linewidth=2, label = "Fit Gauss: {:.2f} and {:.2f}".format(mu, std))
     param=sp.stats.lognorm.fit(error)
-    print(param)
     pdf_fitted = sp.stats.lognorm.pdf(x, param[0], loc=param[1], scale=param[2]) # fitted distribution
     ax.plot(x,pdf_fitted,'r-', label = "Fit Log-Gauss: {:.2f} and {:.2f}".format(param[2], param[0]))
     ax.set_title(key)
@@ -168,15 +167,21 @@ def depth_evaluation(calib, left_array, right_array):
                     ax = _ax_h[index-1]
                     ax.set_title(left_array[index-1])
                     error = frame.flatten()/1000
-                    ax.hist(error, bins = 100, range=[GT/100 - 0.15,GT/100 + 0.15], edgecolor = "Black")
+                    ax.hist(error, bins = 100, range=[GT/100 - 0.15,GT/100 + 0.15], edgecolor = "Black", density = True, normed=True)
                     xmin, xmax = ax.set_xlim()
                     ymin, ymax = ax.set_ylim()
                     x = np.linspace(xmin, xmax, len(error))
                     mu, std = norm.fit(error)
                     p = norm.pdf(x, mu, std)
-
                     ax.plot(x, p, 'k', linewidth=2, label = "Fit Gauss: {:.2f} and {:.2f}".format(mu, std))
+                    try:
+                        param=sp.stats.lognorm.fit(error)
+                        pdf_fitted = sp.stats.lognorm.pdf(x, param[0], loc=param[1], scale=param[2]) # fitted distribution
+                        ax.plot(x,pdf_fitted,'r-', label = "Fit Log-Gauss: {:.2f} and {:.2f}".format(param[2], param[0]))
+                    except:
+                        pass
                     ax.set_xlabel("Distance[m]")
+                    ax.legend()
                     ax.grid()
                     ax_m =_ax_m[index-1]
                     image = ax_m.imshow(frame/1000, vmin = GT/100 - 0.15, vmax = GT/100 + 0.15)
