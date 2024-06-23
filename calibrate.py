@@ -1094,8 +1094,8 @@ class Main:
                 date_time_string = datetime.now().strftime("_%m_%d_%y_%H_%M")
                 file_name = mx_serial_id + date_time_string
                 dest_path = self.args.saveCalibPath
-                calib_dest_path = dest_path + '/' + file_name + '.json'
-                calibration_handler.eepromToJsonFile(calib_dest_path)
+                self.calib_dest_path = dest_path + '/' + file_name + '.json'
+                calibration_handler.eepromToJsonFile(self.calib_dest_path)
 
             if len(error_text) == 0 and not self.args.debugProcessingMode:
                 print('Flashing Calibration data into ')
@@ -1108,8 +1108,8 @@ class Main:
                 mx_serial_id = self.device.getDeviceInfo().getMxId()
                 date_time_string = datetime.now().strftime("_%m_%d_%y_%H_%M")
                 file_name = mx_serial_id + date_time_string
-                calib_dest_path = dest_path + '/' + file_name + '.json'
-                calibration_handler.eepromToJsonFile(calib_dest_path)
+                self.calib_dest_path = dest_path + '/' + file_name + '.json'
+                calibration_handler.eepromToJsonFile(self.calib_dest_path)
                 if self.args.saveCalibPath:
                     Path(self.args.saveCalibPath).parent.mkdir(parents=True, exist_ok=True)
                     calibration_handler.eepromToJsonFile(self.args.saveCalibPath)
