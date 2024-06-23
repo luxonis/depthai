@@ -7,7 +7,18 @@ import matplotlib.colors as colors
 from scipy.stats import norm
 import scipy as sp
 import glob
+from math import pi
+import depthai as dai
+import numpy as np
+import cv2
 threshold = {"left": 1, "right": 1, "rgb": 1.5}
+
+def rail_steps(steps: int) -> float:
+    """
+        Convert rail steps to mm
+    """
+    return steps / ((400) / (18 * pi))
+
 def plot_reporjection(ax, display_corners, key, all_error):
     center_x, center_y = main.stereo_calib.width[key] / 2, main.stereo_calib.height[key] / 2
     distances = [distance((center_x, center_y), point) for point in np.array(display_corners)]
@@ -45,11 +56,149 @@ def plot_histogram(ax, key, error):
     ax.grid()
     return mu, std
 
-def plot_all():
+def depth_evaluation(calib, left_array, right_array):
+    device = dai.Device()
+    pipeline = dai.Pipeline()
+
+
+    ### NEED TO ADD JSON CALIBRATION YOU WANT ###
+    calib = dai.CalibrationHandler(calib)
+    pipeline.setCalibrationData(calib)
+
+    left_socket = dai.CameraBoardSocket.LEFT
+    right_socket = dai.CameraBoardSocket.RIGHT
+    monoLeft = pipeline.create(dai.node.MonoCamera)
+    monoRight = pipeline.create(dai.node.MonoCamera)
+    monoLeft.setBoardSocket(left_socket)
+    monoRight.setBoardSocket(right_socket)
+    monoLeft.setFps(5)
+    monoRight.setFps(5)
+    monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+    monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+
+    xin_left = pipeline.create(dai.node.XLinkIn)
+    xin_left.setStreamName("left")
+    xin_right = pipeline.create(dai.node.XLinkIn)
+    xin_right.setStreamName("right")
+
+    xin_left_out = xin_left.out
+    xin_right_out = xin_right.out
+
+    xoutDisparity = pipeline.create(dai.node.XLinkOut)
+    xoutDisparity.setStreamName("depth")
+    stereo = pipeline.create(dai.node.StereoDepth)
+
+    #stereo.initialConfig.setConfidenceThreshold(200)
+    stereo.initialConfig.setMedianFilter(dai.MedianFilter.MEDIAN_OFF)
+    stereo.setExtendedDisparity(True)
+    stereo.setSubpixel(True)
+    stereo.setLeftRightCheck(True)
+    stereo.enableDistortionCorrection(True)
+    xin_left_out.link(stereo.left)
+    xin_right_out.link(stereo.right)
+    stereo.depth.link(xoutDisparity.input)
+
+    def send_images(frames):
+        input_queues = {"left": device.getInputQueue("left"), "right": device.getInputQueue("right")}
+        ts = dai.Clock.now()
+        for name, image in dummie_image.items():
+            w, h = image.shape[1], image.shape[0]
+            frame = cv2.resize(image, (w, h), cv2.INTER_AREA)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            if name == "left":
+                number = int(1)
+                if not rectification:
+                    frame = cv2.remap(frame, leftMap.map_x, leftMap.map_y, cv2.INTER_LINEAR)
+            if name == "right":
+                number = int(2)
+                if not rectification:
+                    frame = cv2.remap(frame, rightMap.map_x, rightMap.map_y, cv2.INTER_LINEAR)
+            img = dai.ImgFrame()
+            img.setData(frame.reshape(h * w))
+            img.setTimestamp(ts)
+            img.setWidth(w)
+            img.setHeight(h)
+            img.setInstanceNum(number)
+            img.setType(dai.ImgFrame.Type.RAW8)
+            input_queues[name].send(img)
+    rect_display = True
+    if rect_display:
+        xoutRectifiedLeft = pipeline.create(dai.node.XLinkOut)
+        xoutRectifiedLeft.setStreamName("rectified_left")
+        stereo.rectifiedLeft.link(xoutRectifiedLeft.input)
+    if rect_display:
+        xoutRectifiedRight = pipeline.create(dai.node.XLinkOut)
+        xoutRectifiedRight.setStreamName("rectified_right")
+        stereo.rectifiedRight.link(xoutRectifiedRight.input)
+
+    rectification = True
+    if not rectification:
+        #### Make your own rectification as you wish ###
+        meshLeft = None
+        meshRight = None
+        leftMap = None
+        rightMap = None
+        stereo.loadMeshData(meshLeft, meshRight)
+        stereo.setRectification(False)
+
+    output_queues = [xoutDisparity.getStreamName(), "rectified_left", "rectified_right"]
+
+    device.startPipeline(pipeline)
+
+    ### NEED TO ADD IMAGES YOU WANT, HERE IS JUST DUMMY FRAME ###
+    destroy = False
+    index = 0
+    fig, axes = plt.subplots(nrows=3, ncols=2)
+    ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
+    _ax_h = ax1, ax3, ax5
+    _ax_m = ax2, ax4, ax6
+    fig.suptitle(left_array[index])
+    while True:
+        queues = {name: device.getOutputQueue(name, 4, False) for name in output_queues}
+        while True:
+            GT = rail_steps(float(left_array[index].split("_")[len(left_array[index].split("_")) - 1].split(".")[0])) - 30
+            dummie_image = {"left": cv2.imread(left_array[index]), "right": cv2.imread(right_array[index])}
+            send_images(dummie_image)
+            index += 1
+            frames = {name: queue.get().getCvFrame() for name, queue in queues.items()}
+            for name, frame in frames.items():
+                cv2.imshow(name, frame)
+                key = cv2.waitKey(1)
+                if name == "depth":
+                    ax = _ax_h[index-1]
+                    ax.set_title(left_array[index-1])
+                    error = frame.flatten()/1000
+                    ax.hist(error, bins = 100, range=[GT/100 - 0.15,GT/100 + 0.15], edgecolor = "Black")
+                    xmin, xmax = ax.set_xlim()
+                    ymin, ymax = ax.set_ylim()
+                    x = np.linspace(xmin, xmax, len(error))
+                    mu, std = norm.fit(error)
+                    p = norm.pdf(x, mu, std)
+
+                    ax.plot(x, p, 'k', linewidth=2, label = "Fit Gauss: {:.2f} and {:.2f}".format(mu, std))
+                    ax.set_xlabel("Distance[m]")
+                    ax.grid()
+                    ax_m =_ax_m[index-1]
+                    image = ax_m.imshow(frame/1000, vmin = GT/100 - 0.15, vmax = GT/100 + 0.15)
+                    fig.colorbar(image, label = "Distance [m]", ax=ax_m)
+                    if index == 3:
+                        destroy = True
+                if key == ord("q"):
+                    destroy = True
+                    break
+            if destroy:
+                break
+        if destroy:
+            break
+    device.close()
+
+def plot_all(title):
     fig, axes = plt.subplots(nrows=3, ncols=1)
+    fig.suptitle(title)
     ax1, ax2, ax3 = axes.flatten()
     ax_ = [ax1, ax2, ax3]
     fig_hist, axes_hist = plt.subplots(nrows=3, ncols=1)
+    fig_hist.suptitle(title)
     ax1_h, ax2_h, ax3_h = axes_hist.flatten()
     ax_hist = [ax1_h, ax2_h, ax3_h]
     index = 0
@@ -88,7 +237,7 @@ dynamic = static + ['-pccm', 'left=' + left_binary, 'right=' + right_binary, "rg
 main = Main(dynamic)
 main.run()
 
-plot_all()
+plot_all(left_binary)
 plt.show()
 
 
@@ -101,128 +250,6 @@ for file in left_files:
     if float(file.split("_")[2]) == 0.0 and float(file.split("_")[3]) == 0.0:
         right_array.append(file.replace("left", "right"))
         left_array.append(file)
-
-import depthai as dai
-import numpy as np
-import cv2
-device = dai.Device()
-pipeline = dai.Pipeline()
-
-
-### NEED TO ADD JSON CALIBRATION YOU WANT ###
-calib = dai.CalibrationHandler(main.calib_dest_path)
-pipeline.setCalibrationData(calib)
-
-left_socket = dai.CameraBoardSocket.LEFT
-right_socket = dai.CameraBoardSocket.RIGHT
-monoLeft = pipeline.create(dai.node.MonoCamera)
-monoRight = pipeline.create(dai.node.MonoCamera)
-monoLeft.setBoardSocket(left_socket)
-monoRight.setBoardSocket(right_socket)
-monoLeft.setFps(5)
-monoRight.setFps(5)
-monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
-monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
-
-xin_left = pipeline.create(dai.node.XLinkIn)
-xin_left.setStreamName("left")
-xin_right = pipeline.create(dai.node.XLinkIn)
-xin_right.setStreamName("right")
-
-xin_left_out = xin_left.out
-xin_right_out = xin_right.out
-
-xoutDisparity = pipeline.create(dai.node.XLinkOut)
-xoutDisparity.setStreamName("depth")
-stereo = pipeline.create(dai.node.StereoDepth)
-
-stereo.initialConfig.setConfidenceThreshold(200)
-stereo.initialConfig.setMedianFilter(dai.MedianFilter.MEDIAN_OFF)
-
-xin_left_out.link(stereo.left)
-xin_right_out.link(stereo.right)
-stereo.disparity.link(xoutDisparity.input)
-
-def send_images(frames):
-    input_queues = {"left": device.getInputQueue("left"), "right": device.getInputQueue("right")}
-    ts = dai.Clock.now()
-    for name, image in dummie_image.items():
-        w, h = image.shape[1], image.shape[0]
-        frame = cv2.resize(image, (w, h), cv2.INTER_AREA)
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        if name == "left":
-            number = int(1)
-            if not rectification:
-                frame = cv2.remap(frame, leftMap.map_x, leftMap.map_y, cv2.INTER_LINEAR)
-        if name == "right":
-            number = int(2)
-            if not rectification:
-                frame = cv2.remap(frame, rightMap.map_x, rightMap.map_y, cv2.INTER_LINEAR)
-        img = dai.ImgFrame()
-        img.setData(frame.reshape(h * w))
-        img.setTimestamp(ts)
-        img.setWidth(w)
-        img.setHeight(h)
-        img.setInstanceNum(number)
-        img.setType(dai.ImgFrame.Type.RAW8)
-        input_queues[name].send(img)
-rect_display = True
-if rect_display:
-    xoutRectifiedLeft = pipeline.create(dai.node.XLinkOut)
-    xoutRectifiedLeft.setStreamName("rectified_left")
-    stereo.rectifiedLeft.link(xoutRectifiedLeft.input)
-if rect_display:
-    xoutRectifiedRight = pipeline.create(dai.node.XLinkOut)
-    xoutRectifiedRight.setStreamName("rectified_right")
-    stereo.rectifiedRight.link(xoutRectifiedRight.input)
-
-rectification = True
-if not rectification:
-    #### Make your own rectification as you wish ###
-    meshLeft = None
-    meshRight = None
-    leftMap = None
-    rightMap = None
-    stereo.loadMeshData(meshLeft, meshRight)
-    stereo.setRectification(False)
-
-output_queues = [xoutDisparity.getStreamName(), "rectified_left", "rectified_right"]
-
-device.startPipeline(pipeline)
-
-### NEED TO ADD IMAGES YOU WANT, HERE IS JUST DUMMY FRAME ###
-destroy = False
-index = 0
-fig, axes = plt.subplots(nrows=3, ncols=2)
-ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
-_ax_h = ax1, ax3, ax5
-_ax_m = ax2, ax4, ax6
-while True:
-    queues = {name: device.getOutputQueue(name, 4, False) for name in output_queues}
-    while True:
-        #### LOAD ALL YOUR DUMMY FRAMES AS DICTIONARY ####
-        dummie_image = {"left": cv2.imread(left_array[index]), "right": cv2.imread(right_array[index])}
-        send_images(dummie_image)
-        index += 1
-        frames = {name: queue.get().getCvFrame() for name, queue in queues.items()}
-        for name, frame in frames.items():
-            cv2.imshow(name, frame)
-            key = cv2.waitKey(0)
-            if name == "depth":
-                ax = _ax_h[index-1]
-                ax.set_title(left_array[index-1])
-                ax.hist(frame.flatten()/100, bins = 100, range=[0.2,1.0], edgecolor = "Black")
-                ax.set_xlabel("Distance[m]")
-                ax.grid()
-                ax_m =_ax_m[index-1]
-                image = ax_m.imshow(frame/100, vmin = 0.2, vmax =1.0)
-                fig.colorbar(image, label = "Distance [m]", ax=ax_m)
-                if index == 3:
-                    plt.show()
-            if key == ord("q"):
-                destroy = True
-                break
-        if destroy:
-            break
-    if destroy:
-        break
+calib = main.calib_dest_path
+depth_evaluation(calib, left_array, right_array)
+plt.show()
