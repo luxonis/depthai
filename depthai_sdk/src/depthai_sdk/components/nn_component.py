@@ -551,7 +551,10 @@ class NNComponent(Component):
             self._change_resize_mode(self._ar_resize_mode)
 
         if conf_threshold is not None and self.is_detector():
-            self.node.setConfidenceThreshold(conf_threshold)
+            if 0 <= conf_threshold <= 1:
+                self.node.setConfidenceThreshold(conf_threshold)
+            else:
+                raise ValueError("Confidence threshold must be between 0 and 1!")
 
     def config_spatial(self,
                        bb_scale_factor: Optional[float] = None,

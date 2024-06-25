@@ -234,6 +234,15 @@ class PointcloudPacket(BasePacket):
     def get_timestamp(self) -> timedelta:
         return self.depth_map.getTimestampDevice()
 
+    def crop_points(self, bb: BoundingBox) -> np.ndarray:
+        """
+        Crop points to the bounding box
+
+        Returns: Cropped section of the point cloud
+        """
+        x1, y1, x2, y2 = bb.to_tuple(self.points.shape)
+        return self.points[y1:y2, x1:x2]
+
 
 class SpatialBbMappingPacket(DisparityDepthPacket):
     """
