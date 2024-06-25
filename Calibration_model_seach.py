@@ -11,6 +11,7 @@ from math import pi
 import depthai as dai
 import numpy as np
 import cv2
+from pathlib import Path
 threshold = {"left": 1, "right": 1, "rgb": 1.5}
 
 def rail_steps(steps: int) -> float:
@@ -19,7 +20,7 @@ def rail_steps(steps: int) -> float:
     """
     return steps / ((400) / (18 * pi))
 
-def plot_reporjection(ax, display_corners, key, all_error):
+def plot_reporjection(ax, display_corners, key, all_error, save):
     center_x, center_y = main.stereo_calib.width[key] / 2, main.stereo_calib.height[key] / 2
     distances = [distance((center_x, center_y), point) for point in np.array(display_corners)]
     max_distance = max(distances)
@@ -35,9 +36,10 @@ def plot_reporjection(ax, display_corners, key, all_error):
     #ax.legend()
     ax.set_ylabel('Height')
     ax.grid()
+    plt.tight_layout()
     return np.mean(all_error)
 
-def plot_histogram(ax, key, error):
+def plot_histogram(ax, key, error, save):
     ax.hist(error, range = [0,threshold[key]], bins = 100, edgecolor="Black", density = True)
     xmin, xmax = ax.set_xlim()
     ymin, ymax = ax.set_ylim()
@@ -45,17 +47,17 @@ def plot_histogram(ax, key, error):
     mu, std = norm.fit(error)
     p = norm.pdf(x, mu, std)
     
-    ax.plot(x, p, 'k', linewidth=2, label = "Fit Gauss: {:.2f} and {:.2f}".format(mu, std))
+    ax.plot(x, p, 'k', linewidth=2, label = "Fit Gauss: {:.4f} and {:.4f}".format(mu, std))
     param=sp.stats.lognorm.fit(error)
     pdf_fitted = sp.stats.lognorm.pdf(x, param[0], loc=param[1], scale=param[2]) # fitted distribution
-    ax.plot(x,pdf_fitted,'r-', label = "Fit Log-Gauss: {:.2f} and {:.2f}".format(param[2], param[0]))
+    ax.plot(x,pdf_fitted,'r-', label = "Fit Log-Gauss: {:.4f} and {:.4f}".format(param[2], param[0]))
     ax.set_title(key)
     ax.legend()
     ax.set_xlabel("Reprojection error[px]")
     ax.grid()
-    return mu, std
+    return mu, std, param
 
-def depth_evaluation(calib, left_array, right_array):
+def depth_evaluation(calib, left_array, right_array, depth_on_charucos):
     device = dai.Device()
     pipeline = dai.Pipeline()
 
@@ -147,10 +149,16 @@ def depth_evaluation(calib, left_array, right_array):
     ### NEED TO ADD IMAGES YOU WANT, HERE IS JUST DUMMY FRAME ###
     destroy = False
     index = 0
-    fig, axes = plt.subplots(nrows=3, ncols=2)
-    ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
-    _ax_h = ax1, ax3, ax5
-    _ax_m = ax2, ax4, ax6
+    if depth_on_charucos:
+        fig, axes = plt.subplots(nrows=3, ncols=2)
+        ax1, ax2, ax3, ax4, ax5, ax6 = axes.flatten()
+        _ax_h = ax1, ax3, ax5
+        _ax_m = ax2, ax4, ax6
+    else:
+        fig, axes = plt.subplots(nrows=1, ncols=2)
+        ax1, ax2 = axes.flatten()
+        _ax_h = ax1
+        _ax_m = ax2
     fig.suptitle(left_array[index])
     while True:
         queues = {name: device.getOutputQueue(name, 4, False) for name in output_queues}
@@ -167,17 +175,17 @@ def depth_evaluation(calib, left_array, right_array):
                     ax = _ax_h[index-1]
                     ax.set_title(left_array[index-1])
                     error = frame.flatten()/1000
-                    ax.hist(error, bins = 100, range=[GT/100 - 0.15,GT/100 + 0.15], edgecolor = "Black", density = True, normed=True)
+                    ax.hist(error, bins = 100, range=[GT/100 - 0.15,GT/100 + 0.15], edgecolor = "Black", density = True)
                     xmin, xmax = ax.set_xlim()
                     ymin, ymax = ax.set_ylim()
                     x = np.linspace(xmin, xmax, len(error))
                     mu, std = norm.fit(error)
                     p = norm.pdf(x, mu, std)
-                    ax.plot(x, p, 'k', linewidth=2, label = "Fit Gauss: {:.2f} and {:.2f}".format(mu, std))
+                    ax.plot(x, p, 'k', linewidth=2, label = "Fit Gauss: {:.4f} and {:.4f}".format(mu, std))
                     try:
                         param=sp.stats.lognorm.fit(error)
                         pdf_fitted = sp.stats.lognorm.pdf(x, param[0], loc=param[1], scale=param[2]) # fitted distribution
-                        ax.plot(x,pdf_fitted,'r-', label = "Fit Log-Gauss: {:.2f} and {:.2f}".format(param[2], param[0]))
+                        ax.plot(x,pdf_fitted,'r-', label = "Fit Log-Gauss: {:.4f} and {:.4f}".format(param[2], param[0]))
                     except:
                         pass
                     ax.set_xlabel("Distance[m]")
@@ -186,7 +194,9 @@ def depth_evaluation(calib, left_array, right_array):
                     ax_m =_ax_m[index-1]
                     image = ax_m.imshow(frame/1000, vmin = GT/100 - 0.15, vmax = GT/100 + 0.15)
                     fig.colorbar(image, label = "Distance [m]", ax=ax_m)
-                    if index == 3:
+                    if index == 3 and depth_on_charucos:
+                        destroy = True
+                    elif index == 1 and not depth_on_charucos:
                         destroy = True
                 if key == ord("q"):
                     destroy = True
@@ -197,12 +207,12 @@ def depth_evaluation(calib, left_array, right_array):
             break
     device.close()
 
-def plot_all(title):
-    fig, axes = plt.subplots(nrows=3, ncols=1)
+def plot_all(title, save, folder = str(pathlib.Path(__file__).resolve().parent)):
+    fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(7, 14))
     fig.suptitle(title)
     ax1, ax2, ax3 = axes.flatten()
     ax_ = [ax1, ax2, ax3]
-    fig_hist, axes_hist = plt.subplots(nrows=3, ncols=1)
+    fig_hist, axes_hist = plt.subplots(nrows=3, ncols=1, figsize=(9, 14))
     fig_hist.suptitle(title)
     ax1_h, ax2_h, ax3_h = axes_hist.flatten()
     ax_hist = [ax1_h, ax2_h, ax3_h]
@@ -212,9 +222,15 @@ def plot_all(title):
         ah = ax_hist[index]
         display_corners = main.stereo_calib.all_features[key]
         all_error = main.stereo_calib.all_errors[key]
-        reprojection = plot_reporjection(ax, display_corners, key, all_error)
-        mu, std = plot_histogram(ah, key, all_error)
+        reprojection = plot_reporjection(ax, display_corners, key, all_error, save)
+        mu, std, param = plot_histogram(ah, key, all_error, save)
         index += 1
+    fig.subplots_adjust(top=0.898,bottom=0.082, left=0.169, right=0.946, hspace=0.56, wspace=0.2)
+    fig_hist.subplots_adjust(top=0.898, bottom=0.082, left=0.053, right=0.973, hspace=0.56, wspace=0.2)
+    if save:
+        fig.savefig(folder + f'/{title}.png')
+        fig_hist.savefig(folder + f'/{title}_hist.png')
+    return reprojection, mu, std, param
 
 cdict = {'red':  ((0.0, 0.0, 0.0),   # no red at 0
           (0.5, 1.0, 1.0),   # all channels set to 1.0 at 0.5 to create white
@@ -233,28 +249,89 @@ device = "OAK-D-PRO"
 save_folder = str(pathlib.Path(__file__).resolve().parent)
 
 static = ['-s', '5.0', '-nx', '29', '-ny', '29', '-ms', '3.7', '-dbg', '-m', 'process', '-brd', device + ".json", "-scp", save_folder]
-left_binary = "000000000"
-right_binary = "000000000"
-color_binary = "000000000"
+calibration_models = [
+    "000000001",
+    "000000011",
+    "000000101",
+    "000000111",
+    "000001001",
+    "000001011",
+    "000001101",
+    "000001111",
+    "000010001",
+    "000010011"
+]
+def generate_binary_strings(n):
+    binary_strings = []
+    base_string = "000000001"
 
+    for i in range(n):
+        # Generate the next binary string by converting i to binary and adding leading zeros
+        binary_value = bin(i)[2:].zfill(9)
+        binary_string = list(base_string)
 
-dynamic = static + ['-pccm', 'left=' + left_binary, 'right=' + right_binary, "rgb=" + color_binary]
-main = Main(dynamic)
-main.run()
+        # Fill the generated binary value into the base string starting from the end
+        for j in range(9):
+            if binary_value[j] == '1':
+                binary_string[j] = '1'
+        binary_strings.append("".join(binary_string))
 
-plot_all(left_binary)
-plt.show()
+    return binary_strings
 
+# Generate the first 10 binary strings with the specified format
+binary_strings = generate_binary_strings(3)
+print(binary_strings)
 
-filepath = main.dataset_path
-left_path = filepath + '/' + "left"
-left_files = glob.glob(left_path + "/*")
-left_array = []
-right_array = []
-for file in left_files:
-    if float(file.split("_")[2]) == 0.0 and float(file.split("_")[3]) == 0.0:
-        right_array.append(file.replace("left", "right"))
-        left_array.append(file)
-calib = main.calib_dest_path
-depth_evaluation(calib, left_array, right_array)
+display_graphs = False
+save = True
+depth_on_charucos = True
+mean = []
+standard = []
+params_0 = []
+params_2 = []
+for binary in calibration_models:
+    dynamic = static + ['-pccm', 'left=' + binary, 'right=' + binary, "rgb=" + binary]
+    main = Main(dynamic)
+    main.run()
+
+    reprojection, mu, std, param = plot_all(device + " "  + binary, save)
+    mean.append(mu)
+    standard.append(std)
+    params_0.append(param[0])
+    params_2.append(param[2])
+    plt.tight_layout()
+    if display_graphs:
+        plt.show()
+    else:
+        plt.close()
+
+    calib = main.calib_dest_path
+    left_array = []
+    right_array = []
+    if depth_on_charucos:
+        filepath = main.dataset_path
+        left_path = filepath + '/' + "left"
+        left_files = glob.glob(left_path + "/*")
+        left_array = []
+        right_array = []
+        for file in left_files:
+            if float(file.split("_")[2]) == 0.0 and float(file.split("_")[3]) == 0.0:
+                right_array.append(file.replace("left", "right"))
+                left_array.append(file)
+    #depth_evaluation(calib, left_array, right_array, depth_on_charucos)
+    #if display_graphs:
+    #    plt.show()
+    #else:
+    #    plt.close()
+x = np.linspace(0,len(params_0), len(params_0))
+fig, ax = plt.subplots()
+ax.scatter(x, mean, label = "Mean of Gauss")
+ax.scatter(x, standard, label = "Standard deviation of Gauss")
+ax.scatter(x, params_0, label = "Mean of Log-Gauss")
+ax.scatter(x, params_2, label = "Standard deviation of Log-Gauss")
+ax.legend()
+ax.set_ylabel("Reprojection [px]")
+ax.grid()
+ax.set_xticks(range(1, len(binary_strings)+1))
+ax.set_xticklabels(binary_strings, rotation=45, ha='right')
 plt.show()
