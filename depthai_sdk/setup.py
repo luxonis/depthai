@@ -27,7 +27,8 @@ setup(
                       'Qt.py>=1.3.0',
                       'matplotlib==3.5.3; python_version <= "3.7"',
                       'matplotlib==3.6.1; python_version > "3.7"',
-                      'depthai-viewer'
+                      'depthai-viewer',
+                      'open3d'
                       ],
         "replay": ['mcap>=0.0.10',
                    'mcap-ros1-support==0.0.8',
