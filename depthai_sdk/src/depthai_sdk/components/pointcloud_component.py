@@ -37,11 +37,11 @@ class PointcloudComponent(Component):
 
         # Depth aspect
         if depth_input is None:
-            stereo = StereoComponent(device, pipeline, replay=replay, args=args)
-            stereo.config_stereo(lr_check=True, subpixel=True, subpixel_bits=3, confidence=230)
-            stereo.node.initialConfig.setNumInvalidateEdgePixels(20)
+            depth_input = StereoComponent(device, pipeline, replay=replay, args=args)
+            depth_input.config_stereo(lr_check=True, subpixel=True, subpixel_bits=3, confidence=230)
+            depth_input.node.initialConfig.setNumInvalidateEdgePixels(20)
 
-            config = stereo.node.initialConfig.get()
+            config = depth_input.node.initialConfig.get()
             config.postProcessing.speckleFilter.enable = True
             config.postProcessing.speckleFilter.speckleRange = 50
             config.postProcessing.temporalFilter.enable = True
@@ -52,14 +52,14 @@ class PointcloudComponent(Component):
             config.postProcessing.thresholdFilter.maxRange = 20000  # 20m
             config.postProcessing.decimationFilter.decimationFactor = 2
             config.postProcessing.decimationFilter.decimationMode = dai.RawStereoDepthConfig.PostProcessing.DecimationFilter.DecimationMode.NON_ZERO_MEDIAN
-            stereo.node.initialConfig.set(config)
+            depth_input.node.initialConfig.set(config)
 
             if self.colorize_comp is not None:
                 # Align to colorize node
-                stereo.config_stereo(align=self.colorize_comp)
+                depth_input.config_stereo(align=self.colorize_comp)
 
         if isinstance(depth_input, StereoComponent):
-            depth_input = stereo.node
+            depth_input = depth_input.node
         elif isinstance(depth_input, ToFComponent):
             if depth_input._align is not None:
                 self.depth = depth_input._align.outputAligned

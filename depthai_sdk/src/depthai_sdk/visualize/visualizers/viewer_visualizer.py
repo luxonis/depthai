@@ -29,7 +29,7 @@ class DepthaiViewerVisualizer(Visualizer):
 
         try:
             # timeout is optional, but it might be good to prevent the script from hanging if the module is large.
-            process = subprocess.Popen([sys.executable, "-m", "depthai_viewer"], stdout=subprocess.PIPE,
+            process = subprocess.Popen([sys.executable, "-m", "depthai_viewer", "--viewer-mode"], stdout=subprocess.PIPE,
                                        stderr=subprocess.PIPE)
             stdout, stderr = process.communicate(timeout=3)
 
@@ -65,10 +65,8 @@ class DepthaiViewerVisualizer(Visualizer):
             viewer.log_imu(*packet.get_imu_vals())
         elif type(packet) == PointcloudPacket:
             if packet.colorize_frame is not None:
-                bgr_frame = packet.colorize_frame
-                rgb_frame = bgr_frame[..., ::-1]
-                frame = np.dstack((rgb_frame, np.full(bgr_frame.shape[:2], 255, dtype=np.uint8)))
-                viewer.log_image(f'color', frame)
+                rgb_frame = packet.colorize_frame[..., ::-1]
+                viewer.log_image(f'color', rgb_frame)
                 viewer.log_points(packet.name, packet.points.reshape(-1, 3) / 1000, colors=rgb_frame.reshape(-1, 3))
             else:
                 viewer.log_points(packet.name, packet.points.reshape(-1, 3) / 1000)
