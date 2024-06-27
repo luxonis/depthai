@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
 
 import depthai as dai
 
@@ -21,6 +21,7 @@ class ToFComponent(Component):
         pipeline: dai.Pipeline,
         source: Union[str, dai.CameraBoardSocket, None] = None,
         align_to: Optional[CameraComponent] = None,
+        fps: Optional[int] = None,
     ):
         super().__init__()
         self.out = self.Out(self)
@@ -40,17 +41,19 @@ class ToFComponent(Component):
         self.camera_node.setBoardSocket(source)
         self.camera_socket = source
 
-        self.node = pipeline.create(dai.node.ToF)
+        if fps is not None:
+            self.camera_node.setFps(fps)
+
+        self.node: dai.node.ToF = pipeline.create(dai.node.ToF)
         self._control_in = pipeline.create(dai.node.XLinkIn)
         self.camera_node.raw.link(self.node.input)
         self._control_in.setStreamName(f"{self.node.id}_inputControl")
         self._control_in.out.link(self.node.inputConfig)
 
+        self._align_to_output: dai.Node.Output = None
+
         if align_to is not None:
-            self._align = pipeline.create(dai.node.ImageAlign)
-            self._align_to_output = align_to.node.isp
-            self.node.depth.link(self._align.input)
-            self._align_to_output.link(self._align.inputAlignTo)
+            self.set_align_to(align_to)
 
     def _find_tof(self, device: dai.Device) -> dai.CameraBoardSocket:
         # Use the first ToF sensor, usually, there will only be one
@@ -62,14 +65,34 @@ class ToFComponent(Component):
             f"No ToF sensor found on this camera! {device.getConnectedCameraFeatures()}"
         )
 
-    def set_align_to(self, align_to: CameraComponent) -> None:
+    def set_align_to(self, align_to: CameraComponent, output_size: Optional[Tuple] = None) -> None:
         if self._align is None:
             self._align = self._pipeline.create(dai.node.ImageAlign)
             self.node.depth.link(self._align.input)
             if align_to.is_mono():
-                align_to.node.out.link(self._align.inputAlignTo)
+                self._align_to_output = align_to.node.out
             else:
-                align_to.node.isp.link(self._align.inputAlignTo)
+                self._align_to_output = align_to.node.isp
+
+            self._align_to_output.link(self._align.inputAlignTo)
+
+            if output_size is not None:
+                self._align.setOutputSize(*output_size)
+
+
+    def configure_tof(self,
+                        phaseShuffleTemporalFilter: bool = None,
+                        phaseUnwrappingLevel: int = None,
+                        phaseUnwrapErrorThreshold: int = None,
+                      ) -> None:
+        tofConfig = self.node.initialConfig.get()
+        if phaseShuffleTemporalFilter is not None:
+            tofConfig.enablePhaseShuffleTemporalFilter = phaseShuffleTemporalFilter
+        if phaseUnwrappingLevel is not None:
+            tofConfig.phaseUnwrappingLevel = phaseUnwrappingLevel
+        if phaseUnwrapErrorThreshold is not None:
+            tofConfig.phaseUnwrapErrorThreshold = phaseUnwrapErrorThreshold
+        self.node.initialConfig.set(tofConfig)
 
     def on_pipeline_started(self, device: dai.Device) -> None:
         self.control.set_input_queue(

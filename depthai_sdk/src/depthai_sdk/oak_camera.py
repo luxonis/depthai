@@ -390,14 +390,19 @@ class OakCamera:
         """
         return self.stereo(resolution, fps, left, right, encode)
 
-    def create_tof(self, source: Union[str, dai.CameraBoardSocket, None] = None, align_to: Optional[CameraComponent] = None) -> ToFComponent:
+    def create_tof(self,
+                   source: Union[str, dai.CameraBoardSocket, None] = None,
+                   fps: Optional[float] = None,
+                   align_to: Optional[CameraComponent] = None) -> ToFComponent:
         """
         Create ToF component.
 
         Args:
             source (str / dai.CameraBoardSocket): ToF camera source
+            fps (float): Sensor FPS
+            align_to (CameraComponent): Align ToF to this camera component
         """
-        comp = ToFComponent(self.device, self.pipeline, source, align_to)
+        comp = ToFComponent(self.device, self.pipeline, source, align_to, fps)
         self._components.append(comp)
         return comp
 
@@ -410,7 +415,7 @@ class OakCamera:
         return comp
 
     def create_pointcloud(self,
-                          stereo: Union[None, StereoComponent, dai.node.StereoDepth, dai.Node.Output] = None,
+                          depth_input: Union[None, StereoComponent, ToFComponent, dai.node.StereoDepth, dai.Node.Output] = None,
                           colorize: Union[None, CameraComponent, dai.node.MonoCamera, dai.node.ColorCamera, dai.Node.Output, bool] = None,
                           ) -> PointcloudComponent:
 
@@ -427,7 +432,7 @@ class OakCamera:
         comp = PointcloudComponent(
             self.device,
             self.pipeline,
-            stereo=stereo,
+            depth_input=depth_input,
             colorize=colorize,
             replay=self.replay,
             args=self._args,
