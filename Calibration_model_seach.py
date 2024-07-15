@@ -30,7 +30,7 @@ cdict = {'red':  ((0.0, 0.0, 0.0),   # no red at 0
 
 
 GnRd = colors.LinearSegmentedColormap('GnRd', cdict)
-threshold = {"left": 0.7, "right": 0.7, "tof": 1.0, "rgb": 1.5, "color": 1.5, "vertical": 1.0}
+threshold = {"left": 0.7, "right": 0.7, "tof": 0.65, "rgb": 1.5, "color": 1.5, "vertical": 1.0}
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-folder', type=str, default=None, help="Folder to session on which to run calibration.")
@@ -264,6 +264,9 @@ def depth_evaluation(calib, left_array, right_array, depth_on_charucos, title, f
                     #LITE
                     range_min = 1.625
                     range_max = 1.75
+                    #OAK-D-SR-PoE
+                    range_min = 0.905
+                    range_max = 1.01
                     error = error[(error >= range_min) & (error <= range_max)]
                     num_filtered_points = len(error)/len(frame.flatten())
                     bins = 100
@@ -406,7 +409,7 @@ for k in range(len(calibration_models_dict["left"])):
         binary = calibration_models_dict[key][k]
     calibration_models.append(binary)
     print(f"ON {k}/{len(calibration_models_dict['left'])}")
-    dynamic = static + ['-pccm', 'left=' + binary, 'right=' + binary, "rgb=" + binary]
+    dynamic = static + ['-pccm', 'left=' + binary, 'right=' + binary, "rgb=" + binary, "tof=" + binary, "color=" + binary]
     main = Main(dynamic)
     main.run()
     print(main.calib_dest_path)
@@ -450,7 +453,7 @@ for k in range(len(calibration_models_dict["left"])):
     else:
         left_array.append("D:/FAKS, FMF/Studentska dela/Luxonis/depthai/dataset/left.png")
         right_array.append("D:/FAKS, FMF/Studentska dela/Luxonis/depthai/dataset/right.png")
-    mu, sigma, fillrate = depth_evaluation(calib, left_array, right_array, depth_on_charucos, binary, display = display_graphs)
+    mu, sigma, fillrate = depth_evaluation(calib, left_array, right_array, depth_on_charucos, binary, folder = save_folder, display = display_graphs)
     with open(save_folder + "/" + f"calib_search_{n}.csv", 'a') as file:
         file.write(f"{binary},stereo,{0},{0},{0},{0},{0},{mu},{sigma},{fillrate}\n")
     depth_mean.append(mu)
