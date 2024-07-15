@@ -399,10 +399,12 @@ reprojection_aray = {}
 depth_mean = []
 depth_standard = []
 depth_fill = []
+calibration_models = []
 for k in range(len(calibration_models_dict["left"])):
     static = static + ["-pccm"]
     for key in calibration_models_dict:
         binary = calibration_models_dict[key][k]
+    calibration_models.append(binary)
     print(f"ON {k}/{len(calibration_models_dict['left'])}")
     dynamic = static + ['-pccm', 'left=' + binary, 'right=' + binary, "rgb=" + binary]
     main = Main(dynamic)
@@ -507,7 +509,7 @@ for index, key in enumerate(reprojection.keys()):
         depth_standard_evaluated = (depth_standard[i] - depth_standard[0]) / depth_standard[0]
         reprojection_mean_evaluated = (mean[key][i]- mean[key][0]) / mean[key][0]
         reprojection_std_evaluated = (standard[key][i]- standard[key][0]) / standard[key][0]
-        overall.append(depth_mean_evaluated + depth_standard_evaluated + reprojection_mean_evaluated + reprojection_std_evaluated)
+        overall.append((depth_mean_evaluated + depth_standard_evaluated + reprojection_mean_evaluated + reprojection_std_evaluated)*100)
 
     paired = list(zip(calibration_models, overall))
     sorted_pairs = sorted(paired, key=lambda x: x[1])
@@ -538,10 +540,10 @@ fig, (ax) = plt.subplots(1, 1, sharex=True, figsize=(17, 8))
 fig.suptitle(f"Overall improvement of reprojection + depth of {device}")
 for index, key in enumerate(overall_all.keys()):
     x2 = np.linspace(0, len(overall_all[key]) + 1, len(overall_all[key]))
-    ax.scatter(x2, overall_all[key]*100, label = key)
+    ax.scatter(x2, overall_all[key], label = key)
 ax.legend()
 ax.grid()
 ax.set_xticks(x2)  # Set x-ticks to the positions of x2
 ax.set_xticklabels(calibration_models, rotation=45)
-ax.set_ylabel("Overall_improvement[%]")
+ax.set_ylabel("Overall improvement[%]")
 plt.show()
