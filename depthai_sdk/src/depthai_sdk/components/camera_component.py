@@ -255,8 +255,13 @@ class CameraComponent(Component):
                 if resize_mode != ResizeMode.CROP:
                     raise ValueError("Currently only ResizeMode.CROP is supported mode for specifying size!")
             else:
-                # TODO: Use ImageManip to set mono frame size
-                raise NotImplementedError("Not yet implemented")
+                crop_manip = self._pipeline.create(dai.node.ImageManip)
+                crop_manip.initialConfig.setResize(*size_tuple)
+                crop_manip.initialConfig.setKeepAspectRatio(True)
+                self.node.out.link(crop_manip.inputImage)
+                self.node = crop_manip
+                self.stream = crop_manip.out
+                self.stream_size = size_tuple
 
     def _config_camera_args(self, args: Dict):
         if not isinstance(args, Dict):
