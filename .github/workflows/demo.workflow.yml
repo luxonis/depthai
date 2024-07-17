@@ -16,8 +16,6 @@ jobs:
   windows-installer:
     runs-on: windows-latest
     steps:
-    # Clones repository without persisting credentials
-    # As this local git repository is packed with installer
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
@@ -102,6 +100,9 @@ jobs:
     runs-on: windows-latest
     needs: windows-installer
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
     - name: Download Windows installer
       uses: actions/download-artifact@v2
       with:
