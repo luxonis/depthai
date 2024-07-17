@@ -248,12 +248,15 @@ class CameraComponent(Component):
 
             if self._replay:
                 self._replay.resize(self._source, size_tuple, resize_mode)
-            elif self.is_color():
+                return
+
+            if resize_mode != ResizeMode.CROP:
+                raise ValueError("Currently only ResizeMode.CROP is supported mode for specifying size!")
+
+            if self.is_color():
                 self.node.setStillSize(*size_tuple)
                 self.node.setVideoSize(*size_tuple)
                 self.node.setPreviewSize(*size_tuple)
-                if resize_mode != ResizeMode.CROP:
-                    raise ValueError("Currently only ResizeMode.CROP is supported mode for specifying size!")
             else:
                 crop_manip = self._pipeline.create(dai.node.ImageManip)
                 crop_manip.initialConfig.setResize(*size_tuple)
