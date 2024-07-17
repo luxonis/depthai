@@ -108,7 +108,7 @@ jobs:
         name: 'installers'
         path: installers
 
-    # Create or update "latest" tag
+    # Use Bash shell to create or update "latest" tag
     - name: Create or update "latest" tag
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -119,6 +119,7 @@ jobs:
           git tag -f latest
           git push origin --tags --force
         fi
+      shell: bash
 
     # Create or update "latest" release
     - uses: actions/create-release@master
