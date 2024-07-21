@@ -72,6 +72,9 @@ html_css_files = [
 html_js_files = [
     'https://docs.luxonis.com/en/latest/_static/js/navbar.js',
 ]
+html_context = {
+    'meta_robots': '<meta name="robots" content="noindex, nofollow" />',
+}
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
