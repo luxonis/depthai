@@ -16,6 +16,8 @@ import matplotlib.colors as colors
 import argparse
 import os
 import json
+from utils_plots import *
+
 
 cdict = {'red':  ((0.0, 0.0, 0.0),   # no red at 0
           (0.5, 1.0, 1.0),   # all channels set to 1.0 at 0.5 to create white
@@ -30,19 +32,26 @@ cdict = {'red':  ((0.0, 0.0, 0.0),   # no red at 0
 
 
 GnRd = colors.LinearSegmentedColormap('GnRd', cdict)
-threshold = {"left": 0.7, "right": 0.7, "tof": 0.65, "rgb": 1.5, "color": 1.5, "vertical": 1.0}
+threshold = {"left": 0.75, "right": 0.75, "tof": 0.65, "rgb": 1.5, "color": 1.5, "vertical": 1.0}
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-folder', type=str, default=None, help="Folder to session on which to run calibration.")
 parser.add_argument('-device', type=str, default=None, help="Name of the device, on which the calibration is run.")
 parser.add_argument('-config', type=str, default=None, help="Define config file.")
 parser.add_argument('-number', type=int, default=512, help="Number of run combinations.")
+parser.add_argument('-gt', type=float, default=1.7, help="Define groung truth for the depth test in m.")
+parser.add_argument('-min_max', type=float, default=0.15, help="Define the distribution plot of ground truth.")
 parser.add_argument("-full", help="Run the full 512 models", default=False, action="store_true")
 parser.add_argument("-save", help="Save all the graphs which are created", default=True, action="store_true")
 parser.add_argument("-graphs", help="Display all the graphs", default=False, action="store_true")
+parser.add_argument("-disable_depth", help="Disable the depth test from device", default=True, action="store_true")
 parser.add_argument('-save_folder', type=str, default=None, help="Folder where all will be saved.")
+parser.add_argument('-c_model', type=str, default=None, help="Use fisheye model instead perspective.")
+parser.add_argument('-session', type=str, default=None, help="Folder to a session on which calibration is performed.")
 args = parser.parse_args()
 
+if args.session is not None:
+    copy_session_folder(args.session, str(pathlib.Path(__file__).resolve().parent) + "/dataset")
 device = args.device
 if args.save_folder is None:
     print(pathlib.Path(__file__).resolve().parent)
@@ -51,7 +60,9 @@ else:
     save_folder = args.save_folder
 os.makedirs(save_folder+ "/jsons/", exist_ok=True)
 os.makedirs(save_folder+ "/images/", exist_ok=True)
-static = ['-s', '5.0', '-nx', '29', '-ny', '29', '-ms', '3.7', '-dbg',  '-m', 'process', '-brd', device + ".json", "-scp", save_folder + "/jsons/"]
+static = ['-s', '5.0', '-nx', '29', '-ny', '29', '-ms', '3.7', '-dbg',  '-m', 'process', '-brd', "OAK-D-PRO" + ".json", "-scp", save_folder + "/jsons/"]
+if args.c_model is not None:
+    static += ["-cm", "fisheye"]
 
 if args.config is None:
     config_file = str(pathlib.Path(__file__).resolve().parent) + "/calibration_config.json"
@@ -74,85 +85,35 @@ def rail_steps(steps: int) -> float:
     """
     return steps / ((400) / (18 * pi))
 
-def plot_reporjection(ax, display_corners, key, all_error, save):
-    center_x, center_y = main.stereo_calib.width[key] / 2, main.stereo_calib.height[key] / 2
-    distances = [distance((center_x, center_y), point) for point in np.array(display_corners)]
-    max_distance = max(distances)
-    circle = plt.Circle((center_x, center_y), max_distance, color='black', fill=True, label = "Calibrated area", alpha = 0.2)
-    ax.add_artist(circle)
-    ax.set_title(f"Reprojection map camera {key}")
-    img = ax.scatter(np.array(display_corners).T[0], np.array(display_corners).T[1], c=all_error, cmap = GnRd, label = "Reprojected", vmin=0, vmax=threshold[key], s=7)
-    cbar = plt.colorbar(img, ax=ax)
-    cbar.set_label("Reprojection error")
-    ax.set_xlabel('Width')
-    ax.set_xlim([0,main.stereo_calib.width[key]])
-    ax.set_ylim([0,main.stereo_calib.height[key]])
-    #ax.legend()
-    ax.set_ylabel('Height')
-    ax.grid()
-    plt.tight_layout()
-    return np.mean(all_error)
-
-def plot_histogram(ax, key, error, save, plt_gauss = False):
-    ax.hist(error, range = [0,threshold[key]], bins = 100, edgecolor="Black", density = True)
-    xmin, xmax = ax.set_xlim()
-    ymin, ymax = ax.set_ylim()
-    x = np.linspace(xmin, xmax, len(error))
-    if plt_gauss:
-        mu, std = norm.fit(error)
-        p = norm.pdf(x, mu, std)
-
-        ax.plot(x, p, 'k', linewidth=2, label = "Fit Gauss: {:.4f} and {:.4f}".format(mu, std))
-    else:
-        mu, std = norm.fit(error) 
-    param=sp.stats.lognorm.fit(error)
-    pdf_fitted = sp.stats.lognorm.pdf(x, param[0], loc=param[1], scale=param[2]) # fitted distribution
-    shape, loc, scale = param
-    ax.plot(x,pdf_fitted,'r-', label = r"Fit Log-Gauss: $\sigma=${:.4f} and $\mu$={:.4f}".format(shape, loc))
-    ax.set_title(key)
-    ax.legend()
-    ax.set_xlabel("Reprojection error[px]")
-    ax.grid()
-    return mu, std, param
-
-def plot_contur(ax,fig,  calib, socket, imsize = (1280,800), index = 0):
-    dist = np.array(calib.getDistortionCoefficients(socket))
-    K = np.array(calib.getCameraIntrinsics(socket, resizeWidth=imsize[0], resizeHeight=imsize[1]))
-    x,y = np.meshgrid(np.arange(imsize[0]),np.arange(imsize[1]))
-             
-    impoints = np.hstack((x.reshape(-1,1), y.reshape(-1,1)))
-    impoints = np.expand_dims(impoints.astype(float),1)
-    impoints_undist = cv2.undistortPoints(impoints, K, dist, P=K)
-    dist_diff = np.linalg.norm(impoints-impoints_undist, axis = 2)
-    z = dist_diff.reshape(imsize[1],imsize[0])
-    Con= ax.contourf(x, y, z, levels = 50, cmap=GnRd)
-    fig.colorbar(Con, label='Distortion Difference')
-    CS = ax.contour(z,levels = 50, alpha = 0.5, cmap = "RdYlGn")
-    #ax.plot([],[],color = "White", label = f"min: {np.min(z)}, max: {np.max(z)}, mean: {np.mean(z)}")
-    ax.set_xlabel("Width")
-    ax.legend()
-    #ax.clabel(CS, inline=0.5, fontsize=8)
-    ax.set_ylabel("Height")
-
-def depth_evaluation(calib, left_array, right_array, depth_on_charucos, title, folder = str(pathlib.Path(__file__).resolve().parent), display = False):
+def depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, title, folder = str(pathlib.Path(__file__).resolve().parent), display = False):
     device = dai.Device()
     pipeline = dai.Pipeline()
 
-
-    ### NEED TO ADD JSON CALIBRATION YOU WANT ###
     calib = dai.CalibrationHandler(calib)
     pipeline.setCalibrationData(calib)
+    left_id = calib.getStereoLeftCameraId()
+    right_id = calib.getStereoRightCameraId()
 
     left_socket = dai.CameraBoardSocket.LEFT
     right_socket = dai.CameraBoardSocket.RIGHT
-    monoLeft = pipeline.create(dai.node.MonoCamera)
-    monoRight = pipeline.create(dai.node.MonoCamera)
+    if main.board_config['cameras'][left_id]["type"] == 'mono':
+        monoLeft = pipeline.create(dai.node.MonoCamera)
+        monoRight = pipeline.create(dai.node.MonoCamera)
+        monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+        monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
+    else:
+        monoLeft = pipeline.create(dai.node.ColorCamera)
+        monoRight = pipeline.create(dai.node.ColorCamera)
+        monoLeft.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+        monoRight.setResolution(dai.ColorCameraProperties.SensorResolution.THE_800_P)
+    print(cv2.imread(left_array[0]).shape[0] )
+    if cv2.imread(left_array[0]).shape[0] > 1280:
+        monoLeft.setIspScale(2, 3)
+        monoRight.setIspScale(2, 3)
     monoLeft.setBoardSocket(left_socket)
     monoRight.setBoardSocket(right_socket)
     monoLeft.setFps(5)
     monoRight.setFps(5)
-    monoLeft.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
-    monoRight.setResolution(dai.MonoCameraProperties.SensorResolution.THE_800_P)
 
     xin_left = pipeline.create(dai.node.XLinkIn)
     xin_left.setStreamName("left")
@@ -198,6 +159,7 @@ def depth_evaluation(calib, left_array, right_array, depth_on_charucos, title, f
             img.setHeight(h)
             img.setInstanceNum(number)
             input_queues[name].send(img)
+
     rect_display = True
     if rect_display:
         xoutRectifiedLeft = pipeline.create(dai.node.XLinkOut)
@@ -222,7 +184,6 @@ def depth_evaluation(calib, left_array, right_array, depth_on_charucos, title, f
 
     device.startPipeline(pipeline)
 
-    ### NEED TO ADD IMAGES YOU WANT, HERE IS JUST DUMMY FRAME ###
     destroy = False
     index = 0
     if depth_on_charucos:
@@ -253,20 +214,8 @@ def depth_evaluation(calib, left_array, right_array, depth_on_charucos, title, f
                     ax = _ax_h[index-1]
                     ax.set_title(left_array[index-1])
                     error = frame.flatten()/1000
-                    range_min = GT/100 - 0.10
-                    range_max = GT/100 + 0.08
-                    #W
-                    range_min = 1.065
-                    range_max = 1.105
-                    #SR
-                    range_min = 0.47
-                    range_max = 0.505
-                    #LITE
-                    range_min = 1.625
-                    range_max = 1.75
-                    #OAK-D-SR-PoE
-                    range_min = 0.905
-                    range_max = 1.01
+                    range_min = args.gt - args.min_max
+                    range_max = args.gt + args.min_max
                     error = error[(error >= range_min) & (error <= range_max)]
                     num_filtered_points = len(error)/len(frame.flatten())
                     bins = 100
@@ -301,91 +250,30 @@ def depth_evaluation(calib, left_array, right_array, depth_on_charucos, title, f
     plt.close(fig)
     return mu, std, num_filtered_points
 
-def plot_all(title, calib, save, folder = str(pathlib.Path(__file__).resolve().parent), display = False):
-    if device == "OAK-D-SR":
-        sockets = [dai.CameraBoardSocket.CAM_B, dai.CameraBoardSocket.CAM_C]
-    else:
-        sockets = [dai.CameraBoardSocket.CAM_A, dai.CameraBoardSocket.CAM_B, dai.CameraBoardSocket.CAM_C]
-    if len(sockets) == 3:
-        fig, axes = plt.subplots(nrows=3, ncols=2, figsize=(14, 14))
-        fig.suptitle(title)
-        ax1,ax1_c, ax2, ax2_c, ax3, ax3_c = axes.flatten()
-        ax_ = [ax1, ax2, ax3]
-        fig_hist, axes_hist = plt.subplots(nrows=3, ncols=1, figsize=(9, 14))
-        fig_hist.suptitle(title)
-        ax1_h, ax2_h, ax3_h = axes_hist.flatten()
-        ax_hist = [ax1_h, ax2_h, ax3_h]
-        ax_contur = [ax1_c, ax2_c, ax3_c]
-    if len(sockets) == 2:
-        fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(14, 14))
-        fig.suptitle(title)
-        ax1,ax1_c, ax2, ax2_c = axes.flatten()
-        ax_ = [ax1, ax2]
-        fig_hist, axes_hist = plt.subplots(nrows=2, ncols=1, figsize=(9, 14))
-        fig_hist.suptitle(title)
-        ax1_h, ax2_h = axes_hist.flatten()
-        ax_hist = [ax1_h, ax2_h]
-        ax_contur = [ax1_c, ax2_c]
-    index = 0
-    mean = {}
-    standard = {}
-    params= {}
-    reprojection_dict = {}
-    for index, key in enumerate(main.stereo_calib.all_features.keys()):
-        ax = ax_[index]
-        ah = ax_hist[index]
-        ac = ax_contur[index]
-        display_corners = main.stereo_calib.all_features[key]
-        all_error = main.stereo_calib.all_errors[key]
-        height = main.stereo_calib.height[key]
-        width = main.stereo_calib.width[key]
-        plot_contur(ac, fig, calib, sockets[index], imsize = (width,height), index = index)
-        reprojection = plot_reporjection(ax, display_corners, key, all_error, save)
-        mu, std, param = plot_histogram(ah, key, all_error, save)
-        mean[key] = mu
-        standard[key] = std
-        params[key] = param
-        reprojection_dict[key] = reprojection
-    if len(sockets) == 3:
-        fig.subplots_adjust(top=0.898,bottom=0.082, left=0.169, right=0.946, hspace=0.56, wspace=0.2)
-        fig_hist.subplots_adjust(top=0.898, bottom=0.082, left=0.053, right=0.973, hspace=0.56, wspace=0.2)
-    if len(sockets) == 2:
-        fig.subplots_adjust(top=0.916,bottom=0.069,left=0.074,right=0.964,hspace=0.245,wspace=0.207)
-        fig_hist.subplots_adjust(top=0.916,bottom=0.069,left=0.077,right=0.973,hspace=0.245,wspace=0.)
-    if display:
-        plt.show()
-    if save:
-        fig.savefig(folder + f'/images/rep_{title}.png')
-        fig_hist.savefig(folder + f'/images/hist_{title}.png')
-        plt.close(fig)
-        plt.close(fig_hist)
-    return reprojection_dict, mean, standard, params
-
 def generate_binary_strings(n):
     binary_strings = []
     base_string = "000000001"
 
     for i in range(n):
-        # Generate the next binary string by converting i to binary and adding leading zeros
         binary_value = bin(i)[2:].zfill(9)
         binary_string = list(base_string)
 
-        # Fill the generated binary value into the base string starting from the end
         for j in range(9):
             if binary_value[j] == '1':
                 binary_string[j] = '1'
-        if "".join(binary_string) not in binary_strings:
+        if "".join(binary_string) not in binary_strings and "".join(binary_string) not in ["111111000", "111111100", "111111110", "111111111", "111111010", "111111001"]:
             binary_strings.append("".join(binary_string))
-        """if "".join(binary_string) not in binary_strings and binary_string[0] == '1' and binary_string[3] == '0' and binary_string[7] == '0' and binary_string[2] == "1":
-            binary_strings.append("".join(binary_string))"""
     return binary_strings
 
 if not args.full:
     if os.path.exists(config_file):
         with open(config_file, 'r') as infile:
             results = json.load(infile)
-
-        calibration_models_dict = results[device]["binaries"]
+        if device in results.keys():
+            calibration_models_dict = results[device]["binaries"]
+        else:
+            calibration_models = generate_binary_strings(n*2)
+            calibration_models_dict = {'left': calibration_models, "right": calibration_models, "rgb": calibration_models}
     else:
         print("Config file does not exsists, defaulting back to the normal.")
         calibration_models = generate_binary_strings(n*2)
@@ -405,16 +293,18 @@ depth_fill = []
 calibration_models = []
 for k in range(len(calibration_models_dict["left"])):
     static = static + ["-pccm"]
+    current_binaries = {}
     for key in calibration_models_dict:
         binary = calibration_models_dict[key][k]
+        static += [key + "=" + binary]
+        current_binaries[key] = binary
+    dynamic = static
     calibration_models.append(binary)
     print(f"ON {k}/{len(calibration_models_dict['left'])}")
-    dynamic = static + ['-pccm', 'left=' + binary, 'right=' + binary, "rgb=" + binary, "tof=" + binary, "color=" + binary]
     main = Main(dynamic)
     main.run()
-    print(main.calib_dest_path)
     calib = dai.CalibrationHandler(main.calib_dest_path)
-    reprojection, mu, std, param = plot_all(binary + " " + device, calib, save, folder = save_folder, display = display_graphs)
+    reprojection, mu, std, param = plot_all(main, device, device, calib, save, folder = save_folder, display = display_graphs, binaries = current_binaries)
     for key in reprojection.keys():
         shape, loc, scale = param[key]
         if key not in mean.keys():
@@ -433,11 +323,10 @@ for k in range(len(calibration_models_dict["left"])):
             reprojection_aray[key] = []
         reprojection_aray[key].append(reprojection[key])
         with open(save_folder + "/" + f"calib_search_{n}.csv", 'a') as file:
-            file.write(f"{binary},{key},{mu[key]},{std[key]},{reprojection[key]},{loc},{shape},{0},{0},{0}\n")
+            file.write(f"{current_binaries[key]},{key},{mu[key]},{std[key]},{reprojection[key]},{loc},{shape},{0},{0},{0}\n")
 
 
     calib = main.calib_dest_path
-    print(main.calib_dest_path)
     left_array = []
     right_array = []
     if depth_on_charucos:
@@ -453,14 +342,15 @@ for k in range(len(calibration_models_dict["left"])):
     else:
         left_array.append("D:/FAKS, FMF/Studentska dela/Luxonis/depthai/dataset/left.png")
         right_array.append("D:/FAKS, FMF/Studentska dela/Luxonis/depthai/dataset/right.png")
-    mu, sigma, fillrate = depth_evaluation(calib, left_array, right_array, depth_on_charucos, binary, folder = save_folder, display = display_graphs)
-    with open(save_folder + "/" + f"calib_search_{n}.csv", 'a') as file:
-        file.write(f"{binary},stereo,{0},{0},{0},{0},{0},{mu},{sigma},{fillrate}\n")
+    if not args.disable_depth:
+        mu, sigma, fillrate = depth_evaluation(main, calib, left_array, right_array, depth_on_charucos, binary, folder = save_folder, display = display_graphs)
+        with open(save_folder + "/" + f"calib_search_{n}.csv", 'a') as file:
+            file.write(f"{binary},stereo,{0},{0},{0},{0},{0},{mu},{sigma},{fillrate}\n")
+    else:
+        mu, sigma, fillrate = 0, 0, 0
     depth_mean.append(mu)
     depth_standard.append(sigma)
     depth_fill.append(fillrate)
-# First plot
-
 
 
 fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(17, 8))
@@ -472,13 +362,11 @@ hspace=0.03,
 wspace=0.2)
 fig.suptitle("Rectification error")
 
-color = ["Green", "Red", "Blue"]
+color = ["Green", "Red", "Blue", "Yellow"]
 for index, key in enumerate(reprojection.keys()):
     x1 = np.linspace(0, len(params_0[key]) + 1, len(params_0[key]))
-    #ax1.scatter(x1, params_0[key], marker="x", label=f"Mean: {key}", color=color[index])
-    #ax1.scatter(x1, params_2[key], label=f"Std: {key}", color=color[index])
-    ax1.scatter(x1, mean[key], marker="x", label="Mean of Gauss", color="Blue")
-    ax1.scatter(x1, standard[key], label="Standard deviation of Gauss", color="Blue")
+    ax1.scatter(x1, mean[key], marker="x", label=f"Mean of Gauss, {key}", color=color[index])
+    ax1.scatter(x1, standard[key], label=f"Standard deviation of Gauss {key}", color=color[index])
 ax1.legend()
 ax1.set_ylabel("Reprojection [px]")
 ax1.grid()
@@ -512,7 +400,7 @@ for index, key in enumerate(reprojection.keys()):
         depth_standard_evaluated = (depth_standard[i] - depth_standard[0]) / depth_standard[0]
         reprojection_mean_evaluated = (mean[key][i]- mean[key][0]) / mean[key][0]
         reprojection_std_evaluated = (standard[key][i]- standard[key][0]) / standard[key][0]
-        overall.append((depth_mean_evaluated + depth_standard_evaluated + reprojection_mean_evaluated + reprojection_std_evaluated)*100)
+        overall.append((reprojection_mean_evaluated + reprojection_std_evaluated)*100)
 
     paired = list(zip(calibration_models, overall))
     sorted_pairs = sorted(paired, key=lambda x: x[1])
@@ -525,9 +413,15 @@ for index, key in enumerate(reprojection.keys()):
 if os.path.exists(config_file):
     with open(config_file, 'r') as infile:
         results = json.load(infile)
-
-    results[device]["binaries"] = best_models
-    results[device]["MXID"] = [device]
+    if device in results.keys():
+        results[device]["binaries"] = best_models
+        results[device]["MXID"] = [device]
+    else:
+        results = {}
+        results[device] = {}
+        results[device]["binaries"] = best_models
+        #FIX THIS SO THE MXID is read
+        results[device]["MXID"] = [device]
 else:
     results = {}
     results[device] = {}
