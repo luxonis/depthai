@@ -963,8 +963,10 @@ class Main:
         stereo_calib = calibUtils.StereoCalibration(self.args.traceLevel, self.args.outputScaleFactor, self.args.disableCamera)
         dest_path = str(Path('resources').absolute())
         # self.args.cameraMode = 'perspective' # hardcoded for now
-        try:
+                    
+        if True:
             # stereo_calib = StereoCalibration()
+            print(self.dataset_path)
             status, result_config = stereo_calib.calibrate(
                                         self.board_config,
                                         self.dataset_path,
@@ -984,7 +986,7 @@ class Main:
                 if self.empty_calibration(calibration_handler):
                     if "name" in board_keys and "revision" in board_keys:
                         calibration_handler.setBoardInfo(self.board_config['name'], self.board_config['revision'])
-                    else:
+                    elif not self.args.debugProcessingMode:
                         calibration_handler.setBoardInfo(str(self.device.getDeviceName()), str(self.args.revision))
             except Exception as e:
                 print('Device closed in exception..' )
@@ -1073,8 +1075,29 @@ class Main:
                                     calibration_handler.setStereoRight(stringToCam[camera], result_config['stereo_config']['rectification_right'])
                                     calibration_handler.setStereoLeft(stringToCam[cam_info['extrinsics']['to_cam']], result_config['stereo_config']['rectification_left'])
             target_file.close()
-
-            if len(error_text) == 0 and not self.args.debugProcessingMode:
+            """import os
+            dataset_Path = "/run/user/1000/gvfs/smb-share:server=officeslo-nas.local,share=public/Calibration_depth_rig/SiQ 2/OAK-D-W_temperature_testing"
+            for folder in os.listdir(dataset_Path):
+                if not os.path.isdir(Path(Path(dataset_Path) / folder)) or folder[-2:]== "py":
+                    continue
+                if folder.split("_")[0] != self.original:
+                    continue
+                for subfolder in os.listdir(Path(Path(dataset_Path) / folder)):
+                    for which in os.listdir(Path(Path(dataset_Path) / folder / subfolder)):
+                        if which != "Depth":
+                            continue
+                        for subsubfolder in os.listdir(Path(Path(dataset_Path) / folder / subfolder/ which)):
+                            print(f"Saved to: {str(Path(Path(dataset_Path) / folder / subfolder/ which /subsubfolder/ f'calib_redo_{self.name}.json'))}")
+                            if self.args.cameraMode != 'perspective':
+                                #self.f.write(f"{self.original};fisheye;{result_config['cameras']['CAM_B']['reprojection_error']};{result_config['cameras']['CAM_C']['reprojection_error']};{result_config['cameras']['CAM_A']['reprojection_error']};{result_config['cameras']['CAM_B']['extrinsics']['epipolar_error']};{result_config['cameras']['CAM_A']['extrinsics']['epipolar_error']}")
+                                #self.f.write("\n")
+                                calibration_handler.eepromToJsonFile(Path(Path(dataset_Path) / folder / subfolder/ which /subsubfolder/ f"calib_redo_{self.name}.json"))
+                            else:
+                                #self.f.write(f"{self.original};normal;{result_config['cameras']['CAM_B']['reprojection_error']};{result_config['cameras']['CAM_C']['reprojection_error']};{result_config['cameras']['CAM_A']['reprojection_error']};{result_config['cameras']['CAM_B']['extrinsics']['epipolar_error']};{result_config['cameras']['CAM_A']['extrinsics']['epipolar_error']}")
+                                #self.f.write("\n")
+                                calibration_handler.eepromToJsonFile(Path(Path(dataset_Path) / folder / subfolder/ which /subsubfolder/ f"calib_redo_{self.name}.json"))"""
+            calibration_handler.eepromToJsonFile(Path(Path(self.dataset_path) /f"calib_TILTED.json"))
+            if len(error_text) == 0 and not self.args.debugProcessingMode and False:
                 print('Flashing Calibration data into ')
                 # print(calib_dest_path)
 
@@ -1087,6 +1110,7 @@ class Main:
                 file_name = mx_serial_id + date_time_string
                 calib_dest_path = dest_path + '/' + file_name + '.json'
                 calibration_handler.eepromToJsonFile(calib_dest_path)
+                calibration_handler.eepromToJsonFile("/home/x/depthai/dataset/calib.json")
                 if self.args.saveCalibPath:
                     Path(self.args.saveCalibPath).parent.mkdir(parents=True, exist_ok=True)
                     calibration_handler.eepromToJsonFile(self.args.saveCalibPath)
@@ -1126,7 +1150,7 @@ class Main:
                     cv2.waitKey(0)
                     # return (False, "EEPROM write Failed!!")
             
-            else:
+            elif False:
                 if not self.args.debugProcessingMode:
                     self.device.close()
                 print(error_text)
@@ -1136,13 +1160,7 @@ class Main:
                     cv2.putText(resImage, text, (10, 250), font, 2, (0, 0, 0), 2)
                     cv2.imshow("Result Image", resImage)
                     cv2.waitKey(0)
-        except Exception as e:
-            if not self.args.debugProcessingMode:
-                self.device.close()
-            print('Device closed in exception..' )
-            print(e)
-            print(traceback.format_exc())
-            raise SystemExit(1)
+
 
     def run(self):
         if 'capture' in self.args.mode:
@@ -1173,6 +1191,26 @@ class Main:
         print("Using dataset path: {}".format(self.args.datasetPath))
         self.dataset_path = self.args.datasetPath
         if 'process' in self.args.mode:
+            """import os
+            dataset_Path = "/run/user/1000/gvfs/smb-share:server=officeslo-nas.local,share=public/Calibration_depth_rig/SiQ 2/OAK-D-W_temperature_testing/"
+            self.f  = open(dataset_Path + "Results_prism.txt", 'w')
+            self.f.write("Device_num;model;reprojection_left;reprojection_right;reprojection_vertical;epipolar_lr;epipolar_rv")
+            self.f.write("\n")
+            for folder in os.listdir(dataset_Path):
+                if not os.path.isdir(Path(Path(dataset_Path) / folder)) or folder[-2:]== "py" or folder[-3:]== "txt":
+                    continue
+                for subfolder in os.listdir(Path(Path(dataset_Path) / folder)):
+                    for which in os.listdir(Path(Path(dataset_Path) / folder / subfolder)):
+                        if which.split("_")[0][:5] != "Calib":
+                            continue
+                        for subsubfolder in os.listdir(Path(Path(dataset_Path) / folder / subfolder/ which)):
+                            for subsubsubfolder in os.listdir(Path(Path(dataset_Path) / folder / subfolder/ which /subsubfolder)):
+                                if subsubsubfolder == "capture":
+                                    self.original = folder.split("_")[0]
+                                    self.name = subfolder
+                                    self.dataset_path = str(Path(Path(dataset_Path) / folder / subfolder/ which/ subsubfolder/ subsubsubfolder )) + "/"
+                                    print(self.dataset_path, self.original)
+                                    self.calibrate()"""
             self.calibrate()
         print('py: DONE.')
 
